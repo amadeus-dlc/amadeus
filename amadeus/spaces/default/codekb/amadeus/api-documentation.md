@@ -1,5 +1,49 @@
 # API ドキュメント
 
+## coverage 免除台帳のデータ契約（260811-allowlist-semantic-audit、履歴、observed `854692fd7`）
+
+**観測 ref**: すべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`。正本は `re-scans/260811-allowlist-semantic-audit.md`。
+
+`tests/.coverage-patch-allowlist.json` は `tests/coverage-patch-gate.ts` が唯一の読み手となるデータ契約であり、公開 API と同じく**破ると CI が赤くなる**面である。observed 断面の契約は次のとおり（`parseAllowlist` `:360-382` の実読）。
+
+### 受理されるエントリ形状
+
+```
+{
+  "file":     <repo-relative source path>,
+  "selector": { "function": <scope name>,
+                "fingerprint": "sha256:<hex>",
+                "anchorLines": <positive int>,
+                "targetLines": "<n>" | "<n>-<m>" },
+  "reason":   <non-empty string>,
+  "expiry":   <string, optional>
+}
+```
+
+- キー和集合は observed で `expiry` / `file` / `reason` / `selector` の 4 つのみ、`selector` は `anchorLines` / `fingerprint` / `function` / `targetLines` の 4 つのみ（`jq` の `keys | add | unique` 実測）。
+- **旧形式の絶対行ピン（`lines` キー）は受理されない**。`t229-coverage-patch-gate.test.ts:176` `legacy absolute line pins are rejected` が契約として固定。observed の台帳に残存 **0 件**。
+- `selector` に契約外のフィールドを足すと throw（同 `:329`）。`expiry` が string 以外なら throw（同 `:337`）。`targetLines` が `n` / `n-m` 以外なら throw（同 `:321`）。
+- `reason` は**空白のみで拒否**（同 `:315` `reason-less entry throws (fail-closed ledger)`）。それ以上の検査は無い。
+
+### 解決契約（fail-closed）
+
+`resolveSemanticSelector(file, source, selector)` は、`selector.function` が指すスコープが**ちょうど 1 つ**でなければ throw し、そのスコープ内で指紋が**ちょうど 1 箇所**に一致しなければ throw する。エラー文言は逐語:
+
+- `coverage-patch-gate: function ${selector.function} in ${file} resolved ${scopes.length} times (expected exactly one)`
+- `coverage-patch-gate: source fingerprint for ${file}#${selector.function} resolved ${matches.length} times (expected exactly one)`
+
+いずれも `runCheck` が捕捉し、`coverage-patch-gate: STALE semantic allowlist entry: ...` を stderr へ出して exit 1 を返す（`:552-553`）。ソースが存在しない場合も throw（`:391` `coverage-patch-gate: source not found for semantic allowlist entry: ${entry.file}`）。
+
+`targetLines` は**アンカー窓内の相対**指定であり、絶対行への復元は `:312` 逐語 `return { start: matches[0] + relative.start - 1, end: matches[0] + relative.end - 1 };`。
+
+### 契約が守っていないこと（明示）
+
+`reason` は非空であること以外に一切の契約を持たない。`findStaleAllowlistEntries` / `evaluatePatch` / `allowlisted` のいずれも `reason` を引数に取らないため、**`reason` が解決先の実コードと無関係でもこの契約は破れない**。observed で確定した転位は 18 件（`re-scans/260811-allowlist-semantic-audit.md` §4、全数照合未実施のため下限）。
+
+### CLI 面
+
+`bun tests/coverage-patch-gate.ts --check` が唯一の CI 入口（`.github/workflows/ci.yml` の `Patch coverage gate` ステップ、PR イベント限定）。base ref は環境変数 `AMADEUS_PATCH_BASE_REF` で与える。
+
 ## TLA+ receipt API の入力ドメイン（260812-tla-proof-receipt、現在、observed `854692fd7`）
 
 **観測 ref**: 本節の file:line はすべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD）時点。正本は `re-scans/260812-tla-proof-receipt.md`。パスは `plugins/formal-model-check/tools/` 配下。

@@ -1,0 +1,6162 @@
+[
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "function": "createInitialGoalLineage",
+    "declaredClass": null,
+    "start": 218,
+    "end": 222,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 16
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "function": "createRevisionZeroLineage",
+    "declaredClass": null,
+    "start": 232,
+    "end": 238,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 23
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "function": "createLegacyGoalLineage",
+    "declaredClass": null,
+    "start": 268,
+    "end": 273,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 18
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "function": "goalCompletionContextDigest",
+    "declaredClass": null,
+    "start": 441,
+    "end": 443,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 9
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "function": "authorizeGoalCompletion",
+    "declaredClass": null,
+    "start": 475,
+    "end": 481,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 21
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "function": "createGoalChangeProposal",
+    "declaredClass": null,
+    "start": 584,
+    "end": 594,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 34
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "function": "createLegacyGoalMigrationProposal",
+    "declaredClass": null,
+    "start": 704,
+    "end": 713,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 32
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "function": "buildApprovedGoalRevision",
+    "declaredClass": null,
+    "start": 807,
+    "end": 810,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 12
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "function": "approveGoalRevision",
+    "declaredClass": null,
+    "start": 851,
+    "end": 854,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 12
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
+    "function": "createGoalReconciliationReceipt",
+    "declaredClass": null,
+    "start": 867,
+    "end": 874,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 25
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-workflow-completion.ts",
+    "function": "authorizeWorkflowCompletion",
+    "declaredClass": null,
+    "start": 162,
+    "end": 166,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 15
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-workflow-completion.ts",
+    "function": "authorizePersistedCompletedWorkflow",
+    "declaredClass": null,
+    "start": 226,
+    "end": 228,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 9
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-audit.ts",
+    "function": "appendLifecycleAuditEntryUnlocked",
+    "declaredClass": null,
+    "start": 516,
+    "end": 519,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "emitMirrorBoundaryIfNeeded",
+    "declaredClass": null,
+    "start": 606,
+    "end": 620,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 31
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "handleNext",
+    "declaredClass": null,
+    "start": 3633,
+    "end": 3652,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 30
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "handleReport",
+    "declaredClass": null,
+    "start": 6054,
+    "end": 6073,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 28
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "completedRecoveryError",
+    "declaredClass": null,
+    "start": 652,
+    "end": 658,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 16
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "handleNext",
+    "declaredClass": null,
+    "start": 3652,
+    "end": 3656,
+    "actualClass": "catch-arm",
+    "verdict": "転位",
+    "preFixTokens": 7
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "handleReport",
+    "declaredClass": null,
+    "start": 6073,
+    "end": 6077,
+    "actualClass": "catch-arm",
+    "verdict": "転位",
+    "preFixTokens": 7
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "emitWorkflowCompletionAuditRows",
+    "declaredClass": null,
+    "start": 585,
+    "end": 585,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "emitWorkflowCompletionAuditRows",
+    "declaredClass": null,
+    "start": 646,
+    "end": 646,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 6
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "completeWorkflowForTarget",
+    "declaredClass": null,
+    "start": 2957,
+    "end": 2957,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "approveUnderLock",
+    "declaredClass": null,
+    "start": 3960,
+    "end": 3960,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 6
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "approveUnderLock",
+    "declaredClass": null,
+    "start": 3985,
+    "end": 3985,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/hooks/amadeus-sensor-fire.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 134,
+    "end": 134,
+    "actualClass": "catch-arm",
+    "verdict": "転位",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/hooks/amadeus-sensor-fire.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 265,
+    "end": 265,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/hooks/amadeus-stop.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 869,
+    "end": 869,
+    "actualClass": "spawn-only",
+    "verdict": "判定不能",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/core/hooks/amadeus-stop.ts",
+    "function": "runEngineNextKind",
+    "declaredClass": null,
+    "start": 768,
+    "end": 768,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/hooks/amadeus-stop.ts",
+    "function": "continuationReason",
+    "declaredClass": null,
+    "start": 818,
+    "end": 821,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 8
+  },
+  {
+    "file": "packages/framework/core/hooks/amadeus-stop.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 1031,
+    "end": 1036,
+    "actualClass": "spawn-only",
+    "verdict": "転位",
+    "preFixTokens": 6
+  },
+  {
+    "file": "packages/framework/core/hooks/amadeus-stop.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 1041,
+    "end": 1041,
+    "actualClass": "spawn-only",
+    "verdict": "一致",
+    "preFixTokens": 6
+  },
+  {
+    "file": "packages/framework/core/otel/event-registry.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 1037,
+    "end": 1037,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/otel/relay.ts",
+    "function": "defaultPost",
+    "declaredClass": null,
+    "start": 419,
+    "end": 428,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 40
+  },
+  {
+    "file": "packages/framework/core/otel/relay.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 771,
+    "end": 779,
+    "actualClass": "spawn-only",
+    "verdict": "転位",
+    "preFixTokens": 34
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-caller-authorization.ts",
+    "function": "parseActiveSubagents",
+    "declaredClass": null,
+    "start": 73,
+    "end": 102,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 66
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-contained-file.ts",
+    "function": "openCandidate",
+    "declaredClass": null,
+    "start": 101,
+    "end": 101,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-store.ts",
+    "function": "create",
+    "declaredClass": null,
+    "start": 494,
+    "end": 495,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-store.ts",
+    "function": "create",
+    "declaredClass": null,
+    "start": 509,
+    "end": 509,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-convergence-runtime.ts",
+    "function": "projectRequired",
+    "declaredClass": null,
+    "start": 47,
+    "end": 47,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-convergence-runtime.ts",
+    "function": "rebuildRequired",
+    "declaredClass": null,
+    "start": 50,
+    "end": 50,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-convergence-runtime.ts",
+    "function": "projectTelemetry",
+    "declaredClass": null,
+    "start": 53,
+    "end": 53,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-execution-lifecycle.ts",
+    "function": "isExecutionEventSet",
+    "declaredClass": null,
+    "start": 325,
+    "end": 327,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 9
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-finding.ts",
+    "function": "runFindingMain",
+    "declaredClass": null,
+    "start": 288,
+    "end": 291,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 19
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-finding.ts",
+    "function": "runFindingMain",
+    "declaredClass": null,
+    "start": 293,
+    "end": 294,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 20
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-finding.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 299,
+    "end": 299,
+    "actualClass": "spawn-only",
+    "verdict": "転位",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-graph.ts",
+    "function": "validateGrid",
+    "declaredClass": null,
+    "start": 1130,
+    "end": 1130,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-graph.ts",
+    "function": "validateGrid",
+    "declaredClass": null,
+    "start": 1134,
+    "end": 1134,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-graph.ts",
+    "function": "stageGraphDrift",
+    "declaredClass": "type-only",
+    "start": 1768,
+    "end": 1769,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 6
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-graph.ts",
+    "function": "printHelp",
+    "declaredClass": null,
+    "start": 2916,
+    "end": 2916,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-journal-convert.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 289,
+    "end": 298,
+    "actualClass": "spawn-only",
+    "verdict": "転位",
+    "preFixTokens": 28
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-journal.ts",
+    "function": "isJsonValue",
+    "declaredClass": null,
+    "start": 270,
+    "end": 270,
+    "actualClass": "dispatch-case",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-jump.ts",
+    "function": "main",
+    "declaredClass": null,
+    "start": 201,
+    "end": 203,
+    "actualClass": "dispatch-case",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-jump.ts",
+    "function": "main",
+    "declaredClass": null,
+    "start": 191,
+    "end": 193,
+    "actualClass": "spawn-only",
+    "verdict": "転位",
+    "preFixTokens": 10
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-learnings.ts",
+    "function": "priorAuditRow",
+    "declaredClass": null,
+    "start": 390,
+    "end": 390,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-learnings.ts",
+    "function": "main",
+    "declaredClass": null,
+    "start": 911,
+    "end": 911,
+    "actualClass": "spawn-only",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-learnings.ts",
+    "function": "main",
+    "declaredClass": null,
+    "start": 910,
+    "end": 912,
+    "actualClass": "spawn-only",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-lib.ts",
+    "function": "birthIntent",
+    "declaredClass": null,
+    "start": 2267,
+    "end": 2268,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-lib.ts",
+    "function": "recoverLifecycleCursorStep",
+    "declaredClass": null,
+    "start": 2790,
+    "end": 2792,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-lib.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 6148,
+    "end": 6150,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 16
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-coordinator.ts",
+    "function": "selectMirrorReconciliation",
+    "declaredClass": null,
+    "start": 151,
+    "end": 154,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 9
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-coordinator.ts",
+    "function": "executionAuthorization",
+    "declaredClass": null,
+    "start": 305,
+    "end": 305,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-coordinator.ts",
+    "function": "executionAuthorization",
+    "declaredClass": null,
+    "start": 319,
+    "end": 319,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-coordinator.ts",
+    "function": "skippedOutcome",
+    "declaredClass": null,
+    "start": 447,
+    "end": 454,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 22
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-coordinator.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 461,
+    "end": 468,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 7
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-coordinator.ts",
+    "function": "consumeAnsweredPrompt",
+    "declaredClass": null,
+    "start": 625,
+    "end": 628,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 13
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-coordinator.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 639,
+    "end": 642,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-coordinator.ts",
+    "function": "selectBoundaryDecision",
+    "declaredClass": null,
+    "start": 651,
+    "end": 651,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-coordinator.ts",
+    "function": "selectBoundaryDecision",
+    "declaredClass": null,
+    "start": 665,
+    "end": 665,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
+    "function": "reconcileHeldProjectsUnderLock",
+    "declaredClass": null,
+    "start": 1683,
+    "end": 1687,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-policy.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 190,
+    "end": 199,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 10
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-presentation.ts",
+    "function": "mirrorContractCommandUsage",
+    "declaredClass": null,
+    "start": 193,
+    "end": 194,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 8
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-presentation.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 230,
+    "end": 234,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 7
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-presentation.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 237,
+    "end": 252,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 14
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-presentation.ts",
+    "function": "renderMirrorIssueContent",
+    "declaredClass": null,
+    "start": 279,
+    "end": 279,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-presentation.ts",
+    "function": "renderMirrorIssueContent",
+    "declaredClass": null,
+    "start": 288,
+    "end": 291,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 12
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-presentation.ts",
+    "function": "renderMirrorIssueContent",
+    "declaredClass": null,
+    "start": 288,
+    "end": 288,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 7
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-presentation.ts",
+    "function": "renderMirrorIssueContent",
+    "declaredClass": null,
+    "start": 290,
+    "end": 291,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-presentation.ts",
+    "function": "renderMirrorIssueContent",
+    "declaredClass": null,
+    "start": 310,
+    "end": 315,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 13
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-provenance.ts",
+    "function": "decodeMarkerIdentity",
+    "declaredClass": null,
+    "start": 62,
+    "end": 62,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-provenance.ts",
+    "function": "verifyOwnership",
+    "declaredClass": null,
+    "start": 150,
+    "end": 151,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-provenance.ts",
+    "function": "classifyCandidates",
+    "declaredClass": null,
+    "start": 214,
+    "end": 214,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-repair.ts",
+    "function": "provenanceDigest",
+    "declaredClass": null,
+    "start": 52,
+    "end": 52,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-repair.ts",
+    "function": "issueRepairChallenge",
+    "declaredClass": null,
+    "start": 213,
+    "end": 213,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 6
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-codec.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 955,
+    "end": 962,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 25
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-codec.ts",
+    "function": "checkReceiptHoldInvariants",
+    "declaredClass": null,
+    "start": 970,
+    "end": 977,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 45
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-codec.ts",
+    "function": "validateWarning",
+    "declaredClass": null,
+    "start": 1138,
+    "end": 1145,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 42
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-codec.ts",
+    "function": "validateWarning",
+    "declaredClass": null,
+    "start": 1153,
+    "end": 1160,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 31
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-codec.ts",
+    "function": "validateReceiptMap",
+    "declaredClass": null,
+    "start": 1431,
+    "end": 1432,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-codec.ts",
+    "function": "validateReceiptMap",
+    "declaredClass": null,
+    "start": 1446,
+    "end": 1447,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-codec.ts",
+    "function": "checkProjectSyncRevisionInvariants",
+    "declaredClass": null,
+    "start": 1455,
+    "end": 1460,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 14
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-codec.ts",
+    "function": "checkReceiptRevisionInvariants",
+    "declaredClass": null,
+    "start": 1470,
+    "end": 1475,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 15
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
+    "function": "promptApprovalMatches",
+    "declaredClass": null,
+    "start": 192,
+    "end": 192,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 6
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
+    "function": "attempt",
+    "declaredClass": null,
+    "start": 290,
+    "end": 291,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 296,
+    "end": 302,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 16
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
+    "function": "writeCompletedIssue",
+    "declaredClass": null,
+    "start": 383,
+    "end": 385,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
+    "function": "reduceComplete",
+    "declaredClass": null,
+    "start": 432,
+    "end": 434,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
+    "function": "reduceComplete",
+    "declaredClass": null,
+    "start": 436,
+    "end": 438,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 7
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
+    "function": "reduceComplete",
+    "declaredClass": null,
+    "start": 440,
+    "end": 442,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 10
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
+    "function": "reduceComplete",
+    "declaredClass": null,
+    "start": 461,
+    "end": 462,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
+    "function": "reduceSkip",
+    "declaredClass": null,
+    "start": 506,
+    "end": 506,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 6
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
+    "function": "reduceMarkPending",
+    "declaredClass": null,
+    "start": 586,
+    "end": 589,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 17
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
+    "function": "reduceSafetyBlocked",
+    "declaredClass": null,
+    "start": 597,
+    "end": 606,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 33
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
+    "function": "reduceMirrorState",
+    "declaredClass": null,
+    "start": 836,
+    "end": 836,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
+    "function": "commitTransaction",
+    "declaredClass": null,
+    "start": 260,
+    "end": 262,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 20
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 323,
+    "end": 326,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 7
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
+    "function": "atomicWrite",
+    "declaredClass": null,
+    "start": 329,
+    "end": 331,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
+    "function": "atomicWrite",
+    "declaredClass": null,
+    "start": 338,
+    "end": 341,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
+    "function": "atomicWrite",
+    "declaredClass": null,
+    "start": 363,
+    "end": 366,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
+    "function": "atomicWrite",
+    "declaredClass": null,
+    "start": 380,
+    "end": 380,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
+    "function": "atomicWrite",
+    "declaredClass": null,
+    "start": 386,
+    "end": 389,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
+    "function": "atomicWrite",
+    "declaredClass": null,
+    "start": 392,
+    "end": 396,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
+    "function": "atomicWrite",
+    "declaredClass": null,
+    "start": 398,
+    "end": 399,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 401,
+    "end": 404,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 401,
+    "end": 418,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 36
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-state-store.ts",
+    "function": "idempotentAppend",
+    "declaredClass": null,
+    "start": 438,
+    "end": 438,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-observability.ts",
+    "function": "resolveObservabilityConfig",
+    "declaredClass": null,
+    "start": 119,
+    "end": 119,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 321,
+    "end": 322,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "currentMirrorBoundaryPhase",
+    "declaredClass": null,
+    "start": 326,
+    "end": 327,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 15
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "mirrorLifecyclePrint",
+    "declaredClass": null,
+    "start": 381,
+    "end": 385,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 8
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "mirrorLifecyclePrint",
+    "declaredClass": null,
+    "start": 390,
+    "end": 390,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "mirrorLifecyclePrint",
+    "declaredClass": null,
+    "start": 395,
+    "end": 395,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 7
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "mirrorLifecyclePrint",
+    "declaredClass": null,
+    "start": 404,
+    "end": 404,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "mirrorLifecyclePrint",
+    "declaredClass": null,
+    "start": 405,
+    "end": 405,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 474,
+    "end": 582,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 172
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "emitConfiguredMirrorBoundary",
+    "declaredClass": null,
+    "start": 503,
+    "end": 503,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "emitConfiguredMirrorBoundary",
+    "declaredClass": null,
+    "start": 526,
+    "end": 529,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 586,
+    "end": 591,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 9
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "emitMirrorBoundaryIfNeeded",
+    "declaredClass": null,
+    "start": 594,
+    "end": 598,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 10
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "emitMirrorBoundaryIfNeeded",
+    "declaredClass": null,
+    "start": 597,
+    "end": 598,
+    "actualClass": "catch-arm",
+    "verdict": "転位",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "emitMirrorBoundaryIfNeeded",
+    "declaredClass": null,
+    "start": 621,
+    "end": 631,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 52
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "appendOrchestrateLifecycleEvent",
+    "declaredClass": null,
+    "start": 677,
+    "end": 691,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 37
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 675,
+    "end": 688,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 27
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 698,
+    "end": 729,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 62
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 704,
+    "end": 735,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 63
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "emitArchivedNextError",
+    "declaredClass": null,
+    "start": 740,
+    "end": 740,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "emitArchivedNextError",
+    "declaredClass": null,
+    "start": 742,
+    "end": 742,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 963,
+    "end": 971,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 34
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "intentPickPromptIfRecordsExist",
+    "declaredClass": null,
+    "start": 1607,
+    "end": 1607,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "intentPickPromptIfRecordsExist",
+    "declaredClass": null,
+    "start": 1613,
+    "end": 1613,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "trustedPluginStageFile",
+    "declaredClass": null,
+    "start": 1738,
+    "end": 1738,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "trustedPluginStageFile",
+    "declaredClass": null,
+    "start": 1709,
+    "end": 1709,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "trustedPluginStageFile",
+    "declaredClass": null,
+    "start": 1731,
+    "end": 1731,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 6
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "trustedPluginStageFile",
+    "declaredClass": null,
+    "start": 1733,
+    "end": 1733,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 7
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "handleNext",
+    "declaredClass": null,
+    "start": 3377,
+    "end": 3377,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "handleNext",
+    "declaredClass": null,
+    "start": 3391,
+    "end": 3391,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 4979,
+    "end": 4980,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "parseReportFlags",
+    "declaredClass": null,
+    "start": 4998,
+    "end": 5000,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 24
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "handleAuthorizedApprovalReport",
+    "declaredClass": null,
+    "start": 5608,
+    "end": 5610,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 10
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 5706,
+    "end": 5718,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 20
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "handleReport",
+    "declaredClass": null,
+    "start": 5720,
+    "end": 5741,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 52
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "handleReport",
+    "declaredClass": null,
+    "start": 5742,
+    "end": 5756,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 35
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "handleReport",
+    "declaredClass": null,
+    "start": 5743,
+    "end": 5754,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 26
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "handleReport",
+    "declaredClass": null,
+    "start": 5755,
+    "end": 5771,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 41
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "handleReport",
+    "declaredClass": null,
+    "start": 5758,
+    "end": 5773,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 38
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "handleReport",
+    "declaredClass": null,
+    "start": 5795,
+    "end": 5807,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 14
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "handleReport",
+    "declaredClass": null,
+    "start": 6034,
+    "end": 6036,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "handleReport",
+    "declaredClass": null,
+    "start": 6105,
+    "end": 6109,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "handleReport",
+    "declaredClass": null,
+    "start": 6151,
+    "end": 6168,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 21
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "handleReport",
+    "declaredClass": null,
+    "start": 6158,
+    "end": 6167,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 10
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "handleReport",
+    "declaredClass": null,
+    "start": 6172,
+    "end": 6173,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "handlePark",
+    "declaredClass": null,
+    "start": 6262,
+    "end": 6263,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "handlePark",
+    "declaredClass": null,
+    "start": 6261,
+    "end": 6261,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 7
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "handlePark",
+    "declaredClass": null,
+    "start": 6261,
+    "end": 6269,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 41
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "handlePark",
+    "declaredClass": null,
+    "start": 6271,
+    "end": 6271,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "reserveKimiGateApproval",
+    "declaredClass": null,
+    "start": 6392,
+    "end": 6392,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "reserveKimiGateApproval",
+    "declaredClass": null,
+    "start": 6397,
+    "end": 6404,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 17
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "main",
+    "declaredClass": null,
+    "start": 6628,
+    "end": 6632,
+    "actualClass": "spawn-only",
+    "verdict": "一致",
+    "preFixTokens": 10
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "main",
+    "declaredClass": null,
+    "start": 6654,
+    "end": 6654,
+    "actualClass": "spawn-only",
+    "verdict": "判定不能",
+    "preFixTokens": 8
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-presence-reservation.ts",
+    "function": "mintArmedPresenceReservation",
+    "declaredClass": null,
+    "start": 449,
+    "end": 449,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 41,
+    "end": 45,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 9
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 47,
+    "end": 49,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 8
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 51,
+    "end": 55,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 20
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 57,
+    "end": 58,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 7
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 63,
+    "end": 63,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 9
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 65,
+    "end": 70,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 31
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 73,
+    "end": 77,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 13
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 81,
+    "end": 81,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 9
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 83,
+    "end": 90,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 22
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "function": "defaultDeps",
+    "declaredClass": null,
+    "start": 96,
+    "end": 100,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 11
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 117,
+    "end": 117,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "function": "terminatePosix",
+    "declaredClass": null,
+    "start": 200,
+    "end": 202,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "function": "terminatePosix",
+    "declaredClass": null,
+    "start": 204,
+    "end": 204,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "function": "terminateWindows",
+    "declaredClass": null,
+    "start": 215,
+    "end": 217,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "function": "terminateWindows",
+    "declaredClass": null,
+    "start": 219,
+    "end": 219,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-process-runner.ts",
+    "function": "run",
+    "declaredClass": null,
+    "start": 282,
+    "end": 282,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-runner-gen.ts",
+    "function": "renderRunner",
+    "declaredClass": null,
+    "start": 519,
+    "end": 519,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-runner-gen.ts",
+    "function": "main",
+    "declaredClass": null,
+    "start": 603,
+    "end": 608,
+    "actualClass": "dispatch-case",
+    "verdict": "転位",
+    "preFixTokens": 37
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-swarm.ts",
+    "function": "currentBranch",
+    "declaredClass": null,
+    "start": 1331,
+    "end": 1334,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 16
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-swarm.ts",
+    "function": "main",
+    "declaredClass": null,
+    "start": 1367,
+    "end": 1369,
+    "actualClass": "spawn-only",
+    "verdict": "一致",
+    "preFixTokens": 16
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-swarm.ts",
+    "function": "main",
+    "declaredClass": null,
+    "start": 1419,
+    "end": 1419,
+    "actualClass": "dispatch-case",
+    "verdict": "一致",
+    "preFixTokens": 6
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-swarm.ts",
+    "function": "main",
+    "declaredClass": null,
+    "start": 1390,
+    "end": 1392,
+    "actualClass": "dispatch-case",
+    "verdict": "判定不能",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-swarm.ts",
+    "function": "main",
+    "declaredClass": null,
+    "start": 1384,
+    "end": 1386,
+    "actualClass": "dispatch-case",
+    "verdict": "判定不能",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "function": "inspectHookHeartbeats",
+    "declaredClass": "type-only",
+    "start": 862,
+    "end": 863,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "function": "inspectHookHeartbeats",
+    "declaredClass": null,
+    "start": 862,
+    "end": 864,
+    "actualClass": "type-only",
+    "verdict": "転位",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "function": "gitRmFlatTree",
+    "declaredClass": null,
+    "start": 4104,
+    "end": 4107,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 17
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "function": "handleIntentBirthStateBuild",
+    "declaredClass": null,
+    "start": 4603,
+    "end": 4616,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 34
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "function": "handleIntentBirthStateBuild",
+    "declaredClass": null,
+    "start": 4638,
+    "end": 4660,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 52
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "function": "handleIntentBirthStateBuild",
+    "declaredClass": null,
+    "start": 4671,
+    "end": 4678,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 36
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "function": "handleIntentBirthStateBuild",
+    "declaredClass": null,
+    "start": 4691,
+    "end": 4701,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 25
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "function": "handleIntentBirthStateBuild",
+    "declaredClass": null,
+    "start": 4806,
+    "end": 4806,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "function": "handleIntentBirthStateBuild",
+    "declaredClass": null,
+    "start": 4821,
+    "end": 4821,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "function": "handleIntentBirthStateBuild",
+    "declaredClass": null,
+    "start": 4908,
+    "end": 4909,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 11
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 5039,
+    "end": 5049,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 23
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "function": "delegateIntentLifecycle",
+    "declaredClass": null,
+    "start": 5051,
+    "end": 5053,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 7
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 5072,
+    "end": 5094,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 47
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "function": "handleIntentSelectionResponse",
+    "declaredClass": null,
+    "start": 5177,
+    "end": 5188,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 18
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "function": "handleRecompose",
+    "declaredClass": null,
+    "start": 5791,
+    "end": 5792,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-worktree.ts",
+    "function": "telemetryProjectDir",
+    "declaredClass": null,
+    "start": 113,
+    "end": 114,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-worktree.ts",
+    "function": "main",
+    "declaredClass": null,
+    "start": 939,
+    "end": 941,
+    "actualClass": "dispatch-case",
+    "verdict": "判定不能",
+    "preFixTokens": 8
+  },
+  {
+    "file": "packages/framework/harness/opencode/emit.ts",
+    "function": "emitAgentsMd",
+    "declaredClass": null,
+    "start": 92,
+    "end": 94,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
+    "function": "readRoleMarker",
+    "declaredClass": null,
+    "start": 358,
+    "end": 388,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 67
+  },
+  {
+    "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
+    "function": "establishKimiMainBaseline",
+    "declaredClass": null,
+    "start": 420,
+    "end": 421,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
+    "function": "establishKimiMainBaseline",
+    "declaredClass": null,
+    "start": 441,
+    "end": 449,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
+    "function": "clearKimiRoleCarrier",
+    "declaredClass": null,
+    "start": 462,
+    "end": 465,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 6
+  },
+  {
+    "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
+    "function": "updateKimiSubagentRole",
+    "declaredClass": null,
+    "start": 498,
+    "end": 505,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 24
+  },
+  {
+    "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
+    "function": "updateKimiSubagentRole",
+    "declaredClass": null,
+    "start": 517,
+    "end": 539,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 17
+  },
+  {
+    "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
+    "function": "isTrustedMainStop",
+    "declaredClass": null,
+    "start": 555,
+    "end": 555,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
+    "function": "isTrustedMainStop",
+    "declaredClass": null,
+    "start": 571,
+    "end": 572,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/harness/kimi/hooks/amadeus-kimi-lib.ts",
+    "function": "isTrustedMainStop",
+    "declaredClass": null,
+    "start": 579,
+    "end": 580,
+    "actualClass": "catch-arm",
+    "verdict": "転位",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/harness/projections.ts",
+    "function": "validateMirrorProjectionRegistry",
+    "declaredClass": null,
+    "start": 302,
+    "end": 303,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 10
+  },
+  {
+    "file": "packages/framework/harness/projections.ts",
+    "function": "validateMirrorProjectionRegistry",
+    "declaredClass": null,
+    "start": 307,
+    "end": 308,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 11
+  },
+  {
+    "file": "plugins/formal-model-check/tools/contract.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 52,
+    "end": 52,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 6
+  },
+  {
+    "file": "plugins/formal-model-check/tools/contract.ts",
+    "function": "parseJsonBytes",
+    "declaredClass": null,
+    "start": 120,
+    "end": 120,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "plugins/formal-model-check/tools/fs-tlc-toolchain.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 175,
+    "end": 238,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 340
+  },
+  {
+    "file": "plugins/formal-model-check/tools/fs-tlc-toolchain.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 385,
+    "end": 420,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 168
+  },
+  {
+    "file": "plugins/formal-model-check/tools/node-ci-model-check-port.ts",
+    "function": "runCiCommand",
+    "declaredClass": null,
+    "start": 70,
+    "end": 71,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 6
+  },
+  {
+    "file": "plugins/formal-model-check/tools/run-model-check.ts",
+    "function": "createDefaultModelCheckToolchain",
+    "declaredClass": null,
+    "start": 70,
+    "end": 91,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 57
+  },
+  {
+    "file": "plugins/formal-model-check/tools/tla-arm.ts",
+    "function": "tallyReceipt",
+    "declaredClass": null,
+    "start": 264,
+    "end": 264,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 14
+  },
+  {
+    "file": "plugins/formal-model-check/tools/tla-arm.ts",
+    "function": "unreachablePipelineError",
+    "declaredClass": null,
+    "start": 464,
+    "end": 464,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 4
+  },
+  {
+    "file": "plugins/formal-model-check/tools/tla-arm.ts",
+    "function": "invariantReceiptShapeError",
+    "declaredClass": null,
+    "start": 590,
+    "end": 590,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "plugins/formal-model-check/tools/tlc-spawn-planner.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 128,
+    "end": 185,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 146
+  },
+  {
+    "file": "scripts/amadeus-election-migrate.ts",
+    "function": "planMigration",
+    "declaredClass": null,
+    "start": 149,
+    "end": 150,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 9
+  },
+  {
+    "file": "scripts/amadeus-election-migrate.ts",
+    "function": "readCandidates",
+    "declaredClass": null,
+    "start": 230,
+    "end": 232,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 2
+  },
+  {
+    "file": "scripts/amadeus-election-migrate.ts",
+    "function": "verifyFidelity",
+    "declaredClass": null,
+    "start": 456,
+    "end": 457,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "scripts/amadeus-election-migrate.ts",
+    "function": "runExecute",
+    "declaredClass": null,
+    "start": 556,
+    "end": 563,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 33
+  },
+  {
+    "file": "scripts/amadeus-election-migrate.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 574,
+    "end": 578,
+    "actualClass": "spawn-only",
+    "verdict": "一致",
+    "preFixTokens": 20
+  },
+  {
+    "file": "scripts/distribution-transaction.ts",
+    "function": "wait",
+    "declaredClass": null,
+    "start": 124,
+    "end": 124,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 3
+  },
+  {
+    "file": "scripts/distribution-transaction.ts",
+    "function": "ownerState",
+    "declaredClass": null,
+    "start": 127,
+    "end": 132,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 18
+  },
+  {
+    "file": "scripts/distribution-transaction.ts",
+    "function": "ownerState",
+    "declaredClass": null,
+    "start": 134,
+    "end": 134,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 6
+  },
+  {
+    "file": "scripts/metrics-publication-domain.ts",
+    "function": "classifyDeadline",
+    "declaredClass": null,
+    "start": 389,
+    "end": 391,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 6
+  },
+  {
+    "file": "scripts/metrics-publication.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 140,
+    "end": 140,
+    "actualClass": "spawn-only",
+    "verdict": "転位",
+    "preFixTokens": 7
+  },
+  {
+    "file": "scripts/mirror-distribution-benchmark-aggregate.ts",
+    "function": "aggregateMirrorBenchmarks",
+    "declaredClass": null,
+    "start": 104,
+    "end": 106,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 26
+  },
+  {
+    "file": "scripts/mirror-distribution-benchmark-aggregate.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 112,
+    "end": 114,
+    "actualClass": "spawn-only",
+    "verdict": "一致",
+    "preFixTokens": 11
+  },
+  {
+    "file": "scripts/mirror-distribution-benchmark-aggregate.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 113,
+    "end": 116,
+    "actualClass": "spawn-only",
+    "verdict": "一致",
+    "preFixTokens": 14
+  },
+  {
+    "file": "scripts/mirror-distribution-benchmark-aggregate.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 116,
+    "end": 119,
+    "actualClass": "catch-arm",
+    "verdict": "一致",
+    "preFixTokens": 10
+  },
+  {
+    "file": "scripts/mirror-distribution-benchmark-aggregate.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 121,
+    "end": 125,
+    "actualClass": "spawn-only",
+    "verdict": "判定不能",
+    "preFixTokens": 26
+  },
+  {
+    "file": "scripts/mirror-distribution-benchmark.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 118,
+    "end": 124,
+    "actualClass": "spawn-only",
+    "verdict": "判定不能",
+    "preFixTokens": 30
+  },
+  {
+    "file": "scripts/mirror-distribution-benchmark.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 126,
+    "end": 127,
+    "actualClass": "spawn-only",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "scripts/mirror-distribution-check.ts",
+    "function": "readProjectionFile",
+    "declaredClass": null,
+    "start": 46,
+    "end": 48,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 8
+  },
+  {
+    "file": "scripts/mirror-distribution-check.ts",
+    "function": "inspectRoot",
+    "declaredClass": null,
+    "start": 129,
+    "end": 129,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "scripts/mirror-distribution-check.ts",
+    "function": "checkMirrorDistribution",
+    "declaredClass": null,
+    "start": 167,
+    "end": 170,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 9
+  },
+  {
+    "file": "scripts/mirror-distribution-check.ts",
+    "function": "checkMirrorDistribution",
+    "declaredClass": null,
+    "start": 175,
+    "end": 182,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 11
+  },
+  {
+    "file": "scripts/mirror-distribution-check.ts",
+    "function": "checkMirrorDistribution",
+    "declaredClass": null,
+    "start": 193,
+    "end": 195,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 15
+  },
+  {
+    "file": "scripts/mirror-distribution-check.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 206,
+    "end": 210,
+    "actualClass": "spawn-only",
+    "verdict": "判定不能",
+    "preFixTokens": 27
+  },
+  {
+    "file": "scripts/mirror-distribution-check.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 212,
+    "end": 213,
+    "actualClass": "spawn-only",
+    "verdict": "判定不能",
+    "preFixTokens": 15
+  },
+  {
+    "file": "scripts/mirror-docs-contract.ts",
+    "function": "validateDocument",
+    "declaredClass": null,
+    "start": 81,
+    "end": 82,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 7
+  },
+  {
+    "file": "scripts/mirror-docs-contract.ts",
+    "function": "validateDocument",
+    "declaredClass": null,
+    "start": 89,
+    "end": 89,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "scripts/mirror-docs-contract.ts",
+    "function": "validateHelpContracts",
+    "declaredClass": null,
+    "start": 108,
+    "end": 110,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 6
+  },
+  {
+    "file": "scripts/mirror-docs-contract.ts",
+    "function": "validateHelpContracts",
+    "declaredClass": null,
+    "start": 114,
+    "end": 116,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 11
+  },
+  {
+    "file": "scripts/mirror-docs-contract.ts",
+    "function": "validateHelpContracts",
+    "declaredClass": null,
+    "start": 122,
+    "end": 124,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 8
+  },
+  {
+    "file": "scripts/mirror-docs-contract.ts",
+    "function": "validateMirrorDocs",
+    "declaredClass": null,
+    "start": 134,
+    "end": 137,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "scripts/mirror-docs-contract.ts",
+    "function": "validateMirrorDocs",
+    "declaredClass": null,
+    "start": 147,
+    "end": 147,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "scripts/mirror-docs-contract.ts",
+    "function": "validateMirrorDocs",
+    "declaredClass": null,
+    "start": 156,
+    "end": 158,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 9
+  },
+  {
+    "file": "scripts/mirror-docs-contract.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 187,
+    "end": 191,
+    "actualClass": "spawn-only",
+    "verdict": "判定不能",
+    "preFixTokens": 25
+  },
+  {
+    "file": "scripts/promote-self.ts",
+    "function": "preflight",
+    "declaredClass": null,
+    "start": 705,
+    "end": 705,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 7
+  },
+  {
+    "file": "scripts/scan-public-projections.ts",
+    "function": "scanProjectionBuffers",
+    "declaredClass": null,
+    "start": 51,
+    "end": 53,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 6
+  },
+  {
+    "file": "scripts/scan-public-projections.ts",
+    "function": "scanPublicProjections",
+    "declaredClass": null,
+    "start": 63,
+    "end": 66,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "scripts/scan-public-projections.ts",
+    "function": "scanPublicProjections",
+    "declaredClass": null,
+    "start": 75,
+    "end": 75,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "scripts/scan-public-projections.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 86,
+    "end": 91,
+    "actualClass": "spawn-only",
+    "verdict": "判定不能",
+    "preFixTokens": 28
+  },
+  {
+    "file": "tests/coverage-patch-gate.ts",
+    "function": "createSemanticSelector",
+    "declaredClass": null,
+    "start": 392,
+    "end": 392,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "tests/coverage-patch-gate.ts",
+    "function": "createSemanticSelector",
+    "declaredClass": null,
+    "start": 414,
+    "end": 414,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 9
+  },
+  {
+    "file": "tests/deletion-gate.ts",
+    "function": "measureCallsites",
+    "declaredClass": null,
+    "start": 384,
+    "end": 384,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "tests/deletion-gate.ts",
+    "function": "measureRegistryDrift",
+    "declaredClass": null,
+    "start": 392,
+    "end": 393,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "tests/deletion-gate.ts",
+    "function": "measureRelayProof",
+    "declaredClass": null,
+    "start": 421,
+    "end": 422,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "tests/deletion-gate.ts",
+    "function": "runDistributionGuards",
+    "declaredClass": null,
+    "start": 483,
+    "end": 489,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 30
+  },
+  {
+    "file": "tests/deletion-gate.ts",
+    "function": "main",
+    "declaredClass": null,
+    "start": 628,
+    "end": 631,
+    "actualClass": "spawn-only",
+    "verdict": "判定不能",
+    "preFixTokens": 20
+  },
+  {
+    "file": "tests/harness/codex-exec-live.ts",
+    "function": "writeCodexExecHomeConfig",
+    "declaredClass": null,
+    "start": 123,
+    "end": 126,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 9
+  },
+  {
+    "file": "tests/harness/codex-exec-live.ts",
+    "function": "initializeCodexExecProject",
+    "declaredClass": null,
+    "start": 174,
+    "end": 174,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 8
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "function": "auditFilePathFor",
+    "declaredClass": null,
+    "start": 776,
+    "end": 776,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 10
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "function": "readAuditText",
+    "declaredClass": null,
+    "start": 787,
+    "end": 787,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 9
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "function": "readAuditEvents",
+    "declaredClass": null,
+    "start": 816,
+    "end": 821,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 18
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "completionAuditEvents",
+    "declaredClass": null,
+    "start": 551,
+    "end": 552,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 568,
+    "end": 569,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 565,
+    "end": 574,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 19
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "emitWorkflowCompletionAuditRows",
+    "declaredClass": null,
+    "start": 630,
+    "end": 630,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "observeToolRun",
+    "declaredClass": null,
+    "start": 938,
+    "end": 938,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 8
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "main",
+    "declaredClass": null,
+    "start": 991,
+    "end": 991,
+    "actualClass": "spawn-only",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "main",
+    "declaredClass": "dispatch-case",
+    "start": 1011,
+    "end": 1012,
+    "actualClass": "dispatch-case",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "enforceCallerAuthorization",
+    "declaredClass": null,
+    "start": 962,
+    "end": 962,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "main",
+    "declaredClass": null,
+    "start": 980,
+    "end": 988,
+    "actualClass": "spawn-only",
+    "verdict": "判定不能",
+    "preFixTokens": 27
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "main",
+    "declaredClass": null,
+    "start": 982,
+    "end": 984,
+    "actualClass": "spawn-only",
+    "verdict": "判定不能",
+    "preFixTokens": 20
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "main",
+    "declaredClass": "dispatch-case",
+    "start": 1099,
+    "end": 1099,
+    "actualClass": "dispatch-case",
+    "verdict": "一致",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "handleSet",
+    "declaredClass": null,
+    "start": 1168,
+    "end": 1183,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 24
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "handleSet",
+    "declaredClass": null,
+    "start": 1186,
+    "end": 1195,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 51
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "handleSet",
+    "declaredClass": null,
+    "start": 1197,
+    "end": 1198,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 6
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "handleMirrorBoundary",
+    "declaredClass": null,
+    "start": 1290,
+    "end": 1292,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 17
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 1375,
+    "end": 1417,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 86
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "handleFinalize",
+    "declaredClass": null,
+    "start": 2793,
+    "end": 2793,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "completeWorkflowForTarget",
+    "declaredClass": null,
+    "start": 2923,
+    "end": 2952,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 49
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "completeWorkflowForTarget",
+    "declaredClass": null,
+    "start": 2973,
+    "end": 3018,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 91
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "authorizeApproval",
+    "declaredClass": null,
+    "start": 3805,
+    "end": 3805,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 3827,
+    "end": 3831,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 9
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "handleMerge",
+    "declaredClass": null,
+    "start": 5773,
+    "end": 5773,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "handleMerge",
+    "declaredClass": null,
+    "start": 5756,
+    "end": 5758,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 12
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "rejectForTarget",
+    "declaredClass": null,
+    "start": 4441,
+    "end": 4441,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 6
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "rejectForTarget",
+    "declaredClass": null,
+    "start": 4533,
+    "end": 4533,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "reviseForTarget",
+    "declaredClass": null,
+    "start": 4587,
+    "end": 4587,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "handleSetConstructionIteration",
+    "declaredClass": null,
+    "start": 5826,
+    "end": 5827,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "handleSetConstructionIteration",
+    "declaredClass": null,
+    "start": 5834,
+    "end": 5834,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "verifyPreparedWorkflowCompletion",
+    "declaredClass": null,
+    "start": 5919,
+    "end": 5919,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "handleFork",
+    "declaredClass": null,
+    "start": 5474,
+    "end": 5477,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "handleFork",
+    "declaredClass": null,
+    "start": 5456,
+    "end": 5456,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 9
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "handleFork",
+    "declaredClass": null,
+    "start": 5445,
+    "end": 5445,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-swarm.ts",
+    "function": "handlePrepare",
+    "declaredClass": null,
+    "start": 616,
+    "end": 616,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 11
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 3865,
+    "end": 3875,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 62
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-swarm.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 494,
+    "end": 547,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 179
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-swarm.ts",
+    "function": "handlePrepare",
+    "declaredClass": null,
+    "start": 564,
+    "end": 564,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-swarm.ts",
+    "function": "handlePrepare",
+    "declaredClass": null,
+    "start": 582,
+    "end": 584,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 8
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-swarm.ts",
+    "function": "handlePrepare",
+    "declaredClass": null,
+    "start": 634,
+    "end": 654,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 63
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-swarm.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 1171,
+    "end": 1318,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 515
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-swarm.ts",
+    "function": "main",
+    "declaredClass": null,
+    "start": 1393,
+    "end": 1415,
+    "actualClass": "dispatch-case",
+    "verdict": "一致",
+    "preFixTokens": 24
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-unit-pool-runtime.ts",
+    "function": "readUnitPoolEventSetsFromAudit",
+    "declaredClass": null,
+    "start": 135,
+    "end": 137,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 21
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-unit-pool.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 23,
+    "end": 38,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 44
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-unit-pool.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 74,
+    "end": 113,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 102
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-unit-pool.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 129,
+    "end": 146,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 100
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-unit-pool.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 216,
+    "end": 230,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 143
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-unit-pool.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 254,
+    "end": 255,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 14
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
+    "function": "maintenanceFailure",
+    "declaredClass": null,
+    "start": 301,
+    "end": 301,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-jump.ts",
+    "function": "assertTargetCheckboxExists",
+    "declaredClass": null,
+    "start": 382,
+    "end": 382,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 12
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "stageCheckboxOrError",
+    "declaredClass": null,
+    "start": 689,
+    "end": 697,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 26
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "handleCheckbox",
+    "declaredClass": null,
+    "start": 1579,
+    "end": 1581,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 9
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "advanceScopeOrError",
+    "declaredClass": null,
+    "start": 2479,
+    "end": 2479,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "advanceScopeOrError",
+    "declaredClass": null,
+    "start": 2482,
+    "end": 2482,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 8
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "resolveAdvanceNextStage",
+    "declaredClass": null,
+    "start": 2499,
+    "end": 2500,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 6
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "resolveAdvanceNextStage",
+    "declaredClass": null,
+    "start": 2506,
+    "end": 2508,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 8
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "inspectCompletedAdvanceState",
+    "declaredClass": null,
+    "start": 2522,
+    "end": 2525,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 7
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "inspectCompletedAdvanceState",
+    "declaredClass": null,
+    "start": 2535,
+    "end": 2538,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 11
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "emitAdvanceAudit",
+    "declaredClass": null,
+    "start": 2600,
+    "end": 2600,
+    "actualClass": "catch-arm",
+    "verdict": "転位",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "handleAdvance",
+    "declaredClass": null,
+    "start": 2757,
+    "end": 2757,
+    "actualClass": "catch-arm",
+    "verdict": "転位",
+    "preFixTokens": 1
+  },
+  {
+    "file": "tests/no-silent-drop/engine.ts",
+    "function": "currentRevision",
+    "declaredClass": null,
+    "start": 202,
+    "end": 202,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 3
+  },
+  {
+    "file": "tests/no-silent-drop/ledger.ts",
+    "function": "baselineAtRevision",
+    "declaredClass": null,
+    "start": 230,
+    "end": 230,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "function": "advisoryOccurrenceMatchesDecision",
+    "declaredClass": null,
+    "start": 303,
+    "end": 307,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 15
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "function": "resolveAdvisoryChoiceAutonomously",
+    "declaredClass": null,
+    "start": 1264,
+    "end": 1267,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 15
+  },
+  {
+    "file": "tests/harness/live-e2e/claude.ts",
+    "function": "ClaudePrintAdapter.cleanup",
+    "declaredClass": null,
+    "start": 356,
+    "end": 359,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 14
+  },
+  {
+    "file": "tests/harness/live-e2e/codex.ts",
+    "function": "CodexExecAdapter.cleanup",
+    "declaredClass": null,
+    "start": 276,
+    "end": 280,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 14
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "function": "cmdWait",
+    "declaredClass": null,
+    "start": 411,
+    "end": 411,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "function": "chooseNumberedMenuOption",
+    "declaredClass": null,
+    "start": 688,
+    "end": 688,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 3
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "function": "handleRevisionRecovery",
+    "declaredClass": null,
+    "start": 747,
+    "end": 767,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 67
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "function": "handleRevisionRecovery",
+    "declaredClass": null,
+    "start": 799,
+    "end": 802,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 19
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "function": "cmdAnswerGate",
+    "declaredClass": null,
+    "start": 940,
+    "end": 940,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 3
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "function": "cmdAnswerGate",
+    "declaredClass": null,
+    "start": 999,
+    "end": 999,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 3
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "function": "cmdAnswerGate",
+    "declaredClass": null,
+    "start": 1018,
+    "end": 1018,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 3
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "function": "cmdAnswerGate",
+    "declaredClass": null,
+    "start": 1052,
+    "end": 1052,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 3
+  },
+  {
+    "file": "tests/lib/test-time-factor.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 4,
+    "end": 4,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 6
+  },
+  {
+    "file": "tests/harness/live-e2e/ledger.ts",
+    "function": "inspectLedgerLock",
+    "declaredClass": null,
+    "start": 161,
+    "end": 162,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 8
+  },
+  {
+    "file": "tests/harness/live-e2e/ledger.ts",
+    "function": "reapLedgerLock",
+    "declaredClass": null,
+    "start": 195,
+    "end": 196,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "tests/harness/live-e2e/ledger.ts",
+    "function": "reapLedgerLock",
+    "declaredClass": null,
+    "start": 200,
+    "end": 201,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "tests/harness/live-e2e/ledger.ts",
+    "function": "acquireLedgerLock",
+    "declaredClass": null,
+    "start": 224,
+    "end": 225,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 12
+  },
+  {
+    "file": "tests/harness/live-e2e/ledger.ts",
+    "function": "persistNewReceipt",
+    "declaredClass": null,
+    "start": 370,
+    "end": 371,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 8
+  },
+  {
+    "file": "tests/harness/live-e2e/ledger.ts",
+    "function": "persistNewReceipt",
+    "declaredClass": null,
+    "start": 384,
+    "end": 386,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 6
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "function": "driveAidlc",
+    "declaredClass": null,
+    "start": 437,
+    "end": 438,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "function": "driveAidlc",
+    "declaredClass": null,
+    "start": 461,
+    "end": 467,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 25
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "function": "driveAidlc",
+    "declaredClass": null,
+    "start": 535,
+    "end": 535,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "function": "driveAidlc",
+    "declaredClass": null,
+    "start": 640,
+    "end": 640,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 3
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "function": "driveAidlc",
+    "declaredClass": null,
+    "start": 654,
+    "end": 655,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 11
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "function": "driveAidlc",
+    "declaredClass": null,
+    "start": 666,
+    "end": 666,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 6
+  },
+  {
+    "file": "tests/harness/sdk-drive.ts",
+    "function": "driveAidlc",
+    "declaredClass": null,
+    "start": 681,
+    "end": 682,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "tests/harness/live-e2e/claude-sdk-worker.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 187,
+    "end": 187,
+    "actualClass": "spawn-only",
+    "verdict": "一致",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "function": "closeProbeFile",
+    "declaredClass": null,
+    "start": 84,
+    "end": 85,
+    "actualClass": "catch-arm",
+    "verdict": "転位",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "function": "readRegularFileNoFollow",
+    "declaredClass": null,
+    "start": 98,
+    "end": 108,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 39
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "function": "catalogMinimumVersion",
+    "declaredClass": null,
+    "start": 124,
+    "end": 124,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "function": "catalogResourceMapping",
+    "declaredClass": null,
+    "start": 140,
+    "end": 140,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "function": "parseCatalog",
+    "declaredClass": null,
+    "start": 173,
+    "end": 196,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 86
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "function": "nearestTrustDecision",
+    "declaredClass": null,
+    "start": 229,
+    "end": 241,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 49
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "function": "filesBelow",
+    "declaredClass": null,
+    "start": 263,
+    "end": 264,
+    "actualClass": "catch-arm",
+    "verdict": "転位",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "function": "validateResourceFamily",
+    "declaredClass": null,
+    "start": 277,
+    "end": 278,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 6
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-pi-doctor.ts",
+    "function": "installerCatalogReceipt",
+    "declaredClass": null,
+    "start": 306,
+    "end": 310,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 23
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "function": "captureExecutableSnapshot",
+    "declaredClass": null,
+    "start": 169,
+    "end": 169,
+    "actualClass": "catch-arm",
+    "verdict": "転位",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "function": "defaultClock",
+    "declaredClass": null,
+    "start": 203,
+    "end": 204,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "function": "wallNow",
+    "declaredClass": null,
+    "start": 205,
+    "end": 205,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "function": "monotonicNowMs",
+    "declaredClass": null,
+    "start": 206,
+    "end": 206,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "function": "runtimeDirFor",
+    "declaredClass": null,
+    "start": 210,
+    "end": 211,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 15
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "function": "parseEnvelope",
+    "declaredClass": null,
+    "start": 238,
+    "end": 239,
+    "actualClass": "catch-arm",
+    "verdict": "転位",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "function": "verifyEnvelope",
+    "declaredClass": null,
+    "start": 267,
+    "end": 268,
+    "actualClass": "catch-arm",
+    "verdict": "転位",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "function": "mapReplay",
+    "declaredClass": null,
+    "start": 291,
+    "end": 291,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 9
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "function": "writeGuardianControl",
+    "declaredClass": null,
+    "start": 355,
+    "end": 356,
+    "actualClass": "catch-arm",
+    "verdict": "転位",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "function": "runGuardian",
+    "declaredClass": null,
+    "start": 425,
+    "end": 535,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 304
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "function": "writeControl",
+    "declaredClass": null,
+    "start": 431,
+    "end": 431,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "function": "executePiChild",
+    "declaredClass": null,
+    "start": 586,
+    "end": 682,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 410
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-driver.ts",
+    "function": "main",
+    "declaredClass": null,
+    "start": 684,
+    "end": 699,
+    "actualClass": "spawn-only",
+    "verdict": "一致",
+    "preFixTokens": 71
+  },
+  {
+    "file": "packages/framework/harness/pi/drivers/amadeus-pi-replay-store.ts",
+    "function": "reserve",
+    "declaredClass": null,
+    "start": 268,
+    "end": 269,
+    "actualClass": "catch-arm",
+    "verdict": "転位",
+    "preFixTokens": 9
+  },
+  {
+    "file": "packages/framework/harness/pi/extensions/amadeus-pi-extension.ts",
+    "function": "ExtensionHealthLatch.snapshot",
+    "declaredClass": null,
+    "start": 763,
+    "end": 763,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/harness/pi/extensions/amadeus-pi-extension.ts",
+    "function": "auditMapping",
+    "declaredClass": null,
+    "start": 794,
+    "end": 794,
+    "actualClass": "dispatch-case",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/harness/pi/extensions/amadeus-pi-extension.ts",
+    "function": "readStateValidity",
+    "declaredClass": null,
+    "start": 799,
+    "end": 803,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 32
+  },
+  {
+    "file": "packages/framework/harness/pi/extensions/amadeus-pi-extension.ts",
+    "function": "PiContinuationOutbox.reconcile",
+    "declaredClass": null,
+    "start": 1022,
+    "end": 1023,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 13
+  },
+  {
+    "file": "packages/framework/harness/pi/extensions/amadeus-pi-extension.ts",
+    "function": "amadeusPiExtension",
+    "declaredClass": null,
+    "start": 1152,
+    "end": 1159,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 18
+  },
+  {
+    "file": "scripts/package.ts",
+    "function": "piMetadataFromRootPackage",
+    "declaredClass": null,
+    "start": 740,
+    "end": 740,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "function": "countMarker",
+    "declaredClass": null,
+    "start": 46,
+    "end": 46,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 7
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "function": "safeProviderId",
+    "declaredClass": null,
+    "start": 50,
+    "end": 54,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 19
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "function": "liveProviderSelection",
+    "declaredClass": null,
+    "start": 66,
+    "end": 72,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 30
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "function": "livePlatform",
+    "declaredClass": null,
+    "start": 76,
+    "end": 78,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 14
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "function": "providerBelongsToFamily",
+    "declaredClass": null,
+    "start": 82,
+    "end": 82,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 6
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "function": "observedProvider",
+    "declaredClass": null,
+    "start": 86,
+    "end": 89,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 14
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "function": "validateLiveOutcome",
+    "declaredClass": null,
+    "start": 93,
+    "end": 109,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 53
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "function": "gitIdentity",
+    "declaredClass": null,
+    "start": 113,
+    "end": 117,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 48
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "function": "piVersion",
+    "declaredClass": null,
+    "start": 121,
+    "end": 123,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 18
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "function": "liveLifecycle",
+    "declaredClass": null,
+    "start": 127,
+    "end": 132,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 15
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "function": "monotonicNowMs",
+    "declaredClass": null,
+    "start": 131,
+    "end": 131,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 9
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "function": "projectRequired",
+    "declaredClass": null,
+    "start": 133,
+    "end": 137,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 15
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "function": "rebuildRequired",
+    "declaredClass": null,
+    "start": 140,
+    "end": 141,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 3
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "function": "projectTelemetry",
+    "declaredClass": null,
+    "start": 143,
+    "end": 144,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 3
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "function": "runPiLiveRpc",
+    "declaredClass": null,
+    "start": 171,
+    "end": 244,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 236
+  },
+  {
+    "file": "scripts/pi-live-rpc.ts",
+    "function": "main",
+    "declaredClass": null,
+    "start": 249,
+    "end": 256,
+    "actualClass": "spawn-only",
+    "verdict": "判定不能",
+    "preFixTokens": 40
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "function": "resolveQualityPluginActivation",
+    "declaredClass": null,
+    "start": 256,
+    "end": 258,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 10
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "function": "createMemoryQualityRepairRepository",
+    "declaredClass": null,
+    "start": 162,
+    "end": 164,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 17
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "function": "createMemoryQualityRepairRepository",
+    "declaredClass": null,
+    "start": 171,
+    "end": 173,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 9
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "function": "createQualityRepairCoordinator",
+    "declaredClass": null,
+    "start": 611,
+    "end": 612,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 6
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "function": "rebaseResumeEvidence",
+    "declaredClass": null,
+    "start": 577,
+    "end": 578,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 7
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "function": "rebaseResumeEvidence",
+    "declaredClass": null,
+    "start": 587,
+    "end": 591,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 17
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-replay.ts",
+    "function": "createAuditQualityRepairRepository",
+    "declaredClass": null,
+    "start": 139,
+    "end": 141,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 11
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-replay.ts",
+    "function": "replayQualityRepairScope",
+    "declaredClass": null,
+    "start": 176,
+    "end": 179,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 9
+  },
+  {
+    "file": "plugins/formal-model-check/tools/fs-tlc-toolchain.ts",
+    "function": "FsPlannedTlcRuntime.#execute",
+    "declaredClass": null,
+    "start": 2126,
+    "end": 2126,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/hooks/amadeus-stop.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 948,
+    "end": 948,
+    "actualClass": "spawn-only",
+    "verdict": "一致",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "function": "receiptRevocationProblem",
+    "declaredClass": null,
+    "start": 227,
+    "end": 231,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 17
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "function": "advisoryChoicePresentationFields",
+    "declaredClass": null,
+    "start": 532,
+    "end": 549,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 78
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "function": "hasMatchingAdvisoryPresentation",
+    "declaredClass": null,
+    "start": 572,
+    "end": 572,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "function": "cliFlag",
+    "declaredClass": null,
+    "start": 1306,
+    "end": 1307,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 11
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 1320,
+    "end": 1323,
+    "actualClass": "spawn-only",
+    "verdict": "判定不能",
+    "preFixTokens": 18
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 1353,
+    "end": 1357,
+    "actualClass": "spawn-only",
+    "verdict": "判定不能",
+    "preFixTokens": 17
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 1358,
+    "end": 1361,
+    "actualClass": "spawn-only",
+    "verdict": "判定不能",
+    "preFixTokens": 14
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 1363,
+    "end": 1363,
+    "actualClass": "spawn-only",
+    "verdict": "判定不能",
+    "preFixTokens": 8
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-bolt.ts",
+    "function": "readDecisionPolicyInputs",
+    "declaredClass": null,
+    "start": 990,
+    "end": 1004,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 58
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-bolt.ts",
+    "function": "handleDecideQuestion",
+    "declaredClass": null,
+    "start": 1019,
+    "end": 1032,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 51
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-bolt.ts",
+    "function": "handleObserveQuality",
+    "declaredClass": null,
+    "start": 1037,
+    "end": 1050,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 49
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-bolt.ts",
+    "function": "handleResumeQuality",
+    "declaredClass": null,
+    "start": 1054,
+    "end": 1067,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 49
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-directive.ts",
+    "function": "checkOptionalBoolean",
+    "declaredClass": null,
+    "start": 888,
+    "end": 889,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 15
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-directive.ts",
+    "function": "checkOptionalEnum",
+    "declaredClass": null,
+    "start": 901,
+    "end": 903,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 25
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-replay.ts",
+    "function": "transactionShape",
+    "declaredClass": null,
+    "start": 43,
+    "end": 43,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-replay.ts",
+    "function": "decodeIntentAutonomyTransaction",
+    "declaredClass": null,
+    "start": 57,
+    "end": 57,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-replay.ts",
+    "function": "readIntentAutonomyTransactions",
+    "declaredClass": null,
+    "start": 104,
+    "end": 113,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 37
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-replay.ts",
+    "function": "createAuditIntentAutonomyRepository",
+    "declaredClass": null,
+    "start": 139,
+    "end": 141,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 11
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor-replay.ts",
+    "function": "decodeLoopMonitorEventSet",
+    "declaredClass": null,
+    "start": 245,
+    "end": 247,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 14
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor-replay.ts",
+    "function": "readLoopMonitorEventSetsFromAudit",
+    "declaredClass": null,
+    "start": 251,
+    "end": 267,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 49
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor-replay.ts",
+    "function": "isCommitted",
+    "declaredClass": null,
+    "start": 514,
+    "end": 522,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 41
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor-replay.ts",
+    "function": "createAuditLoopMonitorRepository",
+    "declaredClass": null,
+    "start": 530,
+    "end": 538,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 32
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor-replay.ts",
+    "function": "appendCanonical",
+    "declaredClass": null,
+    "start": 539,
+    "end": 549,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 20
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor-replay.ts",
+    "function": "readCanonicalForRepair",
+    "declaredClass": null,
+    "start": 552,
+    "end": 553,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 9
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor-replay.ts",
+    "function": "transactionLock",
+    "declaredClass": null,
+    "start": 554,
+    "end": 555,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 12
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor-runtime.ts",
+    "function": "foldLoopMonitorEventSets",
+    "declaredClass": null,
+    "start": 325,
+    "end": 326,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor-runtime.ts",
+    "function": "projectLoopMonitorStatus",
+    "declaredClass": null,
+    "start": 526,
+    "end": 527,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 7
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor-runtime.ts",
+    "function": "createLoopMonitorCoordinator",
+    "declaredClass": null,
+    "start": 579,
+    "end": 580,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 6
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor-runtime.ts",
+    "function": "appendAwaitingHuman",
+    "declaredClass": null,
+    "start": 604,
+    "end": 605,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 7
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor-runtime.ts",
+    "function": "completeJudgeResult",
+    "declaredClass": null,
+    "start": 626,
+    "end": 629,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 21
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor-runtime.ts",
+    "function": "dispatch",
+    "declaredClass": null,
+    "start": 695,
+    "end": 700,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 20
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor-runtime.ts",
+    "function": "observeDelivery",
+    "declaredClass": null,
+    "start": 727,
+    "end": 741,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 35
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor-runtime.ts",
+    "function": "clearLatch",
+    "declaredClass": null,
+    "start": 836,
+    "end": 836,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor.ts",
+    "function": "createJudgeRouteConstraint",
+    "declaredClass": null,
+    "start": 84,
+    "end": 84,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor.ts",
+    "function": "isValidJudgeRouteConstraint",
+    "declaredClass": null,
+    "start": 105,
+    "end": 106,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor.ts",
+    "function": "nonEmptyString",
+    "declaredClass": null,
+    "start": 174,
+    "end": 175,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 6
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor.ts",
+    "function": "uniqueStringArray",
+    "declaredClass": null,
+    "start": 185,
+    "end": 186,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 6
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor.ts",
+    "function": "descriptorMap",
+    "declaredClass": null,
+    "start": 302,
+    "end": 307,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 25
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor.ts",
+    "function": "validateRouteDescriptor",
+    "declaredClass": null,
+    "start": 328,
+    "end": 328,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor.ts",
+    "function": "validateSafeDeliveryInput",
+    "declaredClass": null,
+    "start": 490,
+    "end": 490,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor.ts",
+    "function": "applySemanticEvent",
+    "declaredClass": null,
+    "start": 677,
+    "end": 682,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 20
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor.ts",
+    "function": "drainPending",
+    "declaredClass": null,
+    "start": 745,
+    "end": 751,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 17
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "routeMainWorkflowDirective",
+    "declaredClass": null,
+    "start": 2713,
+    "end": 2717,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 31
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-replay.ts",
+    "function": "readQualityRepairTransactionsFromAudit",
+    "declaredClass": null,
+    "start": 131,
+    "end": 131,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 207,
+    "end": 207,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 211,
+    "end": 214,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 9
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 247,
+    "end": 248,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 13
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "function": "completeReplan",
+    "declaredClass": null,
+    "start": 636,
+    "end": 636,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "function": "processReplanOutcome",
+    "declaredClass": null,
+    "start": 663,
+    "end": 699,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 90
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "function": "dispatchJudge",
+    "declaredClass": null,
+    "start": 810,
+    "end": 835,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 113
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "function": "resumeReplan",
+    "declaredClass": null,
+    "start": 871,
+    "end": 872,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "function": "planNoneModeQualitySetting",
+    "declaredClass": null,
+    "start": 80,
+    "end": 100,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 61
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "function": "createFirstPartyQualityContribution",
+    "declaredClass": null,
+    "start": 217,
+    "end": 217,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "function": "resolveQualityPluginActivation",
+    "declaredClass": null,
+    "start": 256,
+    "end": 268,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 37
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "function": "normalizeQualityEvidence",
+    "declaredClass": null,
+    "start": 567,
+    "end": 629,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 263
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "function": "classifyPattern",
+    "declaredClass": null,
+    "start": 711,
+    "end": 726,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 67
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "function": "recordQualityReplan",
+    "declaredClass": null,
+    "start": 802,
+    "end": 802,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "function": "handleIntentBirthStateBuild",
+    "declaredClass": null,
+    "start": 4824,
+    "end": 4825,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/hooks/amadeus-stop.ts",
+    "function": "isFullyAutonomousIntent",
+    "declaredClass": null,
+    "start": 178,
+    "end": 178,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "function": "revokeMisattributedAdvisoryChoice",
+    "declaredClass": null,
+    "start": 1119,
+    "end": 1119,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "function": "revokeMisattributedAdvisoryChoice",
+    "declaredClass": null,
+    "start": 1126,
+    "end": 1126,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-approval-authorization.ts",
+    "function": "parseApprovalProcessResult",
+    "declaredClass": null,
+    "start": 62,
+    "end": 62,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-approval-authorization.ts",
+    "function": "parseApprovalProcessResult",
+    "declaredClass": null,
+    "start": 65,
+    "end": 65,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-approval-authorization.ts",
+    "function": "parseApprovalProcessResult",
+    "declaredClass": null,
+    "start": 79,
+    "end": 79,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-bolt.ts",
+    "function": "handleSetAutonomy",
+    "declaredClass": null,
+    "start": 1165,
+    "end": 1165,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-bolt.ts",
+    "function": "handleSetAutonomy",
+    "declaredClass": null,
+    "start": 1194,
+    "end": 1194,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-replay.ts",
+    "function": "readIntentAutonomyTransactionsFromAudit",
+    "declaredClass": null,
+    "start": 129,
+    "end": 134,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 18
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-replay.ts",
+    "function": "createAuditIntentAutonomyRepository",
+    "declaredClass": null,
+    "start": 142,
+    "end": 142,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor-replay.ts",
+    "function": "validReservation",
+    "declaredClass": null,
+    "start": 170,
+    "end": 174,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 42
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor-replay.ts",
+    "function": "validLatch",
+    "declaredClass": null,
+    "start": 178,
+    "end": 181,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 37
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-loop-monitor-replay.ts",
+    "function": "validDelivery",
+    "declaredClass": null,
+    "start": 194,
+    "end": 195,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 14
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "handleAuthorizedApprovalReport",
+    "declaredClass": null,
+    "start": 5681,
+    "end": 5687,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 11
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "function": "handleAuthorizedApprovalReport",
+    "declaredClass": null,
+    "start": 5689,
+    "end": 5689,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-replay.ts",
+    "function": "validQualityEventPayload",
+    "declaredClass": null,
+    "start": 86,
+    "end": 89,
+    "actualClass": "dispatch-case",
+    "verdict": "判定不能",
+    "preFixTokens": 15
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "function": "foldQualityProjections",
+    "declaredClass": null,
+    "start": 146,
+    "end": 147,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "function": "foldQualityProjections",
+    "declaredClass": null,
+    "start": 153,
+    "end": 153,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "function": "recordEvidence",
+    "declaredClass": null,
+    "start": 710,
+    "end": 716,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 14
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "function": "recordEvidence",
+    "declaredClass": null,
+    "start": 721,
+    "end": 721,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 10
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "function": "recordEvidence",
+    "declaredClass": null,
+    "start": 757,
+    "end": 762,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 18
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "function": "recordEvidence",
+    "declaredClass": null,
+    "start": 788,
+    "end": 793,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 13
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair-runtime.ts",
+    "function": "resume",
+    "declaredClass": null,
+    "start": 879,
+    "end": 879,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "function": "normalizeObservation",
+    "declaredClass": null,
+    "start": 439,
+    "end": 439,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "function": "normalizeObservation",
+    "declaredClass": null,
+    "start": 446,
+    "end": 456,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 15
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "function": "normalizeObservation",
+    "declaredClass": null,
+    "start": 469,
+    "end": 469,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 7
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "function": "normalizeObservation",
+    "declaredClass": null,
+    "start": 476,
+    "end": 476,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "function": "normalizeObservation",
+    "declaredClass": null,
+    "start": 481,
+    "end": 485,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 14
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "function": "normalizeObservation",
+    "declaredClass": null,
+    "start": 504,
+    "end": 504,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "function": "normalizeObservation",
+    "declaredClass": null,
+    "start": 509,
+    "end": 513,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 14
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "function": "normalizeObservation",
+    "declaredClass": null,
+    "start": 530,
+    "end": 530,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-quality-repair.ts",
+    "function": "normalizeObservation",
+    "declaredClass": null,
+    "start": 535,
+    "end": 539,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 14
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "main",
+    "declaredClass": null,
+    "start": 1099,
+    "end": 1099,
+    "actualClass": "dispatch-case",
+    "verdict": "判定不能",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "assertIntentAutonomyCompletion",
+    "declaredClass": null,
+    "start": 3076,
+    "end": 3076,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "assertHumanPresentForGateResolution",
+    "declaredClass": null,
+    "start": 3372,
+    "end": 3374,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "assertHumanPresentForGateResolution",
+    "declaredClass": null,
+    "start": 3376,
+    "end": 3377,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 11
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "assertHumanPresentForGateResolution",
+    "declaredClass": null,
+    "start": 3379,
+    "end": 3379,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 7
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "rejectUngroundedDelegation",
+    "declaredClass": null,
+    "start": 4207,
+    "end": 4207,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "handleDelegateApproval",
+    "declaredClass": null,
+    "start": 4238,
+    "end": 4238,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "handleDelegateRejection",
+    "declaredClass": null,
+    "start": 4361,
+    "end": 4363,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 10
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "handleDelegateRejection",
+    "declaredClass": null,
+    "start": 4365,
+    "end": 4365,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 3
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "function": "renderAutonomyStatus",
+    "declaredClass": null,
+    "start": 343,
+    "end": 355,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 70
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
+    "function": "latestHumanTurnId",
+    "declaredClass": null,
+    "start": 327,
+    "end": 327,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
+    "function": "commitProductionStageGateDecision",
+    "declaredClass": null,
+    "start": 795,
+    "end": 795,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 7
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
+    "function": "commitProductionQualityObservation",
+    "declaredClass": null,
+    "start": 1030,
+    "end": 1030,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
+    "function": "commitProductionQualityObservation",
+    "declaredClass": null,
+    "start": 1051,
+    "end": 1051,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 12
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
+    "function": "parkProductionQuality",
+    "declaredClass": null,
+    "start": 1060,
+    "end": 1060,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
+    "function": "qualityResumeAlreadyCommitted",
+    "declaredClass": null,
+    "start": 1105,
+    "end": 1115,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 44
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
+    "function": "qualityResumeAlreadyCommitted",
+    "declaredClass": null,
+    "start": 1119,
+    "end": 1121,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 15
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
+    "function": "prepareProductionQualityResume",
+    "declaredClass": null,
+    "start": 1155,
+    "end": 1155,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 14
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "function": "sameTransaction",
+    "declaredClass": null,
+    "start": 123,
+    "end": 126,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 6
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "function": "validateAutonomyTransaction",
+    "declaredClass": null,
+    "start": 133,
+    "end": 133,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "function": "validateAutonomyTransaction",
+    "declaredClass": null,
+    "start": 136,
+    "end": 136,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "function": "validateAutonomyTransaction",
+    "declaredClass": null,
+    "start": 139,
+    "end": 139,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "function": "validateAutonomyTransactionPrecondition",
+    "declaredClass": null,
+    "start": 152,
+    "end": 152,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "function": "validateAutonomyTransactionPrecondition",
+    "declaredClass": null,
+    "start": 159,
+    "end": 159,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "function": "validateAutonomyTransactionPrecondition",
+    "declaredClass": null,
+    "start": 163,
+    "end": 163,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "function": "createMemoryIntentAutonomyRepository",
+    "declaredClass": null,
+    "start": 168,
+    "end": 170,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 17
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "function": "apply",
+    "declaredClass": null,
+    "start": 180,
+    "end": 181,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 7
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "function": "parkProjection",
+    "declaredClass": null,
+    "start": 359,
+    "end": 359,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "function": "createIntentAutonomyCoordinator",
+    "declaredClass": null,
+    "start": 387,
+    "end": 388,
+    "actualClass": "type-only",
+    "verdict": "判定不能",
+    "preFixTokens": 6
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "function": "commitPark",
+    "declaredClass": null,
+    "start": 430,
+    "end": 430,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "function": "createSelectedGateDecision",
+    "declaredClass": null,
+    "start": 522,
+    "end": 522,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "function": "decide",
+    "declaredClass": null,
+    "start": 623,
+    "end": 623,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "function": "park",
+    "declaredClass": null,
+    "start": 675,
+    "end": 675,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "function": "resume",
+    "declaredClass": null,
+    "start": 687,
+    "end": 687,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "function": "complete",
+    "declaredClass": null,
+    "start": 741,
+    "end": 741,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "function": "readStatusAutonomy",
+    "declaredClass": null,
+    "start": 336,
+    "end": 336,
+    "actualClass": "catch-arm",
+    "verdict": "一致",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-bolt.ts",
+    "function": "handleListAutoDecisions",
+    "declaredClass": null,
+    "start": 1075,
+    "end": 1075,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-bolt.ts",
+    "function": "handleReviewAutoDecision",
+    "declaredClass": null,
+    "start": 1143,
+    "end": 1143,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-autonomy-review-production.ts",
+    "function": "commitProductionDecisionReview",
+    "declaredClass": null,
+    "start": 481,
+    "end": 482,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 13
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-bolt.ts",
+    "function": "handleReviewAutoDecision",
+    "declaredClass": null,
+    "start": 1146,
+    "end": 1146,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-autonomy-review.ts",
+    "function": "put",
+    "declaredClass": null,
+    "start": 802,
+    "end": 802,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 6
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-bolt.ts",
+    "function": "handleGetAutoDecision",
+    "declaredClass": null,
+    "start": 1121,
+    "end": 1121,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "function": "authorize",
+    "declaredClass": null,
+    "start": 240,
+    "end": 240,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "function": "authorize",
+    "declaredClass": null,
+    "start": 254,
+    "end": 254,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 306,
+    "end": 306,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "function": "bindRunCommit",
+    "declaredClass": null,
+    "start": 479,
+    "end": 479,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "function": "bindTransitionCommit",
+    "declaredClass": null,
+    "start": 638,
+    "end": 638,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "function": "bindDispatchClaimCommit",
+    "declaredClass": null,
+    "start": 663,
+    "end": 663,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "function": "dispatch",
+    "declaredClass": null,
+    "start": 675,
+    "end": 675,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "function": "dispatch",
+    "declaredClass": null,
+    "start": 681,
+    "end": 681,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "function": "validate",
+    "declaredClass": null,
+    "start": 799,
+    "end": 799,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 840,
+    "end": 840,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "function": "evaluate",
+    "declaredClass": null,
+    "start": 966,
+    "end": 966,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "function": "evaluate",
+    "declaredClass": null,
+    "start": 997,
+    "end": 997,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 6
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "function": "planTerminalCommit",
+    "declaredClass": null,
+    "start": 1143,
+    "end": 1143,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "function": "planTerminalCommit",
+    "declaredClass": null,
+    "start": 1148,
+    "end": 1148,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "function": "planTerminalCommit",
+    "declaredClass": null,
+    "start": 1164,
+    "end": 1164,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "function": "commit",
+    "declaredClass": null,
+    "start": 1296,
+    "end": 1296,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "function": "awaitingLiveCapability",
+    "declaredClass": null,
+    "start": 1359,
+    "end": 1359,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 4
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-completion.ts",
+    "function": "parseCompletionEvidencePayload",
+    "declaredClass": null,
+    "start": 1397,
+    "end": 1398,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 13
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "function": "hasRecordedAdvisoryPresentation",
+    "declaredClass": null,
+    "start": 936,
+    "end": 936,
+    "actualClass": "catch-arm",
+    "verdict": "転位",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "function": "freshRecordRefusal",
+    "declaredClass": null,
+    "start": 997,
+    "end": 997,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "function": "freshRecordRefusal",
+    "declaredClass": null,
+    "start": 1000,
+    "end": 1000,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "function": "freshRecordRefusal",
+    "declaredClass": null,
+    "start": 1010,
+    "end": 1010,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 1329,
+    "end": 1351,
+    "actualClass": "spawn-only",
+    "verdict": "一致",
+    "preFixTokens": 78
+  },
+  {
+    "file": "plugins/formal-model-check/tools/tla-authoring.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 938,
+    "end": 938,
+    "actualClass": "spawn-only",
+    "verdict": "一致",
+    "preFixTokens": 16
+  },
+  {
+    "file": "plugins/formal-model-check/tools/tla-referee-toolchain.ts",
+    "function": "runOnce",
+    "declaredClass": null,
+    "start": 157,
+    "end": 197,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 117
+  },
+  {
+    "file": "plugins/formal-model-check/tools/tla-referees.ts",
+    "function": "prepareMutation",
+    "declaredClass": null,
+    "start": 820,
+    "end": 822,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 17
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "awaitCompletion",
+    "declaredClass": null,
+    "start": 5986,
+    "end": 5987,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 13
+  },
+  {
+    "file": "plugins/pr-convergence/tools/pr-convergence-cli.ts",
+    "function": "nodeDecisionEmitter",
+    "declaredClass": null,
+    "start": 284,
+    "end": 296,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 54
+  },
+  {
+    "file": "plugins/pr-convergence/tools/pr-convergence-cli.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 850,
+    "end": 853,
+    "actualClass": "spawn-only",
+    "verdict": "転位",
+    "preFixTokens": 39
+  },
+  {
+    "file": "plugins/pr-convergence/tools/pr-convergence-gh-runner.ts",
+    "function": "nodeGhSpawn",
+    "declaredClass": null,
+    "start": 133,
+    "end": 149,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 60
+  },
+  {
+    "file": "plugins/pr-convergence/tools/pr-convergence-ledger.ts",
+    "function": "isBotAuthor",
+    "declaredClass": null,
+    "start": 130,
+    "end": 131,
+    "actualClass": "type-only",
+    "verdict": "一致",
+    "preFixTokens": 7
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "main",
+    "declaredClass": null,
+    "start": 1064,
+    "end": 1066,
+    "actualClass": "dispatch-case",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "main",
+    "declaredClass": null,
+    "start": 1094,
+    "end": 1096,
+    "actualClass": "dispatch-case",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "function": "handleSessionTakeover",
+    "declaredClass": null,
+    "start": 4801,
+    "end": 4801,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 7
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-reviewer-runtime.ts",
+    "function": "mkdir",
+    "declaredClass": null,
+    "start": 107,
+    "end": 107,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 4
+  },
+  {
+    "file": "tests/no-silent-drop/events.ts",
+    "function": "listEventUlidsAtRevision",
+    "declaredClass": null,
+    "start": 330,
+    "end": 330,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 3
+  },
+  {
+    "file": "tests/no-silent-drop/events.ts",
+    "function": "assertSharedEventBytesUnchanged",
+    "declaredClass": null,
+    "start": 377,
+    "end": 377,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "tests/no-silent-drop/events.ts",
+    "function": "assertNewSnapshotLineage",
+    "declaredClass": null,
+    "start": 422,
+    "end": 422,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
+    "function": "<module>",
+    "declaredClass": null,
+    "start": 1319,
+    "end": 1319,
+    "actualClass": "spawn-only",
+    "verdict": "転位",
+    "preFixTokens": 18
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-bolt.ts",
+    "function": "setMergeHeld",
+    "declaredClass": null,
+    "start": 871,
+    "end": 871,
+    "actualClass": "unmeasurable-other",
+    "verdict": "転位",
+    "preFixTokens": 7
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-bolt.ts",
+    "function": "handleApproveBatch",
+    "declaredClass": null,
+    "start": 1259,
+    "end": 1259,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-jump.ts",
+    "function": "handleExecute",
+    "declaredClass": null,
+    "start": 659,
+    "end": 659,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "tests/harness/fixtures.ts",
+    "function": "safeReaddir",
+    "declaredClass": null,
+    "start": 704,
+    "end": 705,
+    "actualClass": "catch-arm",
+    "verdict": "一致",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-candidates.ts",
+    "function": "innerIdentity",
+    "declaredClass": null,
+    "start": 544,
+    "end": 544,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 1
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-candidates.ts",
+    "function": "projectEventSet",
+    "declaredClass": null,
+    "start": 588,
+    "end": 588,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 11
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-intervals.ts",
+    "function": "validateCandidates",
+    "declaredClass": null,
+    "start": 258,
+    "end": 258,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 8
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-intervals.ts",
+    "function": "validateCandidates",
+    "declaredClass": null,
+    "start": 267,
+    "end": 267,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 8
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-intervals.ts",
+    "function": "validateWindowNetSeconds",
+    "declaredClass": null,
+    "start": 282,
+    "end": 282,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 0
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-intervals.ts",
+    "function": "createWindowAttribution",
+    "declaredClass": null,
+    "start": 349,
+    "end": 349,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 8
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-intervals.ts",
+    "function": "createWindowAttribution",
+    "declaredClass": null,
+    "start": 361,
+    "end": 362,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 8
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-intervals.ts",
+    "function": "createWindowAttribution",
+    "declaredClass": null,
+    "start": 382,
+    "end": 383,
+    "actualClass": "catch-arm",
+    "verdict": "判定不能",
+    "preFixTokens": 8
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-intervals.ts",
+    "function": "validateResult",
+    "declaredClass": null,
+    "start": 394,
+    "end": 394,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-intervals.ts",
+    "function": "validateResult",
+    "declaredClass": null,
+    "start": 399,
+    "end": 399,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-intervals.ts",
+    "function": "validateResult",
+    "declaredClass": null,
+    "start": 405,
+    "end": 405,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 11
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-report.ts",
+    "function": "validateWindowAccounting",
+    "declaredClass": null,
+    "start": 239,
+    "end": 239,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 6
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-report.ts",
+    "function": "validateWindowBijection",
+    "declaredClass": null,
+    "start": 262,
+    "end": 262,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-report.ts",
+    "function": "validateCandidateBijection",
+    "declaredClass": null,
+    "start": 280,
+    "end": 280,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-report.ts",
+    "function": "validateCandidateBijection",
+    "declaredClass": null,
+    "start": 284,
+    "end": 284,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 5
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-report.ts",
+    "function": "validateFamilyCounts",
+    "declaredClass": null,
+    "start": 293,
+    "end": 293,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-report.ts",
+    "function": "validateFamilyCounts",
+    "declaredClass": null,
+    "start": 303,
+    "end": 303,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-stage-attribution-report.ts",
+    "function": "composeAttributionReport",
+    "declaredClass": null,
+    "start": 384,
+    "end": 384,
+    "actualClass": "unmeasurable-other",
+    "verdict": "判定不能",
+    "preFixTokens": 2
+  }
+]

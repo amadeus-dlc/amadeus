@@ -418,17 +418,6 @@
     "expiry": "remove when Store.create gains an injectable filesystem seam for post-registry directory creation failure"
   },
   {
-    "file": "packages/framework/core/tools/amadeus-election.ts",
-    "selector": {
-      "function": "handleOpen",
-      "fingerprint": "sha256:2d1d83f120ff8a8840c71e879c7aa40cbd2b3a2c3055aa49173d104cb7d39990",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "Defensive views-directory mkdirSync catch immediately after Store.create minted and created a fresh election directory. Normal create and view-write failures are covered; reaching this row requires a permission or filesystem race between Store.create and the views mkdir, and the CLI has no injectable filesystem seam.",
-    "expiry": "remove when handleOpen gains an injectable filesystem seam for post-create views-directory failure"
-  },
-  {
     "file": "packages/framework/core/tools/amadeus-convergence-runtime.ts",
     "selector": {
       "function": "projectRequired",
@@ -530,21 +519,11 @@
   {
     "file": "packages/framework/core/tools/amadeus-graph.ts",
     "selector": {
-      "function": "<module>",
-      "fingerprint": "sha256:01fd73138bd592fdca6de46a6e375f9fc31a8c15a21136df88748239f49efb3a",
-      "anchorLines": 6,
-      "targetLines": "1-6"
-    },
-    "reason": "Multi-line optional snapshot parameter type for stageGraphDrift; runtime-erased, bun lcov stamps these type-only lines DA:0 even though t257 drives both injected values in-process (bun-multiline-arg-da0 class).",
-    "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-graph.ts",
-    "selector": {
-      "function": "gatedStagePredicate",
-      "fingerprint": "sha256:100f90543e5ea66f75acd0af808ff69738576c2b05dbb94fc1473ba6e74485b4",
-      "anchorLines": 6,
-      "targetLines": "1-6"
+      "function": "stageGraphDrift",
+      "fingerprint": "sha256:b301065026e018e1c4cfb85a08ad7c286feaa32e771d521683da42dc0bf85b97",
+      "anchorLines": 2,
+      "targetLines": "1-2",
+      "class": "type-only"
     },
     "reason": "Multi-line optional snapshot parameter type for stageGraphDrift; runtime-erased, bun lcov stamps these type-only lines DA:0 even though t257 drives both injected values in-process (bun-multiline-arg-da0 class).",
     "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
@@ -619,9 +598,9 @@
     "file": "packages/framework/core/tools/amadeus-learnings.ts",
     "selector": {
       "function": "main",
-      "fingerprint": "sha256:3b051e183dc0c6b2e805858c39966c0790525e3ebd18f196379931c3fd123f5b",
-      "anchorLines": 3,
-      "targetLines": "1-3"
+      "fingerprint": "sha256:3cae48706f8168deff05f008847bbd97142133657c1bf7384911777b0e718dac",
+      "anchorLines": 1,
+      "targetLines": "1"
     },
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
@@ -772,19 +751,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
     "selector": {
-      "function": "executeLinked",
-      "fingerprint": "sha256:db3756e345b0b132f09d066d4dd784b6645680f95f6a29b6705ba6b3039ccfa8",
-      "anchorLines": 5,
-      "targetLines": "1-5"
-    },
-    "reason": "The held receipt was parsed from the same valid snapshot and necessarily participates in latestProjectReconciliationReceiptKey for its intent. Invalid timestamps fail during state parsing before this defensive fail-closed branch; t359 covers the selector's none and invalid outcomes directly.",
-    "expiry": "remove if held receipts can be excluded from Project reconciliation ordering or the selector returns a typed invariant result"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
-    "selector": {
-      "function": "executeLinked",
-      "fingerprint": "sha256:84bb3c9295b8e56cceb8a1e24bc711105ef48190e8c808aab719f92e25666738",
+      "function": "reconcileHeldProjectsUnderLock",
+      "fingerprint": "sha256:a3c60ebc6693e1178a063920fba8ca15a3d36048e3372eb6baf79b780d01805d",
       "anchorLines": 5,
       "targetLines": "1-5"
     },
@@ -1532,17 +1500,6 @@
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:e3b279463c9a6c97c41103e066c29a162964daa1a97b2f690d47643edeea915a",
-      "anchorLines": 8,
-      "targetLines": "1-8"
-    },
-    "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
-    "expiry": "remove when the enclosing entrypoint gains an in-process driver"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
-    "selector": {
-      "function": "<module>",
       "fingerprint": "sha256:8ff973b6f668afda231518f42d12f0c2e61d1ec7d925d23cac5dfc9e4be7300a",
       "anchorLines": 9,
       "targetLines": "1-9"
@@ -1576,7 +1533,7 @@
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
       "function": "trustedPluginStageFile",
-      "fingerprint": "sha256:4439ddf8e614fd4e99cc9031a0797d5a5ed40ca3e4f653bf415664ab9e27bcc6",
+      "fingerprint": "sha256:a43abc8f2deff3263e5194fc8992a74caf124520647e022dd4e80a148c913647",
       "anchorLines": 1,
       "targetLines": "1"
     },
@@ -1806,8 +1763,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
-      "function": "handleReport",
-      "fingerprint": "sha256:79ae5c584bfb30feb892fe0ac00cb1d20e10398249fb9a9e32b815b4396bbf99",
+      "function": "handlePark",
+      "fingerprint": "sha256:93bcc3633f23aec2f82a6e3b678bd1c764e9149f8f3ace2c80a9031e6674f3e1",
       "anchorLines": 2,
       "targetLines": "1-2"
     },
@@ -2079,17 +2036,6 @@
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
   },
   {
-    "file": "packages/framework/core/tools/amadeus-runtime.ts",
-    "selector": {
-      "function": "compile",
-      "fingerprint": "sha256:a0a4ea0255b91f30f67dd300ec5869f77c394fa3e54d8e90f01d19b7646aba18",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "MEMORY_EMPTY re-emission dedup runs only inside the spawned compile path; the single-line predicate delegates to auditBlockField (covered in-process by t351) and the timestamp compare. Spawn-only wiring line per spawn-blindspot-two-step (ii).",
-    "expiry": "remove when the compile MEMORY_EMPTY path gains an in-process seam test"
-  },
-  {
     "file": "packages/framework/core/tools/amadeus-runner-gen.ts",
     "selector": {
       "function": "renderRunner",
@@ -2169,10 +2115,11 @@
   {
     "file": "packages/framework/core/tools/amadeus-utility.ts",
     "selector": {
-      "function": "<module>",
-      "fingerprint": "sha256:8df55f40470b25b7e34dfad1bac5e2df06a786c8b619819cbae0571e7659f641",
-      "anchorLines": 3,
-      "targetLines": "1-3"
+      "function": "inspectHookHeartbeats",
+      "fingerprint": "sha256:dc2be1d9d6111f64f4aeaf989cb45e81e0a829597fb841e4a30b6c05ed8dcf62",
+      "anchorLines": 2,
+      "targetLines": "1-2",
+      "class": "type-only"
     },
     "reason": "Multi-line Pick type for the inspectHookHeartbeats snapshot options; runtime-erased, bun lcov stamps these type-only lines DA:0 even though t226 and t257 drive platform and both swap targets in-process (bun-multiline-arg-da0 class).",
     "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
@@ -2548,17 +2495,6 @@
       "targetLines": "1-22"
     },
     "reason": "createDefaultModelCheckToolchain wires the live Node adapters (NodeTlcProcessPort/NodeArtifactNetworkPort/NodeFileDigestPort/NodePhysicalReservationPort, real OpenJDK) — exercised only by the real-toolchain probe outside CI; requires a real JDK/TLC install."
-  },
-  {
-    "file": "plugins/formal-model-check/tools/tla-arm.ts",
-    "selector": {
-      "function": "<module>",
-      "fingerprint": "sha256:04c23dcf2c961052f94f04498c0fe29b4548d9303e5f8ed7f372df789a4e491d",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "Defensive TypeError throw line in assertTlaElectionAction (non-plain-object action); CI-run tests submit well-formed actions.",
-    "expiry": "remove if a test injects a non-plain action object"
   },
   {
     "file": "plugins/formal-model-check/tools/tla-arm.ts",
@@ -3199,24 +3135,13 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "runSelectedIntentOperation",
-      "fingerprint": "sha256:e98834798c2df64502093acdef36492b954a7fbb9f693f00c333c75588c8d4e2",
+      "function": "observeToolRun",
+      "fingerprint": "sha256:ea5cbebc5cce09937222676f262c00208100cb592924db5fc0be0623605541d1",
       "anchorLines": 1,
       "targetLines": "1"
     },
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-state.ts",
-    "selector": {
-      "function": "<module>",
-      "fingerprint": "sha256:bfa242d9603209bacba33a1f550aad92e6625473465b7d34b2c9f910fc8d0bfd",
-      "anchorLines": 16,
-      "targetLines": "1-16"
-    },
-    "reason": "enforceCallerAuthorization runs only inside the spawned state CLI main path; t365 drives the authorized and denied outcomes end-to-end through the shipped CLI, which Bun does not attribute to the parent LCOV report. Spawn-only wiring per spawn-blindspot-two-step (ii).",
-    "expiry": "remove when the state CLI main() receives an in-process argv driver"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
@@ -3232,10 +3157,11 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "enforceCallerAuthorization",
-      "fingerprint": "sha256:316149cd7ed66e29c8f375064ea00352b9753fd37822b334975e967d171b7d5a",
-      "anchorLines": 4,
-      "targetLines": "1-4"
+      "function": "main",
+      "fingerprint": "sha256:b9da71e666d9498e351613367679869897d8298eaf958c308a9e7ba9e814353f",
+      "anchorLines": 2,
+      "targetLines": "1-2",
+      "class": "dispatch-case"
     },
     "reason": "main() dispatch case for the set-construction-iteration verb (U05, FR-2 item 8). main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handler it dispatches (handleSetConstructionIteration) is driven in-process by tests/integration/t250 (valid path). Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
     "expiry": "remove when main() gains an in-process argv driver"
@@ -3277,9 +3203,10 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "main",
-      "fingerprint": "sha256:5e798b6fb2abe1024fa73399b2033a97c98c7ba8de249e0a68de404bcf9b4a4b",
+      "fingerprint": "sha256:acb663282982152af7b16532e4cb95ab8cd3b2f6e8a34935ea116fa5986c2742",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "dispatch-case"
     },
     "reason": "Unknown-subcommand usage message string in main()'s default case — mirror-initial-create was appended to the existing single-line list (#1750). A spawn-only message-string row per spawn-blindspot-two-step (ii).",
     "expiry": "remove when main()'s argv dispatch is exported and driven in-process"
@@ -3473,10 +3400,10 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "handleMerge",
-      "fingerprint": "sha256:3a08aa26f38ad4b11e137287205877e93e0a763a1b1b3d6b5521bb5ee51a8ed0",
-      "anchorLines": 4,
-      "targetLines": "1-4"
+      "function": "handleSetConstructionIteration",
+      "fingerprint": "sha256:4cd7c0de9c7688ca419ca832d3a727643bfc4ac5dd4a65042ad7e6914ea17619",
+      "anchorLines": 2,
+      "targetLines": "1-2"
     },
     "reason": "Usage-error emit in handleSetConstructionIteration for the missing-argument branch (U05). error() is `never` (process.exit), so driving this arm in-process would terminate the test runner; it is exercised by the shipped-subprocess reject case in tests/integration/t250 (exit code + byte-identity asserted). Spawn-only error-exit row per spawn-blindspot-two-step (ii); the happy path is covered in-process by the same file's in-process handler drive.",
     "expiry": "remove if error() gains a test-injectable non-exiting seam"
@@ -3484,8 +3411,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "handleMerge",
-      "fingerprint": "sha256:e839dddea161d9859bd2d3b28da68bd59e469d3cf9de373ac73b9dcf48c329fb",
+      "function": "handleSetConstructionIteration",
+      "fingerprint": "sha256:d23633a2a9933adf92381373ce3e20f3e14776b1294aa5f561724161ec1d2c23",
       "anchorLines": 1,
       "targetLines": "1"
     },

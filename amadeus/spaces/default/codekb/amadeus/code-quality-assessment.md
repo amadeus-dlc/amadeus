@@ -1,5 +1,47 @@
 # コード品質評価
 
+## coverage 免除台帳の意味論が無検査 — 解決 fail-closed / 意味 fail-open の非対称（260811-allowlist-semantic-audit、履歴、observed `854692fd7`）
+
+**観測 ref**: すべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD）。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（34 commits）。正本は `re-scans/260811-allowlist-semantic-audit.md`。
+
+### 台帳の規模と成長（PROVEN、コマンド出力からの転記）
+
+| 指標 | 値 | 述語 |
+|---|---|---|
+| エントリ総数（observed） | **623** | `jq 'length' tests/.coverage-patch-allowlist.json` |
+| エントリ総数（base `ce3c3ccfd`） | **614** | `git show ce3c3ccfd:tests/.coverage-patch-allowlist.json \| jq 'length'` |
+| 対象ファイル数 | **106** | `jq -r '[.[].file] \| unique \| length' <台帳>` |
+| distinct な `reason` 文字列 | **310** | `jq -r '[.[].reason] \| unique \| length' <台帳>` |
+| 旧形式の絶対行ピン | **0** | `jq '[.[] \| select(.selector == null)] \| length' <台帳>` |
+| 単一行アンカー（`anchorLines == 1`） | **233**（37%） | `jq '[.[]\|select(.selector.anchorLines==1)]\|length' <台帳>` |
+
+Issue #1622 起票時の「約272件」、クロスレビュー時点（2026-07-28）の「300件」に対し observed は **623**。棚卸し対象は起票時の約 2.3 倍に膨張している。
+
+### 品質所見（PROVEN）
+
+1. **解決は fail-closed、意味は fail-open という非対称**。`resolveSemanticSelector`（`tests/coverage-patch-gate.ts:288-313`）はスコープ名の非一意（`:294-298`）と指紋の非一意（`:306-310`）を throw し、`runCheck` が exit 1 へ落とす（`:552`）。一方 `findStaleAllowlistEntries`（`:407-419`）は引数が `entries` と `lcov` のみで `reason` を受け取らず、判定は `hits.has(line)`（DA レコードの**存在**）だけ。免除の適用も `allowlisted`（`:421-426`）の**行番号包含**のみ。**免除の正当性を見る段はパイプラインのどこにも無い**。
+2. **PR #2127 の意味的セレクタ移行は転位を解消せず固定した**。指紋は「誤った行」を行シフトを跨いで正確に追従する。実測: `amadeus-election.ts` のエントリは Issue 報告時に `:317` へ解決していたが observed では `:417`（+100 行）で、指紋 `sha256:2d1d83f1...` は Issue 記載と同一。すなわち移行が消したのは「行シフト起因の stale」であって「意味の不一致」ではない。
+3. **確定転位 18 件**（`re-scans/260811-allowlist-semantic-audit.md` §4 の正本）。分布は `amadeus-state.ts` 6・`amadeus-orchestrate.ts` 3・`amadeus-graph.ts` 2・`amadeus-mirror-executor.ts` 2・`amadeus-election.ts` / `amadeus-runtime.ts` / `amadeus-learnings.ts` / `amadeus-utility.ts` / `tla-arm.ts` 各 1。うち 4 件は「type-only / runtime-erased」を主張しながら**実行文**へ解決しており（`amadeus-graph.ts:1711-1716` / `:1715-1720`、`amadeus-utility.ts:820-822`）、2 件は解決範囲に**コメント行**を含む（`amadeus-state.ts:5736-5739`、`amadeus-orchestrate.ts:944-951`）。
+4. **腐敗はエントリ単位で混在する**。同一ファイル・同一 `reason` 文字列の群の中でも一致と転位が並存する（`amadeus-state.ts` の telemetry reason は `:991` 一致 / `:916` 転位。`amadeus-graph.ts` の型 reason は `:1130` / `:1134` 一致 / `:1711-1720` 転位）。ファイル単位・reason 単位の一括処理では正しく捌けない。
+5. **反証不能な `reason` が 45 件存在する**。逐語「defensive, type-only, or spawned-boundary path」が **20 件**、「Residual defensive, invalid-input, replay, or process-boundary」が **25 件**。いずれも複数の可能性を `or` で並べており特定の構文クラスを主張しない。**どの機械述語でも真偽を決められない**構造であり、`reason` 非空という現行契約は満たすが監査可能性はゼロ。
+
+### ガード不在（反証確認済み、3 述語）
+
+- `git grep -nIE "semanticAudit|reasonMatches|auditAllowlistReasons"`（対象 `packages/` `scripts/` `tests/` `.github/` `plugins/` `docs/`）= **exit 1（0 hit）**
+- `tests/coverage-patch-gate.ts` の export 16 シンボルのうち `reason` を引数に取る関数 = **0 件**
+- t229 の 2 テストファイルで `reason` に触れる全行はフィクスチャ値生成か「非空」検査。**`reason` の内容を検査するテストは 0 件**
+
+→ **`reason` と実コードの意味整合を検査する機構は、リポジトリ内に存在しない。**
+
+### 検証面（failing-first テストの置き場、候補）
+
+- **AST 述語の決定的判定**: 構文クラスを主張する `reason`（type-only 76 / catch 32 / dispatch-usage 10、重複あり）に対し「解決先の全トークンが型位置にあるか」「解決先が `CatchClause` 内か」「解決先が `CaseClause` か」を `ts` で判定する（ゲートは既に `ts` を import 済み）。実測の転位 4 件（`amadeus-graph.ts` 2 / `amadeus-utility.ts` 1 / `amadeus-state.ts:961-964`）はこの述語で落ちる
+- **反証不能 reason の禁止**: 選言型 boilerplate 45 件を `parseAllowlist` の段で拒否する契約を置けば、以後の混入は構造的に止まる（既存 45 件の扱いは別裁定）
+
+### 品質上の限界（本 scan で測っていないこと）
+
+全数照合は未実施であり、確定 18 件は**下限**である。`findStaleAllowlistEntries` の実行結果（現行 stale 件数）は LCOV を要するため未測定。転位の双方向の実害（偽赤 / 偽緑の件数）も未定量。詳細は `re-scans/260811-allowlist-semantic-audit.md` § UNMEASURED。
+
 ## TLA+ receipt 経路の品質所見（260812-tla-proof-receipt、現在、observed `854692fd7`）
 
 **観測 ref**: 本節の file:line はすべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD）時点。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（距離 34）。正本は `re-scans/260812-tla-proof-receipt.md`。

@@ -1,5 +1,50 @@
 # アーキテクチャ
 
+## patch coverage ゲートの判定パイプラインと免除の適用段（260811-allowlist-semantic-audit、履歴、observed `854692fd7`）
+
+**観測 ref**: すべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（34 commits）。正本は `re-scans/260811-allowlist-semantic-audit.md`。
+
+### 消費者グラフ（全数、実測）
+
+`tests/.coverage-patch-allowlist.json` を**解釈する**実装は `tests/coverage-patch-gate.ts` の **1 箇所のみ**（述語 `grep -rn "coverage-patch-allowlist" . --exclude-dir=node_modules --exclude-dir=.git --exclude-dir=dist --exclude-dir=amadeus -l` = `tests/coverage-patch-gate.ts` と `tests/README.md` の 2 件、後者は文書）。CI 配線は `.github/workflows/ci.yml` の `Patch coverage gate` ステップ（`bun tests/coverage-patch-gate.ts --check`、`github.event_name == 'pull_request'` 限定）。
+
+### 判定パイプラインの段構成（`evaluatePatch` `:438-461` の実読）
+
+```
+diff の追加行（parseDiffAddedLines）
+  → LCOV に当該 file が在るか（無ければ skip）
+  → LCOV に当該 line の DA が在るか（h === undefined なら skip = 計測不能行）
+  → h > 0 なら covered
+  → allowlisted(allowlist, file, line) なら allowlistedCount
+  → いずれでもなければ violation（ゲート赤）
+```
+
+免除は**最終段**にのみ現れ、判定は `allowlisted`（`:421-426`）の**行番号包含**（`e.file === file && line >= e.start && line <= e.end`）だけである。
+
+### 2 つの信頼境界と、その非対称
+
+台帳には性質の異なる 2 つの契約が同居しており、observed ではその**片方だけ**が機械で守られている。
+
+| 契約 | 守る機構 | 向き |
+|---|---|---|
+| **セレクタが一意に解決すること** | `resolveSemanticSelector` `:288-313` — スコープ名の非一意（`:294-298`）・指紋の非一意（`:306-310`）で throw。ソース不在も throw（`:391`）。`runCheck` `:552` が exit 1 | **fail-closed** |
+| **範囲が測定可能行に当たること** | `findStaleAllowlistEntries` `:407-419` — DA レコードの存在検査 | fail-closed（存在ゼロで赤） |
+| **`reason` が解決先の実コードを説明していること** | **無し** | **fail-open**（無検査） |
+
+`findStaleAllowlistEntries` は引数が `entries` と `lcov` のみで `reason` を受け取らない。したがって「指紋は一意に解決し、範囲には測定可能行が在り、しかし `reason` は別の関数の別の分岐を説明している」という状態が、ゲートを green のまま通過する。
+
+### PR #2127 の移行が変えた面と変えなかった面
+
+PR #2127 は台帳を「絶対行番号ピン → 関数スコープ名 + ソース指紋」へ移行した（observed で旧形式 `lines` キーのエントリは **0 件**）。アーキテクチャ上の帰結:
+
+- **消えた失敗モード**: 行シフトによる stale 化。指紋は関数スコープ内を走査して一致点を探すため、対象行が上下へ移動しても追従する（`:301-305`）。
+- **消えなかった失敗モード**: 指紋が**誤った行から採取されている**場合、その誤りは指紋ごと固定され、以後シフトを跨いで正確に追従する。実測: `amadeus-election.ts` のエントリは Issue 報告時 `:317` → observed `:417`（+100 行）で、指紋は同一。
+- したがって移行は**転位の可視性を下げた**。行ピン時代は行ズレが stale として赤くなる経路があったが、意味的セレクタではそれも起きない。
+
+### 変更影響の直列化点としての台帳
+
+台帳は 106 ファイルへ 623 エントリを張る**横断的な結合点**であり、`packages/framework/core/tools/` の主要モジュールへの変更はほぼ必ず接触する（上位: `amadeus-orchestrate.ts` 63 / `amadeus-state.ts` 61 / `amadeus-quality-repair-runtime.ts` 19 / `amadeus-advisory-choice.ts` 18 / `amadeus-intent-completion.ts` 18 / `amadeus-utility.ts` 18）。区間 `ce3c3ccfd..854692fd7` でもゲート実装は無変更のまま台帳のみ `+109/−10`（614 → 623）で、**台帳だけが動き続ける**構造が続いている。
+
 ## receipt 信頼境界の二重欠陥（260812-tla-proof-receipt、現在、observed `854692fd7`）
 
 **観測 ref**: 本節の file:line はすべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD、`origin/main` 系譜）時点。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（HEAD の祖先のうち距離最小 = **34 commits**）。currency 根拠・全述語・全数列挙の正本は `re-scans/260812-tla-proof-receipt.md`。
