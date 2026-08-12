@@ -83,9 +83,24 @@ describe("amadeus-norm-metrics rank (cli spawn boundary)", () => {
     }
     expect(records).toBe(heads);
     expect(accepted + rejected).toBe(records);
-    expect(accepted).toBeGreaterThan(0);
-    expect(rejected).toBeGreaterThan(0);
     expect(newEcodes).toBe(oldEcodes);
+  });
+
+  // Re-baselined by #2921 after the norm distillation in #2919: the shipped memory layer
+  // no longer carries GoA vote traces (they live in the election store and git history),
+  // so the live corpus can legitimately hold zero records. The "both classification
+  // branches are reachable" half of the old assertion is kept here over a corpus the test
+  // owns, so it stays proven regardless of how the live corpus is populated.
+  test("every extracted record is classified as accepted or rejected", () => {
+    const body = [
+      "GoA[E-ACCEPT]: 1x4 2x0 3x1 4x0 5x0 6x2 7x0 8x0",
+      "GoA[E-REJECT]: 1x4 2x0 3x1",
+    ].join("\n\n");
+    const extracted = extractGoaRecords(body);
+    expect(extracted.length).toBe(scanGoaHeads(body).offsets.length);
+    const verdicts = extracted.map((record) => parseGoaLine(record).ok);
+    expect(verdicts).toContain(true);
+    expect(verdicts).toContain(false);
   });
 
   test("rank (table form) exits 0 and prints the loud NOT-COLLECTED lines", () => {
