@@ -1,6 +1,6 @@
 # アーキテクチャ
 
-## patch coverage ゲートの判定パイプラインと免除の適用段（260811-allowlist-semantic-audit、現在、observed `854692fd7`）
+## patch coverage ゲートの判定パイプラインと免除の適用段（260811-allowlist-semantic-audit、履歴、observed `854692fd7`）
 
 **観測 ref**: すべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（34 commits）。正本は `re-scans/260811-allowlist-semantic-audit.md`。
 
@@ -44,6 +44,182 @@ PR #2127 は台帳を「絶対行番号ピン → 関数スコープ名 + ソー
 ### 変更影響の直列化点としての台帳
 
 台帳は 106 ファイルへ 623 エントリを張る**横断的な結合点**であり、`packages/framework/core/tools/` の主要モジュールへの変更はほぼ必ず接触する（上位: `amadeus-orchestrate.ts` 63 / `amadeus-state.ts` 61 / `amadeus-quality-repair-runtime.ts` 19 / `amadeus-advisory-choice.ts` 18 / `amadeus-intent-completion.ts` 18 / `amadeus-utility.ts` 18）。区間 `ce3c3ccfd..854692fd7` でもゲート実装は無変更のまま台帳のみ `+109/−10`（614 → 623）で、**台帳だけが動き続ける**構造が続いている。
+
+## receipt 信頼境界の二重欠陥（260812-tla-proof-receipt、現在、observed `854692fd7`）
+
+**観測 ref**: 本節の file:line はすべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD、`origin/main` 系譜）時点。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（HEAD の祖先のうち距離最小 = **34 commits**）。currency 根拠・全述語・全数列挙の正本は `re-scans/260812-tla-proof-receipt.md`。
+
+**Focus**: [Issue #2913](https://github.com/amadeus-dlc/amadeus/issues/2913)（ミラー #2917）— `tla-authoring` ステージの proof が receipt 検証で止まり、TLC 実行に到達しない。クロスレビュー 2 名成立済み。
+
+### 中核: 「レジストリ照合器」を「自己完結 receipt 検証器」として使っている
+
+`validateVerifiedTlaModelReceipt`（`plugins/formal-model-check/tools/tla-model-receipt.ts:142`）は、入力 receipt を **登録済み model-map と突き合わせる照合器**である。検証の基準値 `expected` は、引数からではなく loader が返す登録済みソースから作られる（`:154` `const loaded = loadVerifiedTlaSources();` / `:156` `const selected = selectVerifiedModel(loaded.value, input.modelName);` / `:158` `const expected = createVerifiedTlaModelReceipt(selected.value);`）。
+
+一方 referee は、**登録されていないディスク上のバイト列**から receipt を作る（`tla-referee-toolchain.ts:158` `const receipt = createVerifiedTlaModelReceipt(described.value.source);`）。この receipt は登録済み model-map に存在しないため、照合器は構造的に「一致する登録モデルがない」として拒否する。すなわち**生成器と検証器の契約が食い違っている**のであって、どちらか一方の実装バグではない。
+
+### 欠陥は 2 つあり、独立している
+
+| ID | 欠陥 | 所在 | 効果 |
+|---|---|---|---|
+| **D1** | 検証器が model-map に直接結合している（DI seam なし） | `tla-model-receipt.ts:154` / `:156` | 未登録モデルの receipt は `verified model is unavailable: <name>`（`:157`）で拒否 |
+| **D2** | identity のエンコーディングが producer 間で分裂している | `tla-referee-toolchain.ts:47` vs `tla-model-loader-internal.ts:279` / `fs-tlc-toolchain.ts:731` | 登録済みモデルでも identity 比較が不一致になり `receipt differs from the selected verified model`（`:169`）で拒否 |
+
+**D2 の内訳**（3 サイトのうち 2 形式が併存）:
+
+| サイト | `canonicalIdentity` への入力 | file:line |
+|---|---|---|
+| referee | **オブジェクト** `{ bytes: <base64> }` | `tla-referee-toolchain.ts:47` `return canonicalIdentity({ bytes: Buffer.from(bytes).toString("base64") }, domain).sha256;` |
+| loader | **デコード済み文字列** | `tla-model-loader-internal.ts:279` `canonicalIdentity(source, domain).sha256` |
+| toolchain のバイト照合 | **デコード済み文字列** | `fs-tlc-toolchain.ts:731` `if (canonicalIdentity(source, domain).sha256 !== expectedIdentity) {` |
+
+分裂が検出されないまま共存できる理由は、`createVerifiedTlaModelReceipt`（`tla-model-receipt.ts:89-130`）が **identity を再計算せず呼び出し元の値をコピーする**ことにある（`:104-112` `moduleBytesIdentity: source.moduleIdentity,` / `cfgBytesIdentity: source.cfgIdentity,` / `auxIdentities.map(...)`）。エンコーディングは receipt 構築器ではなく `VerifiedModelSource` の**生産者**が決めるため、referee 経路と loader 経路で別々の形式がそのまま receipt に載る。
+
+**D2 は D1 の修正の前提条件である。** 現在のバイト照合は loader 形式どうしの比較で自己整合しているが（`verifyPlannedModelSources` が `model.value.moduleBytesIdentity` を `readVerifiedSourceBytes` へ渡す — `fs-tlc-toolchain.ts:1645` / `:1651`、補助モジュールは `:1777`。`model.value` は `tla-model-receipt.ts:177` `...expected.value` 由来 = loader 形式）、D1 だけを直して自己完結 receipt 経路を通すと、referee 自身の object 形式 identity が同じバイト照合へ渡り、`MODEL_RECEIPT` の代わりに `SOURCE_IDENTITY` で落ちる。失敗が 1 層下へ移動するだけになる。
+
+### `validateModelCheckReceipt` の消費者は 2 つある
+
+片方だけを直しても失敗は解消せず、発生箇所が移動する。
+
+| 消費者 | 段階 | 失敗の出方 |
+|---|---|---|
+| `fs-tlc-toolchain.ts:1641` `const model = validateModelCheckReceipt(input.modelReceipt);`（`verifyPlannedModelSources`、宣言 `:1635`） | **準備段**（TLC 実行前） | `:1643` `toolchainAbort("PreparationError", "MODEL_RECEIPT", model.error.message);` — #2913 が現に発火している箇所 |
+| `tlc-toolchain.ts:647` `const model = validateModelCheckReceipt(input.modelReceipt);`（`parseTlcOutput174`） | **出力解析段**（TLC 実行完了後） | `GRAMMAR` `TLC output model receipt is invalid: ...`。準備段で止まる現状では**到達しない**が、同じ model-map 依存を持つ第 2 の実例 |
+
+```mermaid
+flowchart TD
+    Referee["referee describeMutant<br/>tla-referee-toolchain.ts:47<br/>object form identity"] --> Ctor["createVerifiedTlaModelReceipt<br/>tla-model-receipt.ts:104-112<br/>copies identity, no recompute"]
+    Loader["loadVerifiedTlaSources<br/>tla-model-loader-internal.ts:279<br/>string form identity"] --> Ctor
+    Ctor --> Validator["validateVerifiedTlaModelReceipt<br/>tla-model-receipt.ts:142"]
+    Loader -->|"D1: hard call :154 / :156"| Validator
+    Validator -->|"MODEL_RECEIPT"| Prep["fs-tlc-toolchain.ts:1641 preparation"]
+    Validator -->|"GRAMMAR"| Parse["tlc-toolchain.ts:647 output parse"]
+    Prep --> ByteCheck["readVerifiedSourceBytes<br/>fs-tlc-toolchain.ts:731<br/>string form compare"]
+```
+<!-- Text fallback: referee(object形式) と loader(string形式) の双方が createVerifiedTlaModelReceipt へ流れ込むが、構築器は identity を再計算せずコピーする(D2)。検証器は loader を直接呼んで基準値を作る(D1)。検証器の下流には準備段(fs-tlc-toolchain.ts:1641)と出力解析段(tlc-toolchain.ts:647)の 2 消費者があり、さらに準備段の先には string 形式のバイト照合(:731)がある。 -->
+
+### loader 内部 seam は「能力の欠如」ではなく「方針の禁止」
+
+`loadVerifiedTlaSourcesInternal`（`tla-model-loader-internal.ts:463`）の直上コメント `:461-462` は逐語で `// Internal/test-only seam. Production callers must use the no-argument wrapper` / `// in tla-model-loader.ts so runtime input cannot select a root or filesystem.` である。ただしこの seam は **root を選択する能力を実際に持つ**（`findRepositoryRoot` `:151-168` が `moduleUrl` から `.git` + `package.json` を持つ最初のディレクトリまで遡る）。`tests/integration/t403-tla-loader-generalization.test.ts:94-100` は合成ワークスペースから fixture モデルを読ませるためにこの能力を使っている。
+
+したがって `:461-462` は**方針上の禁止**であって能力上の制約ではない。設計段でこの区別を明示しておかないと、「seam を開ければ簡単に直る」という再発見が起きる。
+
+## PR 収束ゲートのアーキテクチャと bypass 経路（260811-pr-convergence-gate、履歴、observed `854692fd7`）
+
+### System Overview
+
+Amadeus は単一リポジトリから複数ハーネス向け配布物を生成する、layered modular monolith 型の CLI フレームワークである。source of truth は `packages/framework/core/` と `packages/framework/harness/<name>/` にあり、plugin は `plugins/<name>/` から compose される。workflow state、audit、stage artifacts は `amadeus/spaces/<space>/` 配下へ永続化される。
+
+Issue #2838 の変更面は4つの境界に分かれる。
+
+1. **Selection boundary** — host config と compiled scope grid が self-* workflow に `pr-convergence` stage を含める。
+2. **Delivery boundary** — plugin CLI が `gh` process boundary を通じて PR を作成・観測する。
+3. **Evidence boundary** — CLI が per-unit `code-generation/pr-convergence-report.md` を生成する。
+4. **Completion boundary** — orchestrator と state machine が required artifacts と blocking sensors を検査して stage/workflow completion を許可する。
+
+現行実装は 1 と通常 engine path の 4 を部分的に閉じるが、2→3→4 を不可偽造の一連の証拠として結合していない。
+
+### Architectural Style and Boundaries
+
+- **Core layer**: graph compile、scope binding、orchestration、state transition、artifact/sensor guards。plugin 固有の GitHub 意味論を import しない。
+- **Plugin layer**: GitHub I/O、PR lifecycle、review ledger、convergence predicate、report rendering、provenance parsingを所有する。
+- **Harness layer**: core/plugin の同じ stage graph と tools を各 AI host の filesystem convention へ投影する。
+- **Record layer**: Intent state、audit、per-unit artifacts を append/read する永続化境界。
+- **External adapter**: `gh` CLI を shell なし argv で spawn し、GitHub GraphQL/PR create を呼び出す。
+
+この依存方向は妥当である。問題は component boundary ではなく、report writer と completion verifier の contract が shape validation に留まり、execution provenance を所有する component が存在しない点にある。
+
+### Component Relationships
+
+```mermaid
+flowchart LR
+  HC["Host config\namadeus/config.json"] --> GC["Graph compiler\namadeus-graph.ts"]
+  PM["Plugin manifest\nplugin.json"] --> PC["Plugin compose\namadeus-plugin.ts"]
+  PC --> GC
+  GC --> SG["Compiled stage graph\nand scope grid"]
+  SG --> OR["Orchestrator\namadeus-orchestrate.ts"]
+  OR --> CLI["PR convergence CLI"]
+  CLI --> GH["gh adapter / GitHub"]
+  CLI --> RP["pr-convergence-report.md"]
+  RP --> AG["Artifact coverage guard"]
+  RP --> FS["Report format sensor"]
+  FS -. "advisory only" .-> BG["Blocking sensor guard"]
+  AG --> ST["State completion chokepoint"]
+  BG --> ST
+```
+
+テキスト代替: host config と plugin manifest を graph compiler が統合し、orchestrator が compiled plan に従って plugin CLI を起動する。CLI は GitHub を読み、report を書く。report は artifact guard と format sensor に読まれるが、format sensor は advisory のため blocking guard へ実効的に接続されず、state completion は report の真正性を保証しない。
+
+### Interaction Diagrams
+
+#### 正常な convergence report 生成
+
+```mermaid
+sequenceDiagram
+  participant O as Orchestrator
+  participant C as pr-convergence CLI
+  participant G as gh/GitHub
+  participant R as Record filesystem
+  participant S as Format sensor
+  participant M as State machine
+
+  O->>C: status --repo --pr --unit --record
+  C->>G: GraphQL PR snapshot
+  G-->>C: title/body/state/merge/check data
+  C->>G: paged review threads
+  G-->>C: complete thread set
+  C-->>O: converged or violations
+  O->>C: report --repo --pr --unit --record
+  C->>G: re-evaluate snapshot and threads
+  G-->>C: current PR facts
+  C->>R: write canonical Markdown report
+  C-->>O: report path
+  O->>S: manual fire on report path
+  S->>R: read shape
+  S-->>O: pass/fail data, exit 0
+  O->>M: completion request
+  M->>R: check artifact existence
+  M-->>O: completion allowed or refused
+```
+
+テキスト代替: status の後、report verb は GitHub を再評価して Markdown を書く。orchestrator は sensor を手動 fire し、最後に state completion を要求する。現状、sensor failure は data でしかなく、state machine は CLI が report を書いたという receipt を検証しない。
+
+#### 手書き report bypass
+
+```mermaid
+sequenceDiagram
+  participant W as Arbitrary writer
+  participant R as Record filesystem
+  participant F as Format sensor
+  participant A as Artifact guard
+  participant M as State machine
+
+  W->>R: copy or hand-write canonical-looking report
+  F->>R: parse required fields
+  R-->>F: syntactically valid content
+  F-->>W: pass, or no fire at all
+  A->>R: check required artifact path
+  R-->>A: file exists
+  A-->>M: covered on normal engine path
+  M->>R: direct guard checks any declared artifact exists
+  M-->>W: completion may proceed
+```
+
+テキスト代替: 任意の writer が正規 field を模倣すると、format sensor は writer identity を区別できない。sensor が未実行でも blocking precondition はなく、artifact guard は path existence を見る。direct state guard は全成果物ではなく少なくとも1件の存在で通り得るため、bypass が残る。
+
+### Key Design Decisions Observed
+
+- plugin stage は `scopes: []` を維持し、host-owned `plugin.scope-bindings` で self-* にだけ加算する。非 self scope の opt-in を壊さない可逆な設計である。
+- report artifact は `pr-convergence` stage の own produce ではなく、plugin seam で先行 `code-generation.produces` に overlay される。既存 per-unit coverage を再利用できる一方、責任の所在が stage と artifact owner で分離する。
+- plugin は core を import せず、`gh` と `amadeus-log` を process boundary で呼ぶ。配布独立性を守るが、attestation verification をどこに置くか明示的な契約が必要になる。
+- GitHub snapshot は title/body/state/merge/check を1 queryで取得し、Intent/Bolt/Unit provenance を同じ snapshot から検証する。PR content provenance は閉じているが report writer provenance は別問題として未解決である。
+
+### Architectural Risks
+
+- **BLOCKER**: report に execution receipt、content digest、audit identity、signature がなく、正規 content の copy/tamper/replay を識別できない。
+- **BLOCKER**: sensor manifest は `default_severity: advisory`、stage は `sensors: []`、手動 fire、failure exit 0 であり completion boundary に接続されていない。
+- **BLOCKER**: direct state completion guard は declared artifacts の全件ではなく最低1件の存在を検査するため、orchestrator の per-unit all-artifact coverage と強度が一致しない。
+- **FOLLOW-UP**: stage `produces: []` / `requires_stage: []` と code-generation overlay の分離は、責任・順序・resume semantics を下流設計で明文化する必要がある。
+- **FOLLOW-UP**: `create` は `--head` を gh に渡すだけで、clean branch、local commit、push、remote head SHA 一致を検証しない。
 
 ## テスト時間係数の未接続境界（260810-test-time-factor、履歴、observed `ce3c3ccfd`）
 

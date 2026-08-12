@@ -20,10 +20,10 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 622,
+    "total": 623,
     "enumeratedByClass": {
       "function": 352,
-      "audit": 91,
+      "audit": 92,
       "scope": 15,
       "stage": 32,
       "hook": 15,
@@ -41,6 +41,13 @@
     }
   },
   "units": [
+    {
+      "unitClass": "audit",
+      "unitId": "ARTIFACT_ATTESTED",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
     {
       "unitClass": "audit",
       "unitId": "ARTIFACT_CREATED",

@@ -1,0 +1,53 @@
+{
+  "declaredIdentity": "sha256:4c6bf2d4791d00bbae9474f1c2e62c334182dc878d23a6e9b476930610f0b988",
+  "notes": "Reviewer FOLLOW-UP: FR-5 names four completion choke points (per-Unit coverage, approve, advance, finalize/complete-workflow); the model aggregates them into the two guards CodeGenerationGuarded and WorkflowGuarded, because every choke point enforces the same required-all predicate and a separate variable per choke point adds no distinct safety behaviour.",
+  "items": [
+    {
+      "reductionItem": "Two alternating PR head epochs",
+      "preservedMeaning": "A new head differs from the report-bound head and invalidates its evidence; more than two concrete SHA values do not add a distinct safety behavior.",
+      "sourceSubjects": ["FR-2", "FR-3"]
+    },
+    {
+      "reductionItem": "Boolean required-all artifact completion",
+      "preservedMeaning": "The unsafe distinction is whether every declared artifact is present, so the missing-member identity is abstracted into a single false value.",
+      "sourceSubjects": ["FR-5"]
+    }
+  ],
+  "injections": {
+    "TypeOK": {
+      "witness": "head = 0",
+      "fallingMutation": {
+        "find": "  /\\ head \\in {0, 1}",
+        "replace": "  /\\ head \\in {1}"
+      }
+    },
+    "EvidenceCurrentHead": {
+      "witness": "attested",
+      "fallingMutation": {
+        "find": "EvidenceCurrentHead ==\n  (attested \\/ sensorPassed) => reportHead = head",
+        "replace": "EvidenceCurrentHead ==\n  (attested \\/ sensorPassed) => reportHead # head"
+      }
+    },
+    "SensorRequiresAttestation": {
+      "witness": "sensorPassed",
+      "fallingMutation": {
+        "find": "SensorRequiresAttestation ==\n  sensorPassed => attested",
+        "replace": "SensorRequiresAttestation ==\n  sensorPassed => ~attested"
+      }
+    },
+    "CodeGenerationGuarded": {
+      "witness": "codeGenerationDone",
+      "fallingMutation": {
+        "find": "CodeGenerationGuarded ==\n  codeGenerationDone =>\n    /\\ reportHead = head",
+        "replace": "CodeGenerationGuarded ==\n  codeGenerationDone =>\n    /\\ reportHead # head"
+      }
+    },
+    "WorkflowGuarded": {
+      "witness": "workflowDone",
+      "fallingMutation": {
+        "find": "WorkflowGuarded ==\n  workflowDone =>\n    /\\ reportHead = head",
+        "replace": "WorkflowGuarded ==\n  workflowDone =>\n    /\\ reportHead # head"
+      }
+    }
+  }
+}

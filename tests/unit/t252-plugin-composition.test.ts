@@ -464,10 +464,9 @@ describe("drop", () => {
     expect(backend.auditCount()).toBe(1); // only the compose audit, no drop audit
   });
 
-  test("a non-produces seam contribution to a real frontmatter stage is rejected, not thrown (compose)", () => {
-    // The host file is a REAL stage document (frontmatter bridge path). The
-    // bridge only rewrites `produces`, so a sensors contribution must surface
-    // as a typed rejection from inspectPlugin — never an uncaught exception.
+  test("a sensors seam contribution to a real frontmatter stage is accepted (compose)", () => {
+    // The host file is a REAL stage document (frontmatter bridge path). Both
+    // `produces` and `sensors` are writable seams, so the plugin is ready.
     const realCg = Buffer.from(
       "---\nslug: code-generation\nproduces:\n  - code-summary\nsensors:\n  - linter\n---\n\n# CG\n",
       "utf-8",
@@ -475,9 +474,7 @@ describe("drop", () => {
     const cg = stage("code-generation", "cg.md", { sensors: ["linter"], produces: ["code-summary"] });
     const host = makeHost({ files: new Map([["cg.md", realCg], ["SKILL.md", Buffer.from("# SKILL\n<!-- ANCHOR -->\ntail\n", "utf-8")]]), stages: new Map([[cg.slug, cg]]) });
     const result = inspectPlugin(cleanPlugin(), host);
-    expect(result.kind).toBe("rejected");
-    if (result.kind !== "rejected") return;
-    expect(result.errors.some((e) => e.kind === "clobber" && e.locus === "cg.md")).toBe(true);
+    expect(result.kind).toBe("ready");
   });
 
   test("drop of a drifted real frontmatter stage is a clobber rejection, not a throw", () => {

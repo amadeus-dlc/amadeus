@@ -1,6 +1,22 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260811-allowlist-semantic-audit）
+## 実行メタデータ（現在: 260812-tla-proof-receipt）
+
+- Date: `2026-08-12`
+- Base commit: `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（`reverse-engineering-timestamp.md` + `re-scans/*.md` の全 observed のうち **HEAD の祖先で距離最小**。`git merge-base --is-ancestor ce3c3ccfd HEAD` = exit 0、`git rev-list --count ce3c3ccfd..HEAD` = **34 commits / 734 files**。次に近い祖先は 50 / 53 / 55 / 63。`cid:reverse-engineering:rescan-base-ancestry`）
+- Observed commit: `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD、`origin/main` 系譜。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、build `bun`
+- Focus: [Issue #2913](https://github.com/amadeus-dlc/amadeus/issues/2913)（ミラー #2917、bug / P1 / S2-CRITICAL）— TLA+ の author-new した proof と model-map 登録が循環し、実 TLC を実行できない
+- Scan mode: **xrev differential scan**（`cid:reverse-engineering:c1-xrev-scan-mode` / `c1-xrev-single-issue`）— クロスレビュー 2 名（run `xrev-2913-20260812`、reviewer-1 / reviewer-2 とも **CONFIRMED_WITH_REFINEMENTS**、target-sha `3fc024e44`）の verdict を Developer scan の一次入力とし、Architect が observed 断面の verbatim 実読で二重化
+- 行番号引用の currency（**実測の記録であり免除の主張ではない**）: レビュー target SHA `3fc024e44` ≠ observed のため SHA 一致による免除は不成立。測定区間を **`review..observed` に固定**した `git diff --name-only 3fc024e44 854692fd7 -- <被引用 15 パス>` は**空出力**（区間全体は 87 files）→ 行番号再解決は構造的 no-op（`cid:reverse-engineering:E-XBB-RE-S13-c2`）。加えて `base..observed` でも患部は無変更（plugin 内変更 9 files はいずれも被引用外、`tests/formal-verif/**` は変更 0）。起票・レビューの行番号には **off-by-one 4 件**（`fs-tlc-toolchain.ts` 検証呼び出し `:1640`→`:1641` / 中断 `:1642`→`:1643`、`tla-model-receipt.ts` 検証器宣言 `:143`→`:142` / identity 比較 `:159`→`:161-169`、`tla-model-loader-internal.ts` seam コメント `:460-463`→`:461-462`）があり、いずれも採番誤りで行シフト起因ではない。訂正後が正本
+- 中核知見: 欠陥は**独立した 2 つ**である。**D1** = 検証器 `validateVerifiedTlaModelReceipt`（`tla-model-receipt.ts:142`）が登録済み model-map へ直接結合（`:154` / `:156`）し、未登録モデルの receipt を `:157` で拒否する。**D2** = identity のエンコーディング分裂 — referee は object `{bytes: base64}`（`tla-referee-toolchain.ts:47`）、loader とバイト照合は文字列（`tla-model-loader-internal.ts:279` / `fs-tlc-toolchain.ts:731`）。`createVerifiedTlaModelReceipt` が identity を再計算せずコピーする（`:104-112`）ため分裂が無検出で共存する。**D2 は D1 修正の前提条件**（D1 のみ直すと失敗が `MODEL_RECEIPT` から `SOURCE_IDENTITY` へ 1 層下がるだけ）。さらに `validateModelCheckReceipt` の消費者は **2 つ**あり（準備段 `fs-tlc-toolchain.ts:1641`、出力解析段 `tlc-toolchain.ts:647`）、片方だけの修正は失敗を移動させる。loader 消費者 4 件中 3 件は DI seam を持ち、検証器だけが持たない（S1）。loader 内部 seam の禁止（`:461-462`）は**方針であって能力の制約ではない**（root 選択能力は実在、`t403:94-100` が使用）。`tests/formal-verif/**` は `run-tests.ts:750-759` のスコープ固定と `.test.ts` フィルタにより**構造的に CI 除外**で、修正すべき除外リストは存在しない。`t447:568-651` は TLC 到達前の失敗経路とバージョン行のみを覆い、整形式モデルを `preparePlanned` へ通すテストは 0 件
+- Verification: git 状態変更・GitHub 書込・`bun run build`・engine/state 操作は**すべてゼロ**。書き込みは codekb 配下のみ
+- Updated artifacts: `architecture.md`（新現在節「receipt 信頼境界の二重欠陥」— 照合器と自己完結検証器の契約不一致、D1 / D2、消費者 2 系統、policy-vs-capability）/ `component-inventory.md`（新現在節 — receipt 生成器・検証器・消費者の棚卸しと loader 消費者の seam 有無表）/ `code-quality-assessment.md`（新現在節 — seam 非対称 S1、型で守られないエンコーディング契約、t447 の成功経路欠落、`tests/formal-verif/**` の構造的 CI 除外）/ `api-documentation.md`（新現在節 — `createVerifiedTlaModelReceipt` / `validateVerifiedTlaModelReceipt` / `canonicalIdentity` / 内部 seam の入力ドメイン）。直前の現在節は本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）
+- Reviewed-and-unchanged artifacts（**沈黙のスキップではなく、レビュー済みで無変更**）: `code-structure.md`（モジュールの移動も新規ファイルもなく、欠陥は既存モジュール間の関係にのみ存在）/ `dependencies.md`（依存エッジの追加削除なし。referee は既に receipt モジュールを import している）/ `technology-stack.md`（TLC / JDK のピンは本欠陥と無関係）/ `business-overview.md`（ワークフロー停止の業務影響は Issue と record に既述で、ここへ書くと informing でなく duplicating になる — Developer scan が judgement call として提起した件を Architect が非更新で裁定）
+- Per-intent record: `re-scans/260812-tla-proof-receipt.md`（述語 P0〜P5、引用 currency 表、D1 / D2、修正面の全数列挙 (a)〜(d)、同根スイープ S1〜S3、テストピン 5 files、CI 配線、仮説 H1〜H3 と未測定 3 件の正本）
+- 適用範囲外（明示）: 修正の設計・選定（D1 の解の形、D2 のエンコーディング統一方向、probe の CI 配線可否、`tests/formal-verif/**` 全体の扱い）は requirements-analysis / application-design の所掌
+
+## 実行メタデータ（履歴: 260811-allowlist-semantic-audit）
 
 - Date: `2026-08-11`
 - Base commit: `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（直前 intent `260810-test-time-factor` の observed。`git merge-base --is-ancestor ce3c3ccfdb3f93e619a081386a70c8185b84f1db 854692fd7a11b124236b0427fe3d59e2fe6bf785` = **exit 0**、`git rev-list --count ce3c3ccfd..854692fd7` = **34 commits**。`cid:reverse-engineering:rescan-base-ancestry`）
@@ -18,7 +34,21 @@
 - Per-intent record: `re-scans/260811-allowlist-semantic-audit.md`（述語 P0〜P7、scan mode 選定根拠、確定転位 18 件の一覧、候補 51 件と未判定 43 件の扱い、Developer scan への訂正 5 件、UNMEASURED-1〜6 の正本）
 - 適用範囲外（明示）: 転位 18 件の是正方法の選定、全数照合の進め方と工数見積り、機械ガードの設置先と CI 配線位置、選言型 `reason` 45 件の可否方針、#1622 と #2162 / #2135 / #2134 / #2216 / #2112 / #2133 の統合・分離の裁定はいずれも requirements-analysis / application-design の所掌
 
-## 実行メタデータ（履歴: 260810-test-time-factor）
+## 実行メタデータ（履歴、2026-08-11: 260811-pr-convergence-gate）
+
+- Date: `2026-08-11`
+- Observed commit: `854692fd7`
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`
+- Depth: `Minimal`
+- Focus: [Issue #2838](https://github.com/amadeus-dlc/amadeus/issues/2838) — 4 self-* scope の mandatory PR convergence と手書き report bypass の fail-closed 化
+- Result: scope/stage wiring、per-unit engine coverage、PR content provenance は実装済み。report attestation、blocking sensor wiring、local delivery prerequisites、direct completion all-required guard、要求 matrix 回帰は未実装であり、Issue は未解決。
+- Scan record: `re-scans/260811-pr-convergence-gate.md`
+
+### Freshness
+
+このファイルは repo 単位の共有 freshness pointer であり、intent 固有の差分 base は scan record に記録する。共有9成果物は last-writer-wins derived cache として本 scan の current snapshot に更新した。
+
+## 260810-test-time-factor
 
 - Date: `2026-08-10T14:26:50Z`
 - Base commit: `7b9391be2db4fad791d637293ea442d5a1462bac`

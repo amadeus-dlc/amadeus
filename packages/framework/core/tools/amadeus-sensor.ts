@@ -31,7 +31,7 @@
 // always emit a paired terminal row.
 
 import { spawnSync } from "node:child_process";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, resolve as pathResolve, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -98,6 +98,18 @@ interface FireContext {
 	scriptArgs: string[]; // CLI args appended to the script invocation
 	scriptAbsPath: string; // sibling-resolved absolute path
 	timeoutMs: number;
+	outputDigest: string;
+}
+
+export function digestFile(path: string): string {
+	try {
+		return `sha256:${createHash("sha256").update(readFileSync(path)).digest("hex")}`;
+	} catch {
+		// The path is validated before this point, but it can disappear in the
+		// gap before hashing. Preserve dispatcher fail-closed bookkeeping without
+		// leaking a filesystem exception across the audit boundary.
+		return "missing";
+	}
 }
 
 type SensorTraceContext = {
@@ -203,11 +215,10 @@ export { stripProjectDir };
 
 // --- Sibling-script resolver ---
 //
-// Manifest `command:` is `bun <harness>/tools/amadeus-sensor-<id>.ts`. The
-// dispatcher extracts the .ts basename and resolves it next to itself.
-// This decouples script discovery from cwd — works in tests where
-// projectDir doesn't carry a .claude/tools/ tree, AND in production where
-// it does. Sibling resolution mirrors amadeus-bolt.ts:84.
+// Manifest `command:` is either a core sibling under `<harness>/tools/` or a
+// plugin-owned script under `<harness>/plugins/`. Preserve the latter path;
+// reducing every command to its basename incorrectly searches core tools.
+// Resolution remains independent of cwd and mirrors amadeus-bolt.ts:84.
 //
 // AMADEUS_SENSOR_SCRIPT_DIR overrides the resolution directory — the script
 // seam mirroring AMADEUS_SENSORS_DIR for manifests. Tests that exercise stub
@@ -216,7 +227,7 @@ export { stripProjectDir };
 // version-controlled artifact on a crashed run and makes concurrent test
 // files race on a shared directory). Unset in production → sibling resolution
 // against __FILE_DIR, exactly as before.
-function resolveScriptPath(command: string): string {
+export function resolveScriptPath(command: string): string {
 	const tokens = command.trim().split(/\s+/);
 	// Find the first .ts token (drops the "bun" prefix or any flags).
 	const tsToken = tokens.find((t) => t.endsWith(".ts"));
@@ -227,9 +238,21 @@ function resolveScriptPath(command: string): string {
 	// is always defined — indexed access keeps the basename typed as
 	// string without a non-null assertion.
 	const parts = tsToken.split("/");
-	const basename = parts[parts.length - 1];
-	const scriptDir = process.env.AMADEUS_SENSOR_SCRIPT_DIR ?? __FILE_DIR;
-	return join(scriptDir, basename);
+	const scriptBasename = parts[parts.length - 1];
+	const scriptDirOverride = process.env.AMADEUS_SENSOR_SCRIPT_DIR;
+	if (scriptDirOverride !== undefined) {
+		return join(scriptDirOverride, scriptBasename);
+	}
+	const harnessMarker = "{{HARNESS_DIR}}/";
+	if (tsToken.startsWith(harnessMarker)) {
+		return pathResolve(__FILE_DIR, "..", tsToken.slice(harnessMarker.length));
+	}
+	const harnessRoot = pathResolve(__FILE_DIR, "..");
+	const projectedHarnessPrefix = `${basename(harnessRoot)}/`;
+	if (tsToken.startsWith(projectedHarnessPrefix)) {
+		return pathResolve(harnessRoot, "..", tsToken);
+	}
+	return join(__FILE_DIR, scriptBasename);
 }
 
 // --- Fire id ---
@@ -518,6 +541,7 @@ export async function handleFire(args: string[], projectDirArg?: string): Promis
 		scriptArgs,
 		scriptAbsPath,
 		timeoutMs,
+		outputDigest: digestFile(outputPath),
 	};
 
 	// --- 4. Lock window A — emit SENSOR_FIRED ---
@@ -532,6 +556,7 @@ export async function handleFire(args: string[], projectDirArg?: string): Promis
 				"Sensor ID": id,
 				"Stage slug": stageSlug,
 				"Output path": relativizePath(outputPath, projectDir),
+				"Output digest": ctx.outputDigest,
 			},
 			projectDir,
 		);
@@ -831,6 +856,7 @@ function emitTerminal(
 		"Sensor ID": id,
 		"Stage slug": stageSlug,
 		"Output path": relativizePath(outputPath, projectDir),
+		"Output digest": ctx.outputDigest,
 	};
 
 	if (outcome.kind === "passed") {

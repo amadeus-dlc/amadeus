@@ -116,16 +116,20 @@ describe("t531 fixture falling-proof — an injected harness literal is flagged"
   });
 });
 
-// The pr-convergence.md's own tool-path line, as the real projector emits it
-// for one harness. `undefined` when the artifact or the line is missing —
-// callers assert both are present rather than crashing on a bad index.
+// The sensor manifest's command line, as the real projector emits it for one
+// harness. `undefined` when the artifact or line is missing — callers assert
+// both are present rather than crashing on a bad index.
 function projectedSensorLine(plugin: PluginSource, harness: PackageHarness): string | undefined {
   const artifacts = buildPluginProjection(plugin, harness).artifacts;
-  const artifact = artifacts.find((a) => a.relativePath === "plugins/pr-convergence/stages/pr-convergence.md");
+  const artifact = artifacts.find(
+    (a) =>
+      a.relativePath ===
+      "plugins/pr-convergence/sensors/amadeus-pr-convergence-report-format.md",
+  );
   return artifact?.bytes
     .toString("utf8")
     .split("\n")
-    .find((l) => l.includes("amadeus-sensor-pr-convergence-report-format.ts"));
+    .find((l) => l.startsWith("command:"));
 }
 
 describe("t531 positive projection proof — the real fix resolves on every package and self-install face", () => {
@@ -152,7 +156,7 @@ describe("t531 positive projection proof — the real fix resolves on every pack
       const { harnessDir } = harnessProjectionSpec(harness);
       const line = projectedSensorLine(plugin, harness);
       expect(line).toBe(
-        `bun ${harnessDir}/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts \\`,
+        `command: bun ${harnessDir}/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts`,
       );
       // Claude's own harnessDir legitimately IS `.claude` (harness === "claude"
       // resolves to itself); every OTHER harness must carry no Claude literal.

@@ -37,9 +37,10 @@ export type IdentityComparison =
   | { readonly kind: "current" }
   | { readonly kind: "stale"; readonly recorded: AggregateDigest; readonly current: AggregateDigest };
 
-// The closed grammar of Q2 ruling A. Tokens outside it (cid: … and friends) are
-// never collected automatically.
-const STABLE_ID_RE = /^(?:(?:FR|NFR|AC)-\d{3}|ADR-\d+)$/;
+// Keep explicit subject normalization aligned with the requirements heading
+// grammar below. Tokens outside the repository's FR/NFR/AC and ADR forms
+// (cid: … and friends) are never collected automatically.
+const STABLE_ID_RE = /^(?:(?:FR|NFR|AC)-(?:[A-Z0-9]+-)*\d+|ADR-\d+)$/;
 // The functional design fixes both heading grammars to a \b boundary after the
 // id, so real headings like "## ADR-1: title" stay extractable.
 // FR-2 (#2766) widened the requirements side to the corpus this repository

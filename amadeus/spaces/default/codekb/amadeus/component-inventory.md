@@ -1,6 +1,6 @@
 # コンポーネント棚卸し
 
-## coverage patch gate の構成要素棚卸し（260811-allowlist-semantic-audit、現在、observed `854692fd7`）
+## coverage patch gate の構成要素棚卸し（260811-allowlist-semantic-audit、履歴、observed `854692fd7`）
 
 **観測 ref**: すべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（34 commits、ゲート実装は区間内無変更）。正本は `re-scans/260811-allowlist-semantic-audit.md`。
 
@@ -78,6 +78,84 @@
 | `tests/integration/t229-coverage-patch-gate-check.test.ts` | プロセス境界での `--check` 挙動 |
 
 **`reason` の内容を検査するテストは両ファイルに 0 件。**
+
+## TLA+ receipt 生成・検証コンポーネント（260812-tla-proof-receipt、現在、observed `854692fd7`）
+
+**観測 ref**: 本節の file:line はすべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD）時点。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（距離 34）。正本は `re-scans/260812-tla-proof-receipt.md`。パスはすべて `plugins/formal-model-check/tools/` 配下（テストを除く）。
+
+### receipt の生成器・検証器・消費者
+
+| 構成要素 | file:line | 役割 |
+|---|---|---|
+| `createVerifiedTlaModelReceipt` | `tla-model-receipt.ts:89-130` | receipt 構築。**identity を再計算せず `source.moduleIdentity` / `source.cfgIdentity` / `source.auxIdentities` をコピー**（`:104-112`）し、`identityInput` 全体を `:124-127` でハッシュする |
+| `validateVerifiedTlaModelReceipt` | `tla-model-receipt.ts:142` | 検証器。基準値を loader から作る（`:154` / `:156` / `:158`）。identity 比較は `:161-169`、拒否文言は `:169` `"receipt differs from the selected verified model"` |
+| `validateModelCheckReceipt` | `tla-model-receipt.ts:184`（`:187` で verified 分岐へ委譲） | union のディスパッチャ |
+| `sourceIdentityOf`（referee） | `tla-referee-toolchain.ts:46-48` | referee 側の identity 生成。**object 形式** `{ bytes: <base64> }` |
+| receipt 生成（referee） | `tla-referee-toolchain.ts:158` | ディスク上のバイト列から receipt を作る（未登録モデル） |
+| identity 生成（loader） | `tla-model-loader-internal.ts:279` | **デコード済み文字列**形式 |
+| `readVerifiedSourceBytes` | `fs-tlc-toolchain.ts:702`、identity 照合 `:731`、呼び出し `:1645` / `:1651` / `:1777` | ステージング時のバイト照合。**文字列形式**で比較 |
+| `verifyPlannedModelSources` | `fs-tlc-toolchain.ts:1635`、検証呼び出し `:1641`、中断 `:1643` | 準備段の消費者 |
+| `parseTlcOutput174` | `tlc-toolchain.ts:647` | 出力解析段の消費者（現状は準備段で止まるため未到達） |
+| `loadVerifiedTlaSourcesInternal` | `tla-model-loader-internal.ts:463`（方針コメント `:461-462`、root 解決 `findRepositoryRoot` `:151-168`） | test 専用 seam。root 選択の**能力はある**が本番利用は方針で禁止 |
+
+### loader 消費者の DI seam 有無 — 非対称は 1 箇所のみ
+
+| 消費者 | seam | file:line |
+|---|---|---|
+| `run-model-check-ci.ts` | **あり** — `loadSources` / `selectModel` フィールド（既定値つき） | `:19-20` `readonly loadSources: typeof loadVerifiedTlaSources;` / `:28-29` |
+| `run-model-check-diagnostic.ts` | **あり** — 同形 | `:326-327` / `:333-334` |
+| `run-model-check-source.ts` | **あり** — `loadVerifiedSources?` 任意依存、`:128` `(dependencies.loadVerifiedSources ?? loadVerifiedTlaSources)()` | `:40` / `:128` |
+| `run-skeleton-ci.ts` | なし（ただし検証器ではなく最上位 CI スクリプト） | `:66` / `:70` |
+| **`tla-model-receipt.ts`** | **なし — モジュール束縛の直接呼び出し** | **`:154` / `:156`** |
+
+seam のパターンは兄弟ファイルに 3 例すでに存在し、必要な 1 箇所にだけ無い（`cid:requirements-analysis:symmetric-pair-review` の形）。
+
+### `ModelCheckReceipt` の生産側（本番 2 箇所）
+
+- `tla-referee-toolchain.ts:158` — referee がディスク上のバイト列から生成（#2913 の患部）
+- `run-model-check-source.ts:96` `const verified = createVerifiedTlaModelReceipt(source);` — loader 由来のソースから生成（非対称なし）
+
+## PR 収束プラグインのコンポーネント棚卸し（260811-pr-convergence-gate、履歴、observed `854692fd7`）
+
+### Repository-Level Components
+
+| コンポーネント | 責務 | 主な依存 | Health |
+|---|---|---|---|
+| Framework Core | lifecycle、graph、state、audit、artifact/sensor guard | Bun、filesystem | at-risk |
+| Harness Adapters | 8 host 向け filesystem/UI integration | Core、host conventions | healthy |
+| Plugin Runtime | compose/drop、stage/tool/sensor projection | Core graph、filesystem | healthy |
+| PR Convergence Plugin | PR delivery loop と report | `gh`、GitHub、record | degraded |
+| Build/Packaging | deterministic `dist/<harness>` と self promotion | Bun、manifest | healthy |
+| Test System | smoke/unit/integration/e2e/conformance | Bun test、fixtures | at-risk |
+| Workflow Record Store | Intent state、audit、artifacts、CodeKB | Markdown/JSON filesystem | healthy |
+
+### PR Convergence Components
+
+| コンポーネント | 責務 | 依存 | Health / 根拠 |
+|---|---|---|---|
+| Host activation/config | plugin 有効化、4 self-* binding | `amadeus/config.json` | healthy — 配線済み |
+| Scope binding compiler | binding を stock/composed grid に加算 | config、plugin stage metadata | healthy — 非 self opt-in を保持 |
+| Plugin manifest | stage/tool と code-generation produces seam の宣言 | plugin composer | healthy |
+| Plugin stage contract | convergence loop、manual sensor fire、merge 非権限 | CLI、sensor | degraded — own produces/requires/sensors が空 |
+| CLI dispatcher | `create/status/report/override` | adapter、predicate、ledger | at-risk — local delivery precondition 不在 |
+| GitHub runner | auth probe、GraphQL/PR create boundary | `gh` CLI | healthy |
+| Lifecycle/predicate | active/merged と convergence 判定 | raw PR state | healthy |
+| Review ledger | all-page thread classification | GitHub GraphQL | healthy |
+| PR provenance checker | Intent/Bolt/Unit と title/body の一致 | record registry、snapshot | healthy |
+| Presentation renderer | canonical linked PR title/body | intent reference | healthy |
+| Report renderer/writer | canonical Markdown の生成 | convergence facts、filesystem | degraded — attestation 不在 |
+| Report format sensor | required field と自己矛盾の検査 | report filesystem | degraded — shape-only/advisory |
+| Orchestrator coverage | per-unit required produces の全件存在 | compiled graph、filesystem | healthy on normal engine path |
+| State artifact guard | direct transition の evidence check | compiled graph、filesystem | degraded — any-one artifact semantics |
+| Blocking sensor guard | blocking sensor の fired/passed 要求 | graph severity、audit | healthy generic mechanism、未配線 |
+
+### Ownership Gaps
+
+- CLI execution receipt の発行 owner がない。
+- report content digest と audit identity の binding owner がない。
+- receipt/digest の completion-time verification owner がない。
+- local branch/commit/push/head SHA precondition の検査 owner がない。
+- pr-convergence stage と code-generation overlay の間で report lifecycle owner が分散している。
 
 ## テスト時間制御コンポーネント（260810-test-time-factor、履歴、observed `ce3c3ccfd`）
 

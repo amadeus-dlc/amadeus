@@ -1,0 +1,14 @@
+{
+  "documents": [
+    {
+      "path": "amadeus/spaces/default/intents/260811-pr-convergence-gate/inception/requirements-analysis/requirements.md",
+      "kind": "requirements"
+    }
+  ],
+  "subjects": [
+    "FR-2",
+    "FR-3",
+    "FR-4",
+    "FR-5"
+  ]
+}

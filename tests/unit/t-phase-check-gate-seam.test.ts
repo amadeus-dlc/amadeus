@@ -28,6 +28,7 @@ import {
   handleApprove,
   handleCompleteWorkflow,
   handleFinalize,
+  handleSkip,
   verifyPhaseCheckArtifact,
 } from "../../dist/claude/.claude/tools/amadeus-state.ts";
 import { handleExecute } from "../../dist/claude/.claude/tools/amadeus-jump.ts";
@@ -77,13 +78,25 @@ function captureExit(fn: () => void): { threw: boolean; stderr: string } {
 function seedReqProduces(proj: string): void {
   const dir = join(seededRecordDir(proj), "inception", "requirements-analysis");
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, "requirements.md"), "# reqs\n");
+  for (const artifact of ["requirements", "requirements-analysis-questions"]) {
+    writeFileSync(join(dir, `${artifact}.md`), `# ${artifact}\n`);
+  }
 }
 
 function seedBuildProduces(proj: string): void {
   const dir = join(seededRecordDir(proj), "construction", "build-and-test");
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, "build-test-results.md"), "# green\n");
+  for (const artifact of [
+    "build-instructions",
+    "unit-test-instructions",
+    "integration-test-instructions",
+    "performance-test-instructions",
+    "security-test-instructions",
+    "build-and-test-summary",
+    "build-test-results",
+  ]) {
+    writeFileSync(join(dir, `${artifact}.md`), `# ${artifact}\n`);
+  }
   const sourceDir = join(proj, "src");
   mkdirSync(sourceDir, { recursive: true });
   writeFileSync(join(sourceDir, "index.ts"), "export {};\n");
@@ -92,12 +105,14 @@ function seedBuildProduces(proj: string): void {
 // Seed one declared produces file for an arbitrary stage, in both the
 // phase-level and the per-unit produces directory, so verifyStageArtifacts
 // passes and ONLY the phase-check gate can refuse (#2143 FR-3).
-function seedProduces(proj: string, phase: string, slug: string, artifact: string, unit?: string): void {
+function seedProduces(proj: string, phase: string, slug: string, artifacts: readonly string[], unit?: string): void {
   const dirs = [join(seededRecordDir(proj), phase, slug)];
   if (unit !== undefined) dirs.push(join(seededRecordDir(proj), phase, unit, slug));
   for (const dir of dirs) {
     mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, `${artifact}.md`), `# ${artifact}\n`);
+    for (const artifact of artifacts) {
+      writeFileSync(join(dir, `${artifact}.md`), `# ${artifact}\n`);
+    }
   }
 }
 
@@ -394,7 +409,11 @@ describe("t-phase-check-gate-seam: approve at the ideation→inception boundary 
     // which sits at [?]. nextInScopeStage → reverse-engineering (inception).
     seedStateFile(proj, "state-ideation-boundary.md");
     saveEnv();
-    seedProduces(proj, "ideation", "approval-handoff", "initiative-brief");
+    seedProduces(proj, "ideation", "approval-handoff", [
+      "initiative-brief",
+      "decision-log",
+      "approval-handoff-questions",
+    ]);
   });
   afterEach(() => {
     restoreEnv();
@@ -429,7 +448,11 @@ describe("t-phase-check-gate-seam: approve at the construction→operation bound
     // [?]. nextInScopeStage → deployment-pipeline (operation).
     seedStateFile(proj, "state-construction-boundary.md");
     saveEnv();
-    seedProduces(proj, "construction", "ci-pipeline", "ci-config", "todo-core");
+    seedProduces(proj, "construction", "ci-pipeline", [
+      "ci-config",
+      "quality-gates",
+      "ci-pipeline-questions",
+    ], "todo-core");
   });
   afterEach(() => {
     restoreEnv();
@@ -512,7 +535,12 @@ describe("t-phase-check-gate-seam: a non-boundary approve is not gated (#2143 ne
     const sf = seededStateFile(proj);
     writeFileSync(sf, readFileSync(sf, "utf-8").replace("- [-] feasibility", "- [?] feasibility"));
     saveEnv();
-    seedProduces(proj, "ideation", "feasibility", "feasibility-assessment");
+    seedProduces(proj, "ideation", "feasibility", [
+      "feasibility-assessment",
+      "constraint-register",
+      "raid-log",
+      "feasibility-questions",
+    ]);
   });
   afterEach(() => {
     restoreEnv();
@@ -527,5 +555,77 @@ describe("t-phase-check-gate-seam: a non-boundary approve is not gated (#2143 ne
     const r = captureExit(() => handleApprove(["feasibility"]));
     expect(r.threw).toBe(false);
     expect(readFileSync(seededStateFile(proj), "utf-8")).toContain("- **Ideation**: Active");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #2932 CodeRabbit review — mandatoryPluginStages / verifyMandatoryPluginStages
+// in-process coverage seam. The guard (amadeus-state.ts) refuses a
+// complete-workflow / skip when a host-bound plugin scope-binding names the
+// target stage mandatory for the current scope, or refuses closed when the
+// bound config layer itself fails to resolve. verifyMandatoryPluginStages
+// runs BEFORE the Goal-reconciliation / artifact / phase-check guards inside
+// completeWorkflowForTarget, so these fixtures need no Goal receipt, no
+// produces artifacts, and no phase-check file — the mandatory-stage guard (or
+// the config-resolution failure feeding it) is reached and refuses first.
+// ---------------------------------------------------------------------------
+describe("t-phase-check-gate-seam: mandatory-plugin-stage guard (#2932)", () => {
+  beforeEach(() => {
+    proj = createTestProject();
+    resetOtelPerProject();
+    seedStateFile(proj, "state-fix-final-construction.md");
+    saveEnv();
+    setEnv(false); // bypass the unrelated artifact/phase-check guards entirely
+  });
+  afterEach(() => {
+    restoreEnv();
+    cleanupTestProject(proj);
+  });
+
+  test("a config layer that fails structured validation refuses closed before any stage judgement", () => {
+    // "fixture-stage" bound to an EMPTY scopes array is invalid per the
+    // scope-bindings schema (amadeus-config.ts), so resolveAmadeusConfig
+    // returns kind "invalid" and mandatoryPluginStages refuses closed.
+    writeFileSync(
+      join(proj, "amadeus", "config.json"),
+      JSON.stringify({ plugin: { "scope-bindings": { "fixture-plugin": { "fixture-stage": [] } } } }),
+    );
+    const r = captureExit(() => handleCompleteWorkflow(["build-and-test"]));
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("Cannot enforce plugin scope bindings");
+  });
+
+  test("complete-workflow refuses when a DIFFERENT stage is host-bound mandatory and not completed", () => {
+    // market-research sits [S] SKIP in the fix-scope fixture — mandatory but
+    // never completed, and not the slug being completed, so the loop's
+    // continue guard does not excuse it: the refusal fires.
+    writeFileSync(
+      join(proj, "amadeus", "config.json"),
+      JSON.stringify({ plugin: { "scope-bindings": { "fixture-plugin": { "market-research": ["fix"] } } } }),
+    );
+    const before = readFileSync(seededStateFile(proj), "utf-8");
+    const r = captureExit(() => handleCompleteWorkflow(["build-and-test"]));
+    const after = readFileSync(seededStateFile(proj), "utf-8");
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("host-bound plugin stage");
+    expect(r.stderr).toContain("market-research");
+    expect(r.stderr).toContain("mandatory for scope");
+    expect(r.stderr).toContain("fix");
+    expect(after).toBe(before);
+  });
+
+  test("skip refuses a target stage the host config binds mandatory for the current scope", () => {
+    writeFileSync(
+      join(proj, "amadeus", "config.json"),
+      JSON.stringify({ plugin: { "scope-bindings": { "fixture-plugin": { "build-and-test": ["fix"] } } } }),
+    );
+    const before = readFileSync(seededStateFile(proj), "utf-8");
+    const r = captureExit(() => handleSkip(["build-and-test"], proj));
+    const after = readFileSync(seededStateFile(proj), "utf-8");
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("Cannot skip");
+    expect(r.stderr).toContain("build-and-test");
+    expect(r.stderr).toContain("host-bound mandatory plugin stage for scope");
+    expect(after).toBe(before);
   });
 });

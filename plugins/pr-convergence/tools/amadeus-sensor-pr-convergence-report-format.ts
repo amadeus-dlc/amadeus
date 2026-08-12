@@ -1,5 +1,4 @@
-// Plugin-owned report-format check — advisory surface for the convergence
-// report's shape (FR-6a/6b, ADR-3).
+// Plugin-owned blocking evidence check for the convergence report (FR-4).
 //
 // The `pr-convergence` plugin's CLI is the only legitimate writer of
 // `pr-convergence-report.md`; the code-generation artifact guard only asks
@@ -19,13 +18,25 @@
 // a second, minimal reader of the same field names; the shipped test renders
 // its fixtures FROM renderReport so the two cannot drift unobserved.
 //
-// Advisory contract, as in amadeus-sensor-answer-evidence.ts: every check
+// Dispatcher contract: every check
 // outcome — pass or fail — exits 0. The only exit-1 path is a missing CLI flag.
-// A non-existent --output-path is likewise not an error: absence is the
-// artifact guard's business, not the sensor's.
+// A non-existent --output-path is not an exception to that: it exits 0 like any
+// other outcome, but as a BLOCKING finding, because the convergence evidence
+// the stage requires is absent.
 import { readFileSync } from "node:fs";
-import { basename } from "node:path";
+import { spawnSync } from "node:child_process";
+import { basename, dirname } from "node:path";
 import { requireFlagValue } from "./sensor-flags.ts";
+import {
+  attestationId,
+  auditCarriesAttestation,
+  isSelfRecord,
+  parseAttestation,
+  recordRootForReport,
+  reportPayload,
+  reportPayloadDigest,
+} from "./pr-convergence-attestation.ts";
+import { resolveIntentReference } from "./pr-convergence-presentation.ts";
 
 /** Result shape read by the dispatcher: `pass` gates PASSED/FAILED and
  *  `findings_count` is emitted verbatim; `reason` and `findings` are advisory
@@ -68,12 +79,12 @@ function checkCommon(body: string, findings: ReportFormatFinding[]): {
   if (kind === null || kind === "") {
     findings.push({
       field: "kind",
-      reason: "missing — every report declares converged, override or landed",
+      reason: "missing — every report declares created, converged, or override",
     });
-  } else if (kind !== "converged" && kind !== "override" && kind !== "landed") {
+  } else if (kind !== "created" && kind !== "converged" && kind !== "override" && kind !== "landed") {
     findings.push({
       field: "kind",
-      reason: `unknown kind "${kind}" — expected converged, override or landed`,
+      reason: `unknown kind "${kind}" — expected created, converged, or override`,
     });
   }
 
@@ -131,16 +142,54 @@ function checkLanded(body: string, converged: string | null, findings: ReportFor
   }
 }
 
+function checkAttestation(outputPath: string, body: string, findings: ReportFormatFinding[]): void {
+  const recordRoot = recordRootForReport(outputPath);
+  if (recordRoot === null || !isSelfRecord(recordRoot)) return;
+  const receipt = parseAttestation(body);
+  if (receipt === null) {
+    findings.push({ field: "attestation", reason: "missing or malformed CLI attestation" });
+    return;
+  }
+  const expectedId = attestationId({
+    intent: receipt.intent, intentUuid: receipt.intentUuid, record: receipt.record,
+    bolt: receipt.bolt, unit: receipt.unit, repo: receipt.repo, pr: receipt.pr,
+    localHead: receipt.localHead, remoteHead: receipt.remoteHead, prHead: receipt.prHead,
+    contentDigest: receipt.contentDigest,
+  });
+  if (receipt.id !== expectedId) findings.push({ field: "attestation id", reason: "does not bind the declared identity" });
+  if (receipt.contentDigest !== reportPayloadDigest(reportPayload(body))) {
+    findings.push({ field: "content digest", reason: "does not match current report bytes" });
+  }
+  const intent = resolveIntentReference(recordRoot);
+  const unit = basename(dirname(dirname(outputPath)));
+  if (!intent.ok || receipt.intent !== intent.value.name || receipt.intentUuid !== intent.value.uuid || receipt.record !== intent.value.recordPath) {
+    findings.push({ field: "intent", reason: "does not match the report owner record" });
+  }
+  if (receipt.unit !== unit) findings.push({ field: "unit", reason: "does not match the report owner path" });
+  const pr = field(body, "pull request");
+  if (pr !== `${receipt.repo}#${receipt.pr}`) findings.push({ field: "pull request", reason: "does not match the attestation" });
+  if (receipt.localHead !== receipt.remoteHead || receipt.localHead !== receipt.prHead) {
+    findings.push({ field: "head", reason: "local, remote, and PR head SHAs differ" });
+  }
+  const local = spawnSync("git", ["rev-parse", "HEAD"], { cwd: recordRoot, encoding: "utf-8" });
+  if (local.status !== 0 || local.stdout.trim() !== receipt.localHead) {
+    findings.push({ field: "local head", reason: "does not match the current checkout" });
+  }
+  if (!auditCarriesAttestation(recordRoot, receipt)) {
+    findings.push({ field: "attestation event", reason: "canonical audit receipt is missing" });
+  }
+}
+
 /** Pure evaluation core (in-process test seam). Reads the file itself so the
  *  CLI entry stays a thin argv shim. */
-export function evaluateReportFormat(outputPath: string): ReportFormatResult {
+export function evaluateReportFormat(outputPath: string, stage?: string): ReportFormatResult {
   if (basename(outputPath) !== REPORT_BASENAME) return verdict("not-a-report", []);
 
   let body: string;
   try {
     body = readFileSync(outputPath, "utf-8");
   } catch {
-    return verdict("no-file", []);
+    return verdict("no-file", [{ field: "report", reason: "missing — blocking evidence must exist" }]);
   }
 
   const findings: ReportFormatFinding[] = [];
@@ -152,10 +201,17 @@ export function evaluateReportFormat(outputPath: string): ReportFormatResult {
     }
   } else if (kind === "landed") {
     checkLanded(body, converged, findings);
+    findings.push({ field: "kind", reason: "landed is a merge fact, not convergence evidence" });
   } else if (kind === "converged" && converged === "false") {
     findings.push({ field: "converged", reason: "a converged report is converged: true by construction" });
+  } else if (kind === "created" && converged === "true") {
+    findings.push({ field: "converged", reason: "a created report is converged: false by construction" });
   }
-  const reason = kind === "override" || kind === "landed" ? kind : "converged";
+  if (stage === "pr-convergence" && kind === "created") {
+    findings.push({ field: "kind", reason: "created proves PR delivery only; final convergence requires converged or override" });
+  }
+  checkAttestation(outputPath, body, findings);
+  const reason = kind === "override" || kind === "landed" || kind === "created" ? kind : "converged";
   return verdict(reason, findings);
 }
 
@@ -184,12 +240,12 @@ export function fail(msg: string): never {
 }
 
 /** CLI entry / in-process test seam. Exits 1 ONLY on a missing required flag;
- *  every check outcome is stdout JSON with exit 0 (advisory contract). */
+ *  every check outcome is stdout JSON with exit 0 for the dispatcher. */
 export function main(argv: string[] = process.argv.slice(2)): void {
   const flags = parseFlags(argv);
   if (!flags.stage) fail("--stage is required");
   if (!flags.outputPath) fail("--output-path is required");
-  process.stdout.write(`${JSON.stringify(evaluateReportFormat(flags.outputPath))}\n`);
+  process.stdout.write(`${JSON.stringify(evaluateReportFormat(flags.outputPath, flags.stage))}\n`);
   process.exit(0);
 }
 
