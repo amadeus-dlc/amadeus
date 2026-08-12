@@ -35,8 +35,8 @@
 - **Revision Count**: 0
 - **Execution Projection Digest**:
 - **Goal ID**: goal-8f488ca2280b7d4496d3b8e889a08468
-- **Current Goal Revision**: 0
-- **Current Goal Digest**: 885995a4d531256872f5a08fb9d2e3aeb4d531b6cb7797f0fc80f58f84cf8046
+- **Current Goal Revision**: 1
+- **Current Goal Digest**: 4af12d33cadee972864ae6fe885e5ed4a79cf2e6680386a55721800c513172da
 
 - **Mirror Initial Create Receipt**: completed
 - **Mirror Boundary Receipts**: {"inception":"completed"}
@@ -44,8 +44,6 @@
 - **Workflow Completion Instance**: terminal:formal-model-check
 - **Workflow Completion Stage**: formal-model-check
 - **Workflow Completion Status**: pending
-- **Parked**: 2026-08-12T00:33:26Z
-- **Parked At Stage**: formal-model-check
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -112,7 +110,7 @@ Per unit: [TBD]
 - **Intent Autonomy Mode**: semi
 - **Intent Grant**: none
 - **Construction Autonomy Mode**: gated
-- **Last Updated**: 2026-08-12T00:33:26Z
+- **Last Updated**: 2026-08-12T13:27:58Z
 
 ## Session Resume Point
 - **Last Completed Stage**: formal-model-check
