@@ -13,14 +13,23 @@ concurrency:
 jobs:
   sync:
     name: Sync Issue Form classification labels
-    # Paren width is a rendering detail, not a classification signal: the Issue
-    # Form emits full-width （）, while bodies built by hand or by `gh issue
-    # create --body-file` routinely use half-width (). Gating on the full-width
-    # spelling skipped this job — and with it the whole fail-closed
-    # classification check — for every CLI-filed Issue. Gate on the heading stem
-    # alone and let the script below decide, so an unrecognizable body fails
-    # loudly instead of never being looked at.
-    if: contains(github.event.issue.body, '### 優先度')
+    # Paren width and heading level are rendering details, not classification
+    # signals: the Issue Form emits a full-width （）, H3 (`### `) heading,
+    # while bodies built by hand or by `gh issue create --body-file`
+    # routinely use half-width () and any heading level (H1-H3 observed).
+    # Gating on the full literal `### 優先度` skipped this job — and with it
+    # the whole fail-closed classification check — for every CLI-filed Issue
+    # whose heading wasn't exactly H3. `contains()` is plain substring
+    # matching (no regex), so drop the leading hashes from the literal: for
+    # any heading level N (1-6), `#{N} 優先度` ends in the substring
+    # `# 優先度` (the last hash, the space, then the stem) so a single
+    # literal covers every level. Gate on the heading stem alone and let the
+    # script below decide, so an unrecognizable body fails loudly instead of
+    # never being looked at. Trade-off: this also fires on non-heading
+    # occurrences of the same five characters (e.g. inside a quoted code
+    # block or prose) — accepted because over-firing degrades to the script's
+    # existing loud "分類を取得できませんでした" failure, never to silence.
+    if: contains(github.event.issue.body, '# 優先度')
     runs-on: ubuntu-latest
     timeout-minutes: 2
     permissions:
@@ -42,15 +51,22 @@ jobs:
               return escaped.replace(/\\\(|（/g, "[(（]").replace(/\\\)|）/g, "[)）]");
             }
 
+            // The Issue Form renders headings as H3, but bodies built by hand
+            // or by `gh issue create --body-file` are not bound to that
+            // level (#2916). Match any heading level 1-6 so the job gate
+            // (widened the same way, see the `if:` comment above) and this
+            // script agree on what counts as the field.
+            const HEADING_PREFIX = "^#{1,6}[ \\t]+";
+
             function field(label) {
               const match = body.match(
-                new RegExp(`^### ${headingPattern(label)}\\s*\\n+([^\\n]+)`, "m"),
+                new RegExp(`${HEADING_PREFIX}${headingPattern(label)}\\s*\\n+([^\\n]+)`, "m"),
               );
               return match?.[1]?.trim() ?? "";
             }
 
             function hasField(label) {
-              return new RegExp(`^### ${headingPattern(label)}\\s*$`, "m").test(body);
+              return new RegExp(`${HEADING_PREFIX}${headingPattern(label)}\\s*$`, "m").test(body);
             }
 
             const typeSignals = [
