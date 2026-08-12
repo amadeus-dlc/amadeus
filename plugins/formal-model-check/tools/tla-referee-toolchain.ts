@@ -3,8 +3,8 @@
 // It wires the referee's port (tla-referees.ts) to the shipped TLC child
 // process contract without changing it: the planned toolchain path
 // (createDefaultModelCheckToolchain → acquire → preparePlanned → runPlanned)
-// already accepts a VerifiedTlaModelReceipt, validates the on-disk bytes
-// against that receipt, and returns the toolchain's own TlcExploration. The
+// accepts the referee's own receipt, validates the on-disk bytes against it,
+// and returns the toolchain's own TlcExploration. The
 // registered-model byte pin in run-model-check-source.ts is a different entry
 // point and is left untouched — mutants are transient by construction and never
 // enter it (ADR-5, BR-U3-03).
