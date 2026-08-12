@@ -1,5 +1,6 @@
 {
   "declaredIdentity": "sha256:4c6bf2d4791d00bbae9474f1c2e62c334182dc878d23a6e9b476930610f0b988",
+  "notes": "Reviewer FOLLOW-UP: FR-5 names four completion choke points (per-Unit coverage, approve, advance, finalize/complete-workflow); the model aggregates them into the two guards CodeGenerationGuarded and WorkflowGuarded, because every choke point enforces the same required-all predicate and a separate variable per choke point adds no distinct safety behaviour.",
   "items": [
     {
       "reductionItem": "Two alternating PR head epochs",
