@@ -32,12 +32,11 @@
 - filesystem / process を使う medium test は unit allowlist を増やさず integration suite に置く <!-- cid:code-generation:c2-doctor-seam -->
 - property-based test(fast-check)は unit 層の Developer Testing として既存スイートに常駐させ、別枠の QA スイートを新設しない。PR CI は固定 seed・低 numRuns で即再現可能に保ち、深掘りは別ジョブへ分離して失敗 seed をログ化する。新設・変更する永続化境界(write⇔read、発行⇔消費)には round-trip プロパティを標準観点として付ける <!-- cid:build-and-test:pbt-developer-testing-posture -->
 - PBT のオラクルで、検証したい不変量そのものを被検実装から独立に再実装しない。両者が同じ箇所で正しく振る舞うと欠陥が観測面に出ず相殺され、緑のまま欠陥が生存する <!-- cid:build-and-test:pbt-oracle-cancellation -->
-- 検証は二層で運用する。日常 CI は PBT / unit / integration を回し、並行プロトコル(状態機械・相互排除の不変量)の spec 変更時のみ、単一形式モデルの完全探索(TLA+/TLC)を専用ジョブで追加する。有限探索で「検出されなかった」と主張できるのは、宣言済み有限 domain の固定点まで完走した completion marker と state 統計が揃う場合だけで、部分探索・timeout・統計欠損は fail-closed に扱う <!-- cid:build-and-test:two-layer-verification-posture -->
+- 二層検証(team.md § Testing Posture)の形式検証面: 有限探索(TLA+/TLC)で「検出されなかった」と主張できるのは、宣言済み有限 domain の固定点まで完走した completion marker と state 統計が揃う場合だけで、部分探索・timeout・統計欠損は fail-closed に扱う <!-- cid:application-design:finite-exploration-not-detected-proof -->
 - `TEST_TIME_FACTOR` はテスト用 timeout の基準値への乗算を中心契約とし、timeout の成立と検証に対応する sleep・poll・settle にも同じ係数を適用する。乗算を直接書かず `tests/lib/test-time-factor.ts` の `scaleTestTime` を経由する。性能基準や本番 CLI の timeout 契約は対象外 <!-- cid:requirements-analysis:test-time-factor-c1 -->
 - 長い本番タイムアウトを持つ性能要件は、実時間の負荷試験ではなく、同じ制御経路を通る短縮可能なタイミングシームとカウンタ検証で構成する <!-- cid:build-and-test:bt-timeout-verification-shape -->
 - Test Strategy の水準が高くても、performance / security の検査は承認済み NFR と実在境界へ trace できる範囲だけ生成し、生成しなかった検査は根拠付きで明記する。合否を決める数値目標が要件に宣言されていないテスト種別は、体裁のために実体を作らない — 指示書に「適用可能な NFR が存在しないという判定」であること、根拠、将来この判定を覆す条件を明記する。目標なきベンチマークは検証劇場、無言の省略は黙示の欠落 <!-- cid:build-and-test:c2-no-test-theatre-for-absent-nfr -->
 - テストファイル・テストヘルパを新規追加した変更では、範囲を絞った実行の緑で完了としない。conductor がフルスイートを1回通す(横断ゲートは絞り込み実行の射程外) <!-- cid:code-generation:c3-conductor-runs-full-suite -->
-- 複数の test path を列挙して実行する場合は、実行前に全 path の実在を機械確認し、実行後に期待ファイル数と runner の実行ファイル数を照合する。不存在 path は無音で除外され exit 0 になりうる <!-- cid:build-and-test:test-path-set-completeness -->
 - verdict では検証した面と未検証の面を書き分ける(起動の成立を配送の成立へ昇格させない)。未検証面が受け入れ基準の外にあると requirements/RAID の実文照合で確認できる場合は無条件 READY としてよく、未検証面は申し送り節に列挙する <!-- cid:build-and-test:verdict-names-unverified-facets -->
 - 要件・RAID が「実装時に実測確認」と規定した項目を後続 intent へ先送りしない。受け入れ基準が名指す経路そのもので確認し、内部関数の単体実行や部分経路で代替しない <!-- cid:build-and-test:no-silent-scope-narrowing -->
 
