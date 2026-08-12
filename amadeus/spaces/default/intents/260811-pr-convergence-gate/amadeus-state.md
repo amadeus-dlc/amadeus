@@ -46,8 +46,6 @@ autonomy=fullで
 - **Mirror Initial Create Receipt**: completed
 - **Mirror Boundary Receipts**: {"inception":"completed"}
 - **Skeleton Stance**: off
-- **Parked**: 2026-08-12T08:08:14Z
-- **Parked At Stage**: pr-convergence
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -114,7 +112,7 @@ Per unit: [TBD]
 - **Intent Autonomy Mode**: semi
 - **Intent Grant**: none
 - **Construction Autonomy Mode**: gated
-- **Last Updated**: 2026-08-12T08:08:14Z
+- **Last Updated**: 2026-08-12T08:09:13Z
 
 ## Session Resume Point
 - **Last Completed Stage**: tla-authoring
