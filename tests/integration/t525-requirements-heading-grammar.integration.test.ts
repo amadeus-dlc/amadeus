@@ -44,7 +44,10 @@ describe("t525 requirements heading grammar", () => {
 
   test("every extracted corpus form is also accepted as an explicit trace subject", () => {
     for (const id of ["FR-1", "NFR-1", "AC-1", "FR-CROSS-1", "FR-1-1", "FR-001"]) {
-      expect(IdentityDigest.normalizeStableId(id)).toEqual({ ok: true, value: id });
+      const normalized = IdentityDigest.normalizeStableId(id);
+      expect(normalized.ok).toBe(true);
+      if (!normalized.ok) continue;
+      expect(String(normalized.value)).toBe(id);
     }
   });
 
