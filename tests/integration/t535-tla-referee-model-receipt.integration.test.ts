@@ -8,8 +8,10 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "n
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { canonicalIdentity } from "../../plugins/formal-model-check/tools/canonical.ts";
 import {
   isRefereeTlaModelReceipt,
+  REFEREE_RECEIPT_IDENTITY_DOMAIN,
   isVerifiedTlaModelReceipt,
   validateModelCheckReceipt,
   validateVerifiedTlaModelReceipt,
@@ -116,7 +118,13 @@ describe("the referee receipt is a self-contained receipt kind", () => {
   });
 
   test("a receipt whose model name disagrees with its vocabulary is refused", () => {
-    const tampered = { ...refereeReceipt(), modelName: "Other" };
+    // Recompute the carried identity after the rename so the rejection can only
+    // come from the modelName <-> vocabulary binding, not from a stale identity.
+    const { modelIdentity: _stale, ...renamed } = { ...refereeReceipt(), modelName: "Other" };
+    const tampered = {
+      ...renamed,
+      modelIdentity: canonicalIdentity(renamed, REFEREE_RECEIPT_IDENTITY_DOMAIN).sha256,
+    };
     expect(validateModelCheckReceipt(tampered).ok).toBe(false);
   });
 
