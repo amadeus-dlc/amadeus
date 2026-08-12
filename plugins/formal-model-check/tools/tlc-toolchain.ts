@@ -6,7 +6,7 @@ import {
   type TlaInvariantSourceLocation,
 } from "./tla-arm.ts";
 import {
-  isVerifiedTlaModelReceipt,
+  isSourceBoundTlaModelReceipt,
   validateModelCheckReceipt,
   type ModelCheckReceipt,
   type ModelCheckReceiptBundle,
@@ -250,7 +250,7 @@ function parsedAuxiliaryModule(line: string, input: TlcOutputInput): string | nu
     (module) => line === `Parsing file ${directory}/${module}.tla`,
   );
   if (standard !== undefined) return standard;
-  if (!isVerifiedTlaModelReceipt(input.modelReceipt)) return null;
+  if (!isSourceBoundTlaModelReceipt(input.modelReceipt)) return null;
   const modelDirectory = input.expectedModulePath.replace(/[\\/][^\\/]+$/, "");
   return input.modelReceipt.auxiliaryModules.find(
     ({ name }) => line === `Parsing file ${modelDirectory}/${name}.tla`,
@@ -295,7 +295,7 @@ function moduleTranscriptIsValid(
   transcript: readonly string[],
   input: TlcOutputInput,
 ): boolean {
-  if (isVerifiedTlaModelReceipt(input.modelReceipt)) {
+  if (isSourceBoundTlaModelReceipt(input.modelReceipt)) {
     return verifiedModuleTranscriptIsValid(transcript, {
       ...input,
       modelReceipt: input.modelReceipt,
@@ -595,7 +595,7 @@ function counterexampleExploration(input: TlcOutputInput, parsed: TlcEnvelope[],
 // Verified-source receipts bind their declared model name without weakening
 // the frozen branch or inferring a model from process output.
 function hasModelOutputBinding(input: TlcOutputInput): boolean {
-  const expectedName = isVerifiedTlaModelReceipt(input.modelReceipt)
+  const expectedName = isSourceBoundTlaModelReceipt(input.modelReceipt)
     ? input.modelReceipt.modelName
     : "FormalElection";
   return input.expectedModuleName === expectedName

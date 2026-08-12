@@ -1,6 +1,42 @@
 # コンポーネント棚卸し
 
-## テスト時間制御コンポーネント（260810-test-time-factor、現在、observed `ce3c3ccfd`）
+## TLA+ receipt 生成・検証コンポーネント（260812-tla-proof-receipt、現在、observed `854692fd7`）
+
+**観測 ref**: 本節の file:line はすべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD）時点。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（距離 34）。正本は `re-scans/260812-tla-proof-receipt.md`。パスはすべて `plugins/formal-model-check/tools/` 配下（テストを除く）。
+
+### receipt の生成器・検証器・消費者
+
+| 構成要素 | file:line | 役割 |
+|---|---|---|
+| `createVerifiedTlaModelReceipt` | `tla-model-receipt.ts:89-130` | receipt 構築。**identity を再計算せず `source.moduleIdentity` / `source.cfgIdentity` / `source.auxIdentities` をコピー**（`:104-112`）し、`identityInput` 全体を `:124-127` でハッシュする |
+| `validateVerifiedTlaModelReceipt` | `tla-model-receipt.ts:142` | 検証器。基準値を loader から作る（`:154` / `:156` / `:158`）。identity 比較は `:161-169`、拒否文言は `:169` `"receipt differs from the selected verified model"` |
+| `validateModelCheckReceipt` | `tla-model-receipt.ts:184`（`:187` で verified 分岐へ委譲） | union のディスパッチャ |
+| `sourceIdentityOf`（referee） | `tla-referee-toolchain.ts:46-48` | referee 側の identity 生成。**object 形式** `{ bytes: <base64> }` |
+| receipt 生成（referee） | `tla-referee-toolchain.ts:158` | ディスク上のバイト列から receipt を作る（未登録モデル） |
+| identity 生成（loader） | `tla-model-loader-internal.ts:279` | **デコード済み文字列**形式 |
+| `readVerifiedSourceBytes` | `fs-tlc-toolchain.ts:702`、identity 照合 `:731`、呼び出し `:1645` / `:1651` / `:1777` | ステージング時のバイト照合。**文字列形式**で比較 |
+| `verifyPlannedModelSources` | `fs-tlc-toolchain.ts:1635`、検証呼び出し `:1641`、中断 `:1643` | 準備段の消費者 |
+| `parseTlcOutput174` | `tlc-toolchain.ts:647` | 出力解析段の消費者（現状は準備段で止まるため未到達） |
+| `loadVerifiedTlaSourcesInternal` | `tla-model-loader-internal.ts:463`（方針コメント `:461-462`、root 解決 `findRepositoryRoot` `:151-168`） | test 専用 seam。root 選択の**能力はある**が本番利用は方針で禁止 |
+
+### loader 消費者の DI seam 有無 — 非対称は 1 箇所のみ
+
+| 消費者 | seam | file:line |
+|---|---|---|
+| `run-model-check-ci.ts` | **あり** — `loadSources` / `selectModel` フィールド（既定値つき） | `:19-20` `readonly loadSources: typeof loadVerifiedTlaSources;` / `:28-29` |
+| `run-model-check-diagnostic.ts` | **あり** — 同形 | `:326-327` / `:333-334` |
+| `run-model-check-source.ts` | **あり** — `loadVerifiedSources?` 任意依存、`:128` `(dependencies.loadVerifiedSources ?? loadVerifiedTlaSources)()` | `:40` / `:128` |
+| `run-skeleton-ci.ts` | なし（ただし検証器ではなく最上位 CI スクリプト） | `:66` / `:70` |
+| **`tla-model-receipt.ts`** | **なし — モジュール束縛の直接呼び出し** | **`:154` / `:156`** |
+
+seam のパターンは兄弟ファイルに 3 例すでに存在し、必要な 1 箇所にだけ無い（`cid:requirements-analysis:symmetric-pair-review` の形）。
+
+### `ModelCheckReceipt` の生産側（本番 2 箇所）
+
+- `tla-referee-toolchain.ts:158` — referee がディスク上のバイト列から生成（#2913 の患部）
+- `run-model-check-source.ts:96` `const verified = createVerifiedTlaModelReceipt(source);` — loader 由来のソースから生成（非対称なし）
+
+## テスト時間制御コンポーネント（260810-test-time-factor、履歴、observed `ce3c3ccfd`）
 
 | コンポーネント | 責務 | 係数対応状況 |
 |---|---|---|
@@ -12,7 +48,7 @@
 
 追加候補 `tests/lib/test-time-factor.ts` は環境値の parse と基準時間の scale だけを担い、scheduler や個別 driver のドメイン判定は持たない小さな共通モジュールが妥当である。
 
-## advisory 宣言消費と plugin 供給経路の構成要素（260810-plugin-manifest-resoluti、現在、observed `7b9391be2`）
+## advisory 宣言消費と plugin 供給経路の構成要素（260810-plugin-manifest-resoluti、履歴、observed `7b9391be2`）
 
 **観測 ref**: すべて observed = `7b9391be2db4fad791d637293ea442d5a1462bac`（= repo HEAD）。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`（**13 commits / 302 files**、**PR #2811 を含む** — 直下の履歴節の `amadeus-plugin.ts` 系行番号は陳腐化しており、本節で取り直す）。正本は `re-scans/260810-plugin-manifest-resoluti.md`。
 

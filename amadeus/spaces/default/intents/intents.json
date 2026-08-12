@@ -1103,5 +1103,12 @@
     "dirName": "260810-test-time-factor",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019ff349-9d80-79ad-ae0b-ede0018cac73",
+    "slug": "tla-proof-receipt",
+    "dirName": "260812-tla-proof-receipt",
+    "scope": "self-fix",
+    "status": "in-flight"
   }
 ]
