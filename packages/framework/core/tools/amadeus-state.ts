@@ -4671,8 +4671,13 @@ export function skipStageContent(content: string, slug: string): string {
   );
 }
 
-function mandatoryPluginStages(pd: string, scope: string): string[] {
-  const resolved = resolveAmadeusConfig(pd);
+function mandatoryPluginStages(
+  pd: string,
+  scope: string,
+  intent: string | undefined,
+  space: string | undefined,
+): string[] {
+  const resolved = resolveAmadeusConfig(pd, intent, space);
   if (resolved.kind === "invalid") {
     error(`Cannot enforce plugin scope bindings: ${resolved.issues.map((issue) => issue.path).join(", ")}`);
   }
@@ -4685,8 +4690,9 @@ function verifyMandatoryPluginStages(
   completingSlug?: string,
 ): void {
   const scope = getField(content, "Scope") ?? "";
-  for (const slug of mandatoryPluginStages(pd, scope)) {
-    const state = parseCheckboxes(content).find((row) => row.slug === slug)?.state;
+  const rows = parseCheckboxes(content);
+  for (const slug of mandatoryPluginStages(pd, scope, stateOperationTarget?.intent, stateOperationTarget?.space)) {
+    const state = rows.find((row) => row.slug === slug)?.state;
     if (state === "completed" || slug === completingSlug) continue;
     error(
       `Refusing workflow completion: host-bound plugin stage "${slug}" is mandatory ` +
@@ -4709,7 +4715,9 @@ export function handleSkip(args: string[], root = projectDir): void {
   const stage = findStageBySlug(slug);
   if (!stage) error(`Unknown stage: ${slug}`);
   const scope = getField(content, "Scope") ?? "";
-  if (mandatoryPluginStages(pd, scope).includes(slug)) {
+  if (
+    mandatoryPluginStages(pd, scope, stateOperationTarget?.intent, stateOperationTarget?.space).includes(slug)
+  ) {
     error(`Cannot skip "${slug}": it is a host-bound mandatory plugin stage for scope "${scope}".`);
   }
   validateSlugInState(content, slug, ["pending", "in-progress", "revising"]);
