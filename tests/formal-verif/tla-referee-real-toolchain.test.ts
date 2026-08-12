@@ -40,19 +40,27 @@ const DEADLINE_MS = 240_000;
 
 if (!process.env.JAVA_HOME) throw new Error("JAVA_HOME is required and must point to OpenJDK 26.0.1");
 
+// Two variables, declared alphabetically. TLC prints a single-variable state
+// without the leading conjunction and always prints variables in alphabetical
+// order, and the trace parser matches the declared order positionally.
 const MODULE = [
   "---- MODULE Counter ----",
   "EXTENDS Naturals",
-  "VARIABLE ticks",
-  "TypeOK == ticks \\in 0..3",
-  "Init == ticks = 0",
-  "Next == ticks' = IF ticks < 3 THEN ticks + 1 ELSE ticks",
-  "Spec == Init /\\ [][Next]_ticks",
+  "VARIABLES seen, ticks",
+  "TypeOK == ticks \\in 0..3 /\\ seen \\in 0..3",
+  "Init == seen = 0 /\\ ticks = 0",
+  "Next == ticks' = (IF ticks < 3 THEN ticks + 1 ELSE ticks) /\\ seen' = ticks",
+  "Spec == Init /\\ [][Next]_<<seen, ticks>>",
   "====",
   "",
 ].join("\n");
 
 const CONFIG = ["SPECIFICATION Spec", "INVARIANT TypeOK", ""].join("\n");
+
+const FALLING_MUTATION = {
+  find: "TypeOK == ticks \\in 0..3 /\\ seen \\in 0..3",
+  replace: "TypeOK == ticks \\in 0..2 /\\ seen \\in 0..3",
+};
 
 const HELPER = ["---- MODULE Helper ----", "EXTENDS Naturals", "Limit == 3", "====", ""].join("\n");
 const EXTENDING_MODULE = MODULE
@@ -98,10 +106,7 @@ function unregisteredModel(): ModelArtifacts {
         },
       ],
       injections: {
-        TypeOK: {
-          witness: "ticks > 0",
-          fallingMutation: { find: "TypeOK == ticks \\in 0..3", replace: "TypeOK == ticks \\in 0..2" },
-        },
+        TypeOK: { witness: "ticks > 0", fallingMutation: FALLING_MUTATION },
       },
     }),
     "utf8",
@@ -134,7 +139,8 @@ describe("the referee proves an unregistered model with real TLC", () => {
 
   test("baseline, falling mutation and vacuity witness all reach TLC", () => {
     if (!outcome.ok) throw new Error(JSON.stringify(outcome.error));
-    expect(outcome.value.tlcExploration.kind).toBe("COMPLETE");
+    expect(outcome.value.tlcExploration.outcome).toBe("not-detected");
+    expect(outcome.value.tlcExploration.stateStatistics.distinctStates).toBeGreaterThan(0);
     expect(outcome.value.fallingProofs.length).toBe(1);
     expect(outcome.value.vacuityProof).not.toBeUndefined();
   });
@@ -194,7 +200,8 @@ describe("the referee receipt stays fail-closed at preparation", () => {
       planner,
     });
     if (prepared.ok) return { code: "", message: "" };
-    return { code: prepared.error.code, message: prepared.error.message };
+    const { error } = prepared;
+    return { code: "code" in error ? error.code : error.kind, message: error.message };
   }
 
   function counterWorkspace(module = MODULE): { root: string; modulePath: string; configPath: string } {

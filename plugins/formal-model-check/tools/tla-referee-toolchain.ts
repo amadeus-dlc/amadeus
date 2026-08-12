@@ -16,7 +16,13 @@ import { basename, dirname, join } from "node:path";
 import { canonicalIdentity } from "./canonical.ts";
 import { createDefaultModelCheckToolchain } from "./run-model-check.ts";
 import { resolveAuxiliaryModules, type ModuleDepsError } from "./tla-module-deps.ts";
-import { createVerifiedTlaModelReceipt } from "./tla-model-receipt.ts";
+import {
+  REFEREE_RECEIPT_IDENTITY_DOMAIN,
+  REFEREE_RECEIPT_SCHEMA,
+  type ModelCheckReceiptValidationError,
+  type RefereeTlaModelReceipt,
+} from "./tla-model-receipt.ts";
+import { tlaInvariantSourceMap } from "./tla-arm.ts";
 import type { VerifiedModelSource } from "./tla-model-loader-internal.ts";
 import type { ModelMapAssetIdentity, ModelMapModel } from "./amadeus-formal-verif-model-map.ts";
 import { FIXED_TLC_ARTIFACT_DESCRIPTOR, FIXED_JDK_RUN_PROFILE, type TraceVocabulary } from "./tlc-toolchain.ts";
@@ -139,6 +145,54 @@ function describeMutant(
   return { ok: true, value: { model, source, vocabulary } };
 }
 
+/**
+ * Mints the referee's own receipt from the bytes described above. It is built
+ * here and nowhere else: the production model-check entry points must keep
+ * going through the registered model map, which is what
+ * createVerifiedTlaModelReceipt is for.
+ */
+export function createRefereeTlaModelReceipt(
+  source: VerifiedModelSource,
+): Result<RefereeTlaModelReceipt, ModelCheckReceiptValidationError> {
+  const vocabulary = source.model.vocabulary;
+  if (vocabulary === undefined) {
+    return receiptError(`model ${source.model.name} has no declared vocabulary`);
+  }
+  const locations = tlaInvariantSourceMap(source.moduleSource, vocabulary.namedInvariants);
+  if (!locations.ok) {
+    return receiptError(
+      `model ${source.model.name} is missing invariant formula ${locations.error.missingInvariant}`,
+    );
+  }
+  const identityInput = {
+    schema: REFEREE_RECEIPT_SCHEMA,
+    modelName: source.model.name,
+    moduleBytesIdentity: source.moduleIdentity,
+    cfgBytesIdentity: source.cfgIdentity,
+    auxiliaryModules: source.auxIdentities.map(({ path, identity }) => ({
+      name: basename(path, ".tla"),
+      moduleBytesIdentity: identity,
+    })),
+    vocabulary: {
+      moduleName: source.model.name,
+      namedInvariants: [...vocabulary.namedInvariants],
+      traceStateVariables: [...vocabulary.traceStateVariables],
+    },
+    invariantSourceMap: locations.value,
+  };
+  return {
+    ok: true,
+    value: {
+      ...identityInput,
+      modelIdentity: canonicalIdentity(identityInput, REFEREE_RECEIPT_IDENTITY_DOMAIN).sha256,
+    },
+  };
+}
+
+function receiptError(message: string): Result<never, ModelCheckReceiptValidationError> {
+  return { ok: false, error: { kind: "ModelCheckReceiptValidationError", message } };
+}
+
 function fail(detail: string): never {
   throw new Error(`referee toolchain: ${detail}`);
 }
@@ -160,7 +214,7 @@ async function runOnce(
 
   const described = describeMutant(modulePath, configPath);
   if (!described.ok) fail(described.error.detail);
-  const receipt = createVerifiedTlaModelReceipt(described.value.source);
+  const receipt = createRefereeTlaModelReceipt(described.value.source);
   if (!receipt.ok) fail(receipt.error.message);
 
   const toolchain = createDefaultModelCheckToolchain(cacheRoot, workspaceRoot);

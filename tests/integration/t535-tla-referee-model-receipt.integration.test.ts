@@ -78,7 +78,11 @@ describe("the referee receipt is a self-contained receipt kind", () => {
     const receipt = refereeReceipt();
     const validated = validateModelCheckReceipt(receipt);
     expect(validated.ok).toBe(true);
-    if (validated.ok) expect(validated.value.modelName).toBe("Counter");
+    if (validated.ok && isRefereeTlaModelReceipt(validated.value)) {
+      expect(validated.value.modelName).toBe("Counter");
+    } else {
+      throw new Error("the validated receipt is not a referee receipt");
+    }
   });
 
   test("the registered-model validator still refuses it", () => {
