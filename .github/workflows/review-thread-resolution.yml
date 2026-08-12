@@ -24,6 +24,17 @@ on:
           - "true"
           - "false"
 
+# One refresh per pull request at a time. Review events arrive in bursts (a
+# single bot review fires one event per comment — 14 concurrent runs measured
+# on #2939), and each run holds a hosted-runner slot while it waits for the
+# PR's other checks (`wait_for_other_checks` defaults to true). Without this
+# group the waiters starve the very CI they wait on (#2947). Scheduled and
+# dispatched runs fall back to the event name so they only collapse among
+# themselves, never cancelling a PR-scoped refresh.
+concurrency:
+  group: review-thread-resolution-${{ github.event.pull_request.number || github.event.issue.number || github.event_name }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   checks: write
