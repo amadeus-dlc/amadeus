@@ -18,6 +18,7 @@ interface WorkflowJob {
 
 interface Workflow {
   readonly on?: Readonly<Record<string, unknown>>;
+  readonly concurrency?: { readonly group?: string; readonly "cancel-in-progress"?: boolean };
   readonly permissions?: Readonly<Record<string, string>>;
   readonly jobs?: Readonly<Record<string, WorkflowJob>>;
 }
@@ -27,6 +28,31 @@ function parseWorkflow(path: string): Workflow {
 }
 
 describe("review-thread resolution CI gate", () => {
+  // #2947: a bot review fires one event per comment (14 concurrent runs
+  // measured on #2939), and every run holds a hosted-runner slot while it
+  // waits for the PR's other checks — the waiters starve the CI they wait on.
+  // The concurrency group collapses each PR's burst to one live run; schedule
+  // and dispatch runs key on the event name so they never cancel a PR-scoped
+  // refresh, and a PR refresh never cancels the recovery schedule.
+  test("collapses per-PR event bursts under a concurrency group (#2947)", () => {
+    const workflow = parseWorkflow(REFRESH_WORKFLOW_PATH);
+    const group = workflow.concurrency?.group ?? "";
+
+    expect(workflow.concurrency?.["cancel-in-progress"]).toBe(true);
+    // Review events key on the PR, comment events on the issue, and the
+    // schedule/dispatch fallback keys on the event name — in that order, so a
+    // PR-scoped run never shares a group with the cron sweep.
+    expect(group).toContain("github.event.pull_request.number");
+    expect(group).toContain("github.event.issue.number");
+    expect(group).toContain("github.event_name");
+    expect(group.indexOf("github.event.pull_request.number")).toBeLessThan(
+      group.indexOf("github.event.issue.number"),
+    );
+    expect(group.indexOf("github.event.issue.number")).toBeLessThan(
+      group.indexOf("github.event_name"),
+    );
+  });
+
   test("refreshes the synthetic status after review activity and on a recovery schedule", () => {
     const workflow = parseWorkflow(REFRESH_WORKFLOW_PATH);
     const refresh = workflow.jobs?.refresh;
