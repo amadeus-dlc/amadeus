@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -14,6 +16,7 @@ import {
   reportPathFor,
   runCli,
 } from "../../plugins/pr-convergence/tools/pr-convergence-cli.ts";
+import { cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
 
 const REPO = "amadeus-dlc/amadeus";
 const UNIT = "convergence-enforcement";
@@ -312,4 +315,167 @@ describe("explicit unlinked and override routes", () => {
     expect(out.stderr).toContain("no HUMAN_TURN");
     expect(out.stderr).not.toContain("provenance");
   });
+});
+
+// The mandatory-plugin-stage guard (verifyMandatoryPluginStages /
+// mandatoryPluginStages in amadeus-state.ts) is what makes pr-convergence
+// non-skippable for the scopes host config binds it to. CodeRabbit review
+// finding on #2932: mandatoryPluginStages resolved plugin.scopeBindings via
+// resolveAmadeusConfig(pd) — ignoring the `--intent`/`--space` selector a
+// caller like `complete-workflow` threads through stateOperationTarget — so
+// the resolved config (and therefore the enforced mandatory-stage set) could
+// silently diverge from what `recompose` (amadeus-utility.ts, which DOES pass
+// intent/space) enforces for the exact same targeted Intent.
+//
+// This reproduces that divergence end to end: a project with TWO Intents,
+// where the SECOND (active) Intent carries an invalid intent-layer config
+// (`plugin.activation.names` is project-scope-only — amadeus-config.ts
+// "allows plugin activation only at project scope"), while the FIRST
+// (non-active, explicitly `--intent`-targeted) Intent's config is clean.
+// `complete-workflow` is invoked with `--intent`/`--space` naming the FIRST
+// Intent explicitly. Pre-fix, the guard ignores that selector and resolves
+// against the ACTIVE (second) Intent's invalid config, spuriously refusing a
+// legitimate completion of the first. Post-fix, it resolves against the
+// explicitly targeted (first) Intent's clean config and completes normally.
+describe("mandatory-plugin-stage guard resolves config for the targeted Intent, not the active one", () => {
+  const ROOT = join(import.meta.dir, "..", "..");
+  const UTIL = join(ROOT, "packages", "framework", "core", "tools", "amadeus-utility.ts");
+  const STATE = join(ROOT, "packages", "framework", "core", "tools", "amadeus-state.ts");
+  const GOAL = join(ROOT, "packages", "framework", "core", "tools", "amadeus-goal.ts");
+  const STAGE_GRAPH = join(ROOT, "dist", "claude", ".claude", "tools", "data", "stage-graph.json");
+  const SCOPE_GRID = join(ROOT, "dist", "claude", ".claude", "tools", "data", "scope-grid.json");
+  const toolEnv = {
+    ...process.env,
+    AMADEUS_STAGE_GRAPH: STAGE_GRAPH,
+    AMADEUS_SCOPE_GRID: SCOPE_GRID,
+  };
+  const projects: string[] = [];
+
+  afterEach(() => {
+    for (const project of projects.splice(0)) cleanupTestProject(project);
+  });
+
+  function intentBirth(project: string): string {
+    const result = spawnSync(
+      process.execPath,
+      [UTIL, "intent-birth", "--scope", "fix", "--project-dir", project],
+      { encoding: "utf8", env: toolEnv },
+    );
+    expect(result.status, `${result.stdout}${result.stderr}`).toBe(0);
+    return readFileSync(
+      join(project, "amadeus", "spaces", "default", "intents", "active-intent"),
+      "utf8",
+    ).trim();
+  }
+
+  function reconcileAchieved(project: string): void {
+    const evidencePath = join(project, "goal-proof.txt");
+    const evidence = "goal guard verified\n";
+    writeFileSync(evidencePath, evidence);
+    const itemsPath = join(project, "goal-items.json");
+    writeFileSync(
+      itemsPath,
+      JSON.stringify([
+        {
+          id: "goal-statement",
+          verdict: "ACHIEVED",
+          evidence: [
+            {
+              kind: "deterministic-check",
+              reference: "goal-proof.txt",
+              digest: createHash("sha256").update(evidence).digest("hex"),
+            },
+          ],
+        },
+      ]),
+    );
+    const reconcile = spawnSync(
+      process.execPath,
+      [
+        GOAL, "reconcile",
+        "--items", itemsPath,
+        "--final-stage", "build-and-test",
+        "--project-dir", project,
+      ],
+      { encoding: "utf8", env: toolEnv },
+    );
+    expect(reconcile.status, `${reconcile.stdout}${reconcile.stderr}`).toBe(0);
+  }
+
+  function runComplete(project: string, record: string) {
+    return spawnSync(
+      process.execPath,
+      [
+        STATE, "complete-workflow", "build-and-test",
+        "--intent", record,
+        "--space", "default",
+        "--project-dir", project,
+      ],
+      {
+        encoding: "utf8",
+        env: {
+          ...toolEnv,
+          AMADEUS_SKIP_ARTIFACT_GUARD: "1",
+          AMADEUS_SKIP_HUMAN_PRESENCE_GUARD: "1",
+        },
+      },
+    );
+  }
+
+  test("an explicit --intent selector, not the active cursor, decides which config layer gates completion", () => {
+    const project = createTestProject();
+    projects.push(project);
+
+    // Intent A: the one we will explicitly target and complete. Reconcile its
+    // Goal while it is still the active Intent (GOAL reconcile has no
+    // --intent selector of its own).
+    const recordA = intentBirth(project);
+    reconcileAchieved(project);
+
+    // Intent B: born second, becomes the new active-intent cursor. Its
+    // intent-layer config carries a key forbidden outside project scope, so
+    // resolving config AGAINST it fails closed.
+    const recordB = intentBirth(project);
+    expect(recordB).not.toBe(recordA);
+    const intentBConfigDir = join(project, "amadeus", "spaces", "default", "intents", recordB);
+    expect(existsSync(intentBConfigDir)).toBe(true);
+    writeFileSync(
+      join(intentBConfigDir, "config.json"),
+      JSON.stringify({ plugin: { activation: { names: ["fixture-plugin"] } } }),
+    );
+    // Intent A's own config layer stays clean (absent).
+    expect(existsSync(join(project, "amadeus", "spaces", "default", "intents", recordA, "config.json"))).toBe(false);
+
+    // Sanity: the active cursor is now B, not A — the divergence this test
+    // pins only exists because the guard has a choice between the two.
+    expect(
+      readFileSync(join(project, "amadeus", "spaces", "default", "intents", "active-intent"), "utf8").trim(),
+    ).toBe(recordB);
+
+    // complete-workflow explicitly names Intent A via --intent/--space. A
+    // config-resolution seam that honors that selector must resolve A's
+    // (clean) config and succeed; a seam that silently falls back to the
+    // active cursor resolves B's (invalid) config and fails closed instead.
+    const result = runComplete(project, recordA);
+
+    expect(result.status, `${result.stdout}${result.stderr}`).toBe(0);
+    expect(`${result.stdout}${result.stderr}`).not.toContain("Cannot enforce plugin scope bindings");
+
+    const eventsA = readdirSync(join(intentsDirAudit(project, recordA)))
+      .filter((f) => f.endsWith(".jsonl"))
+      .map((f) => readFileSync(join(intentsDirAudit(project, recordA), f), "utf8"))
+      .join("\n");
+    expect(eventsA).toContain("WORKFLOW_COMPLETED");
+
+    // Symmetric negative control: explicitly targeting Intent B must resolve
+    // B's (invalid) config and fail closed. Without this, a seam that skips
+    // config resolution entirely would still satisfy the assertions above.
+    const targetedB = runComplete(project, recordB);
+    expect(targetedB.status, `${targetedB.stdout}${targetedB.stderr}`).not.toBe(0);
+    expect(`${targetedB.stdout}${targetedB.stderr}`).toContain("Cannot enforce plugin scope bindings");
+  });
+
+  function intentsDirAudit(project: string, record: string): string {
+    return join(project, "amadeus", "spaces", "default", "intents", record, "audit");
+  }
 });

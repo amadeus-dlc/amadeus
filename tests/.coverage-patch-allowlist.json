@@ -3354,11 +3354,33 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "completeWorkflowForTarget",
-      "fingerprint": "sha256:bd4d2e8d007dd66054f41f03bc86092739ff23fde57bc22cd2ca96c6ae433296",
-      "anchorLines": 30,
-      "targetLines": "1-30"
+      "fingerprint": "sha256:87a7a70776dcc5accfdf4e25f5ac102b9c6f54e32d621e2af4f563ea218c6732",
+      "anchorLines": 17,
+      "targetLines": "1-17"
     },
     "reason": "The lifecycle CLI adapter is covered through t258 shipped-process cases for archive, unarchive, recovery, validation failures, lock timeout, audit emission, and output contracts; Bun does not attribute child-process execution to the parent LCOV report.",
+    "expiry": "remove when lifecycle CLI composition and exit handling can be driven with injected in-process ports"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "completeWorkflowForTarget",
+      "fingerprint": "sha256:dd13014ab067fd13e5b65c2b745738279a3a970703b65b0726cc0f855a357b30",
+      "anchorLines": 13,
+      "targetLines": "1-13"
+    },
+    "reason": "The lifecycle CLI adapter is covered through t258 shipped-process cases for archive, unarchive, recovery, validation failures, lock timeout, audit emission, and output contracts; Bun does not attribute child-process execution to the parent LCOV report.",
+    "expiry": "remove when lifecycle CLI composition and exit handling can be driven with injected in-process ports"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "completeWorkflowForTarget",
+      "fingerprint": "sha256:40f48c860e6d8ee3191a1b560b66e5810a20602e389230809df1ce5eae918420",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The verifyMandatoryPluginStages guard call sits inside the same spawn-only complete-workflow CLI adapter; its behavior (mandatory plugin stage refusal) is pinned by the shipped-process integration tests of this intent, and Bun does not attribute child-process execution to the parent LCOV report. Split out from the surrounding waiver so the new guard line is waived explicitly, not inherited silently.",
     "expiry": "remove when lifecycle CLI composition and exit handling can be driven with injected in-process ports"
   },
   {
@@ -6475,12 +6497,23 @@
     "file": "plugins/pr-convergence/tools/pr-convergence-cli.ts",
     "selector": {
       "function": "nodeDecisionEmitter",
-      "fingerprint": "sha256:dadde3570381c97b13b9a900c4fa727371dfdd55f92d74b29e6f61402ab0c7ce",
-      "anchorLines": 13,
-      "targetLines": "1-13"
+      "fingerprint": "sha256:5b0c00d1583bfea20129eaf54aa6ed6f697f99f9e64c5951b318bc5b2d5d15ff",
+      "anchorLines": 17,
+      "targetLines": "1-17"
     },
     "reason": "The production DecisionEmitter spawns the host's real amadeus-log tool; every test drives the CLI through the injected emitDecision seam so no real audit is ever emitted from a test run (t448 covers the seam contract, not the child_process wiring).",
     "expiry": "remove if a hermetic audit-tool fixture makes the real spawn drivable in CI"
+  },
+  {
+    "file": "plugins/pr-convergence/tools/pr-convergence-cli.ts",
+    "selector": {
+      "function": "selfReportLifecycle",
+      "fingerprint": "sha256:d9b7a286e90243e67a17979cf5fe1c89a7cda24d5a1d3dded034b42f85945438",
+      "anchorLines": 5,
+      "targetLines": "4-4"
+    },
+    "reason": "Defensive residual arm: a non-created verb only reaches selfReportLifecycle through currentSelfContext, whose attestationBindsIdentity already requires receipt.prHead === heads.prHead and refuses a mismatch with exit 1 first, while a created-kind caller takes the write arm above; the refuse is kept as fail-closed defence rather than deleted.",
+    "expiry": "remove if the lifecycle is ever callable without the currentSelfContext head binding"
   },
   {
     "file": "plugins/pr-convergence/tools/pr-convergence-cli.ts",

@@ -129,6 +129,8 @@ function parkAtIdeationBoundary(projectDir: string): void {
   const producesDir = join(recordDir(projectDir), "ideation", "approval-handoff");
   mkdirSync(producesDir, { recursive: true });
   writeFileSync(join(producesDir, "initiative-brief.md"), "# initiative brief\n");
+  writeFileSync(join(producesDir, "decision-log.md"), "# decision log\n");
+  writeFileSync(join(producesDir, "approval-handoff-questions.md"), "# approval handoff questions\n");
 }
 
 function writePhaseCheck(projectDir: string, phase: string): void {

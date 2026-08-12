@@ -16,6 +16,20 @@
 - Per-intent record: `re-scans/260812-tla-proof-receipt.md`（述語 P0〜P5、引用 currency 表、D1 / D2、修正面の全数列挙 (a)〜(d)、同根スイープ S1〜S3、テストピン 5 files、CI 配線、仮説 H1〜H3 と未測定 3 件の正本）
 - 適用範囲外（明示）: 修正の設計・選定（D1 の解の形、D2 のエンコーディング統一方向、probe の CI 配線可否、`tests/formal-verif/**` 全体の扱い）は requirements-analysis / application-design の所掌
 
+## 実行メタデータ（履歴、2026-08-11: 260811-pr-convergence-gate）
+
+- Date: `2026-08-11`
+- Observed commit: `854692fd7`
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`
+- Depth: `Minimal`
+- Focus: [Issue #2838](https://github.com/amadeus-dlc/amadeus/issues/2838) — 4 self-* scope の mandatory PR convergence と手書き report bypass の fail-closed 化
+- Result: scope/stage wiring、per-unit engine coverage、PR content provenance は実装済み。report attestation、blocking sensor wiring、local delivery prerequisites、direct completion all-required guard、要求 matrix 回帰は未実装であり、Issue は未解決。
+- Scan record: `re-scans/260811-pr-convergence-gate.md`
+
+### Freshness
+
+このファイルは repo 単位の共有 freshness pointer であり、intent 固有の差分 base は scan record に記録する。共有9成果物は last-writer-wins derived cache として本 scan の current snapshot に更新した。
+
 ## 260810-test-time-factor
 
 - Date: `2026-08-10T14:26:50Z`

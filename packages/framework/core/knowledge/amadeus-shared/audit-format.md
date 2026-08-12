@@ -161,13 +161,14 @@ These event shapes are retained only so replay and migration projection code can
 | `GRANT_REVOKED` | Historical standing-grant revocation | Grant Id, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts | — | Reserved legacy observation |
 | `GATE_AUTHORIZATION_SELECTED` | Historical standing-grant route selection | Route Id, Stage, Grant Id | — | Reserved legacy observation |
 
-### Artifact Events (3 events — hook-emitted)
+### Artifact Events (4 events)
 
 | Event | When | Required | Optional | Emitter |
 |-------|------|----------|----------|---------|
 | `ARTIFACT_CREATED` | New artifact file written under `amadeus-docs/` | Tool, File, Context | — | `hooks/amadeus-audit-logger.ts` (PostToolUse; Write to net-new path) |
 | `ARTIFACT_UPDATED` | Existing artifact modified | — | Tool, File, Context, Artifact, TransactionId, Revision, TransitionKind, Digest, TriggerBoundary, Reconciliation, OperationId, Classification, coalescedWarning, repairProof | `hooks/amadeus-audit-logger.ts` (PostToolUse; Edit, or Write overwriting existing) |
 | `ARTIFACT_REUSED` | Re-use decision on backward jump | Stage, Decision, Artifacts | — | `tools/amadeus-state.ts reuse-artifact` |
+| `ARTIFACT_ATTESTED` | A tool-owned delivery binds artifact bytes to workflow and external-delivery identity | Attestation Id, Intent, Intent UUID, Record, Bolt, Unit, Repository, PR, Local Head, Remote Head, PR Head, Content Digest | — | Plugin CLI through `tools/amadeus-audit.ts append` under the canonical audit lock |
 
 ### Subagent Events (2 events — hook-emitted)
 
@@ -249,10 +250,10 @@ Emitted by the deterministic-sensor system. The sensor dispatcher emits the four
 
 | Event | When | Required | Optional | Emitter |
 |-------|------|----------|----------|---------|
-| `SENSOR_FIRED` | Dispatcher invoked a sensor against a stage output (per PostToolUse Write/Edit match on the sensor's `matches` filter) | Fire id, Sensor ID, Stage slug, Output path | — | `tools/amadeus-sensor.ts` `fire` |
-| `SENSOR_PASSED` | Sensor completed and reported no findings (also: tool-unavailable, script-error fall-through — see Note footnote) | Fire id, Sensor ID, Stage slug, Output path, Duration ms | Note | `tools/amadeus-sensor.ts` `fire` |
-| `SENSOR_FAILED` | Sensor completed and reported findings; detail file written at `amadeus-docs/.amadeus-sensors/<stage-slug>/<sensor-id>-<fire-id>.md` | Fire id, Sensor ID, Stage slug, Output path, Detail path, Findings count | — | `tools/amadeus-sensor.ts` `fire` |
-| `SENSOR_BUDGET_OVERRIDE` | Sensor exceeded its configured cap (registry / binding / depth-derived per the three-layer cap model) and was terminated or skipped | Fire id, Sensor ID, Stage slug, Output path, Cap layer, Cap value, Observed value | — | `tools/amadeus-sensor.ts` `fire` |
+| `SENSOR_FIRED` | Dispatcher invoked a sensor against a stage output (per PostToolUse Write/Edit match on the sensor's `matches` filter) | Fire id, Sensor ID, Stage slug, Output path | Output digest | `tools/amadeus-sensor.ts` `fire` |
+| `SENSOR_PASSED` | Sensor completed and reported no findings (also: tool-unavailable, script-error fall-through — see Note footnote) | Fire id, Sensor ID, Stage slug, Output path, Duration ms | Note, Output digest | `tools/amadeus-sensor.ts` `fire` |
+| `SENSOR_FAILED` | Sensor completed and reported findings; detail file written at `amadeus-docs/.amadeus-sensors/<stage-slug>/<sensor-id>-<fire-id>.md` | Fire id, Sensor ID, Stage slug, Output path, Detail path, Findings count | Output digest | `tools/amadeus-sensor.ts` `fire` |
+| `SENSOR_BUDGET_OVERRIDE` | Sensor exceeded its configured cap (registry / binding / depth-derived per the three-layer cap model) and was terminated or skipped | Fire id, Sensor ID, Stage slug, Output path, Cap layer, Cap value, Observed value | Output digest | `tools/amadeus-sensor.ts` `fire` |
 | `GUARDRAIL_LOADED` | Guardrail loader resolved the scope-hierarchical guardrail set for the active workflow (org → project → phase → stage); doctor's paired-coverage check reads from this event | Scope, Path, Rule count | — | `tools/amadeus-utility.ts` |
 
 > The `Note` field on `SENSOR_PASSED` is optional. It carries `tool-unavailable` when the per-sensor script's underlying binary isn't on PATH (advisory PASS, not failure), or `script-error: <reason>` for spawn-failure / non-zero exit / malformed JSON / detail-write failure paths. Pair correlation is via `Fire id` (echoed verbatim from `SENSOR_FIRED` to the terminal row); `Output path` alone does not disambiguate when the PostToolUse Write/Edit hook fires the same sensor + stage + path tuple multiple times within a stage.

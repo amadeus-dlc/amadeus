@@ -71,6 +71,19 @@ export type PluginScopeBindings = Readonly<
   Record<string, Readonly<Record<string, readonly string[]>>>
 >;
 
+export function requiredPluginStagesForScope(
+  bindings: PluginScopeBindings,
+  scope: string,
+): string[] {
+  const required = new Set<string>();
+  for (const stages of Object.values(bindings)) {
+    for (const [slug, scopes] of Object.entries(stages)) {
+      if (scopes.includes(scope)) required.add(slug);
+    }
+  }
+  return [...required].sort();
+}
+
 export type AmadeusConfig = Readonly<{
   intentMirror: Readonly<{
     github: Readonly<{

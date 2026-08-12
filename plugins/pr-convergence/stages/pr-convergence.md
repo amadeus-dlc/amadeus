@@ -11,8 +11,9 @@ produces: []
 consumes: []
 requires_stage: []
 inputs: the Bolt branch and authored pull-request body, an optional existing open pull request, plus the GitHub checks and review threads reachable through the `gh` boundary.
-outputs: the machine-rendered convergence report at `<record>/construction/<unit>/code-generation/pr-convergence-report.md`, written only by the plugin CLI — a `converged`, `override`, or (for an already-merged pull request) `landed` record.
-sensors: []
+outputs: the machine-rendered convergence report at `<record>/construction/<unit>/code-generation/pr-convergence-report.md`, written and attested only by the plugin CLI as a `created`, `converged`, or `override` record.
+sensors:
+  - pr-convergence-report-format
 scopes: []
 ---
 
@@ -31,11 +32,11 @@ as a `question` occurrence (`amadeus-advisory-choice.ts`), and a `run-now`
 decision can start it unattended — any other ladder outcome falls back to the
 human.
 
-Installing the plugin also overlays `pr-convergence-report` onto the
-`code-generation` stage's `produces`. From that point the existing per-unit
-artifact guard will not advance a unit until the report exists on disk — the
-guard is untouched core, the plugin only supplies it with data. Dropping the
-plugin restores the stage file byte-identically and the guard forgets it.
+Installing the plugin overlays both `pr-convergence-report` and the blocking
+`pr-convergence-report-format` sensor onto `code-generation`. The shared
+required-all completion guard will not advance a unit until every required
+artifact exists and the report's current sensor verdict passes. Dropping the
+plugin restores the host stage byte-identically and removes both resources.
 
 Convergence is **not** merge. Merging stays a human decision, asked for
 separately; this stage only establishes that the pull request is ready to be
@@ -71,7 +72,14 @@ wait indefinitely.
 pull request that is explicitly not linked to an Intent, append
 `--unlinked true`; only the exact lowercase value `true` is accepted. This flag
 skips only provenance checking. It does not skip GitHub reads, convergence
-evaluation, or the report contract.
+evaluation, or the report contract. Self-development scopes reject
+`--unlinked true`; their report must remain bound to the active Intent.
+
+`status` is a read-only diagnostic and stays runnable mid-work: for a
+self-development record it is exempt from the delivery prerequisites (clean
+worktree, matching heads) and from the created-report requirement. Provenance
+checking and the self-scope `--unlinked` rejection still apply to it; `report`
+and `override` remain fully fail-closed.
 
 ### (1) Create the pull request
 
@@ -96,6 +104,25 @@ bun {{HARNESS_DIR}}/plugins/pr-convergence/tools/pr-convergence-cli.ts create \
 
 `--head` is required and is passed explicitly to `gh pr create`; the current
 working directory and checked-out branch never select the pull request source.
+
+For a self-development Intent, `create` first verifies that the checked-out
+branch is the requested non-base branch, the local commit contains target
+changes, tracked files are clean, the branch exists on `origin`, and the local
+and remote head SHAs — and the head branch name — match. It never commits or
+pushes. A failed prerequisite refuses before any GitHub mutation. A successful
+create immediately writes a `created` report, emits its canonical attestation,
+and fires the blocking sensor in that order.
+
+When an open pull request for the same head branch already exists, `create`
+does not fail on the duplicate: it verifies the existing pull request's head
+SHA and branch name against the local/remote HEAD and its title/body against
+this delivery's identity, then re-mints the `created` report, attestation, and
+sensor pass for that pull request — a new created epoch. This is also the
+recovery for a `created` attestation invalidated by later pushes ("PR head
+changed"): push the current HEAD, then run `create` again; the pull request is
+reused, never closed and reopened. An existing pull request whose head or
+identity does not match refuses with the remediation named on stderr (`gh pr
+edit` for provenance, push for a stale head).
 
 Pass `--record`, `--bolt`, and `--unit` together when the pull request is linked
 to an Amadeus Intent. The CLI resolves the record against the adjacent
@@ -182,39 +209,32 @@ bun {{HARNESS_DIR}}/plugins/pr-convergence/tools/pr-convergence-cli.ts report \
 pull request is not converged — a report that exists without convergence is
 exactly the fail-open this tooling exists to prevent. Every number in it is
 machine-derived; do not hand-write or hand-edit the file. The
-`pr-convergence-report-format` sensor surfaces a report whose required fields
-are missing or self-contradictory, and the review gate treats a hand-written
-report as a finding.
+`pr-convergence-report-format` sensor rejects missing, malformed, stale,
+tampered, copied, or replayed evidence. The CLI writes the report, emits the
+canonical `ARTIFACT_ATTESTED` event, and fires the sensor automatically. A
+failed emission or sensor fire returns non-zero and leaves the completion guard
+closed; re-running the same verb with the same identity resumes the interrupted
+delivery (it completes the missing audit emission and sensor fire), while
+tampered or copied evidence is still refused. Manual report edits and manual
+sensor invocation are not delivery paths. The unit's own
+`pr-convergence-report.md` and the record's audit shards — the files the CLI
+itself writes — are exempt from the clean-worktree prerequisite, so
+`create` → `report` completes inside one head epoch and the record checkpoint
+commit happens after the verdict; every other tracked modification still
+refuses.
 
-Immediately after `report` writes the file, fire the declared sensor on it by
-hand. The manual fire IS the normal delivery path, not a fallback: the report
-is written by the CLI through Bash, so the harness's write-time hook (which
-watches Write/Edit turns of the active stage) never observes it.
-
-```
-bun {{HARNESS_DIR}}/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts \
-  --stage pr-convergence \
-  --output-path <record-root>/construction/<unit>/code-generation/pr-convergence-report.md
-```
-
-Read the verdict from the audit `SENSOR_PASSED` / `SENSOR_FAILED` rows — the
-fire command's own exit code is not the verdict. The sensor is advisory
-(FR-6a): a `SENSOR_FAILED` is a finding to resolve before announcing
-convergence, never an automatic gate.
+The packaged checker resource is
+`{{HARNESS_DIR}}/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts`;
+the CLI reaches it through the host sensor dispatcher so attestation and latest
+verdict bookkeeping cannot be bypassed.
 
 Announce convergence with the report's own counts. Do not paraphrase them and
 do not round them.
 
-**Already merged?** A pull request whose state is `MERGED` cannot converge —
-its mergeability stays `UNKNOWN` forever — so the CLI records the merge
-instead of chasing it. `status` reports the `landed` verdict with exit 0, and
-`report` writes a `landed` report carrying the merge instant, the merge
-commit, and (when GitHub reports one) the check rollup, every field machine-derived from GitHub. A
-landed report says `converged: false`: it is the record of a merge that
-already happened, **not** an approval and not a convergence claim — the
-Guardrail "Convergence is not merge" reads in both directions, and a merge
-performed outside this loop earns no retroactive convergence verdict from it.
-Fire the same sensor on the landed report as on any other.
+**Already merged?** A pull request whose state is `MERGED` is not convergence
+evidence. For self-development records both `status` and `report` refuse it,
+and no `landed` report can satisfy the blocking sensor. A merge performed
+outside this loop earns no retroactive convergence verdict.
 
 ## When GitHub is unreachable
 
@@ -231,11 +251,10 @@ bun {{HARNESS_DIR}}/plugins/pr-convergence/tools/pr-convergence-cli.ts override 
   --reason "<why the human ruled forward>"
 ```
 
-`override` requires a real human turn in the record's audit shards, refuses to
-override an already-converged pull request, writes the ruling to the audit
-trail, and only then writes a report that says `converged: false` permanently.
-It remains the explicit human ruling path and is not subject to provenance
-checking.
+`override` requires a linked PR, an existing valid `created` attestation, a
+real human turn in the record's audit shards, and a non-blank reason. It
+refuses to override an already-converged or merged pull request, records the
+ruling, then writes and attests an `override` report with `converged: false`.
 There is no environment variable, flag, or state field that skips the guard
 silently: a bypass that leaves no record is not offered.
 
