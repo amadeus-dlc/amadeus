@@ -38,6 +38,7 @@ describe("MirrorLifecycle model registration", () => {
     expect(map.models.map((model) => model.name)).toEqual([
       "FormalElection",
       "MirrorLifecycle",
+      "PrConvergenceGate",
     ]);
   });
 
