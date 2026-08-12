@@ -619,6 +619,7 @@ function currentSelfContext(
     options.record,
     { oid: prHead, ref: prHeadRef },
     seams.gitSpawn ?? nodeGitSpawn,
+    options.unit,
   );
   if (!git.ok) {
     return { ok: false, outcome: { exitCode: 1, stdout: "", stderr: `delivery prerequisite failed: ${git.message}\n` } };
@@ -938,6 +939,7 @@ async function createPullRequest(options: CreateOptions, seams: CliSeams): Promi
         options.head,
         options.base,
         seams.gitSpawn ?? nodeGitSpawn,
+        options.unit,
       );
       if (!prerequisite.ok) {
         return { exitCode: 1, stdout: "", stderr: `create prerequisite failed: ${prerequisite.message}\n` };

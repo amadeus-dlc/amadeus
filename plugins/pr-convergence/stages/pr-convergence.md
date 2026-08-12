@@ -216,7 +216,12 @@ failed emission or sensor fire returns non-zero and leaves the completion guard
 closed; re-running the same verb with the same identity resumes the interrupted
 delivery (it completes the missing audit emission and sensor fire), while
 tampered or copied evidence is still refused. Manual report edits and manual
-sensor invocation are not delivery paths.
+sensor invocation are not delivery paths. The unit's own
+`pr-convergence-report.md` and the record's audit shards — the files the CLI
+itself writes — are exempt from the clean-worktree prerequisite, so
+`create` → `report` completes inside one head epoch and the record checkpoint
+commit happens after the verdict; every other tracked modification still
+refuses.
 
 The packaged checker resource is
 `{{HARNESS_DIR}}/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts`;

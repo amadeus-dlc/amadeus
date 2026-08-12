@@ -1427,6 +1427,10 @@ function selfGit(overrides: Record<string, { code: number; stdout: string }> = {
       "rev-parse --show-toplevel": { code: 0, stdout: "/repo\n" },
       "branch --show-current": { code: 0, stdout: `${SELF_BRANCH}\n` },
       "rev-parse HEAD": { code: 0, stdout: `${SELF_SHA}\n` },
+      "rev-parse --show-prefix": {
+        code: 0,
+        stdout: "amadeus/spaces/default/intents/260812-pr-gate/\n",
+      },
       "diff --name-only main...HEAD": { code: 0, stdout: "plugins/pr-convergence/tool.ts\n" },
       "status --porcelain --untracked-files=no": { code: 0, stdout: "" },
       [`ls-remote --exit-code --heads origin ${SELF_BRANCH}`]: {
@@ -1953,6 +1957,100 @@ describe("CLI self delivery — the failure arms of recovery are loud", () => {
     const missing = spawnGit(["amadeus-no-such-binary"], tmpdir());
     expect(missing.code).not.toBe(0);
     expect(missing.stderr).toContain("amadeus-no-such-binary");
+  });
+});
+
+describe("CLI self delivery — the CLI's own outputs do not block the next verb", () => {
+  const PREFIX = "amadeus/spaces/default/intents/260812-pr-gate/";
+  const REPORT_PATH = `${PREFIX}construction/cli/code-generation/pr-convergence-report.md`;
+  const SHARD_PATH = `${PREFIX}audit/clone-a.jsonl`;
+  const dirty = (...paths: readonly string[]) => ({
+    "status --porcelain --untracked-files=no": {
+      code: 0,
+      stdout: paths.map((path) => ` M ${path}\n`).join(""),
+    },
+  });
+
+  test("report proceeds when only the unit report and the audit shard are dirty", async () => {
+    const f = makeSelfFixture();
+    expect((await invokeCli(createArgs(f), selfSeams(f.record))).exitCode).toBe(0);
+    const out = await invokeCli(
+      reportArgs(f),
+      selfSeams(f.record, {
+        gh: selfGh({ provenance: SELF_PROVENANCE }),
+        git: selfGit(dirty(REPORT_PATH, SHARD_PATH)),
+      }),
+    );
+    expect(out.exitCode).toBe(0);
+    expect(readFileSync(reportPathFor(f.record, "cli"), "utf-8")).toContain("- kind: converged");
+  });
+
+  test("create proceeds when only its own earlier outputs are dirty", async () => {
+    const f = makeSelfFixture();
+    expect((await invokeCli(createArgs(f), selfSeams(f.record))).exitCode).toBe(0);
+    const out = await invokeCli(
+      createArgs(f),
+      selfSeams(f.record, { git: selfGit(dirty(REPORT_PATH, SHARD_PATH)) }),
+    );
+    expect(out.exitCode).toBe(0);
+  });
+
+  test("any other tracked modification still refuses, with the same message", async () => {
+    const f = makeSelfFixture();
+    expect((await invokeCli(createArgs(f), selfSeams(f.record))).exitCode).toBe(0);
+    const out = await invokeCli(
+      reportArgs(f),
+      selfSeams(f.record, {
+        gh: selfGh({ provenance: SELF_PROVENANCE }),
+        git: selfGit(dirty(REPORT_PATH, SHARD_PATH, "src/unrelated.ts")),
+      }),
+    );
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain("tracked worktree is dirty; commit or restore it");
+  });
+
+  test("another unit's report is not this delivery's output", async () => {
+    const f = makeSelfFixture();
+    expect((await invokeCli(createArgs(f), selfSeams(f.record))).exitCode).toBe(0);
+    const out = await invokeCli(
+      reportArgs(f),
+      selfSeams(f.record, {
+        gh: selfGh({ provenance: SELF_PROVENANCE }),
+        git: selfGit(
+          dirty(`${PREFIX}construction/other-unit/code-generation/pr-convergence-report.md`),
+        ),
+      }),
+    );
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain("dirty");
+  });
+
+  test("create still refuses an unrelated tracked modification", async () => {
+    const f = makeSelfFixture();
+    const out = await invokeCli(
+      createArgs(f),
+      selfSeams(f.record, { git: selfGit(dirty("src/unrelated.ts")) }),
+    );
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain("dirty");
+    expect(existsSync(reportPathFor(f.record, "cli"))).toBe(false);
+  });
+
+  test("an unresolvable record prefix exempts nothing", async () => {
+    const f = makeSelfFixture();
+    expect((await invokeCli(createArgs(f), selfSeams(f.record))).exitCode).toBe(0);
+    const out = await invokeCli(
+      reportArgs(f),
+      selfSeams(f.record, {
+        gh: selfGh({ provenance: SELF_PROVENANCE }),
+        git: selfGit({
+          ...dirty(REPORT_PATH),
+          "rev-parse --show-prefix": { code: 1, stdout: "" },
+        }),
+      }),
+    );
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain("dirty");
   });
 });
 

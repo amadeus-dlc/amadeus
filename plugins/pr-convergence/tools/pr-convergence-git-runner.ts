@@ -40,11 +40,66 @@ function run(git: GitSpawn, cwd: string, args: readonly string[]): GitRunResult 
   return git(["git", ...args], cwd);
 }
 
+/**
+ * The delivery mechanism's own tracked outputs, which a clean-worktree check
+ * must not count against the delivery that just produced them.
+ *
+ * `create` writes the unit's report and appends the record's audit shard —
+ * both tracked. Counting them would deadlock the loop: `report` refuses because
+ * they are dirty, and committing them moves the head, staling the attestation
+ * they carry. Exactly two paths are exempt, and both are derived from the
+ * record and unit this invocation names; everything else still refuses.
+ */
+function selfOutputPaths(prefix: string, unit: string): {
+  readonly report: string;
+  readonly auditDir: string;
+} {
+  return {
+    report: `${prefix}construction/${unit}/code-generation/pr-convergence-report.md`,
+    auditDir: `${prefix}audit/`,
+  };
+}
+
+/** The path a `git status --porcelain` line names (root-relative; a rename
+ *  reports its destination). */
+function statusPath(line: string): string {
+  const body = line.slice(3);
+  const renamed = body.lastIndexOf(" -> ");
+  return renamed === -1 ? body : body.slice(renamed + 4);
+}
+
+function isSelfOutput(path: string, self: ReturnType<typeof selfOutputPaths>): boolean {
+  if (path === self.report) return true;
+  if (!path.startsWith(self.auditDir) || !path.endsWith(".jsonl")) return false;
+  return !path.slice(self.auditDir.length).includes("/");
+}
+
+/**
+ * The tracked modifications that are not this delivery's own outputs. An empty
+ * result means the worktree is clean as far as this delivery is concerned.
+ * The record's repository-relative prefix is read only when something IS dirty,
+ * and a prefix that cannot be resolved exempts nothing — the check stays
+ * closed rather than guessing which paths are ours.
+ */
+function foreignDirtyPaths(git: GitSpawn, cwd: string, unit: string | null): readonly string[] {
+  const status = run(git, cwd, ["status", "--porcelain", "--untracked-files=no"]);
+  if (status.code !== 0) return ["<git status failed>"];
+  const lines = status.stdout.split("\n").filter((line) => line.trim() !== "");
+  if (lines.length === 0 || unit === null) return lines.map(statusPath);
+  const prefix = run(git, cwd, ["rev-parse", "--show-prefix"]);
+  if (prefix.code !== 0) return lines.map(statusPath);
+  const self = selfOutputPaths(prefix.stdout.trim(), unit);
+  return lines.map(statusPath).filter((path) => !isSelfOutput(path, self));
+}
+
 export function verifyCreatePrerequisites(
   cwd: string,
   head: string,
   requestedBase: string | null,
   git: GitSpawn = nodeGitSpawn,
+  // The unit whose report this delivery owns. Omitted (an unlinked caller), no
+  // path is exempt from the clean-worktree check.
+  unit: string | null = null,
 ): GitPrerequisite {
   const top = run(git, cwd, ["rev-parse", "--show-toplevel"]);
   if (top.code !== 0) return { ok: false, message: "not a git worktree; run create from a committed checkout" };
@@ -64,8 +119,7 @@ export function verifyCreatePrerequisites(
   if (changed.code !== 0 || changed.stdout.trim() === "") {
     return { ok: false, message: "HEAD contains no target changes; commit the implementation first" };
   }
-  const status = run(git, cwd, ["status", "--porcelain", "--untracked-files=no"]);
-  if (status.code !== 0 || status.stdout.trim() !== "") {
+  if (foreignDirtyPaths(git, cwd, unit).length > 0) {
     return { ok: false, message: "tracked worktree is dirty; commit or restore tracked changes before create" };
   }
   const remote = run(git, cwd, ["ls-remote", "--exit-code", "--heads", "origin", head]);
@@ -94,6 +148,7 @@ export function verifyCurrentPrerequisites(
   cwd: string,
   expected: ExpectedPrHead,
   git: GitSpawn = nodeGitSpawn,
+  unit: string | null = null,
 ): GitPrerequisite {
   const branch = run(git, cwd, ["branch", "--show-current"]);
   const head = branch.stdout.trim();
@@ -104,8 +159,9 @@ export function verifyCurrentPrerequisites(
   const local = run(git, cwd, ["rev-parse", "HEAD"]);
   const localHead = local.stdout.trim();
   if (local.code !== 0 || !/^[0-9a-f]{40,64}$/i.test(localHead)) return { ok: false, message: "cannot resolve local HEAD" };
-  const status = run(git, cwd, ["status", "--porcelain", "--untracked-files=no"]);
-  if (status.code !== 0 || status.stdout.trim() !== "") return { ok: false, message: "tracked worktree is dirty; commit or restore it" };
+  if (foreignDirtyPaths(git, cwd, unit).length > 0) {
+    return { ok: false, message: "tracked worktree is dirty; commit or restore it" };
+  }
   const remote = run(git, cwd, ["ls-remote", "--exit-code", "--heads", "origin", head]);
   const remoteHead = remote.stdout.trim().split(/\s+/)[0] ?? "";
   if (remote.code !== 0 || remoteHead === "") return { ok: false, message: `remote branch origin/${head} is missing; push it` };
