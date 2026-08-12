@@ -1743,6 +1743,12 @@ function sensorRowsForStage(
 //     about — while a sensor that never applied to anything is refused.
 //   unresolved — some fired output's latest terminal is not SENSOR_PASSED
 //     (a FAILED, a budget override, or no terminal at all).
+interface TerminalSensorVerdict {
+  readonly event: string;
+  readonly outputDigest: string | null;
+  readonly receiptMatches: boolean;
+}
+
 export function evaluateBlockingSensors(
   blockingSensorIds: readonly string[],
   audit: string,
@@ -1756,11 +1762,7 @@ export function evaluateBlockingSensors(
     const firedOutputs: string[] = [];
     let latestOutputPath = "";
     const latestFire = new Map<string, { fireId: string; outputDigest: string | null }>();
-    const latestTerminal = new Map<string, {
-      event: string;
-      outputDigest: string | null;
-      receiptMatches: boolean;
-    }>();
+    const latestTerminal = new Map<string, TerminalSensorVerdict>();
     for (const row of rows) {
       if (row.sensorId !== sensorId) continue;
       if (row.event === "SENSOR_FIRED") {
