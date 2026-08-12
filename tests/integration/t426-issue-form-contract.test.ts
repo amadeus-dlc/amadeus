@@ -181,24 +181,25 @@ describe("t426 Issue Form contract", () => {
   test("the team norm separates common, type-specific, mirror, and post-filing rules", () => {
     const norm = readFileSync(TEAM_NORM_PATH, "utf8");
 
+    // Re-baselined by #2921 after the norm distillation in #2919. Two cids were
+    // consolidated away and their content is pinned as surviving substrings instead:
+    //   issue-type-specific-body   -> the delegation clause inside issue-canonical-body
+    //                                 (type-specific forms live in the ISSUE_TEMPLATE yml files,
+    //                                  whose fields this file already pins directly)
+    //   intent-first-mirror-issue  -> the (B) intent-first branch inside issue-taxonomy
     for (const cid of [
       "issue-taxonomy",
       "issue-type-decision",
       "issue-canonical-body",
       "pre-filing-dup-and-branch-check",
       "issue-cross-review",
-      "issue-type-specific-body",
-      "intent-first-mirror-issue",
     ]) {
       expect(norm, `missing canonical norm: ${cid}`).toContain(`cid:requirements-analysis:${cid}`);
     }
     expect(norm).toContain("`bug` / `enhancement` / `documentation` / `question`");
     expect(norm).toContain("**完了条件**を上から順に判定");
-    expect(norm).toContain("`.github/ISSUE_TEMPLATE/{bug,enhancement,documentation,question}.yml`");
-    expect(norm).toContain("`.github/workflows/issue-labels.yml`");
-    for (const field of ["ハーネス名", "ハーネスバージョン", "Amadeus バージョン"]) {
-      expect(norm, `missing bug field contract: ${field}`).toContain(field);
-    }
+    expect(norm).toContain("種別固有の様式は `.github/ISSUE_TEMPLATE/*.yml` を正本とし、同じ変更で同期する");
+    expect(norm).toContain("intent record を正本に engine がミラー Issue を生成し、record → Issue の一方向同期");
     expect(norm).not.toContain("cid:requirements-analysis:bug-issue-canonical-body");
     expect(norm).not.toContain("`.github/workflows/bug-labels.yml`");
   });
