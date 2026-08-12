@@ -49,6 +49,7 @@
 // REFUSED by the core gate (and the preToolUse hook hard-blocks the tool call
 // besides). One human turn commits at most one gate.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { platform, tmpdir } from "node:os";
@@ -70,6 +71,9 @@ import {
 
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "2400", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 2400) * 1000;
+const MARKER_WAIT_TIMEOUT_MS = TEST_TIMEOUT_MS === 0
+  ? scaleTestTime(2_280_000)
+  : Math.max(1, TEST_TIMEOUT_MS - 120_000);
 
 // TEST-GRADE: a per-process port so back-to-back runs never collide on a fixed
 // debug port (the spike hardcoded 9337/9340/9341). The runner pins this file serial
@@ -209,13 +213,13 @@ describe("t-ide-kiro-checkpoint (live Kiro IDE: human-presence gate enforced on 
         // human-presence hooks). Budget leaves headroom under the timeout.
         await watchMarkers(
           () => gateApprovedCountFor(sandbox, COMMITTED_SLUG) >= 1,
-          TEST_TIMEOUT_MS - 120_000,
+          MARKER_WAIT_TIMEOUT_MS,
           async () => {
             await autoApprove(handle.port);
           },
         );
         // Settle a beat so a (wrongly) committed second gate would also have landed.
-        await new Promise((r) => setTimeout(r, 8000));
+        await new Promise((r) => setTimeout(r, scaleTestTime(8000)));
 
         // ---- ASSERTIONS (disk only; never chat prose) - the REAL fix surfaces ----
 
@@ -293,13 +297,13 @@ describe("t-ide-kiro-checkpoint (live Kiro IDE: human-presence gate enforced on 
         // proceed and fire their postToolUse hooks.
         await watchMarkers(
           () => humanTurnCount(sandbox) >= 1,
-          TEST_TIMEOUT_MS - 120_000,
+          MARKER_WAIT_TIMEOUT_MS,
           async () => {
             await autoApprove(handle.port);
           },
         );
         // Settle so any (wrongly) re-fired mint on a continuation would have landed.
-        await new Promise((r) => setTimeout(r, 8000));
+        await new Promise((r) => setTimeout(r, scaleTestTime(8000)));
 
         // RATIO: exactly one human turn => exactly one HUMAN_TURN event, regardless of
         // how many model continuations / postToolUse firings happened in between.
@@ -313,4 +317,3 @@ describe("t-ide-kiro-checkpoint (live Kiro IDE: human-presence gate enforced on 
     TEST_TIMEOUT_MS,
   );
 });
-

@@ -60,9 +60,19 @@ const KNOWN_RULES_SUBDIR: Readonly<Record<string, string>> = {
   ".claude": "rules",
   ".kiro": "steering",
   ".codex": "amadeus-rules",
+  ".cursor": "amadeus-rules",
   ".kimi-code": "rules",
+  ".opencode": "amadeus-rules",
   ".pi": "rules",
 };
+
+// The rules subdir a GIVEN harness dir renames `rules/` to — the same mapping
+// rulesSubdir() applies to the ambient harness, but for an explicitly named one.
+// A cross-harness prose copy (the plugin staging seed) needs the target's rename,
+// not the running process's (#2790). Unknown dirs keep the neutral `rules`.
+export function rulesSubdirFor(dir: string): string {
+  return KNOWN_RULES_SUBDIR[dir] ?? "rules";
+}
 
 export function isHarnessType(value: string): value is HarnessType {
   return HARNESS_TYPE_VALUES.has(value);

@@ -7,6 +7,7 @@
 // an unknown collector, and a missing metrics dir all exit non-zero
 // (AC-1a/1b/3d).
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
@@ -134,7 +135,7 @@ describe("pipe integrity — Issue #2700, stdout must fully drain before exit", 
   test("output bigger than the 64KiB pipe buffer is not truncated when piped", () => {
     dir = buildOversizedMetricsRoot(1300);
     const env = { ...process.env, AMADEUS_METRICS_ROOT: dir };
-    const RUN_OPTIONS = { encoding: "utf-8", env, timeout: 60_000, killSignal: "SIGKILL" } as const;
+    const RUN_OPTIONS = { encoding: "utf-8", env, timeout: scaleTestTime(60_000), killSignal: "SIGKILL" } as const;
 
     // Full capture: spawnSync reads the child's stdout pipe to EOF itself, so
     // this number is what a correct, fully-drained run actually produces.

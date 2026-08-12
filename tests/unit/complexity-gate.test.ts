@@ -8,6 +8,7 @@
 //     contract (refined-mockups M1..M7) with the right exit code against
 //     injected fixtures — the gate's own falling demonstration.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test, afterAll } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -251,7 +252,7 @@ describe("complexity-gate CLI (spawn boundary, M-contracts)", () => {
     const check = runGate(["--check"], env);
     expect(check.status).toBe(0);
     expect(check.stdout).toContain("complexity gate: OK — 0 new violations, 0 regressions");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("M2: an injected over-threshold function fails as NEW_VIOLATION (falling demonstration)", () => {
     const fx = fixtureProject({ "simple.ts": SIMPLE_FN });
@@ -263,7 +264,7 @@ describe("complexity-gate CLI (spawn boundary, M-contracts)", () => {
     expect(check.stderr).toContain("COMPLEXITY GATE FAILED [NEW_VIOLATION]");
     expect(check.stderr).toContain("tangled");
     expect(check.stderr).toContain("bun tests/complexity-gate.ts --update");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("M3: a baselined function that got worse fails as RATCHET_REGRESSION", () => {
     const fx = fixtureProject({ "simple.ts": SIMPLE_FN, "tangled.ts": TANGLED_FN });
@@ -279,7 +280,7 @@ describe("complexity-gate CLI (spawn boundary, M-contracts)", () => {
     expect(check.stderr).toContain("COMPLEXITY GATE FAILED [RATCHET_REGRESSION]");
     expect(check.stderr).toContain("-> ");
     expect(check.stderr).toContain("The baseline only ratchets down.");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("M4: a missing baseline fails closed as MISSING_BASELINE", () => {
     const fx = fixtureProject({ "simple.ts": SIMPLE_FN });
@@ -290,7 +291,7 @@ describe("complexity-gate CLI (spawn boundary, M-contracts)", () => {
     expect(check.status).toBe(1);
     expect(check.stderr).toContain("COMPLEXITY GATE FAILED [MISSING_BASELINE]");
     expect(check.stderr).toContain("--update");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("M4: a malformed baseline fails closed as MALFORMED with a formatted diagnosis", () => {
     const fx = fixtureProject({ "simple.ts": SIMPLE_FN });
@@ -302,7 +303,7 @@ describe("complexity-gate CLI (spawn boundary, M-contracts)", () => {
     expect(check.status).toBe(1);
     expect(check.stderr).toContain("COMPLEXITY GATE FAILED [MALFORMED]");
     expect(check.stderr).not.toContain("    at "); // formatted, not a stack trace
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("M4: a broken lizard launcher fails closed as MEASUREMENT_FAILED", () => {
     const fx = fixtureProject({ "simple.ts": SIMPLE_FN });
@@ -314,7 +315,7 @@ describe("complexity-gate CLI (spawn boundary, M-contracts)", () => {
     expect(check.status).toBe(1);
     expect(check.stderr).toContain("COMPLEXITY GATE FAILED [MEASUREMENT_FAILED]");
     expect(check.stderr).toContain("pip install lizard==1.23.0");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("M5: warn-band functions are listed without failing", () => {
     const moderate = `export function moderate(a: number): number {
@@ -334,13 +335,13 @@ describe("complexity-gate CLI (spawn boundary, M-contracts)", () => {
     expect(check.status).toBe(0);
     expect(check.stdout).toContain("warn band (informational, not blocking)");
     expect(check.stdout).toContain("moderate");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("M7: unknown arguments exit 2 with usage", () => {
     const run = runGate([], {});
     expect(run.status).toBe(2);
     expect(run.stderr).toContain("usage: bun tests/complexity-gate.ts <--check | --update>");
-  }, 30000);
+  }, scaleTestTime(30000));
 });
 
 // --- in-process: C-4 handlers (spawn-blindspot seam) ----------------------------
@@ -515,5 +516,5 @@ describe("handlers in-process (runUpdate / runCheck / main)", () => {
     const chk = silenced(() => runCheck());
     expect(chk.result).toBe(0);
     expect(chk.out).toContain("complexity gate: OK");
-  }, 60000);
+  }, scaleTestTime(60000));
 });

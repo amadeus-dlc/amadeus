@@ -1,0 +1,11 @@
+{
+  "route": "author-new",
+  "subjectIdentity": "sha256:4c6bf2d4791d00bbae9474f1c2e62c334182dc878d23a6e9b476930610f0b988",
+  "subjectSeries": "sha256:1c22f6d5b39d2958ba42733cbbbd02368b32ac263a13f448bf2d736e73b6e691",
+  "subjects": ["FR-2", "FR-3", "FR-4", "FR-5"],
+  "reason": "J6: new-subject — PR report lifecycle, attestation, blocking sensor, and completion chokepoints coordinate resumable actors over shared state; a stale or missing verdict can otherwise permit a silent safety violation, and no registered model governs these subjects.",
+  "judgedBy": "amadeus-architect-agent",
+  "humanApproval": null,
+  "generatedAt": "2026-08-11T23:18:07.130Z",
+  "predecessor": { "kind": "root" }
+}

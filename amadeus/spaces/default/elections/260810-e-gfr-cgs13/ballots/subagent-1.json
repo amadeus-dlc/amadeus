@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-GFR-CGS13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 2,
+  "reservation": "B の persist 文には record-reconciliation の必須フラグ --reconciliation-kind <kind> を併記すること — packages/framework/core/tools/amadeus-swarm.ts:1211 の `if (!flags[\"reconciliation-kind\"]) fail(...)` により未指定は fail し、提案文の逐語コマンドは再実行不能(cid:requirements-analysis:mechanism-cite-verify-at-draft / verbatim-quote-with-cite)。",
+  "rationale": "独立実測: (1) A の事実基盤 — projection-sweep/code-generation-plan.md:25,29-32 で i1 BLOCKER 4件が全件『レビュー環境に Bolt 3 未取込』起因、:44,48-50 で i2 BLOCKER 3件が全件『自己インストール投影(.claude/.codex)未再生成』起因、いずれも実装欠陥ゼロで予算2を消尽。code-summary.md:65 で conductor が build 後 R4 再実測 exit 1 / 0 hit を実測して閉包。(2) A の射程 — project.md:173 の mirror-merge-before-approve は engine の workspace_requires ガード(approve 前の取込)のみを縛り、review 前の取込順序も reviewer が conductor ツリーを読む事実も未規定。project.md:292 の c2-ssp-plugin-overlay-review-order は record 側順序(PR→converge→report→§12a→approve)を定めるが取込時点を規定しない。project.md:406 の c2-acceptance-at-delivery-tree は『受け入れ条件を配送先ツリー述語で書く』ことを縛るが、取込側 conductor ツリーでの build 再生成という conductor 手順は未被覆。よって既存 cid への追補として成立(独立 cid 非新設に同意)。(3) B の機構 — amadeus-unit-pool-runtime.ts:310 の acquire は active>=cap で 'capacity-exhausted' を返し恒久ブロックが構造的に成立、:316-317 の recordReconciliation は effect==='no-effect-confirmed' のとき mutate の fillReleasedSlots=true(:238,:255-257 のコメント『Fill every newly available slot from FIFO before committing』)で新 attempt を自動再取得 — 『同ツールが新 attempt を自動再取得する』の記述は実装と一致。(4) B の実測 — audit シャード j5ik2o-mac-studio-lan-7e855145ebfb.jsonl に UNIT_POOL_EVENT_SET_COMMITTED 13行・no-effect-confirmed 2件(両 attempt)、seq 373 の SWARM_COMPLETED が Batch number 2 / Converged count 2 / Failed count 0 を実値で示す。(5) B の射程 — memory 3層を grep しても unit pool / capacity-exhausted / reconciliation の運用規則は 0 hit で、c1-degrade-batch-directive-capture(directive 捕捉)・c1-pcp-isolated-session-swarm-incompat(隔離ガード下の代替経路)いずれも pool 回復を覆わない。",
+  "submittedAt": "2026-08-10T14:12:11Z",
+  "receivedAt": "2026-08-10T14:12:16Z"
+}

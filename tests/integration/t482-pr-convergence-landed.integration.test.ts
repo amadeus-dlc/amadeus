@@ -18,7 +18,7 @@
 //   (e) an unmerged pull request never takes the landed path (AC-2c).
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -60,8 +60,10 @@ const MERGED_PR = {
   },
 } as const;
 
-const stateEnvelope = (pullRequest: unknown): string =>
-  JSON.stringify({ data: { repository: { pullRequest } } });
+const stateEnvelope = (pullRequest: Record<string, unknown>): string =>
+  JSON.stringify({
+    data: { repository: { pullRequest: { ...pullRequest, title: "", body: "" } } },
+  });
 
 describe("fetchRawPrState — the lifecycle fields travel raw (AC-1a)", () => {
   test("the state query asks for state, mergedAt and the merge commit rollup", () => {
@@ -81,6 +83,8 @@ describe("fetchRawPrState — the lifecycle fields travel raw (AC-1a)", () => {
     expect(raw.value).toEqual({
       mergeable: "UNKNOWN",
       mergeStateStatus: "UNKNOWN",
+      title: "",
+      body: "",
       state: "MERGED",
       mergedAt: "2026-08-07T01:00:00Z",
       mergeCommitOid: "0123456789abcdef0123456789abcdef01234567",
@@ -92,6 +96,8 @@ describe("fetchRawPrState — the lifecycle fields travel raw (AC-1a)", () => {
     const open = {
       mergeable: "MERGEABLE",
       mergeStateStatus: "CLEAN",
+      title: "",
+      body: "",
       state: "OPEN",
       mergedAt: null,
       mergeCommit: null,
@@ -105,6 +111,8 @@ describe("fetchRawPrState — the lifecycle fields travel raw (AC-1a)", () => {
     expect(raw.value).toEqual({
       mergeable: "MERGEABLE",
       mergeStateStatus: "CLEAN",
+      title: "",
+      body: "",
       state: "OPEN",
       mergedAt: null,
       mergeCommitOid: null,
@@ -125,7 +133,12 @@ describe("fetchRawPrState — the lifecycle fields travel raw (AC-1a)", () => {
     const raw = await fetchRawPrState(runner.value, REF);
     expect(raw.ok).toBe(true);
     if (!raw.ok) return;
-    expect(raw.value).toEqual({ mergeable: "MERGEABLE", mergeStateStatus: "CLEAN" });
+    expect(raw.value).toEqual({
+      mergeable: "MERGEABLE",
+      mergeStateStatus: "CLEAN",
+      title: "",
+      body: "",
+    });
     expect("state" in raw.value).toBe(false);
     expect("mergedAt" in raw.value).toBe(false);
   });
@@ -152,7 +165,7 @@ function makeBareRecord(): string {
 }
 
 /** Drives the CLI: readiness, then the state query, then review-thread pages. */
-function cliSpawn(pullRequest: unknown, pages: readonly string[]) {
+function cliSpawn(pullRequest: Record<string, unknown>, pages: readonly string[]) {
   const argvs: (readonly string[])[] = [];
   let pageCalls = 0;
   const spawn: GhSpawn = async (argv) => {
@@ -196,6 +209,8 @@ const statusArgs = (record: string) => [
   "landed-report",
   "--record",
   record,
+  "--unlinked",
+  "true",
 ];
 
 describe("CLI status verb on a merged pull request (AC-2a/2b)", () => {

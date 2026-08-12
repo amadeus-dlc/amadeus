@@ -1,6 +1,7 @@
 // covers: function:compileStageGraph, subcommand:amadeus-orchestrate:next,
 //         function:unitCovered, function:producesArtifactsExist
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -369,7 +370,7 @@ describe("t248 kind-aware routing and coverage", () => {
       `amadeus/spaces/${DEFAULT_SPACE}/intents/${DEFAULT_RECORD_DIR}/construction/schema/functional-design/domain-entities.md`,
     ]);
     expect("optional_produces" in directive).toBe(false);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("treats a filtered required empty set as covered after the spec files land", () => {
     const project = seedProject([
@@ -380,7 +381,7 @@ describe("t248 kind-aware routing and coverage", () => {
     const directive = next(project, sourceGraph());
     expect(directive.unit).toBe("schema");
     expect(directive.gate).toBe(true);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("keeps the full matrix for an untagged unit", () => {
     const project = seedProject([{ name: "legacy" }]);
@@ -388,7 +389,7 @@ describe("t248 kind-aware routing and coverage", () => {
     expect(directive.unit).toBe("legacy");
     expect(directive.produces).toHaveLength(4);
     expect(directive.optional_produces).toHaveLength(1);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("keeps the full matrix when the runtime kind is malformed", () => {
     const project = seedProject([{ name: "legacy" }]);
@@ -398,7 +399,7 @@ describe("t248 kind-aware routing and coverage", () => {
     writeFileSync(runtimePath, `${JSON.stringify(graph, null, 2)}\n`, "utf-8");
     const directive = next(project, sourceGraph());
     expect(directive.produces).toHaveLength(4);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 });
 
 describe("t248 kind-aware consume projection", () => {
@@ -418,7 +419,7 @@ describe("t248 kind-aware consume projection", () => {
     expect(directive.kind).toBe("run-stage");
     expect(artifactNames(directive.consumes)).toEqual([...expected]);
     expect("consumes_absent" in directive).toBe(false);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("covers a library NFR Design with only its two applicable outputs", () => {
     const project = seedProject([{ name: "library", kind: "library" }]);
@@ -428,12 +429,25 @@ describe("t248 kind-aware consume projection", () => {
       "security-design",
       "logical-components",
     ]);
+    writeFileSync(
+      join(
+        seededRecordDir(project),
+        "construction/library/nfr-design/security-design.md",
+      ),
+      "# security-design\n\n## Review — Iteration 1\n\n" +
+        "- **Verdict:** READY\n" +
+        "- **Reviewer:** amadeus-architecture-reviewer-agent\n" +
+        "- **Date:** 2026-08-10T00:00:00Z\n" +
+        "- **Iteration:** 1\n" +
+        "- **Scope decision:** none\n",
+      "utf-8",
+    );
 
     const directive = next(project, sourceGraph());
 
     expect(directive.unit).toBe("library");
     expect(directive.gate).toBe(true);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("falls back only the kindless unit in a valid mixed runtime graph", () => {
     const project = seedProject([
@@ -464,7 +478,7 @@ describe("t248 kind-aware consume projection", () => {
       ...ALL_NFR_REQUIREMENTS,
       "business-logic-model",
     ]);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("discards every unit kind when one runtime row has an invalid kind", () => {
     const project = seedProject([
@@ -486,7 +500,7 @@ describe("t248 kind-aware consume projection", () => {
       ...ALL_NFR_REQUIREMENTS,
       "business-logic-model",
     ]);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("falls back every NFR Design input when runtime-graph is missing", () => {
     const project = seedProject([{ name: "library", kind: "library" }]);
@@ -501,7 +515,7 @@ describe("t248 kind-aware consume projection", () => {
       ...ALL_NFR_REQUIREMENTS,
       "business-logic-model",
     ]);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 });
 
 describe("t248 applicability projection and completion guard", () => {
@@ -547,7 +561,7 @@ describe("t248 applicability projection and completion guard", () => {
       { encoding: "utf-8", env: env(graphPath, true) },
     );
     expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("completion guard still rejects a non-vacuous spec stage without artifacts", () => {
     const graphPath = sourceGraph();
@@ -559,7 +573,7 @@ describe("t248 applicability projection and completion guard", () => {
     );
     expect(result.status).not.toBe(0);
     expect(`${result.stdout}\n${result.stderr}`).toContain("Refusing to complete");
-  }, 30_000);
+  }, scaleTestTime(30_000));
 });
 
 // buildGraphStage carries the plugin-scope optional frontmatter fields
@@ -623,7 +637,7 @@ describe("t248 buildGraphStage optional field carry-through", () => {
     expect(functional?.bundle).toBe("book");
     expect(functional?.when).toEqual({ "producer-in-plan": "business-rules" });
     expect(functional?.required_sections).toEqual(["Overview", "Details"]);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 });
 
 // In-process twins of the spawn cases above. The subprocess cases pin the
@@ -705,13 +719,13 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     const directive = nextInProcess(project, sourceGraph());
     expect(directive.unit).toBe("schema");
     expect(directive.produces).toHaveLength(2);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("next keeps the full matrix for an untagged unit in-process", () => {
     const project = seedProject([{ name: "legacy" }]);
     const directive = nextInProcess(project, sourceGraph());
     expect(directive.produces).toHaveLength(4);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("next keeps the full matrix when the runtime kind is malformed in-process", () => {
     const project = seedProject([{ name: "legacy" }]);
@@ -721,12 +735,45 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     writeFileSync(runtimePath, `${JSON.stringify(graph, null, 2)}\n`, "utf-8");
     const directive = nextInProcess(project, sourceGraph());
     expect(directive.produces).toHaveLength(4);
-  }, 30_000);
+  }, scaleTestTime(30_000));
+
+  test("next re-emits a covered unit in reviewer-only mode when its verdict is missing", () => {
+    const project = seedProject([{ name: "schema", kind: "spec" }]);
+    writeStageArtifacts(project, "schema", "functional-design", [
+      "business-rules",
+      "domain-entities",
+    ]);
+
+    const directive = nextInProcess(project, sourceGraph());
+
+    expect(directive.kind).toBe("run-stage");
+    expect(directive.unit).toBe("schema");
+    expect(directive.gate).toBe(false);
+    expect(directive.review_only).toBe(true);
+    expect(directive.reviewer).toBe("amadeus-architecture-reviewer-agent");
+    expect("next_stage" in directive).toBe(false);
+  }, scaleTestTime(30_000));
+
+  test("next recovers a missing verdict without a compiled unit DAG", () => {
+    const project = seedProject([{ name: "legacy" }], { dependencyDoc: false });
+    writeStageArtifacts(project, "legacy", "functional-design", [
+      "business-logic-model",
+      "business-rules",
+      "domain-entities",
+    ]);
+    rmSync(join(seededRecordDir(project), "runtime-graph.json"), { force: true });
+
+    const directive = nextInProcess(project, sourceGraph());
+
+    expect(directive.unit).toBe("legacy");
+    expect(directive.gate).toBe(false);
+    expect(directive.review_only).toBe(true);
+  }, scaleTestTime(30_000));
 
   test("completion guard accepts an all-vacuous packaging stage in-process", () => {
     const project = seedProject([{ name: "package", kind: "packaging" }]);
     expect(() => advanceInProcess(project, sourceGraph())).not.toThrow();
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("completion guard treats spec artifacts on disk as covered in-process", () => {
     const project = seedProject([
@@ -735,7 +782,7 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     ]);
     writeFunctionalArtifacts(project, "schema", ["business-rules", "domain-entities"]);
     expect(() => advanceInProcess(project, sourceGraph())).not.toThrow();
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("next heals the unit topology from the dependency doc when runtime-graph is missing", () => {
     // Deleting runtime-graph.json forces orderedUnits to heal from the canonical
@@ -745,11 +792,9 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     rmSync(join(seededRecordDir(project), "runtime-graph.json"), { force: true });
     const directive = nextInProcess(project, sourceGraph());
     expect(directive.produces).toHaveLength(4);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
-  // An absent primary artifact reads the same as an unreviewed one, and it
-  // reaches the check through a different door: artifactCarriesReview cannot
-  // open the file at all.
+  // Required-all rejects an absent primary before the reviewer-verdict guard.
   //
   // The proposition this pins is narrower than it first looked (#2567): it holds
   // only when the unit's kind is unresolved at BOTH points — emit and gate. Then
@@ -759,7 +804,7 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
   // that state: no runtime-graph.json AND no canonical unit-of-work-dependency.md.
   // With either source present the kinds agree at both points and the pruned
   // arms below apply instead.
-  test("completion guard refuses when the primary artifact is absent entirely", () => {
+  test("completion guard refuses a kindless unit when a required artifact is absent", () => {
     const project = seedProject([{ name: "schema", kind: "spec" }], {
       dependencyDoc: false,
     });
@@ -784,8 +829,8 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
       process.exit = originalExit;
       console.error = originalError;
     }
-    expect(stderr).toContain("no reviewer verdict recorded");
-  }, 30_000);
+    expect(stderr).toContain("missing required artifacts");
+  }, scaleTestTime(30_000));
 
   test("completion guard falls back to on-disk artifacts when runtime-graph is missing", () => {
     // Missing runtime-graph.json drives the kind-aware reader's missing-file
@@ -802,7 +847,7 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     ]);
     rmSync(join(seededRecordDir(project), "runtime-graph.json"), { force: true });
     expect(() => advanceInProcess(project, sourceGraph())).not.toThrow();
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   // The refusal itself, driven in-process. The spawned arms above cross a
   // process boundary bun's coverage cannot see, so the branch that names the
@@ -834,7 +879,7 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     }
     expect(stderr).toContain("no reviewer verdict recorded");
     expect(stderr).toContain("schema");
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   // --- Canonical kind fallback for the review gate (#2567) ------------------
   //
@@ -891,9 +936,14 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
 
   function seedReviewedSpecUnit(mutate: (runtimePath: string) => void): string {
     const project = seedProject([{ name: "schema", kind: "spec" }]);
-    // Exactly the spec-applicable set. business-logic-model is NOT applicable to
-    // a spec unit, so the reviewer never saw it and it is absent on disk.
-    writeFunctionalArtifacts(project, "schema", ["business-rules", "domain-entities"]);
+    // The state guard widens to the declared set when the runtime kind cannot
+    // be trusted. Seed that full set so these cases isolate dependency-document
+    // kind recovery in the reviewer guard rather than required-all refusal.
+    writeFunctionalArtifacts(project, "schema", [
+      "business-logic-model",
+      "business-rules",
+      "domain-entities",
+    ]);
     mutate(join(seededRecordDir(project), "runtime-graph.json"));
     return project;
   }
@@ -901,7 +951,7 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
   test("completion guard resolves the unit kind from the dependency doc when runtime-graph is missing", () => {
     const project = seedReviewedSpecUnit((path) => rmSync(path, { force: true }));
     expectAdvanceAccepted(project, sourceGraph());
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("completion guard resolves the unit kind from the dependency doc when the runtime row omits kind", () => {
     const project = seedReviewedSpecUnit((path) => {
@@ -910,7 +960,7 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
       writeFileSync(path, `${JSON.stringify(graph, null, 2)}\n`, "utf-8");
     });
     expectAdvanceAccepted(project, sourceGraph());
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("completion guard resolves the unit kind from the dependency doc when the runtime graph has no bolt_dag", () => {
     const project = seedReviewedSpecUnit((path) => {
@@ -921,7 +971,7 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
       );
     });
     expectAdvanceAccepted(project, sourceGraph());
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("completion guard accepts a service unit whose declared-first primary carries the review", () => {
     // Non-regression control: for a service unit the pruned and unpruned primary
@@ -943,7 +993,7 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     ]);
     rmSync(join(seededRecordDir(withoutGraph), "runtime-graph.json"), { force: true });
     expectAdvanceAccepted(withoutGraph, sourceGraph());
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("completion guard still refuses when only a secondary artifact carries a review", () => {
     // The primary-only invariant is untouched by the fallback: a heading on a
@@ -952,9 +1002,13 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     // canonical doc supplies the same kind.
     const seed = (dropGraph: boolean): string => {
       const project = seedProject([{ name: "schema", kind: "spec" }]);
-      // Primary (business-rules) exists WITHOUT a review; the review sits on the
-      // secondary (domain-entities) where a hand could have placed it.
-      writeStageArtifacts(project, "schema", "functional-design", ["business-rules"]);
+      // Both possible primaries exist WITHOUT a review; the review sits on the
+      // secondary (domain-entities) where a hand could have placed it. Seeding
+      // the widened required set keeps the no-runtime arm past required-all.
+      writeStageArtifacts(project, "schema", "functional-design", [
+        "business-logic-model",
+        "business-rules",
+      ]);
       writeFunctionalArtifacts(project, "schema", ["domain-entities"]);
       if (dropGraph) {
         rmSync(join(seededRecordDir(project), "runtime-graph.json"), { force: true });
@@ -967,19 +1021,21 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     expect(expectAdvanceRefusal(seed(true), sourceGraph())).toContain(
       "no reviewer verdict recorded",
     );
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
-  test("completion guard scans past a spec unit with no artifacts to one that has them", () => {
-    // Two spec units: the first has NO artifacts on disk (artifactsExistInDir
-    // returns false and the scan continues), the second has them (returns true),
-    // so the guard is satisfied without erroring.
+  test("completion guard requires artifacts for every spec unit", () => {
+    // Two spec units: the first has no artifacts while the second is complete.
+    // Required-all must refuse instead of letting one covered sibling stand in
+    // for the missing owner directory.
     const project = seedProject([
       { name: "schema-a", kind: "spec" },
       { name: "schema-b", kind: "spec" },
     ]);
     writeFunctionalArtifacts(project, "schema-b", ["business-rules", "domain-entities"]);
-    expect(() => advanceInProcess(project, sourceGraph())).not.toThrow();
-  }, 30_000);
+    expect(expectAdvanceRefusal(project, sourceGraph())).toContain(
+      "missing required artifacts",
+    );
+  }, scaleTestTime(30_000));
 
   test("report on a per-unit stage with uncovered units emits the coverage-gate error", () => {
     // Drives handleReport's per-unit coverage gate (nextUncoveredUnit): a
@@ -1005,7 +1061,7 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     const directive = JSON.parse(stdout.trim()) as Record<string, unknown>;
     expect(directive.kind).toBe("error");
     expect(String(directive.message)).toContain("not yet complete");
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   // Issue #2586. The approve-time coverage guard used to run ONLY when a
   // compiled Bolt DAG existed, so every scope that SKIPs units-generation
@@ -1069,7 +1125,7 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     expect(directive.kind).toBe("error");
     expect(String(directive.message)).toContain("not yet complete");
     expect(String(directive.message)).toContain("unit-b");
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("report accepts a degrade per-unit stage once every unit directory is covered", () => {
     const project = seedDegradeProject();
@@ -1081,7 +1137,7 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     // about) instead of stopping at the coverage refusal.
     expect(String(directive.message ?? "")).not.toContain("not yet complete");
     expect(String(directive.message ?? "")).toContain("amadeus-state.ts approve");
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("report accepts a single covered degrade unit (the common fix-scope shape)", () => {
     const project = seedDegradeProject();
@@ -1092,7 +1148,7 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     // about) instead of stopping at the coverage refusal.
     expect(String(directive.message ?? "")).not.toContain("not yet complete");
     expect(String(directive.message ?? "")).toContain("amadeus-state.ts approve");
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("report leaves a degrade record with no unit directory unguarded", () => {
     // Nothing on disk to judge: the listing is the ledger, and an empty ledger
@@ -1105,5 +1161,5 @@ describe("t248 kind-aware coverage in-process (spawn-blindspot twins)", () => {
     // about) instead of stopping at the coverage refusal.
     expect(String(directive.message ?? "")).not.toContain("not yet complete");
     expect(String(directive.message ?? "")).toContain("amadeus-state.ts approve");
-  }, 30_000);
+  }, scaleTestTime(30_000));
 });

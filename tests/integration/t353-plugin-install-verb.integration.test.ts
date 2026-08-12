@@ -50,6 +50,10 @@ import {
   listPluginSourceDirs,
 } from "../../packages/framework/core/tools/amadeus-plugin.ts";
 import { writeProjectPlugins } from "../../packages/framework/core/tools/amadeus-plugin-selection.ts";
+import {
+  advisoriesForHost,
+  declaredHandoffStage,
+} from "../../packages/framework/core/tools/amadeus-advisory-declaration.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const FIXTURE = join(REPO_ROOT, "plugins", "formal-model-check");
@@ -268,6 +272,47 @@ describe("t353 plugin install verb (U2, #1597)", () => {
       ).toEqual([PLUGIN]);
       expect(existsSync(join(harness, PLUGIN_SOURCE_DIR_NAME, PLUGIN, "plugin.json"))).toBe(true);
       expect(createNodeBackend(harness).readComposition().plugins.has(PLUGIN)).toBe(true);
+    } finally {
+      rmSync(project, { recursive: true, force: true });
+    }
+  });
+
+  // #2823 / FR-7(b): the persistentInstall arm persisted the full bundle, but
+  // no test joined it to the advisory declaration read path. After install the
+  // persisted project supply IS the authoring face: the declaration reader
+  // finds the manifest there and resolves the plugin-root-relative evaluator
+  // argv against the installed plugin root.
+  test("a harness install joins the advisory declaration read path (manifest found, argv resolved)", () => {
+    const project = mkdtempSync(join(tmpdir(), "amadeus-t353-project-"));
+    const harness = join(project, ".codex");
+    mkdirSync(harness, { recursive: true });
+    mkdirSync(join(project, "amadeus"), { recursive: true });
+    writeFileSync(join(project, "amadeus", "config.json"), "{}\n");
+    try {
+      const result = runPluginCli(["install", source, "--project-root", harness], deps());
+      expect(result).toEqual({ kind: "installed", name: PLUGIN, composeOutcome: "composed" });
+      const seen: string[][] = [];
+      const warnings: string[] = [];
+      const raised = advisoriesForHost(harness, "requirements-analysis", undefined, (argv) => {
+        seen.push([...argv]);
+        return { status: 0, stdout: JSON.stringify({ ok: true, verdict: { kind: "no-hold" } }) };
+      }, (message) => warnings.push(message));
+      // The plugin-owned activation evaluator runs before the declared
+      // authoring-hold route on this bare fixture (no spec model map).
+      expect(raised.some((advisory) => String(advisory.code) === "authoring-hold")).toBe(false);
+      expect(seen).toEqual([
+        [
+          "bun",
+          join(project, "plugins", PLUGIN, "tools", "plugin-activation.ts"),
+          "advisory",
+          harness,
+          "requirements-analysis",
+        ],
+        ["bun", join(project, "plugins", PLUGIN, "tools", "tla-authoring.ts"), "advisory", "hold"],
+      ]);
+      expect(seen.every((argv) => existsSync(argv[1] as string))).toBe(true);
+      expect(warnings).toEqual([]);
+      expect(declaredHandoffStage(project, PLUGIN, "authoring-hold")).toBe("tla-authoring");
     } finally {
       rmSync(project, { recursive: true, force: true });
     }

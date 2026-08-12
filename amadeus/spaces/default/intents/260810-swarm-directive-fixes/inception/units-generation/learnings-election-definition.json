@@ -1,0 +1,13 @@
+{
+  "electionId": "E-SDF-UG-S13-1",
+  "kind": "zero-confirm",
+  "question": "Units Generation の学習候補 c1〜c6 は既存 norm（requirements 代替写像、数値規模、既存 infrastructure 再利用、TDD、Unit/Bolt 分離、parallel shared-file ownership）または今回 intent 固有設計に重複するため、新規 persist 0件でよいか",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "既存ノルムと intent 固有設計へ留め、永続ルール・sensorを追加しない。"
+    }
+  ],
+  "voters": ["subagent-1", "subagent-2"]
+}

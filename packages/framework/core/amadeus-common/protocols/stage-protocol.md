@@ -140,7 +140,7 @@ For a question under `semi`, the conductor runs the **same** `amadeus-bolt decid
 
 When a Bolt's code-generation returns failure, **always halt regardless of autonomy mode** — the Bolt never proceeds on its own. This is the one case where `autonomous` mode stops to consult. Halting is unconditional; who rules on the halt is decided by the solo auto-election hook below, which names the one branch that does not present the prompt.
 
-- Solo Bolt failure: halt immediately, emit `BOLT_FAILED` (with `--slug` for halt-and-ask correlation), present retry / skip / abort.
+- Solo Bolt failure: preserve the explicit `batch_id` and `attempt_id` returned by `amadeus-bolt start`, halt immediately, emit `BOLT_FAILED` with `--slug`, `--batch-id <batch_id>` (the `solo:<n>:<unit>` value, not the numeric batch number), `--attempt`, and the current `--stage`, then present retry / skip / abort. Never recover these immutable keys by selecting the latest Bolt event.
 - Parallel batch partial failure: wait for all parallel Tasks to return, preserve successful Bolts' artifacts, emit `BOLT_FAILED` for the failed Bolt with `Succeeded=[names]`, present `"Bolts [X, Y] succeeded, Bolt [Z] failed with: [error]. Options: retry Z, skip Z, abort Construction."`
 - Retry: re-run the failed Bolt only inside the existing worktree.
 - Skip: mark `[S]` in state with reason, proceed to next batch. Worktree at `<path>` is preserved.
@@ -274,14 +274,16 @@ options:
   - label: Guide me
     description: Walk through each question interactively here
   - label: Grill me
-    description: One question at a time, in depth — recommended answers included, until we reach a shared understanding
+    description: Round-by-round interview over the design tree admitted by the active materiality threshold — recommended answers included, until every admitted branch is settled (deferred nodes remain listed in the agreement summary). Depth acts as a pruning threshold here, not a question budget; the circuit breaker (3x the guideline) is the only ceiling
   - label: I'll edit the file
     description: I'll fill in the answers in the file directly
   - label: Chat
     description: Discuss freely — I'll extract decisions from our conversation
 ```
 
-Estimate `[N]` as the total interaction budget from the depth guidance below (the actual primary questions are authored in Step 2, per the chosen mode). Primary and follow-up questions draw from the same budget. When the current stage's phase is Construction or Operation, append " (exceptional use in this phase)" to the Grill me description — questions in those phases are exceptional, not routine.
+Estimate `[N]` as the total interaction budget from the depth guidance below (the actual primary questions are authored in Step 2, per the chosen mode). Primary and follow-up questions draw from the same budget. The `[N]` budget governs Guide me, file-edit, and Chat; Grill me does not consume `[N]` as a budget — it consumes depth as a materiality pruning threshold, with the §8 numeric ceiling crossing recorded via the standing justification line and the circuit breaker as the upper bound (see `grilling-protocol.md` §2). When the current stage's phase is Construction or Operation, append " (exceptional use in this phase)" to the Grill me description — questions in those phases are exceptional, not routine.
+
+While `semi` or `full` Intent autonomy is in force, do NOT include Grill me among the offered options — grilling is a human-in-the-loop discipline whose every round waits on a person, and unattended question resolution runs through `amadeus-bolt decide-question` (§1) instead.
 
 Log the user's mode choice to `<record>/audit/<host>-<clone>.jsonl` using the Question interaction log format.
 
@@ -346,10 +348,11 @@ For multi-select questions (where user may choose more than one option), add "(s
 - Best for: exploratory stages, brainstorming, when questions need discussion before answering
 
 **Step 3d: If "Grill me" (grilling mode):**
-- Follow `grilling-protocol.md` (same directory) — the single source for the grilling discipline (one question at a time, recommended answer with rationale, facts self-researched and only decisions asked, hybrid termination, confirmed agreement summary). Do not re-define the discipline here.
+- Follow `grilling-protocol.md` (same directory) — the single source for the grilling discipline (the design tree worked in rounds, the whole pruned frontier asked per round with recommended answers and rationale, depth consumed as the pruning threshold rather than a question budget, facts self-researched and only decisions asked, termination when the pruned frontier is empty or the user says `done`, the circuit breaker as the disclosed upper bound, confirmed agreement summary listing deferred nodes). Do not re-define the discipline here.
 - Workflow-specific obligations on top of the protocol:
-  - Append every dynamically generated question to the questions file with a blank `[Answer]:` tag **before presenting it** — the same Stop-hook human-wait convention as the other modes.
-  - Write each answer back to its `[Answer]:` tag immediately after it is received. Do not present the next question before the write-back.
+  - Append every dynamically generated question to the questions file with a blank `[Answer]:` tag **before presenting it** — one entry per question even when the round is presented at once, the same Stop-hook human-wait convention as the other modes.
+  - Write each answer back to its own `[Answer]:` tag immediately after it is received. Do not present the next round before the write-back.
+  - Append the deferred-node section (`grilling-protocol.md` §2.3) to the questions file, opened by `<!-- amadeus-grilling:deferred -->` on its own line — once per session, including when nothing was pruned. The heading follows the record's language; the marker is matched verbatim and is never translated.
   - Audit per question, existing contract only: `bun {{HARNESS_DIR}}/tools/amadeus-log.ts decision ...` before presenting, `bun {{HARNESS_DIR}}/tools/amadeus-log.ts answer ...` after the response — one `decision`/`answer` pair per question, with the same write-back, audit, and fresh-timestamp discipline as Step 3a. No new event types.
 - After the agreement summary is explicitly confirmed, continue with Step 4 as usual — grilling replaces only the Step 3 dialogue; verification, contradiction analysis, artifact generation, §13, and the approval gate are unchanged.
 
@@ -746,6 +749,20 @@ and NFR Design volume is measured separately by the advisory `nfr-budget` sensor
 — neither stage gets a numeric row in the Depth-Level Contract table above, which
 holds only counted quantities common to every scope.
 
+**Grill me mode consumes depth as a pruning threshold, not as a question
+budget** (`grilling-protocol.md` §2.2). Its sessions terminate on frontier
+coverage, so the question total is an emergent value and may exceed the row
+above. When it does, the recorded justification required by this contract takes
+a standing machine-readable form: grilling appends the fixed justification line
+(`grilling-protocol.md` §2.5) to the questions file at the crossing, recording
+the depth, the total, and `frontier-driven` as the reason. Alongside it the same
+file carries the deferred-node section carrying the
+`<!-- amadeus-grilling:deferred -->` marker (`grilling-protocol.md` §2.3), so
+the overrun is readable next to the pruning it was traded against. The circuit breaker
+(three times the row's ceiling — Minimal 12 / Standard 24 / Comprehensive 36)
+is the disclosed upper bound on that overrun. The ceilings above are unchanged
+and continue to bind every other interaction mode.
+
 ### Depth-Level Guidance
 
 The rest of each level is guidance — shape rather than ceiling. Follow it unless
@@ -986,18 +1003,14 @@ state alone is never proof that this question was shown.
 
 The engine persists one identity per pending advisory and accepts a choice only
 from the trusted human-prompt hook after that protected presentation. Re-run
-`next` after the human answers. A
-risk defer releases only that checkpoint. A run-now answer returns
-`run_required: true` plus one or more structured `formal_checks`; execute each
-`command` exactly as supplied, then re-run `next`. Only a complete, non-partial,
-provenance-verified `NOT_DETECTED` result releases the hold. `DETECTED`,
-`HARNESS_ERROR`, missing/corrupt evidence, or an identity mismatch keeps the
-hold active and requires a fresh retry or explicit risk defer.
+`next` after the human answers. A risk defer releases only that checkpoint.
 
-The engine applies this contract at `requirements-analysis`,
-`functional-design`, and `build-and-test`, including main workflow, `--single`,
-and the first `gate:false` per-unit directive. A directive without advisories is
-unchanged.
+An advisory whose declaration names a destination carries
+`advisories[].handoff_stage`. A run-now answer on that advisory opens that stage
+— run `/amadeus --stage <handoff_stage> --single`. Opening the stage
+does **not** release the hold: the hold lifts only when the declaring plugin's
+own evaluator returns no-hold on a later `next`. A directive without advisories
+is unchanged.
 
 ## 12. Phase Boundary Verification
 
@@ -1006,6 +1019,15 @@ unchanged.
 ## 12a. Reviewer Invocation
 
 If the `run-stage` directive includes a `reviewer` field (non-null), the orchestrator MUST invoke the reviewer as a **separate sub-agent** after the stage body produces its artifacts and before the §13 learnings ritual.
+
+For a per-unit directive, `gate:false` suppresses only the human approval gate
+and §13; it never suppresses this reviewer invocation. If the engine detects
+that all required unit artifacts exist without the durable verdict, it emits
+the same `run-stage` with `review_only:true`, `unit`, `reviewer`, and
+`gate:false`. Skip the stage body for that recovery directive, execute only this
+§12a flow for the named unit, and re-run `next` without reporting. The later
+per-unit `gate:true` re-entry means all bodies and reviewer verdicts already
+exist; do not regenerate either before completion verification and §13.
 
 ### Closed finding severity and verdict contract
 

@@ -1,6 +1,430 @@
 # コンポーネント棚卸し
 
-## directive kind の terminal/非terminal 分類（260809-report-done-kind-split、現在、observed `91f37ec85`）
+## coverage patch gate の構成要素棚卸し（260811-allowlist-semantic-audit、履歴、observed `854692fd7`）
+
+**観測 ref**: すべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（34 commits、ゲート実装は区間内無変更）。正本は `re-scans/260811-allowlist-semantic-audit.md`。
+
+### `tests/coverage-patch-gate.ts` の公開面（`grep -n "^export "` の全 16 件）
+
+| 行 | シンボル | 種別 | `reason` を受け取るか |
+|---|---|---|---|
+| `:68` | `parseLcovLineHits` | 関数 | — |
+| `:109` | `parseDiffAddedLines` | 関数 | — |
+| `:155` | `SemanticSelector` | interface | — |
+| `:162` | `ResolvedLineRange` | interface | — |
+| `:237` | `createSemanticSelector` | 関数 | — |
+| `:288` | `resolveSemanticSelector` | 関数 | **否**（`file` / `source` / `selector`） |
+| `:318` | `AllowlistEntry` | interface | 型として保持 |
+| `:325` | `ResolvedAllowlistEntry` | interface | 型として保持 |
+| `:360` | `parseAllowlist` | 関数 | 非空検査のみ |
+| `:384` | `resolveAllowlistEntries` | 関数 | 素通し |
+| `:407` | `findStaleAllowlistEntries` | 関数 | **否**（`entries` / `lcov`） |
+| `:431` | `PatchGateResult` | interface | — |
+| `:438` | `evaluatePatch` | 関数 | **否**（`added` / `lcov` / `allowlist`） |
+| `:463` | `renderSummary` | 関数 | — |
+| `:481` | `runCheck` | 関数 | — |
+| `:571` | `main` | 関数 | — |
+
+**`reason` を判定に用いる公開関数は 0 件。** 非公開の `allowlisted`（`:421-426`）も `file` / `start` / `end` のみを見る。
+
+### 台帳 `tests/.coverage-patch-allowlist.json` のデータ形状
+
+| フィールド | 型 | 検査 |
+|---|---|---|
+| `file` | string | `join(repoRoot, entry.file)` で読取、LCOV の `SF:` と突合 |
+| `selector.function` | string | AST スコープ名。トップレベルは `<module>`（`:190`）。クラスメンバは `Class.member` 形 |
+| `selector.fingerprint` | string | `sha256:` + アンカー窓の sha256（`sourceFingerprint` `:181-183`） |
+| `selector.anchorLines` | number | アンカー窓の行数。1 が最多（233 件 = 37%） |
+| `selector.targetLines` | string | アンカー窓**内の相対**範囲。絶対化は `:312` |
+| `reason` | string | **非空のみ**。内容は無検査 |
+| `expiry` | string?（597 件が保持） | string 型のみ検査 |
+
+### 台帳が張る対象コンポーネント（上位 10、`jq` の group_by 出力からの転記）
+
+| 件数 | ファイル |
+|---|---|
+| 63 | `packages/framework/core/tools/amadeus-orchestrate.ts` |
+| 61 | `packages/framework/core/tools/amadeus-state.ts` |
+| 19 | `packages/framework/core/tools/amadeus-quality-repair-runtime.ts` |
+| 18 | `packages/framework/core/tools/amadeus-advisory-choice.ts` |
+| 18 | `packages/framework/core/tools/amadeus-intent-completion.ts` |
+| 18 | `packages/framework/core/tools/amadeus-utility.ts` |
+| 17 | `packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts` |
+| 16 | `packages/framework/core/tools/amadeus-process-runner.ts` |
+| 16 | `packages/framework/core/tools/amadeus-quality-repair.ts` |
+| 16 | `scripts/pi-live-rpc.ts` |
+
+### 転位が確定したコンポーネント（18 件の分布）
+
+| ファイル | 確定転位数 | 該当エントリの解決先 |
+|---|---|---|
+| `packages/framework/core/tools/amadeus-state.ts` | 6 | `:916` / `:925-940` / `:961-964` / `:1070` / `:5683` / `:5736-5739` |
+| `packages/framework/core/tools/amadeus-orchestrate.ts` | 3 | `:944-951` / `:1707` / `:6189-6190` |
+| `packages/framework/core/tools/amadeus-graph.ts` | 2 | `:1711-1716` / `:1715-1720` |
+| `packages/framework/core/tools/amadeus-mirror-executor.ts` | 2 | `:1471-1475` / `:1480-1484` |
+| `packages/framework/core/tools/amadeus-election.ts` | 1 | `:417` |
+| `packages/framework/core/tools/amadeus-runtime.ts` | 1 | `:878` |
+| `packages/framework/core/tools/amadeus-learnings.ts` | 1 | `:902-904` |
+| `packages/framework/core/tools/amadeus-utility.ts` | 1 | `:820-822` |
+| `plugins/formal-model-check/tools/tla-arm.ts` | 1 | `:199` |
+
+各エントリの `reason` と真の対象所在は `re-scans/260811-allowlist-semantic-audit.md` §4 が正本。**全数照合は未実施のため本表は下限**。
+
+### 契約を固定しているテスト
+
+| ファイル | 固定している allowlist 契約 |
+|---|---|
+| `tests/unit/t229-coverage-patch-gate.test.ts` | 旧行ピンの拒否（`:176`）、指紋の行シフト耐性（`:182`）、指紋窓の拡張（`:197`）、解決の fail-closed（`:283`）、ソース不在の fail-closed（`:308`）、`reason` 非空（`:315`）、`targetLines` 形式（`:321`）、契約外セレクタフィールド（`:329`）、`expiry` 型（`:337`）、stale 範囲検出（`:343`） |
+| `tests/integration/t229-coverage-patch-gate-check.test.ts` | プロセス境界での `--check` 挙動 |
+
+**`reason` の内容を検査するテストは両ファイルに 0 件。**
+
+## TLA+ receipt 生成・検証コンポーネント（260812-tla-proof-receipt、現在、observed `854692fd7`）
+
+**観測 ref**: 本節の file:line はすべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD）時点。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（距離 34）。正本は `re-scans/260812-tla-proof-receipt.md`。パスはすべて `plugins/formal-model-check/tools/` 配下（テストを除く）。
+
+### receipt の生成器・検証器・消費者
+
+| 構成要素 | file:line | 役割 |
+|---|---|---|
+| `createVerifiedTlaModelReceipt` | `tla-model-receipt.ts:89-130` | receipt 構築。**identity を再計算せず `source.moduleIdentity` / `source.cfgIdentity` / `source.auxIdentities` をコピー**（`:104-112`）し、`identityInput` 全体を `:124-127` でハッシュする |
+| `validateVerifiedTlaModelReceipt` | `tla-model-receipt.ts:142` | 検証器。基準値を loader から作る（`:154` / `:156` / `:158`）。identity 比較は `:161-169`、拒否文言は `:169` `"receipt differs from the selected verified model"` |
+| `validateModelCheckReceipt` | `tla-model-receipt.ts:184`（`:187` で verified 分岐へ委譲） | union のディスパッチャ |
+| `sourceIdentityOf`（referee） | `tla-referee-toolchain.ts:46-48` | referee 側の identity 生成。**object 形式** `{ bytes: <base64> }` |
+| receipt 生成（referee） | `tla-referee-toolchain.ts:158` | ディスク上のバイト列から receipt を作る（未登録モデル） |
+| identity 生成（loader） | `tla-model-loader-internal.ts:279` | **デコード済み文字列**形式 |
+| `readVerifiedSourceBytes` | `fs-tlc-toolchain.ts:702`、identity 照合 `:731`、呼び出し `:1645` / `:1651` / `:1777` | ステージング時のバイト照合。**文字列形式**で比較 |
+| `verifyPlannedModelSources` | `fs-tlc-toolchain.ts:1635`、検証呼び出し `:1641`、中断 `:1643` | 準備段の消費者 |
+| `parseTlcOutput174` | `tlc-toolchain.ts:647` | 出力解析段の消費者（現状は準備段で止まるため未到達） |
+| `loadVerifiedTlaSourcesInternal` | `tla-model-loader-internal.ts:463`（方針コメント `:461-462`、root 解決 `findRepositoryRoot` `:151-168`） | test 専用 seam。root 選択の**能力はある**が本番利用は方針で禁止 |
+
+### loader 消費者の DI seam 有無 — 非対称は 1 箇所のみ
+
+| 消費者 | seam | file:line |
+|---|---|---|
+| `run-model-check-ci.ts` | **あり** — `loadSources` / `selectModel` フィールド（既定値つき） | `:19-20` `readonly loadSources: typeof loadVerifiedTlaSources;` / `:28-29` |
+| `run-model-check-diagnostic.ts` | **あり** — 同形 | `:326-327` / `:333-334` |
+| `run-model-check-source.ts` | **あり** — `loadVerifiedSources?` 任意依存、`:128` `(dependencies.loadVerifiedSources ?? loadVerifiedTlaSources)()` | `:40` / `:128` |
+| `run-skeleton-ci.ts` | なし（ただし検証器ではなく最上位 CI スクリプト） | `:66` / `:70` |
+| **`tla-model-receipt.ts`** | **なし — モジュール束縛の直接呼び出し** | **`:154` / `:156`** |
+
+seam のパターンは兄弟ファイルに 3 例すでに存在し、必要な 1 箇所にだけ無い（`cid:requirements-analysis:symmetric-pair-review` の形）。
+
+### `ModelCheckReceipt` の生産側（本番 2 箇所）
+
+- `tla-referee-toolchain.ts:158` — referee がディスク上のバイト列から生成（#2913 の患部）
+- `run-model-check-source.ts:96` `const verified = createVerifiedTlaModelReceipt(source);` — loader 由来のソースから生成（非対称なし）
+
+## PR 収束プラグインのコンポーネント棚卸し（260811-pr-convergence-gate、履歴、observed `854692fd7`）
+
+### Repository-Level Components
+
+| コンポーネント | 責務 | 主な依存 | Health |
+|---|---|---|---|
+| Framework Core | lifecycle、graph、state、audit、artifact/sensor guard | Bun、filesystem | at-risk |
+| Harness Adapters | 8 host 向け filesystem/UI integration | Core、host conventions | healthy |
+| Plugin Runtime | compose/drop、stage/tool/sensor projection | Core graph、filesystem | healthy |
+| PR Convergence Plugin | PR delivery loop と report | `gh`、GitHub、record | degraded |
+| Build/Packaging | deterministic `dist/<harness>` と self promotion | Bun、manifest | healthy |
+| Test System | smoke/unit/integration/e2e/conformance | Bun test、fixtures | at-risk |
+| Workflow Record Store | Intent state、audit、artifacts、CodeKB | Markdown/JSON filesystem | healthy |
+
+### PR Convergence Components
+
+| コンポーネント | 責務 | 依存 | Health / 根拠 |
+|---|---|---|---|
+| Host activation/config | plugin 有効化、4 self-* binding | `amadeus/config.json` | healthy — 配線済み |
+| Scope binding compiler | binding を stock/composed grid に加算 | config、plugin stage metadata | healthy — 非 self opt-in を保持 |
+| Plugin manifest | stage/tool と code-generation produces seam の宣言 | plugin composer | healthy |
+| Plugin stage contract | convergence loop、manual sensor fire、merge 非権限 | CLI、sensor | degraded — own produces/requires/sensors が空 |
+| CLI dispatcher | `create/status/report/override` | adapter、predicate、ledger | at-risk — local delivery precondition 不在 |
+| GitHub runner | auth probe、GraphQL/PR create boundary | `gh` CLI | healthy |
+| Lifecycle/predicate | active/merged と convergence 判定 | raw PR state | healthy |
+| Review ledger | all-page thread classification | GitHub GraphQL | healthy |
+| PR provenance checker | Intent/Bolt/Unit と title/body の一致 | record registry、snapshot | healthy |
+| Presentation renderer | canonical linked PR title/body | intent reference | healthy |
+| Report renderer/writer | canonical Markdown の生成 | convergence facts、filesystem | degraded — attestation 不在 |
+| Report format sensor | required field と自己矛盾の検査 | report filesystem | degraded — shape-only/advisory |
+| Orchestrator coverage | per-unit required produces の全件存在 | compiled graph、filesystem | healthy on normal engine path |
+| State artifact guard | direct transition の evidence check | compiled graph、filesystem | degraded — any-one artifact semantics |
+| Blocking sensor guard | blocking sensor の fired/passed 要求 | graph severity、audit | healthy generic mechanism、未配線 |
+
+### Ownership Gaps
+
+- CLI execution receipt の発行 owner がない。
+- report content digest と audit identity の binding owner がない。
+- receipt/digest の completion-time verification owner がない。
+- local branch/commit/push/head SHA precondition の検査 owner がない。
+- pr-convergence stage と code-generation overlay の間で report lifecycle owner が分散している。
+
+## テスト時間制御コンポーネント（260810-test-time-factor、履歴、observed `ce3c3ccfd`）
+
+| コンポーネント | 責務 | 係数対応状況 |
+|---|---|---|
+| run-tests argument parser | suite/perf/coverage/test timeout 引数の解決 | 固定値のみ |
+| run-tests scheduler | file 分類、並列実行、Bun child 起動 | 係数未使用 |
+| GitHub Actions workflows | CI、coverage、PBT、release の実行 | 係数未注入 |
+| TUI/IDE test drivers | 外部 UI の poll、settle、deadline | 固定値 |
+| test fixtures/perf suites | timeout 発火や wall-clock 上限の検証 | 意味保持のため対象外候補 |
+
+追加候補 `tests/lib/test-time-factor.ts` は環境値の parse と基準時間の scale だけを担い、scheduler や個別 driver のドメイン判定は持たない小さな共通モジュールが妥当である。
+
+## advisory 宣言消費と plugin 供給経路の構成要素（260810-plugin-manifest-resoluti、履歴、observed `7b9391be2`）
+
+**観測 ref**: すべて observed = `7b9391be2db4fad791d637293ea442d5a1462bac`（= repo HEAD）。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`（**13 commits / 302 files**、**PR #2811 を含む** — 直下の履歴節の `amadeus-plugin.ts` 系行番号は陳腐化しており、本節で取り直す）。正本は `re-scans/260810-plugin-manifest-resoluti.md`。
+
+### advisory 宣言の消費者側コンポーネント（Issue #2823 の患部）
+
+| 構成要素 | file:line | 役割 |
+|---|---|---|
+| `pluginManifestPath` | `packages/framework/core/tools/amadeus-advisory-declaration.ts:295-297` | 宣言の唯一の解決規則: `<projectRoot>/plugins/<name>/plugin.json`。doc comment `:289-294` は authoring レイアウト前提を明言 |
+| `declaredAdvisoriesForPlugin` | `amadeus-advisory-declaration.ts:305-329` | checkpoint 発火。`:312-313` manifest 不在 → **無音 `return []`** |
+| `declarationFor` | `amadeus-advisory-declaration.ts:386-400` | `:393` / `:397-399` で無音 null |
+| `declaredFormalCheckArgv` / `declaredHandoffStage` | `amadeus-advisory-declaration.ts:403-410` / `:413-420` | null をそのまま伝播（silent-null degradation） |
+| `spawnEvaluator` | `amadeus-advisory-declaration.ts:347-357` | `cwd: projectRoot`・shell なし spawn。timeout 60s / 8MiB、失敗は unreadable verdict → hold（fail-closed） |
+| `advisoriesForHost` | `amadeus-advisory-declaration.ts:366-383` | activation 判定 + composed plugins の宣言を flatMap |
+| `verdictSummary` / `advisoryFromEvaluatorRun` | `amadeus-advisory-declaration.ts:214-232` / `:241-257` | verdict が権威。no-hold 以外は raise |
+| `projectRootForHost` | `amadeus-plugin-activation.ts:110-112` | hostRoot（harness ディレクトリ）の親 = projectRoot |
+| `declaredFormalCheckRoute` | `amadeus-advisory-choice.ts:948-978` | run-now ルートを宣言 argv から構築（トークン解決 `:962-967`） |
+| `directiveItemFor` | `amadeus-advisory-choice.ts:729-741` | handoff_stage を宣言から載せる（null なら素の item） |
+| `DECLARED_RELEASE_RULE` | `amadeus-advisory-choice.ts:980-986` | formalCheck:null は engine 側 release 経路なし |
+| engine 側双子 argv | `amadeus-advisory-choice.ts:925` | hard-coded `"bun", "plugins/formal-model-check/tools/run-model-check.ts"` — repo ルート相対、宣言 argv `:61` と同根 |
+| 宣言の出荷形 | `plugins/formal-model-check/plugin.json:50-71` | `advisories` キーはこの 1 plugin のみ（全 2 plugin 中）。機械的 root-relative argv は `:61` の 1 本 |
+
+### 供給側コンポーネント（PR #2811 後の行番号で取り直し）
+
+| 構成要素 | file:line | 役割 |
+|---|---|---|
+| `PLUGIN_SOURCE_DIR_NAME` / `pluginSourceRootOf` | `amadeus-plugin.ts:563` / `:570-572` | staging root `.amadeus-plugin-src` |
+| `PLUGIN_AUTHORING_DIR_NAME` | `amadeus-plugin.ts:578` | 権威ディレクトリ名 `plugins` |
+| `stagingHarnessDirOf` / `seedBytesForHarness` | `amadeus-plugin.ts:659-664` / `:669-675` | **#2811 で新設**。staging 宛てコピー時に `{{HARNESS_DIR}}` を解決（authoring 宛ては除外）。`rulesSubdirFor` は `amadeus-harness.ts:71` |
+| `copyPluginSource` / `copyRealFiles` | `amadeus-plugin.ts:702-741` | tmp+rename swap。`copyRealFiles` は `harnessDir` 非 null なら散文を解決しつつコピー |
+| `collectPluginSources` / `seedStaging` | `amadeus-plugin.ts:874-906` | repo ルート `plugins/` 優先 → 各ツリー staging。seed は absent のみ |
+| `prepareInstall` / `handleInstall` | `amadeus-plugin.ts:1102-1129` / `:1154-1174` | `:1117-1118` `persistentInstall = selected.projectDir !== hostRoot`、`:1160` で **FULL bundle を `<projectRoot>/plugins/<name>/` へ永続化**（project supply） |
+| tools/stages push | `amadeus-plugin-compose.ts:370-415` | 生バイトを `posix.join("plugins", pluginName, rel)` へ（`:386` / `:412`） |
+| `ownedPaths` | `amadeus-plugin-compose.ts:895` | compose が manifest から集めるのは stages/tools のみ — **plugin.json は配送されない** |
+| `composeWriteSet` | `amadeus-plugin-compose.ts:1390-1408` | hostWrites は stage/tool/shared コピーのみ |
+| `ownedRecordDigests` / `pluginContentDigest` | `amadeus-plugin-compose.ts:921-972` | manifest の stages/tools のバイトを sha256 |
+| `installDoc` | `scripts/plugin-projection.ts:613-664` | `:634` folder-drop（primary、project supply を作らない）/ `:636` install verb 言及（persistent 腕の project supply 永続化は**未開示**） |
+| `transform` / `isMarkdownProsePath` | `scripts/harness-transform.ts:33-45` / `:27-29` | 拡張子のみで分岐。`.json` / `.ts` は逐語 — manifest は経路Aでも変換されない |
+
+### 検証面コンポーネント
+
+| テスト | 位置 | 何を pin するか |
+|---|---|---|
+| t445-advisory-declaration-supply | `:155-160` / `:224-226` | 無音 fail-open を**契約として** pin / dogfood レイアウトで宣言供給 |
+| t526 / t528 | `:59-61` / `:103-105` | 同じく dogfood レイアウト（`<projectDir>/plugins/demo/plugin.json` 手書き） |
+| t353-plugin-install-verb | `:254-274` / `:276-324` | persistentInstall=true の 4 面永続化と rollback。**advisory 消費との join は未 pin** |
+| t340-plugin-drop-fs-restore | `:196` / `:220` / `:240` | project supply を `cpSync` で手作り |
+| t531-plugin-harness-literal-guard | 新設（#2811） | plugin **散文**のハーネスリテラル走査。manifest argv は対象外 |
+
+consumer レイアウト（staging のみで project supply なし）を組むテストは **0 件**。
+
+## seed 置換器と rename データ源の構成要素棚卸し（260810-plugin-prose-seed-guard、履歴、observed `c51afbd0a`）
+
+**観測 ref**: すべて observed = `c51afbd0a99b2eb3f0b9c1ee4e2cef2772378131`。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`（8 コミット、非 record 面 16 files / +721 / -101）。正本は `re-scans/260810-plugin-prose-seed-guard.md`。構造的含意は `architecture.md` の同 intent 節。
+
+### PR #2811（`c51afbd0a`）が新設した構成要素
+
+| 構成要素 | file:line | 役割 |
+|---|---|---|
+| `rulesSubdirFor(dir)` | `packages/framework/core/tools/amadeus-harness.ts:71-73` | `KNOWN_RULES_SUBDIR[dir] ?? "rules"`。**明示指定されたハーネス**の rename を返す（`rulesSubdir()` は ambient 用） |
+| `KNOWN_RULES_SUBDIR` | 同 `:59-65` | **5 キー**（`.claude` / `.kiro` / `.codex` / `.kimi-code` / `.pi`）。`.opencode` / `.cursor` は不在 |
+| `HARNESS_TOKEN`（core 側） | `amadeus-plugin.ts:653` | `/\{\{HARNESS_DIR\}\}/g`。`scripts/harness-transform.ts:11` と**別実体**（core は `scripts/` を import できない） |
+| `stagingHarnessDirOf(dst)` | `amadeus-plugin.ts:659-664` | 書き出し先が `<harnessTree>/.amadeus-plugin-src/<name>` のときのみハーネス dir、authoring 宛は `null` |
+| `seedBytesForHarness(relPath, bytes, harnessDir)` | `amadeus-plugin.ts:669-675` | 経路B の置換器。prose ゲート `:671`、rename `:672`、token `:673` |
+| `stagingEntryState(dst, src)` | `amadeus-plugin.ts:681-692` | staging の drift 判定を **seed 適用後のソース**と比較（`:689`）— 恒久 drift の回避 |
+| seed 適用点 | `amadeus-plugin.ts:738` | `copyRealFiles` の `writeFileSync` |
+| `harnessNames` / `harnessDirOf` / `allHarnessDirs` / `foreignHarnessDirs` | `tests/helpers/harness-dir-fixture.ts:15/21/28/34` | manifest 由来のハーネス事実供給。**`rulesRename` を返すヘルパーは未実装** |
+| `scanPluginProseForHarnessLiterals` | `tests/lib/boundary-guard.ts:205-210` | predicate 3。`HARNESS_LITERAL_TOKEN_RE`（`:122`）を plugin 散文へ適用 |
+
+### rename のデータ源 — 2 面 3 消費点
+
+| 消費点 | file:line | データ源 | descriptor を見るか |
+|---|---|---|---|
+| `transform()` の rename | `scripts/harness-transform.ts:22-24`（引数 `:37`） | **harness manifest の `rulesRename`** | — （呼び出し元が manifest から渡す） |
+| `seedBytesForHarness` の rename | `amadeus-plugin.ts:672` → `rulesSubdirFor` | `KNOWN_RULES_SUBDIR` | 見ない |
+| `rulesSubdir()` env 分岐 | `amadeus-harness.ts:194` | `KNOWN_RULES_SUBDIR` | **見ない**（両レビュー未指摘） |
+| `rulesSubdir()` fallback | `amadeus-harness.ts:196` | `shippedRulesSubdir() ?? KNOWN_RULES_SUBDIR` | descriptor 優先 |
+
+manifest 実測 8 面（`harnessDir` / `rulesRename` 行）: claude `.claude` `null`(:112) / codex `.codex` `"amadeus-rules"`(:74) / **cursor `.cursor` `"amadeus-rules"`(:74)** / kimi `.kimi-code` `null`(:109) / kiro `.kiro` `"steering"`(:91) / kiro-ide `.kiro` `"steering"`(:111) / **opencode `.opencode` `"amadeus-rules"`(:76)** / pi `.pi` `null`(:114)。**8 manifest → distinct `(harnessDir, rulesRename)` ペアは 7**、うち 2 面が `KNOWN_RULES_SUBDIR` と乖離。
+
+### 4 系統の rename 実装（emit 層 — `transform()` とは別面）
+
+| 系統 | file:line | 形 |
+|---|---|---|
+| codex emit | `packages/framework/harness/codex/emit.ts:227-228` | `substituteToken(s).replaceAll(".codex/rules/", ".codex/amadeus-rules/")` |
+| codex emit（否定先読み） | 同 `:245` | `s.replace(/\.codex\/rules\/(?!default\.rules)/g, ".codex/amadeus-rules/")` — **例外規則は他 3 系統に不在** |
+| opencode emit | `packages/framework/harness/opencode/emit.ts:160-161` | `substituteToken(s).replaceAll(\`${harnessDir}/rules/\`, \`${harnessDir}/amadeus-rules/\`)` |
+| cursor emit | — | **hardcode なし**（`git grep -nE 'amadeus-rules' "${S}" -- packages/framework/harness/cursor/` → **6 hits = manifest 5 行（`:3` / `:11` / `:33` / `:44` / `:74`）+ `emit.ts:3` のコメント 1 行**。実行コードのヒットは 0。scan の「manifest 6 行」は内訳誤りで Architect 独立再実測により訂正） |
+
+emit 層は core ソース由来 prose の**生成器**であり、`transform()` / `seedBytesForHarness` の経路とは別面。実装時の評価対象として棚卸ししておく。
+
+### 患部ファイルの棚卸し（#2810、11 行）
+
+| ファイル | 行 | 件数 |
+|---|---|---|
+| `plugins/pr-convergence/stages/pr-convergence.md` | 54, 80, 162, 214 | 4 |
+| `plugins/formal-model-check/stages/formal-model-check.md` | 48 | 1 |
+| `plugins/formal-model-check/stages/tla-authoring.md` | 65, 68, 110, 113, 116 | 5 |
+| `plugins/formal-model-check/README.md` | 111 | 1 |
+
+スコープ隣接（要件段で採否裁定）: `formal-model-check.md:12`（frontmatter `inputs:` の説明参照）、`README.md:101`（自ファイルへの自己ポインタ）。トークンが届かない面: `plugin.json:61`（**#2823** へ分離）、`node-ci-model-check-port.ts:223`、`run-skeleton-ci.ts:19` / `:60`。
+
+## plugin 配布経路の構成要素棚卸し（260810-plugin-harness-dir-token、履歴、2026-08-10、observed `df1c874cf`）
+
+**観測 ref**: すべて observed = `df1c874cfb397fafe877a72f00a82664a59689ae`（= repo HEAD = `origin/main`）。差分 base = `91f37ec8589cdf468599b4787e27e5125d4d16e8`（20 commits / 117 files。患部 7 パスは区間の変更集合と**非交差** — `git diff --name-only base..HEAD` を患部語彙で絞って **0 hit**）。正本は `re-scans/260810-plugin-harness-dir-token.md`。構造的含意は `architecture.md` の同 intent 節。
+
+### 経路A — build-time packager
+
+| 構成要素 | file:line | 役割 |
+|---|---|---|
+| `HARNESS_TOKEN` | `scripts/harness-transform.ts:11` | `/\{\{HARNESS_DIR\}\}/g` |
+| `substituteToken` | `harness-transform.ts:14` | トークン置換本体 |
+| `applyRulesRename` | `harness-transform.ts:23` | `${harnessDir}/rules/` にアンカー。claude は `rulesRename === null` で no-op |
+| `isMarkdownProsePath` | `harness-transform.ts:27` | `.md` / `.md.example` のみ真 |
+| `transform` | `harness-transform.ts:33-46` | 拡張子だけで分岐。`.json` / `.ts` / `.snippet` は Buffer 素通し |
+| `projectPluginArtifacts` | `scripts/plugin-projection.ts:262-278` | `:274` で `transform` 適用 |
+| `pluginHostPrefix` | `plugin-projection.ts:148-150` | 出力を `plugins/<name>` へ名前空間化 |
+| `buildPluginBundle` | `plugin-projection.ts:283-293` | 中立バンドル（逐語） |
+| `buildPluginProjection` | `plugin-projection.ts:304-307` | — |
+| `installArtifacts` | `plugin-projection.ts:670-685` | — |
+| `projectPluginForHarness` | `plugin-projection.ts:696-714` | — |
+| `buildHarnessTree` | `plugin-projection.ts:718-731` | **呼び出し元はテストのみ** |
+| `checkHarnessTree` | `plugin-projection.ts:786-800` | **呼び出し元はテストのみ** |
+| `installDoc` | `plugin-projection.ts:620-664` | 消費者への導入手順。**repo ルート `plugins/` を作る指示は無い** |
+| `projectInTemporaryWorkspace` | `plugin-projection.ts:1019-1067` | `:1025` dist コピー / `:1031` `plugins/` を逐語 `cpSync` / `:1035` compose を spawn |
+| `buildSelfInstallProjection` | `scripts/promote-self.ts:382` | 上記の呼び出し元 |
+
+`scripts/package.ts` は `pluginBundleExpected` のみを import（`:67`、`:873`）。
+
+### 経路B — runtime compose
+
+| 構成要素 | file:line | 役割 |
+|---|---|---|
+| `KNOWN_HARNESS_DIRS` import | `packages/framework/core/tools/amadeus-plugin.ts:32` | **置換器ではなく名前列挙**。compose 側の置換器関連ヒットはこれ 1 件のみ |
+| `copyPluginSource` | `amadeus-plugin.ts:659-671` | tmp + rename swap |
+| `copyRealFiles` | `amadeus-plugin.ts:676-688` | `:686` でバイト逐語コピー、symlink は `:681-684` で skip |
+| `collectPluginSources` | `amadeus-plugin.ts:821-838` | repo ルート `plugins/` 優先 → 各ツリーの staging root |
+| `PLUGIN_AUTHORING_DIR_NAME` | `amadeus-plugin.ts:578` | 権威ディレクトリ名 |
+| `pluginSourceRootOf` | `amadeus-plugin.ts:570-572`（`:563`） | staging root `.amadeus-plugin-src` |
+| `seedStaging` | `amadeus-plugin.ts:841-853` | 逐語コピー |
+| tools push | `amadeus-plugin-compose.ts:381-386` | 生バイトを `posix.join("plugins", pluginName, rel)` へ |
+| stages push | `amadeus-plugin-compose.ts:407-412` | 同上 |
+| `pluginContentDigest` / `digestBytes` | `amadeus-plugin-compose.ts:921-972` | manifest の stages/tools の**バイト**を sha256（N-7 の隠れ結合） |
+| `resolveHarnessToolsDir` | `amadeus-plugin.ts:368` | 非散文ランタイム経路のハーネス差吸収。吸収範囲は **UNMEASURED** |
+
+### harnessDir 実測（`packages/framework/harness/*/manifest.ts`）
+
+claude `.claude`（:45）/ codex `.codex`（:24）/ cursor `.cursor`（:30）/ kimi `.kimi-code`（:35）/ kiro `.kiro`（:27）/ kiro-ide `.kiro`（:24）/ opencode `.opencode`（:35）/ pi `.pi`（:15）。**8 ハーネス、7 個の相異なるディレクトリ**（`.kiro` 共有）。`amadeus-harness.ts:38-46` `KNOWN_HARNESS_DIRS` と一致。self-install 面は 5（claude / codex / cursor / opencode / kimi）。
+
+### ガード側の構成要素
+
+| 構成要素 | file:line | 現況 |
+|---|---|---|
+| `CORE` | `tests/unit/t146-core-hygiene.test.ts` | `packages/framework/core` のみ（`plugins/` 非対象） |
+| `HARNESS_PATH_RE` | 同上 | `/\.(claude\|kiro\|codex)\//` — 7 ディレクトリ中 3 個のみ（N-5） |
+| `isCarvedOut` | 同上 | carve-out ちょうど 2 件 |
+| `PLUGIN_SCAN_ROOTS` | `tests/integration/t377-plugin-boundary-guard.integration.test.ts:33-35` | `["plugins"]` — corpus は正しい |
+| `scanDistributionTreeForScriptsRefs` | `tests/lib/boundary-guard.ts:152` | `scripts/` トークンのみ照合 — 述語が噛み合わない |
+| `SCAN_ROOTS` | `tests/lib/boundary-guard.ts:54-66` | `plugins/` / `dist/kimi` / `dist/pi` / `.kimi-code` / `.pi` を欠く |
+
+### 漏洩している生成物（tracked ではない）
+
+self-install 5 面 × {`plugins/…`, `.amadeus-plugin-src/…`} = **10 ファイル**が同一ブロックを運ぶ（例 `.codex/plugins/pr-convergence/stages/pr-convergence.md:180` が `.claude/tools/` を指す）。`git ls-files` → `dist/` tracked **0**、self-install `plugins/` tracked **0**。**修正が触るのはソースのみ**。
+
+`plugin.json` は composed ツリーへ配送されない（N-9）— `.claude/plugins/pr-convergence/` は `stages/` と `tools/` のみを持つ。
+
+## formal-model-check advisory 供給チェーンの棚卸し（260810-tla-applicability-wiring、履歴、2026-08-10、observed `91f37ec85`）
+
+**観測 ref**: すべて observed = `91f37ec8589cdf468599b4787e27e5125d4d16e8`（= 本 worktree HEAD = `origin/main` 系譜。`cid:reverse-engineering:measurement-ref-in-artifacts`）。行番号はこの断面で解決する。正本は `re-scans/260810-tla-applicability-wiring.md`。
+
+対象は [Issue #2766](https://github.com/amadeus-dlc/amadeus/issues/2766)（TLA+ applicability 判定が常に no-hold）とユーザー裁定 **案A**（接続完成 + FR-005 receipt 閉包）。判別子は「**宣言 → 発火 → 評価 → 解除の鎖のどこが実装済みで、どこに書き手が居ないか**」。結論を先に言えば、**鎖は両端が完成していて中央（subjects の書き手）だけが空**である。
+
+### 供給チェーンのコンポーネントと現況
+
+| 段 | コンポーネント（`packages/framework/core/tools/` ほか） | 現況（observed 実測） |
+|---|---|---|
+| **宣言 parse** | `amadeus-advisory-declaration.ts` — `parseAdvisoryDeclarations` :110-128 / `parseOne` :90-99 / `declaredAdvisoriesForPlugin` :253-277 | **実装済み・稼働中**。`pluginManifestPath` :243-245 = `<projectRoot>/plugins/<plugin>/plugin.json` が本 repo に実在するため経路は生きている |
+| **no-hold の痕跡消失** | 同 :171 逐語 `if (isRecord(verdict) && verdict.kind === "no-hold") return null;` | **#2766 の症状面**。「評価器が走って no-hold」と「そもそも走っていない」が観測上区別できない |
+| **checkpoint 発火** | `amadeus-orchestrate.ts` — `ACTIVATION_ADVISORY_STAGES` :1785-1789（`requirements-analysis` / `functional-design` / `build-and-test`）、`emitActivationAdvisory` :1808-1820、`raiseActivationAdvisoriesFor` :1844-1858 | **実装済み・2 call site**。コメント :1796-1803 が両者の乖離を戒める → 供給側に触る変更は**両方を必ず棚卸し** |
+| **guard → directive** | `applyPendingAdvisoryGuard` :814-866 → `guardAdvisoryChoices` :819 → `await-advisory-choice`（`run_required` / `formal_checks` は :861-863） | 実装済み |
+| **run-now ルート供給** | `amadeus-advisory-choice.ts` — `declaredFormalCheckRoute` :925-955、予約トークン4種 :939-944、`resolveRunRequiredHold` :978-1019、`DECLARED_RELEASE_RULE` :962-963 | **実装済み・テストで両側固定**（`t445-advisory-declaration-supply.integration.test.ts:297-322`）。実 manifest の `formalCheck` を非 null にすれば **engine 変更なしでルートが立つ** |
+| **subjects 供給** | `plugins/formal-model-check/tools/tla-authoring.ts` — `defaultSubjectsPath` :453-455、`GovernedSubjects` :457-476、`governedIdentity` :479-496、`advisoryHold` :498-532 | **🔴 書き手が存在しない**。解決先 `amadeus/spaces/default/specs/tla/authoring-subjects.json` は**未作成**（`ls -d` 実測）。`advisoryHold` は ENOENT のみ no-hold（:507-508）で、それ以外は fail-closed |
+| **model-map 書込** | `plugins/formal-model-check/tools/tla-registration.ts:265-270`（staging + `renameSync` の atomic replace） | model-map **のみ**を書く。subjects 宣言の書き手はここにも無い |
+| **判定表** | `plugins/formal-model-check/tools/tla-applicability.ts` — `judge` :121-138、`ApplicabilityReceipt` :147-157、`buildReceipt` :176-198、`HoldReason` :211-214、`evaluate` :319-352 | 実装済み。終端2経路（:169）は検証済み human approval 必須（:183-185 `approval-missing`） |
+| **evidence store** | `amadeus/spaces/default/specs/tla-evidence` | **未作成**（`ls -d` 実測）。案A で hold を実発火させると全 intent の RA/FD/B&T で `no-applicability-receipt` hold が立つ |
+
+**書き手不在の全数根拠**（述語 `git grep -n "authoring-subjects"`、全 tracked・除外なし → **7 hit**）: record 3 / docs 2 / 読み手 1（`tla-authoring.ts:454`）/ テスト 1（`t481-spec-root-resolver.integration.test.ts:227`）= **書き手 0 件**。
+
+### applicability judge の CLI verb 全数（`tla-authoring.ts` :746-792 の argv dispatch）
+
+| 形 | verb | ハンドラ |
+|---|---|---|
+| group+verb | `identity extract` / `identity compare` | :150 / :173 |
+| group+verb | `bundle build` / `verify` / `read` / `list` / `head` | :201 / :237 / :258 / :267 |
+| group+verb | `applicability judge` / `receipt` / `series` | :351 / :373 / :399 |
+| group+verb | `advisory hold` | :498 |
+| flat | `hold` / `trace` / `proof`（async）/ `commit` | :407 / :592 / :625 / :669 |
+
+フラグ形式は `--name value` の対のみ（`parseFlags` :101-112、奇数長・非 `--` 先頭は null → usage exit 2）。in-process seam は `runTlaAuthoring` :795-803、エントリ :805-807。
+
+### FR-005 receipt surface — owner が存在しない
+
+- 永続 kind は2つ（`tla-evidence.ts:229-231`）= `authoring-bundle` / `terminal-route-receipt`。必須 part は :274-275
+- **書き手は `bundle build` のみ**（`tla-authoring.ts:201-228` → `EvidenceBundle.build`）。`applicability receipt`（:373-397）は receipt JSON を **stdout に返すだけで永続化しない**
+- `tla-authoring` stage は終端経路を明示拒否（`plugins/formal-model-check/stages/tla-authoring.md:40-44` 逐語「Refuse to start on a terminal route as well. `impl-only` and `non-target` carry no authoring work, so a receipt naming either one ends the stage instead of opening it.」）
+- → **非対象 receipt を発行する owner がワークフロー上どこにも無い**。案A 項目3 はこの欠落を埋める設計を要する。`t450-tla-authoring-stage-e2e.integration.test.ts:163` が「owner は stage 外」を固定しているピンで、**衝突しうる**
+
+### ADR-6 の一般化点と残る非一般化点
+
+- 一般化済み（改訂1 で承認、`260804-tla-authoring/inception/application-design/decisions.md:65`）: **宣言 parse** と **formal-check route の argv**（`declaredFormalCheckArgv` :334-348）
+- call site: `declaredFormalCheckArgv` = `amadeus-advisory-choice.ts:20`（import）/ `:932`（唯一の呼び出し）。`advisoriesForHost` = `amadeus-advisory-choice.ts:974` / `amadeus-orchestrate.ts:1816` / `:1817` / `:1847`
+- **🔴 非一般化点（案A 項目2 の核心）**: ルートの遷移先 stage は `declaredFormalCheckRoute` 内でハードコード。`amadeus-advisory-choice.ts:948` 逐語 `stage: "formal-model-check",` → **`tla-authoring` を指す手段が現行の一般化点に存在しない**。ADR-6 が一般化したのは argv だけで**遷移先 stage は一般化されていない**
+
+### 設計段へ持ち上げる2リスク
+
+- **🔴 R1 見出し文法の不一致（測定）**: `tla-evidence.ts:45` 逐語 `const REQUIREMENTS_HEADING_RE = /^###\s+((?:FR|NFR|AC)-\d{3})\b/;` は3桁ゼロ埋めを要求するが、実コーパスは **134 ファイル中 3 ファイルのみ一致**（述語は re-scan の P2/P3）。対照として decisions 側（:46 `/^##\s+(ADR-\d+)\b/`）は **56 中 54** で健全。intent 要件を直接読む供給設計は現行文法では大半で `unresolvable-id` fail-closed になる
+- **🔴 R2 subjects の置き場（演繹、未実測）**: `amadeus-plugin-activation.ts:51` 逐語 `export const ACTIVATION_WATCH_GLOBS: readonly string[] = ["tla/**"];`。直前の :49-50 が「the evidence store (`<specsRoot>/tla-evidence`) sits outside the glob by construction」と設計意図を明言する一方、`defaultSubjectsPath` の解決先 `specs/tla/authoring-subjects.json` は **glob の内側**。subjects 更新のたび spec-hash が変わり兄弟 advisory が発火する見込み — **ハッシュ再計算の実測は未実施**
+
+## CG attribution のコンポーネント棚卸し（260809-cg-attribution-stats、履歴、observed `82e2f30c0`）
+
+| コンポーネント | 現在の責務・根拠 | 本 intent での役割 | 依存 |
+| --- | --- | --- | --- |
+| `amadeus-stage-stats.ts` corpus scanner | intent audit shardをpath帰属で走査（`:844-872`） | canonical records と corpus diagnostics を供給。dedup境界をjournal正本へ合わせる | filesystem、`readJournalRecords` |
+| stage window builder | `intent×stage` FIFO pairing（`:132-176`） | measured windowを保存し、stable internal IDとcollision group metadataを追加 | chronological records |
+| idle index/subtractor | awaiting/parked/session-gapのclip/union（`:180-321`） | attribution intervalから同じidle交差を除去。zero-net判定はattribution側 | measured windows、audit records |
+| candidate inventory | **未実装** | 全 candidate family、outer/inner event、採否理由を無音廃棄なく列挙 | event registry、journal、event-set decoders |
+| lifecycle rule evaluator | **未実装** | explicit stage/start/terminal/identityが揃うpairだけinterval化 | candidate inventory |
+| interval accountant | **未実装** | `[start,end)` clip、idle差引、category/global union、overlap、residual、恒等式 | eligible windows、explicit intervals |
+| `StageStatsReport` composer | 既存duration/sensor/model/reviewを合成（`:515-577`） | append-only attribution sectionの唯一のsemantic model | measured stats、attribution aggregate |
+| Markdown renderer | 人間向け表（`:632-667`） | attributionの全意味軸とmethodologyを表示 | report model |
+| CSV renderer | section型CSV（`:676-699`） | 同じ値をconsumer向けに表示 | report model |
+| JSON serializer | 決定的配列化（`:701-723`） | machine-readable attributionと`candidateBoundary`の事実/仮説分離 | report model |
+| argv/parser/main | option検証、scan、stdout、exit ladder（`:728-798`, `:941-968`） | `--stage` / `--outliers`、正常空レポート、exit 2境界 | renderers、project/space解決 |
+| journal codec/merge | v1/v2 reader、canonical merge/dedup（`amadeus-journal.ts:30-35`, `:481-497`, `:534-549`, `:608-640`） | attributionの正準入力とcross-shard dedup | crypto、pure codec |
+| `packages/framework/core/otel/event-registry.ts` | event vocabulary/required fields | candidate inventoryの閉じた候補集合 | audit schema |
+| Sensor lifecycle | Fire id + Stage slugを持つ start/terminal | `sensor-execution` interval | `amadeus-sensor.ts:521-536`, `:819-865` |
+| Execution event set | operation ID + origin stage contract | `execution-lifecycle`。現 corpus terminal欠落を理由報告 | `amadeus-execution-contract.ts:30-46`, `:101-154` |
+| Unit-pool event set | attempt acquired/settled + dedup | `unit-pool-lifecycle`。現 corpus stage属性欠落を理由報告 | `amadeus-unit-pool.ts:80-93`, `:130-148`; runtime `:113-159` |
+| Other lifecycle families | Bolt/Swarm/Subagent/Loop monitor/Merge dispatch/transaction | interval要件を満たすまではinventoryのみ | 各writer、event registry |
+| runtime graph compiler | stage snapshot、containment/latest-wins帰属 | 本集計の一次資料には使わない比較対象 | `amadeus-runtime.ts:71-110`, `:498-760`, `:980-1044` |
+| `t486-stage-stats.test.ts` | pure unit、renderer、argv | interval代数・恒等式・理由計数・parity・flag境界 | core source import |
+| `t487-stage-stats.integration.test.ts` | filesystem/CLI/real corpus/pipe | event-set合成fixture、実 corpus、3形式oversized consumer | Bun spawn、scratch filesystem、`jq` |
+
+### candidate family の完全性
+
+inventory は `SENSOR_*`、`SWARM_*`、`BOLT_*`、`SUBAGENT_*`、`LOOP_MONITOR_*`、`MERGE_DISPATCH_*`、`UNIT_POOL_EVENT_SET_COMMITTED`、`EXECUTION_EVENT_SET_COMMITTED`、transaction envelope を全て対象にする。区間採用できない family を削るのではなく、`stage-identity-missing` / `start-missing` / `terminal-missing` / `identity-missing` / `duplicate-start` / `duplicate-terminal` / `terminal-not-after-start` / `malformed-event-set` / `digest-mismatch` / `duplicate-event-set` 等の理由別件数として report に残す。
+
+### 所有境界
+
+- journal codec はwire正規化とcanonical dedupを所有し、業務上のstage attributionを所有しない。
+- window builderは既存 measured identityとFIFO collision診断を所有し、event containmentからstageを推論しない。
+- lifecycle rule evaluatorはcandidateごとの明示契約を所有し、categoryを「実装/検証/review」へ読み替えない。
+- interval accountantは時間代数と恒等式を所有し、rendererは再計算しない。
+- report modelが3形式 parityの正本であり、各renderer固有の集計分岐を作らない。
+
+## directive kind の terminal/非terminal 分類（260809-report-done-kind-split、履歴、2026-08-09、observed `91f37ec85`）
 
 **観測 ref**: すべて observed = `91f37ec8589cdf468599b4787e27e5125d4d16e8`（`cid:reverse-engineering:measurement-ref-in-artifacts`）。行番号はこの断面で解決する。
 
@@ -1983,3 +2407,24 @@ packaging-repair-batch(intent 260709-packaging-repair-batch、履歴)の2バグ�
 ## 記録系 round-trip PBT の対象コンポーネント（260802-record-roundtrip-pbt、履歴、observed `9750f8aea`）
 
 - 判断: 本 intent での実質変更なし — 新規コンポーネントの新設は見通しにない。対象は既存 3 グループで、全数は `code-structure.md` 現在節の患部配置表と `re-scans/260802-record-roundtrip-pbt.md` を正本とする — (1) コーデック正本（`packages/framework/core/tools/` の `amadeus-mirror-state-codec.ts` / `amadeus-state.ts` / `amadeus-lib.ts` / `amadeus-audit.ts` / `amadeus-election-store.ts` / `amadeus-election-model.ts` / `amadeus-election.ts` / `amadeus-journal.ts`）、(2) テスト側（fast-check 使用ファイル 8 本 + arbitrary ヘルパ 2 本 = `grep -rln "fast-check" tests/` の 10 パス、新規 PBT と新規 arbitrary の追加先）、(3) 静的ガード（`tests/callsite-guard.ts` 同型の新規 allowlist ratchet 1 本）。dist 側は core/tools の投影コピーのみで、独立コンポーネントは増えない。
+
+## grilling 対話契約の棚卸し（260810-grilling-frontier-resync）
+
+Issue #2785（grilling depth を質問数予算から frontier 駆動の枝刈り閾値へ再定義）に向けた対応表。全数は `re-scans/260810-grilling-frontier-resync.md` を正本とする。observed `5564dccd1`。
+
+| 層 | コンポーネント | 責務 | 患部箇所（file:line） |
+|---|---|---|---|
+| 正本 | `packages/framework/core/amadeus-common/protocols/grilling-protocol.md`（137行） | grilling 対話規律の単一正本。D1-D7（Dialogue Discipline）、8ステップループ、質問テンプレート、workflow/standalone 分岐を定義 | D1 :29、D6（Bounded termination）:34、§2 ループ :37-69、§3 テンプレート :71-122、§4 :124-137、帰属ヘッダ :1-6 |
+| 参照面 | `packages/framework/core/amadeus-common/protocols/stage-protocol.md`（1304行） | grilling を workflow ステージへ配線する薄い呼び出し面。depth 別の質問数予算契約そのものはこちらが正本 | §3 depth 表 :300-311、Step 3d「Grill me」:348-356（`hybrid termination` 残存 :349）、§8 Depth-Level Contract :726-746、semi decide-question 経路 :137 |
+| 参照面 | `packages/framework/core/amadeus-common/conductor.md` | interaction-mode 一覧で grilling を1行言及 | :50-53（"one question at a time" 言及 :51） |
+| 参照面 | `packages/framework/core/skills/amadeus-grilling/SKILL.md`（58行） | standalone grilling スキルのエントリポイント。read-only 保証と depth 既定値（Standard=8）を明記 | Purpose 節、Standalone rules 規則2（depth 言及の唯一箇所） |
+| 機械契約 | `packages/framework/core/tools/amadeus-directive.ts` | depth 値の閉語彙契約（3値）を directive validation に強制 | `VALID_DEPTH_VALUES` :62、呼び出し :664 |
+| 機械契約 | `packages/framework/core/tools/amadeus-sensor-question-budget.ts` | depth 別の質問数上限をセンサーとして29ステージへ強制 | `QUESTION_BUDGETS` :39-43、`DEPTH_LEVELS`（directive.ts からの mirror）:47、`QUESTION_BUDGET_CUTOFF_YYMMDD` :63 |
+| 機械契約 | `packages/framework/core/amadeus-common/stages/*.md`（29ファイル） | `question-budget` センサーの宣言側。ideation 7 / inception 8 / construction 7 / operation 7 | `git grep -l "question-budget"` で全数列挙、専用 manifest ファイルなし |
+| 検証面 | `tests/integration/t415-interaction-budget-contract.test.ts` | `stage-protocol.md` の数値予算文言 + `grilling-protocol.md` D6/C-3 文言を verbatim `toContain`/`not.toContain` で29個ピン | grilling/depth 関連ピン :26-54 |
+| 検証面 | `tests/unit/t199-grilling-distribution.test.ts` | 4ハーネス `dist/` への `SKILL.md` / `grilling-protocol.md` 投影の存在・frontmatter・MIT 表示を検査（`hybrid`/`bounded` 用語は非対象、dist 読みのため正本編集後は要リビルド） | 6アサーション全数、非 verbatim |
+| 投影 | `dist/{claude,codex,kiro,kiro-ide}/**/amadeus-common/protocols/{grilling-protocol.md,stage-protocol.md}` | `bun run build` によるハーネス別投影コピー | `existsSync` のみで内容検証は t199 の限定範囲 |
+| 用語ドリフト | `docs/reference/04-stage-protocol.md` / `.ja.md` | canonical D6 改称（→ Bounded termination）に未追従の旧称 `hybrid termination` / `ハイブリッド終了` が残存 | `.md:320`、`.ja.md:264` |
+| prose 消費者 | `docs/guide/02-your-first-workflow.{md,ja.md}` / `docs/guide/07-interaction-modes.{md,ja.md}` | "one question at a time" を利用者向けガイドで踏襲説明（英語のみ、和訳は「一度に1質問」で別語彙） | `02-*.md:89` / `.ja.md:89`、`07-*.md:22,37` / `.ja.md:18`、和訳: `04-stage-protocol.ja.md:264` |
+
+**未確定**: frontier 駆動（上流 `mattpocock/skills`、ピン SHA `1495d014303e041c51c29f9e442485ba06f5878d`）が具体的にどの層（正本のみか、機械契約の閉語彙・数値も含むか）まで置き換えるかは要件段の裁定事項。本棚卸しは現行構造の全数把握であり、再定義後の to-be 構造は含まない。

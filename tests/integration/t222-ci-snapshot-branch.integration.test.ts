@@ -91,7 +91,9 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(changesJob).toContain(`coverage: \${{ steps.filter.outputs.coverage }}`);
     expect(changesJob).toContain("git diff --name-only -z");
     expect(changesJob).toContain("--no-renames");
-    expect(changesJob).toContain(`if [[ "\${EVENT_NAME}" == "pull_request" ]]`);
+    expect(changesJob).toContain(
+      `if [[ "\${EVENT_NAME}" == "pull_request" || "\${EVENT_NAME}" == "merge_group" ]]`,
+    );
     expect(changesJob).toContain(`"\${BASE_SHA}...\${HEAD_SHA}"`);
     expect(changesJob).toContain("bash scripts/detect-ci-changes.sh");
     for (const fullJob of [typecheckJob, lintJob, contractJob, testsJob]) {
@@ -132,11 +134,19 @@ describe("t222 CI snapshot publication boundary", () => {
 
     // The full blocking dependency set: dropping any entry must be as loud as
     // re-introducing a benchmark job.
+    //
+    // `control-byte-gate` joined this set for Issue #2814. It runs with no
+    // `needs` and no `if` — a path filter would excuse exactly the changes it
+    // exists to catch — but "CI Success" is this repository's only required
+    // status check, so a job outside this set is advisory however loudly it
+    // fails. Independence governs WHEN the job runs; membership here governs
+    // whether a red run blocks the merge.
     const ciSuccessNeeds = jobs["ci-success"]?.needs;
     expect(Array.isArray(ciSuccessNeeds)).toBe(true);
     expect(new Set(ciSuccessNeeds as string[])).toEqual(
       new Set([
         "changes",
+        "control-byte-gate",
         "typecheck",
         "lint",
         "distribution-contract",
@@ -145,6 +155,7 @@ describe("t222 CI snapshot publication boundary", () => {
         "reproducible-build",
         "drift-check",
         "coverage",
+        "review-thread-resolution",
       ]),
     );
     expect(Object.keys(jobs)).toContain("distribution-contract");
@@ -224,9 +235,19 @@ describe("t222 CI snapshot publication boundary", () => {
     const ciSuccessJob = yaml.split("  ci-success:")[1] ?? "";
 
     expect(ciSuccessJob).toContain(
-      "- changes\n      - typecheck\n      - lint\n      - distribution-contract\n      - plugin-conformance-e2e\n      - tests\n      - reproducible-build\n      - drift-check\n      - coverage",
+      "- changes\n      - control-byte-gate\n      - typecheck\n      - lint\n      - distribution-contract\n      - plugin-conformance-e2e\n      - tests\n      - reproducible-build\n      - drift-check\n      - coverage",
     );
     expect(ciSuccessJob).toContain(`require_result "changes" "\${{ needs.changes.result }}"`);
+    // Asserted unconditionally, ahead of the `changes`-driven case branches:
+    // the control-byte gate has no path filter, so a docs-only or amadeus-only
+    // pull request must still be held to its result (Issue #2814). Containment
+    // alone would not catch the assertion being moved INTO a case branch, which
+    // is the way this contract actually breaks, so pin the position too.
+    const controlByteAssertion =
+      `require_result "control-byte-gate" "\${{ needs.control-byte-gate.result }}"`;
+    const controlByteAt = ciSuccessJob.indexOf(controlByteAssertion);
+    expect(controlByteAt).toBeGreaterThan(-1);
+    expect(ciSuccessJob.indexOf("          case ")).toBeGreaterThan(controlByteAt);
     expect(ciSuccessJob).toContain(`case "\${{ needs.changes.outputs.full }}" in`);
     expect(ciSuccessJob).toContain(`case "\${{ needs.changes.outputs.drift }}" in`);
     expect(ciSuccessJob).toContain(`case "\${{ needs.changes.outputs.coverage }}" in`);

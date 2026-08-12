@@ -4,6 +4,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { VALID_DEPTH_VALUES } from "../../packages/framework/core/tools/amadeus-directive.ts";
 import { REPO_ROOT } from "../harness/fixtures.ts";
 
 const CORE = join(REPO_ROOT, "packages/framework/core");
@@ -21,6 +22,18 @@ function compact(content: string): string {
   return content.replace(/\s+/g, " ");
 }
 
+/** The text from a heading to the next heading of the same or shallower level.
+ *  Section-scoped rather than whole-file, so a pin that names one enumeration
+ *  cannot be satisfied by the same token sitting in a different one. */
+function section(content: string, heading: string): string {
+  const start = content.indexOf(heading);
+  if (start === -1) return "";
+  const depth = heading.startsWith("#") ? (heading.match(/^#+/) as RegExpMatchArray)[0].length : 0;
+  const rest = content.slice(start + heading.length);
+  const next = depth === 0 ? rest.search(/\n\*\*Step |\n#{1,6} /) : rest.search(new RegExp(`\\n#{1,${depth}} `));
+  return next === -1 ? rest : rest.slice(0, next);
+}
+
 describe("#1999 bounded interaction and completion contracts", () => {
   test("defines finite primary and follow-up question budgets", () => {
     expect(PROTOCOL).toContain("Minimal | at most 4 per stage");
@@ -32,17 +45,123 @@ describe("#1999 bounded interaction and completion contracts", () => {
     expect(PROTOCOL).not.toContain("8-12+");
     expect(PROTOCOL).not.toContain("These are guidelines, not hard caps");
 
+    // Grilling terminates on frontier coverage (#2785), so its bound is the
+    // disclosed circuit breaker rather than a total question ceiling. The
+    // ceilings above stay in force for every other interaction mode.
+    expect(PROTOCOL).not.toContain("hybrid termination");
+
     const grilling = read("amadeus-common/protocols/grilling-protocol.md");
-    expect(grilling).toContain("Do not offer continuation beyond the total ceiling");
+    expect(compact(grilling)).toContain("The session is done when the frontier is empty");
+    expect(grilling).toContain("Termination is coverage, not counting");
+    expect(compact(grilling)).toContain("Minimal 12, Standard 24, Comprehensive 36");
     expect(compact(grilling)).toContain("Proceed directly to C-4");
-    expect(grilling).toContain("including estimate confirmations");
-    expect(grilling).toContain("defaults to Standard when none is requested");
-    expect(grilling).toContain("standalone terminal agreement summary");
+    expect(compact(grilling)).toContain("including estimate confirmations");
+    expect(compact(grilling)).toContain("defaults to Free when none is requested");
+    expect(compact(grilling)).toContain("standalone terminal agreement summary");
     expect(grilling).not.toContain('label: "Continue"');
+    expect(grilling).not.toContain("Do not offer continuation beyond the total ceiling");
 
     const standalone = read("skills/amadeus-grilling/SKILL.md");
-    expect(standalone).toContain("default to Standard (8)");
-    expect(standalone).toContain("unresolved material points");
+    expect(compact(standalone)).toContain("Default to Free when the user names no level");
+    expect(compact(standalone)).toContain("unresolved material points");
+    expect(standalone).not.toContain("default to Standard (8)");
+  });
+
+  test("depth is grilling's pruning threshold, and the breaker is its only ceiling", () => {
+    // The half of #2785 that the budget pins above cannot state: grilling reads
+    // the same depth value as every other mode but spends it on WHICH nodes
+    // enter the tree, not on how many questions may be asked. Without these,
+    // the file could drift back to a counted mode and the pins above would
+    // still pass.
+    const grilling = read("amadeus-common/protocols/grilling-protocol.md");
+    expect(grilling).toContain("### 2.2 Depth is a materiality threshold");
+    expect(grilling).toContain("| Level | Nodes that enter the tree | Circuit breaker (§2.4) |");
+    expect(grilling).toContain("| Free *(standalone only)* | No pruning — every branch of the tree | none |");
+    expect(compact(grilling)).toContain(
+      "Depth decides **which nodes enter the tree**, not how many questions may be asked",
+    );
+    expect(compact(grilling)).toContain(
+      "`Free` never appears on the wire, in state, or on a directive",
+    );
+
+    // The breaker is an abort that must announce itself. A silent truncation
+    // presented as a finished traversal is the failure this clause exists for.
+    expect(compact(grilling)).toContain("disclose that the tree was not fully traversed");
+    expect(grilling).toContain("Silent truncation is forbidden");
+
+    // stage-protocol carries the same split, so a stage author reading only
+    // §8 does not apply the ceiling to a grilling session.
+    expect(compact(PROTOCOL)).toContain(
+      "Grill me mode consumes depth as a pruning threshold, not as a question budget",
+    );
+    expect(compact(PROTOCOL)).toContain("Grill me does not consume `[N]` as a budget");
+    expect(compact(PROTOCOL)).toContain("The ceilings above are unchanged");
+
+    // Grilling waits on a person every round, so it is not offered when the
+    // Intent is running unattended.
+    expect(compact(PROTOCOL)).toContain(
+      "While `semi` or `full` Intent autonomy is in force, do NOT include Grill me among the offered options",
+    );
+
+    // Free is a grilling level, not a depth. The engine's depth vocabulary is
+    // unchanged, and none of the files grilling touches passes Free where a
+    // depth value is expected — a fourth value reaching the wire would fail the
+    // directive validator at a distance from where it was introduced.
+    expect([...VALID_DEPTH_VALUES]).toEqual(["Minimal", "Standard", "Comprehensive"]);
+    const depthWireUse = /(?:depth[=:]\s*|--depth\s+)"?Free/i;
+    for (const relativePath of [
+      "amadeus-common/protocols/grilling-protocol.md",
+      "amadeus-common/protocols/stage-protocol.md",
+      "skills/amadeus-grilling/SKILL.md",
+      "tools/amadeus-sensor-question-budget.ts",
+    ]) {
+      expect(read(relativePath), relativePath).not.toMatch(depthWireUse);
+    }
+  });
+
+  test("the three machine-matched grilling tokens are language-neutral markers", () => {
+    // The question-budget sensor reads a questions file and matches these three
+    // verbatim. All three are HTML comments rather than prose headings because
+    // the sensor ships to every project: a heading in one team's record language
+    // would be structurally unmatchable in another's, and a shipped check that
+    // can never match is worse than no check. The human-visible headings around
+    // them stay in whatever language the record is written in.
+    const grilling = read("amadeus-common/protocols/grilling-protocol.md");
+    expect(grilling).toContain("<!-- amadeus-grilling:v1 mode=grilling -->");
+    expect(grilling).toContain(
+      "<!-- amadeus-grilling:justification depth=<Depth> questions=<N> frontier-driven -->",
+    );
+    expect(grilling).toContain("<!-- amadeus-grilling:deferred -->");
+
+    // The deferred section is a QUESTIONS-FILE obligation, not only a terminal
+    // one. The sensor reads that file and nothing else, so a section that lives
+    // only in the spoken summary is unreachable to it — the write side has to
+    // land where the check side looks (symmetric-pair-review).
+    expect(compact(grilling)).toContain(
+      "append the same section to the questions file",
+    );
+    // Pruning nothing still writes the section. Without this, every Free or
+    // nothing-pruned session would be a false `missing-deferred-list`.
+    expect(compact(grilling)).toContain(
+      "the marker and the section are written even when nothing was pruned",
+    );
+
+    // Both enumerations of what a grilling session writes to the questions file
+    // carry it. Amending one and not the other reproduces the same write/check
+    // asymmetry in the other list (enumeration-completeness-review).
+    const recordingObligations = section(grilling, "### 2.5 Recording obligations");
+    expect(recordingObligations).toContain("<!-- amadeus-grilling:deferred -->");
+    const questionsFileRow = grilling
+      .split("\n")
+      .find((line) => line.startsWith("| Questions file |"));
+    expect(questionsFileRow).toContain("deferred-node section");
+
+    // stage-protocol names the questions-file obligations twice as well.
+    expect(compact(PROTOCOL)).toContain(
+      "the deferred-node section carrying the `<!-- amadeus-grilling:deferred -->` marker",
+    );
+    const step3d = section(PROTOCOL, "**Step 3d: If \"Grill me\" (grilling mode):**");
+    expect(step3d).toContain("<!-- amadeus-grilling:deferred -->");
   });
 
   test("limits follow-ups to material ambiguity and records reversible defaults", () => {

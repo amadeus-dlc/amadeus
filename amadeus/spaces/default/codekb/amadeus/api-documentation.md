@@ -1,6 +1,267 @@
 # API ドキュメント
 
-## 監査 journal の wire 契約と正規化 API（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+## coverage 免除台帳のデータ契約（260811-allowlist-semantic-audit、履歴、observed `854692fd7`）
+
+**観測 ref**: すべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`。正本は `re-scans/260811-allowlist-semantic-audit.md`。
+
+`tests/.coverage-patch-allowlist.json` は `tests/coverage-patch-gate.ts` が唯一の読み手となるデータ契約であり、公開 API と同じく**破ると CI が赤くなる**面である。observed 断面の契約は次のとおり（`parseAllowlist` `:360-382` の実読）。
+
+### 受理されるエントリ形状
+
+```
+{
+  "file":     <repo-relative source path>,
+  "selector": { "function": <scope name>,
+                "fingerprint": "sha256:<hex>",
+                "anchorLines": <positive int>,
+                "targetLines": "<n>" | "<n>-<m>" },
+  "reason":   <non-empty string>,
+  "expiry":   <string, optional>
+}
+```
+
+- キー和集合は observed で `expiry` / `file` / `reason` / `selector` の 4 つのみ、`selector` は `anchorLines` / `fingerprint` / `function` / `targetLines` の 4 つのみ（`jq` の `keys | add | unique` 実測）。
+- **旧形式の絶対行ピン（`lines` キー）は受理されない**。`t229-coverage-patch-gate.test.ts:176` `legacy absolute line pins are rejected` が契約として固定。observed の台帳に残存 **0 件**。
+- `selector` に契約外のフィールドを足すと throw（同 `:329`）。`expiry` が string 以外なら throw（同 `:337`）。`targetLines` が `n` / `n-m` 以外なら throw（同 `:321`）。
+- `reason` は**空白のみで拒否**（同 `:315` `reason-less entry throws (fail-closed ledger)`）。それ以上の検査は無い。
+
+### 解決契約（fail-closed）
+
+`resolveSemanticSelector(file, source, selector)` は、`selector.function` が指すスコープが**ちょうど 1 つ**でなければ throw し、そのスコープ内で指紋が**ちょうど 1 箇所**に一致しなければ throw する。エラー文言は逐語:
+
+- `coverage-patch-gate: function ${selector.function} in ${file} resolved ${scopes.length} times (expected exactly one)`
+- `coverage-patch-gate: source fingerprint for ${file}#${selector.function} resolved ${matches.length} times (expected exactly one)`
+
+いずれも `runCheck` が捕捉し、`coverage-patch-gate: STALE semantic allowlist entry: ...` を stderr へ出して exit 1 を返す（`:552-553`）。ソースが存在しない場合も throw（`:391` `coverage-patch-gate: source not found for semantic allowlist entry: ${entry.file}`）。
+
+`targetLines` は**アンカー窓内の相対**指定であり、絶対行への復元は `:312` 逐語 `return { start: matches[0] + relative.start - 1, end: matches[0] + relative.end - 1 };`。
+
+### 契約が守っていないこと（明示）
+
+`reason` は非空であること以外に一切の契約を持たない。`findStaleAllowlistEntries` / `evaluatePatch` / `allowlisted` のいずれも `reason` を引数に取らないため、**`reason` が解決先の実コードと無関係でもこの契約は破れない**。observed で確定した転位は 18 件（`re-scans/260811-allowlist-semantic-audit.md` §4、全数照合未実施のため下限）。
+
+### CLI 面
+
+`bun tests/coverage-patch-gate.ts --check` が唯一の CI 入口（`.github/workflows/ci.yml` の `Patch coverage gate` ステップ、PR イベント限定）。base ref は環境変数 `AMADEUS_PATCH_BASE_REF` で与える。
+
+## TLA+ receipt API の入力ドメイン（260812-tla-proof-receipt、現在、observed `854692fd7`）
+
+**観測 ref**: 本節の file:line はすべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD）時点。正本は `re-scans/260812-tla-proof-receipt.md`。パスは `plugins/formal-model-check/tools/` 配下。
+
+### `createVerifiedTlaModelReceipt(source: VerifiedModelSource)`（`tla-model-receipt.ts:89-130`）
+
+- 読む入力は `source.moduleIdentity` / `source.cfgIdentity` / `source.auxIdentities` の 3 つのみ（`:104-112`）
+- **identity をバイト列から再計算しない** — 呼び出し元が置いた値をそのままコピーし、`identityInput` オブジェクト全体を `:124-127` でハッシュして `modelIdentity` を作る
+- したがって identity のエンコーディングは本 API ではなく `VerifiedModelSource` の**生産者**が決める。現在の生産者は 2 系統あり形式が異なる（loader = デコード済み文字列 `tla-model-loader-internal.ts:279`、referee の `describeMutant` = オブジェクト `{bytes: base64}` `tla-referee-toolchain.ts:47`）。この「コピーであって計算ではない」性質が、2 つのエンコーディングを無検出で共存させている
+
+### `validateVerifiedTlaModelReceipt(input: unknown)`（`tla-model-receipt.ts:142`）
+
+- 名目上の入力は `unknown` だが、**実効的な入力ドメインは「登録済み model-map に存在するモデルの receipt」に限られる**
+- 基準値は引数ではなく loader から作られる: `:154` `loadVerifiedTlaSources()` → `:156` `selectVerifiedModel(loaded.value, input.modelName)` → `:158` `createVerifiedTlaModelReceipt(selected.value)`
+- 拒否は 2 段階 — 未登録なら `:157` `verified model is unavailable: ${input.modelName}`、登録済みでも identity 比較（`:161-169`）が合わなければ `:169` `"receipt differs from the selected verified model"`
+- 形状検査は `exactPlainObject(input, VERIFIED_RECEIPT_KEYS)`（`:145`、実装 `:69-75`）で**キー集合の完全一致**を要求する。union へ新しいメンバを足す設計はこの厳格さを踏まえる必要がある
+- ディスパッチャは `validateModelCheckReceipt`（`:184`、`:187` で `isVerifiedTlaModelReceipt` により verified 分岐へ委譲）
+
+### `canonicalIdentity(value, domain)` の呼び出し規約（現状は不統一）
+
+| 呼び出し元 | 渡す値 | file:line |
+|---|---|---|
+| referee | `{ bytes: Buffer.from(bytes).toString("base64") }` | `tla-referee-toolchain.ts:47` |
+| loader | デコード済みソース文字列 | `tla-model-loader-internal.ts:279` |
+| toolchain のバイト照合 | デコード済みソース文字列 | `fs-tlc-toolchain.ts:731` |
+
+同じ `domain` に対して 2 種類の入力形式が使われており、同一バイト列から異なる sha256 が出る。この規約は型で強制されていない（`canonicalIdentity` は任意の JSON 値を受ける）。
+
+### `loadVerifiedTlaSourcesInternal(moduleUrl, fs)`（`tla-model-loader-internal.ts:463`）
+
+- 公開 API ではなく test 専用 seam。本番呼び出し元は無引数ラッパ `loadVerifiedTlaSources`（`tla-model-loader.ts:31-33`）を使う契約
+- 直上コメント `:461-462` は逐語で `// Internal/test-only seam. Production callers must use the no-argument wrapper` / `// in tla-model-loader.ts so runtime input cannot select a root or filesystem.`
+- **この禁止は方針であって能力の制約ではない** — `findRepositoryRoot`（`:151-168`）により root は実際に選択でき、`tests/integration/t403-tla-loader-generalization.test.ts:94-100` が合成ワークスペースでその能力を使っている。選べないのは root から独立した任意の model-map パスのみ
+
+## PR 収束 CLI の外部境界と内部契約（260811-pr-convergence-gate、履歴、observed `854692fd7`）
+
+### External CLI Surface
+
+本リポジトリに HTTP server API はない。Issue #2838 の外部境界は plugin CLI と `gh` である。
+
+#### `create`
+
+```text
+bun <harness>/plugins/pr-convergence/tools/pr-convergence-cli.ts create \
+  --repo <owner/repo> --head <branch> --title <title> --body-file <path> \
+  [--base <branch>] [--record <record> --bolt <slug> --unit <slug>]
+```
+
+- linked mode では `--record`、`--bolt`、`--unit` を3点セットで要求する。
+- canonical title prefix と `## Amadeus Work` section を追加し、Intent registry の UUID/record path に結び付ける。
+- `--head` は `gh pr create` に明示的に渡す。
+- 現在は local branch の clean、commit 済み、push 済み、remote head SHA 一致を検査しない。
+- 成功 `0`、usage/GitHub boundary failure `2`。
+
+#### `status`
+
+```text
+bun <harness>/plugins/pr-convergence/tools/pr-convergence-cli.ts status \
+  --repo <owner/repo> --pr <number> --unit <slug> --record <record> [--unlinked true]
+```
+
+- GitHub GraphQL snapshot と全 review threads を読み、JSON verdict を stdout に返す。
+- `0`: converged または landed、`1`: not converged、`2`: GitHub/parse failure、`3`: linked PR provenance violation。
+- `--unlinked true` は PR title/body provenance だけを省略し、GitHub read と convergence 判定は省略しない。
+
+#### `report`
+
+```text
+bun <harness>/plugins/pr-convergence/tools/pr-convergence-cli.ts report \
+  --repo <owner/repo> --pr <number> --unit <slug> --record <record> [--unlinked true]
+```
+
+- current PR state を再評価する。
+- active PR が未収束なら exit `1` で report を書かない。
+- converged または landed の場合、`<record>/construction/<unit>/code-generation/pr-convergence-report.md` を書く。
+- report schema は `converged | override | landed` の3 kind。
+- 現在の schema は execution receipt、report digest、audit event ID、signature を持たない。
+
+#### `override`
+
+```text
+bun <harness>/plugins/pr-convergence/tools/pr-convergence-cli.ts override \
+  --repo <owner/repo> --pr <number> --unit <slug> --record <record> --reason <text>
+```
+
+- audit shards 内の最新 `HUMAN_TURN` を要求する。
+- 収束済み PR の override を拒否する。
+- `amadeus-log.ts decision` の成功後にのみ `override` report を書く。
+- PR content provenance 検査は意図的に省略する。
+
+### GitHub Adapter Contract
+
+`pr-convergence-gh-runner.ts` は次を提供する。
+
+- `parsePrRef(repo, number)` — `owner/repo` と正整数 PR 番号を検証する。
+- `createGhRunner()` — `gh --version` と `gh auth status` が成功した後だけ runner を返す。
+- `fetchRawPrState()` — GraphQL から `mergeable`、`mergeStateStatus`、`title`、`body`、`state`、`mergedAt`、`mergeCommit.oid`、check rollup を1 snapshot で読む。
+- stderr 本文は外へ出さず短い SHA-256 digest に変換する。
+
+### Internal Contracts
+
+| Contract | Owner | 概要 |
+|---|---|---|
+| `ConvergenceReport` | `pr-convergence-cli.ts` | 3 kind の render 入力 union |
+| `ConvergenceVerdict` | `pr-convergence-predicate.ts` | merge state と violating thread count による純粋判定 |
+| `ThreadLedger` | `pr-convergence-ledger.ts` | paged thread の terminal/non-terminal 集計 |
+| `ProvenanceVerdict` | `pr-convergence-provenance.ts` | canonical title/body と record/unit の整合性 |
+| `applyPluginScopeBindings` | `amadeus-graph.ts` | host binding を既存 scope row へ加算 |
+| `unitCovered` | `amadeus-orchestrate.ts` | per-unit required produces の全件存在判定 |
+| `verifyStageCompletionGuards` | `amadeus-state.ts` | direct transition の artifact/sensor chokepoint |
+| `evaluateReportFormat` | report sensor | Markdown field shape と自己矛盾の検査 |
+
+### Report Format Sensor Contract
+
+入力は `--stage` と `--output-path`。対象 basename 以外、またはファイル不在は clean pass として扱う。shape finding があっても JSON verdict を stdout に出し exit `0` となる。CLI flag 不備だけが exit `1` である。この advisory 契約は観測には適するが、Issue #2838 が要求する completion gate には不足する。
+
+## テスト時間設定 API の現状（260810-test-time-factor、履歴、observed `ce3c3ccfd`）
+
+| 入力/API | 現状 | 備考 |
+|---|---|---|
+| `TEST_TIME_FACTOR` | 未実装 | 環境変数参照、parse、scale helper は0件 |
+| `--test-timeout-ms <ms>` | 実装済み | `tests/lib/run-tests-args.ts` が正整数と上限を検証 |
+| `AMADEUS_TEST_TIMEOUT` | 実装済み | live model/driver 用の秒単位 override。共通係数ではない |
+
+要件化すべき公開契約候補は、未指定時 `1`、有限の正値のみ受理、基準ミリ秒に係数を乗算することである。丸めと上限、明示 `--test-timeout-ms` に係数を掛けるかは requirements-analysis で固定する。
+
+## plugin advisory 宣言の解決契約（260810-plugin-manifest-resoluti、履歴、observed `7b9391be2`）
+
+**観測 ref**: すべて observed = `7b9391be2db4fad791d637293ea442d5a1462bac`。正本は `re-scans/260810-plugin-manifest-resoluti.md`。
+
+Issue #2823 が欠陥とするのは、次の 3 契約の**継ぎ目**である（個々の契約はすべて実装どおりに動く）。
+
+### 契約 1 — manifest 解決（読み手側）
+
+`pluginManifestPath(projectRoot, plugin)` = `<projectRoot>/plugins/<name>/plugin.json`（`amadeus-advisory-declaration.ts:295-297`）が宣言の**唯一の**解決規則。読み手は `declaredAdvisoriesForPlugin`（`:312`）と `declarationFor`（`:392`）の 2 箇所のみ。`projectRoot` は `projectRootForHost(hostRoot) = dirname(hostRoot)`（`amadeus-plugin-activation.ts:110-112`）で導かれる。**manifest 不在はエラーではなく zero-impact**（`:312-313` で `return []`、無音）。`declaredFormalCheckArgv`（`:403-410`）/ `declaredHandoffStage`（`:413-420`）は宣言が読めないとき `null` を返し、呼び出し側（`amadeus-advisory-choice.ts:948-978` / `:729-741`）は route/handoff なしの素の振る舞いへ落ちる — すべて無音。
+
+### 契約 2 — evaluator spawn
+
+`spawnEvaluator(projectRoot)`（`:347-357`）は argv ベクトルを shell なし・`cwd: projectRoot` で同期 spawn する（timeout 60s、maxBuffer 8MiB）。manifest が持つ argv の相対要素は **projectRoot 基準**で解決される。timeout・truncation・非 JSON verdict は unreadable verdict として **hold 方向に fail-closed**（`:340-343` の設計コメント）。出荷 manifest の argv（`plugins/formal-model-check/plugin.json:59-65`）は `:61` が repo ルート相対 `plugins/formal-model-check/tools/tla-authoring.ts` であり、この契約の下では projectRoot に authoring ツリーが在る場合のみ解決する。
+
+### 契約 3 — 供給側（何が consumer の projectRoot に届くか）
+
+- compose は `plugin.json` を**配送しない**（`amadeus-plugin-compose.ts:895` / `:1390-1408` — stages/tools のみ）
+- folder-drop（`installDoc` primary 腕、`plugin-projection.ts:634`）は `<harnessDir>/.amadeus-plugin-src/<name>/` にのみ置く — project supply は作られない
+- `install <path>` verb は dot-dir ホストへ投げると persistent 腕（`amadeus-plugin.ts:1117-1118`）に入り、**FULL bundle（plugin.json + tools）を `<projectRoot>/plugins/<name>/` へ永続化する**（`:1160`）。永続化の pin は t353 `:254-274`（4 面: project supply / config / staging / composition）と rollback `:276-324`
+
+### ワイヤ上の振る舞いまとめ
+
+| 供給状態 | 発火（checkpoint） | run-now route | handoff |
+|---|---|---|---|
+| manifest なし（folder-drop / marketplace 経路） | 無音でゼロ | null → 提示なし | null → 素の item |
+| manifest あり・argv 解決可（install verb / self-install） | 宣言どおり発火 | 宣言 argv から構築 | 宣言 stage を載せる |
+| manifest あり・argv 解決不可（手作り hybrid のみ） | 発火するが unreadable verdict → **hold** | — | — |
+
+## stage-stats attribution API 契約（260809-cg-attribution-stats、履歴、observed `82e2f30c0`）
+
+### CLI 契約
+
+現行 usage は `--project-dir` / `--space` / `--format` / `--json`（`packages/framework/core/tools/amadeus-stage-stats.ts:728-798`）。Issue #2695 は次を追加する。
+
+```text
+bun amadeus-stage-stats.ts \
+  [--project-dir <path>] [--space <name>] \
+  [--stage <safe-slug>] [--outliers <0..100>] \
+  [--format markdown|csv|json] [--json]
+```
+
+| option | 既定値 | 検証・意味 |
+| --- | --- | --- |
+| `--stage <slug>` | `code-generation` | 安全な stage slug。attribution target だけを選び、既存の全 stage duration 表は維持する |
+| `--outliers <N>` | `10` | 10進整数かつ0〜100。0は outlier 行を表示しないが集計は変えない |
+
+`--outliers -1` / `101` / 小数 / 非数値、値欠落、安全でない stage slug、未知 flag は usage error（exit 2）。安全な stage でも attribution population が0なら exit 0 の正常空レポートで、`n=0` と比率 `n/a` を返す。既存 exit ladder（正常0、unreadable shardを含む部分 sweep=1、usage=2）は `main`（`:941-965`）のまま保存する。
+
+### report semantic model
+
+既存 `StageStatsReport`（`:515-527`）の `scanScope` / `exclusions` / `stages` / `sensors` / `models` / `reviewBuckets` は不変。次の attribution section を同じ report に追加する（名称の最終確定は後続 design stage、意味契約は固定）。
+
+| セクション | 必須意味 |
+| --- | --- |
+| measurement ref | target stage、scan scope、measured/attribution population、`zero-net-attribution` / `ambiguous-window-identity`、採用・不採用 event rule |
+| category stats | category、正の union を持つ `n`、observable duration median/p95、attribution 全窓を母集団とする net share median/p95 |
+| coverage stats | observable/unattributable seconds、coverage/unattributable rate の median/p95 |
+| overlap stats | category 間で重なった秒数と「category 値を単純加算できない」注記 |
+| outliers | `unattributableSeconds` 降順上位N。tie は `intent → startedAt → completedAt` 昇順 |
+| missing instrumentation candidates | candidate×reason、`unattributableRate > 0.5` 件数、exact lifecycle の terminal 欠落。`candidateBoundary` 仮説は observed facts と別フィールド |
+| methodology | event→category rule、identity key、stage identity、half-open、clip、idle subtraction、category/global union、除外条件 |
+
+各 window の機械契約は次である。
+
+```text
+observableSeconds + unattributableSeconds = netSeconds
+coverage + unattributableRate = 1
+0 <= observableSeconds <= netSeconds
+```
+
+category share は `categoryUnionSeconds / netSeconds`。category 間の overlap を許すため、その合計を100%にしない。category 名は lifecycle 名であり、`sensor-execution` を「検証時間」、`unit-pool-lifecycle` を「実装時間」へ変換しない。
+
+### event / event-set 入力契約
+
+| family | start | terminal | identity | stage identity |
+| --- | --- | --- | --- | --- |
+| Sensor | `SENSOR_FIRED` | `PASSED` / `FAILED` / `BUDGET_OVERRIDE` | `Fire id` | `Stage slug` |
+| Execution event set | inner `operation-started` | inner `operation-finished` | `operationId` | outer/inner `origin.stage` |
+| Unit-pool event set | inner `unit-acquired` | inner `unit-settled` | `attemptId` | 同 envelope 内の明示 stage 属性 |
+| Bolt/Swarm/Subagent/Loop monitor/Merge dispatch/transaction | event固有 | event固有 | event固有 | 明示 `Stage` / `Stage slug` / `origin.stage` |
+
+intent と target stage は完全一致のみ。window containment / timestamp containment は stage identity API ではない。missing stage/start/terminal/identity、duplicate start/terminal、terminal<=start、malformed/digest/duplicate event set は fail-closed の理由コードとして出力し、区間を作らない。`GATE_*` は idle subtraction で消費済みなので candidate category API から除外する。
+
+Execution contract は operation lifecycle と `origin.stage` を定義済み（`amadeus-execution-contract.ts:30-46`, `:101-154`）。一方、現 execution decoder は invalid inner を silent skip する（`amadeus-execution-lifecycle.ts:336-359`）、unit-pool decoder は throw と Event Set ID dedup を行う（`amadeus-unit-pool-runtime.ts:113-159`）。本 report API はこの差を隠さず、candidate×reason で malformed/duplicate を観測可能にする。
+
+### 出力形式の同値契約
+
+Markdown（`:632-667`）、CSV（`:676-699`）、JSON（`:701-723`）は同じ semantic model を描画する。見た目の表現は異なっても、target、母集団、rule、exclusion、category/coverage/overlap/outlier/missing-instrumentation の値は一致しなければならない。JSON は Map を決定的配列へ変換する現行 ordering 契約を維持し、Markdown/CSV の外部値 sanitization と CSV quoting も維持する（`:582-603`, `:670-673`）。
+
+実 corpus 相当サイズでは、Markdown/CSV consumer が EOF まで読め、JSON は pipe 後に `jq empty` が成功することを契約に含む。既存 #2700 テストは JSON 約104 KiBだけを証明する（`tests/integration/t487-stage-stats.integration.test.ts:337-389`）ため、3形式を個別に64 KiB超へする fixture が必要である。
+
+## 監査 journal の wire 契約と正規化 API（260807-intent-2328-tests-e2e-au、履歴、observed `a5621236c`）
 
 ### wire 形の2版
 

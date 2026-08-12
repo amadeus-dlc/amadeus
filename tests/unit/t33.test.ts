@@ -172,6 +172,30 @@ describe("t33 start: BOLT_STARTED audit emission", () => {
     expect(auditFields(proj, "BOLT_STARTED")["Batch number"]).toBe("1");
   });
 
+  test("solo start emits and returns immutable Construction correlation", () => {
+    proj = mkStartedProject();
+    writeFileSync(
+      seededStateFile(proj),
+      readFileSync(seededStateFile(proj), "utf-8").replace(
+        /^- \*\*Current Stage\*\*:.*$/m,
+        "- **Current Stage**: code-generation",
+      ),
+    );
+    const started = runBolt(proj, "start", "--name", "auth-service", "--batch", "1");
+    const output = JSON.parse(started.out.trim()) as Record<string, string>;
+    const fields = auditFields(proj, "BOLT_STARTED");
+
+    expect(started.status).toBe(0);
+    expect(fields.Stage).toBe("code-generation");
+    expect(fields["Batch Id"]).toBe("solo:1:auth-service");
+    expect(fields["Attempt Id"]).toMatch(/^[0-9a-f-]{36}$/);
+    expect(output).toMatchObject({
+      stage: fields.Stage,
+      batch_id: fields["Batch Id"],
+      attempt_id: fields["Attempt Id"],
+    });
+  });
+
   // Test 3: start accepts CSV bolt names (parallel batch)
   test("start records CSV bolt names", () => {
     proj = mkStartedProject();

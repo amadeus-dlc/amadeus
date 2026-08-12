@@ -2,6 +2,7 @@
 // test follows commands emitted by the installed public engine and observes
 // only process output, Git, hooks, and workspace state.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -298,4 +299,4 @@ test("installed Codex migration route reaches apply without birthing or advancin
     consumeMigrationStopLatch(project.projectDir, sessionId);
     project.cleanup();
   }
-}, 15_000);
+}, scaleTestTime(15_000));

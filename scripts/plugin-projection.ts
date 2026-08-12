@@ -998,6 +998,28 @@ function copyDirectoryContents(source: string, destination: string): void {
   }
 }
 
+// Seed a projection workspace's authoring `plugins/` tree, applying the SAME
+// prose transform the packager applies (harness-transform.ts). The runtime
+// compose this workspace then spawns copies plugin bytes verbatim, so a
+// {{HARNESS_DIR}} token left un-substituted here reaches the composed face raw
+// and a `.claude/…` literal reaches every other face foreign (#2790). This is
+// the SEEDING point, not compose: compose stays a byte-faithful copier.
+// transform() branches on extension only, so plugin.json and any .ts are carried
+// through byte-for-byte exactly as the previous verbatim cpSync did.
+function seedPluginsTransformed(
+  source: string,
+  destination: string,
+  harnessDir: string,
+  rulesRename: string | null,
+): void {
+  mkdirSync(destination, { recursive: true });
+  for (const { rel, abs } of walkFs(nodeReadOnlyFs, source, "")) {
+    const out = join(destination, ...rel.split("/"));
+    mkdirSync(dirname(out), { recursive: true });
+    writeFileSync(out, transform(rel, readFileSync(abs), harnessDir, rulesRename));
+  }
+}
+
 function fileMap(root: string): Map<string, Buffer> {
   const files = new Map<string, Buffer>();
   if (!existsSync(root)) return files;
@@ -1028,7 +1050,8 @@ function projectInTemporaryWorkspace(repoRoot: string, name: SelfInstallHarness)
     if (!existsSync(configSource)) throw new Error("missing self plugin selection: amadeus/config.json");
     mkdirSync(join(workspace, "amadeus"), { recursive: true });
     cpSync(configSource, join(workspace, "amadeus", "config.json"));
-    if (existsSync(pluginsSource)) cpSync(pluginsSource, join(workspace, "plugins"), { recursive: true });
+    if (existsSync(pluginsSource))
+      seedPluginsTransformed(pluginsSource, join(workspace, "plugins"), manifest.harnessDir, manifest.rulesRename);
     const hostRoot = join(workspace, manifest.harnessDir);
     const tool = join(hostRoot, "tools", "amadeus-plugin.ts");
     const env: NodeJS.ProcessEnv = { ...process.env, AMADEUS_HARNESS_DIR: manifest.harnessDir };

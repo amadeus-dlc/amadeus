@@ -55,6 +55,7 @@
 //     in the SAME fixture before the max-age=0 stale check, isolating that the
 //     non-zero is the window, not an absent event.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, writeFileSync } from "node:fs";
@@ -136,7 +137,7 @@ describe("t04 amadeus-worktree discard/list/verify (migrated from t04-worktree-d
     // (amadeus-worktree.ts:470-480).
     expect(r2.out).toContain('"emitted":null');
     expect(r2.out).toContain('"reason":"already-discarded"');
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("5-7: list returns only bolt-* worktrees under the framework dir", () => {
     const p = freshFixture();
@@ -156,7 +157,7 @@ describe("t04 amadeus-worktree discard/list/verify (migrated from t04-worktree-d
     expect(r.status).toBe(0); // T5
     expect(r.out).toContain('"slug":"listed"'); // T6
     expect(r.out).not.toContain("non-bolt-wt"); // T7
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("8-9: verify finds the most recent matching event within the window", () => {
     const p = freshFixture();
@@ -166,7 +167,7 @@ describe("t04 amadeus-worktree discard/list/verify (migrated from t04-worktree-d
     const r = wt(p, ["verify", "--event", "WORKTREE_CREATED", "--slug", "ver"]);
     expect(r.status).toBe(0); // T8
     expect(r.out).toContain('"verified":true'); // T9
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("10-12: verify reports absent for a missing slug and stale for an out-of-window event", () => {
     const p = freshFixture();
@@ -196,5 +197,5 @@ describe("t04 amadeus-worktree discard/list/verify (migrated from t04-worktree-d
     ]);
     expect(stale.status).not.toBe(0);
     expect(stale.out).toContain('"reason":"stale');
-  }, 30000);
+  }, scaleTestTime(30000));
 });

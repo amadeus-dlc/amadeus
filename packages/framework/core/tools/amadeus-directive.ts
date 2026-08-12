@@ -18,7 +18,7 @@
 // amadeus-lib.ts.
 
 import { isPlainObject, UUID_V4_RE, UUID_V7_RE } from "./amadeus-lib.ts";
-import type { AdvisoryCode } from "./amadeus-plugin-activation.ts";
+import type { AdvisoryCode } from "./amadeus-plugin-runtime.ts";
 
 // --- Public types ---
 
@@ -109,6 +109,11 @@ export interface RunStageDirective {
   // reviewer_max_iterations — how many review cycles before escalating to the
   // human. Default 2 when reviewer is present. Absent when no reviewer.
   reviewer_max_iterations?: number;
+  // review_only — recovery directive emitted when a per-unit stage's required
+  // artifacts already exist but the reviewer verdict does not. The conductor
+  // skips the stage body and runs only stage-protocol.md §12a, then re-runs
+  // `next`. Present only as the literal true with unit + reviewer + gate:false.
+  review_only?: true;
   // Intent-scoped autonomy metadata is present only after a human selected
   // semi/full. The conductor still runs the full quality ritual; auto approval
   // changes only the final human-wait boundary.
@@ -174,7 +179,7 @@ export interface RunStageDirective {
   advisories?: DirectiveAdvisory[];
 }
 
-// DirectiveAdvisory — the wire shape of amadeus-plugin-activation.ts's
+// DirectiveAdvisory — the wire shape of a plugin advisory.
 // `Advisory`. Declared here (rather than imported) so the directive contract
 // module stays dependency-free, and kept structurally identical so the
 // producing type assigns to it without a cast; the plugin module remains the
@@ -200,15 +205,11 @@ export type AdvisoryChoiceDirectiveAdvisory = {
   intent_run: string;
   advisory_instance: string;
   result?: string;
-};
-
-export type AdvisoryFormalCheckDirective = {
-  stage: "formal-model-check";
-  command: string;
-  output_dir: string;
-  target: string;
-  spec_identity: string;
-  advisory_instance: string;
+  // The stage a run-now choice opens for this advisory, when its declaration
+  // names one (D2 of #2766). Opening the stage is an entry point into the work
+  // the advisory is holding for, never a release: the hold still lifts only
+  // when the declaring plugin's own evaluator returns no-hold (BR-U2-05).
+  handoff_stage?: string;
 };
 
 const ADVISORY_CHOICE_QUESTION_SUFFIX =
@@ -230,8 +231,6 @@ export interface AwaitAdvisoryChoiceDirective {
   question: string;
   options: ["今すぐ実行する", "リスクを承知して延期する"];
   advisories: AdvisoryChoiceDirectiveAdvisory[];
-  run_required?: boolean;
-  formal_checks?: AdvisoryFormalCheckDirective[];
 }
 
 // dispatch-subagent — same as run-stage, but the stage runs via a Task call to
@@ -285,6 +284,10 @@ export interface InvokeSwarmDirective {
   // conductor's knowledge call, so it supplies --repo from the intent's recorded
   // set). When present, the conductor passes it straight through as `prepare --repo`.
   repo?: string;
+  // Retry correlation. Both fields are present together only when the named
+  // batch already owns its worktrees and Unit Pool.
+  prepared_batch?: string;
+  retry_unit?: string;
 }
 
 // present-gate — run the stage-protocol §13 learnings ritual, then render the
@@ -451,6 +454,7 @@ const RUN_STAGE_FIELDS = [
   "depth",
   "reviewer",
   "reviewer_max_iterations",
+  "review_only",
   "intent_autonomy_mode",
   "autonomy_auto_approve",
   "intent_grant_id",
@@ -475,11 +479,9 @@ const AWAIT_ADVISORY_CHOICE_FIELDS = [
   "question",
   "options",
   "advisories",
-  "run_required",
-  "formal_checks",
 ] as const;
 
-const INVOKE_SWARM_FIELDS = ["kind", "units", "cap", "repo"] as const;
+const INVOKE_SWARM_FIELDS = ["kind", "units", "cap", "repo", "prepared_batch", "retry_unit"] as const;
 const PRESENT_GATE_FIELDS = ["kind", "stage", "phase", "memory_path"] as const;
 const ASK_FIELDS = ["kind", "question"] as const;
 const SELECT_INTENT_FIELDS = ["kind", "selection_token", "question", "options"] as const;
@@ -522,6 +524,31 @@ type DirectiveFieldCheck = (
   errors: string[],
 ) => void;
 
+function checkPreparedRetryCorrelation(
+  o: Record<string, unknown>,
+  errors: string[],
+): void {
+  checkOptionalString(o, "prepared_batch", "invoke-swarm", errors);
+  checkOptionalString(o, "retry_unit", "invoke-swarm", errors);
+  const preparedBatchProvided = "prepared_batch" in o;
+  const retryUnitProvided = "retry_unit" in o;
+  const hasPreparedBatch = typeof o.prepared_batch === "string" && o.prepared_batch.trim().length > 0;
+  const hasRetryUnit = typeof o.retry_unit === "string" && o.retry_unit.trim().length > 0;
+  if (
+    preparedBatchProvided !== retryUnitProvided ||
+    (preparedBatchProvided && (!hasPreparedBatch || !hasRetryUnit))
+  ) {
+    errors.push("invoke-swarm: prepared_batch and retry_unit must be provided together");
+  }
+  if (
+    hasRetryUnit &&
+    Array.isArray(o.units) &&
+    o.units.filter((unit) => unit === o.retry_unit).length !== 1
+  ) {
+    errors.push("invoke-swarm: retry_unit must name exactly one member of units");
+  }
+}
+
 const FIELD_CHECKS_BY_KIND: Readonly<Record<DirectiveKind, DirectiveFieldCheck>> = {
   "run-stage": (o, errors) => checkRunStageShared(o, "run-stage", errors),
   "dispatch-subagent": (o, errors) => {
@@ -539,6 +566,7 @@ const FIELD_CHECKS_BY_KIND: Readonly<Record<DirectiveKind, DirectiveFieldCheck>>
       errors.push("invoke-swarm: cap must not exceed units.length");
     }
     checkOptionalString(o, "repo", "invoke-swarm", errors);
+    checkPreparedRetryCorrelation(o, errors);
   },
   "present-gate": (o, errors) => {
     checkString(o, "stage", "present-gate", errors);
@@ -663,6 +691,24 @@ function checkRunStageShared(
   // an optional string, reviewer_max_iterations an optional positive integer.
   checkOptionalString(o, "reviewer", kind, errors);
   checkOptionalPositiveInteger(o, "reviewer_max_iterations", kind, errors);
+  checkOptionalBoolean(o, "review_only", kind, errors);
+  if ("review_only" in o) {
+    if (kind !== "run-stage") {
+      errors.push(`${kind}: review_only is valid only on run-stage`);
+    }
+    if (o.review_only !== true) {
+      errors.push(`${kind}: review_only must be true when present`);
+    }
+    if (typeof o.unit !== "string" || o.unit.length === 0) {
+      errors.push(`${kind}: review_only requires a non-empty unit`);
+    }
+    if (typeof o.reviewer !== "string" || o.reviewer.length === 0) {
+      errors.push(`${kind}: review_only requires a non-empty reviewer`);
+    }
+    if (o.gate !== false) {
+      errors.push(`${kind}: review_only requires gate:false`);
+    }
+  }
   checkOptionalEnum(o, "intent_autonomy_mode", ["semi", "full"] as const, kind, errors);
   checkOptionalBoolean(o, "autonomy_auto_approve", kind, errors);
   checkOptionalString(o, "intent_grant_id", kind, errors);
@@ -738,32 +784,6 @@ function checkAwaitAdvisoryChoice(
   ) {
     errors.push("await-advisory-choice: options must be the canonical two choices");
   }
-  if ("run_required" in o && typeof o.run_required !== "boolean") {
-    errors.push(`await-advisory-choice: run_required must be boolean, got ${describe(o.run_required)}`);
-  }
-  if (o.run_required === true && (!Array.isArray(o.formal_checks) || o.formal_checks.length === 0)) {
-    errors.push("await-advisory-choice: run_required requires non-empty formal_checks");
-  }
-  if (o.run_required !== true && "formal_checks" in o) {
-    errors.push("await-advisory-choice: formal_checks requires run_required=true");
-  }
-  if (Array.isArray(o.formal_checks)) {
-    o.formal_checks.forEach((item, index) => {
-      const prefix = `await-advisory-choice: formal_checks[${index}]`;
-      if (!isPlainObject(item)) {
-        errors.push(`${prefix} must be object, got ${describe(item)}`);
-        return;
-      }
-      for (const key of ["command", "output_dir", "target", "spec_identity", "advisory_instance"]) {
-        if (typeof item[key] !== "string" || item[key].length === 0) {
-          errors.push(`${prefix}.${key} must be non-empty string, got ${describe(item[key])}`);
-        }
-      }
-      if (item.stage !== "formal-model-check") {
-        errors.push(`${prefix}.stage must be formal-model-check, got ${describe(item.stage)}`);
-      }
-    });
-  }
   if (!Array.isArray(o.advisories) || o.advisories.length === 0) {
     errors.push("await-advisory-choice: advisories must be a non-empty array");
     return;
@@ -787,11 +807,14 @@ function checkAwaitAdvisoryChoice(
         errors.push(`${prefix}.${key} must be non-empty string, got ${describe(item[key])}`);
       }
     }
-    if (typeof item.code !== "string" || !(ADVISORY_CODES as readonly string[]).includes(item.code)) {
-      errors.push(`${prefix}.code must be one of ${ADVISORY_CODES.join(" | ")}, got ${describe(item.code)}`);
+    if (typeof item.code !== "string" || !ADVISORY_CODE_RE.test(item.code)) {
+      errors.push(`${prefix}.code must be a slug, got ${describe(item.code)}`);
     }
     if ("result" in item && (typeof item.result !== "string" || item.result.length === 0)) {
       errors.push(`${prefix}.result must be non-empty string, got ${describe(item.result)}`);
+    }
+    if ("handoff_stage" in item && (typeof item.handoff_stage !== "string" || item.handoff_stage.length === 0)) {
+      errors.push(`${prefix}.handoff_stage must be non-empty string, got ${describe(item.handoff_stage)}`);
     }
   });
 }
@@ -1048,11 +1071,9 @@ function checkOptionalConsumesAbsent(
   });
 }
 
-// The advisory codes the channel accepts — the two FIRING judgment values.
-// `current` is deliberately absent: a silent judgment produces no entry at all,
-// so a "current" advisory would be a rendered decision with no decision behind
-// it (the validator refuses to carry one).
-const ADVISORY_CODES = ["not-ready", "changed", "never-run"] as const;
+// Advisory codes are plugin-owned identifiers. The host validates only their
+// transport-safe shape and never enumerates a concrete plugin's vocabulary.
+const ADVISORY_CODE_RE = /^[a-z][a-z0-9-]*$/;
 
 function checkOptionalAdvisoryStrings(
   item: Record<string, unknown>,
@@ -1067,7 +1088,7 @@ function checkOptionalAdvisoryStrings(
 }
 
 // checkOptionalAdvisories — each entry must be
-// {plugin, code, message, stage} with `code` in ADVISORY_CODES. Same
+// {plugin, code, message, stage} with a slug-shaped `code`. Same
 // presence-then-type shape as checkOptionalConsumesAbsent, the sibling
 // object-array field.
 function checkOptionalAdvisories(
@@ -1096,12 +1117,9 @@ function checkOptionalAdvisories(
       }
     }
     checkOptionalAdvisoryStrings(item, `${kind}: ${field}[${i}]`, errors);
-    if (
-      typeof item.code !== "string" ||
-      !(ADVISORY_CODES as readonly string[]).includes(item.code)
-    ) {
+    if (typeof item.code !== "string" || !ADVISORY_CODE_RE.test(item.code)) {
       errors.push(
-        `${kind}: ${field}[${i}].code must be one of ${ADVISORY_CODES.join(" | ")}, got ${describe(item.code)}`,
+        `${kind}: ${field}[${i}].code must be a slug, got ${describe(item.code)}`,
       );
     }
   });

@@ -1,3 +1,4 @@
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -356,8 +357,8 @@ describe("t222 metrics publication adapters", () => {
     const maintenance = new MaintenanceCliPort({ ...context, runner });
     expect(snapshot.nowMs()).toBeGreaterThan(0);
     expect(maintenance.nowMs()).toBeGreaterThan(0);
-    await snapshot.sleep(1);
-    await maintenance.sleep(1);
+    await snapshot.sleep(scaleTestTime(1));
+    await maintenance.sleep(scaleTestTime(1));
   });
 
   test("CLI validation and operation failures return stable exit codes", async () => {
@@ -568,7 +569,7 @@ describe.serial("t222 metrics publication hermetic Git/GitHub boundary", () => {
     expect(jsonFiles).toHaveLength(1);
     expect(state.pullRequests).toHaveLength(1);
     expect(state.dispatches).toBe(3);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("backfill preserves the source artifact timestamp", async () => {
     const sha = headSha();
@@ -585,7 +586,7 @@ describe.serial("t222 metrics publication hermetic Git/GitHub boundary", () => {
     const state = JSON.parse(readFileSync(statePath, "utf8"));
     expect(state.pullRequests).toHaveLength(1);
     expect(state.dispatches).toBe(2);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("backfill fails closed on an open snapshot PR carrying a different captured_at", async () => {
     const sha = headSha();
@@ -626,7 +627,7 @@ describe.serial("t222 metrics publication hermetic Git/GitHub boundary", () => {
     expect(finalState.merges).toBe(0);
     expect(finalState.pullRequests[0].state).toBe("OPEN");
     expect(run(repository, ["git", "ls-remote", "--heads", "origin", `refs/heads/${branch}`])).toContain(branch);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("three different SHAs do not conflict and maintenance converges to one stable branch generation", async () => {
     for (const label of ["change-one", "change-two", "change-three"]) {
@@ -654,7 +655,7 @@ describe.serial("t222 metrics publication hermetic Git/GitHub boundary", () => {
     );
     expect(maintenancePullRequests).toHaveLength(1);
     expect(run(repository, ["git", "ls-remote", "--heads", "origin", "refs/heads/metrics/maintenance"])).toBe("");
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("human-owned branch-only candidate fails closed without deletion", async () => {
     const sha = addMainCommit("human-candidate");
@@ -672,7 +673,7 @@ describe.serial("t222 metrics publication hermetic Git/GitHub boundary", () => {
     run(repository, ["git", "config", "user.name", BOT_LOGIN]);
     expect(await publishSnapshot(sha)).toBe(1);
     expect(run(repository, ["git", "ls-remote", "--heads", "origin", `refs/heads/${branch}`])).toContain(branch);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("maintenance reconciliation ignores snapshots landed after its cutoff", async () => {
     const targetSha = addMainCommit("cutoff-target");
@@ -706,7 +707,7 @@ describe.serial("t222 metrics publication hermetic Git/GitHub boundary", () => {
     const observation = await port.reconcile(cutoffSha);
     expect(observation.inventory.hasDiff).toBe(false);
     expect(observation.mainSha).not.toBe(cutoffSha);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("snapshot branch ownership ignores snapshots added to main after the branch point", async () => {
     const targetSha = addMainCommit("snapshot-branch-target");
@@ -729,7 +730,7 @@ describe.serial("t222 metrics publication hermetic Git/GitHub boundary", () => {
       ownership: { ok: true },
       files: [{ status: "A" }],
     });
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("a branch deleted between ls-remote and fetch converges and still dispatches maintenance", async () => {
     const sha = addMainCommit("toctou-target");
@@ -767,7 +768,7 @@ describe.serial("t222 metrics publication hermetic Git/GitHub boundary", () => {
     expect(wildcardListings).toBeGreaterThanOrEqual(2);
     expect(code).toBe(0);
     expect(JSON.parse(readFileSync(statePath, "utf8")).dispatches).toBe(1);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 
   test("maintenance publish never stages an untracked snapshot JSON", async () => {
     const targetSha = addMainCommit("maintenance-untracked-target");
@@ -789,5 +790,5 @@ describe.serial("t222 metrics publication hermetic Git/GitHub boundary", () => {
       encoding: "utf8",
     });
     expect(staged.status).not.toBe(0);
-  }, 30_000);
+  }, scaleTestTime(30_000));
 });

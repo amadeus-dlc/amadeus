@@ -1,0 +1,18 @@
+[
+  {
+    "id": "goal-statement",
+    "verdict": "ACHIEVED",
+    "evidence": [
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260810-test-time-factor/construction/build-and-test/build-test-results.md",
+        "digest": "90d6fc2daabd1f914470cf93fdcbe091b3a770a97ea2ded804f0e4f7c66b5992"
+      },
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260810-test-time-factor/verification/phase-check-construction.md",
+        "digest": "ac8ab29c02d95f70ee8de866782f6cf0ccd926459f197456e747cd031cbd814b"
+      }
+    ]
+  }
+]

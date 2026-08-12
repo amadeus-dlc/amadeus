@@ -70,6 +70,7 @@
 //   .sh assert 15 (Glue: candidate field contract)                  -> "Glue: candidate carries {id, summary, source_heading, default_scope}"
 //   .sh assert 16 (§13 fossil sweep)                                 -> "§13 rewrite carries zero sensor-protocol.md / applies_to / pre-v3 PR-doctor fossils"
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -240,7 +241,7 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
     // STRONGER than the .sh's "3:1" string: assert the two array LENGTHS directly.
     expect(j.candidates.length).toBe(3);
     expect(j.parked_open_questions.length).toBe(1);
-  }, TIMEOUT);
+  }, scaleTestTime(TIMEOUT));
 
   test("Case 1: project pick lands as a practice in project.md [.sh 2]", () => {
     const pd = mkproj();
@@ -269,7 +270,7 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
     });
     expect(persist(pd, sel).status).toBe(0);
     expect(readFileSync(projectPractices(pd), "utf-8")).toContain("cid:user-stories:c1");
-  }, TIMEOUT);
+  }, scaleTestTime(TIMEOUT));
 
   test("Case 1: team-scoped pick lands as a practice in team.md [.sh 3]", () => {
     const pd = mkproj();
@@ -298,7 +299,7 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
     });
     expect(persist(pd, sel).status).toBe(0);
     expect(readFileSync(teamPractices(pd), "utf-8")).toContain("cid:user-stories:c2");
-  }, TIMEOUT);
+  }, scaleTestTime(TIMEOUT));
 
   test("Case 1: two RULE_LEARNED audit rows [.sh 4]", () => {
     const pd = mkproj();
@@ -327,7 +328,7 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
     });
     expect(persist(pd, sel).status).toBe(0);
     expect(ruleLearnedRows(pd)).toBe(2);
-  }, TIMEOUT);
+  }, scaleTestTime(TIMEOUT));
 
   // Case 2 (surface + persist skipped in test-run mode) was dropped per #369
   // when the test-run mechanism was removed.
@@ -377,7 +378,7 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
     const m = parseSensorManifest(readFileSync(manifest, "utf-8"));
     expect(m.id).toBe("acceptance-format");
     expect(m.matches).toBe("**/amadeus-docs/inception/user-stories/**");
-  }, TIMEOUT);
+  }, scaleTestTime(TIMEOUT));
 
   test("Case 3: next compile binds the id into user-stories sensors_applicable [.sh 8]", () => {
     const pd = mkproj();
@@ -409,7 +410,7 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
     // .sh: BOUND === "true". Two-write install: the manifest + the frontmatter
     // edit make the id resolvable on the NEXT compile.
     expect(ids).toContain("acceptance-format");
-  }, TIMEOUT);
+  }, scaleTestTime(TIMEOUT));
 
   test("Case 3: SENSOR_PROPOSED row carries Destinations array [user-stories] [.sh 9]", () => {
     const pd = mkproj();
@@ -424,7 +425,7 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
     expect(((spRecord?.fields ?? {}) as Record<string, string>).Destinations).toBe(
       '["user-stories"]',
     );
-  }, TIMEOUT);
+  }, scaleTestTime(TIMEOUT));
 
   // ===========================================================================
   // Case 3b — admission conflict-check (STUBBED verdict). §6-E non-golden: the
@@ -441,7 +442,7 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
     // The failure event (a write) MUST NOT fire: zero RULE_LEARNED rows.
     expect(ruleLearnedRows(pd)).toBe(0);
     expect(existsSync(projectPractices(pd))).toBe(false);
-  }, TIMEOUT);
+  }, scaleTestTime(TIMEOUT));
 
   test("Case 3b: user-escalated entry writes through to the learnings file [.sh 11]", () => {
     const pd = mkproj();
@@ -462,7 +463,7 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
     });
     expect(persist(pd, sel).status).toBe(0);
     expect(readFileSync(projectPractices(pd), "utf-8")).toContain("cid:user-stories:c_escalated");
-  }, TIMEOUT);
+  }, scaleTestTime(TIMEOUT));
 
   // ===========================================================================
   // Case 4 — idempotent re-run (same selections-json) → no-op.
@@ -488,7 +489,7 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
     expect(persist(pd, sel).status).toBe(0);
     expect(ruleLearnedRows(pd)).toBe(1);
     expect(countLines(projectPractices(pd), "cid:user-stories:c1")).toBe(1);
-  }, TIMEOUT);
+  }, scaleTestTime(TIMEOUT));
 
   // ===========================================================================
   // Case 5 — concurrent persist (same selections-json) → exactly one. The
@@ -525,7 +526,7 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
     await Promise.all([a.exited, b.exited]);
     expect(ruleLearnedRows(pd)).toBe(1);
     expect(countLines(projectPractices(pd), "cid:user-stories:c1")).toBe(1);
-  }, TIMEOUT);
+  }, scaleTestTime(TIMEOUT));
 
   // ===========================================================================
   // Case 6 — recovery: audit row present, file line gone → re-write only,
@@ -561,7 +562,7 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
     expect(r.status).toBe(0);
     expect(ruleLearnedRows(pd)).toBe(1);
     expect(countLines(lf, "cid:user-stories:c1")).toBe(1);
-  }, TIMEOUT);
+  }, scaleTestTime(TIMEOUT));
 
   // ===========================================================================
   // Glue — label → candidate_id → selection-record mapping. The surface JSON
@@ -580,7 +581,7 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
     expect(typeof c.summary).toBe("string");
     expect(c.source_heading).toBe("Interpretations");
     expect(c.default_scope).toBe("project");
-  }, TIMEOUT);
+  }, scaleTestTime(TIMEOUT));
 
   // ===========================================================================
   // §13 fossil sweep — after the §13 rewrite, the "## 13. Learnings Ritual"
@@ -608,7 +609,7 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
     const fossilRe = /sensor-protocol\.md|applies_to|milestone 1[0-9]|milestone 9|doctor coverage check/;
     const fossils = section.filter((l) => fossilRe.test(l));
     expect(fossils).toEqual([]);
-  }, TIMEOUT);
+  }, scaleTestTime(TIMEOUT));
 
   // ===========================================================================
   // Case 7 — duplicate candidate_id within one persist call (#754). The cid
@@ -647,7 +648,7 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
     expect(existsSync(teamFile) ? readFileSync(teamFile, "utf-8") : null).toBe(teamBefore);
     expect(readAudit(pd)).toBe(auditBefore);
     expect(ruleLearnedRows(pd)).toBe(0);
-  }, TIMEOUT);
+  }, scaleTestTime(TIMEOUT));
 
   // ===========================================================================
   // Case 8 — marker collision with divergent body (#754). A pre-existing line
@@ -683,7 +684,7 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
     expect(readFileSync(projFile, "utf-8")).toBe(preExisting);
     expect(readAudit(pd)).toBe(auditBefore);
     expect(ruleLearnedRows(pd)).toBe(0);
-  }, TIMEOUT);
+  }, scaleTestTime(TIMEOUT));
 
   // ===========================================================================
   // Case 9 — practice line present, audit row absent (#745). The inverse of
@@ -716,5 +717,5 @@ describe("t99 §13 learning-gate end-to-end (migrated from t99-learnings-gate-fl
     expect(persist(pd, sel).status).toBe(0);
     expect(ruleLearnedRows(pd)).toBe(1);
     expect(countLines(projFile, marker)).toBe(1);
-  }, TIMEOUT);
+  }, scaleTestTime(TIMEOUT));
 });

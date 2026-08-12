@@ -226,10 +226,9 @@ function compareExpected(
 }
 
 // Cells are compared over the intersection of stage keys all faces carry.
-// Keys only some faces hold are exempt by construction: plugin composition is
-// per-face (`self-feature.formal-model-check` exists on .claude alone by
-// design), so ranging over the union would report that intentional asymmetry
-// as drift on the four faces that legitimately lack the key.
+// Keys only some faces hold are exempt by construction: third-party plugin
+// composition can be per-face, so ranging over the union would report that
+// intentional asymmetry as drift on faces that legitimately lack the key.
 function compareCells(
   projectRoot: string,
   snapshots: readonly HarnessSnapshot[],

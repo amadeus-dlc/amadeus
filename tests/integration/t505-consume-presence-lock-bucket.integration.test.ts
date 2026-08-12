@@ -32,6 +32,7 @@
 // an owner stamp naming a LIVE pid, which is exactly what acquireAuditLock's
 // reaper refuses to steal — the same shape t161 uses.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -146,7 +147,7 @@ describe("t505 consume takes the owner-intent audit-lock bucket (#2590)", () => 
         readPresenceReservation(fixture.root, fixture.reservationId)?.state,
       ).toBe("minted");
     },
-    BLOCKED_ACQUIRE_TIMEOUT_MS,
+    scaleTestTime(BLOCKED_ACQUIRE_TIMEOUT_MS),
   );
 
   // The regression pin. It passes trivially today (consume never touches the
@@ -170,7 +171,7 @@ describe("t505 consume takes the owner-intent audit-lock bucket (#2590)", () => 
         readPresenceReservation(fixture.root, fixture.reservationId)?.state,
       ).toBe("consumed");
     },
-    BLOCKED_ACQUIRE_TIMEOUT_MS,
+    scaleTestTime(BLOCKED_ACQUIRE_TIMEOUT_MS),
   );
 });
 

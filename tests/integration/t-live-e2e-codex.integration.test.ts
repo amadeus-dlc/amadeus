@@ -1,3 +1,4 @@
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -72,7 +73,7 @@ describe("Codex live adapter", () => {
     });
     const journey = createCodexAnchorJourney({
       prompt: JSON.stringify({ observation: fixture.observation }),
-      timeoutMs: 1_000,
+      timeoutMs: scaleTestTime(1_000),
     });
     try {
       const result = await runLiveJourney(adapter, journey, {

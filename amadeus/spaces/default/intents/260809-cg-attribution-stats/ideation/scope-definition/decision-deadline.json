@@ -1,0 +1,13 @@
+{
+  "stage": "scope-definition",
+  "phase": "ideation",
+  "questionId": "scope-definition-hard-deadline",
+  "selector": "scope-definition:hard-deadline",
+  "question": "能力固有の hard deadline をどう扱うか？",
+  "optionIds": ["no-calendar-deadline", "immediate-deadline", "fixed-date", "dependency-deadline"],
+  "recommendedOptionId": "no-calendar-deadline",
+  "election": {
+    "optionId": "no-calendar-deadline",
+    "evidenceFingerprint": "sha256:f903807eb6ace45ba6d2fe92b2e1536bc676e3093862c7a33d3c16e24c2e702c"
+  }
+}

@@ -1,6 +1,7 @@
 // covers: file:packages/framework/core/tools/amadeus-intent-autonomy-production.ts, file:packages/framework/core/tools/amadeus-autonomy-review-production.ts, subcommand:amadeus-bolt:set-autonomy, subcommand:amadeus-orchestrate:next, subcommand:amadeus-orchestrate:report
 // size: medium
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -728,7 +729,7 @@ describe("Intent-scoped autonomy production path", () => {
     const resumedProjection = readProductionAutonomyProjection(projectDir);
     expect(resumedProjection?.workflowExecutionState).toBe("running");
     expect(resumedProjection?.currentGrant?.state).toBe("active");
-  }, 120_000);
+  }, scaleTestTime(120_000));
 
   test("bolt autonomy verbs drive the shipped handlers in-process", () => {
     projectDir = bornProject();
@@ -815,7 +816,7 @@ describe("Intent-scoped autonomy production path", () => {
     const accepted = listProductionAutoDecisions({ projectDir, reviewState: "accepted" });
     if (!accepted.ok) throw new Error(accepted.error);
     expect(accepted.page.items.map((item) => item.decisionId)).toContain(decisionId);
-  }, 60_000);
+  }, scaleTestTime(60_000));
 
   test("utility status renders the autonomy projection in-process", () => {
     projectDir = bornProject();
@@ -834,5 +835,5 @@ describe("Intent-scoped autonomy production path", () => {
       else process.env.AMADEUS_STAGE_GRAPH = savedGraph;
     }
     expect(readProductionAutonomyProjection(projectDir)?.mode).toBe("full");
-  }, 60_000);
+  }, scaleTestTime(60_000));
 });

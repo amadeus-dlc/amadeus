@@ -1,4 +1,4 @@
-// covers: file:packages/framework/core/tools/amadeus-plugin-activation.ts
+// covers: file:plugins/formal-model-check/tools/plugin-activation.ts
 // size: medium
 //
 // U5 advisories-channel (FR-B2) — the MACHINE-CONSUMABLE advisory channel. The
@@ -19,7 +19,7 @@
 // (bun-coverage-spawn-blindspot).
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { __resetGraphCache } from "../../packages/framework/core/tools/amadeus-graph.ts";
@@ -36,7 +36,7 @@ import {
   activationAdvisoriesForHost,
   recordActivationVerdict,
   specRootForHost,
-} from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+} from "../../plugins/formal-model-check/tools/plugin-activation.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -76,6 +76,11 @@ function makeHost(composed: boolean): string {
   writeFileSync(join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.cfg"), "INIT Init\n");
   writeActivationModelMap(root);
   if (composed) {
+    cpSync(
+      join(REPO_ROOT, "plugins", ACTIVATION_PLUGIN),
+      join(root, "plugins", ACTIVATION_PLUGIN),
+      { recursive: true },
+    );
     writeFileSync(
       join(h, ".amadeus-plugin-composition.json"),
       JSON.stringify({ ledger: [], plugins: [[ACTIVATION_PLUGIN, { stageIndex: [{ slug: ACTIVATION_PLUGIN }] }]] }),
@@ -212,10 +217,10 @@ describe("t378 directive contract: advisories field", () => {
     expect(result.valid).toBe(true);
   });
 
-  test("an entry with an unrecognised code is rejected (no演出 — the 2 firing values only)", () => {
+  test("an entry with a non-slug plugin code is rejected", () => {
     const result = validateDirective(
       runStageFixture({
-        advisories: [{ plugin: "p", code: "current", message: "m", stage: "s" }],
+        advisories: [{ plugin: "p", code: "Not A Slug", message: "m", stage: "s" }],
       }),
     );
     expect(result.valid).toBe(false);
@@ -346,7 +351,7 @@ describe("t378 next holds before stage body", () => {
     expect(directive.stage).toBe("build-and-test");
     expect(directive.options).toEqual(["今すぐ実行する", "リスクを承知して延期する"]);
     expect(directive.advisories?.length).toBe(1);
-    expect(directive.advisories?.[0].code).toBe("changed");
+    expect(directive.advisories?.[0].code).toBe("spec-change");
     expect(directive.advisories?.[0].checkpoint).toBe("build-and-test");
     expect(directive.question).toBe(
       `${directive.advisories?.[0].message}\n\n各advisoryについて次のいずれかを選択してください。`,

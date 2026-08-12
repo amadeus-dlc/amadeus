@@ -1,3 +1,4 @@
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import {
   mkdtempSync,
@@ -267,7 +268,7 @@ describe("non-acceptance model-check diagnostic", () => {
     expect(runDiagnosticCommand("/usr/bin/printf", ["diagnostic"], {
       cwd: resolve("."),
       env: { PATH: "/usr/bin:/bin" },
-      timeoutMs: 1_000,
+      timeoutMs: scaleTestTime(1_000),
     })).toEqual({
       status: 0,
       signal: null,
@@ -289,7 +290,7 @@ describe("non-acceptance model-check diagnostic", () => {
       },
       writeError: (value) => writes.push(value),
     })).toBe(0);
-    expect(models).toEqual(["FormalElection", "MirrorLifecycle"]);
+    expect(models).toEqual(["FormalElection", "MirrorLifecycle", "PrConvergenceGate"]);
     expect(writes.at(-1)).toBe('{"errorCode":null}\n');
     expect(await runModelCheckDiagnosticMain([
       "--root", "/tmp/evidence", "--model", "unknown",

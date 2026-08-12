@@ -78,6 +78,7 @@
 //
 // Exit codes: 0 success, 1 wait-timeout / assertion miss, 2 usage/spawn error.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { spawnSync } from "node:child_process";
 import {
   appendFileSync,
@@ -90,11 +91,11 @@ import {
 import { dirname, join } from "node:path";
 import { stateFilePathFor } from "./sdk-drive.ts";
 
-const POLL_INTERVAL_MS = 150;
-const DEFAULT_TIMEOUT_MS = 30_000;
+const POLL_INTERVAL_BASE_MS = 150;
+const DEFAULT_TIMEOUT_BASE_MS = 30_000;
 const DEFAULT_STABLE_MS = 600;
 const DEFAULT_TUI_SETTING_SOURCES = "project";
-const DEFAULT_ANSWER_GATE_TRACE_POLL_MS = 10_000;
+const DEFAULT_ANSWER_GATE_TRACE_POLL_BASE_MS = 10_000;
 
 type Args = {
   positionals: string[];
@@ -102,6 +103,18 @@ type Args = {
   bools: Record<string, boolean>;
   rest: string[]; // everything after a literal `--`
 };
+
+export function resolveTuiWaitTiming(
+  timeoutBaseMs: number,
+  pollBaseMs: number,
+  stableBaseMs: number,
+): { timeoutMs: number; pollMs: number; stableMs: number } {
+  return {
+    timeoutMs: scaleTestTime(timeoutBaseMs),
+    pollMs: scaleTestTime(pollBaseMs),
+    stableMs: stableBaseMs <= 0 ? stableBaseMs : scaleTestTime(stableBaseMs),
+  };
+}
 
 function parseArgs(argv: string[]): Args {
   const flags: Record<string, string> = {};
@@ -212,9 +225,9 @@ export function normalizeTuiCommand(
 }
 
 function answerGateTracePollMs(): number {
-  const raw = Number(process.env.AMADEUS_TUI_TRACE_POLL_MS ?? DEFAULT_ANSWER_GATE_TRACE_POLL_MS);
-  if (!Number.isFinite(raw) || raw <= 0) return DEFAULT_ANSWER_GATE_TRACE_POLL_MS;
-  return Math.max(1_000, raw);
+  const raw = Number(process.env.AMADEUS_TUI_TRACE_POLL_MS ?? DEFAULT_ANSWER_GATE_TRACE_POLL_BASE_MS);
+  if (!Number.isFinite(raw) || raw <= 0) return scaleTestTime(DEFAULT_ANSWER_GATE_TRACE_POLL_BASE_MS);
+  return scaleTestTime(Math.max(1_000, raw));
 }
 
 // A small promise-based sleep for polling and input-settle delays.
@@ -356,8 +369,12 @@ function cmdSend(backend: Backend, a: Args): void {
 async function cmdWait(backend: Backend, a: Args): Promise<void> {
   const session = requireFlag(a, "session");
   const pattern = requireFlag(a, "pattern");
-  const timeoutMs = Number(a.flags["timeout-ms"] ?? DEFAULT_TIMEOUT_MS);
-  const stableMs = Number(a.flags["stable-ms"] ?? DEFAULT_STABLE_MS);
+  const timing = resolveTuiWaitTiming(
+    Number(a.flags["timeout-ms"] ?? DEFAULT_TIMEOUT_BASE_MS),
+    POLL_INTERVAL_BASE_MS,
+    Number(a.flags["stable-ms"] ?? DEFAULT_STABLE_MS),
+  );
+  const { timeoutMs, pollMs, stableMs } = timing;
   const re = new RegExp(pattern);
   writeTuiTrace(session, "wait_start", { pattern, timeoutMs, stableMs });
 
@@ -391,7 +408,7 @@ async function cmdWait(backend: Backend, a: Args): Promise<void> {
       process.stdout.write(`matched /${pattern}/ (stable ${stableMs}ms)\n`);
       return;
     }
-    await sleep(POLL_INTERVAL_MS);
+    await sleep(pollMs);
   }
   writeTuiTrace(session, "wait_timeout", {
     pattern,
@@ -668,7 +685,7 @@ async function chooseNumberedMenuOption(
 ): Promise<void> {
   for (let i = 1; i < optionNum; i++) {
     backend.send(session, "Down", false, true);
-    await sleep(120);
+    await sleep(scaleTestTime(120));
   }
   backend.send(session, "Enter", false, true);
 }
@@ -727,9 +744,9 @@ async function handleRevisionRecovery(
   session: string,
   answered: number,
 ): Promise<boolean> {
-  const recoveryDeadline = Date.now() + 60_000;
+  const recoveryDeadline = Date.now() + scaleTestTime(60_000);
   while (Date.now() < recoveryDeadline) {
-    await sleep(POLL_INTERVAL_MS);
+    await sleep(scaleTestTime(POLL_INTERVAL_BASE_MS));
     const after = backend.capture(session, false);
     const typeSomethingNum = pickRevisionTypeSomethingOption(after);
     if (typeSomethingNum !== null) {
@@ -741,13 +758,13 @@ async function handleRevisionRecovery(
         screen: after,
       });
 
-      const promptDeadline = Date.now() + 10_000;
+      const promptDeadline = Date.now() + scaleTestTime(10_000);
       while (Date.now() < promptDeadline) {
-        await sleep(POLL_INTERVAL_MS);
+        await sleep(scaleTestTime(POLL_INTERVAL_BASE_MS));
         const prompt = backend.capture(session, false);
         if (!gridHasMenu(prompt)) {
           backend.send(session, REVISION_FEEDBACK, true, true);
-          await sleep(300);
+          await sleep(scaleTestTime(300));
           backend.send(session, "Enter", false, true);
           writeTuiTrace(session, "answer_gate_action", {
             answered,
@@ -779,10 +796,10 @@ async function handleRevisionRecovery(
     // for long enough, treat it as the free-text shape and supply feedback.
     if (
       gridLooksLikeRevisionFreeTextPrompt(after) ||
-      (!gridHasMenu(after) && Date.now() > recoveryDeadline - 50_000)
+      (!gridHasMenu(after) && Date.now() > recoveryDeadline - scaleTestTime(50_000))
     ) {
       backend.send(session, REVISION_FEEDBACK, true, true);
-      await sleep(300);
+      await sleep(scaleTestTime(300));
       backend.send(session, "Enter", false, true);
       writeTuiTrace(session, "answer_gate_action", {
         answered,
@@ -816,8 +833,10 @@ async function cmdAnswerGate(backend: Backend, a: Args): Promise<void> {
   // wedge (nothing ever reaches the disk terminator), and bun's own test timeout is
   // the hard ceiling above it. An explicit --per-gate-timeout-ms still overrides for
   // the rare case that wants faster wedge-detection.
-  const overallMs = Number(a.flags["overall-timeout-ms"] ?? "600000");
-  const perGateMs = Number(a.flags["per-gate-timeout-ms"] ?? String(overallMs));
+  const overallBaseMs = Number(a.flags["overall-timeout-ms"] ?? "600000");
+  const perGateBaseMs = Number(a.flags["per-gate-timeout-ms"] ?? String(overallBaseMs));
+  const overallMs = scaleTestTime(overallBaseMs);
+  const perGateMs = scaleTestTime(perGateBaseMs);
   // The on-disk signal that means STOP answering — workshop affirmation by
   // default, or a journey-specific file/state-field via --until-* (see
   // makeTerminator). The keystroke strategy is the same for every journey;
@@ -918,7 +937,7 @@ async function cmdAnswerGate(backend: Backend, a: Args): Promise<void> {
         sawMenu = true;
         break;
       }
-      await sleep(POLL_INTERVAL_MS);
+      await sleep(scaleTestTime(POLL_INTERVAL_BASE_MS));
     }
 
     if (!sawMenu) {
@@ -977,7 +996,7 @@ async function cmdAnswerGate(backend: Backend, a: Args): Promise<void> {
         screen: grid,
       });
       backend.send(session, "Space", false, true); // toggle the Recommended option ON
-      await sleep(150);
+      await sleep(scaleTestTime(150));
       if (gridIsMultiTabForm(grid)) {
         backend.send(session, "Right", false, true); // advance to the next tab / Submit
       } else {
@@ -996,7 +1015,7 @@ async function cmdAnswerGate(backend: Backend, a: Args): Promise<void> {
       // 2; Enter selects it → handleReject (GATE_REJECTED + STAGE_REVISING +
       // Revision Count++). Consume the one-shot so every later gate is approved.
       backend.send(session, "Down", false, true);
-      await sleep(150);
+      await sleep(scaleTestTime(150));
       backend.send(session, "Enter", false, true);
       rejectFirstGate = false;
       process.stdout.write("answer-gate: rejected first approval gate (Request changes)\n");
@@ -1030,7 +1049,7 @@ async function cmdAnswerGate(backend: Backend, a: Args): Promise<void> {
     // the TUI has consumed the keystroke and begun the next turn. The post-answer
     // screen either advances to the next tab or starts streaming the next turn;
     // either way it stops matching the just-answered menu shortly.
-    await sleep(500);
+    await sleep(scaleTestTime(500));
   }
 }
 

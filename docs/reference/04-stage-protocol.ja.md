@@ -241,7 +241,7 @@ AskUserQuestion({
     multiSelect: false,
     options: [
       { label: "Guide me", description: "Walk through each question interactively here" },
-      { label: "Grill me", description: "One question at a time, in depth -- recommended answers included, until we reach a shared understanding" },
+      { label: "Grill me", description: "Round-by-round interview over the design tree admitted by the active materiality threshold -- recommended answers included, until every admitted branch is settled (deferred nodes remain listed in the agreement summary). Depth acts as a pruning threshold here, not a question budget; the circuit breaker (3x the guideline) is the only ceiling" },
       { label: "I'll edit the file", description: "I'll fill in the answers in the file directly" },
       { label: "Chat", description: "Discuss freely -- I'll extract decisions from our conversation" }
     ]
@@ -261,7 +261,7 @@ AskUserQuestion({
 
 #### Grill Me(グリリングモード)
 
-- `amadeus-common/protocols/grilling-protocol.md` に従う — グリリングの規律の単一のソース(mattpocock/skills、MIT から翻案)。一度に1質問。各質問は根拠付きの推奨回答を運ぶ。事実は自己リサーチされ、決定のみが尋ねられる。ハイブリッド終了(いつでも「done」、深度ガイドラインで継続チェック)。生成前に明示的に確認された合意サマリー。
+- `amadeus-common/protocols/grilling-protocol.md` に従う — グリリングの規律の単一のソース(mattpocock/skills、MIT から翻案)。設計ツリーをラウンド単位で進め、枝刈り後のフロンティア全体を各ラウンドで根拠付きの推奨回答とともに尋ねる。深度は質問数の予算ではなく枝刈りのしきい値として消費される。事実は自己リサーチされ、決定のみが尋ねられる。終了は、枝刈り後のフロンティアが空になるか、ユーザーが「done」と言ったとき。遮断器が開示された上限となる。生成前に、先送りされたノードを列挙する合意サマリーを明示的に確認する。
 - ワークフロー上の義務: 動的に生成される各質問は、提示する **前** に空白の `[Answer]:` タグとともに質問ファイルに append される。各回答は直ちに書き戻される。質問ごとに `decision`/`answer` 監査イベントがログされる(既存のイベント種別のみ)。
 - Construction と Operation フェーズでは、モードオプションは例外的使用として注記される。
 - Step 4 以降(完全性検証、矛盾分析、成果物生成、ゲート)は不変 — グリリングは Step 3 の対話のみを置き換える。

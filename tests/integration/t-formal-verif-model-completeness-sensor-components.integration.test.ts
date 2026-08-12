@@ -20,7 +20,7 @@ import {
   main,
   modelCompletenessTestSeams,
   updateModelMap,
-} from "../../packages/framework/core/tools/amadeus-sensor-model-completeness.ts";
+} from "../../plugins/formal-model-check/tools/amadeus-sensor-model-completeness.ts";
 
 const roots: string[] = [];
 const encoder = new TextEncoder();

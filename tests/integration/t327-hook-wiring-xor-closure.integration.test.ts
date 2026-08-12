@@ -108,7 +108,7 @@ describe("t327 hook wiring XOR closure (U4)", () => {
         ],
       ]),
     };
-    const section = buildDoctorPluginSection({ diagnostics: [], drops, revision: 1, activation: null });
+    const section = buildDoctorPluginSection({ diagnostics: [], drops, revision: 1 });
     const line = section.lines.find((l) => l.state === "advisory" && l.detail.includes("auto-compose-trigger"));
     expect(line, "the advisory degrade entry is a visible doctor line").toBeDefined();
     // advisory is visible-but-passing (not a FAIL) — degrade is not breakage.

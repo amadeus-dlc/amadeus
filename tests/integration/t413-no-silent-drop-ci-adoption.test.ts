@@ -124,10 +124,11 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     // in events/<ulid>.json and B0 is the folded effective set size. 213 -> 215
     // is #2378: two design-approved fail-open catches — the autonomy refusal
     // emit (u1) and the question-route sweep (u3) — each entered as a granted
-    // NSD001 identity.
-    expect(result.evidence.counts).toEqual({ C_pre: 215, B_pre: 215, B0: 215 });
-    expect(folded.grandfather).toHaveLength(215);
-    expect(removed).toHaveLength(14);
+    // NSD001 identity. Moving plugin policy out of core removed both catches,
+    // so their grants are now explicitly revoked and the baseline returns to 213.
+    expect(result.evidence.counts).toEqual({ C_pre: 213, B_pre: 213, B0: 213 });
+    expect(folded.grandfather).toHaveLength(213);
+    expect(removed).toHaveLength(16);
     expect(removed.some((entry: { fingerprint: string }) => entry.fingerprint.startsWith("b775faf8"))).toBeTrue();
     expect(removed.some((entry: { fingerprint: string }) => entry.fingerprint.startsWith("56fefece"))).toBeTrue();
     expect(new Set(removed.flatMap((entry: { issues: string[] }) => entry.issues))).toEqual(

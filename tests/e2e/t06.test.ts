@@ -36,6 +36,7 @@
 //   T5  discard from a sibling                     -> exit 0, worktree removed.
 //   T6  list from a sibling AND the main checkout  -> exit 0 both (unchanged).
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -199,7 +200,7 @@ describe("t06 amadeus-worktree sibling anchoring (#670)", () => {
     expect(existsSync(wtPath(sibling, "demo"))).toBe(false);
     // WORKTREE_CREATED landed in the --project-dir (sibling) record.
     expect(boltSlugRows(sibling)).toContain("demo");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("T2: create from the main checkout is unchanged (regression)", () => {
     const fixture = freshFixture();
@@ -209,7 +210,7 @@ describe("t06 amadeus-worktree sibling anchoring (#670)", () => {
     expect(r.status).toBe(0);
     expect(existsSync(wtPath(fixture, "demo2"))).toBe(true);
     expect(boltSlugRows(fixture)).toContain("demo2");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("T3: create from inside a Bolt worktree is rejected pre-audit (true nesting)", () => {
     const fixture = freshFixture();
@@ -225,7 +226,7 @@ describe("t06 amadeus-worktree sibling anchoring (#670)", () => {
     expect(boltSlugRows(fixture)).not.toContain("nested");
     expect(existsSync(wtPath(boltWt, "nested"))).toBe(false);
     expect(existsSync(wtPath(fixture, "nested"))).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("T4: merge --strategy squash from a sibling lands on the main checkout", () => {
     const fixture = freshFixture();
@@ -250,7 +251,7 @@ describe("t06 amadeus-worktree sibling anchoring (#670)", () => {
     // Cleanup ran: the worktree dir is gone.
     expect(existsSync(wtPath(fixture, "m1"))).toBe(false);
     expect(boltSlugRows(sibling)).toContain("m1");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("T5: discard from a sibling removes the main-checkout Bolt worktree", () => {
     const fixture = freshFixture();
@@ -265,7 +266,7 @@ describe("t06 amadeus-worktree sibling anchoring (#670)", () => {
     expect(discarded.status).toBe(0);
     expect(discarded.out).toContain("WORKTREE_DISCARDED");
     expect(existsSync(wtPath(fixture, "d1"))).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("T6: list returns the same Bolt from a sibling and the main checkout (read/write symmetry)", () => {
     const fixture = freshFixture();
@@ -287,7 +288,7 @@ describe("t06 amadeus-worktree sibling anchoring (#670)", () => {
     ];
     expect(listedBolts(fromSibling.stdout)).toEqual(expected);
     expect(listedBolts(fromMain.stdout)).toEqual(expected);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("T7: list from inside a Bolt worktree succeeds (read has no true-nest rejection)", () => {
     const fixture = freshFixture();
@@ -298,5 +299,5 @@ describe("t06 amadeus-worktree sibling anchoring (#670)", () => {
     const r = run("list", boltWt, boltWt, []);
     expect(r.status).toBe(0);
     expect(listedBolts(r.stdout).map((w) => w.slug)).toContain("l2");
-  }, 30000);
+  }, scaleTestTime(30000));
 });

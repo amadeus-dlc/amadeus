@@ -358,7 +358,7 @@ name the owner, so passing that receipt over would delete it without ever
 establishing whose it was, and silence is not evidence of belonging. The outcome
 names what changed: `receipts_dropped`, `re_presentation_required` (false when
 no open advisory was salvaged — the store is simply normalised for whatever
-comes next), and `formal_check_attempts_reset`, since the attempt a formal-check
+comes next), and `run_now_receipts_reset`, since the attempt a formal-check
 route is numbered by is derived from the `run-now` receipts now gone.
 
 ### Scope and configuration
@@ -378,6 +378,7 @@ route is numbered by is derived from the `run-now` receipts now gone.
 | `ARTIFACT_CREATED` | `hooks/amadeus-audit-logger.ts` | Write to net-new path — distinguished from UPDATED via `mtimeMs == birthtimeMs` stat check |
 | `ARTIFACT_UPDATED` | `hooks/amadeus-audit-logger.ts` | Edit tool or Write overwriting existing file |
 | `ARTIFACT_REUSED` | `tools/amadeus-state.ts` | `reuse-artifact` subcommand — keep/modify/redo decisions |
+| `ARTIFACT_ATTESTED` | `tools/amadeus-audit.ts` | The PR-convergence plugin submits a canonical report identity through the audit append gateway, bound to the intent, unit, repository, PR, and matching local/remote/PR head SHA |
 
 ### Construction Bolts
 

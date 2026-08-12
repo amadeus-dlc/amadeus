@@ -65,6 +65,7 @@
 // once in a guard test so a structurally-broken copy can't make every case
 // trivially "catch".
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -176,7 +177,7 @@ describe("t52 — meta-test on t48 drift detection (migrated from t52-drift-meta
     expect(fwdNotOk.length).toBeGreaterThan(0);
     expect(r.out).toContain("GATE_APPROVED");
     expect(r.status).not.toBe(0);
-  }, 120000);
+  }, scaleTestTime(120000));
 
   test("reverse check catches an undocumented emission [.sh test 2]", () => {
     const sb = makeSandbox();
@@ -194,7 +195,7 @@ describe("t52 — meta-test on t48 drift detection (migrated from t52-drift-meta
     expect(revNotOk.length).toBeGreaterThan(0);
     expect(r.out).toContain("PHANTOM_EVENT");
     expect(r.status).not.toBe(0);
-  }, 120000);
+  }, scaleTestTime(120000));
 
   test("tertiary check catches a resurrected deleted event [.sh test 3]", () => {
     const sb = makeSandbox();
@@ -212,7 +213,7 @@ describe("t52 — meta-test on t48 drift detection (migrated from t52-drift-meta
     expect(terNotOk.length).toBeGreaterThan(0);
     expect(r.out).toContain("JUMP_AUTO_STOPPED");
     expect(r.status).not.toBe(0);
-  }, 120000);
+  }, scaleTestTime(120000));
 
   test("pairing check catches a renamed handler [.sh test 4]", () => {
     const sb = makeSandbox();
@@ -233,7 +234,7 @@ describe("t52 — meta-test on t48 drift detection (migrated from t52-drift-meta
     expect(pairNotOk.length).toBeGreaterThan(0);
     expect(r.out).toContain("handleApprove");
     expect(r.status).not.toBe(0);
-  }, 120000);
+  }, scaleTestTime(120000));
 
   test("md-md check catches audit-format ⇄ 12-state-machine drift [.sh test 5]", () => {
     const sb = makeSandbox();
@@ -259,5 +260,5 @@ describe("t52 — meta-test on t48 drift detection (migrated from t52-drift-meta
     expect(mdNotOk.length).toBeGreaterThan(0);
     expect(r.out).toContain("ARTIFACT_REUSED");
     expect(r.status).not.toBe(0);
-  }, 120000);
+  }, scaleTestTime(120000));
 });

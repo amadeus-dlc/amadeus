@@ -54,6 +54,7 @@
 //     `fire` WRITES audit rows (SENSOR_FIRED + terminal); a shared dir
 //     would cross-contaminate event counts. Cleaned in afterAll.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { spawn, spawnSync } from "node:child_process";
 import {
@@ -584,7 +585,7 @@ describe("t92 Group B: PASSED real round-trip per sensor", () => {
     expect(r.detailExists).toBe(false);
     expect(r.path).toBe(`${r.subdir}/sample.ts`);
     expect(r.note).toBe("");
-  }, 60000);
+  }, scaleTestTime(60000));
 
   // type-check spawns the real tsc (manifest timeout_seconds=60); give it
   // generous headroom over bun's 5s default.
@@ -598,7 +599,7 @@ describe("t92 Group B: PASSED real round-trip per sensor", () => {
     expect(r.detailExists).toBe(false);
     expect(r.path).toBe(`${r.subdir}/sample.ts`);
     expect(r.note).toBe("");
-  }, 90000);
+  }, scaleTestTime(90000));
 });
 
 // ============================================================
@@ -749,7 +750,7 @@ describe("t92 Group C: FAILED real round-trip per sensor", () => {
   // Real tsc spawn (manifest timeout_seconds=60) — generous headroom.
   test("16: type-check — failing TS (string->number) -> Findings count=1", () => {
     runFailedTsReal("type-check", "code-generation", join(FIXTURES_ROOT, "failing-type-check"), "1");
-  }, 90000);
+  }, scaleTestTime(90000));
 });
 
 // ============================================================
@@ -847,7 +848,7 @@ describe("t92 Group F: budget override (timeout -> SENSOR_BUDGET_OVERRIDE)", () 
     expect(auditField(f, "SENSOR_BUDGET_OVERRIDE", "Cap value")).toBe("1");
     expect(isInteger(observed)).toBe(true);
     expect(Number(observed)).toBeGreaterThanOrEqual(1);
-  }, 15000);
+  }, scaleTestTime(15000));
 
   test("23: slow-command fixture -> Observed>=Cap, Output path project-relative", () => {
     const proj = makeProj();
@@ -867,7 +868,7 @@ describe("t92 Group F: budget override (timeout -> SENSOR_BUDGET_OVERRIDE)", () 
     expect(isInteger(observed)).toBe(true);
     expect(Number(observed)).toBeGreaterThanOrEqual(Number(cap));
     expect(auditField(f, "SENSOR_BUDGET_OVERRIDE", "Output path")).toBe("slow-command/sample.ts");
-  }, 15000);
+  }, scaleTestTime(15000));
 });
 
 // ============================================================
@@ -900,7 +901,7 @@ describe("t92 Group G: concurrency invariants", () => {
     for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1);
     const paired = [...counts.values()].filter((c) => c === 2).length;
     expect(paired).toBe(5);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("25: lock-released-across-spawn — fast PASSED lands during slow's spawn window", async () => {
     const proj = makeProj();
@@ -922,7 +923,7 @@ describe("t92 Group G: concurrency invariants", () => {
     // has ample room to complete inside it on any platform.
     {
       const f = proj;
-      const deadline = Date.now() + 15000;
+      const deadline = Date.now() + scaleTestTime(15000);
       while (Date.now() < deadline) {
         if (
           existsSync(f) &&
@@ -932,7 +933,7 @@ describe("t92 Group G: concurrency invariants", () => {
         ) {
           break;
         }
-        await sleep(50);
+        await sleep(scaleTestTime(50));
       }
     }
     // Fast fire starts inside slow's spawn window; await its completion.
@@ -952,7 +953,7 @@ describe("t92 Group G: concurrency invariants", () => {
     await slowDone;
     expect(slowVisible).toBe(1);
     expect(fastVisible).toBe(2);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("26: lock-orphan recovery — process.exit(1)-inside-lock -> next fire fast (no retry burn)", async () => {
     const proj = makeProj();
@@ -974,7 +975,7 @@ describe("t92 Group G: concurrency invariants", () => {
     expect(auditEventCount(proj, "SENSOR_PASSED")).toBe(1);
     // The .sh asserts elapsed < 3s (no 5x100ms retry burn). Use ms form.
     expect(elapsedMs).toBeLessThan(3000);
-  }, 15000);
+  }, scaleTestTime(15000));
 });
 
 // ============================================================
@@ -1045,7 +1046,7 @@ describe("t92 Group I: detail-file collision-free", () => {
       : [];
     expect(files.length).toBe(2);
     expect(new Set(files).size).toBe(2);
-  }, 15000);
+  }, scaleTestTime(15000));
 });
 
 // ============================================================
@@ -1065,22 +1066,24 @@ describe("t92 Group J: audit-row required fields per event type", () => {
     });
   });
 
-  test("32: SENSOR_FIRED — 6 fields (Timestamp, Event, Fire id, Sensor ID, Stage slug, Output path)", () => {
+  test("32: SENSOR_FIRED — 7 fields including Output digest", () => {
     const f = jProj;
-    expect(auditFieldCount(f, "SENSOR_FIRED")).toBe(6);
+    expect(auditFieldCount(f, "SENSOR_FIRED")).toBe(7);
     expect(auditField(f, "SENSOR_FIRED", "Fire id")).not.toBe("");
     expect(auditField(f, "SENSOR_FIRED", "Sensor ID")).toBe("required-sections");
     expect(auditField(f, "SENSOR_FIRED", "Stage slug")).toBe("intent-capture");
     expect(auditField(f, "SENSOR_FIRED", "Output path")).not.toBe("");
+    expect(auditField(f, "SENSOR_FIRED", "Output digest")).toMatch(/^sha256:[0-9a-f]{64}$/);
   });
 
-  test("33: SENSOR_PASSED — 7 fields including Duration ms (integer)", () => {
+  test("33: SENSOR_PASSED — 8 fields including Duration ms and Output digest", () => {
     const f = jProj;
-    expect(auditFieldCount(f, "SENSOR_PASSED")).toBe(7);
+    expect(auditFieldCount(f, "SENSOR_PASSED")).toBe(8);
     expect(isInteger(auditField(f, "SENSOR_PASSED", "Duration ms"))).toBe(true);
+    expect(auditField(f, "SENSOR_PASSED", "Output digest")).toBe(auditField(f, "SENSOR_FIRED", "Output digest"));
   });
 
-  test("34: SENSOR_FAILED — 8 fields including Detail path + Findings count (integer)", () => {
+  test("34: SENSOR_FAILED — 9 fields including digest, Detail path, and Findings count", () => {
     const proj = makeProj();
     writeFileSync(join(proj, "amadeus-docs", "test.md"), "stub\n", "utf-8");
     const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-fail.ts");
@@ -1089,12 +1092,13 @@ describe("t92 Group J: audit-row required fields per event type", () => {
       AMADEUS_SENSORS_DIR: sensors,
     });
     const f = proj;
-    expect(auditFieldCount(f, "SENSOR_FAILED")).toBe(8);
+    expect(auditFieldCount(f, "SENSOR_FAILED")).toBe(9);
     expect(auditField(f, "SENSOR_FAILED", "Detail path")).not.toBe("");
     expect(isInteger(auditField(f, "SENSOR_FAILED", "Findings count"))).toBe(true);
+    expect(auditField(f, "SENSOR_FAILED", "Output digest")).toMatch(/^sha256:[0-9a-f]{64}$/);
   });
 
-  test("35: SENSOR_BUDGET_OVERRIDE — 9 fields (+Cap layer/value, Observed value)", () => {
+  test("35: SENSOR_BUDGET_OVERRIDE — 10 fields including digest and cap evidence", () => {
     const proj = makeProj();
     writeFileSync(join(proj, "amadeus-docs", "test.md"), "stub\n", "utf-8");
     const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-slow.ts", "", 1);
@@ -1103,11 +1107,12 @@ describe("t92 Group J: audit-row required fields per event type", () => {
       AMADEUS_SENSORS_DIR: sensors,
     });
     const f = proj;
-    expect(auditFieldCount(f, "SENSOR_BUDGET_OVERRIDE")).toBe(9);
+    expect(auditFieldCount(f, "SENSOR_BUDGET_OVERRIDE")).toBe(10);
     expect(auditField(f, "SENSOR_BUDGET_OVERRIDE", "Cap layer")).toBe("registry");
     expect(isInteger(auditField(f, "SENSOR_BUDGET_OVERRIDE", "Cap value"))).toBe(true);
     expect(isInteger(auditField(f, "SENSOR_BUDGET_OVERRIDE", "Observed value"))).toBe(true);
-  }, 15000);
+    expect(auditField(f, "SENSOR_BUDGET_OVERRIDE", "Output digest")).toMatch(/^sha256:[0-9a-f]{64}$/);
+  }, scaleTestTime(15000));
 });
 
 // ============================================================
@@ -1338,5 +1343,5 @@ describe("t92 Group O: type-check status gate (cross-file errors, none for targe
     expect(auditEventCount(f, "SENSOR_PASSED")).toBe(1);
     expect(auditEventCount(f, "SENSOR_FAILED")).toBe(0);
     expect(auditField(f, "SENSOR_PASSED", "Note")).toBe("");
-  }, 30000);
+  }, scaleTestTime(30000));
 });

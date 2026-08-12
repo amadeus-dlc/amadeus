@@ -1,5 +1,6 @@
 // size: large
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -136,5 +137,5 @@ describe("symlink clone-id installed doctor journey", () => {
       mtimeMs: targetBefore.mtimeMs,
       ino: targetBefore.ino,
     });
-  }, 120_000);
+  }, scaleTestTime(120_000));
 });

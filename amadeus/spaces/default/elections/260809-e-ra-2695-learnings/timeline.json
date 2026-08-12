@@ -1,0 +1,56 @@
+[
+  {
+    "kind": "distributed",
+    "at": "2026-08-09T14:07:29Z",
+    "receivedAt": "2026-08-09T14:07:29Z",
+    "detail": "delivered via subagent: requirements-learning-voter-1 (reported-by-conductor)",
+    "voter": "requirements-learning-voter-1"
+  },
+  {
+    "kind": "distributed",
+    "at": "2026-08-09T14:07:29Z",
+    "receivedAt": "2026-08-09T14:07:29Z",
+    "detail": "delivered via subagent: requirements-learning-voter-2 (reported-by-conductor)",
+    "voter": "requirements-learning-voter-2"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-08-09T14:08:42Z",
+    "receivedAt": "2026-08-09T14:08:42Z",
+    "detail": "ballot accepted: requirements-learning-voter-2",
+    "voter": "requirements-learning-voter-2"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-08-09T14:09:17Z",
+    "receivedAt": "2026-08-09T14:09:17Z",
+    "detail": "ballot accepted: requirements-learning-voter-1",
+    "voter": "requirements-learning-voter-1"
+  },
+  {
+    "kind": "tallied",
+    "at": "2026-08-09T14:09:32Z",
+    "receivedAt": "2026-08-09T14:09:32Z",
+    "detail": "tally: hold"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-08-09T14:10:47Z",
+    "receivedAt": "2026-08-09T14:10:47Z",
+    "detail": "ballot amendment: requirements-learning-voter-1",
+    "voter": "requirements-learning-voter-1"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-08-09T14:10:56Z",
+    "receivedAt": "2026-08-09T14:10:56Z",
+    "detail": "ballot amendment: requirements-learning-voter-2",
+    "voter": "requirements-learning-voter-2"
+  },
+  {
+    "kind": "tallied",
+    "at": "2026-08-09T14:11:09Z",
+    "receivedAt": "2026-08-09T14:11:09Z",
+    "detail": "tally: established"
+  }
+]

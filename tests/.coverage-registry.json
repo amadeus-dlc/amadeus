@@ -20,10 +20,10 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 622,
+    "total": 623,
     "enumeratedByClass": {
       "function": 352,
-      "audit": 91,
+      "audit": 92,
       "scope": 15,
       "stage": 32,
       "hook": 15,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 185,
+      "function": 186,
       "audit": 44,
       "scope": 15,
       "stage": 8,
@@ -41,6 +41,13 @@
     }
   },
   "units": [
+    {
+      "unitClass": "audit",
+      "unitId": "ARTIFACT_ATTESTED",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
     {
       "unitClass": "audit",
       "unitId": "ARTIFACT_CREATED",
@@ -1151,7 +1158,7 @@
     },
     {
       "unitClass": "function",
-      "unitId": "function:applyPluginScopeOptIns",
+      "unitId": "function:applyPluginScopeBindings",
       "minMechanism": "none",
       "coveredBy": [
         {
@@ -1832,8 +1839,21 @@
       "unitClass": "function",
       "unitId": "function:docsRoot",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/integration/t526-advisory-handoff-stage.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/integration/t528-authoring-hold-end-to-end.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/integration/t529-advisory-hold-trace.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",

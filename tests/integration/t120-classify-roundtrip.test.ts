@@ -84,6 +84,7 @@
 // the .sh used (state-construction-bolt1.md, state-construction.md). Nothing is
 // written under tests/fixtures/**. All temp dirs cleaned in afterAll.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -189,7 +190,7 @@ describe("t120 walking-skeleton classify round-trip (migrated from t120-classify
       expect(d.stage).toBe(SKELETON_STAGE);
       // The sentinel — a STRING, not a boolean (GATE_UNRESOLVED === "unresolved").
       expect(d.gate).toBe("unresolved");
-    }, 30000);
+    }, scaleTestTime(30000));
 
     test(`[${stance}] step 2 (print): report --skeleton-stance ${stance} → print (stance accepted, re-run next)`, () => {
       const p = projWithState("state-construction-bolt1.md");
@@ -206,7 +207,7 @@ describe("t120 walking-skeleton classify round-trip (migrated from t120-classify
       );
       // A `print` (re-run next), NOT a done/transition — no commit crossed back.
       expect(d.kind).toBe("print");
-    }, 30000);
+    }, scaleTestTime(30000));
 
     test(`[${stance}] step 2 (state): stance recorded in the Skeleton Stance state field`, () => {
       const p = projWithState("state-construction-bolt1.md");
@@ -222,7 +223,7 @@ describe("t120 walking-skeleton classify round-trip (migrated from t120-classify
       // (mirrors the .sh's assert_grep '\*\*Skeleton Stance\*\*: <stance>').
       const body = readFileSync(statePath(p), "utf-8");
       expect(body.includes(`**Skeleton Stance**: ${stance}`)).toBe(true);
-    }, 30000);
+    }, scaleTestTime(30000));
 
     test(`[${stance}] step 3: next → run-stage(${SKELETON_STAGE}) gate:true (determined from stance)`, () => {
       const p = projWithState("state-construction-bolt1.md");
@@ -241,7 +242,7 @@ describe("t120 walking-skeleton classify round-trip (migrated from t120-classify
       // diff: assert the JSON type is boolean AND the value is true.
       expect(typeof d.gate).toBe("boolean");
       expect(d.gate).toBe(true);
-    }, 30000);
+    }, scaleTestTime(30000));
   }
 
   // ===========================================================================
@@ -266,7 +267,7 @@ describe("t120 walking-skeleton classify round-trip (migrated from t120-classify
     expect(typeof d.gate).toBe("boolean");
     expect(d.gate).toBe(true);
     expect(d.gate).not.toBe("unresolved");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // ===========================================================================
   // Negative path 1: invalid stance value → error (2). Only on/off/scope-
@@ -288,7 +289,7 @@ describe("t120 walking-skeleton classify round-trip (migrated from t120-classify
     // The error names the rejected value verbatim (mirrors the .sh's
     // assert_contains on 'Unknown --skeleton-stance "bogus"').
     expect(d.message).toContain('Unknown --skeleton-stance "bogus"');
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // ===========================================================================
   // Negative path 2: stance reported off the skeleton-gate stage → error (2).
@@ -317,7 +318,7 @@ describe("t120 walking-skeleton classify round-trip (migrated from t120-classify
     expect(d.kind).toBe("error");
     // Verbatim guard wording (the .sh grepped the raw directive for it).
     expect(d.message).toContain("is not the skeleton-gate stage for scope");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // ===========================================================================
   // Negative path 3: stance reported with no state file → error (2).
@@ -340,5 +341,5 @@ describe("t120 walking-skeleton classify round-trip (migrated from t120-classify
     );
     expect(d.kind).toBe("error");
     expect(d.message).toContain("No workflow state found");
-  }, 30000);
+  }, scaleTestTime(30000));
 });

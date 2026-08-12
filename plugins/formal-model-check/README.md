@@ -1,13 +1,12 @@
 # formal-model-check plugin
 
-An opt-in Amadeus plugin that adds one construction-phase stage,
-`formal-model-check`, which runs an exhaustive TLC exploration of a TLA+ model
-via the `run-model-check` CLI. The stage carries an empty `scopes:` list, so it
-is never selected by a stock scope. Install is the opt-in boundary: once
-composed it runs on an explicit `amadeus-orchestrate next --stage
-formal-model-check` invocation (`--single` optional). Amadeus never runs it
-automatically — the engine only emits a spec-hash advisory when the watched
-spec changed (U6 activation-policy).
+An opt-in Amadeus plugin that adds the `tla-authoring` and
+`formal-model-check` construction stages. The plugin declares no workflow
+scope; the host assigns either stage to its own scopes in project configuration.
+Authoring runs first; the checker then performs an
+exhaustive TLC exploration only when the applicability outcome requires one.
+Both stages also remain directly invocable with `--single`. A spec-hash
+advisory remains an additional trigger when a watched model changes.
 
 Activation has four read-only outcomes: `not-ready` when no valid declared
 model/config target exists, `never-run` when targets exist without a successful
@@ -19,23 +18,30 @@ TLC.
 An advisory-correlated local run receives the three all-or-none CLI options
 `--advisory-target`, `--advisory-spec-identity`, and `--advisory-instance`.
 They are copied into `manifest.json` alongside source provenance for the actual
-model/config bytes. The engine accepts only a complete, non-partial,
-provenance-matching `NOT_DETECTED` result for that exact advisory instance.
+model/config bytes. Validation of that plugin-specific evidence remains in this
+plugin; core does not interpret its schema.
 
 ## Bundle layout
 
-```
+```text
 formal-model-check/
   plugin.json
+  sensors/amadeus-model-completeness.md
   stages/formal-model-check.md
   stages/tla-authoring.md
+  tools/
   README.md
 ```
 
-The bundle supplies two stages: `formal-model-check` checks a registered model,
-and `tla-authoring` carries a subject from an applicability route to a
-registered one (authoring, referees, independent review, human gate,
-registration). Both are opt-in — neither joins a stock scope.
+The bundle supplies two stages: `tla-authoring` assesses requirements and
+carries applicable subjects to a registered model (authoring, referees,
+independent review, human gate, registration), then `formal-model-check` checks
+the resulting registration. Both retain `scopes: []`; direct stage invocation
+works without a binding, while automatic workflow selection is host-owned.
+
+For this repository, `amadeus/config.json` binds both stages to the four
+`self-*` scopes through `plugin.scope-bindings`. A consumer can bind the same
+stages to any scope it defines; the plugin contains no concrete host scope.
 
 `plugin.json`'s `stages[].path` is declared relative to the plugin root
 (`stages/formal-model-check.md`). The compose engine resolves the bytes from
@@ -98,7 +104,7 @@ expectation, and the observation:
 run-model-check: HARNESS_ERROR (ENVIRONMENT_UNAVAILABLE) — Darwin environment
 inspection failed: Error: OpenJDK 26.0.1 verification failed: expected `openjdk
 version "26.0.1…"` from JAVA_HOME=/…/temurin-26.0.2+10, observed `openjdk
-version "26.0.2" 2026-07-21` (see plugins/formal-model-check/README.md § Local
+version "26.0.2" 2026-07-21` (see {{HARNESS_DIR}}/plugins/formal-model-check/README.md § Local
 execution requirements)
 ```
 
@@ -108,7 +114,7 @@ The same string is carried on the JSON line as `errorDetail`.
 toolchain explicitly:
 
 ```
-mise x java@temurin-26.0.1+8 -- bun plugins/formal-model-check/tools/run-model-check.ts …
+mise x java@temurin-26.0.1+8 -- bun {{HARNESS_DIR}}/plugins/formal-model-check/tools/run-model-check.ts …
 ```
 
 Local execution also needs `sandbox-exec` (macOS built-in). CI uses the Docker

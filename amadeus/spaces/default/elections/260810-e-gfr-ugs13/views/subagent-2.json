@@ -1,0 +1,17 @@
+{
+  "electionId": "E-GFR-UGS13",
+  "voter": "subagent-2",
+  "question": "260810-grilling-frontier-resync units-generation の §13 学習候補は 0 件(選定なし)でよいか。diary の Interpretations は既存 cid(units-generation:c1 の統合判定・produces_kinds ファミリ)の適用実例、Deviations は既存 cid(requirements-analysis:c2-mandated-sections-precheck)の違反実例(是正済み・記録済み)であり、新規の一般化可能なノルムは無いと conductor は判断した。各自 diary(amadeus/spaces/default/intents/260810-grilling-frontier-resync/inception/units-generation/memory.md)と成果物3点(Review Iteration 1/2 ブロック含む)を実測確認して投票すること。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "候補がある(留保に具体候補を記す)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "0件で可"
+    }
+  ]
+}

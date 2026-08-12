@@ -1,9 +1,10 @@
+// covers: file:plugins/formal-model-check/tools/amadeus-sensor-model-completeness.ts
 import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { canonicalIdentity } from "../../plugins/formal-model-check/tools/canonical.ts";
-import { updateModelMap } from "../../packages/framework/core/tools/amadeus-sensor-model-completeness.ts";
+import { updateModelMap } from "../../plugins/formal-model-check/tools/amadeus-sensor-model-completeness.ts";
 import { runTlaAuthoring } from "../../plugins/formal-model-check/tools/tla-authoring.ts";
 import { EvidenceBundle, EvidenceEnvelopeCodec } from "../../plugins/formal-model-check/tools/tla-evidence.ts";
 import { readModelMapSnapshot, traceSubjectsOf } from "../../plugins/formal-model-check/tools/tla-applicability.ts";
@@ -389,6 +390,28 @@ describe("registration commit on the real filesystem (FR-010)", () => {
 
     expect(() => ports.publish("{}")).toThrow();
     expect(existsSync(missingDir)).toBe(false);
+  });
+
+  test("the real publish rethrows the original write failure, not a cleanup error (#2784)", () => {
+    // The staging parent is an existing FILE, so the write itself throws
+    // ENOTDIR — and the catch arm's own `rmSync(staging, { force: true })`
+    // throws a second, unrelated error (EFAULT on macOS/bun) because `force`
+    // only suppresses ENOENT. Before the fix, that cleanup error replaces the
+    // original write failure; after the fix, the write failure propagates.
+    const { root } = workspace();
+    const blocker = join(root, "not-a-dir");
+    writeFileSync(blocker, "occupied", "utf8");
+    const ports = createRegistrationPorts({ mapPath: join(blocker, "model-map.json") });
+
+    let caught: unknown;
+    try {
+      ports.publish("{}");
+    } catch (cause) {
+      caught = cause;
+    }
+    expect(caught).toBeInstanceOf(Error);
+    expect((caught as NodeJS.ErrnoException).code).toBe("ENOTDIR");
+    expect((caught as NodeJS.ErrnoException).syscall).not.toBe("rm");
   });
 });
 

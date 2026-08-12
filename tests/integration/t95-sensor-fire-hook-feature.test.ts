@@ -69,6 +69,7 @@
 // EXACT ordered slice (not a substring grep), and the spawn count is the parsed
 // line count of the dispatcher's own argv log.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -265,7 +266,7 @@ function runHook(
     input: json,
     encoding: "utf-8",
     env,
-    timeout: 30_000,
+    timeout: scaleTestTime(30_000),
   });
   return {
     status: res.status ?? -1,
@@ -312,7 +313,7 @@ describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — 
     // Named explicitly: a derived-vs-derived comparison would still agree if
     // depth-budget fell out of the stage or stopped matching this path.
     expect(firedSensorIds(proj)).toContain("depth-budget");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("C1a-intents: a write under the per-intent record dir fires the 2 markdown sensors (the {amadeus-docs,intents} glob's intents arm) [P9 layout]", () => {
     // GUARDS the sensor-glob fix: the framework glob is **/{amadeus-docs,intents}/**.
@@ -327,7 +328,7 @@ describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — 
     expect(r.status).toBe(0);
     expect(firedSensorIds(proj)).toEqual(sensorsFiringFor(written));
     expect(firedSensorIds(proj)).toContain("depth-budget");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("C1b: spawned argv carries the fire subcommand [.sh test 2]", () => {
     const proj = makeProjectActive("requirements-analysis");
@@ -339,7 +340,7 @@ describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — 
     // STRONGER than the .sh's substring grep: "fire" is the argv element right
     // after [bun, <sensor.ts>].
     expect(argv[2]).toBe("fire");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("C1c: spawned argv carries --stage requirements-analysis [.sh test 3]", () => {
     const proj = makeProjectActive("requirements-analysis");
@@ -353,7 +354,7 @@ describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — 
     const i = argv.indexOf("--stage");
     expect(i).toBeGreaterThan(-1);
     expect(argv[i + 1]).toBe("requirements-analysis");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("C1d: spawned argv carries the --output-path flag with the written path [.sh test 4]", () => {
     const proj = makeProjectActive("requirements-analysis");
@@ -371,7 +372,7 @@ describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — 
     // STRONGER: the .sh only checked the flag is present; assert the value is
     // the exact file_path the hook was driven with.
     expect(argv[i + 1]).toBe(fp);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("C2a: stage with 2 matching sensors_applicable -> 2 spawns [.sh test 5]", () => {
     const proj = makeProjectActive("synthetic-multi");
@@ -381,7 +382,7 @@ describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — 
     ]);
     runHook(proj, join(proj, "amadeus-docs", "foo.md"), { graph });
     expect(spawnArgvs(proj).length).toBe(2);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("C2b: spawns preserve sensors_applicable order (sensor-a before sensor-b) [.sh test 6]", () => {
     const proj = makeProjectActive("synthetic-multi");
@@ -394,7 +395,7 @@ describe("t95 sensor-fire hook — single & multi-entry fire (mechanism cli — 
     // argv[3] is the sensor id (after bun, sensor.ts, "fire").
     expect(argvs[0][3]).toBe("sensor-a");
     expect(argvs[1][3]).toBe("sensor-b");
-  }, 30000);
+  }, scaleTestTime(30000));
 });
 
 describe("t95 sensor-fire hook — resolved artifact selection", () => {
@@ -599,7 +600,7 @@ describe("t95 sensor-fire hook — multi-glob filtering at the stage level (mech
     const graph = synthGraph(proj, "code-generation-syn", CODE_STAGE);
     runHook(proj, join(proj, "src", "foo.ts"), { graph });
     expect(spawnArgvs(proj).length).toBe(2);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("C3b: TS write fires linter + type-check, skips required-sections (multi-glob filter) [.sh test 8]", () => {
     const proj = makeProjectActive("code-generation-syn");
@@ -610,7 +611,7 @@ describe("t95 sensor-fire hook — multi-glob filtering at the stage level (mech
     expect(ids).toContain("type-check");
     expect(ids).not.toContain("required-sections");
     expect(ids).not.toContain("upstream-coverage");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("C3c: markdown write at the same stage -> only the 2 markdown sensors fire (code filtered) [.sh test 9]", () => {
     const proj = makeProjectActive("code-generation-syn");
@@ -623,7 +624,7 @@ describe("t95 sensor-fire hook — multi-glob filtering at the stage level (mech
     expect(ids).toContain("upstream-coverage");
     expect(ids).not.toContain("linter");
     expect(ids).not.toContain("type-check");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("C4a: mixed-glob stage on a .md write -> only the md sensor fires [.sh test 10]", () => {
     const proj = makeProjectActive("glob-mixed");
@@ -633,7 +634,7 @@ describe("t95 sensor-fire hook — multi-glob filtering at the stage level (mech
     ]);
     runHook(proj, join(proj, "amadeus-docs", "x.md"), { graph });
     expect(spawnArgvs(proj).length).toBe(1);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("C4b: the single spawned id is sensor-md-only (not sensor-ts-only) [.sh test 11]", () => {
     const proj = makeProjectActive("glob-mixed");
@@ -643,7 +644,7 @@ describe("t95 sensor-fire hook — multi-glob filtering at the stage level (mech
     ]);
     runHook(proj, join(proj, "amadeus-docs", "x.md"), { graph });
     expect(spawnArgvs(proj)[0][3]).toBe("sensor-md-only");
-  }, 30000);
+  }, scaleTestTime(30000));
 });
 
 describe("t95 sensor-fire hook — error recovery is advisory (always exit 0) (mechanism cli — spawnSync)", () => {
@@ -657,7 +658,7 @@ describe("t95 sensor-fire hook — error recovery is advisory (always exit 0) (m
       { mode: "slow", timeoutMs: "2000" },
     );
     expect(r.status).toBe(0);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("C5b: timeout -> recordHookDrop with a SIGTERM/timeout reason [.sh test 13]", () => {
     const proj = makeProjectActive("requirements-analysis");
@@ -671,7 +672,7 @@ describe("t95 sensor-fire hook — error recovery is advisory (always exit 0) (m
     expect(existsSync(dropsPath(proj))).toBe(true);
     const drops = readFileSync(dropsPath(proj), "utf-8");
     expect(drops).toContain("subprocess killed by SIGTERM");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("C6a: hook exits 0 even when the subprocess exits non-zero (G5 advisory) [.sh test 14]", () => {
     const proj = makeProjectActive("requirements-analysis");
@@ -681,7 +682,7 @@ describe("t95 sensor-fire hook — error recovery is advisory (always exit 0) (m
       { mode: "fail-exit-1" },
     );
     expect(r.status).toBe(0);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("C6b: subprocess exit 1 -> recordHookDrop with a 'dispatcher exit 1' reason [.sh test 15]", () => {
     const proj = makeProjectActive("requirements-analysis");
@@ -695,7 +696,7 @@ describe("t95 sensor-fire hook — error recovery is advisory (always exit 0) (m
     expect(existsSync(dropsPath(proj))).toBe(true);
     const drops = readFileSync(dropsPath(proj), "utf-8");
     expect(drops).toContain("dispatcher exit 1");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("C7: hook stdout never carries a {decision: block} payload (advisory contract) [.sh test 16]", () => {
     const proj = makeProjectActive("requirements-analysis");
@@ -723,11 +724,11 @@ describe("t95 sensor-fire hook — error recovery is advisory (always exit 0) (m
         T95_SPAWN_LOG: join(proj, ".spawn.log"),
         T95_STUB_MODE: "pass",
       },
-      timeout: 30_000,
+      timeout: scaleTestTime(30_000),
     });
     const stdout = res.stdout ?? "";
     expect(stdout.includes("decision")).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 });
 
 describe("t95 sensor-fire hook — heartbeat & skipped-file accounting (mechanism cli — spawnSync)", () => {
@@ -748,7 +749,7 @@ describe("t95 sensor-fire hook — heartbeat & skipped-file accounting (mechanis
     runHook(proj, fp);
     const m2 = statSync(hb).mtimeMs;
     expect(m2).toBeGreaterThan(m1);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // C9a/C9b (the Test-Run-mode sensor-fire skip -> sensor-fire.skipped
   // accounting) were dropped per #369 when the test-run mechanism was removed.

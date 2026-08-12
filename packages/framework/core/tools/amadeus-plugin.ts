@@ -29,7 +29,7 @@ import { createHash } from "node:crypto";
 import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { harnessStageEntry, isHarnessDirName, KNOWN_HARNESS_DIRS } from "./amadeus-harness.ts";
+import { harnessStageEntry, isHarnessDirName, KNOWN_HARNESS_DIRS, rulesSubdirFor } from "./amadeus-harness.ts";
 import type { GraphStage } from "./amadeus-graph.ts";
 import {
   resolveProjectDirFromHook,
@@ -524,7 +524,7 @@ export function defaultPluginCliDeps(): PluginCliDeps {
 
 // The plugin host root when the caller names none (#1591 ruling B): the HARNESS
 // directory, i.e. the same root the engine reads back
-// (amadeus-orchestrate.ts:pluginActivationHostRoot and
+// (amadeus-orchestrate.ts:pluginHostRoot and
 // amadeus-graph.ts:pluginsHostRoot both resolve to the harness dir). Derived
 // from THIS file's own installed location, so the compose command the shipped
 // INSTALL doc prints — run from the project root, through the harness copy of
@@ -635,15 +635,58 @@ function readTreeFiles(root: string): Map<string, Buffer> {
   return files;
 }
 
+// ---------------------------------------------------------------------------
+// Harness-neutral → harness-specific prose, applied at the STAGING SEED (#2790).
+//
+// Plugin prose is authored harness-neutral, exactly like core prose: a path that
+// names the harness directory is written `{{HARNESS_DIR}}/…`. The build-time
+// packager resolves the token per face with its own prose transform, but the
+// runtime path — seeding a harness tree's staging dir from the project's
+// authoring `plugins/` — copied bytes verbatim, so a dogfood compose from a
+// repo-root `plugins/` shipped the raw token into every tree.
+//
+// The substitution belongs HERE, at the seed, not in the composition engine:
+// compose stays a byte-faithful copier over whatever staging holds, and the
+// staleness digests it computes keep comparing like against like.
+// ---------------------------------------------------------------------------
+
+const HARNESS_TOKEN = /\{\{HARNESS_DIR\}\}/g;
+
+// The harness dir a staging landing path belongs to, or null when `dst` is not
+// `<harnessTree>/.amadeus-plugin-src/<name>`. The authoring `plugins/<name>`
+// dir (an install --force write target) is deliberately NOT a match: the
+// authoring tree must stay harness-neutral.
+export function stagingHarnessDirOf(dst: string): string | null {
+  const stagingRoot = dirname(dst);
+  if (basename(stagingRoot) !== PLUGIN_SOURCE_DIR_NAME) return null;
+  const host = basename(dirname(stagingRoot));
+  return isHarnessDirName(host) ? host : null;
+}
+
+// One prose file's bytes, resolved for `harnessDir`. Mirrors the packager's
+// transform(): Markdown prose only (.md / .md.example), everything else — the
+// plugin manifest, any shipped .ts — byte-for-byte verbatim.
+export function seedBytesForHarness(relPath: string, bytes: Buffer, harnessDir: string | null): Buffer {
+  if (harnessDir === null) return bytes;
+  if (!relPath.endsWith(".md") && !relPath.endsWith(".md.example")) return bytes;
+  const rules = rulesSubdirFor(harnessDir);
+  const text = bytes.toString("utf-8").replace(HARNESS_TOKEN, harnessDir);
+  return Buffer.from(text.replaceAll(`${harnessDir}/rules/`, `${harnessDir}/${rules}/`), "utf-8");
+}
+
 // Compare the staged landing path against the source it would be replaced by.
+// The source is read THROUGH the same seed transform the copy applies, so a
+// correctly-seeded tree reads `identical` instead of drifting forever against
+// its own harness-neutral source.
 export function stagingEntryState(dst: string, src: string): StagingEntryState {
   if (!existsSync(dst)) return "absent";
+  const harnessDir = stagingHarnessDirOf(dst);
   const staged = readTreeFiles(dst);
   const source = readTreeFiles(src);
   if (staged.size !== source.size) return "different";
   for (const [rel, bytes] of source) {
     const other = staged.get(rel);
-    if (other === undefined || !other.equals(bytes)) return "different";
+    if (other === undefined || !other.equals(seedBytesForHarness(rel, bytes, harnessDir))) return "different";
   }
   return "identical";
 }
@@ -664,7 +707,7 @@ export function copyPluginSource(src: string, dst: string, warn: (line: string) 
   rmSync(tmp, { recursive: true, force: true });
   rmSync(old, { recursive: true, force: true });
   mkdirSync(tmp, { recursive: true });
-  copyRealFiles(src, tmp, src, warn);
+  copyRealFiles(src, tmp, src, warn, stagingHarnessDirOf(dst));
   if (existsSync(dst)) renameSync(dst, old);
   renameSync(tmp, dst);
   rmSync(old, { recursive: true, force: true });
@@ -672,8 +715,16 @@ export function copyPluginSource(src: string, dst: string, warn: (line: string) 
 
 // Recursive real-file copy. Symlinks (of any target kind) are skipped with one
 // stderr line each rather than followed — an install must not import whatever a
-// symlink happens to point at.
-function copyRealFiles(dir: string, outDir: string, srcRoot: string, warn: (line: string) => void): void {
+// symlink happens to point at. `harnessDir` non-null means the destination is a
+// harness tree's staging dir, so prose is resolved for that harness on the way
+// in (#2790); null copies every byte verbatim, as before.
+function copyRealFiles(
+  dir: string,
+  outDir: string,
+  srcRoot: string,
+  warn: (line: string) => void,
+  harnessDir: string | null = null,
+): void {
   mkdirSync(outDir, { recursive: true });
   for (const name of [...readdirSync(dir)].sort()) {
     const abs = join(dir, name);
@@ -682,8 +733,10 @@ function copyRealFiles(dir: string, outDir: string, srcRoot: string, warn: (line
       warn(`amadeus-plugin: install skipped symlink ${toPosixRel(srcRoot, abs)}`);
       continue;
     }
-    if (st.isDirectory()) copyRealFiles(abs, join(outDir, name), srcRoot, warn);
-    else if (st.isFile()) writeFileSync(join(outDir, name), readFileSync(abs));
+    if (st.isDirectory()) copyRealFiles(abs, join(outDir, name), srcRoot, warn, harnessDir);
+    else if (st.isFile()) {
+      writeFileSync(join(outDir, name), seedBytesForHarness(toPosixRel(srcRoot, abs), readFileSync(abs), harnessDir));
+    }
   }
 }
 
@@ -1248,7 +1301,6 @@ function handleDoctor(cmd: Extract<PluginCliCommand, { kind: "doctor" }>, deps: 
     diagnostics: deps.diagnosePlugins(host, journalPending),
     drops: readDropsRecord(hostRoot),
     revision: backend.auditCount(),
-    activation: null,
   });
   const selected = resolvePluginSelection(hostRoot);
   if (selected.kind === "invalid") {
@@ -1349,16 +1401,10 @@ function handleStatus(cmd: Extract<PluginCliCommand, { kind: "status" }>, deps: 
 // 8-row branch table also requires the DropsRecord (the SOLE source of the
 // degraded/advisory states — domain-entities.md) and the record's revision (the
 // `composed@<rev>` line). Those two inputs cannot be realized from `record` alone,
-// so the observation bundles diag + drops + revision + activation. Bundling keeps
+// so the observation bundles diagnostics, drops, and revision. Bundling keeps
 // the function a pure port-free projection (performance-design's structural
-// acceptance — it reads nothing beyond its argument). The U6 ActivationJudgment is
-// display-only here (U5 owns no activation logic); until U6 lands the handler
-// passes `activation: null`.
+// acceptance — it reads nothing beyond its argument).
 // ---------------------------------------------------------------------------
-
-// The U6 (activation-policy) judgment, reduced to the one fact this Unit displays.
-// U6 owns the judgment logic; U5 only renders whether the spec-hash changed.
-export type DoctorActivationInput = { readonly specHashChanged: boolean };
 
 // Read-only observation of the host's plugin state (the projection input). No
 // Buffers / composition ledger — only the fields the branch table maps.
@@ -1366,7 +1412,6 @@ export type DoctorPluginObservation = {
   readonly diagnostics: readonly PluginDiagnostic[];
   readonly drops: DropsRecord;
   readonly revision: number;
-  readonly activation: DoctorActivationInput | null;
 };
 
 // The projected --doctor plugin section. `installed` is the discovered-plugin
@@ -1427,8 +1472,7 @@ export function buildDoctorPluginSection(obs: DoctorPluginObservation): DoctorPl
   for (const [plugin, entries] of dropPlugins) {
     for (const entry of entries) lines.push(dropEntryToDoctorLine(plugin, entry));
   }
-  const activation = obs.activation?.specHashChanged ? "formal-model-check: spec-hash CHANGED" : null;
-  return { installed: obs.diagnostics.length, lines, activation };
+  return { installed: obs.diagnostics.length, lines, activation: null };
 }
 
 // The display string for one plugin DoctorLine (branch table display forms).
@@ -1472,7 +1516,7 @@ export function doctorPluginRows(section: DoctorPluginSection): readonly DoctorP
 // readDropsRecord), so a pristine project creates nothing. The full host walk
 // (buildHostSnapshot) is skipped unless a plugin is composed or a recovery
 // journal exists — the 0-plugin common case pays only three existsSync probes
-// (BR-U5-4 / performance-design). U6 activation is null until that Unit lands.
+// (BR-U5-4 / performance-design).
 export function readDoctorPluginObservation(hostRoot: string): DoctorPluginObservation {
   const backend = createNodeBackend(hostRoot);
   const record = backend.readComposition();
@@ -1482,7 +1526,7 @@ export function readDoctorPluginObservation(hostRoot: string): DoctorPluginObser
   const diagnostics = record.plugins.size > 0 || journalPending
     ? diagnosePlugins(buildHostSnapshot(hostRoot, backend), journalPending)
     : [];
-  return { diagnostics, drops, revision, activation: null };
+  return { diagnostics, drops, revision };
 }
 
 // ---------------------------------------------------------------------------

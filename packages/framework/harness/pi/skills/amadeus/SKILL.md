@@ -85,7 +85,13 @@ state-transition tools directly.
   `.pi/drivers/amadeus-pi-driver.ts` through the deterministic swarm protocol.
   Resolve the driver before preparing worktrees. Never pretend dispatch
   succeeded when the driver is missing, incompatible, or returns no accepted
-  native handle.
+  native handle. When the directive carries both `prepared_batch` and
+  `retry_unit`, skip driver resolution and preparation. Acquire from the
+  existing batch with `bun .pi/tools/amadeus-swarm.ts acquire --batch
+  <directive.prepared_batch> --idempotency-key <stable-delivery-id>`, verify the
+  unconfirmed permit names `directive.retry_unit`, dispatch only that permit,
+  and immediately confirm it with the accepted native handle. A partial pair is
+  an invalid directive.
 - `ask`: render `directive.question` as numbered prose using
   `question-rendering.md`, then end the turn. For a fresh-workflow routing question
   (`Starting a ...` or `No stock scope clearly fits ...`), preserve the original
@@ -142,9 +148,15 @@ where the phase's usual final stage was skipped. Never report first and try to
 repair a rejected transition afterward.
 
 For a per-unit directive, write only beneath the current unit's declared
-construction path. Run any declared reviewer inside its runtime-scoped
-read-only evidence boundary. A validated `READY` verdict is required; a failed
-review validation establishes no trustworthy verdict.
+construction path. On a normal per-unit directive, run the body and any declared
+reviewer inside its runtime-scoped read-only evidence boundary, then re-run
+`next` without reporting. `gate:false` suppresses only the human gate and §13;
+it never suppresses the reviewer. `review_only:true` skips the stage body and
+runs only the declared reviewer for the current unit, then re-runs `next`
+without reporting. A `gate:true` per-unit re-entry means every body and verdict
+already exists: do not regenerate either; run completion verification and §13,
+then present the single stage gate. A validated `READY` verdict is required; a
+failed review validation establishes no trustworthy verdict.
 
 When a stage gate is open, present exactly:
 

@@ -1,28 +1,32 @@
 ---
 slug: tla-authoring
+number: 3.8
+name: TLA+ Authoring
 phase: construction
 execution: CONDITIONAL
-condition: Opt-in — install is the boundary. Once composed, runs on an explicit `--stage tla-authoring` invocation (with or without `--single`); never auto-selected by a stock scope (scopes is empty).
+condition: When selected by the host workflow, assess formal-model applicability; continue authoring only for an author-new or revise-model route. Explicit single-stage runs remain supported.
 lead_agent: amadeus-architect-agent
 support_agents: []
 mode: inline
 produces: []
-consumes: []
-requires_stage: []
-inputs: an ApplicabilityReceipt from the `tla-authoring.ts applicability` verbs, the requirements and design documents its subjects name, and the evidence store the bundle verbs read and write.
+consumes:
+  - artifact: requirements
+    required: false
+requires_stage:
+  - build-and-test
+inputs: the active workflow's requirements path when the host selects this stage, or an existing ApplicabilityReceipt for an explicit run, plus the model map and evidence store.
 outputs: the model deliverables (.tla / .cfg / reduction manifest / trace rows), the referee evidence, the review receipt, the human approval reference, the authoring evidence bundle, and the model-map registration receipt.
 scopes: []
 ---
 
 # TLA+ Authoring
 
-The `tla-authoring` plugin stage carries one subject from an applicability
-route to a registered TLA+ model. It is the authoring counterpart of
-`formal-model-check`: this stage produces and registers the model, that stage
-checks it. Like its sibling it is opt-in (empty `scopes:`) — install is the
-opt-in boundary, so once composed it is reachable via
-`amadeus-orchestrate next --stage tla-authoring`, and it never joins a stock
-scope's workflow.
+The `tla-authoring` plugin stage assesses the active change
+and, when required, carries its governed subjects to a registered TLA+ model.
+It is the authoring counterpart of `formal-model-check`: this stage supplies or
+revises a model, and that stage checks the resulting registration. It joins
+only the scopes assigned by the host and remains directly reachable through an
+explicit single-stage invocation.
 
 The conductor running this stage owns the progression. The referees, the
 evidence store and the registration committer are called by it; none of them
@@ -30,18 +34,34 @@ starts the next step on its own.
 
 ## Steps
 
-### 1. Receive the route
+### 1. Assess applicability and receive the route
 
-Take the `ApplicabilityReceipt` produced by
-`tla-authoring.ts applicability receipt` and build the work plan from its
-`route`, `subjects` and `subjectIdentity`. The receipt is the entry
-condition: without one, do not start.
+When an explicit run supplies an `ApplicabilityReceipt`, validate it and build
+the work plan from its `route`, `subjects` and `subjectIdentity`.
 
-Refuse to start on a terminal route as well. `impl-only` and `non-target`
-carry no authoring work, so a receipt naming either one ends the stage
-instead of opening it. This refusal is an addition made by this unit's
-functional design (ADR-7) rather than an inherited rule — the upstream
-procedure table only names the missing-receipt refusal.
+When a host workflow supplies requirements instead, perform the applicability
+assessment here rather than assuming that an absent model means non-target:
+
+1. Read the requirements path from the directive's `consumes` entries and
+   enumerate its stable FR/NFR/AC identifiers.
+2. Select only subjects whose behaviour includes concurrent or resumable
+   actors sharing state and a safety violation that can remain silent. Record
+   the rationale for every selected and rejected subject.
+3. Compare the selected subjects with the registered model map and the current
+   change. Classify them as `new-subject`, `semantic-change`, `impl-only`, or
+   `non-target`; never infer `impl-only` merely because a model already exists.
+4. For a non-empty selected set, run `subjects declare`, then
+   `applicability receipt`, and persist the receipt under the stage record.
+   An unregistered selected set must route to `author-new`; a registered set
+   whose reachable behaviour changed must route to `revise-model`.
+
+If no subject meets the formal-model criterion, record a terminal
+`not-applicable` assessment with the inspected identifiers and stop the stage
+successfully. For `impl-only` and `non-target`, persist the terminal-route
+receipt after its human approval and stop successfully. Only `author-new` and
+`revise-model` continue to step 2. Missing requirements, an undecidable route,
+or a selected subject without a stable identifier is a halt rather than a
+silent no-hold.
 
 ### 2. Author or revise the model
 
@@ -62,10 +82,10 @@ here rather than discovering the gap in step 3.
 Run the trace referee and then the proof referee:
 
 ```
-bun plugins/formal-model-check/tools/tla-authoring.ts trace \
+bun {{HARNESS_DIR}}/plugins/formal-model-check/tools/tla-authoring.ts trace \
   --subjects <subjects.json> --rows <trace-rows.json> --invariants <invariants.json>
 
-bun plugins/formal-model-check/tools/tla-authoring.ts proof \
+bun {{HARNESS_DIR}}/plugins/formal-model-check/tools/tla-authoring.ts proof \
   --model <module.tla> --cfg <module.cfg> --reduction <reduction.json> \
   --invariants <invariants.json> --identity <sha256:...>
 ```
@@ -107,13 +127,13 @@ no verified approval the stage does not reach step 6.
 Build the authoring bundle, verify it, and commit the entry:
 
 ```
-bun plugins/formal-model-check/tools/tla-authoring.ts bundle build \
+bun {{HARNESS_DIR}}/plugins/formal-model-check/tools/tla-authoring.ts bundle build \
   --parts <parts.json> --predecessor <root|sha256:...> --identity <sha256:...>
 
-bun plugins/formal-model-check/tools/tla-authoring.ts bundle verify \
+bun {{HARNESS_DIR}}/plugins/formal-model-check/tools/tla-authoring.ts bundle verify \
   --ref <sha256:...> --identity <sha256:...>
 
-bun plugins/formal-model-check/tools/tla-authoring.ts commit \
+bun {{HARNESS_DIR}}/plugins/formal-model-check/tools/tla-authoring.ts commit \
   --draft <entry.json> --bundle <sha256:...> --preconditions <preconditions.json>
 ```
 
@@ -135,11 +155,12 @@ receipts rather than the markdown artefacts the universal shape sensors
 is the referees in step 3 and the precondition gate in step 6 — deterministic
 checks that already fail closed.
 
-## Not a stock-scope stage
+## Host-assigned lifecycle
 
-`scopes:` is intentionally empty. The stage is a plugin-supplied capability a
-team opts into per run. Dropping the plugin removes it from the graph and
-restores the 0-plugin baseline.
+The plugin declares no host scope. Project configuration assigns this stage to
+the host's workflow scopes. Plugin composition remains the installation
+boundary: dropping the plugin removes both this assessment and the following
+model check, restoring the 0-plugin baseline.
 
 ## Learn
 

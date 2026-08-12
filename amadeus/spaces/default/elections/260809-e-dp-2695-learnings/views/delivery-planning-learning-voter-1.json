@@ -1,0 +1,19 @@
+{
+  "electionId": "E-DP-2695-LEARNINGS",
+  "voter": "delivery-planning-learning-voter-1",
+  "question": "Delivery Planningの学習候補から次回以降のproject practiceとして最も価値の高い1件を選ぶ",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "4 Boltへの機械的分割より単一walking-skeleton Boltを選ぶ",
+      "description": "最後のU-04までend-to-end valueがない今回のDAGでは、単一BoltでもUnit別ownershipと内部DAGを保持できる。→ project.md ## Corrections"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "deployable boundaryが複数Unitの合流点にしかない場合はUnit境界を壊さず1つのwalking-skeleton Boltへ束ねる",
+      "description": "Boltはeconomic/deployable slice、Unitはchange-reason/source-test ownership境界として維持し、Bolt内でUnit DAGを実行する。→ project.md ## Corrections"
+    }
+  ]
+}

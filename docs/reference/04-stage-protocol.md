@@ -291,7 +291,7 @@ AskUserQuestion({
     multiSelect: false,
     options: [
       { label: "Guide me", description: "Walk through each question interactively here" },
-      { label: "Grill me", description: "One question at a time, in depth -- recommended answers included, until we reach a shared understanding" },
+      { label: "Grill me", description: "Round-by-round interview over the design tree admitted by the active materiality threshold -- recommended answers included, until every admitted branch is settled (deferred nodes remain listed in the agreement summary). Depth acts as a pruning threshold here, not a question budget; the circuit breaker (3x the guideline) is the only ceiling" },
       { label: "I'll edit the file", description: "I'll fill in the answers in the file directly" },
       { label: "Chat", description: "Discuss freely -- I'll extract decisions from our conversation" }
     ]
@@ -315,11 +315,13 @@ Log the mode choice to the `audit/` shards. Users can switch modes mid-stage.
 #### Grill Me (Grilling Mode)
 
 - Follows `amadeus-common/protocols/grilling-protocol.md` — the single source
-  for the grilling discipline (adapted from mattpocock/skills, MIT). One
-  question at a time; each carries a recommended answer with rationale; facts
-  are self-researched and only decisions are asked; hybrid termination
-  ("done" any time, continuation check at the depth guideline); explicitly
-  confirmed agreement summary before generation.
+  for the grilling discipline (adapted from mattpocock/skills, MIT). The design
+  tree is worked in rounds, the whole pruned frontier asked per round with
+  recommended answers and rationale; depth is consumed as the pruning threshold
+  rather than a question budget; facts are self-researched and only decisions
+  are asked; termination when the pruned frontier is empty or the user says
+  "done", with the circuit breaker as the disclosed upper bound; explicitly
+  confirmed agreement summary listing deferred nodes before generation.
 - Workflow obligations: each dynamically generated question is appended to
   the questions file with a blank `[Answer]:` tag BEFORE presenting; each
   answer is written back immediately; `decision`/`answer` audit events are

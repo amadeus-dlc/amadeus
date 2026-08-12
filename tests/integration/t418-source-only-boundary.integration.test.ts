@@ -1,6 +1,7 @@
 // covers: file:scripts/source-only-boundary.ts
 // size: medium
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -49,7 +50,7 @@ describe("t418 source-only boundary process integration", () => {
         expect(existsSync(join(candidate, path)), path).toBe(true);
       }
     },
-    120_000,
+    scaleTestTime(120_000),
   );
 
   test("reads a tracked-file index larger than the spawnSync default buffer", () => {

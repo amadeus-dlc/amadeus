@@ -49,6 +49,7 @@
 //   .sh 9  sensor absent → pass:false, edge_block:absent      -> "sensor: absent block → pass:false, edge_block:absent"
 //   .sh 10 sensor non-target md keeps generic check           -> "sensor: non-target markdown keeps generic H2 check (no edge_block)"
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -309,7 +310,7 @@ describe("t133 Bolt-DAG runtime compile (migrated from t133-bolt-dag-compile.sh,
     expect("bolt_dag" in g).toBe(true);
     expect(Array.isArray(g.bolt_dag.units)).toBe(true);
     expect(g.bolt_dag.units.length).toBe(4);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("valid edge block: batches are correct sorted topological levels [.sh test 2]", () => {
     const proj = makeProject();
@@ -318,7 +319,7 @@ describe("t133 Bolt-DAG runtime compile (migrated from t133-bolt-dag-compile.sh,
     const g = readGraph(proj);
     // auth+db (no deps) batch 0, sorted; api (deps satisfied) batch 1; ui batch 2.
     expect(g.bolt_dag.batches).toEqual([["auth", "db"], ["api"], ["ui"]]);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("compile preserves all five canonical unit kinds in the runtime graph", () => {
     const proj = makeProject();
@@ -327,7 +328,7 @@ describe("t133 Bolt-DAG runtime compile (migrated from t133-bolt-dag-compile.sh,
     expect(
       readGraph(proj).bolt_dag.units.map((unit: { kind?: string }) => unit.kind),
     ).toEqual(["service", "spec", "ui", "packaging", "library"]);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // ---- 3: byte-identical re-compile (determinism) --------------------------
   test("second compile is byte-identical (pure-data parse) [.sh test 3]", () => {
@@ -340,7 +341,7 @@ describe("t133 Bolt-DAG runtime compile (migrated from t133-bolt-dag-compile.sh,
     // Stronger than the .sh's `diff -q`: assert exact byte equality of the
     // whole file (no Date.now / Set-order nondeterminism in the bolt_dag path).
     expect(second).toBe(first);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // ---- 4: cyclic block → compile fails ------------------------------------
   // Revised: the .sh asserted the node was omitted and the graph still written.
@@ -352,7 +353,7 @@ describe("t133 Bolt-DAG runtime compile (migrated from t133-bolt-dag-compile.sh,
     const { stderr, status } = runCompile(proj);
     expect(status).not.toBe(0);
     expect(stderr).toContain("cyclic");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // ---- 5: malformed (dangling dep) → compile fails -------------------------
   test("malformed edge block (dangling dep): non-zero exit + stderr names 'malformed' [.sh test 5, revised]", () => {
@@ -361,7 +362,7 @@ describe("t133 Bolt-DAG runtime compile (migrated from t133-bolt-dag-compile.sh,
     const { stderr, status } = runCompile(proj);
     expect(status).not.toBe(0);
     expect(stderr).toContain("malformed");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // ---- 6a: absent artifact under a completed units-generation → fails ------
   test("absent artifact with units-generation completed: non-zero exit [.sh test 6, revised]", () => {
@@ -369,7 +370,7 @@ describe("t133 Bolt-DAG runtime compile (migrated from t133-bolt-dag-compile.sh,
     const { stderr, status } = runCompile(proj);
     expect(status).not.toBe(0);
     expect(stderr).toContain("absent");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // ---- 6b: absent artifact in a degrade scope → normal --------------------
   // The pre-milestone-15 4-key envelope no longer holds even here: recording WHY
@@ -388,7 +389,7 @@ describe("t133 Bolt-DAG runtime compile (migrated from t133-bolt-dag-compile.sh,
     ]);
     expect(g.bolt_dag_absence.reason).toBe("scope-skips-units");
     expect("bolt_dag" in g).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 });
 
 describe("t133 edge-block sensor (amadeus-sensor-required-sections, units-generation 2.7)", () => {
@@ -400,7 +401,7 @@ describe("t133 edge-block sensor (amadeus-sensor-required-sections, units-genera
     expect(r.pass).toBe(true);
     expect(r.edge_block).toBe("ok");
     expect(r.missing_unit_kinds).toEqual([]);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("sensor: kindless units fail and identify every missing unit", () => {
     const proj = makeProject();
@@ -410,7 +411,7 @@ describe("t133 edge-block sensor (amadeus-sensor-required-sections, units-genera
     expect(r.edge_block).toBe("ok");
     expect(r.findings_count).toBeGreaterThanOrEqual(1);
     expect(r.missing_unit_kinds).toEqual(["api", "auth", "db", "ui"]);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("sensor: invalid kind uses the shared parser malformed result", () => {
     const proj = makeProject();
@@ -418,7 +419,7 @@ describe("t133 edge-block sensor (amadeus-sensor-required-sections, units-genera
     const r = runSensor(uowdPath(proj));
     expect(r.pass).toBe(false);
     expect(r.edge_block).toBe("malformed");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("sensor: cyclic block → pass:false, edge_block:cyclic [.sh test 8]", () => {
     const proj = makeProject();
@@ -426,7 +427,7 @@ describe("t133 edge-block sensor (amadeus-sensor-required-sections, units-genera
     const r = runSensor(uowdPath(proj));
     expect(r.pass).toBe(false);
     expect(r.edge_block).toBe("cyclic");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("sensor: absent block → pass:false, edge_block:absent [.sh test 9]", () => {
     const proj = makeProject();
@@ -439,7 +440,7 @@ describe("t133 edge-block sensor (amadeus-sensor-required-sections, units-genera
     const r = runSensor(uowdPath(proj));
     expect(r.pass).toBe(false);
     expect(r.edge_block).toBe("absent");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // ---- 10: non-target markdown keeps the generic check ---------------------
   test("sensor: non-target markdown keeps generic H2 check (no edge_block) [.sh test 10]", () => {
@@ -461,5 +462,5 @@ describe("t133 edge-block sensor (amadeus-sensor-required-sections, units-genera
     // edge_block field is never set on a non-target artefact.
     expect(r.edge_block).toBeUndefined();
     expect(r.raw.includes("edge_block")).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 });

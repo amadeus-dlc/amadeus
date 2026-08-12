@@ -1,40 +1,41 @@
 ---
 slug: formal-model-check
+number: 3.9
+name: Formal Model Check
 phase: construction
 execution: CONDITIONAL
-condition: Opt-in — install is the boundary. Once composed, runs on an explicit `--stage formal-model-check` invocation (with or without `--single`); never auto-selected by a stock scope (scopes is empty).
+condition: When selected by the host workflow, run after TLA+ authoring if applicability produced or revised a model; otherwise record the terminal applicability outcome without invoking TLC. Explicit single-stage runs check the selected registered model or all registered models.
 lead_agent: amadeus-quality-agent
 support_agents: []
 mode: inline
 produces: []
 consumes: []
-requires_stage: []
-inputs: all externalised TLA+ model + config pairs declared by amadeus/spaces/<space>/specs/tla/model-map.json and the model-check CLIs under plugins/formal-model-check/tools/.
-outputs: the TLC exhaustive-exploration verdict (exit 0 detected / 1 not-detected / 2 harness-error) plus the report/artifacts written under the chosen --out directory.
-sensors:
-  - model-completeness
+requires_stage:
+  - tla-authoring
+inputs: all externalised TLA+ model + config pairs declared by amadeus/spaces/<space>/specs/tla/model-map.json and the model-check CLIs under {{HARNESS_DIR}}/plugins/formal-model-check/tools/.
+outputs: the TLC exhaustive-exploration verdict (exit 0 not-detected / 1 detected / 2 harness-error) plus the report/artifacts written under the chosen --out directory.
+sensors: []
 scopes: []
 ---
 
 # Formal Model Check
 
-The `formal-model-check` plugin stage runs a **single formal-model-check pass**:
-an exhaustive TLC exploration of a declared TLA+ model, driven by the
-`run-model-check` CLI. It is an opt-in plugin stage (empty `scopes:`): install is
-the opt-in boundary, so once composed it is reachable via
-`amadeus-orchestrate next --stage formal-model-check` — `--single` optional
-(U6 activation-policy, FR-7(a)). It never joins a stock scope's workflow and
-never runs on `push` / `pull_request`. When the watched spec changed, the
-engine emits a spec-hash advisory nudge (ADR-1 option A, U6); whether that
-advisory starts a run depends on the Intent autonomy mode: under `none` a
-human decides whether to run it; under `semi` or `full` the advisory is routed
-through the autonomy ladder as a `question` occurrence
-(`amadeus-advisory-choice.ts`), and a `run-now` decision starts the check
-unattended — any other ladder outcome falls back to the human.
+The `formal-model-check` plugin stage runs an exhaustive TLC exploration of a
+declared TLA+ model, driven by the `run-model-check` CLI. It follows
+`tla-authoring` in the scopes assigned by the host, so a missing model can be
+supplied before the check is selected. Explicit `--stage formal-model-check`
+runs remain supported. It never runs on `push` / `pull_request`. When a watched
+spec changes, the existing spec-hash advisory remains an additional trigger.
 
 ## Stage body
 
-1. Resolve the model + config to check. CI acceptance checks every pair declared
+1. Read the immediately preceding applicability outcome when this is a host
+   workflow. An `author-new` or `revise-model` route must name the model just
+   registered by `tla-authoring`; check that model. An `impl-only`, `non-target`,
+   or `not-applicable` outcome records `NOT_APPLICABLE` and does not invoke TLC.
+   A missing or contradictory outcome is a halt. For an explicit run with no
+   preceding applicability outcome, resolve the requested model + config as
+   before. CI acceptance checks every pair declared
    in `amadeus/spaces/<space>/specs/tla/model-map.json`, sequentially and in declaration order. The
    optional `--model <registered-name>` selector narrows CI or diagnostics to
    one pair and rejects unknown names without falling back. `FormalElection`
@@ -45,7 +46,7 @@ unattended — any other ladder outcome falls back to the human.
    environment (see the README for the local vs CI dependency contract):
 
    ```
-   bun plugins/formal-model-check/tools/run-model-check.ts \
+   bun {{HARNESS_DIR}}/plugins/formal-model-check/tools/run-model-check.ts \
      --model amadeus/spaces/default/specs/tla/FormalElection.tla \
      --cfg   amadeus/spaces/default/specs/tla/FormalElection.cfg \
      --out   <out-dir>
@@ -55,14 +56,9 @@ unattended — any other ladder outcome falls back to the human.
    `--model` from `run-model-check-ci.ts run|verify --root <absolute-path>`
    checks all registered models.
 
-   When an `await-advisory-choice` directive supplies a
-   `formal_checks[].command`, run that command unchanged. It adds
-   `--advisory-target`, `--advisory-spec-identity`, and
-   `--advisory-instance` as one all-or-none correlation group and uses the
-   engine-selected output directory. The local manifest records those
-   coordinates together with the selected model/config paths, registered
-   identities, and byte digests. These fields prove which evidence may resolve
-   that one advisory; they do not change TLC exploration.
+   A `run-now` advisory choice reaches this plugin through its declared handoff
+   stage. The host does not construct or execute a plugin-specific command.
+   This stage owns the model-check invocation and evidence contract.
 
 3. Report the CLI's verdict by its exit code. The CLI's outcome names say what
    was detected — a **counterexample** — so read them that way:
@@ -76,16 +72,18 @@ unattended — any other ladder outcome falls back to the human.
 
    The `run-model-check` CLI derives every verdict from real TLC output, never a
    hardcoded value (NFR-3, no verification theatre).
+4. After a completed check, record the checked spec identity from the plugin:
+   `bun {{HARNESS_DIR}}/plugins/formal-model-check/tools/plugin-activation.ts record {{HARNESS_DIR}}`.
 
 ## Sensors
 
-This stage declares the core `model-completeness` sensor (U5) in its
-frontmatter. The sensor is supplied by the core framework, not the plugin, so
-the stage graph compile resolves the id against the core sensor registry; an
-unknown id fails the compile loudly.
+The plugin owns its model-completeness checker. Run it from the plugin tool
+directory when the stage changes a model registration; core carries no
+plugin-specific sensor or implementation.
 
-## Not a stock-scope stage
+## Host-assigned lifecycle
 
-`scopes:` is intentionally empty. The stage is a plugin-supplied capability that
-a team opts into per run. Dropping the plugin removes this stage from the graph
-and restores the 0-plugin baseline.
+The plugin declares no host scope. Project configuration assigns this stage to
+the host's workflow scopes. It remains ordered after `tla-authoring`; dropping
+the plugin removes both stages from the graph and restores the 0-plugin
+baseline.

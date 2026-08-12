@@ -61,7 +61,9 @@ describe("scheduled deep PBT workflow", () => {
     expect(job?.["runs-on"]).toBe("ubuntu-latest");
     expect(job?.["timeout-minutes"]).toBe(5);
     expect(targets).toEqual(EXPECTED_TARGETS);
-    expect(runStep?.run).toContain("bun test --timeout=30000");
+    expect(runStep?.run).toContain(
+      'bun test --timeout="$(bun tests/test-timeout-ms.ts 30000)"',
+    );
     expect(job?.steps?.some((step) => step.run?.includes("deep run covered all"))).toBe(true);
   });
 });

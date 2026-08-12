@@ -22,6 +22,7 @@
 // MECHANISM: cli — the tool's contract is its process boundary (argv, stdout,
 // stderr, exit code), so it is spawned as `bun amadeus-subagent-stats.ts`.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -591,7 +592,7 @@ function buildOversizedCorpus(proj: string, count: number): void {
 }
 
 describe("pipe integrity — Issue #2700, stdout must fully drain before exit", () => {
-  const RUN_OPTIONS = { encoding: "utf-8", env: process.env, timeout: 60_000, killSignal: "SIGKILL" } as const;
+  const RUN_OPTIONS = { encoding: "utf-8", env: process.env, timeout: scaleTestTime(60_000), killSignal: "SIGKILL" } as const;
 
   test("output bigger than the 64KiB pipe buffer is not truncated when piped", () => {
     const proj = mkdtempSync(join(tmpdir(), "t461-oversized-"));

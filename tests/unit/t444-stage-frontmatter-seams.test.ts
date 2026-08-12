@@ -8,9 +8,8 @@
 // fixtures, so they belong in the unit tier (fs-tests-integration-first); the
 // real-stage corpus sweep and the compose end-to-end live in t445.
 //
-// Falling/passing evidence: a sensors-seam rewrite request is rejected with
-// unsupported-target-seam (BR-U1-4, the falling proof of the minimal accepted
-// set), an entry that cannot survive a re-parse is rejected with
+// Falling/passing evidence: produces and sensors are the two writable plugin
+// seams; consumes/required_sections stay rejected. An entry that cannot survive a re-parse is rejected with
 // roundtrip-mismatch (BR-U1-3), and an unchanged rewrite is byte-identical to
 // the original document (BR-U1-1).
 
@@ -180,12 +179,21 @@ describe("t444 serializeStageFrontmatterSeams (pure)", () => {
     expect(parseOk(out.value.toString("utf-8")).seams.produces).toEqual(["alpha", "beta", "gamma"]);
   });
 
-  test("rejects a rewrite of any seam other than produces (BR-U1-4)", () => {
+  test("appending a blocking sensor leaves every unrelated byte unchanged", () => {
     const doc = parseOk(REAL_STAGE);
     const out = serializeStageFrontmatterSeams(doc, { ...doc.seams, sensors: [...doc.seams.sensors, "answer-evidence"] });
+    expect(out.ok).toBe(true);
+    if (!out.ok) return;
+    expect(out.value.toString("utf-8")).toBe(REAL_STAGE.replace("  - type-check\n", "  - type-check\n  - answer-evidence\n"));
+    expect(parseOk(out.value.toString("utf-8")).seams.sensors).toEqual(["linter", "type-check", "answer-evidence"]);
+  });
+
+  test("rejects a rewrite of a host-owned consumes seam", () => {
+    const doc = parseOk(REAL_STAGE);
+    const out = serializeStageFrontmatterSeams(doc, { ...doc.seams, consumes: [...doc.seams.consumes, "other"] });
     expect(out.ok).toBe(false);
     if (out.ok) return;
-    expect(out.error).toEqual({ kind: "unsupported-target-seam", seam: "sensors" });
+    expect(out.error).toEqual({ kind: "unsupported-target-seam", seam: "consumes" });
   });
 
   test("rejects an entry that cannot survive the re-parse check (BR-U1-3)", () => {

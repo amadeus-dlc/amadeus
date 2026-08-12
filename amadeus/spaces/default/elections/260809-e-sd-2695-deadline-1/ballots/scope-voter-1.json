@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-SD-2695-DEADLINE-1",
+  "voter": "scope-voter-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "能力固有の外部期限が示されていないため暦日締切は設けず、Issue #2695 の完了条件 1〜10 を満たす品質ゲートを優先するのが妥当である。",
+  "submittedAt": "2026-08-09T11:15:09Z",
+  "receivedAt": "2026-08-09T11:15:25Z"
+}

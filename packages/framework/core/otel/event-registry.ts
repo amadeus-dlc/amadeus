@@ -76,7 +76,7 @@ export type EventDef = {
 
 // The canonical cardinality (#1672). The drift guard pins this so an emptied
 // or truncated registry fails instead of passing vacuously.
-export const EXPECTED_CANONICAL_COUNT = 91;
+export const EXPECTED_CANONICAL_COUNT = 92;
 
 // The OTel semantic-convention span event name produced by recordException().
 // Registered as telemetry (FR-EVT-7): it rides the span record, never the
@@ -592,7 +592,7 @@ export const REGISTERED_EVENTS = [
     optionalAttributes: [],
     schemaVersion: 1,
   },
-  // --- Artifact Events (3) ---
+  // --- Artifact Events (4) ---
   {
     name: "amadeus.artifact.created",
     auditEvent: "ARTIFACT_CREATED",
@@ -617,6 +617,18 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "artifact",
     requiredAttributes: ["Stage", "Decision", "Artifacts"],
+    optionalAttributes: [],
+    schemaVersion: 1,
+  },
+  {
+    name: "amadeus.artifact.attested",
+    auditEvent: "ARTIFACT_ATTESTED",
+    durability: "canonical",
+    category: "artifact",
+    requiredAttributes: [
+      "Attestation Id", "Intent", "Intent UUID", "Record", "Bolt", "Unit",
+      "Repository", "PR", "Local Head", "Remote Head", "PR Head", "Content Digest",
+    ],
     optionalAttributes: [],
     schemaVersion: 1,
   },
@@ -691,7 +703,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "bolt",
     requiredAttributes: ["Bolt names", "Batch number", "Walking skeleton"],
-    optionalAttributes: ["Bolt slug"],
+    optionalAttributes: ["Bolt slug", "Stage", "Attempt Id", "Batch Id"],
     schemaVersion: 1,
   },
   {
@@ -700,7 +712,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "bolt",
     requiredAttributes: ["Bolt names", "Batch number"],
-    optionalAttributes: ["Bolt slug"],
+    optionalAttributes: ["Bolt slug", "Stage", "Attempt Id", "Batch Id", "Outcome", "Reason"],
     schemaVersion: 1,
   },
   {
@@ -711,7 +723,7 @@ export const REGISTERED_EVENTS = [
     requiredAttributes: ["Failed Bolt", "Error summary"],
     // `Reason` distinguishes an explicit abort from a run failure; `Succeeded
     // siblings` is carried by halt-and-ask flows (tools/amadeus-bolt.ts fail).
-    optionalAttributes: ["Bolt slug", "Reason", "Succeeded siblings"],
+    optionalAttributes: ["Bolt slug", "Reason", "Succeeded siblings", "Stage", "Attempt Id", "Batch Id"],
     schemaVersion: 1,
   },
   {
@@ -869,7 +881,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "sensor",
     requiredAttributes: ["Fire id", "Sensor ID", "Stage slug", "Output path"],
-    optionalAttributes: [],
+    optionalAttributes: ["Output digest"],
     schemaVersion: 1,
   },
   {
@@ -878,7 +890,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "sensor",
     requiredAttributes: ["Fire id", "Sensor ID", "Stage slug", "Output path", "Duration ms"],
-    optionalAttributes: ["Note"],
+    optionalAttributes: ["Note", "Output digest"],
     schemaVersion: 1,
   },
   {
@@ -887,7 +899,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "sensor",
     requiredAttributes: ["Fire id", "Sensor ID", "Stage slug", "Output path", "Detail path", "Findings count"],
-    optionalAttributes: [],
+    optionalAttributes: ["Output digest"],
     schemaVersion: 1,
   },
   {
@@ -896,7 +908,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "sensor",
     requiredAttributes: ["Fire id", "Sensor ID", "Stage slug", "Output path", "Cap layer", "Cap value", "Observed value"],
-    optionalAttributes: [],
+    optionalAttributes: ["Output digest"],
     schemaVersion: 1,
   },
   {
@@ -943,7 +955,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "swarm",
     requiredAttributes: ["Batch Id", "Event Set Id", "Event Set"],
-    optionalAttributes: [],
+    optionalAttributes: ["Stage"],
     schemaVersion: 1,
   },
   {
@@ -983,7 +995,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "swarm",
     requiredAttributes: ["Batch number", "Unit name", "Reason"],
-    optionalAttributes: [],
+    optionalAttributes: ["Stage", "Attempt Id"],
     schemaVersion: 1,
   },
   {

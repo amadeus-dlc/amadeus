@@ -1093,10 +1093,10 @@ describe("t514 the live corpus reports no kind-coverage omission", () => {
     // missing an artifact its kind requires. That is the substantive result:
     // the check does not over-fire on the corpus as it stands.
     //
-    // Separately, no such record was born under the id contract, so the cutoff
-    // means no finding can fire today regardless. Both are pinned below, since
-    // an empty `reported` alone would also be what a population of zero
-    // produces.
+    // Separately, records born under the id contract with resolvable kinds
+    // exist, so findings CAN fire and the zero is the predicate's verdict.
+    // Both are pinned below, since an empty `reported` alone would also be
+    // what a population of zero produces.
     const reported: string[] = [];
     let evaluated = 0;
     let kindResolved = 0;
@@ -1119,10 +1119,10 @@ describe("t514 the live corpus reports no kind-coverage omission", () => {
     expect(evaluated).toBeGreaterThan(0);
     expect(kindResolved).toBeGreaterThan(0);
     expect(reported).toEqual([]);
-    // Pinned as its own fact rather than folded into the above: today the
-    // cutoff alone would suppress every finding, so when the first
-    // post-contract kind-resolvable unit appears this stops being true and the
-    // sweep's zero starts resting on the predicate instead.
-    expect(reportable).toBe(0);
+    // Post-contract kind-resolvable units now exist in the corpus (the first
+    // record landed 2026-08-09), so the cutoff no longer suppresses findings
+    // by itself: the empty `reported` above rests on the predicate judging a
+    // genuinely reportable population.
+    expect(reportable).toBeGreaterThan(0);
   });
 });

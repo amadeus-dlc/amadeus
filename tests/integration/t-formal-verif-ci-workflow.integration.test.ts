@@ -65,6 +65,28 @@ const BASELINE_SHA = readFileSync(
 //     remaining-debt count literally ("the existing 33"). Fixing the
 //     over-count changes that number, so the comment now names the debt
 //     without a literal count.
+//   - Issue #2814 (control-byte gate): the always-run `control-byte-gate` job.
+//     It carries no `needs` and no `if` on purpose — a path filter would excuse
+//     exactly the changes the gate exists to catch — so it is an independent
+//     job rather than a lint step.
+//     Re-baselined once more in the same PR to add `persist-credentials: false`
+//     to that job's checkout, matching the jobs that already disable credential
+//     persistence: the job runs PR-authored code, so the token must not sit in
+//     the local git config while it does.
+//     Re-baselined again (FR-CBG-7 follow-up): the job is now in ci-success's
+//     needs with an unconditional require_result. Independence from `changes`
+//     is about *when the job runs*; membership in ci-success is about *whether
+//     a red run blocks the merge*. The earlier note conflated the two and left
+//     the gate advisory — "CI Success" is this repository's only required
+//     status check, so a job outside its needs cannot block anything.
+//   - Review-thread resolution gate: add the PR-only reusable-workflow job,
+//     make CI Success fail when unresolved review feedback remains, and ignore
+//     Cursor's author-scoped usage-limit notification.
+//   - 260810-test-time-factor: the test, plugin-conformance, coverage-head, and
+//     coverage-base jobs set TEST_TIME_FACTOR=2, runner-bypass tests resolve a
+//     scaled Bun timeout, and lint runs the timing-sink guard.
+//   - Merge Queue CI: trigger required checks for merge groups and resolve the
+//     changed-file and no-silent-drop bases from the event's trusted SHAs.
 describe("CI workflow structure (formal job isolation + baseline pin)", () => {
   test("contains only the sanctioned edits and an isolated pinned formal job", () => {
     const source = readFileSync(WORKFLOW, "utf8");

@@ -1,0 +1,29 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-DP-2695-LEARNINGS",
+      "voter": "delivery-planning-learning-voter-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "表示2を選ぶ。Boltをeconomic/deployable slice、Unitをchange-reason/source-test ownership境界として区別し、deployable boundaryが複数Unitの合流点にしかない場合だけ単一walking-skeleton Boltへ束ねる原則は、今回固有の4 Bolt構成に依存せず次回以降にも再利用できる。単一Bolt内でもUnit別ownershipと依存DAGを維持するため、実装責務や検証境界を失わずend-to-end valueを最短で届けられる。表示1は同じ判断を今回固有の数と経緯で述べた具体例であり、project practiceとしては表示2の方が精密かつ汎用的である。",
+      "submittedAt": "2026-08-09T15:40:14Z",
+      "receivedAt": "2026-08-09T15:40:29Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-DP-2695-LEARNINGS",
+      "voter": "delivery-planning-learning-voter-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "候補1は、deployable value が複数Unitの合流点でのみ成立する場合に、Boltをeconomic/deployable slice、Unitをchange-reason/source-test ownership境界として分離して扱う一般原則を示している。今回固有の4 Bolt対1 Boltという結論に寄る候補2より、Unit境界を保持したままwalking-skeletonへ束ねる判断条件と内部DAGの実行規律を次回以降へ再利用しやすいため、project practiceとして最も価値が高い。",
+      "submittedAt": "2026-08-09T15:40:39Z",
+      "receivedAt": "2026-08-09T15:40:54Z"
+    }
+  ],
+  "late": []
+}

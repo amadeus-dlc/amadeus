@@ -31,6 +31,7 @@
 // dir (AMADEUS_LOCK_BASE_DIR), both rm-rf'd in afterEach/afterAll. Nothing under
 // tests/fixtures/**.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
   chmodSync,
@@ -211,5 +212,5 @@ describe("t427 — audit lock never steals from a live owner", () => {
     // ...and the next waiter reclaims it on liveness, not on age.
     expect(acquireAuditLock(proj, 0, 1, INTENT, SPACE)).toBe(true);
     releaseAuditLock(proj, INTENT, SPACE);
-  }, 30000);
+  }, scaleTestTime(30000));
 });

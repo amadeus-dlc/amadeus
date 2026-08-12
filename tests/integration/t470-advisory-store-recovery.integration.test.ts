@@ -26,7 +26,7 @@
 //   FR-2.3  a store whose pending belongs to another intent is refused, loudly
 //           and without a byte of change (#2352 defence).
 //   FR-2.4  the outcome names the dropped receipts, whether the advisories must
-//           be presented again, and the formal-check attempts that reset.
+//           be presented again, and the discarded run-now receipt count.
 //   AC-2c   the report-side block is gone afterwards: an open advisory is asked
 //           again, and a store that had no open advisory returns to normal flow.
 
@@ -44,7 +44,7 @@ import {
   type PendingAdvisory,
 } from "../../packages/framework/core/tools/amadeus-advisory-choice.ts";
 import { docsRoot } from "../../packages/framework/core/tools/amadeus-lib.ts";
-import type { Advisory } from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+import type { Advisory } from "../../packages/framework/core/tools/amadeus-plugin-runtime.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -156,11 +156,9 @@ describe("advisory store recovery: outcome contract (FR-2.4)", () => {
       pendingSalvaged: 1,
       receiptsDropped: 3,
       rePresentationRequired: true,
-      // The attempt counter every formal-check route is numbered by is derived
-      // from the run-now receipts an advisory holds, so dropping them takes two
-      // attempts back to zero. Counting is all the recovery does with a legacy
-      // receipt — nothing is read from it for meaning.
-      formalCheckAttemptsReset: 2,
+      // Counting is all recovery does with a legacy run-now receipt; it assigns
+      // no plugin-specific execution meaning to that choice.
+      runNowReceiptsReset: 2,
     });
   });
 });
@@ -242,7 +240,7 @@ describe("advisory store recovery: receipts-only store (AC-2a)", () => {
       pendingSalvaged: 0,
       receiptsDropped: 1,
       rePresentationRequired: false,
-      formalCheckAttemptsReset: 0,
+      runNowReceiptsReset: 0,
     });
     const store = readRawStore(projectDir) as unknown as AdvisoryChoiceStore;
     expect(store).toEqual({ schema: 2, pending: [], receipts: [] });
@@ -381,7 +379,7 @@ describe("advisory store recovery: CLI surface (FR-2.5)", () => {
       pending_salvaged: 1,
       receipts_dropped: 2,
       re_presentation_required: true,
-      formal_check_attempts_reset: 1,
+      run_now_receipts_reset: 1,
     });
   });
 

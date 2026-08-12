@@ -1,6 +1,385 @@
 # コード品質評価
 
-## 監査リーダーのスキーマ決め打ち債務（260807-intent-2328-tests-e2e-au、現在、observed `a5621236c`）
+## coverage 免除台帳の意味論が無検査 — 解決 fail-closed / 意味 fail-open の非対称（260811-allowlist-semantic-audit、履歴、observed `854692fd7`）
+
+**観測 ref**: すべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD）。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（34 commits）。正本は `re-scans/260811-allowlist-semantic-audit.md`。
+
+### 台帳の規模と成長（PROVEN、コマンド出力からの転記）
+
+| 指標 | 値 | 述語 |
+|---|---|---|
+| エントリ総数（observed） | **623** | `jq 'length' tests/.coverage-patch-allowlist.json` |
+| エントリ総数（base `ce3c3ccfd`） | **614** | `git show ce3c3ccfd:tests/.coverage-patch-allowlist.json \| jq 'length'` |
+| 対象ファイル数 | **106** | `jq -r '[.[].file] \| unique \| length' <台帳>` |
+| distinct な `reason` 文字列 | **310** | `jq -r '[.[].reason] \| unique \| length' <台帳>` |
+| 旧形式の絶対行ピン | **0** | `jq '[.[] \| select(.selector == null)] \| length' <台帳>` |
+| 単一行アンカー（`anchorLines == 1`） | **233**（37%） | `jq '[.[]\|select(.selector.anchorLines==1)]\|length' <台帳>` |
+
+Issue #1622 起票時の「約272件」、クロスレビュー時点（2026-07-28）の「300件」に対し observed は **623**。棚卸し対象は起票時の約 2.3 倍に膨張している。
+
+### 品質所見（PROVEN）
+
+1. **解決は fail-closed、意味は fail-open という非対称**。`resolveSemanticSelector`（`tests/coverage-patch-gate.ts:288-313`）はスコープ名の非一意（`:294-298`）と指紋の非一意（`:306-310`）を throw し、`runCheck` が exit 1 へ落とす（`:552`）。一方 `findStaleAllowlistEntries`（`:407-419`）は引数が `entries` と `lcov` のみで `reason` を受け取らず、判定は `hits.has(line)`（DA レコードの**存在**）だけ。免除の適用も `allowlisted`（`:421-426`）の**行番号包含**のみ。**免除の正当性を見る段はパイプラインのどこにも無い**。
+2. **PR #2127 の意味的セレクタ移行は転位を解消せず固定した**。指紋は「誤った行」を行シフトを跨いで正確に追従する。実測: `amadeus-election.ts` のエントリは Issue 報告時に `:317` へ解決していたが observed では `:417`（+100 行）で、指紋 `sha256:2d1d83f1...` は Issue 記載と同一。すなわち移行が消したのは「行シフト起因の stale」であって「意味の不一致」ではない。
+3. **確定転位 18 件**（`re-scans/260811-allowlist-semantic-audit.md` §4 の正本）。分布は `amadeus-state.ts` 6・`amadeus-orchestrate.ts` 3・`amadeus-graph.ts` 2・`amadeus-mirror-executor.ts` 2・`amadeus-election.ts` / `amadeus-runtime.ts` / `amadeus-learnings.ts` / `amadeus-utility.ts` / `tla-arm.ts` 各 1。うち 4 件は「type-only / runtime-erased」を主張しながら**実行文**へ解決しており（`amadeus-graph.ts:1711-1716` / `:1715-1720`、`amadeus-utility.ts:820-822`）、2 件は解決範囲に**コメント行**を含む（`amadeus-state.ts:5736-5739`、`amadeus-orchestrate.ts:944-951`）。
+4. **腐敗はエントリ単位で混在する**。同一ファイル・同一 `reason` 文字列の群の中でも一致と転位が並存する（`amadeus-state.ts` の telemetry reason は `:991` 一致 / `:916` 転位。`amadeus-graph.ts` の型 reason は `:1130` / `:1134` 一致 / `:1711-1720` 転位）。ファイル単位・reason 単位の一括処理では正しく捌けない。
+5. **反証不能な `reason` が 45 件存在する**。逐語「defensive, type-only, or spawned-boundary path」が **20 件**、「Residual defensive, invalid-input, replay, or process-boundary」が **25 件**。いずれも複数の可能性を `or` で並べており特定の構文クラスを主張しない。**どの機械述語でも真偽を決められない**構造であり、`reason` 非空という現行契約は満たすが監査可能性はゼロ。
+
+### ガード不在（反証確認済み、3 述語）
+
+- `git grep -nIE "semanticAudit|reasonMatches|auditAllowlistReasons"`（対象 `packages/` `scripts/` `tests/` `.github/` `plugins/` `docs/`）= **exit 1（0 hit）**
+- `tests/coverage-patch-gate.ts` の export 16 シンボルのうち `reason` を引数に取る関数 = **0 件**
+- t229 の 2 テストファイルで `reason` に触れる全行はフィクスチャ値生成か「非空」検査。**`reason` の内容を検査するテストは 0 件**
+
+→ **`reason` と実コードの意味整合を検査する機構は、リポジトリ内に存在しない。**
+
+### 検証面（failing-first テストの置き場、候補）
+
+- **AST 述語の決定的判定**: 構文クラスを主張する `reason`（type-only 76 / catch 32 / dispatch-usage 10、重複あり）に対し「解決先の全トークンが型位置にあるか」「解決先が `CatchClause` 内か」「解決先が `CaseClause` か」を `ts` で判定する（ゲートは既に `ts` を import 済み）。実測の転位 4 件（`amadeus-graph.ts` 2 / `amadeus-utility.ts` 1 / `amadeus-state.ts:961-964`）はこの述語で落ちる
+- **反証不能 reason の禁止**: 選言型 boilerplate 45 件を `parseAllowlist` の段で拒否する契約を置けば、以後の混入は構造的に止まる（既存 45 件の扱いは別裁定）
+
+### 品質上の限界（本 scan で測っていないこと）
+
+全数照合は未実施であり、確定 18 件は**下限**である。`findStaleAllowlistEntries` の実行結果（現行 stale 件数）は LCOV を要するため未測定。転位の双方向の実害（偽赤 / 偽緑の件数）も未定量。詳細は `re-scans/260811-allowlist-semantic-audit.md` § UNMEASURED。
+
+## TLA+ receipt 経路の品質所見（260812-tla-proof-receipt、現在、observed `854692fd7`）
+
+**観測 ref**: 本節の file:line はすべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD）時点。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（距離 34）。正本は `re-scans/260812-tla-proof-receipt.md`。
+
+### Q1: 依存 seam の非対称（S1）
+
+loader の消費者 4 件のうち 3 件は DI seam を持ち、検証器だけが持たない（`tla-model-receipt.ts:154` / `:156` のモジュール束縛直接呼び出し）。seam の設計パターンは兄弟ファイルに既に 3 例存在する（`run-model-check-ci.ts:19-20` / `:28-29`、`run-model-check-diagnostic.ts:326-327` / `:333-334`、`run-model-check-source.ts:40` / `:128`）。全数表は `component-inventory.md` の同 intent 節。
+
+この非対称は #2913 の D1 そのものであり、同時にテスト容易性の欠落でもある — 検証器だけが単体で model-map を差し替えられない。
+
+### Q2: エンコーディング契約が型で守られていない（D2）
+
+`canonicalIdentity` へ渡す形式が producer ごとに分裂している（referee = object `{bytes: base64}` `tla-referee-toolchain.ts:47`、loader = 文字列 `tla-model-loader-internal.ts:279`、バイト照合 = 文字列 `fs-tlc-toolchain.ts:731`）。`createVerifiedTlaModelReceipt` が identity を再計算せずコピーする（`tla-model-receipt.ts:104-112`）ため、分裂は型でも実行時でも検出されず、**最終的な identity ハッシュ比較の不一致という遠く離れた症状**としてのみ現れる。`parse-don't-validate` の適用漏れ（識別子文字列をブランド型で運んでいない）に該当する。
+
+### Q3: テストが成功経路を一切通していない（t447）
+
+`tests/integration/t447-tla-referees.integration.test.ts:568` の describe ブロック `"the production referee toolchain adapter (CI-safe surface)"` のうち、`createRefereeToolchain` を実際に駆動するテストは 2 件のみ:
+
+- `:624` `"run() folds a broken mutant into a loud referee-toolchain error before any TLC work"` — **TLC 到達前**に落ちる経路
+- `:635` `"the adapter's version line names the pinned jar and the pinned JDK"` — バージョン行のみ
+
+残りはすべて `RefereeToolchainInternals.describeMutant` / `declaredInvariantsOf` / `traceStateVariablesOf` を純関数として検査する。**整形式のモデルを `preparePlanned` へ通すテストは存在しない**。よって #2913 の欠陥はテストの盲点にちょうど収まっており、既存スイートが green のまま本番経路が全滅していた。
+
+### Q4: `tests/formal-verif/**` の構造的 CI 除外
+
+`tests/run-tests.ts` / `tests/run-tests.sh` に `formal-verif` の参照は **0 件**。除外は 2 重に構造的である:
+
+1. スコープ集合が固定 — `tests/run-tests.ts:852` および `:909` の `const scopes = ["smoke", "unit", "integration", "e2e"] as const;`。`levelFiles`（`:750-759`）は `readdirSync(join(SCRIPT_DIR, level))` で当該 4 ディレクトリの直下しか見ず、再帰もしない。
+2. 仮に見えても `.filter((f) => f.endsWith(".test.ts"))`（`:754`）で弾かれる — `tla-referee-real-toolchain-probe.ts` は `.ts`。
+
+**除外リストは存在しない**（`levelFiles` の `excludes` 引数は当該 4 階層内の個別ファイル除外用）ので、「除外リストから外す」形の是正は取れない。probe をスイートへ載せるにはティアへの移設（`.test.ts` 化）か新スコープの追加が要る。ただし probe のヘッダは除外が**意図的**であることを明言しており（`:5-7` `Same shape as tla-real-toolchain-probe.ts: a standalone probe, not a CI test.` / `It needs JAVA_HOME on the pinned OpenJDK and network access for the first` / `jar fetch, so the default suite never runs it.`）、単純な移設は JDK 依存・ネットワーク依存のテストを既定スイートへ持ち込む。トレードオフの裁定は後続ステージの所掌。
+
+この除外は本 Issue 1 件より広い系統的な盲点である — `tests/formal-verif/**` 全体が既定 CI の射程外にある。
+
+## PR 収束ゲートの品質評価と未解決 BLOCKER（260811-pr-convergence-gate、履歴、observed `854692fd7`）
+
+### Assessment Summary
+
+| 領域 | 評価 | 根拠 |
+|---|---|---|
+| Type safety | 良好 | TypeScript、discriminated union、typed boundary errors |
+| External command safety | 良好 | shell を介さない argv spawn、stderr digest |
+| Component separation | 良好 | adapter/predicate/ledger/provenance の分離 |
+| Scope/harness wiring | 良好 | 4 self-* binding と generated grid を検証 |
+| Report authenticity | 不十分 | shape-only、receipt/digest/signature なし |
+| Completion enforcement | 不十分 | advisory sensor、manual fire、direct guard any-one semantics |
+| Delivery preconditions | 不十分 | create が commit/clean/push/head SHA を未検査 |
+| Regression coverage | 部分的 | component tests はあるが要求 matrix が未閉包 |
+
+### Existing Verification
+
+Developer scan では関連5 test files の計81 tests が pass した。既存 suite は real plugin bundle の compose/drop、4 self-* binding、code-generation produces overlay、report 不在時の engine coverage、3種の canonical report format、GraphQL snapshot、Intent/Bolt/Unit PR provenance をカバーする。
+
+### Unresolved BLOCKER Findings
+
+- **BLOCKER**: `renderReport` は公開された deterministic Markdown であり、CLI 以外の writer が同じ bytes を作れる。writer provenance を検証する receipt/audit identity がない。
+- **BLOCKER**: format sensor は `default_severity: advisory`、finding でも exit 0、stage `sensors: []`、manual fire である。未実行・失敗が completion を止めない。
+- **BLOCKER**: direct completion artifact guard は required produces のうち最低1件があれば存在条件を満たし得る。通常 orchestrator path の all-artifact coverage と一致しない。
+- **BLOCKER**: `create` は `--head` を渡すが、clean worktree、local commit、push、remote head SHA 一致を検査しない。
+
+### Follow-up Risks
+
+- **FOLLOW-UP**: stage `produces: []` / `requires_stage: []` と code-generation overlay の責任分離が resume/completion behavior を分かりにくくする。
+- **FOLLOW-UP**: 4 self-* scope × 8 harness × compose/drop × resume × direct/engine completion の回帰 matrix がない。
+- **FOLLOW-UP**: secret signature を導入すると key management が過剰になり得る。audit event identity + canonical content digest + PR/head binding で threat model を満たすか先に判断する。
+
+### Quality Gates and Recommended Tests
+
+repository の標準 gate は typecheck、Biome lint、Bun test、deterministic isolated builds、source-only check、distribution/graph invariants、project/patch coverage、plugin conformance である。
+
+実装時は、手書き/copy/tamper/replay report、sensor never-fired/failed/passed、uncommitted/dirty/unpublished/SHA mismatch/valid head、4 scope と非 self control、全 harness、compose/drop、park/resume を固定する必要がある。
+
+本 Reverse Engineering は read-only synthesis であり、追加 test 実行や code 変更は行っていない。pass 数は Developer scan の結果を継承する。
+
+## タイムアウト安定性評価（260810-test-time-factor、履歴、observed `ce3c3ccfd`）
+
+| 観点 | 観測 | リスク |
+|---|---|---|
+| 係数の正本 | `TEST_TIME_FACTOR`/`testTimeFactor` 実装0件 | CI 能力差をテスト値へ伝播できない |
+| runner 上限 | 既定30秒、上限300秒 | 低速 CI で正常テストが先に失効する |
+| 個別 timeout | 約555箇所/94ファイル | runner だけの修正では残存する |
+| 負荷依存 sleep | lock concurrency、IDE checkpoint、TUI/IDE driver に存在 | 起動・settle 完了前の観測で flake になる |
+| CI 配線 | ci/coverage/PBT/release で係数未注入 | 入口間で改善が不揃いになる |
+
+品質上の最小闉包は、helper の parse/scale 契約テスト、runner の既定値と明示値の係数適用テスト、workflow 注入の契約テスト、高優先 wait の乗算実証である。perf suite、時計境界テスト、timeout 発火用 fixture は対象外とする彼我分類が必要である。
+
+## advisory 宣言の無音 degradation とガード空白（260810-plugin-manifest-resoluti、履歴、observed `7b9391be2`）
+
+**観測 ref**: すべて observed = `7b9391be2db4fad791d637293ea442d5a1462bac`（= repo HEAD）。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`（13 commits / 302 files、PR #2811 を含む）。正本は `re-scans/260810-plugin-manifest-resoluti.md`。
+
+### ガード現況（直下の履歴節からの更新、PROVEN）
+
+直下の履歴節が記した「plugin コーパスが全ガードの死角」は **#2811 で部分的に解消**されている — `t531-plugin-harness-literal-guard` が新設され、plugin **散文**のハーネスリテラル走査は存在する。ただし本 Issue（#2823）のクラスに対する空白は残る:
+
+- **`plugins/**/plugin.json` の evaluator argv を走査するガードは存在しない**。Issue 完了条件 3 の述語は新規であり、現行配置では恒久赤になりうる注意（permanent-red caveat）が Issue 自身に付されている
+- consumer レイアウト（staging のみ、project supply なし）で advisory 経路を通すテストは **0 件**。t445 `:155-160` は逆に無音 fail-open を**契約として pin** しており、loud 化はこのテストの意図的書き換えを要する
+
+### 品質所見（PROVEN）
+
+1. **無音 degradation の全面性**: manifest 不在（`amadeus-advisory-declaration.ts:312-313`）・parse 不能・宣言なし（`:393` / `:397-399`）・route なし（`amadeus-advisory-choice.ts:960` / `:968`）のすべてが audit event・stderr・ログを出さない。fail-open（発火側）と fail-closed（spawn 失敗 → unreadable verdict → hold、`:340-343`）が混在し、向きの使い分けは設計コメントにのみ存在する
+2. **doc comment と配送契約の矛盾**: `:289-294` は「宣言は project ルート隣の plugin source tree から読む」と前提を明言するが、配送契約（前 intent `requirements.md:86` / `:90`）はそのレイアウトを consumer に供給しない。コメントが前提とするレイアウトを primary な導入経路（folder-drop、`plugin-projection.ts:634`）が作らない
+3. **installDoc の 2 腕が欠陥露出を変える**: folder-drop では advisory が無音で全滅し（(a)）、install verb の persistent 腕（`amadeus-plugin.ts:1117-1118` / `:1160`）では FULL bundle が project ルートへ永続化されて動く（(c)）。**同じ plugin の振る舞いが導入手順の選択だけで変わるのに、その差は未開示**（`:636` は verb に言及するが project supply 永続化には触れない）
+4. **dogfood masking**: advisory テスト 3 本（t445 `:224-226` / t526 `:59-61` / t528 `:103-105`）はすべて dogfood レイアウトで宣言を供給し、self-install では常に (c) が成立するため、本 repo 内のどの検証でも欠陥は見えない構造
+
+### 検証面（failing-first テストの置き場）
+
+- **t445 consumer-layout variant**: staging-only レイアウトで宣言読み手を呼び、現行の無音 `[]` を可視化
+- **t353-adjacent dot-dir-host install テスト**: install verb（persistent 腕）→ 宣言読取 → evaluator spawn の join を pin（現行は 4 面永続化までしか pin されていない、t353 `:254-274`）
+
+## 二重化した rename 規則にガードが無い — サンプルが乖離キーを外している（260810-plugin-prose-seed-guard、履歴、observed `c51afbd0a`）
+
+**観測 ref**: すべて observed = `c51afbd0a99b2eb3f0b9c1ee4e2cef2772378131`。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`。正本は `re-scans/260810-plugin-prose-seed-guard.md`。
+
+### 中核の品質債務（#2812）— ガードに見えてガードではない
+
+`transform()`（`scripts/harness-transform.ts:33-45`）と `seedBytesForHarness()`（`packages/framework/core/tools/amadeus-plugin.ts:669-675`）は同一の規則形を持つが、rename のデータ源が異なる（manifest `rulesRename` vs `KNOWN_RULES_SUBDIR`）。**両者の等価性を検査するテストは存在しない。**
+
+述語と実測:
+
+| 述語 | 結果 |
+|---|---|
+| `git grep -ln 'harness-transform' "${S}" -- tests/` | **6 ファイル**。うち `transform` を実 import するのは `tests/smoke/t-pi-dist-structure.test.ts:11` の **1 件のみ**、残り 5 件はコメント内の言及 |
+| `git grep -ln 'seedBytesForHarness' "${S}" -- tests/ scripts/` | **1 ファイル**（`tests/integration/t2790-plugin-staging-seed-harness-dir.integration.test.ts`） |
+| 両者を参照するファイル | **0**（上記 2 集合の交わりは空） |
+
+差分比較は現状**構造的に不可能**である。
+
+**サンプル選択による遮蔽（PROVEN）**: `t2790:87-102` の `seedBytesForHarness transforms prose only, and applies the rules rename` が叩くキーは `.claude`（`:89`）/ `.codex`（`:92`）/ `.kiro`（`:95`）と、非 prose `.codex`（`:99` / `:100`）/ `null`（`:101`）のみ。**乖離している `.cursor` / `.opencode` は不在** — サンプルされたキー集合は `KNOWN_RULES_SUBDIR` と manifest が**一致する部分集合と完全に一致**する。テストは緑だが、生きた乖離を 1 件も観測していない。
+
+これは「keyed map を叩くテストは、叩いているキーを map の全キー空間と突き合わせて初めてガードになる」という一般則の実例である（`cid:code-generation:vocabulary-collision-vacuity-guard` の姉妹形 — 述語ではなく**サンプル空間**が空文化の経路）。
+
+**コーパス側の遮蔽**: `git grep -nE '/rules/' "${S}" -- plugins/` → **exit 1 / 0 行**。plugin `.md` コーパスは 4 ファイルのみで、`{{HARNESS_DIR}}` の出現は `pr-convergence.md:180` の 1 件（`tools/` パス）。したがって rename 規則は plugin コーパスでは一度も発火せず、**#2810 の 11 行を修正しても #2812 の乖離は自然には露出しない**。ガードは明示的に作らないと生まれない。
+
+### #2811 が閉じたガードの穴（直前節 N-5 / N-6 の帰結）
+
+直前 intent が指摘した穴のうち 2 つは着地済みである。
+
+| 直前節の指摘 | 現況（observed 実測） |
+|---|---|
+| `HARNESS_PATH_RE` が 7 ディレクトリ中 3 個しか見ない（N-5） | **解消**。`tests/unit/t146-core-hygiene.test.ts:80-82` が `allHarnessDirs()`（manifest 導出）から正規表現を構築（`const HARNESS_PATH_RE = new RegExp(` `:80`） |
+| t146 の corpus に `plugins/` が無い（N-6） | **解消**。`:42-43` `const PLUGINS = join(REPO_ROOT, "plugins"); const STRAY_ROOTS: readonly string[] = [CORE, PLUGINS];`。トークンフロアテストは core-only スコープを維持（`:40-41` のコメントが逐語で理由を宣言） |
+| plugin 散文へハーネスリテラル述語が無い | **解消**。`tests/lib/boundary-guard.ts:205-210` `scanPluginProseForHarnessLiterals`（predicate 3）+ `tests/integration/t531-plugin-harness-literal-guard.integration.test.ts` |
+
+### 残る非対称 — ガード 2 本のコーパスが揃っていない
+
+#2810 のガードをどこへ置くかは、この非対称が決める（要件段の裁定事項）。
+
+| 候補 | コーパスの実体 | `plugin.json:61` と `.ts` の扱い |
+|---|---|---|
+| `tests/unit/t146-core-hygiene.test.ts` | `STRAY_ROOTS = [CORE, PLUGINS]`（`:42-43`）だが `walkMd`（`:66-72`）の `full.endsWith(".md")`（`:70`）により **`.md` のみ** | **構造的にコーパス外** → カーブアウト不要 |
+| `tests/integration/t531-…` | `PLUGIN_SCAN_ROOTS = ["plugins"]`（`:47`）+ `git grep -lE …`（`:71`）で **全 tracked file** | `.json` / `.ts` が入る → **恒久赤かカーブアウトの二択** |
+
+すなわち **t146 に置けば #2823（`plugin.json:61`）の裁定を待つ順序制約自体が発生せず、t531 に置く場合のみ待ちが生じる。** `t531` の `RAW_PLUGIN_ALLOWLIST` は `:53` で空（fail-closed、`:49-52` のコメントが逐語で理由を宣言）。
+
+既存述語の射程: `boundary-guard.ts:122` `HARNESS_LITERAL_TOKEN_RE = /\.(?:claude|codex|cursor|kimi-code|kiro-ide|kiro|opencode|pi)\/[A-Za-z0-9._/-]*/g` は harness dotdir 専用で、`plugins/<name>/tools/…` 形（#2810 の患部）を**捕捉しない**。新述語が要る。
+
+### 新述語のコーパス危険度（PROVEN）
+
+t146 に `plugins/` 相対述語を足す場合、CORE 半分の偽陽性は 1 件のみ。述語 `git grep -nE '(^|[^/A-Za-z0-9._-])plugins/[a-z0-9-]+/' "${S}" -- 'packages/framework/core/**/*.md'` → **1 hit**:
+
+```
+packages/framework/core/sensors/amadeus-pr-convergence-report-format.md:54
+  importing `plugins/pr-convergence/tools/pr-convergence-cli.ts`. Core ships to
+```
+
+`:51-58` を実読すると「The checker re-reads the report with its own minimal line reader **instead of** importing …」— **意図的な非 import を説明する散文**であり患部ではない。CORE 根も走査する設計ならこの 1 件が唯一のカーブアウト対象（`isCarvedOut` `:46-64` の既存 2 件と同様式）、PLUGINS 根に限定すれば発生しない。
+
+composed 面は危険要因にならない: `git ls-files dist .claude | wc -l` → **3**（`.claude/CLAUDE.md` / `.claude/hooks/amadeus-dispatch.ts` / `.claude/settings.json`）で `.gitignore` が `/dist/**`（`:19`）と `/.claude/**`（`:24`）を除外。合成 `.claude/plugins/` 配下は untracked のため、t531 の `git grep` 走査にも t146 の `walkMd(REPO_ROOT/plugins)` にも入らない。
+
+### 既存ピンとの衝突（PROVEN な不在）
+
+両 Issue の修正で**明示改訂が必要なテストは 1 件も検出されなかった**（`cid:reverse-engineering:c1-pinned-behavior-ruling` の適用対象外）。
+
+| テスト | 固定内容 | 修正後 |
+|---|---|---|
+| `t2790:87-102` | `.claude`/`.codex`/`.kiro`/非prose/`null` の出力文字列 | 緑維持（乖離キーを触らない） |
+| `t2790:104-120` compose E2E | `${harnessDir}/tools/amadeus-sensor.ts` がちょうど 1 回（`:96`）/ 生トークン残存なし（`:97`）/ foreign dir リテラルなし（`:98-100`） | 緑維持（置換後は自 dir） |
+| `t2790:122-131` 再 compose no-op | 2 回目の compose がバイト同一 | 緑維持 |
+| `t-plugin-projection-packaging.test.ts:180-196` | 上記同形を 8 面で | 緑維持 |
+| `t531:88-94` / `:96-110` / `:162-171` | dotdir リテラル 0 件 / 落ちる実証 / vacuity guard | 緑維持（トークン形は dotdir でない） |
+| `t146:104-118` ほか | CORE+PLUGINS の `.md` に dotdir 0 件 | 緑維持 |
+| `t144-harness-seam.cli.test.ts:207-220, 228-243, 245-255` | `rulesSubdir()` の descriptor / `AMADEUS_HARNESS_DIR`（`.kiro`/`.codex`）/ `AMADEUS_RULES_SUBDIR` 解決 | 緑維持。述語 `git grep -nE '(cursor\|opencode)' "${S}" -- tests/integration/t144-harness-seam.cli.test.ts` → **0 hits** = 現行 `.cursor`/`.opencode` fallback を pin するテストは**存在しない** |
+| `tests/smoke/t149-…:81` / `:87` | 両面の `harness.json` の `rulesSubdir` が `"amadeus-rules"` | **緑維持かつ整合強化** — descriptor は既に `amadeus-rules` を出荷しており、map 追加はこれと一致する方向 |
+
+### 拡張点
+
+`tests/helpers/harness-dir-fixture.ts` は既に `HarnessManifest` 型を import（`:11`）し `harnessDirOf` が manifest を `require`（`:22`）しているが、**`rulesRename` を返すヘルパーは持たない**。等価性テストが必要とする「`(harnessDir, rulesRename)` ペアの供給」はここへの最小追加で足りる。新規テスト追加時の付随作業（`tests/integration/t-coverage-mechanism-ratchet.test.ts` への台帳追記）は #2811 が t2790 追加時に 1 行行った先例がある。
+
+## 制御バイト混入クラスの防御在庫と CI ゲート先例（260810-control-byte-gate、履歴、2026-08-10、observed `f1270d710`）
+
+**観測 ref**: すべて observed = `f1270d710193d102b6fe8a728873a1c3e27dc094`（origin/main 系譜上。`origin/main` は 1 コミット先行 `40056d0ec`）。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`（10 commits）。正本は `re-scans/260810-control-byte-gate.md`。
+
+Issue #2814 が対象とする欠陥クラスは `cid:requirements-analysis:control-byte-guard`（PM1-8 2026-07-10、#786 実測）が記録するとおり、**tracked ソースへの制御バイト混入は git diff にも grep にもレビューにも構造的に見えない**。品質面から見た現況は「認識はあるが面の防御がない」である。
+
+### 現在の防御在庫（PROVEN、4 面すべてが射程外）
+
+| 面 | 所在 | 性質 | 射程外である理由 |
+|---|---|---|---|
+| `isUtf8` 述語 | `packages/framework/core/tools/amadeus-migrate.ts:477`（関数定義 `:476`）。呼び出し 5 箇所 = `:1461` / `:1994` / `:2038` / `:2385` / `:2388` | NUL 含有を非 UTF-8 と判定して拒否 | **入力面限定** — migrate が読む個別ファイルの検証であり、コーパス走査ではない |
+| `CONTROL_CHARS` strip | `packages/framework/core/tools/amadeus-lib.ts:4298` 定義 / `:4304` 適用（`subagentPurposeLine`） | 派生表示文字列から C0 を除去 | **表示層かつ除去** — 検出・拒否ではなく、ファイル内容をゲートしない |
+| #786 リグレッション guard | `tests/integration/t-learnings-persist-seam.test.ts:246-262` | `amadeus-learnings.ts` 1 ファイルの NUL 不在を assert | **単一ファイル・ハードコードパス** |
+| t55 の NUL-skip | `tests/unit/t55-test-suite-drift.test.ts:664-678`（`grepFile`） | NUL 含有ファイルを列挙から除外 | **同じ fail-open 側** — `grep -r` の binary スキップの意図的模倣であり、欠陥機序の側にある |
+
+**債務の性質**: 制御バイトが害であるという認識は `amadeus-lib.ts:4295-4297` のコメント（逐語「a stray control byte is invisible in review while corrupting the record frame」）としてコードベースに明文で存在する。にもかかわらず防御は点に留まり、#786 が実際に通った経路（tracked ソースへの直接混入）に対する面がない。**認識と機構の非対称**であり、`cid:requirements-analysis:symmetric-pair-review` の観点（write⇔check）で見れば check 側の欠落にあたる。
+
+### コーパス清浄度の実測（測定 ref = observed `f1270d710`）
+
+Python 直走査（`git ls-files -z` 起点、binary モード）:
+
+| 対象 | tracked files | 制御バイト hit |
+|---|---|---|
+| repo 全域 | **16124**（read errors 0） | **1** — `assets/AI-DLC-Workflows-2.0-Specification.pdf`（first NUL offset 248） |
+| Issue 宣言スコープ（core / harness / scripts / tests / docs） | **2576** | **0** |
+| `.github/` | **15** | **0** |
+| `dist/` | **0**（`.gitignore:19` `/dist/**`） | — |
+
+**品質上の含意**: 新設ゲートは宣言スコープにおいて **allowlist / carve-out ゼロで初日から green** になる。`cid:code-generation:corpus-sweep-for-new-guards` が要求する両側実測のうち「正当な既存データで赤くならないこと」は成立済み。残る側（落ちる実証）は本 RE では**未実施**であり、注入は一切行っていない。
+
+⚠ 手法メモ（`cid:requirements-analysis:review-method-memo`）: この清浄度測定を再実行する際、**grep 系ラッパを使うと偽陰性になる**。NUL 含有ファイルは binary 扱いで無音脱落する — それが検出したい当の欠陥機序である。走査は binary モード直走査で行い、read error 数も併せて報告する。
+
+### CI ゲート先例パターン（PROVEN）
+
+- **走査ルートの先例は非対称**: `tests/no-silent-drop/engine.ts:46-50` = core + harness + scripts / `tests/unchecked-cast-guard.ts:74` = core + scripts。後者の `:51-53` コメントは `tests/` を走査外と逐語で宣言。**どちらも `docs/` を走査しない**。Issue 宣言スコープは両者の上位集合であり、`tests/` と `docs/` の追加は先例からの意図的拡張として根拠の明文化を要する。
+- **配線の先例は単一ステップ**: `.github/workflows/ci.yml` の `lint` job（`:96-98`、`if: needs.changes.outputs.full == 'true'`）内に、各ゲートが `bun tests/<name>.ts --check` の兄弟ステップとして並ぶ（`:157` no-silent-drop / `:164` callsite / `:172` unchecked-cast / `:199` complexity）。これら 3 ゲートは `tests/run-tests.ts` の tier オーケストレーション**外**の standalone スクリプトであり、`package.json` エイリアスを持つのは no-silent-drop のみ（`:24`）。
+- **sensor 形態は CI をブロックしない**: `grep -n "amadeus-sensor\|sensors/" .github/workflows/ci.yml` は **0 hit（exit 1）**。sensors は hook 起動のランタイム機構で CI に一切配線されていない。「決定的に CI をブロックする」要件を sensor 単独で満たすことはできない。
+- **docs スコープの死角**: `scripts/detect-ci-changes.sh` は docs について `docs/reference/15-stage-definition.md|docs/reference/15-stage-definition.ja.md` の 2 ファイル名指しでのみ `full=true` を立て、`docs/*` ワイルドカードを持たない。docs-only PR は `full=false` で `lint` job 自体が skip されるため、`docs/` をスコープに含めたゲートを同 job のステップとして置くと **docs-only PR では走らない**。これは `cid:build-and-test:ci-paths-ignore-doc-guard-blindspot` が記録する既知の構造的死角と同型である。
+
+## ハーネス中立性ガードの穴 — plugin コーパスが全ガードの死角（260810-plugin-harness-dir-token、履歴、2026-08-10、observed `df1c874cf`）
+
+**観測 ref**: すべて observed = `df1c874cfb397fafe877a72f00a82664a59689ae`。差分 base = `91f37ec8589cdf468599b4787e27e5125d4d16e8`（20 commits / 117 files、患部 7 パスは非交差）。正本は `re-scans/260810-plugin-harness-dir-token.md`。
+
+Issue #2790 が漏れた機序は「誰も見ていなかった」である。ハーネス中立性を守るガードは 2 本あるが、**いずれも `plugins/` の散文リテラルを検査しない**。
+
+### t146-core-hygiene の corpus 境界（PROVEN）
+
+`tests/unit/t146-core-hygiene.test.ts`:
+
+- `const CORE = join(REPO_ROOT,"packages","framework","core")` — **`plugins/` を含まない**
+- `const HARNESS_PATH_RE = /\.(claude|kiro|codex)\//;`
+- `isCarvedOut` の carve-out は**ちょうど 2 件**（`workspace-detection.md` の `.kiro/` と `.codex/` を同時に運ぶ行、`stage-protocol.md` の `$CLAUDE_PROJECT_DIR/.claude/tools/` を運ぶ行）
+- 第2のテストが「core の `.md` 50 件超がトークンを運ぶ」ことを assert する
+
+**N-5（品質債務）**: `HARNESS_PATH_RE` は**相異なる 7 個のハーネスディレクトリのうち 3 個しかカバーしない**。`.opencode` / `.cursor` / `.kimi-code` / `.pi` は今日の core 散文でもガードを素通りする。これは #2790 とは独立に現存する穴である。
+
+**N-6（拡張コスト、PROVEN）**: 述語 `grep -rnE "\.(claude|kiro|codex)/" plugins/ --include="*.md"` → **1 hit**（patient のみ）。7 ディレクトリ全部へ広げても **同じ 1 hit**。すなわち **t146 の corpus に `plugins/` を足しても偽陽性は 0 で、新しい carve-out も不要**。
+
+⚠ ただし制約が 1 つある: 「トークン 50 件超」の下限テストは core を前提にしているため、**corpus 拡張は 2 つのテストの walk scope を分離する形でなければならない**（`plugins/` は `.md` 4 ファイルしか持たないため下限を満たさない）。
+
+### t377-plugin-boundary-guard の述語／corpus ミスマッチ（PROVEN）
+
+`tests/integration/t377-plugin-boundary-guard.integration.test.ts:33-35` は既に `PLUGIN_SCAN_ROOTS = ["plugins"]` を走査している。**corpus は正しいが述語が違う** — `tests/lib/boundary-guard.ts:152` `scanDistributionTreeForScriptsRefs` は `scripts/` トークンしか照合しない。したがってハーネスディレクトリのリテラルは検出対象外である。corpus は git-tracked ファイルに限定（`:56-62`）、`RAW_PLUGIN_ALLOWLIST = []` で fail-closed。
+
+**構造的評価**: #2790 は「corpus を持つガード（t377）と述語を持つガード（t146）が 1 対 1 で噛み合っていない」ことで漏れた。片方は正しい場所を見て違うものを探し、もう片方は正しいものを探して違う場所を見ている。
+
+### boundary-guard の SCAN_ROOTS 欠落（PROVEN な欠落、影響は UNMEASURED）
+
+`tests/lib/boundary-guard.ts:54-66` の `SCAN_ROOTS`（t258 用）には `plugins/` が無く、さらに `dist/kimi` / `dist/pi` / `.kimi-code` / `.pi` も無い。この 4 面が走査外であることの blast radius は本 intent では**未測定**。
+
+### 散文中のパス表記の一貫性債務（12 行、DEDUCED 強）
+
+述語 `grep -rn "amadeus-sensor.ts\|bun plugins/\|bun \.claude" plugins/ --include="*.md"` → **12 行**。patient 1 行がハーネスを**固定**し、残り 11 行がハーネス接頭辞を**落とす**。両者は同一機構（`{{HARNESS_DIR}}` 置換）の不在という 1 つの根に帰着する。詳細と根拠は `architecture.md` の同 intent 節を参照。
+
+**確立した先例との落差（N-8、PROVEN）**: core では `{{HARNESS_DIR}}/tools/` 形が **92 箇所**（`grep -rn "{{HARNESS_DIR}}/tools/" packages/framework/core/ --include="*.md" | wc -l`）で確立している。plugin 側だけがこの規約から外れている。一方、**散文中の手動センサー fire は core に先例が 0**（`grep -rn "amadeus-sensor.ts fire" packages/framework/core/` は `.md` に 0 hit）であり、patient は既存規約に単純に合わせるだけでは済まない形をしている。
+
+### 検証面（failing-first テストの置き場、PROVEN な棚卸し）
+
+- 経路A のピン: `tests/unit/t-plugin-projection.test.ts:201-244`（`{{HARNESS_DIR}}` を使う唯一の plugin 側 fixture）、`tests/integration/t-plugin-projection-packaging.test.ts:101-112`、t303、t308、t309/t312、t310、t311、`t254-reference-plugin-lifecycle.test.ts:191-337`
+- 経路B のピン: `tests/integration/t416-self-install-plugin-projection.integration.test.ts`（冪等性／決定性 `:51-52`、`:111-113` — **`plugins/` → temp workspace → compose を実際に走らせる唯一の層**）、`tests/e2e/t416-self-projection-fresh-git.serial.test.ts`、`t-plugin-projection.test.ts:317-319`、t146、t377
+
+## CG attribution の品質評価（260809-cg-attribution-stats、履歴、observed `82e2f30c0`）
+
+### 現行品質ベースライン
+
+- focused suites `tests/unit/t486-stage-stats.test.ts` と `tests/integration/t487-stage-stats.integration.test.ts`: Developer scan 実測 **80 pass / 0 fail / 221 expect**。
+- 現 corpus: 229 shards / 136,011 rows、constructed 1,603、measured 1,154、CG `n=109`。既存値は raw median 5,902s、net mean 10,814.93s、net median 4,721s、p95 49,247s。
+- 既存除外: unmatched 36、orphan 5、unclosed-idle 34、zero-second 415。Issue規則probeは zero-net attribution 4、ambiguous identity 3、eligible 102。
+- sensor-only observable union 4,501s / eligible net 1,009,424s = coverage 0.446%。eligible 102/102 が unattributable rate 50%超。
+- 出力実測は Markdown 53,121 bytes、CSV 48,619 bytes、JSON 107,248 bytes。現 `t487:337-389` が64 KiB超を証明するのはJSONのみ。
+
+これらは2026-08-09のDeveloper probeであり、監査は本workflow自身でも増える移動値である。後続要件・テストの数値はコマンド出力から再測定し、固定された永続真理として転記しない。
+
+### 良質な既存構造
+
+1. 集計の主要関数はexportされ、unit testがin-processでpure logicを直接被覆する（`t486:1-28`）。filesystem/CLIはintegrationへ分離されている。
+2. `composeReport` は同じcorpusから決定的reportを作り（`amadeus-stage-stats.ts:545-577`）、3 rendererは一つのreportを消費する。
+3. idleはwindowへclip後unionされ、重複を二重減算しない（`:264-285`）。interval algebraの先例として再利用できる。
+4. external stringsのsanitize、CSV quote、JSON fixed orderingが既にある（`:582-603`, `:670-723`）。
+5. real workspace 60秒以内とbyte-identical output、JSON pipe integrityのintegration proofがある（`t487:305-389`）。
+
+### 技術的負債とリスク
+
+| 債務 | 根拠 | 品質リスク |
+| --- | --- | --- |
+| `journalRecordKey` 相当の重複 | stage-stats独自scanとjournal merge/dedupの分離 | cross-shard duplicateをlifecycle duplicateと誤認しうる |
+| window collision metadata欠落 | `buildWindows` はpending queueをshiftするだけ（`:135-176`） | FIFOで測定値は出ても意味的identityが曖昧な窓を帰属へ混入 |
+| zero-net attribution未分離 | `subtractIdle` はraw=0だけ除外し、idle差引後net=0を残す（`:287-315`） | coverage除算でNaN/Infinity、既存populationを変える誘惑 |
+| interval algebra不在 | idle用private clip/mergeのみ（`:267-285`） | category/global unionの実装重複、overlap二重計上 |
+| decoder failure semantics不統一 | executionはinvalid silent skip（`:336-359`）、unit poolはthrow+dedup（`:113-159`） | 不採用イベントが無音で消え、missing instrumentation評価を歪める |
+| runtime inferenceとの意味非互換 | runtimeはcontainment/latest-wins（`amadeus-runtime.ts:498-760`） | snapshot用推定を遡及会計へ誤再利用する危険 |
+| 単一CLI肥大化 | `amadeus-stage-stats.ts` 968行、lint CCN `buildWindows=17`, `indexIdle=16` | candidate family追加で巨大条件分岐化しやすい |
+| 3 renderer独立記述 | MD/CSV/JSONに個別section追加が必要 | semantic parity drift |
+| oversized proofの形式偏り | `t487:337-389` はJSONだけ | Markdown/CSVが64 KiB未満のfixtureで偽証明になる |
+
+### fail-closed 品質条件
+
+- stage identity は event/envelope の canonical `Stage` / `Stage slug` / `origin.stage` 完全一致のみ。window containment・timestampから推定しない。
+- identity無し、start/terminal欠落、duplicate start/terminal、terminal<=start、malformed/digest/duplicate event set、FIFO collision、net<=0は区間を作らない。
+- 不採用は candidate×reason として Markdown/CSV/JSON 全てに現れ、silent skipを許さない。
+- measured population/既存duration/sensor/model/reviewBucketsは変えず、attribution eligibilityを別会計にする。
+- `GATE_*` はidle subtraction済みなのでcategoryへ再投入しない。
+- category名はlifecycle意味を保存し、人間向けフェーズ名へ推定変換しない。
+
+### 完了条件への検証マップ（スコープ縮小なし）
+
+| Issue #2695 条件 | 必須proof |
+| --- | --- |
+| 1 合成分節 | Fire id、nested/parallel、idle交差、別stage同秒、開始/終端欠落を独立oracleで固定 |
+| 2 恒等式 | zero-net/ambiguous除外後の全窓で秒・率の2恒等式、finite値を全件assert |
+| 3 union | category内とglobalの重複秒を故意に作り、二重計上時に赤くなるfixture |
+| 4 理由出力 | 全candidate familyとidentity/ambiguity/missing/malformed/duplicate理由を3形式で照合 |
+| 5 real corpus / argv | `--stage code-generation --outliers 10`再実行、0/100/-1/101/小数/非数値境界 |
+| 6 50%超 | observed factと不足境界を出し、`candidateBoundary`仮説を別fieldで確認 |
+| 7 falling proof | union/identity/恒等式のいずれかを壊す注入でテストが実際に赤くなる |
+| 8 3形式 parity | 同一semantic modelから母集団/rule/exclusion/valueをcross-render比較 |
+| 9 非退行 | focused 80 cases +既存report snapshot/shape、全stage durationを維持 |
+| 10 pipe完全性 | 各形式が機械的に>65,536 bytesであるfixture前提をassertし、MD/CSV consumer完走、JSON `jq empty` |
+
+### テスト設計上の注意
+
+既存 `t486` はv1/v2 recordsと`MeasuredWindow`を手で作り、scanner/constructor自身をoracleにしない（`:30-64`）。新しいinterval proofも、被検union関数の出力同士を比較する自己参照を避け、手計算可能な短い半開区間fixtureを使う。real corpus値はfixtureの正しさのoracleにせず、再実行可能性・性能・出力完全性の統合証拠に限定する。
+
+oversized testは「出力が64 KiBを超えた」という前提assertを形式ごとに置く。現実測ではMD/CSVが閾値未満なので、JSON用1200 distinct stages fixtureの流用だけでは条件10を証明しない。attribution rows/categories/outliersを十分生成する合成corpusで3形式それぞれのbytesを測り、full captureとpipe consumerの一致を比較する。
+
+### 保守性判断
+
+単一用途の汎用framework化は不要だが、candidate parsing・lifecycle pairing・interval accounting・aggregation・renderingをpure function境界で分ける必要がある。特にfamilyごとの条件を1つの巨大`if`へ増殖させず、閉じたrule tableと共通rejection resultに揃える。これにより、新規計装を将来追加する際も「採用できない候補を消さない」という観測契約を保てる。
+
+## 監査リーダーのスキーマ決め打ち債務（260807-intent-2328-tests-e2e-au、履歴、2026-08-07、observed `a5621236c`）
 
 ### 債務の性質
 

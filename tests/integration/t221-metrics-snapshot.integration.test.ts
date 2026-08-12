@@ -1,3 +1,4 @@
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -120,9 +121,9 @@ describe("t221 snapshot writer and real CLI", () => {
     const root = fixture(); const first = cli(root, "--write"); const second = cli(root, "--write");
     expect(first.status).toBe(0); expect(first.stdout.trim()).toMatch(/^OK 6 collectors \(skipped: bugs\) .+\.json$/); expect(first.elapsed).toBeLessThan(10_000);
     expect(second.status).toBe(0); expect(readdirSync(join(root, "metrics")).filter((name) => name.endsWith(".json"))).toHaveLength(2);
-  }, 20_000);
+  }, scaleTestTime(20_000));
   test("real --check runs all collectors without writing", () => {
     const root = fixture(); const result = cli(root, "--check");
     expect(result.status).toBe(0); expect(result.stdout.trim()).toBe("CHECK OK 6 collectors (skipped: bugs)"); expect(existsSync(join(root, "metrics"))).toBe(false);
-  }, 10_000);
+  }, scaleTestTime(10_000));
 });

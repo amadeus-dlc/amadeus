@@ -10,7 +10,7 @@
 // verdict (flow 4) so the next judgment is `current`.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { __resetGraphCache, compileStageGraph } from "../../packages/framework/core/tools/amadeus-graph.ts";
@@ -21,7 +21,7 @@ import {
   ACTIVATION_STATE_FILE,
   ACTIVATION_WATCH_GLOBS,
   recordActivationVerdict,
-} from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+} from "../../plugins/formal-model-check/tools/plugin-activation.ts";
 import {
   applyPluginPlan,
   createNodeBackend,
@@ -65,6 +65,11 @@ function makeHostRoot(prefix: string): string {
   const h = join(hostProjectRoot, ".claude");
   mkdirSync(h, { recursive: true });
   writeActivationModelAssets(hostProjectRoot);
+  cpSync(
+    join(BUNDLE_ROOT, ACTIVATION_PLUGIN),
+    join(hostProjectRoot, "plugins", ACTIVATION_PLUGIN),
+    { recursive: true },
+  );
   return h;
 }
 

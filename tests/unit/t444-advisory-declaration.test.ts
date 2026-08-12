@@ -14,7 +14,6 @@ const DECLARATION = {
       code: "authoring-hold",
       checkpoints: ["requirements-analysis", "functional-design"],
       evaluator: { argv: ["bun", "plugins/formal-model-check/tools/tla-authoring.ts", "hold"] },
-      formalCheck: null,
     },
   ],
 };
@@ -25,7 +24,6 @@ describe("parseAdvisoryDeclarations", () => {
     expect(parsed.invalid).toEqual([]);
     expect(parsed.declarations).toHaveLength(1);
     expect(String(parsed.declarations[0]?.code)).toBe("authoring-hold");
-    expect(parsed.declarations[0]?.formalCheckArgv).toBeNull();
   });
 
   test("a manifest without advisories declares none, and that is not an error", () => {
@@ -44,26 +42,10 @@ describe("parseAdvisoryDeclarations", () => {
     ],
     ["advisories that are not a list", JSON.stringify({ advisories: {} })],
     ["an entry that is not an object", JSON.stringify({ advisories: ["authoring-hold"] })],
-    [
-      "a formalCheck that is neither an object nor null",
-      JSON.stringify({ advisories: [{ ...DECLARATION.advisories[0], formalCheck: "bun run.ts" }] }),
-    ],
-    [
-      "a formalCheck without an argv array",
-      JSON.stringify({ advisories: [{ ...DECLARATION.advisories[0], formalCheck: { argv: [] } }] }),
-    ],
   ])("reports %s as invalid rather than dropping it", (_label, text) => {
     const parsed = parseAdvisoryDeclarations(text);
     expect(parsed.declarations).toEqual([]);
     expect(parsed.invalid.length).toBeGreaterThan(0);
-  });
-
-  test("reads a declaration whose formalCheck carries an argv vector", () => {
-    const parsed = parseAdvisoryDeclarations(JSON.stringify({
-      advisories: [{ ...DECLARATION.advisories[0], formalCheck: { argv: ["bun", "check.ts", "{out}"] } }],
-    }));
-    expect(parsed.invalid).toEqual([]);
-    expect(parsed.declarations[0]?.formalCheckArgv).toEqual(["bun", "check.ts", "{out}"]);
   });
 });
 
@@ -106,6 +88,15 @@ describe("advisoryFromEvaluatorRun (BR-U2-20: stdout is the authority)", () => {
     expect(raised?.plugin).toBe("formal-model-check");
     expect(raised?.stage).toBe("requirements-analysis");
     expect(raised?.message).toContain("stale-evidence");
+  });
+
+  test("a plugin-provided hold message is preserved verbatim", () => {
+    const message = "advisory: plugin-owned explanation";
+    const raised = advisory({
+      status: 1,
+      stdout: JSON.stringify({ verdict: { kind: "hold", reasons: [{ kind: "changed" }], message } }),
+    });
+    expect(raised?.message).toBe(message);
   });
 
   test("a typed failure raises rather than releasing (fail-closed)", () => {

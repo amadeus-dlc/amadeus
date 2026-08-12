@@ -1,6 +1,7 @@
 // covers: hook:amadeus-plugin-compose, adapter:session-start, plugin:opencode
 // size: large
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -72,7 +73,7 @@ async function fire(face: Face, project: string): Promise<{ stdout: string; stde
     const result = spawnSync("bun", ["-e", program, join(host, "plugins", "amadeus-opencode-plugin.ts"), project], {
       cwd: project,
       encoding: "utf-8",
-      timeout: 120_000,
+      timeout: scaleTestTime(120_000),
       env: subprocessEnv(),
     });
     expect(result.error, `${face.name} process error`).toBeUndefined();
@@ -88,7 +89,7 @@ async function fire(face: Face, project: string): Promise<{ stdout: string; stde
     cwd: project,
     input: "{}",
     encoding: "utf-8",
-    timeout: 120_000,
+    timeout: scaleTestTime(120_000),
     env: subprocessEnv({ CLAUDE_PROJECT_DIR: project }),
   });
   expect(result.error, `${face.name} process error`).toBeUndefined();

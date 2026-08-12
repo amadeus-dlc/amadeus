@@ -23,7 +23,16 @@
 // (fs-tests-integration-first).
 
 import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
-import { cpSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -264,12 +273,24 @@ describe("t449 the real bundle is installable (FR-1a, NFR-4 precondition)", () =
     expect(result.kind === "ready" ? "ready" : JSON.stringify(result)).toBe("ready");
   });
 
-  test("the plugin stage declares the empty scope set — install is the only door", () => {
+  test("the plugin stage leaves scope assignment to the host", () => {
     const parsed = parseStageFrontmatter(readFileSync(join(PLUGIN_SRC, "stages", "pr-convergence.md")));
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
     expect(parsed.value.slug).toBe(PLUGIN);
     expect(parsed.value.seams.sensors).toEqual(["pr-convergence-report-format"]);
+    expect(existsSync(join(PLUGIN_SRC, "tools", "amadeus-sensor-pr-convergence-report-format.ts"))).toBe(true);
+  });
+
+  test("the shipped host binds PR convergence to every self scope", () => {
+    const config = JSON.parse(readFileSync(join(REPO_ROOT, "amadeus", "config.json"), "utf8")) as {
+      plugin?: { "scope-bindings"?: Record<string, Record<string, string[]>> };
+    };
+    const bindings = config.plugin?.["scope-bindings"];
+    const selfScopes = ["self-document", "self-feature", "self-fix", "self-refactor"];
+
+    expect(bindings?.[PLUGIN]?.[PLUGIN]).toEqual(selfScopes);
+    expect(bindings?.["formal-model-check"]?.["formal-model-check"]).toEqual(selfScopes);
   });
 });
 
@@ -282,26 +303,36 @@ describe("t449 install overlays the guard's produces (FR-2a/2b, ADR-5)", () => {
     const before = readFileSync(join(host, STAGE_REL));
     expect(handlePluginCli(["compose", "--project-root", host], deps())).toBe(0);
     expect(producesOfCodeGeneration()).toEqual([...STOCK_PRODUCES, SEAM_ENTRY]);
-    // The only changed bytes are the appended produces line (BR-U1-2).
+    // The only changed bytes are the plugin-owned produces and sensor lines.
     const after = readFileSync(join(host, STAGE_REL)).toString("utf-8");
-    expect(after).toBe(before.toString("utf-8").replace("  - code-summary\n", `  - code-summary\n  - ${SEAM_ENTRY}\n`));
+    expect(after).toBe(
+      before.toString("utf-8")
+        .replace("  - code-summary\n", `  - code-summary\n  - ${SEAM_ENTRY}\n`)
+        .replace("  - self-scope-consistency\n", "  - self-scope-consistency\n  - pr-convergence-report-format\n"),
+    );
   });
 
-  test("installed: the plugin stage compiles with its sensor resolved (FR-6b)", () => {
+  test("installed: the plugin sensor is owned and bound to both delivery stages", () => {
     expect(handlePluginCli(["compose", "--project-root", host], deps())).toBe(0);
     const stage = compileFromHost().stages.find((s) => s.slug === PLUGIN);
     expect(stage).toBeDefined();
     expect(stage?.scopes ?? []).toEqual([]);
-    expect((stage?.sensors_applicable ?? []).map((s) => s.id)).toEqual(["pr-convergence-report-format"]);
+    expect(stage?.sensors_applicable?.map((s) => [s.id, s.severity])).toContainEqual([
+      "pr-convergence-report-format", "blocking",
+    ]);
+    expect(existsSync(join(host, "sensors", "amadeus-pr-convergence-report-format.md"))).toBe(true);
+    const codeGeneration = compileFromHost().stages.find((s) => s.slug === "code-generation");
+    expect(codeGeneration?.sensors_applicable?.map((s) => [s.id, s.severity])).toContainEqual([
+      "pr-convergence-report-format", "blocking",
+    ]);
   });
 
-  test("a stage declaring an unknown sensor id would fail the compile loudly", () => {
-    // The fail-closed ordering constraint of ADR-5, demonstrated on the same
-    // host: had the core manifest not landed first, compose would compile a
-    // stage whose sensor cannot resolve.
+  test("the plugin-owned sensor tool remains available after compose", () => {
     expect(handlePluginCli(["compose", "--project-root", host], deps())).toBe(0);
-    rmSync(join(host, "sensors", "amadeus-pr-convergence-report-format.md"));
-    expect(() => compileFromHost()).toThrow(/UNKNOWN_SENSOR: plugin pr-convergence stage pr-convergence/);
+    expect(existsSync(join(host, "plugins", PLUGIN, "tools", "amadeus-sensor-pr-convergence-report-format.ts"))).toBe(
+      true,
+    );
+    expect(() => compileFromHost()).not.toThrow();
   });
 });
 
@@ -361,6 +392,7 @@ describe("t449 uninstall is byte-identical and total (FR-1b)", () => {
     expect(handlePluginCli(["drop", PLUGIN, "--project-root", host], deps())).toBe(0);
     expect(readFileSync(join(host, STAGE_REL)).equals(before)).toBe(true);
     expect(producesOfCodeGeneration()).toEqual(STOCK_PRODUCES);
+    expect(existsSync(join(host, "sensors", "amadeus-pr-convergence-report-format.md"))).toBe(false);
     expect(compileFromHost().stages.some((s) => s.slug === PLUGIN)).toBe(false);
   });
 

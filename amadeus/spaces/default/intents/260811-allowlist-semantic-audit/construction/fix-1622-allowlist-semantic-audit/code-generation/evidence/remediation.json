@@ -1,0 +1,121 @@
+[
+  {
+    "id": "T1",
+    "file": "packages/framework/core/tools/amadeus-election.ts",
+    "action": "delete",
+    "oldRange": { "start": 417, "end": 417 }
+  },
+  {
+    "id": "T2",
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "action": "repoint",
+    "oldRange": { "start": 916, "end": 916 },
+    "newRange": { "start": 938, "end": 938 }
+  },
+  {
+    "id": "T3",
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "action": "delete",
+    "oldRange": { "start": 925, "end": 940 }
+  },
+  {
+    "id": "T4",
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "action": "repoint",
+    "oldRange": { "start": 961, "end": 964 },
+    "newRange": { "start": 1011, "end": 1012 }
+  },
+  {
+    "id": "T5",
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "action": "repoint",
+    "oldRange": { "start": 1070, "end": 1070 },
+    "newRange": { "start": 1099, "end": 1099 }
+  },
+  {
+    "id": "T6",
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "action": "repoint",
+    "oldRange": { "start": 5683, "end": 5683 },
+    "newRange": { "start": 5834, "end": 5834 }
+  },
+  {
+    "id": "T7",
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "action": "repoint",
+    "oldRange": { "start": 5736, "end": 5739 },
+    "newRange": { "start": 5826, "end": 5827 }
+  },
+  {
+    "id": "T8",
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "action": "repoint",
+    "oldRange": { "start": 1707, "end": 1707 },
+    "newRange": { "start": 1738, "end": 1738 }
+  },
+  {
+    "id": "T9",
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "action": "repoint",
+    "oldRange": { "start": 6189, "end": 6190 },
+    "newRange": { "start": 6262, "end": 6263 }
+  },
+  {
+    "id": "T10",
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "action": "delete",
+    "oldRange": { "start": 944, "end": 951 }
+  },
+  {
+    "id": "T11",
+    "file": "packages/framework/core/tools/amadeus-runtime.ts",
+    "action": "delete",
+    "oldRange": { "start": 878, "end": 878 }
+  },
+  {
+    "id": "T12",
+    "file": "packages/framework/core/tools/amadeus-learnings.ts",
+    "action": "repoint",
+    "oldRange": { "start": 902, "end": 904 },
+    "newRange": { "start": 911, "end": 911 }
+  },
+  {
+    "id": "T13",
+    "file": "packages/framework/core/tools/amadeus-graph.ts",
+    "action": "repoint",
+    "oldRange": { "start": 1715, "end": 1720 },
+    "newRange": { "start": 1768, "end": 1769 }
+  },
+  {
+    "id": "T14",
+    "file": "packages/framework/core/tools/amadeus-graph.ts",
+    "action": "delete",
+    "oldRange": { "start": 1711, "end": 1716 }
+  },
+  {
+    "id": "T15",
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "action": "repoint",
+    "oldRange": { "start": 820, "end": 822 },
+    "newRange": { "start": 862, "end": 863 }
+  },
+  {
+    "id": "T16",
+    "file": "plugins/formal-model-check/tools/tla-arm.ts",
+    "action": "delete",
+    "oldRange": { "start": 199, "end": 199 }
+  },
+  {
+    "id": "T17",
+    "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
+    "action": "repoint",
+    "oldRange": { "start": 1471, "end": 1475 },
+    "newRange": { "start": 1683, "end": 1687 }
+  },
+  {
+    "id": "T18",
+    "file": "packages/framework/core/tools/amadeus-mirror-executor.ts",
+    "action": "delete",
+    "oldRange": { "start": 1480, "end": 1484 }
+  }
+]

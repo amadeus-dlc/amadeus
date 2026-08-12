@@ -58,6 +58,27 @@ function conductorSurfaces(): string[] {
     .sort();
 }
 
+function preparedRetryBlock(body: string): string | null {
+  const lines = body.split("\n");
+  const anchor = lines.findIndex((line) => line.includes("prepared_batch"));
+  if (anchor < 0) return null;
+  let start = anchor;
+  while (
+    start > 0 &&
+    lines[start - 1].trim().length > 0 &&
+    !/^#{1,6}\s/.test(lines[start - 1]) &&
+    !/^\s*-\s/.test(lines[start])
+  ) start--;
+  let end = anchor;
+  while (
+    end + 1 < lines.length &&
+    lines[end + 1].trim().length > 0 &&
+    !/^#{1,6}\s/.test(lines[end + 1]) &&
+    !/^\s*-\s/.test(lines[end + 1])
+  ) end++;
+  return lines.slice(start, end + 1).map((line) => line.trim()).join(" ");
+}
+
 function sectionStartingAt(body: string, heading: string): string {
   const start = body.indexOf(heading);
   if (start < 0) return "";
@@ -119,6 +140,11 @@ const SHARED_BUILDER_ROUTING_TOKENS = [
   "uses `amadeus-builder-agent`",
   "Named `reverse-engineering` and `code-generation` lifecycle stages remain owned by `amadeus-developer-agent`.",
 ] as const;
+const REVIEW_RECOVERY_TOKENS = [
+  "`review_only:true`",
+  "skips the stage body",
+  "`gate:false` suppresses only the human gate and §13",
+] as const;
 
 describe("t181 per-harness conductor-surface freshness gate (P11 RESOLVE-2)", () => {
   const skills = harnessSkills();
@@ -158,6 +184,39 @@ describe("t181 per-harness conductor-surface freshness gate (P11 RESOLVE-2)", ()
       const body = readFileSync(join(REPO_ROOT, rel), "utf-8");
       for (const tok of REQUIRED_TOKENS) {
         if (!body.includes(tok)) missing.push(`${rel}  missing: ${tok}`);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+
+  test("every harness distinguishes prepared retries from ordinary swarm preparation", () => {
+    const missing: string[] = [];
+    for (const rel of skills) {
+      const body = readFileSync(join(REPO_ROOT, rel), "utf-8");
+      const scope = preparedRetryBlock(body);
+      if (scope === null) {
+        missing.push(`${rel}  prepared retry missing: prepared_batch`);
+        continue;
+      }
+      for (const token of ["retry_unit", "acquire", "confirm"]) {
+        if (!scope.includes(token)) missing.push(`${rel}  prepared retry missing: ${token}`);
+      }
+      if (!/(?:skip|do not).*(?:driver resolution|resolve the driver)/i.test(scope)) {
+        missing.push(`${rel}  prepared retry does not skip driver resolution`);
+      }
+      if (!/(?:skip|do not run).*(?:ordinary|normal|run )?prepar/i.test(scope)) {
+        missing.push(`${rel}  prepared retry does not skip preparation`);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+
+  test("every conductor surface preserves per-unit review before gate recovery", () => {
+    const missing: string[] = [];
+    for (const rel of conductorSurfaces()) {
+      const body = readFileSync(join(REPO_ROOT, rel), "utf-8");
+      for (const token of REVIEW_RECOVERY_TOKENS) {
+        if (!body.includes(token)) missing.push(`${rel}  missing: ${token}`);
       }
     }
     expect(missing).toEqual([]);

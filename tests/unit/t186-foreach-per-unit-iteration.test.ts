@@ -40,9 +40,10 @@
 // than emitting the unresolved sentinel, isolating the per-unit behaviour. All
 // temp dirs are cleaned in afterEach.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   AMADEUS_SRC,
@@ -239,6 +240,29 @@ function coverUnit(
   }
 }
 
+/** Project the validated reviewer verdict onto the unit's primary artifact. */
+function reviewUnit(proj: string, unit: string, slug: string, primary: string): void {
+  const path = join(seededRecordDir(proj), "construction", unit, slug, `${primary}.md`);
+  writeFileSync(
+    path,
+    `${readFileSync(path, "utf-8")}\n## Review — Iteration 1\n\n` +
+      "- **Verdict:** READY\n" +
+      "- **Reviewer:** amadeus-architecture-reviewer-agent\n" +
+      "- **Date:** 2026-08-10T00:00:00Z\n" +
+      "- **Iteration:** 1\n" +
+      "- **Scope decision:** none\n",
+  );
+}
+
+/** Append an incomplete projection that must not satisfy recovery. */
+function seedReviewHeadingOnly(proj: string, unit: string, slug: string, primary: string): void {
+  const path = join(seededRecordDir(proj), "construction", unit, slug, `${primary}.md`);
+  writeFileSync(
+    path,
+    `${readFileSync(path, "utf-8")}\n## Review — Iteration 1\n`,
+  );
+}
+
 /**
  * Create a bare Unit-of-Work directory under construction/ with no artifacts.
  * On the degrade path (no compiled Bolt DAG) this listing IS the unit ledger,
@@ -316,7 +340,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     );
     // The literal placeholder is gone, the real unit was substituted.
     expect(d.produces?.some((p) => p.includes("{unit-name}"))).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // 2: gate suppressed on a non-last unit, alpha + beta both uncovered, so
   // alpha is NOT the last uncovered -> directive.gate === false.
@@ -326,7 +350,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     const d = runNext(proj);
     expect(d.unit).toBe("alpha");
     expect(d.gate).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // 3: iteration advance, cover alpha's full required produces[] on disk -> next emits
   // unit=beta (the engine walks to the next uncovered unit).
@@ -340,7 +364,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     expect(d.produces).toContain(
       `${RP}/construction/beta/functional-design/business-logic-model.md`,
     );
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // 4: gate STILL suppressed on the LAST uncovered unit. alpha covered, beta the
   // only uncovered unit -> directive.unit=beta AND directive.gate===false. The
@@ -354,7 +378,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     const d = runNext(proj);
     expect(d.unit).toBe("beta");
     expect(d.gate).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // 5: degrade with no DAG, no runtime-graph.json -> the stage is still
   // per-unit, so the engine resolves the unit from the ONLY ledger it has on
@@ -374,7 +398,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     expect(
       (d.produces ?? []).filter((p) => p.includes("{unit-name}")),
     ).toEqual([]);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // 5b: the fail-closed half of the same contract. No DAG and NO unit directory
   // -> the engine refuses rather than emitting a placeholder path that can be
@@ -387,7 +411,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     expect(d.message).toContain("functional-design");
     expect(d.message).toContain("no unit directory exists");
     expect(d.message).not.toContain("{unit-name}");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // 6: coverage guard on report, approve with alpha + beta both uncovered ->
   // kind=error naming the remaining units; the transition is NOT committed.
@@ -405,7 +429,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     expect(d.message).toContain("alpha");
     expect(d.message).toContain("beta");
     expect(d.message).toContain("per-unit");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // 6b: coverage guard refuses even when only the LAST unit is uncovered (the
   // strict all-units rule, not just >1). alpha covered, beta not -> approve is
@@ -423,7 +447,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     expect(d.kind).toBe("error");
     expect(d.message).toContain("beta");
     expect(d.message).not.toContain("alpha"); // alpha is covered, not named
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // 7: single-row case, a NON-per-unit stage (application-design) still emits
   // with NO `unit` field and its normal gate, even with a bolt_dag present (the
@@ -436,7 +460,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     expect(d.stage).toBe("application-design");
     expect(d.unit).toBeUndefined();
     expect(d.produces?.some((p) => p.includes("/construction/"))).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // 8: second inline per-unit stage (nfr-requirements) iterates the same way,
   // proves the loop is keyed on for_each, not the functional-design slug.
@@ -448,26 +472,92 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     expect(d.stage).toBe("nfr-requirements");
     expect(d.unit).toBe("alpha");
     expect(d.gate).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 
-  // 9: all-covered settle. Both units covered on disk but the checkbox is still
-  // in-flight -> next emits the LAST unit with the stage's REAL gate (true), so
-  // the single human approval is presented only after every unit is built.
-  test("9: with every unit covered, next presents the real gate on the last unit", () => {
+  // 9: all-covered-and-reviewed settle. Both units carry their artifacts and
+  // verdicts but the checkbox is still in-flight -> next emits the LAST unit
+  // with the stage's REAL gate (true), so approval cannot precede §12a.
+  test("9: with every unit covered and reviewed, next presents the real gate on the last unit", () => {
     const proj = seedProject("functional-design", "on");
     seedBoltDag(proj, ["alpha", "beta"]);
     coverUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES);
     coverUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES);
+    reviewUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES[0]);
+    reviewUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES[0]);
     const d = runNext(proj);
     expect(d.kind).toBe("run-stage");
     expect(d.stage).toBe("functional-design");
     expect(d.unit).toBe("beta"); // the last unit in topo order
     expect(d.gate).toBe(true);
-  }, 30000);
+  }, scaleTestTime(30000));
 
-  // 9b: with every unit covered, the approve is ALLOWED (the guard passes) and
+  test("9a: a heading-only Review projection is recovered before the gate", () => {
+    const proj = seedProject("functional-design", "on");
+    seedBoltDag(proj, ["alpha", "beta"]);
+    coverUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES);
+    coverUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES);
+    seedReviewHeadingOnly(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES[0]);
+    reviewUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES[0]);
+    const d = runNext(proj);
+    expect(d.kind).toBe("run-stage");
+    expect(d.unit).toBe("alpha");
+    expect(d.gate).toBe(false);
+    expect(d.review_only).toBe(true);
+  }, scaleTestTime(30000));
+
+  test("9b: a whitespace-only Scope decision is recovered before the gate", () => {
+    const proj = seedProject("functional-design", "on");
+    seedBoltDag(proj, ["alpha", "beta"]);
+    coverUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES);
+    coverUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES);
+    reviewUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES[0]);
+    const alphaArtifact = join(
+      seededRecordDir(proj),
+      "construction",
+      "alpha",
+      "functional-design",
+      `${FD_REQUIRED_PRODUCES[0]}.md`,
+    );
+    writeFileSync(
+      alphaArtifact,
+      readFileSync(alphaArtifact, "utf-8").replace(
+        "- **Scope decision:** none",
+        "- **Scope decision:**   ",
+      ),
+    );
+    reviewUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES[0]);
+    const d = runNext(proj);
+    expect(d.kind).toBe("run-stage");
+    expect(d.unit).toBe("alpha");
+    expect(d.gate).toBe(false);
+    expect(d.review_only).toBe(true);
+  }, scaleTestTime(30000));
+
+  test("9c: an unreadable Review projection is recovered before the gate", () => {
+    const proj = seedProject("functional-design", "on");
+    seedBoltDag(proj, ["alpha", "beta"]);
+    coverUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES);
+    coverUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES);
+    const alphaArtifact = join(
+      seededRecordDir(proj),
+      "construction",
+      "alpha",
+      "functional-design",
+      `${FD_REQUIRED_PRODUCES[0]}.md`,
+    );
+    rmSync(alphaArtifact);
+    mkdirSync(alphaArtifact);
+    reviewUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES[0]);
+    const d = runNext(proj);
+    expect(d.kind).toBe("run-stage");
+    expect(d.unit).toBe("alpha");
+    expect(d.gate).toBe(false);
+    expect(d.review_only).toBe(true);
+  }, scaleTestTime(30000));
+
+  // 9d: with every unit covered, the approve is ALLOWED (the guard passes) and
   // the transition commits (kind=done, not error).
-  test("9b: approving once every unit is covered is allowed and commits", () => {
+  test("9d: approving once every unit is covered is allowed and commits", () => {
     const proj = seedProject("functional-design", "on");
     seedBoltDag(proj, ["alpha", "beta"]);
     coverUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES);
@@ -479,7 +569,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
       "approved",
     ]);
     expect(d.kind).toBe("committed");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // 10: re-reporting an ALREADY-completed ([x]) per-unit stage with a DAG present
   // but its artifacts ABSENT (a fresh clone / moved files) must NOT be intercepted
@@ -511,7 +601,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     // The guard must not fire on a completed stage; report commits the forward
     // transition (a done directive), never a per-unit coverage error.
     expect(d.kind).not.toBe("error");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // 11: skeleton-gate precedence. functional-design is the FIRST construction
   // stage for feature scope (the walking-skeleton gate stage). With NO Skeleton
@@ -529,7 +619,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     expect(d.produces).toContain(
       `${RP}/construction/{unit-name}/functional-design/business-logic-model.md`,
     );
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // 12: non-autonomous code-generation (mode: subagent, the swarm stage) iterates
   // per unit when the swarm does NOT fire (no autonomy grant) -> the engine drives
@@ -547,7 +637,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     expect(d.produces).toContain(
       `${RP}/construction/alpha/code-generation/code-generation-plan.md`,
     );
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // 13: autonomous-swarm carve-out. code-generation under an autonomy grant with a
   // MULTI-batch DAG [[alpha],[beta]] runs via the swarm (invoke-swarm batches[0]),
@@ -604,5 +694,5 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
       "approved",
     ]);
     expect(d.kind).not.toBe("error");
-  }, 30000);
+  }, scaleTestTime(30000));
 });

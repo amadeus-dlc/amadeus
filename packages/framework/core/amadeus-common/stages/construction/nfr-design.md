@@ -2,7 +2,7 @@
 slug: nfr-design
 phase: construction
 execution: CONDITIONAL
-condition: NFR Requirements was executed and NFR patterns need design. Skip if NFR Requirements was skipped.
+condition: NFR patterns need design. Membership is decided by the scopes: list alone, and a scope may run this stage while skipping NFR Requirements (self-feature does) — the upstream inputs then arrive marked absent-and-expected.
 lead_agent: amadeus-architect-agent
 support_agents:
   - amadeus-aws-platform-agent
@@ -85,7 +85,7 @@ Load amadeus-architect-agent (lead) persona from `agents/amadeus-architect-agent
 
 ### Step 2: Read Prior Artifacts
 
-Read only the present input paths listed in the engine directive's `consumes`; omitted inputs are not applicable and must not be recreated or reported as missing. Read application design from `<record>/inception/application-design/` (if exists) for architectural context; when the scope skipped those design stages, derive the architectural context from the present NFR requirements and, on brownfield, the code knowledge base — never invent the content of a missing artifact.
+Read only the present input paths listed in the engine directive's `consumes`; omitted inputs are not applicable and must not be recreated or reported as missing. This is the normal case for a scope that skips NFR Requirements: `requires_stage` orders the stages at compile time and never gates execution, so the directive still runs this stage and marks every NFR Requirements input absent-and-expected. Read application design from `<record>/inception/application-design/` (if exists) for architectural context; when the scope skipped those design stages, derive the architectural context from the present NFR requirements and, on brownfield, the code knowledge base — never invent the content of a missing artifact.
 
 Do not reclassify or copy decisions already established in Requirements Analysis, Functional Design, or the code knowledge base. In an applicable artifact, reference an established decision as `file:line`; if one item is not applicable, state the reason in one line.
 

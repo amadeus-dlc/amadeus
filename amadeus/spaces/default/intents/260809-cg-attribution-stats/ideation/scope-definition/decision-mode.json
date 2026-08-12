@@ -1,0 +1,13 @@
+{
+  "stage": "scope-definition",
+  "phase": "ideation",
+  "questionId": "scope-definition-interaction-mode",
+  "selector": "scope-definition:interaction-mode",
+  "question": "This stage has a total budget of up to 8 questions, including any follow-ups. How would you like to answer them?",
+  "optionIds": ["guide-me", "grill-me", "edit-file", "chat"],
+  "recommendedOptionId": "guide-me",
+  "election": {
+    "optionId": "guide-me",
+    "evidenceFingerprint": "sha256:429353ff3b10bb6841c3b6553cf7a41d6570375d615f2e7df447a019dabdd091"
+  }
+}

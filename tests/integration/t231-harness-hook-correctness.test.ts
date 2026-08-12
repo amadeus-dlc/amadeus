@@ -1,3 +1,4 @@
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -85,7 +86,7 @@ function runAdapter(
       cwd: project,
       input: "stdin-must-not-be-read",
       encoding: "utf8",
-      timeout: 30_000,
+      timeout: scaleTestTime(30_000),
       env: {
         ...process.env,
         CLAUDE_PROJECT_DIR: project,
@@ -735,7 +736,7 @@ describe("FR-4.15 Claude hook command quoting", () => {
         shell: true,
         input: "{}",
         encoding: "utf8",
-        timeout: 30_000,
+        timeout: scaleTestTime(30_000),
         env: { ...process.env, CLAUDE_PROJECT_DIR: project },
       });
       expect(result.status, `${command}: ${result.stderr}`).toBe(0);

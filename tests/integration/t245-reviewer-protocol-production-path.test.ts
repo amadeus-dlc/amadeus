@@ -362,6 +362,28 @@ describe("t245 reviewer protocol production caller", () => {
     expect(source).not.toMatch(/function main\b|function adapter\b/);
   });
 
+  test("rejects an unexpected required consume gap before issuing a review invocation", async () => {
+    const runtime = await import(
+      "../../packages/framework/core/tools/amadeus-reviewer-runtime.ts"
+    );
+    const current = fixture();
+    const missing =
+      "amadeus/spaces/default/intents/example/construction/unit-a/code-generation/code-summary.md";
+    const directive = {
+      ...current.directive,
+      consumes_absent: [{ path: missing, expected: false }],
+    };
+    const local = localRuntime(current, directive);
+
+    runtime.runReviewerCommand(["scope"], local.deps);
+
+    expect(local.output()).toEqual({
+      stdout: "",
+      stderr: `amadeus-reviewer-runtime: required review consume is missing: ${missing}\n`,
+      exitCode: 1,
+    });
+  });
+
   test("keeps the canonical public module pure and free of runtime adapters", () => {
     const source = readFileSync(join(CORE, "tools/amadeus-reviewer.ts"), "utf8");
     expect(source).not.toContain("node:fs");
@@ -905,17 +927,18 @@ describe("t245 reviewer protocol production caller", () => {
   test("accepts a real engine run-stage directive through all six packaged callers", () => {
     const engineRoot = mkdtempSync(join(tmpdir(), "amadeus-t245-real-directive-"));
     temporaryDirectories.push(engineRoot);
-    const emitted = spawnSync(
+    const engineArgs = [
+      PACKAGED_ORCHESTRATOR,
+      "next",
+      "--stage",
+      "code-generation",
+      "--single",
+      "--project-dir",
+      engineRoot,
+    ];
+    let emitted = spawnSync(
       process.execPath,
-      [
-        PACKAGED_ORCHESTRATOR,
-        "next",
-        "--stage",
-        "code-generation",
-        "--single",
-        "--project-dir",
-        engineRoot,
-      ],
+      engineArgs,
       {
         cwd: engineRoot,
         encoding: "utf8",
@@ -923,7 +946,28 @@ describe("t245 reviewer protocol production caller", () => {
       },
     );
     expect(emitted.status).toBe(0);
-    const directive = JSON.parse(emitted.stdout) as Record<string, unknown>;
+    let directive = JSON.parse(emitted.stdout) as Record<string, unknown>;
+    const requiredGaps = (directive.consumes_absent as Array<{
+      path: string;
+      expected: boolean;
+    }> | undefined)?.filter((gap) => !gap.expected) ?? [];
+    for (const gap of requiredGaps) {
+      mkdirSync(dirname(join(engineRoot, gap.path)), { recursive: true });
+      writeFileSync(join(engineRoot, gap.path), `# ${gap.path}\n`);
+    }
+    if (requiredGaps.length > 0) {
+      emitted = spawnSync(process.execPath, engineArgs, {
+        cwd: engineRoot,
+        encoding: "utf8",
+        env: { ...process.env, AMADEUS_DEFAULT_SCOPE: "feature" },
+      });
+      expect(emitted.status).toBe(0);
+      directive = JSON.parse(emitted.stdout) as Record<string, unknown>;
+      expect(
+        (directive.consumes_absent as Array<{ expected: boolean }> | undefined)
+          ?.filter((gap) => !gap.expected) ?? [],
+      ).toEqual([]);
+    }
     expect(directive.kind).toBe("run-stage");
     expect(directive.reviewer).toBe("amadeus-architecture-reviewer-agent");
 

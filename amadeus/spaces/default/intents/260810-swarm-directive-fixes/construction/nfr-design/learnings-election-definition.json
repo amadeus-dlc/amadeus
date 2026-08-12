@@ -1,0 +1,13 @@
+{
+  "electionId": "E-SDF-NFRD-S13-1",
+  "kind": "zero-confirm",
+  "question": "NFR Designの候補c1〜c6は、self-featureのexpected upstream skipとkind別producesという既存stage契約、または今回intent固有の境界設計に重複するため、新規persist 0件でよいか",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "既存normとintent成果物を正本として維持し、永続ルール・sensorを追加しない。"
+    }
+  ],
+  "voters": ["subagent-1", "subagent-2"]
+}

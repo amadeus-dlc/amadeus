@@ -1,4 +1,4 @@
-// covers: function:resolveSensorsForStage, function:evaluateBlockingSensors
+// covers: function:resolveSensorsForStage, function:evaluateBlockingSensors, file:packages/framework/core/tools/amadeus-sensor.ts
 //
 // t511 (unit) — Issue #2671 item (c): the `blocking` sensor severity, in its two
 // pure layers.
@@ -33,6 +33,10 @@ import {
 } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 import type { SensorSeverity } from "../../dist/claude/.claude/tools/amadeus-sensor-schema.ts";
 import { evaluateBlockingSensors } from "../../dist/claude/.claude/tools/amadeus-state.ts";
+import {
+  digestFile,
+  resolveScriptPath,
+} from "../../dist/claude/.claude/tools/amadeus-sensor.ts";
 
 // --- Layer 1 helpers: a minimal sensor roster -------------------------------
 
@@ -132,6 +136,57 @@ describe("t511 — severity carriage through the compiled stage graph (#2671 c)"
 });
 
 describe("t511 — evaluateBlockingSensors decision table (#2671 c)", () => {
+  test("a projected plugin sensor command resolves inside the plugin subtree", () => {
+    expect(resolveScriptPath(
+      "bun .claude/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts",
+    )).toEndWith(
+      "/dist/claude/.claude/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts",
+    );
+  });
+
+  test("the test seam overrides projected host-tool commands by basename", () => {
+    const previous = process.env.AMADEUS_SENSOR_SCRIPT_DIR;
+    process.env.AMADEUS_SENSOR_SCRIPT_DIR = "/tmp/t511-sensor-scripts";
+    try {
+      expect(resolveScriptPath(
+        "bun .claude/tools/amadeus-sensor-stub-pass.ts",
+      )).toBe("/tmp/t511-sensor-scripts/amadeus-sensor-stub-pass.ts");
+    } finally {
+      if (previous === undefined) delete process.env.AMADEUS_SENSOR_SCRIPT_DIR;
+      else process.env.AMADEUS_SENSOR_SCRIPT_DIR = previous;
+    }
+  });
+
+  test("a {{HARNESS_DIR}}/ placeholder command resolves relative to the harness root", () => {
+    const previous = process.env.AMADEUS_SENSOR_SCRIPT_DIR;
+    delete process.env.AMADEUS_SENSOR_SCRIPT_DIR;
+    try {
+      expect(resolveScriptPath(
+        "bun {{HARNESS_DIR}}/tools/amadeus-sensor-placeholder-probe.ts",
+      )).toEndWith("/dist/claude/.claude/tools/amadeus-sensor-placeholder-probe.ts");
+    } finally {
+      if (previous === undefined) delete process.env.AMADEUS_SENSOR_SCRIPT_DIR;
+      else process.env.AMADEUS_SENSOR_SCRIPT_DIR = previous;
+    }
+  });
+
+  test("a bare script command with no directory falls back to sibling resolution", () => {
+    const previous = process.env.AMADEUS_SENSOR_SCRIPT_DIR;
+    delete process.env.AMADEUS_SENSOR_SCRIPT_DIR;
+    try {
+      expect(resolveScriptPath(
+        "bun amadeus-sensor-bare-probe.ts",
+      )).toEndWith("/dist/claude/.claude/tools/amadeus-sensor-bare-probe.ts");
+    } finally {
+      if (previous === undefined) delete process.env.AMADEUS_SENSOR_SCRIPT_DIR;
+      else process.env.AMADEUS_SENSOR_SCRIPT_DIR = previous;
+    }
+  });
+
+  test("a vanished output hashes to a deterministic missing marker", () => {
+    expect(digestFile("/definitely/missing/t511-output.md")).toBe("missing");
+  });
+
   test("no blocking sensors declared -> nothing to judge", () => {
     expect(evaluateBlockingSensors([], "", "requirements-analysis")).toBeNull();
   });
@@ -144,6 +199,93 @@ describe("t511 — evaluateBlockingSensors decision table (#2671 c)", () => {
     expect(
       evaluateBlockingSensors(["blocking-probe"], audit, "requirements-analysis"),
     ).toBeNull();
+  });
+
+  test("a digest-bound PASS becomes stale when the output bytes change", () => {
+    const digest = `sha256:${"a".repeat(64)}`;
+    const fields = {
+      "Fire id": "digest01",
+      "Sensor ID": "blocking-probe",
+      "Stage slug": "requirements-analysis",
+      "Output path": OUT,
+      "Output digest": digest,
+    };
+    const audit = [
+      auditLine("SENSOR_FIRED", fields, "2026-08-10T01:00:00Z"),
+      auditLine("SENSOR_PASSED", { ...fields, "Duration ms": "1" }, "2026-08-10T01:00:01Z"),
+    ].join("\n");
+    expect(evaluateBlockingSensors(["blocking-probe"], audit, "requirements-analysis", () => digest)).toBeNull();
+    expect(evaluateBlockingSensors(
+      ["blocking-probe"],
+      audit,
+      "requirements-analysis",
+      () => `sha256:${"b".repeat(64)}`,
+    )?.kind).toBe("stale");
+  });
+
+  test("a later passed output supersedes a passed path removed by an artifact move", () => {
+    const oldDigest = `sha256:${"a".repeat(64)}`;
+    const newDigest = `sha256:${"b".repeat(64)}`;
+    const oldFields = {
+      "Fire id": "old-path",
+      "Sensor ID": "blocking-probe",
+      "Stage slug": "requirements-analysis",
+      "Output path": OUT,
+      "Output digest": oldDigest,
+    };
+    const newFields = {
+      "Fire id": "new-path",
+      "Sensor ID": "blocking-probe",
+      "Stage slug": "requirements-analysis",
+      "Output path": OUT2,
+      "Output digest": newDigest,
+    };
+    const audit = [
+      auditLine("SENSOR_FIRED", oldFields, "2026-08-10T01:00:00Z"),
+      auditLine("SENSOR_PASSED", oldFields, "2026-08-10T01:00:01Z"),
+      auditLine("SENSOR_FIRED", newFields, "2026-08-10T02:00:00Z"),
+      auditLine("SENSOR_PASSED", newFields, "2026-08-10T02:00:01Z"),
+    ].join("\n");
+    expect(evaluateBlockingSensors(
+      ["blocking-probe"],
+      audit,
+      "requirements-analysis",
+      (path) => path === OUT2 ? newDigest : null,
+    )).toBeNull();
+  });
+
+  test("an absent output remains stale without a newer passed path", () => {
+    const digest = `sha256:${"a".repeat(64)}`;
+    const fields = {
+      "Fire id": "only-path",
+      "Sensor ID": "blocking-probe",
+      "Stage slug": "requirements-analysis",
+      "Output path": OUT,
+      "Output digest": digest,
+    };
+    const audit = [
+      auditLine("SENSOR_FIRED", fields, "2026-08-10T01:00:00Z"),
+      auditLine("SENSOR_PASSED", fields, "2026-08-10T01:00:01Z"),
+    ].join("\n");
+    expect(evaluateBlockingSensors(
+      ["blocking-probe"],
+      audit,
+      "requirements-analysis",
+      () => null,
+    )?.kind).toBe("stale");
+  });
+
+  test("a legacy PASS without a digest must be re-fired before completion", () => {
+    const audit = [
+      sensorRow("SENSOR_FIRED", "blocking-probe", OUT, "2026-08-10T01:00:00Z"),
+      sensorRow("SENSOR_PASSED", "blocking-probe", OUT, "2026-08-10T01:00:01Z"),
+    ].join("\n");
+    expect(evaluateBlockingSensors(
+      ["blocking-probe"],
+      audit,
+      "requirements-analysis",
+      () => `sha256:${"a".repeat(64)}`,
+    )?.kind).toBe("stale");
   });
 
   test("latest terminal FAILED -> unresolved, naming the sensor and output", () => {

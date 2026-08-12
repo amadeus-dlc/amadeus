@@ -37,7 +37,8 @@ import type {
 } from "./run-model-check-domain.ts";
 import { validateFrozenTlaModelReceipt } from "./tla-arm.ts";
 import {
-  isVerifiedTlaModelReceipt,
+  isRefereeTlaModelReceipt,
+  isSourceBoundTlaModelReceipt,
   validateModelCheckReceipt,
   type ModelCheckReceipt,
   type ModelCheckReceiptBundle,
@@ -1575,7 +1576,7 @@ function verifiedAuxiliaryModulePaths(
   modulePath: string,
   modelReceipt: ModelCheckReceipt,
 ): VerifiedAuxiliaryModulePaths {
-  if (!isVerifiedTlaModelReceipt(modelReceipt)) return Object.freeze([]);
+  if (!isSourceBoundTlaModelReceipt(modelReceipt)) return Object.freeze([]);
   return Object.freeze(modelReceipt.auxiliaryModules.map((auxiliary) => {
     const requestedPath = join(dirname(modulePath), `${auxiliary.name}.tla`);
     const canonicalPath = realpathSync(requestedPath);
@@ -1604,7 +1605,7 @@ function snapshotModelReceipt(bundle: ModelCheckReceiptBundle): ModelCheckReceip
       Object.freeze({ ...location }),
     ]),
   ));
-  if (isVerifiedTlaModelReceipt(bundle)) {
+  if (isSourceBoundTlaModelReceipt(bundle)) {
     return Object.freeze({
       schema: bundle.schema,
       modelName: bundle.modelName,
@@ -1642,19 +1643,26 @@ function verifyPlannedModelSources(
   if (!model.ok) {
     toolchainAbort("PreparationError", "MODEL_RECEIPT", model.error.message);
   }
-  readVerifiedSourceBytes(
+  if (isRefereeTlaModelReceipt(model.value) && model.value.modelName !== basename(modulePath, ".tla")) {
+    toolchainAbort(
+      "PreparationError",
+      "MODEL_RECEIPT",
+      "receipt model name differs from the module being prepared",
+    );
+  }
+  const moduleBytes = readVerifiedSourceBytes(
     modulePath,
     "amadeus.formal-verif.tla.module.v1",
     model.value.moduleBytesIdentity,
     "SOURCE_IDENTITY",
   );
-  readVerifiedSourceBytes(
+  const cfgBytes = readVerifiedSourceBytes(
     cfgPath,
     "amadeus.formal-verif.tla.cfg.v1",
     model.value.cfgBytesIdentity,
     "SOURCE_IDENTITY",
   );
-  if (isVerifiedTlaModelReceipt(model.value)) {
+  if (isSourceBoundTlaModelReceipt(model.value)) {
     const expected = model.value.vocabulary;
     const actual = input.vocabulary;
     if (
@@ -1673,10 +1681,12 @@ function verifyPlannedModelSources(
       );
     }
   }
+  // A referee receipt carries no registry-side bytes: the files just verified
+  // against its identities are the only source there is.
   return Object.freeze({
     modelReceipt: snapshotModelReceipt(model.value),
-    moduleBytes: new Uint8Array(model.value.moduleBytes),
-    cfgBytes: new Uint8Array(model.value.cfgBytes),
+    moduleBytes: isRefereeTlaModelReceipt(model.value) ? moduleBytes : new Uint8Array(model.value.moduleBytes),
+    cfgBytes: isRefereeTlaModelReceipt(model.value) ? cfgBytes : new Uint8Array(model.value.cfgBytes),
     auxiliaryModulePaths: verifiedAuxiliaryModulePaths(cwd, modulePath, model.value),
   });
 }

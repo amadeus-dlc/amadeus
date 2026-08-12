@@ -1,0 +1,13 @@
+{
+  "stage_slug": "reverse-engineering",
+  "selections": [
+    {
+      "candidate_id": "test-time-factor-timeout",
+      "type": "learning",
+      "scope": "project",
+      "heading": "Testing Posture",
+      "text": "`TEST_TIME_FACTOR` はテストのタイムアウト時間の基準値に乗算する。`sleep(500 * testTimeFactor)` のように timeout を構成・検証する待機値にも同じ係数を適用する。性能基準や本番 CLI の timeout 契約は対象外とする",
+      "source": "orchestrator"
+    }
+  ]
+}

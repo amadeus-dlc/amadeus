@@ -39,6 +39,27 @@ describe("t401 directive schema fail-closed branches", () => {
     expect(result.valid).toBe(false);
     expect(result.valid === false && result.errors.join("; ")).toContain("consumes[1] must be string");
   });
+
+  test("accepts reviewer-only recovery only for a gated-off reviewed unit", () => {
+    const recovery = {
+      ...runStage(),
+      gate: false,
+      unit: "provenance-contract",
+      reviewer: "amadeus-architecture-reviewer-agent",
+      review_only: true,
+    };
+    expect(validateDirective(recovery).valid).toBe(true);
+
+    for (const malformed of [
+      { ...recovery, gate: true },
+      { ...recovery, unit: undefined },
+      { ...recovery, reviewer: undefined },
+      { ...recovery, review_only: false },
+      { ...recovery, kind: "dispatch-subagent", worker: "code-generation" },
+    ]) {
+      expect(validateDirective(malformed).valid).toBe(false);
+    }
+  });
 });
 
 describe("t401 JDK distribution manifest identity rejections", () => {

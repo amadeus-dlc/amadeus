@@ -180,59 +180,18 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
     expect(errs({ ...awaitAdvisoryChoice(), options: ["continue"] })).toContain("options");
   });
 
-  test("await-advisory-choice validates the explicit formal-check route", () => {
-    const routed = {
-      ...awaitAdvisoryChoice(),
-      run_required: true,
-      formal_checks: [{
-        stage: "formal-model-check",
-        command: '"bun" "plugins/formal-model-check/tools/run-model-check.ts"',
-        output_dir: "/evidence/advisory-1",
-        target: "amadeus/spaces/default/specs/tla",
-        spec_identity: "sha256:abc",
-        advisory_instance: "019fc698-ba1f-7000-8000-000000000001",
-      }],
-    };
-    expect(validateDirective(routed).valid).toBe(true);
-    expect(errs({ ...awaitAdvisoryChoice(), run_required: true })).toContain("formal_checks");
-    expect(errs({ ...awaitAdvisoryChoice(), formal_checks: routed.formal_checks })).toContain("run_required=true");
-  });
-
-  test("await-advisory-choice rejects malformed optional routes and advisory items", () => {
+  test("await-advisory-choice rejects malformed advisory items", () => {
     const base = awaitAdvisoryChoice();
-    expect(errs({ ...base, run_required: "yes" })).toContain("run_required must be boolean");
-    expect(errs({ ...base, run_required: true, formal_checks: [null] })).toContain("formal_checks[0] must be object");
-    expect(errs({
-      ...base,
-      run_required: true,
-      formal_checks: [{
-        stage: "other",
-        command: "",
-        output_dir: "/evidence",
-        target: "amadeus/spaces/default/specs/tla",
-        spec_identity: "sha256:abc",
-        advisory_instance: "instance-1",
-      }],
-    })).toContain("formal_checks[0].command must be non-empty string");
-    expect(errs({
-      ...base,
-      run_required: true,
-      formal_checks: [{
-        stage: "other",
-        command: "run",
-        output_dir: "/evidence",
-        target: "amadeus/spaces/default/specs/tla",
-        spec_identity: "sha256:abc",
-        advisory_instance: "instance-1",
-      }],
-    })).toContain("formal_checks[0].stage must be formal-model-check");
     expect(errs({ ...base, advisories: [] })).toContain("advisories must be a non-empty array");
     expect(errs({ ...base, advisories: [null] })).toContain("advisories[0] must be object");
-    expect(errs({ ...base, advisories: [{ ...(base.advisories as object[])[0], code: "unknown" }] })).toContain(
-      "advisories[0].code must be one of",
+    expect(errs({ ...base, advisories: [{ ...(base.advisories as object[])[0], code: "Not A Slug" }] })).toContain(
+      "advisories[0].code must be a slug",
     );
     expect(errs({ ...base, advisories: [{ ...(base.advisories as object[])[0], result: "" }] })).toContain(
       "advisories[0].result must be non-empty string",
+    );
+    expect(errs({ ...base, advisories: [{ ...(base.advisories as object[])[0], handoff_stage: "" }] })).toContain(
+      "advisories[0].handoff_stage must be non-empty string",
     );
   });
 
@@ -251,6 +210,33 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
     const d = invokeSwarm();
     d.repo = "repo-a";
     expect(errs(d)).toBe("VALID");
+  });
+
+  test("invoke-swarm accepts a prepared retry correlation as one typed pair", () => {
+    const d = invokeSwarm();
+    d.units = ["auth"];
+    d.cap = 1;
+    d.prepared_batch = "1";
+    d.retry_unit = "auth";
+    expect(errs(d)).toBe("VALID");
+  });
+
+  test("invoke-swarm rejects partial or mismatched prepared retry correlation", () => {
+    expect(errs({ ...invokeSwarm(), prepared_batch: "1" })).toContain(
+      "invoke-swarm: prepared_batch and retry_unit must be provided together",
+    );
+    expect(errs({ ...invokeSwarm(), retry_unit: "auth" })).toContain(
+      "invoke-swarm: prepared_batch and retry_unit must be provided together",
+    );
+    expect(errs({ ...invokeSwarm(), prepared_batch: "1", retry_unit: "missing" })).toContain(
+      "invoke-swarm: retry_unit must name exactly one member of units",
+    );
+    expect(errs({ ...invokeSwarm(), prepared_batch: "", retry_unit: "" })).toContain(
+      "invoke-swarm: prepared_batch and retry_unit must be provided together",
+    );
+    expect(errs({ ...invokeSwarm(), prepared_batch: "   ", retry_unit: "auth" })).toContain(
+      "invoke-swarm: prepared_batch and retry_unit must be provided together",
+    );
   });
 
   test("present-gate well-formed -> VALID", () => {

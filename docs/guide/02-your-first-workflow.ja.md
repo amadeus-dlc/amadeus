@@ -86,7 +86,7 @@ amadeus-product-agent はインタラクションモードの選択を求めま�
 ```
 ▸ Choose interaction mode:
   (1) Guide Me — agent asks structured questions
-  (2) Grill Me — one question at a time, in depth, with recommended answers
+  (2) Grill Me — round-by-round interview over the design tree, with recommended answers
   (3) Edit File — write directly to the artifact
   (4) Chat — freeform discussion
 ```

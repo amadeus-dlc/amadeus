@@ -358,6 +358,10 @@ function scopeForDirective(
   directive: RunStageDirective,
   deps: ReviewerRuntimeDeps,
 ) {
+  const requiredGap = directive.consumes_absent?.find((consume) => !consume.expected);
+  if (requiredGap) {
+    throw new Error(`required review consume is missing: ${requiredGap.path}`);
+  }
   if (!onDisk(directive.stage_file, deps)) {
     throw new Error(`stage definition is missing: ${directive.stage_file}`);
   }

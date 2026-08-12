@@ -440,6 +440,8 @@ Bolts eligible to run in parallel (dependency prerequisites satisfied, no mutual
 
 Blocking reviewer findings, sensors, required outputs, and completion conditions are quality obligations. `semi` and `full` require the first-party Quality Repair plugin, which repairs or replans until the evidence is healthy. If the loop stops making productive progress it parks as `REPAIR_STALLED`, preserving any active Intent grant and recording an explicit resume condition. Human gates still apply wherever the mode table requires them.
 
+A stage-owned referee that fails closed is admitted through the same loop. `report --stage <slug> --result failed --failure <detail>` records the typed failure as an unresolved quality obligation in `semi` and `full`; the directive names the next bounded repair round, the single replan, or the `REPAIR_STALLED` park. While the Intent is suspended for that reason, `next` re-emits the `parked` directive with its resume conditions instead of re-issuing the stage. `none` has no repair loop, so `report` there still accepts forward outcomes only.
+
 - Solo Bolt failure records `BOLT_FAILED`; repair retries only the affected work.
 - Parallel batch partial failure waits for all parallel Tasks, preserves successful siblings, and scopes repair to failed work. Independent siblings remain complete.
 

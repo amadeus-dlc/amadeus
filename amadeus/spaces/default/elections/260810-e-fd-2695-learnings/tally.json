@@ -1,0 +1,60 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "Unit別reviewerへ渡すFunctional Design成果物は、そのUnitの公開境界を自己完結して記述する"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "Unit別reviewerへ渡すFunctional Design成果物は、そのUnitの公開境界を自己完結して記述する",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "Event Set検証の実行順とprimary rejection reasonの優先順位を分離する",
+        "count": 0
+      },
+      {
+        "internalNo": 3,
+        "label": "partial reportのattribution referenceへscan scopeとunreadable shard countを保持する",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-10T00:10:48Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-FD-2695-LEARNINGS",
+      "voter": "functional-design-learning-voter-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "4 Unit中3 Unitが初回NOT-READYで、U-01では後続Unitが必要とする公開型・属性の欠落が複数BLOCKERになった。current Unitと宣言済み上流成果物だけに閉じたreview scopeで検証できるよう、各Unitが公開境界を自己完結して記述するpracticeは、候補2・3の局所的な契約修正より再利用範囲と波及防止効果が大きい。",
+      "submittedAt": "2026-08-10T00:09:34Z",
+      "receivedAt": "2026-08-10T00:10:07Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-FD-2695-LEARNINGS",
+      "voter": "functional-design-learning-voter-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "独立実測により候補1を選ぶ。U-01 attribution-domain-contracts の Functional Design 初回レビューは NOT-READY で3 BLOCKERを記録し、そのうち2件が downstream Unitへ渡す公開境界の欠落・縮小（ExplicitLifecycleInterval/AttributionWindowの不完全shape、9値vocabularyおよび複数public contractの未定義）を直接指摘した。Iteration 2では全C-02 contractの分類、complete public shapes、明示intentを含むcross-Unit型を自己完結して記述した結果 READYとなった。さらにU-02/U-03/U-04の3 downstream Unitの成果物はU-01 public contractを再定義せず再利用すると明記しており、provider Unitの自己完結性が少なくとも3 Unitの実装・レビュー可能性を支えることを確認した。対して候補2はU-02の3 BLOCKER中1件（unsupported schemaとdigest mismatchの同時成立時のprimary選択）を閉じる重要な規律だがEvent Set validationへ局所化し、候補3もU-04の3 BLOCKER中1件（partial corpus referenceのscanScope/unreadableShardCount）として3 renderer parityへ局所化する。候補1は今後の全per-Unit Functional Designレビューへ適用でき、sibling成果物をreview scopeに含めない運用でも契約縮小を防ぐため、再利用範囲とblast radiusが最も大きい。既存memory全域で自己完結・sibling Unit・公開境界の同旨規則は0 hitで、新規性も確認した。",
+      "submittedAt": "2026-08-10T00:09:59Z",
+      "receivedAt": "2026-08-10T00:10:19Z"
+    }
+  ],
+  "resolutions": []
+}

@@ -113,8 +113,7 @@ export interface UnitPoolProjection {
   readonly lateResults: readonly { attemptId: string; outcome: UnitPoolOutcome }[];
 }
 
-const EMPTY: UnitPoolProjection = {
-  batchId: null,
+export interface TerminalUnit { readonly reason?: string; } const EMPTY: UnitPoolProjection = { batchId: null,
   cap: 0,
   phase: "open",
   result: null,
@@ -181,7 +180,7 @@ export function applyUnitPoolEvent(current: UnitPoolProjection, event: UnitPoolE
       next = { ...current, active: current.active.filter((attempt) => attempt.attemptId !== event.terminal.attemptId), terminal: [...current.terminal.filter((unit) => unit.unitId !== event.terminal.unitId), event.terminal] };
       break;
     case "unit-requeued":
-      next = { ...current, queue: [...current.queue, event.entry], terminal: current.terminal.filter((unit) => unit.unitId !== event.entry.unitId) };
+      next = { ...current, phase: "open", result: null, queue: [...current.queue, event.entry], terminal: current.terminal.filter((unit) => unit.unitId !== event.entry.unitId) };
       break;
     case "units-cancelled": {
       const ids = new Set(event.units.map((unit) => unit.unitId));
@@ -229,9 +228,7 @@ export type UnitPoolProposal =
   | { readonly ok: true; readonly events: readonly UnitPoolEvent[] }
   | { readonly ok: false; readonly reason: string };
 
-function terminalOutcome(projection: UnitPoolProjection, unitId: string): UnitPoolOutcome | null {
-  return projection.terminal.find((entry) => entry.unitId === unitId)?.outcome ?? null;
-}
+export type UnitPoolFailureCommand = { readonly kind: "retry-failed-unit"; readonly batchId: string; readonly unitId: string; readonly queueEntryId: string } | { readonly kind: "skip-failed-unit"; readonly batchId: string; readonly unitId: string; readonly reason: string }; export type UnitPoolMutationCommand = UnitPoolCommand | UnitPoolFailureCommand; function terminalOutcome(projection: UnitPoolProjection, unitId: string): UnitPoolOutcome | null { return projection.terminal.find((entry) => entry.unitId === unitId)?.outcome ?? null; }
 
 function ready(projection: UnitPoolProjection, unitId: string): boolean {
   const unit = projection.units.find((candidate) => candidate.unitId === unitId);
@@ -423,10 +420,22 @@ function proposeSettlement(projection: UnitPoolProjection, command: SettlementCo
   return { ok: true, events: [settled, ...cancelledDependentEvents(projection, attempt.unitId)] };
 }
 
-export function proposeUnitPoolCommand(projection: UnitPoolProjection, command: UnitPoolCommand): UnitPoolProposal {
+export function proposeUnitPoolCommand(projection: UnitPoolProjection, command: UnitPoolMutationCommand): UnitPoolProposal {
   if (command.kind === "initial-enqueue") return proposeInitialEnqueue(projection, command);
   if (projection.batchId !== command.batchId) return { ok: false, reason: "batch-not-found" };
   if (command.kind === "late-result-observed") return { ok: true, events: [{ type: "late-result-observed", attemptId: command.attemptId, outcome: command.outcome }] };
+  if (command.kind === "retry-failed-unit") {
+    const terminal = projection.terminal.find((entry) => entry.unitId === command.unitId && entry.outcome === "failed");
+    return terminal === undefined
+      ? { ok: false, reason: "failed-unit-not-found" }
+      : { ok: true, events: [{ type: "unit-requeued", entry: { queueEntryId: command.queueEntryId, unitId: command.unitId, ordinal: projection.queue.length } }] };
+  }
+  if (command.kind === "skip-failed-unit") {
+    const terminal = projection.terminal.find((entry) => entry.unitId === command.unitId && entry.outcome === "failed");
+    return terminal?.attemptId
+      ? { ok: true, events: [{ type: "unit-settled", terminal: { ...terminal, outcome: "cancelled", reason: command.reason } }] }
+      : { ok: false, reason: "failed-unit-not-found" };
+  }
   if (projection.phase === "terminal") return { ok: false, reason: "pool-not-open" };
   if (command.kind === "acquire") return proposeAcquire(projection, command);
   if (command.kind === "confirm-dispatch") return proposeDispatchConfirmation(projection, command);

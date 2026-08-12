@@ -14,7 +14,6 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  advisoryModelCheckOutputDir,
   advisoryChoicePresentationFields,
   advisoryReportHoldReason,
   choiceFromExactPrompt,
@@ -23,10 +22,13 @@ import {
   guardAdvisoryChoices,
   recordAdvisoryChoice,
   revokeMisattributedAdvisoryChoice,
-  verifyAdvisoryModelCheckOutcome,
   type AdvisoryChoiceStore,
   type PendingAdvisory,
 } from "../../packages/framework/core/tools/amadeus-advisory-choice.ts";
+import {
+  advisoryModelCheckOutputDir,
+  verifyAdvisoryModelCheckOutcome,
+} from "../../plugins/formal-model-check/tools/advisory-model-check.ts";
 import {
   auditFilePath,
   auditShardName,
@@ -34,7 +36,7 @@ import {
   findAllEvents,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import { validateDirective } from "../../packages/framework/core/tools/amadeus-directive.ts";
-import type { Advisory } from "../../packages/framework/core/tools/amadeus-plugin-activation.ts";
+import type { Advisory } from "../../packages/framework/core/tools/amadeus-plugin-runtime.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -230,6 +232,20 @@ describe("advisory model-check evidence boundaries", () => {
       code: "TOOL_FAILED",
       detail: "synthetic failure",
     });
+  });
+
+  test("failure-directory lookup uses the sanitized advisory instance", () => {
+    const root = mkdtempSync(join(tmpdir(), "advisory-evidence-safe-instance-"));
+    roots.push(root);
+    const pending = createPendingAdvisory(identity, () => "unsafe/instance");
+    const detected = writeEvidence(root, pending, "DETECTED");
+    const failureDir = `${advisoryModelCheckOutputDir(root, pending.identity.advisoryInstance)}.failure-001`;
+    mkdirSync(failureDir, { recursive: true });
+    for (const name of ["manifest.json", "counterexample.json"]) {
+      writeFileSync(join(failureDir, name), readFileSync(join(detected.directory, name)));
+    }
+    rmSync(detected.directory, { recursive: true, force: true });
+    expect(verifyAdvisoryModelCheckOutcome(root, pending)).toMatchObject({ kind: "detected" });
   });
 
   test("manifest correlation and provenance reject every mismatched identity or byte source", () => {
@@ -434,10 +450,9 @@ describe("protected advisory choice persistence", () => {
     expect(recordAdvisoryChoiceViaPrompt(projectDir, "1", humanTurn)).toBe(false);
     expect(recordAdvisoryChoiceViaPrompt(projectDir, "1", plantHumanTurn(projectDir))).toBe(false);
     const rerun = guardAdvisoryChoices(projectDir, identity.checkpoint, [advisory]);
-    expect(rerun).toMatchObject({ kind: "hold", runRequired: true });
+    expect(rerun.kind).toBe("hold");
     if (rerun.kind === "hold") {
-      expect(rerun.formalChecks[0]?.command).toContain("run-model-check.ts");
-      expect(rerun.advisories[0]?.result).toContain("artifacts are missing");
+      expect(rerun.advisories[0]?.result).toContain("plugin's own evaluator");
     }
     expect(advisoryReportHoldReason(projectDir, identity.checkpoint)).toContain("advisory hold remains");
   });
@@ -450,7 +465,7 @@ describe("protected advisory choice persistence", () => {
     expect(readStore(projectDir).receipts).toHaveLength(0);
   });
 
-  test("副作用のない未提示run-nowだけを補正し、検査証跡があれば拒否する", () => {
+  test("未提示run-nowをplugin固有の証跡解釈なしで補正する", () => {
     {
       const { projectDir, pending } = project();
       const humanTurn = plantHumanTurn(projectDir);
@@ -488,7 +503,26 @@ describe("protected advisory choice persistence", () => {
         projectDir,
         pending.identity.advisoryInstance,
         humanTurn.eventIdentity,
-      )).toEqual({ ok: false, reason: "model-check evidence exists for this receipt" });
+      )).toEqual({ ok: true });
+    }
+    {
+      const { projectDir, pending } = project();
+      const humanTurn = plantHumanTurn(projectDir);
+      const store = readStore(projectDir);
+      store.receipts.push({
+        schema: 2,
+        identity: pending.identity,
+        choice: "run-now",
+        provenance: { kind: "human-turn", ...humanTurn },
+        recordedAt: "2026-08-03T12:00:00.001Z",
+      });
+      writeJson(storePath(projectDir), store);
+      unlinkSync(auditFilePath(projectDir));
+      expect(revokeMisattributedAdvisoryChoice(
+        projectDir,
+        pending.identity.advisoryInstance,
+        humanTurn.eventIdentity,
+      )).toEqual({ ok: true });
     }
   });
 
@@ -613,27 +647,62 @@ describe("protected advisory choice persistence", () => {
       writeJson(storePath(projectDir), store);
       expect(advisoryReportHoldReason(projectDir, identity.checkpoint)).toContain("evidence is invalid");
     }
+    for (const revoked of [
+      { revokedAt: "2026-08-03T12:00:01.000Z" },
+      { revokedAt: "invalid", revocationReason: "misattributed-human-turn" },
+    ]) {
+      const { projectDir } = project();
+      const store = readStore(projectDir);
+      store.receipts.push({
+        schema: 2,
+        identity: store.pending[0]!.identity,
+        choice: "run-now",
+        provenance: {
+          kind: "human-turn",
+          timestamp: "2026-08-03T12:00:00.000Z",
+          shard: "shard",
+          eventIdentity: "event",
+        },
+        recordedAt: "2026-08-03T12:00:00.000Z",
+        ...revoked,
+      } as AdvisoryChoiceStore["receipts"][number]);
+      writeJson(storePath(projectDir), store);
+      expect(advisoryReportHoldReason(projectDir, identity.checkpoint)).toContain("evidence is invalid");
+    }
   });
 
-  test("run-now hold reports detected, harness-error, invalid, and verified outcomes", () => {
+  test("run-now holdはplugin証跡を解釈せずevaluatorのno-holdを待つ", () => {
     const { projectDir, pending } = project();
+    const hostRoot = join(projectDir, ".harness");
+    mkdirSync(hostRoot, { recursive: true });
+    writeJson(join(hostRoot, ".amadeus-plugin-composition.json"), {
+      plugins: [[identity.plugin, { stageIndex: [] }]],
+    });
+    mkdirSync(join(projectDir, "plugins", identity.plugin), { recursive: true });
+    writeJson(join(projectDir, "plugins", identity.plugin, "plugin.json"), {
+      name: identity.plugin,
+      tools: [],
+      advisories: [{
+        code: identity.code,
+        checkpoints: [identity.checkpoint],
+        evaluator: { argv: ["bun", "tools/evaluate.ts"] },
+      }],
+    });
     plantAdvisoryPresentation(projectDir, pending);
     expect(recordAdvisoryChoiceViaPrompt(projectDir, "1", plantHumanTurn(projectDir))).toBe(true);
 
     writeEvidence(projectDir, pending, "DETECTED");
-    expect(advisoryReportHoldReason(projectDir, identity.checkpoint)).toContain("DETECTED counterexample-1");
-
-    writeEvidence(projectDir, pending, "HARNESS_ERROR");
-    expect(advisoryReportHoldReason(projectDir, identity.checkpoint)).toContain("HARNESS_ERROR TOOL_FAILED");
-
-    const invalidEvidence = writeEvidence(projectDir, pending);
-    invalidEvidence.manifest.outcome = "UNKNOWN";
-    invalidEvidence.writeManifest(invalidEvidence.manifest);
-    expect(advisoryReportHoldReason(projectDir, identity.checkpoint)).toContain("manifest outcome is invalid");
-
-    writeEvidence(projectDir, pending);
-    expect(advisoryReportHoldReason(projectDir, identity.checkpoint)).toBeNull();
-    expect(guardAdvisoryChoices(projectDir, identity.checkpoint, [advisory]).kind).toBe("allow");
+    let evaluatorCalls = 0;
+    const reportHold = advisoryReportHoldReason(projectDir, identity.checkpoint, hostRoot, () => {
+      evaluatorCalls += 1;
+      return {
+        status: 1,
+        stdout: JSON.stringify({ verdict: { kind: "hold", reasons: [{ kind: "changed" }] } }),
+      };
+    });
+    expect(evaluatorCalls).toBe(1);
+    expect(reportHold).toContain("plugin's own evaluator");
+    expect(guardAdvisoryChoices(projectDir, identity.checkpoint, [advisory], hostRoot).kind).toBe("hold");
     expect(existsSync(storePath(projectDir))).toBe(true);
   });
 });
@@ -660,37 +729,11 @@ describe("core advisory directive validation boundaries", () => {
     return result.valid ? "" : result.errors.join("|");
   };
 
-  test("malformed optional routes and advisory items fail closed in the source validator", () => {
-    expect(errors({ ...base(), run_required: "yes" })).toContain("run_required must be boolean");
-    expect(errors({ ...base(), run_required: true, formal_checks: [null] })).toContain("must be object");
-    expect(errors({
-      ...base(),
-      run_required: true,
-      formal_checks: [{
-        stage: "other",
-        command: "",
-        output_dir: "/evidence",
-        target: "amadeus/spaces/default/specs/tla",
-        spec_identity: "sha256:abc",
-        advisory_instance: "instance-1",
-      }],
-    })).toContain("command must be non-empty string");
-    expect(errors({
-      ...base(),
-      run_required: true,
-      formal_checks: [{
-        stage: "other",
-        command: "run",
-        output_dir: "/evidence",
-        target: "amadeus/spaces/default/specs/tla",
-        spec_identity: "sha256:abc",
-        advisory_instance: "instance-1",
-      }],
-    })).toContain("stage must be formal-model-check");
+  test("malformed advisory items fail closed in the source validator", () => {
     expect(errors({ ...base(), advisories: [] })).toContain("advisories must be a non-empty array");
     expect(errors({ ...base(), advisories: [null] })).toContain("advisories[0] must be object");
-    expect(errors({ ...base(), advisories: [{ ...base().advisories[0], code: "unknown" }] })).toContain(
-      "code must be one of",
+    expect(errors({ ...base(), advisories: [{ ...base().advisories[0], code: "Not A Slug" }] })).toContain(
+      "code must be a slug",
     );
     expect(errors({ ...base(), advisories: [{ ...base().advisories[0], result: "" }] })).toContain(
       "result must be non-empty string",

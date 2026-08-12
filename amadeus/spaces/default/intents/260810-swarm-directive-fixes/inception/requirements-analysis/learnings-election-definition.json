@@ -1,0 +1,16 @@
+{
+  "electionId": "E-SDF-RA-S13-1",
+  "kind": "zero-confirm",
+  "question": "Requirements Analysis の学習候補 c1〜c5 は、既存 norm（仕様変更のユーザーエスカレーション、pinned behavior ruling、既決 protocol の機械適用、同根棚卸し）および今回 intent 固有の要件裁定に重複するため、新規 persist 0件でよいか",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可",
+      "description": "新しい project rule を追加せず、既存 norm とRequirements成果物を正本として維持する"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ]
+}

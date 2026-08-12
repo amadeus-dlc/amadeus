@@ -101,6 +101,7 @@
 // All temp dirs are cleaned in afterAll, and every chmod is restored to 0644 in
 // a finally so a failed assertion can't leave an unremovable read-only dir.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { auditRowsFrom, type NormalizedAuditRecord } from "../harness/audit-records.ts";
 import { spawnSync } from "node:child_process";
@@ -375,7 +376,7 @@ describe("t47 F2 — missing audit.md before gate-start (ensureAuditFile recover
       // rebuilt-and-written, not merely touched.
       expect(hasEvent(readAudit(p), "STAGE_AWAITING_APPROVAL")).toBe(true);
     },
-    30000,
+    scaleTestTime(30000),
   );
 });
 

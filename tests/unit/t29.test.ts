@@ -52,6 +52,7 @@
 // shipped AMADEUS_SRC. All temp dirs cleaned in afterAll. Nothing is written under
 // tests/fixtures/**.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
@@ -149,7 +150,7 @@ describe("t29 amadeus-sync-statusline hook (migrated from t29-hook-sync-statusli
     expect(r.status).toBe(0); // STRONGER: the .sh discarded the hook exit code
     // STRONGER than `assert_grep 'Current Stage.*scope-definition'`: exact value.
     expect(stateField(p, "Current Stage")).toBe("scope-definition");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // --- T2: status=completed -> hook returns early, state untouched ---
   test("2: skips when status is completed", () => {
@@ -164,7 +165,7 @@ describe("t29 amadeus-sync-statusline hook (migrated from t29-hook-sync-statusli
     expect(readFileSync(statePath(p), "utf-8")).toBe(before);
     // STRONGER: the status guard returns before the heartbeat write.
     expect(existsSync(heartbeatPath(p))).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // --- T3: no activeForm -> hook returns early, state untouched ---
   test("3: skips when no activeForm", () => {
@@ -177,7 +178,7 @@ describe("t29 amadeus-sync-statusline hook (migrated from t29-hook-sync-statusli
     );
     expect(readFileSync(statePath(p), "utf-8")).toBe(before);
     expect(existsSync(heartbeatPath(p))).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // --- T4: activeForm without a [slug] suffix -> hook returns early ---
   test("4: skips when activeForm has no [slug]", () => {
@@ -190,7 +191,7 @@ describe("t29 amadeus-sync-statusline hook (migrated from t29-hook-sync-statusli
     );
     expect(readFileSync(statePath(p), "utf-8")).toBe(before);
     expect(existsSync(heartbeatPath(p))).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // --- T5: no state file -> hook exits 0 (won't fire before handleInit) ---
   test("5: exits 0 when no state file", () => {
@@ -203,7 +204,7 @@ describe("t29 amadeus-sync-statusline hook (migrated from t29-hook-sync-statusli
     expect(r.status).toBe(0);
     // STRONGER: the hook never creates the state file on this path.
     expect(existsSync(statePath(p))).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // --- T6: Lifecycle Phase pulled from the stage graph (code-generation -> CONSTRUCTION) ---
   test("6: updates Lifecycle Phase from stage graph", () => {
@@ -218,7 +219,7 @@ describe("t29 amadeus-sync-statusline hook (migrated from t29-hook-sync-statusli
     expect(stateField(p, "Lifecycle Phase")).toBe("CONSTRUCTION");
     // And it advances Current Stage in the same write (same set-status call).
     expect(stateField(p, "Current Stage")).toBe("code-generation");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // --- T7: a qualifying fire writes the health heartbeat ---
   test("7: writes health heartbeat", () => {
@@ -235,7 +236,7 @@ describe("t29 amadeus-sync-statusline hook (migrated from t29-hook-sync-statusli
     // ISO-8601 UTC timestamp (isoTimestamp(), amadeus-lib.ts:1452).
     const hb = readFileSync(heartbeatPath(p), "utf-8");
     expect(hb).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // --- T8 (issue #776, FR-4): a non-zero set-status exit is recorded as a drop ---
   // Pre-fix the spawn ran with stdout/stderr "ignore" and the exit code was never
@@ -256,7 +257,7 @@ describe("t29 amadeus-sync-statusline hook (migrated from t29-hook-sync-statusli
     expect(existsSync(dropPath(p))).toBe(true);
     const drop = readFileSync(dropPath(p), "utf-8");
     expect(drop).toContain("set-status exit 7");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // --- T9 (issue #776, FR-4): the happy path records NO drop (non-regression) ---
   // A successful set-status must not leave a drops file. Pairs with T1/T6 which
@@ -272,5 +273,5 @@ describe("t29 amadeus-sync-statusline hook (migrated from t29-hook-sync-statusli
     expect(stateField(p, "Current Stage")).toBe("scope-definition");
     // ... and no drop was recorded.
     expect(existsSync(dropPath(p))).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 });

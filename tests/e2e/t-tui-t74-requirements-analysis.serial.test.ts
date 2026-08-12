@@ -93,6 +93,7 @@ import { join } from "node:path";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { seededRecordDir, seededStateFile } from "../harness/fixtures.ts";
 import { cleanupTuiProject, setupTuiProject } from "../harness/tui-fixtures.ts";
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
 // Bun runs the TypeScript entrypoint natively. The answer-gate child spawn
@@ -208,7 +209,7 @@ describe("t-tui-t74-requirements-analysis (answering AUQ gates commits the requi
           if (grid.includes("Enter to select") || grid.includes("Submit answers")) {
             sawSelectFooter = true;
           }
-        }, 1000);
+        }, scaleTestTime(1000));
 
         // --- answer the gates via the shared answer-gate primitive (§3) -------
         // It answers every tab/menu by taking the Recommended default (Enter) and

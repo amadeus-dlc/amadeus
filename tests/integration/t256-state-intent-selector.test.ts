@@ -193,6 +193,28 @@ describe("t256 extractIntentSelector", () => {
       rest: ["State", "--intent"],
     });
   });
+
+  // Issue #2763: the flag-VALUE arm (the following token itself looks like
+  // another flag) used to be silently mis-consumed — `--intent` bound to the
+  // literal string "--space" and the genuine intended value leaked into `rest`
+  // as a stray positional operand. Fixed by requiring the following token NOT
+  // start with "--" before binding it (mirrors the trailing/no-value arm,
+  // which was already intentionally left in `rest` per the doc comment above).
+  test("Issue #2763: --intent immediately followed by --space is left in rest, not mis-consumed", () => {
+    expect(extractIntentSelector(["--intent", "--space", "beta", "Foo=bar"])).toEqual({
+      intent: undefined,
+      space: "beta",
+      rest: ["--intent", "Foo=bar"],
+    });
+  });
+
+  test("Issue #2763: --space immediately followed by --intent is left in rest, not mis-consumed", () => {
+    expect(extractIntentSelector(["Foo=bar", "--space", "--intent", "rec-1"])).toEqual({
+      intent: "rec-1",
+      space: undefined,
+      rest: ["Foo=bar", "--space"],
+    });
+  });
 });
 
 // ===========================================================================

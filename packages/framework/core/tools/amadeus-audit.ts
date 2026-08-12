@@ -140,6 +140,7 @@ const VALID_EVENT_TYPES = new Set([
   "ARTIFACT_CREATED",
   "ARTIFACT_UPDATED",
   "ARTIFACT_REUSED",
+  "ARTIFACT_ATTESTED",
   // Subagent (hook-emitted)
   "SUBAGENT_STARTED",
   "SUBAGENT_COMPLETED",
@@ -264,6 +265,7 @@ export const EVENT_HEADINGS: Record<string, string> = {
   ARTIFACT_CREATED: "Artifact Created",
   ARTIFACT_UPDATED: "Artifact Updated",
   ARTIFACT_REUSED: "Artifact Reused",
+  ARTIFACT_ATTESTED: "Artifact Attested",
   SUBAGENT_STARTED: "Subagent Started",
   SUBAGENT_COMPLETED: "Subagent Completed",
   HEALTH_CHECKED: "Health Check",

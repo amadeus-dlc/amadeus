@@ -1,0 +1,55 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "0件で可",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "候補がある(留保に具体候補を記す)",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-10T05:46:42Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-GFR-UGS13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "Interpretations行(U1へのC1/C2/C5統合、U2 kind変更)はcid:units-generation:c1(a)の適用実例、Deviations行(Step 6必須項目欠落)はcid:requirements-analysis:c2-mandated-sections-precheckの違反実例(i1 BLOCKER→i2で是正済み)であることをunit-of-work.mdのReview Iteration 1/2ブロックとmemory.mdを突合して確認した。両cidとも既存文言と一致し、新規の一般化可能なノルムは見当たらない。0件で可。",
+      "rationale": null,
+      "submittedAt": "2026-08-10T06:00:00Z",
+      "receivedAt": "2026-08-10T05:45:56Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-GFR-UGS13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "diary の Interpretations と Deviations を units-generation の成果物3点(unit-of-work.md の Review Iteration 1/2 ブロック含む)と突き合わせて実測した。Interpretations「U1 に C1/C2/C5 を統合」は unit-of-work.md:9 の記述と一致し、cid:units-generation:c1 (a)(片側だけでは利用者価値を出荷できない境界は単一 Unit へ統合)の逐語適用であり新しい一般化ではない。U2 kind を service→library へ変更した経緯も、unit-of-work.md の Review Iteration 1 FOLLOW-UP(:45「U2 kind=service は library が実態に近い」)を Iteration 2(:57-61)で受理・是正した結果であり、既存の produces_kinds ファミリ(project.md の nfr-design:c1-engine-produces-all-five 系)の枠内の個別判断に留まる。Deviations「Step 6 必須項目(Deployment model / S/M/L/XL)の欠落」は Iteration 1 の BLOCKER(:44)そのものであり、cid:requirements-analysis:c2-mandated-sections-precheck(契約 Step の mandated 項目を先に読んでから起草する)の違反実例。Iteration 2(:57)で列追加+N/A 根拠記載により閉包済みで、unit-of-work.md:11-15 の表に Deployment model 列と S/M/L 複雑度が実在することも確認した。両者とも「既存 cid の適用/違反であり是正済み」という conductor の記述どおりで、新規の一般化可能なノルムは見当たらない。0件で可(internalNo 1)。",
+      "submittedAt": "2026-08-10T05:46:06Z",
+      "receivedAt": "2026-08-10T05:46:24Z"
+    }
+  ],
+  "resolutions": []
+}

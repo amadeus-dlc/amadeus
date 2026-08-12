@@ -62,6 +62,7 @@
 // consistent rather than only separators>=entries; the lock-cleanup row pins
 // the source-computed lock dir, not a hand-recomputed hash).
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { copyFileSync, existsSync, mkdirSync, rmdirSync, writeFileSync } from "node:fs";
 import { hostname } from "node:os";
@@ -219,7 +220,7 @@ describe("t33 audit-logger lock contention under parallel writes (mechanism cli 
     // .sh: NEW_ENTRIES == 5. The lock must serialise all five appends so none
     // clobber another — exactly five new ARTIFACT_CREATED blocks land.
     expect(after - before).toBe(5);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("every parallel artifact path lands in audit.md (no dropped reference) [.sh tests 2-6]", async () => {
     await fireParallel(proj, 5);
@@ -228,7 +229,7 @@ describe("t33 audit-logger lock contention under parallel writes (mechanism cli 
     for (let i = 1; i <= 5; i++) {
       expect(body.includes(`artifact-${i}.md`)).toBe(true);
     }
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("no interleaved/corrupted blocks — counts are mutually consistent [.sh test 7]", async () => {
     await fireParallel(proj, 5);
@@ -252,7 +253,7 @@ describe("t33 audit-logger lock contention under parallel writes (mechanism cli 
       expect(typeof record.timestamp).toBe("string");
       expect(record.timestamp).not.toBe("");
     }
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("the mkdir audit lock is released after all writes complete [.sh test 8]", async () => {
     await fireParallel(proj, 5);
@@ -263,5 +264,5 @@ describe("t33 audit-logger lock contention under parallel writes (mechanism cli 
     // append, so once every process has exited the dir must be gone.
     const lockDir = auditLockDir(proj);
     expect(existsSync(lockDir)).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 });

@@ -1,3 +1,4 @@
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { defaultKiroSourceHome, kiroHomeLayout } from "./live-e2e/kiro.ts";
@@ -34,7 +35,7 @@ export function kiroTuiLiveRequirementsSkipReason({
   if (gateReason !== null) return gateReason;
   const isolated = buildChildEnvironment(env, CAPABILITY.environment);
   if (!isolated.ok) return `Kiro child environment rejected ${isolated.error.key}`;
-  const spawnOptions = { encoding: "utf8", env: isolated.value, timeout: 15_000 } as const;
+  const spawnOptions = { encoding: "utf8", env: isolated.value, timeout: scaleTestTime(15_000) } as const;
   const tmux = spawnSync(tmuxBin, ["-V"], { ...spawnOptions, maxBuffer: 64 * 1024 });
   if (tmux.status !== 0 || !/tmux\s+\d+\.\d+/i.test(tmux.stdout)) return "tmux capability is unavailable";
   const minimumVersion = parseVersion(CAPABILITY.minimumVersion);

@@ -83,6 +83,10 @@ export type GhRunner = (argv: readonly string[]) => Promise<Result<string, GhErr
 export interface RawPrState {
   readonly mergeable: string;
   readonly mergeStateStatus: string;
+  readonly title: string;
+  readonly body: string;
+  readonly headRefOid?: string;
+  readonly headRefName?: string;
   readonly state?: string;
   readonly mergedAt?: string | null;
   readonly mergeCommitOid?: string | null;
@@ -91,7 +95,7 @@ export interface RawPrState {
 
 // The mutable projection of RawPrState's lifecycle slice, built up field by
 // field so an absent response field stays absent (ruling E-MPC-CGBLK).
-type RawLifecycleFields = { state?: string; mergedAt?: string | null; mergeCommitOid?: string | null; checkRollupState?: string | null };
+type RawLifecycleFields = { state?: string; headRefOid?: string; headRefName?: string; mergedAt?: string | null; mergeCommitOid?: string | null; checkRollupState?: string | null };
 
 // ---------------------------------------------------------------------------
 // The process seam
@@ -205,7 +209,7 @@ export async function createGhRunner(
 
 export const PR_STATE_QUERY = `query($owner:String!,$name:String!,$number:Int!){
   repository(owner:$owner,name:$name){
-    pullRequest(number:$number){ mergeable mergeStateStatus state mergedAt mergeCommit { oid statusCheckRollup { state } } }
+    pullRequest(number:$number){ mergeable mergeStateStatus title body state mergedAt mergeCommit { oid statusCheckRollup { state } } headRefOid headRefName }
   }
 }`;
 
@@ -247,11 +251,19 @@ export async function fetchRawPrState(
   const repository = isRecord(data) ? data.repository : undefined;
   const pullRequest = isRecord(repository) ? repository.pullRequest : undefined;
   if (!isRecord(pullRequest)) return { ok: false, error: malformedResponse(out.value) };
-  const { mergeable, mergeStateStatus } = pullRequest;
-  if (typeof mergeable !== "string" || typeof mergeStateStatus !== "string") {
+  const { mergeable, mergeStateStatus, title, body } = pullRequest;
+  if (
+    typeof mergeable !== "string" ||
+    typeof mergeStateStatus !== "string" ||
+    typeof title !== "string" ||
+    typeof body !== "string"
+  ) {
     return { ok: false, error: malformedResponse(out.value) };
   }
-  return { ok: true, value: { mergeable, mergeStateStatus, ...lifecycleFields(pullRequest) } };
+  return {
+    ok: true,
+    value: { mergeable, mergeStateStatus, title, body, ...lifecycleFields(pullRequest) },
+  };
 }
 
 // Lifecycle fields (#2401), raw and unparsed like mergeable/mergeStateStatus.
@@ -261,6 +273,8 @@ export async function fetchRawPrState(
 function lifecycleFields(pullRequest: Record<string, unknown>): RawLifecycleFields {
   const fields: RawLifecycleFields = {};
   if (typeof pullRequest.state === "string") fields.state = pullRequest.state;
+  if (typeof pullRequest.headRefOid === "string") fields.headRefOid = pullRequest.headRefOid;
+  if (typeof pullRequest.headRefName === "string") fields.headRefName = pullRequest.headRefName;
   if ("mergedAt" in pullRequest) {
     fields.mergedAt = typeof pullRequest.mergedAt === "string" ? pullRequest.mergedAt : null;
   }
@@ -273,6 +287,61 @@ function lifecycleFields(pullRequest: Record<string, unknown>): RawLifecycleFiel
       isRecord(rollup) && typeof rollup.state === "string" ? rollup.state : null;
   }
   return fields;
+}
+
+// ---------------------------------------------------------------------------
+// The open pull request already published for a head branch
+// ---------------------------------------------------------------------------
+
+/** The slice of an existing pull request a create recovery needs. */
+export interface OpenPrSummary {
+  readonly number: number;
+  readonly url: string;
+  readonly headRefName: string;
+  readonly headRefOid: string;
+  readonly title: string;
+  readonly body: string;
+}
+
+export const PR_LIST_FIELDS = "number,url,headRefName,headRefOid,title,body";
+
+/**
+ * The open pull request for `head`, or null when there is none. `gh pr create`
+ * failing on a duplicate is not evidence of what already exists, so the answer
+ * is read rather than inferred from the failure text.
+ */
+export async function fetchOpenPrForHead(
+  gh: GhRunner,
+  repo: string,
+  head: string,
+): Promise<Result<OpenPrSummary | null, GhError>> {
+  const out = await gh([
+    "gh", "pr", "list",
+    "--repo", repo,
+    "--head", head,
+    "--state", "open",
+    "--json", PR_LIST_FIELDS,
+    "--limit", "1",
+  ]);
+  if (!out.ok) return out;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(out.value);
+  } catch {
+    return { ok: false, error: malformedResponse(out.value) };
+  }
+  if (!Array.isArray(parsed)) return { ok: false, error: malformedResponse(out.value) };
+  const first = parsed[0];
+  if (first === undefined) return { ok: true, value: null };
+  if (!isRecord(first)) return { ok: false, error: malformedResponse(out.value) };
+  const { number, url, headRefName, headRefOid, title, body } = first;
+  if (
+    typeof number !== "number" || typeof url !== "string" || typeof headRefName !== "string" ||
+    typeof headRefOid !== "string" || typeof title !== "string" || typeof body !== "string"
+  ) {
+    return { ok: false, error: malformedResponse(out.value) };
+  }
+  return { ok: true, value: { number, url, headRefName, headRefOid, title, body } };
 }
 
 /**

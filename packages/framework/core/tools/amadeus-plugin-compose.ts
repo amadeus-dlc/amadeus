@@ -111,6 +111,7 @@ export type FragmentSplice = { file: string; anchor: string; id: string; text: s
 // parsing namespaces it under plugins/<name>/ exactly like a StageCopy, so both
 // kinds land in one owned-path space.
 export type ToolCopy = { path: string; bytes: Buffer };
+export type SensorCopy = { path: string; bytes: Buffer };
 
 export type PluginManifest = {
   name: string;
@@ -118,6 +119,7 @@ export type PluginManifest = {
   seams: readonly SeamContribution[];
   fragments: readonly FragmentSplice[];
   tools: readonly ToolCopy[];
+  sensors?: readonly SensorCopy[];
 };
 
 // A discovered plugin. `manifest` is null when the manifest is malformed;
@@ -246,6 +248,7 @@ export type PluginCompositionPlan = {
   contentDigest: string;
   stageCopies: readonly StageCopy[];
   toolCopies: readonly ToolCopy[];
+  sensorCopies: readonly SensorCopy[];
   sharedWrites: readonly { path: string; bytes: Buffer }[];
   ledger: SharedFileLedger;
   record: PluginRecord;
@@ -343,8 +346,9 @@ export function parsePluginManifest(
   const seams = parseSeams(raw.seams, errors);
   const fragments = parseFragments(raw.fragments, errors);
   const tools = parseTools(name, raw.tools, readStage, errors);
+  const sensors = parseSensors(raw.sensors, readStage, errors);
   if (errors.length > 0) return { manifest: null, errors: errors.sort() };
-  return { manifest: { name, stages, seams, fragments, tools }, errors: [] };
+  return { manifest: { name, stages, seams, fragments, tools, sensors }, errors: [] };
 }
 
 // The directory a declared tool must live under, inside the plugin bundle. A
@@ -384,6 +388,37 @@ function parseTools(
       return;
     }
     out.push({ path: posix.join("plugins", pluginName, rel), bytes });
+  });
+  return out;
+}
+
+function parseSensors(
+  value: unknown,
+  readFile: (rel: string) => Buffer | null,
+  errors: string[],
+): readonly SensorCopy[] {
+  if (value === undefined) return [];
+  const arr = expectArray(value, "sensors", errors);
+  const out: SensorCopy[] = [];
+  const seen = new Set<string>();
+  arr.forEach((entry, i) => {
+    const rel = expectRelPath(entry, `sensors[${i}]`, errors);
+    if (rel === null) return;
+    if (!rel.startsWith("sensors/") || !rel.endsWith(".md")) {
+      errors.push(`sensors[${i}] "${rel}" must be a Markdown manifest under sensors/`);
+      return;
+    }
+    if (seen.has(rel)) {
+      errors.push(`sensors[${i}] "${rel}" is a duplicate declaration`);
+      return;
+    }
+    seen.add(rel);
+    const bytes = readFile(rel);
+    if (bytes === null) {
+      errors.push(`sensors[${i}] "${rel}" not found in bundle`);
+      return;
+    }
+    out.push({ path: rel, bytes });
   });
   return out;
 }
@@ -468,6 +503,7 @@ export function inspectPlugin(plugin: PluginDescriptor, host: HostSnapshot): Plu
   const m = plugin.manifest;
   collectStageErrors(m, host, errors);
   collectToolErrors(m, host, errors);
+  collectSensorErrors(m, host, errors);
   collectSeamErrors(m, host, errors);
   collectFragmentErrors(m, host, errors);
   if (errors.length > 0) return { kind: "rejected", errors: sortErrors(errors) };
@@ -497,6 +533,14 @@ function collectToolErrors(m: PluginManifest, host: HostSnapshot, errors: Plugin
       errors.push({ kind: "malformed-manifest", message: `tool path collides with a stage path`, locus: t.path });
     }
     if (host.paths.has(t.path)) errors.push({ kind: "clobber", message: `tool path already in host`, locus: t.path });
+  }
+}
+
+function collectSensorErrors(m: PluginManifest, host: HostSnapshot, errors: PluginError[]): void {
+  for (const sensor of m.sensors ?? []) {
+    if (host.paths.has(sensor.path)) {
+      errors.push({ kind: "clobber", message: "sensor path already in host", locus: sensor.path });
+    }
   }
 }
 
@@ -574,8 +618,8 @@ export function serializeStageSeams(slug: string, seams: StageSeams): Buffer {
 // every other byte — body, comments, other fields, whitespace, line endings —
 // exactly as it found them.
 //
-// The accepted rewrite set is deliberately MINIMAL: `produces` only. Any other
-// seam is refused (unsupported-target-seam), and the serialized bytes are
+// The accepted rewrite set is deliberately MINIMAL: `produces` and `sensors`.
+// Any other seam is refused (unsupported-target-seam), and the serialized bytes are
 // re-parsed before they are handed back — a document that would not read back
 // as the intended seams is refused (roundtrip-mismatch) rather than written.
 
@@ -606,8 +650,9 @@ export type SeamSerializeError =
   | { readonly kind: "roundtrip-mismatch" }
   | { readonly kind: "unsupported-target-seam"; readonly seam: SeamName };
 
-// The one seam a plugin contribution may write into a real stage file.
-const WRITABLE_SEAM: SeamName = "produces";
+// The two additive stage contracts a plugin may own without rewriting host
+// inputs or document structure.
+const WRITABLE_SEAMS = new Set<SeamName>(["produces", "sensors"]);
 
 type RawLine = { readonly start: number; readonly end: number; readonly text: string };
 
@@ -755,7 +800,7 @@ function renderSeamSpan(name: SeamName, span: SeamSpan, spanText: string, existi
   return [head, ...tail].join(newline);
 }
 
-// Write `seams` back into the document's bytes. Only `produces` may change; the
+// Write `seams` back into the document's bytes. Only produces/sensors may change; the
 // result is re-parsed and compared against the intent before it is returned, so
 // a rewrite that would not read back as asked never reaches a caller.
 export function serializeStageFrontmatterSeams(
@@ -763,20 +808,22 @@ export function serializeStageFrontmatterSeams(
   seams: StageSeams,
 ): Result<Buffer, SeamSerializeError> {
   for (const name of SEAM_NAMES) {
-    if (name !== WRITABLE_SEAM && !sameEntries(doc.seams[name], seams[name])) {
+    if (!WRITABLE_SEAMS.has(name) && !sameEntries(doc.seams[name], seams[name])) {
       return { ok: false, error: { kind: "unsupported-target-seam", seam: name } };
     }
   }
-  if (sameEntries(doc.seams[WRITABLE_SEAM], seams[WRITABLE_SEAM])) return { ok: true, value: doc.raw };
-  const span = doc.seamSpans[WRITABLE_SEAM];
-  if (span === null) return { ok: false, error: { kind: "roundtrip-mismatch" } };
-  const spanText = doc.raw.subarray(span.start, span.end).toString("utf-8");
-  const rendered = renderSeamSpan(WRITABLE_SEAM, span, spanText, doc.seams[WRITABLE_SEAM], seams[WRITABLE_SEAM]);
-  const out = Buffer.concat([
-    doc.raw.subarray(0, span.start),
-    Buffer.from(rendered, "utf-8"),
-    doc.raw.subarray(span.end),
-  ]);
+  let out = doc.raw;
+  for (const name of SEAM_NAMES) {
+    if (!WRITABLE_SEAMS.has(name) || sameEntries(doc.seams[name], seams[name])) continue;
+    const current = parseStageFrontmatter(out);
+    if (!current.ok) return { ok: false, error: { kind: "roundtrip-mismatch" } };
+    const span = current.value.seamSpans[name];
+    if (span === null) return { ok: false, error: { kind: "roundtrip-mismatch" } };
+    const spanText = out.subarray(span.start, span.end).toString("utf-8");
+    const rendered = renderSeamSpan(name, span, spanText, current.value.seams[name], seams[name]);
+    out = Buffer.concat([out.subarray(0, span.start), Buffer.from(rendered, "utf-8"), out.subarray(span.end)]);
+  }
+  if (out.equals(doc.raw)) return { ok: true, value: doc.raw };
   const back = parseStageFrontmatter(out);
   if (!back.ok || back.value.slug !== doc.slug) return { ok: false, error: { kind: "roundtrip-mismatch" } };
   for (const name of SEAM_NAMES) {
@@ -892,7 +939,7 @@ export function planPluginCompositionChecked(
     sharedFiles.push({ path, expectedPostState: bytes });
   }
   if (errors.length > 0) return { ok: false, error: sortErrors(errors) };
-  const ownedPaths = [...m.stages.map((s) => s.path), ...m.tools.map((t) => t.path)].sort();
+  const ownedPaths = [...m.stages.map((s) => s.path), ...m.tools.map((t) => t.path), ...(m.sensors ?? []).map((s) => s.path)].sort();
   const ownedContentDigests = ownedRecordDigests(plugin);
   const stageIndex = buildStageIndex(m.stages);
   const record: PluginRecord = {
@@ -911,6 +958,7 @@ export function planPluginCompositionChecked(
       contentDigest: pluginContentDigest(plugin),
       stageCopies: [...m.stages].sort((a, b) => cmpStr(a.path, b.path)),
       toolCopies: [...m.tools].sort((a, b) => cmpStr(a.path, b.path)),
+      sensorCopies: [...(m.sensors ?? [])].sort((a, b) => cmpStr(a.path, b.path)),
       sharedWrites: sharedWrites.sort((a, b) => cmpStr(a.path, b.path)),
       ledger,
       record,
@@ -927,7 +975,7 @@ export function planPluginCompositionChecked(
 // against the recorded PluginRecord.ownedContentDigests without reaching any
 // mutation stage (inspect/plan/apply).
 export function ownedRecordDigests(plugin: { manifest: PluginManifest }): ReadonlyMap<string, string> {
-  const owned: readonly { path: string; bytes: Buffer }[] = [...plugin.manifest.stages, ...plugin.manifest.tools];
+  const owned: readonly { path: string; bytes: Buffer }[] = [...plugin.manifest.stages, ...plugin.manifest.tools, ...(plugin.manifest.sensors ?? [])];
   return new Map(owned.map((entry) => [entry.path, digestBytes(entry.bytes)]));
 }
 
@@ -958,7 +1006,7 @@ function pluginContentDigest(plugin: ValidPlugin): string {
   const hash = createHash("sha256");
   hash.update("amadeus.plugin-content.v1\0");
   hash.update(plugin.manifestBytes);
-  const owned: readonly { path: string; bytes: Buffer }[] = [...plugin.manifest.stages, ...plugin.manifest.tools];
+  const owned: readonly { path: string; bytes: Buffer }[] = [...plugin.manifest.stages, ...plugin.manifest.tools, ...(plugin.manifest.sensors ?? [])];
   for (const entry of [...owned].sort((a, b) => cmpStr(a.path, b.path))) {
     hash.update("\0");
     hash.update(entry.path);
@@ -1337,6 +1385,7 @@ export function applyPluginPlan(plan: PluginCompositionPlan, tx: WorkspaceTransa
     [
       ...plan.stageCopies.map((s) => ({ path: s.path, bytes: s.bytes })),
       ...plan.toolCopies.map((t) => ({ path: t.path, bytes: t.bytes })),
+      ...plan.sensorCopies.map((s) => ({ path: s.path, bytes: s.bytes })),
       ...plan.sharedWrites,
     ],
     [],
@@ -1395,6 +1444,7 @@ function composeWriteSet(
   const hostWrites = new Map<string, Buffer>();
   for (const s of plan.stageCopies) hostWrites.set(s.path, s.bytes);
   for (const t of plan.toolCopies) hostWrites.set(t.path, t.bytes);
+  for (const s of plan.sensorCopies) hostWrites.set(s.path, s.bytes);
   for (const w of plan.sharedWrites) hostWrites.set(w.path, w.bytes);
   const prior = backend.readComposition();
   const plugins = new Map(prior.plugins);

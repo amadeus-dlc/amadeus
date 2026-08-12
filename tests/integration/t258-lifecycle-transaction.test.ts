@@ -1,5 +1,6 @@
 // covers: subcommand:amadeus-state:archive subcommand:amadeus-state:unarchive
 // size: medium
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -500,7 +501,7 @@ describe("intent lifecycle transaction CLI", () => {
     expect(performance.now() - started).toBeGreaterThanOrEqual(4_900);
     expect(readFileSync(registryPath, "utf-8")).toBe(beforeRegistry);
     expect(readFileSync(fixture.audit, "utf-8")).toBe(beforeAudit);
-  }, 10_000);
+  }, scaleTestTime(10_000));
 
   test.each([
     "beforeValidation",

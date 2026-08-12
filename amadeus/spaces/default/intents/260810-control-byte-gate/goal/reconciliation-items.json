@@ -1,0 +1,38 @@
+[
+  {
+    "id": "goal-statement",
+    "verdict": "ACHIEVED",
+    "evidence": [
+      {
+        "kind": "deterministic-check",
+        "reference": "tests/control-byte-gate.ts",
+        "digest": "8b50ddb6ce4c4fea36818c67254856d383452cd55a91f0004c21adee0b9317a3"
+      },
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260810-control-byte-gate/construction/control-byte-gate/code-generation/code-summary.md",
+        "digest": "cd09f7a69660d0bd3598d21abf9317e41b4246775a6eaf206a95558762eef25e"
+      },
+      {
+        "kind": "deterministic-check",
+        "reference": ".github/workflows/ci.yml",
+        "digest": "70767c9d8d486862938d0484b4d67162a9b29bd40d9d622704e869255c4fa9ce"
+      },
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260810-control-byte-gate/construction/build-and-test/build-test-results.md",
+        "digest": "a9416308a83c0aa733631cd201b606cc39a7770d2482c69c2767a31d5936c4a7"
+      },
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260810-control-byte-gate/verification/phase-check-construction.md",
+        "digest": "313993f05dabe04d3b46e7907e1acf1c9f0c1f1e77eb6e51af773d188f0a8b30"
+      },
+      {
+        "kind": "human-ruling",
+        "reference": "audit:HUMAN_TURN:2026-08-11T06:53:42Z",
+        "digest": "313993f05dabe04d3b46e7907e1acf1c9f0c1f1e77eb6e51af773d188f0a8b30"
+      }
+    ]
+  }
+]

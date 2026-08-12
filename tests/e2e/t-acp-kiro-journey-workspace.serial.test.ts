@@ -71,6 +71,7 @@ import {
 } from "../harness/fixtures.ts";
 import { AcpSession, driveKiroAcp } from "../harness/kiro-acp-drive.ts";
 import { KIRO_SRC } from "../harness/tui-fixtures.ts";
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 
 // A multi-turn live journey (heaviest e2e). On ACP the forwarding loop runs
 // IN-TURN once a workflow is active (kiro-acp-drive.ts:354-359), so the per-repo
@@ -164,7 +165,7 @@ async function driveCodekbUntilBothRepos(
       bothPresent = true;
       session.notify("session/cancel", { sessionId: session.sessionId });
     }
-  }, 2000);
+  }, scaleTestTime(2000));
   try {
     await driveKiroAcp({
       projectDir: root,

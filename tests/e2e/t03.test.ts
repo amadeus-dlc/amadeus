@@ -51,6 +51,7 @@
 // audit row landed (the .sh's "pre-audit" intent, which it only documented in
 // comments).
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -169,7 +170,7 @@ describe("t03 amadeus-worktree merge (migrated from t03-worktree-merge.sh, plan 
     expect(existsSync(wt)).toBe(false); // T3: worktree gone after success
     // STRONGER: the audit-first WORKTREE_MERGED emit actually landed on disk.
     expect(hasMergedAudit(p, "demo")).toBe(true);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("4-5: defensive HEAD check fails when cwd is on a different branch", () => {
     const p = freshFixture();
@@ -180,7 +181,7 @@ describe("t03 amadeus-worktree merge (migrated from t03-worktree-merge.sh, plan 
 
     expect(r.status).not.toBe(0); // T4
     expect(r.out).toContain("expected branch main, found other-branch"); // T5
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("6-9: conflict envelope shape — non-zero, status/detail/conflict_files, worktree preserved", () => {
     const p = freshFixture();
@@ -212,7 +213,7 @@ describe("t03 amadeus-worktree merge (migrated from t03-worktree-merge.sh, plan 
     // `git diff --name-only --diff-filter=U`, deterministic).
     expect(r.out).toContain('"conflict_files":["conflict.txt"]');
     expect(existsSync(wt)).toBe(true); // T10: worktree preserved on conflict
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("10-12: rebase strategy rejected pre-audit when no remote — non-zero, names remote, worktree preserved", () => {
     const p = freshFixture();
@@ -226,5 +227,5 @@ describe("t03 amadeus-worktree merge (migrated from t03-worktree-merge.sh, plan 
     expect(existsSync(wtPath(p, "demo"))).toBe(true);
     // STRONGER: pre-audit rejection means NO WORKTREE_MERGED row landed.
     expect(hasMergedAudit(p, "demo")).toBe(false);
-  }, 30000);
+  }, scaleTestTime(30000));
 });

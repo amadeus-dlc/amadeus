@@ -19,6 +19,7 @@
 // (spawn-blindspot-seam-export); the state mutations they dispatch still go
 // through the real spawned `amadeus-state.ts`, so the transitions are real.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -119,6 +120,14 @@ describe("t528 the `committed` directive is part of the frozen contract", () => 
 });
 
 describe("t528 report's commit ack is non-terminal", () => {
+  test("a failed result remains a typed error directive", () => {
+    handleReport(["--stage", "code-generation", "--result", "failed"], undefined);
+
+    const directive = lastDirective();
+    expect(directive.kind).toBe("error");
+    expect(String(directive.message)).toContain('Unknown --result "failed"');
+  });
+
   test("a gated approve acks with `committed`, never the terminal `done`", () => {
     proj = freshProject();
 
@@ -130,7 +139,7 @@ describe("t528 report's commit ack is non-terminal", () => {
     const directive = lastDirective();
     expect(directive.kind).toBe("committed");
     expect(String(directive.reason)).toContain("Run next to continue.");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("the idempotent stale re-report acks with `committed`", () => {
     proj = freshProject();
@@ -147,7 +156,7 @@ describe("t528 report's commit ack is non-terminal", () => {
     const replay = lastDirective();
     expect(replay.kind).toBe("committed");
     expect(String(replay.reason)).toContain("idempotent re-report");
-  }, 30000);
+  }, scaleTestTime(30000));
 });
 
 describe("t528 terminal `done` is unchanged", () => {
@@ -165,5 +174,5 @@ describe("t528 terminal `done` is unchanged", () => {
     handleNext([], proj);
 
     expect(lastDirective().kind).toBe("done");
-  }, 30000);
+  }, scaleTestTime(30000));
 });

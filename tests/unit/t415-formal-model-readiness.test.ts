@@ -1,8 +1,8 @@
-// covers: file:packages/framework/core/tools/amadeus-formal-verif-model-map.ts
+// covers: file:plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts
 // size: small
 
 import { describe, expect, test } from "bun:test";
-import { evaluateTlaModelReadiness } from "../../packages/framework/core/tools/amadeus-formal-verif-model-map.ts";
+import { evaluateTlaModelReadiness } from "../../plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts";
 import { activationModelMap } from "../harness/formal-model-fixture.ts";
 
 const bytes = (text: string): Uint8Array => new TextEncoder().encode(text);

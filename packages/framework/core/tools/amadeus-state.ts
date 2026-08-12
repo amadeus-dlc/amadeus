@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { basename, dirname, isAbsolute, join } from "node:path";
 import { appendLifecycleAuditEntryUnlocked, escapeAuditValue } from "./amadeus-audit.ts";
 import type { AwaitCompletionDirective } from "./amadeus-directive.ts";
 import {
@@ -152,7 +152,7 @@ import {
   planSessionTakeover,
   readSessionTakeoverFacts,
 } from "./amadeus-session-takeover.ts";
-import { resolveAmadeusConfig } from "./amadeus-config.ts";
+import { requiredPluginStagesForScope, resolveAmadeusConfig } from "./amadeus-config.ts";
 import { parseMirrorStateDocument } from "./amadeus-mirror-state-codec.ts";
 import { workflowCompletionSettlement } from "./amadeus-mirror-policy.ts";
 import {
@@ -660,6 +660,20 @@ function emitWorkflowCompletionAuditRows(input: {
 
 const SLUG_RE = /^[a-z][a-z0-9-]*$/;
 
+// Enforcement cutoff, mirroring the E-OC1 questions-evidence gate: intents are
+// dated by their record dir name (YYMMDD-...), and only intents born on or after
+// the guard's adoption day are enforced. Keep this above main() because direct
+// CLI completion dispatch reads it before later module declarations initialize.
+export const BLOCKING_SENSOR_CUTOFF_YYMMDD = 260809;
+
+// The events that close a SENSOR_FIRED pair. Only SENSOR_PASSED clears an
+// output. Order is the equal-timestamp tie-break: PASSED before FAILED makes a
+// tie resolve to failure. These runtime constants must also stay above main().
+const SENSOR_TERMINAL_EVENTS = ["SENSOR_PASSED", "SENSOR_FAILED", "SENSOR_BUDGET_OVERRIDE"] as const;
+const BLOCKING_SENSOR_REMEDY =
+  "Fire the sensor and resolve its finding before completing the stage: " +
+  "amadeus-sensor.ts fire <sensor-id> --stage <slug> --output-path <artifact>.";
+
 // Exported for the in-process coverage seam (t220); production callers reach it
 // through main()'s handler dispatch. Record-side display names (Unnn-<slug>,
 // uppercase) are normalized to the lowercase canonical form and judged post-
@@ -702,12 +716,30 @@ function sha256(buf: string): string {
   return createHash("sha256").update(buf).digest("hex");
 }
 
+// Shared value-arm guard for hand-rolled `--flag <value>` loops (Issue #2763):
+// a bare `for`-loop consuming `args[i + 1]` as a flag's value has no way to
+// tell "the caller omitted the value" from "the caller's value IS another
+// flag" (`--foo --bar` silently binds `--bar` to `--foo`, then leaves `--bar`
+// itself unconsumed). requireFlagValue (amadeus-sensor-flags.ts) is the
+// canonical form for `for`-loops driven by an explicit `if (argv[i] ===
+// "--flag")` per flag; this is the same check factored out so callers that
+// still collect into a generic flags map (this file's `parseFlags`,
+// `handlePracticesPromote`, `handlePracticesEvent`) don't each grow their own
+// inline branch (and their own cognitive-complexity cost).
+function rejectFlagLikeValue(flag: string, value: string): void {
+  if (value.startsWith("--")) {
+    error(`${flag} expects a value, got another flag: "${value}". Did you forget the value?`);
+  }
+}
+
 function parseFlags(args: string[]): Record<string, string> {
   const flags: Record<string, string> = {};
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a.startsWith("--") && i + 1 < args.length) {
-      flags[a.slice(2)] = args[i + 1];
+      const value = args[i + 1];
+      rejectFlagLikeValue(a, value);
+      flags[a.slice(2)] = value;
       i++;
     }
   }
@@ -720,21 +752,23 @@ function parseFlags(args: string[]): Record<string, string> {
 // all-flags and use parseFlags). Returns the selector plus the positional
 // remainder. Whole-token match on `--intent`/`--space` only, so a field=value
 // operand whose value merely contains those substrings (e.g. `Foo=--intent`) is
-// never mis-consumed. A selector token with no following value is left in `rest`
-// (it then fails the operand parse loudly, never a silent drop). `--project-dir`
-// is already spliced out by main() before dispatch, so it never reaches here.
+// never mis-consumed. A selector token with no following value, OR whose
+// following token itself looks like another flag (starts with `--`), is left
+// in `rest` (it then fails the operand parse loudly, never a silent drop or a
+// mis-consumed selector — Issue #2763). `--project-dir` is already spliced out
+// by main() before dispatch, so it never reaches here.
 export function extractIntentSelector(args: string[]): { intent?: string; space?: string; rest: string[] } {
   const rest: string[] = [];
   let intent: string | undefined;
   let space: string | undefined;
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
-    if (a === "--intent" && i + 1 < args.length) {
+    if (a === "--intent" && i + 1 < args.length && !args[i + 1].startsWith("--")) {
       intent = args[i + 1];
       i++;
       continue;
     }
-    if (a === "--space" && i + 1 < args.length) {
+    if (a === "--space" && i + 1 < args.length && !args[i + 1].startsWith("--")) {
       space = args[i + 1];
       i++;
       continue;
@@ -1638,26 +1672,23 @@ function artifactGuardDisabled(): boolean {
 // guard's own switch and independent of it (a fixture that wants artifacts
 // unchecked does not thereby want sensor verdicts unchecked).
 
-// Enforcement cutoff, mirroring the E-OC1 questions-evidence gate: intents are
-// dated by their record dir name (YYMMDD-...), and only intents born on or after
-// the guard's adoption day are enforced. Without it, adopting a blocking sensor
-// would retroactively block every in-flight intent whose stages were sensed
-// before the severity existed. Exported so the guard's own tests pin the same
-// constant the guard reads rather than a copy.
-export const BLOCKING_SENSOR_CUTOFF_YYMMDD = 260809;
-
-// The events that close a SENSOR_FIRED pair. Only SENSOR_PASSED clears an
-// output: SENSOR_BUDGET_OVERRIDE closes the pair but reports that the sensor ran
-// out of budget, which is not a verdict of "clean". The order matters for the
-// equal-timestamp tie-break in sensorRowsForStage — PASSED is listed before
-// FAILED so a tie resolves to the failure.
-const SENSOR_TERMINAL_EVENTS = ["SENSOR_PASSED", "SENSOR_FAILED", "SENSOR_BUDGET_OVERRIDE"] as const;
+// Canonical name consumed by plugin-owned artifact writers through the audit
+// boundary. Exporting it keeps the core registry's writer-reference invariant
+// explicit without importing a plugin schema into core.
+export const ARTIFACT_ATTESTED_EVENT = "ARTIFACT_ATTESTED";
 
 export type BlockingSensorFinding =
   | { kind: "never-fired"; sensorId: string }
-  | { kind: "unresolved"; sensorId: string; outputPath: string; terminal: string | null };
+  | { kind: "unresolved"; sensorId: string; outputPath: string; terminal: string | null }
+  | { kind: "stale"; sensorId: string; outputPath: string };
 
-type SensorAuditRow = { event: string; sensorId: string; outputPath: string };
+type SensorAuditRow = {
+  event: string;
+  fireId: string;
+  sensorId: string;
+  outputPath: string;
+  outputDigest: string | null;
+};
 
 type TimedSensorRow = { ts: string; row: SensorAuditRow };
 
@@ -1689,7 +1720,9 @@ function sensorRowsForStage(
       const sensorId = auditBlockField(block, "Sensor ID");
       if (sensorId === null || !wanted.has(sensorId)) continue;
       const outputPath = auditBlockField(block, "Output path") ?? "";
-      collected.push({ ts: timestamp, row: { event, sensorId, outputPath } });
+      const outputDigest = auditBlockField(block, "Output digest");
+      const fireId = auditBlockField(block, "Fire id") ?? "";
+      collected.push({ ts: timestamp, row: { event, fireId, sensorId, outputPath, outputDigest } });
     }
   }
   collected.sort(compareSensorRowTime);
@@ -1710,21 +1743,32 @@ function sensorRowsForStage(
 //     about — while a sensor that never applied to anything is refused.
 //   unresolved — some fired output's latest terminal is not SENSOR_PASSED
 //     (a FAILED, a budget override, or no terminal at all).
+interface TerminalSensorVerdict {
+  readonly event: string;
+  readonly outputDigest: string | null;
+  readonly receiptMatches: boolean;
+}
+
 export function evaluateBlockingSensors(
   blockingSensorIds: readonly string[],
   audit: string,
   stageSlug: string,
+  currentDigest?: (outputPath: string) => string | null,
 ): BlockingSensorFinding | null {
   const wanted = new Set(blockingSensorIds);
   if (wanted.size === 0) return null;
   const rows = sensorRowsForStage(audit, stageSlug, wanted);
   for (const sensorId of blockingSensorIds) {
     const firedOutputs: string[] = [];
-    const latestTerminal = new Map<string, string>();
+    let latestOutputPath = "";
+    const latestFire = new Map<string, { fireId: string; outputDigest: string | null }>();
+    const latestTerminal = new Map<string, TerminalSensorVerdict>();
     for (const row of rows) {
       if (row.sensorId !== sensorId) continue;
       if (row.event === "SENSOR_FIRED") {
         if (!firedOutputs.includes(row.outputPath)) firedOutputs.push(row.outputPath);
+        latestOutputPath = row.outputPath;
+        latestFire.set(row.outputPath, { fireId: row.fireId, outputDigest: row.outputDigest });
         // A fire INVALIDATES the output's previous terminal: the artifact changed
         // and the verdict that cleared it describes bytes that no longer exist.
         // Without this, a PASSED followed by an in-flight re-fire would read as
@@ -1732,13 +1776,39 @@ export function evaluateBlockingSensors(
         latestTerminal.delete(row.outputPath);
         continue;
       }
-      latestTerminal.set(row.outputPath, row.event);
+      const fire = latestFire.get(row.outputPath);
+      const receiptMatches = row.outputDigest === null || (
+        fire !== undefined && fire.fireId === row.fireId && fire.outputDigest === row.outputDigest
+      );
+      latestTerminal.set(row.outputPath, {
+        event: row.event,
+        outputDigest: row.outputDigest,
+        receiptMatches,
+      });
     }
     if (firedOutputs.length === 0) return { kind: "never-fired", sensorId };
+    const latest = latestTerminal.get(latestOutputPath) ?? null;
+    const latestDigest = currentDigest?.(latestOutputPath);
+    const latestOutputPassed = latest?.event === "SENSOR_PASSED" && latest.receiptMatches && (
+      currentDigest === undefined || (
+        latest.outputDigest !== null && latestDigest === latest.outputDigest
+      )
+    );
     for (const outputPath of firedOutputs) {
       const terminal = latestTerminal.get(outputPath) ?? null;
-      if (terminal === "SENSOR_PASSED") continue;
-      return { kind: "unresolved", sensorId, outputPath, terminal };
+      if (terminal?.event !== "SENSOR_PASSED" || !terminal.receiptMatches) {
+        return { kind: "unresolved", sensorId, outputPath, terminal: terminal?.event ?? null };
+      }
+      if (currentDigest !== undefined) {
+        const digest = currentDigest(outputPath);
+        // A later successful fire on a different path represents an artifact
+        // move. Do not make a formerly valid, now-absent path a permanent gate;
+        // unresolved or changed sibling outputs remain fail-closed.
+        if (digest === null && outputPath !== latestOutputPath && latestOutputPassed) continue;
+        if (terminal.outputDigest === null || digest !== terminal.outputDigest) {
+          return { kind: "stale", sensorId, outputPath };
+        }
+      }
     }
   }
   return null;
@@ -1762,10 +1832,6 @@ function blockingSensorIdsForStage(slug: string): string[] {
   return ids;
 }
 
-const BLOCKING_SENSOR_REMEDY =
-  "Fire the sensor and resolve its finding before completing the stage: " +
-  "amadeus-sensor.ts fire <sensor-id> --stage <slug> --output-path <artifact>.";
-
 export function verifyBlockingSensors(pd: string, stage: { slug: string; name: string }): void {
   if (blockingSensorGuardDisabled()) return;
   const blocking = blockingSensorIdsForStage(stage.slug);
@@ -1774,13 +1840,26 @@ export function verifyBlockingSensors(pd: string, stage: { slug: string; name: s
   const intentDate = rd === null ? null : Number.parseInt(basename(rd).slice(0, 6), 10);
   const enforced = intentDate !== null && Number.isFinite(intentDate) && intentDate >= BLOCKING_SENSOR_CUTOFF_YYMMDD;
   if (!enforced) return;
-  const finding = evaluateBlockingSensors(blocking, operationReadAudit(pd), stage.slug);
+  const finding = evaluateBlockingSensors(blocking, operationReadAudit(pd), stage.slug, (outputPath) => {
+    try {
+      const path = isAbsolute(outputPath) ? outputPath : join(pd, outputPath);
+      return `sha256:${createHash("sha256").update(readFileSync(path)).digest("hex")}`;
+    } catch {
+      return null;
+    }
+  });
   if (finding === null) return;
   if (finding.kind === "never-fired") {
     let message = `Refusing to complete "${stage.slug}": the blocking sensor `;
     message += `"${finding.sensorId}" has no SENSOR_FIRED row for this stage, so its verdict is `;
     message += `unknown. A blocking sensor that never ran is not a pass. ${BLOCKING_SENSOR_REMEDY}`;
     error(message);
+  }
+  if (finding.kind === "stale") {
+    error(
+      `Refusing to complete "${stage.slug}": the blocking sensor "${finding.sensorId}" ` +
+        `passed different bytes at ${finding.outputPath}. Re-fire it against the current artifact.`,
+    );
   }
   const terminal = finding.terminal ?? "no terminal row";
   let message = `Refusing to complete "${stage.slug}": the blocking sensor `;
@@ -1956,6 +2035,18 @@ function artifactsExistInDir(dir: string, artifacts: readonly string[]): boolean
   return false;
 }
 
+function allArtifactsExistInDir(dir: string, artifacts: readonly string[]): boolean {
+  for (const name of artifacts) {
+    if (!existsSync(join(dir, `${name}.md`))) return false;
+  }
+  return true;
+}
+
+function requiredProducedArtifacts(stage: ProducedStage): string[] {
+  const optional = new Set(stage.optional_produces ?? []);
+  return (stage.produces ?? []).filter((name) => !optional.has(name));
+}
+
 function kindAwareArtifactsExist(
   pd: string,
   stage: ProducedStage,
@@ -1979,9 +2070,9 @@ function kindAwareArtifactsExist(
     if (applicable.length === 0) continue;
     hasApplicableArtifact = true;
     const dir = join(rec, "construction", unit, stage.slug);
-    if (artifactsExistInDir(dir, applicable)) return true;
+    if (!allArtifactsExistInDir(dir, applicable)) return false;
   }
-  return !hasApplicableArtifact;
+  return hasApplicableArtifact || snapshot.units.length > 0;
 }
 
 // Units whose artifacts landed but whose reviewer never ran (#2359).
@@ -2056,22 +2147,19 @@ function artifactCarriesReview(path: string): boolean {
   }
 }
 
-// True when at least one applicable declared produces[] artifact exists on disk
-// under the stage's resolved directory. A stage with empty produces[] passes.
+// True when every applicable required produces[] artifact exists on disk under
+// every resolved owner directory. Optional outputs are never completion guards.
 function producesArtifactsExist(
   pd: string,
   stage: ProducedStage,
 ): boolean {
-  const produces = stage.produces ?? [];
+  const produces = requiredProducedArtifacts(stage);
   if (produces.length === 0) return true; // nothing declared -> nothing to verify
   const kindAware = kindAwareArtifactsExist(pd, stage, produces);
   if (kindAware !== null) return kindAware;
-  for (const dir of producesDirsForStage(pd, stage)) {
-    for (const name of produces) {
-      if (existsSync(join(dir, `${name}.md`))) return true;
-    }
-  }
-  return false;
+  const dirs = producesDirsForStage(pd, stage);
+  if (dirs.length === 0) return false;
+  return dirs.every((dir) => allArtifactsExistInDir(dir, produces));
 }
 
 // True when any non-doc file exists in the workspace - a file outside the
@@ -2374,7 +2462,7 @@ function verifyStageArtifacts(pd: string, stage: VerifiableStage): void {
 
   if (!producesArtifactsExist(pd, stage)) {
     error(
-      `Refusing to complete "${stage.slug}": none of its declared artifacts exist ` +
+      `Refusing to complete "${stage.slug}": one or more missing required artifacts ` +
         `under the intent's record directory. The stage protocol requires ${stage.name} ` +
         `to produce output before the gate. Produce the artifacts before completing. ` +
         `(declared: ${(stage.produces ?? []).join(", ") || "none"})`
@@ -2917,6 +3005,7 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
     completedSlug,
     requestedInstance,
   );
+  verifyMandatoryPluginStages(pd, content, completedSlug);
 
   // If the slug is already [x], approve already emitted STAGE_COMPLETED —
   // skip re-emission to avoid duplicates. Matches handleAdvance's
@@ -4584,6 +4673,36 @@ export function skipStageContent(content: string, slug: string): string {
   );
 }
 
+function mandatoryPluginStages(
+  pd: string,
+  scope: string,
+  intent: string | undefined,
+  space: string | undefined,
+): string[] {
+  const resolved = resolveAmadeusConfig(pd, intent, space);
+  if (resolved.kind === "invalid") {
+    error(`Cannot enforce plugin scope bindings: ${resolved.issues.map((issue) => issue.path).join(", ")}`);
+  }
+  return requiredPluginStagesForScope(resolved.config.plugin.scopeBindings, scope);
+}
+
+function verifyMandatoryPluginStages(
+  pd: string,
+  content: string,
+  completingSlug?: string,
+): void {
+  const scope = getField(content, "Scope") ?? "";
+  const rows = parseCheckboxes(content);
+  for (const slug of mandatoryPluginStages(pd, scope, stateOperationTarget?.intent, stateOperationTarget?.space)) {
+    const state = rows.find((row) => row.slug === slug)?.state;
+    if (state === "completed" || slug === completingSlug) continue;
+    error(
+      `Refusing workflow completion: host-bound plugin stage "${slug}" is mandatory ` +
+        `for scope "${scope}" and is ${state ?? "absent"}. Run and complete it before finishing.`,
+    );
+  }
+}
+
 // skip <slug> [--reason <text>] — transition [ ]/[-]/[R] → [S], emit STAGE_SKIPPED
 export function handleSkip(args: string[], root = projectDir): void {
   if (args.length < 1) error("Usage: amadeus-state.ts skip <slug> [--reason <text>]");
@@ -4597,6 +4716,12 @@ export function handleSkip(args: string[], root = projectDir): void {
 
   const stage = findStageBySlug(slug);
   if (!stage) error(`Unknown stage: ${slug}`);
+  const scope = getField(content, "Scope") ?? "";
+  if (
+    mandatoryPluginStages(pd, scope, stateOperationTarget?.intent, stateOperationTarget?.space).includes(slug)
+  ) {
+    error(`Cannot skip "${slug}": it is a host-bound mandatory plugin stage for scope "${scope}".`);
+  }
   validateSlugInState(content, slug, ["pending", "in-progress", "revising"]);
 
   content = skipStageContent(content, slug);
@@ -4805,16 +4930,19 @@ export function handleSessionTakeover(args: string[]): void {
 // in .ts code so t48's emitter-pairing check passes. Called by the
 // practices-discovery stage at Step 4 (discovered), Step 7 (affirmed), and
 // Step 6 on write failure (override).
-function handlePracticesEvent(args: string[]): void {
+export function handlePracticesEvent(args: string[]): void {
   const pd = resolveProjectDir(projectDir);
   let eventTypeArg = "";
   const fields: Record<string, string> = {};
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--type" && i + 1 < args.length) {
-      eventTypeArg = args[i + 1];
+      const value = args[i + 1];
+      rejectFlagLikeValue("--type", value);
+      eventTypeArg = value;
       i++;
     } else if (args[i] === "--field" && i + 1 < args.length) {
       const kv = args[i + 1];
+      rejectFlagLikeValue("--field", kv);
       const idx = kv.indexOf(":");
       if (idx > 0) {
         const key = kv.slice(0, idx).trim();
@@ -5055,7 +5183,9 @@ export function handlePracticesPromote(args: string[]): void {
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a.startsWith("--") && i + 1 < args.length) {
-      flags[a.slice(2)] = args[i + 1];
+      const value = args[i + 1];
+      rejectFlagLikeValue(a, value);
+      flags[a.slice(2)] = value;
       i++;
     }
   }
@@ -5417,8 +5547,18 @@ export function handleLookup(args: string[]): void {
 // Forks main's amadeus-state.md to <worktreePath>/amadeus-docs/amadeus-state.md.
 // Adds slug to main's Bolt Refs list. Decorative Worktree Path on the
 // worktree-side state file (recoverable from cwd; debugging breadcrumb only).
-function handleFork(args: string[]): void {
-  const flags = parseFlags(args);
+export function handleFork(args: string[]): void {
+  // "--unit" (see boltContextKind below) is a bare boolean marker forwarded
+  // verbatim by amadeus-bolt.ts's start handler — it never carries a value.
+  // parseFlags's value-carrying-flag scan has no boolean-flag concept (unlike
+  // amadeus-bolt.ts's own splitBooleanFlags), so strip it before that scan:
+  // otherwise a call shaped "--unit --repo <name>" (bolt.ts:299-306's
+  // unitFlagArgs()+selectorArgs() pass-through) reads as --unit's value being
+  // swallowed by the NEXT flag and is now refused (Issue #2763's
+  // rejectFlagLikeValue guard) instead of the pre-existing silent-and-harmless
+  // mis-capture into an unread flags.unit. boltContextKind still reads the
+  // ORIGINAL args below so its `--unit` presence check is unaffected.
+  const flags = parseFlags(args.filter((a) => a !== "--unit"));
   const slug = validateSlug(flags.slug);
   const pd = resolveProjectDir(projectDir);
   // Whether the slug names a swarm unit or a Bolt, for the telemetry marker

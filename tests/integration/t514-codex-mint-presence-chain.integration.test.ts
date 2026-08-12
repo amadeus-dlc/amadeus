@@ -19,6 +19,7 @@
 // it globally, and with it set this test would be measuring the bypass rather
 // than the guard (the t188 harness note).
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { cpSync, readFileSync } from "node:fs";
@@ -90,7 +91,7 @@ function runMint(proj: string, prompt: string, sessionId: string): number {
       }),
       encoding: "utf-8",
       env: { ...process.env, CLAUDE_PROJECT_DIR: undefined } as NodeJS.ProcessEnv,
-      timeout: 30_000,
+      timeout: scaleTestTime(30_000),
     },
   );
   return r.status ?? -1;

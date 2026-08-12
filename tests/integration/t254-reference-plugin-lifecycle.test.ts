@@ -25,6 +25,7 @@
 // mechanism unit tests (U09 t-plugin-projection*, U10 t252/t253) — no new runtime
 // API is added here.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "bun:test";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -229,7 +230,7 @@ describe("t254 reference-plugin-and-guides — U11 FR-6 items 21–22", () => {
       expect(bundledSkill).toContain("{{HARNESS_DIR}}");
       expect(checkNeutralBundle()).toEqual([]);
     },
-    TIMEOUT_MS,
+    scaleTestTime(TIMEOUT_MS),
   );
 
   test("self-install stays the closed five faces (kiro/kiro-ide packaged, never promoted)", () => {

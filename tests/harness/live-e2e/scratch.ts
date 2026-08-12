@@ -1,3 +1,4 @@
+import { scaleTestTime } from "../../lib/test-time-factor.ts";
 import { spawnSync } from "node:child_process";
 import { sanitizeText } from "./contract.ts";
 import { buildChildEnvironment, type EnvironmentDeclaration } from "./policy.ts";
@@ -37,7 +38,7 @@ export function initializeScratchGit(
     },
   ];
   for (const step of steps) {
-    const result = spawnSync("git", [...step.args], { cwd: projectDir, encoding: "utf8", env, timeout: 30_000 });
+    const result = spawnSync("git", [...step.args], { cwd: projectDir, encoding: "utf8", env, timeout: scaleTestTime(30_000) });
     if (result.status !== 0) throw new Error(`git ${step.verb} failed: ${sanitizeText(result.stderr)}`);
   }
 }

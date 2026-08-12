@@ -1,7 +1,7 @@
 {
   "description": "Reads that claim a domain type for a JSON value taken off disk without proving it (#1980 FR-3a). Shrink-only: adding a cast fails CI. Regenerate with: bun tests/unchecked-cast-guard.ts --update",
   "direction": "shrink-only",
-  "total": 35,
+  "total": 33,
   "sites": {
     "packages/framework/core/otel/relay.ts": {
       "json-parse-as": 3
@@ -28,9 +28,6 @@
       "json-parse-as": 1
     },
     "packages/framework/core/tools/amadeus-orchestrate.ts": {
-      "json-parse-as": 2
-    },
-    "packages/framework/core/tools/amadeus-plugin-activation.ts": {
       "json-parse-as": 2
     },
     "packages/framework/core/tools/amadeus-plugin-compose.ts": {

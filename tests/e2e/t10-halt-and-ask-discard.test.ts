@@ -70,6 +70,7 @@
 // end-state and split the assertions into named cases). Several STRONGER via
 // block-scoped field co-location + JSON-shape pinning.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -191,7 +192,7 @@ describe("t10 amadeus-worktree discard halt-and-ask cleanup (migrated from t10-h
       );
       expect(stillListed).toBe(false);
     },
-    30000,
+    scaleTestTime(30000),
   );
 
   test(
@@ -209,7 +210,7 @@ describe("t10 amadeus-worktree discard halt-and-ask cleanup (migrated from t10-h
       // a6: Bolt slug field (exactly `y`).
       expect(block?.fields?.["Bolt slug"]).toBe("y");
     },
-    30000,
+    scaleTestTime(30000),
   );
 
   test(
@@ -229,7 +230,7 @@ describe("t10 amadeus-worktree discard halt-and-ask cleanup (migrated from t10-h
       // ... and no SECOND audit row was written.
       expect(discardCount(p, "y")).toBe(1);
     },
-    30000,
+    scaleTestTime(30000),
   );
 
   test(
@@ -245,6 +246,6 @@ describe("t10 amadeus-worktree discard halt-and-ask cleanup (migrated from t10-h
       const json = JSON.parse(info.stdout.trim());
       expect(json.path).toBe(wtPath(p, "y"));
     },
-    30000,
+    scaleTestTime(30000),
   );
 });

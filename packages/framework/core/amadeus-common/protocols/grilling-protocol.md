@@ -7,10 +7,10 @@
 
 # Grilling Protocol
 
-The single source for the **grilling discipline**: a relentless, one-question-
-at-a-time interview about a plan, design, or decision space until agent and
-user reach a shared understanding. Two surfaces consume this protocol and
-define nothing of the discipline themselves:
+The single source for the **grilling discipline**: a relentless, round-by-round
+interview about a plan, design, or decision space until agent and user reach a
+shared understanding. Two surfaces consume this protocol and define nothing of
+the discipline themselves:
 
 - **Grill me mode** (workflow) — the fourth interaction mode in
   `stage-protocol.md` §3 Step 3d.
@@ -20,61 +20,212 @@ define nothing of the discipline themselves:
 Questions render through the harness's question-rendering annex, exactly like
 every other structured question. This protocol never names a harness tool.
 
+## Two layers: skeleton, then overlay
+
+This file is two layers and never interleaves them:
+
+1. **The skeleton** (§1) — the upstream grilling skill, adopted verbatim. It
+   defines the model: a design tree, worked in rounds, driven by the frontier.
+2. **The overlay** (§2 onward) — the Amadeus contracts that the skeleton knows
+   nothing about: depth as a pruning threshold, the circuit breaker, the
+   questions-file and audit obligations, the annex mapping. The overlay adds
+   obligations around the skeleton; it never rewrites the skeleton's wording.
+
+**Extracting the skeleton.** The skeleton is delimited by a marker pair, so
+extraction survives any overlay edit and depends on no line numbers:
+
+```bash
+awk '/^<!-- amadeus-grilling-skeleton:begin /{f=1;next} /^<!-- amadeus-grilling-skeleton:end -->/{f=0} f' grilling-protocol.md > /tmp/skeleton.md
+diff /tmp/skeleton.md <pinned-upstream-text>   # expected: no output, exit 0
+```
+
+The marker lines themselves are not part of the skeleton. The `upstream=`
+attribute on the begin marker records the exact upstream commit the skeleton
+was taken from — it is the attribution anchor for the MIT header above, and the
+diff above is the machine check that the bytes still match that commit. Use the
+same two commands to re-sync against a future upstream revision.
+
+## 1. Skeleton — upstream grilling, verbatim
+
+Everything between the markers is upstream text under MIT. Do not reword,
+reformat, renumber, or annotate it; Amadeus additions belong in the overlay.
+
+<!-- amadeus-grilling-skeleton:begin upstream=1495d014303e041c51c29f9e442485ba06f5878d -->
+---
+name: grilling
+description: Grill the user relentlessly about a plan, decision, or idea. Use when the user wants to stress-test their thinking, or uses any 'grill' trigger phrases.
 ---
 
-## 1. Dialogue Discipline (applies in BOTH contexts)
+Interview the user relentlessly until you reach a shared understanding. Map this as a **design tree**: every decision branches into the decisions that hang off it.
 
-| # | Rule |
-|---|------|
-| D1 | Present questions **one at a time**. Never bundle multiple questions into a single structured-question call. |
-| D2 | Every question carries a **recommended answer**: state the rationale for the recommendation in 1-2 sentences inside the question text, and mark the first option's label with "(recommended)". |
-| D3 | **Facts are never asked.** Anything determinable from the codebase, prior artifacts, or the code knowledge base is looked up by the agent, not put to the user. |
-| D4 | A fact the agent cannot settle by self-research is presented as an **estimate with a confidence level** (high / medium / low) for confirmation. If the user disagrees, demote it to a regular judgement question. |
-| D5 | **Decisions are always the user's.** Put each decision to the user and wait for the answer. Never decide on the user's behalf — autonomy is never inferred. |
-| D6 | **Bounded termination.** The user may cut the session short with "done". Otherwise stop at the finite total question budget: workflow grilling uses the active stage depth; standalone grilling uses the explicitly requested Minimal / Standard / Comprehensive level and defaults to Standard when none is requested. The ceilings are Minimal 4 / Standard 8 / Comprehensive 12 rendered questions, including estimate confirmations, demoted judgement questions, and material-ambiguity clarifications. At most one clarification round may consume remaining slots. Do not offer continuation beyond the total ceiling. |
-| D7 | **Shared understanding is confirmed, never assumed.** At the end, present an agreement summary of every decision and obtain explicit confirmation. Do not proceed to artifact generation or session close before confirmation. On a correction request, update the affected answer and re-present the summary. |
+Work the tree in **rounds**. The **frontier** is every decision whose prerequisites are already settled — the questions you can ask _now_ without guessing at answers you haven't heard yet. Ask the whole frontier in one round: number each question and give your recommended answer. Then wait for the user's answers before the next round.
 
-## 2. The Grilling Loop (8 steps)
+Each question should be formatted like so:
 
-1. **Investigate** — Establish the subject (stage context or skill argument)
-   and self-research the relevant facts from the codebase, artifacts, and the
-   code knowledge base. Never generate a fact-lookup question (D3).
-2. **Formulate** — Build the next single question: a judgement question, or a
-   confidence-tagged estimate confirmation (D4). Include the recommendation
-   rationale in the question text and "(recommended)" on the first option (D2).
-3. **Append** — *(workflow only)* The questions file was created header-only in
-   `stage-protocol.md` §3 Step 2 (grilling never pre-authors a question set).
-   Append this dynamically-formulated question to it with a blank `[Answer]:` tag
-   **before presenting it** (the Stop hook's human-wait convention), and log the
-   pre-presentation `decision` audit event.
-4. **Present** — Present exactly one question through the annex (D1). If an
-   estimate confirmation is rejected, demote it to a judgement question and
-   re-present.
-5. **WriteBack** — *(workflow only)* Write the answer back to its `[Answer]:`
-   tag immediately, and log the `answer` audit event — one per question.
-6. **CheckEnd** — "done" short-circuits to step 7. Reaching the finite total
-   question ceiling also proceeds directly to step 7; never offer a
-   continuation that can exceed the ceiling. Otherwise, if a material open
-   point remains, the one clarification round is unused, and a budget slot
-   remains, loop to step 1. For every other open point, record it for the
-   workflow approval boundary, or the standalone terminal agreement summary,
-   and proceed to step 7 (D6).
-7. **Summary** — Present the agreement summary of all decisions and request
-   explicit confirmation (§3 C-4). A correction request updates the affected
-   answer (workflow: the `[Answer]:` tag) and re-presents the summary. Never
-   move on until confirmed (D7).
-8. **Confirmed** — Workflow: hand off to the stage's artifact generation
-   (stage-protocol Step 4 onward, unchanged). Standalone: print the summary to
-   the terminal, include every unresolved material point in it, and finish
-   (write it to a path only on explicit user request).
+```
+❓ **Q1** - **<question title>**: <question body, might be multiple paragraphs, including multiple choices>
+
+➡️ <your recommended answer>
+```
+
+Each round the user answers reshapes the tree — settled decisions push the frontier outward and unblock questions that depended on them. Recompute the frontier and ask the next round. A question whose answer depends on another question still open in this round belongs to a _later_ round, not this one.
+
+Finding _facts_ is your job, never the user's. When a frontier question needs a fact from the environment (filesystem, tools, etc.), dispatch a sub-agent to find it — don't ask the user for anything you could look up yourself. Don't block on it: a running exploration is an unsettled prerequisite, so only the questions downstream of it wait for the sub-agent to report — ask the rest of the frontier now. The _decisions_ are the user's — put each to them and wait.
+
+The session is done when the frontier is empty: every branch of the design tree visited, nothing left silently assumed. Do not act on it until the user confirms you have reached a shared understanding.
+<!-- amadeus-grilling-skeleton:end -->
+
+## 2. Overlay — the Amadeus round loop
+
+### 2.1 Rounds, frontier, termination
+
+The round is the unit of presentation, not the single question. Ask the whole
+(pruned) frontier in one round — numbered, each carrying a recommended answer
+and the 1-2 sentence rationale for it — then wait for the answers before
+recomputing the tree. Questions that depend on another question still open in
+this round belong to a later round.
+
+**Termination is coverage, not counting.** A session ends when the pruned
+frontier is empty — every branch admitted by the active materiality
+threshold visited, nothing left silently assumed — or when the user says
+`done`. The number of questions asked
+is an emergent value of the tree: it is never a termination condition, never a
+target, and no rule in this protocol obliges a session to end at a count. The
+only count-shaped rule is the circuit breaker in §2.4, which is a disclosed
+abort, not a completion.
+
+### 2.2 Depth is a materiality threshold
+
+Depth decides **which nodes enter the tree**, not how many questions may be
+asked. A node below the active threshold is pruned before the frontier is
+computed, so it never becomes a question:
+
+| Level | Nodes that enter the tree | Circuit breaker (§2.4) |
+|---|---|---|
+| Minimal | Decisions that block implementation, and irreversible decisions | 12 |
+| Standard | The above, plus design decisions carrying a real trade-off | 24 |
+| Comprehensive | The above, plus edge cases, extension points, operational detail | 36 |
+| Free *(standalone only)* | No pruning — every branch of the tree | none |
+
+Workflow grilling takes its level from the active stage depth, which carries the
+engine's three values only — `Free` never appears on the wire, in state, or on a
+directive. Standalone grilling takes an explicitly requested level and defaults
+to Free when none is requested, matching upstream behaviour for single use.
+
+### 2.3 Deferred nodes are named, never dropped
+
+Pruning is a recorded decision, not an invisible one. The agreement summary
+(§3, C-4) carries a required section — **"Deferred as below the threshold"** —
+listing each pruned node and the level that would have admitted it. Under Free
+nothing is pruned: state that explicitly ("none — Free prunes nothing") rather
+than omitting the section.
+
+In workflow grilling, append the same section to the questions file, opened by
+the marker
+
+```text
+<!-- amadeus-grilling:deferred -->
+```
+
+on its own line directly above the section heading. The marker is what the
+question-budget sensor matches: it reads the questions file and nothing else,
+so a section that exists only in the spoken summary is unreachable to it.
+
+The heading above the marker is human-facing prose and is written in whatever
+language the record uses ("Deferred as below the threshold",
+「閾値未満として明示的に先送りした点」). The marker is not — it is machine-matched
+verbatim, so it is never translated, reworded, or merged into another line. The
+same reasoning applies to the mode marker (§2.5) and the justification line
+(§2.5): all three are language-neutral by construction, because a check that
+matched a heading in one team's language could never match another's.
+
+Pruning nothing does not remove the obligation: the marker and the section are
+written even when nothing was pruned, carrying the same explicit "none" the
+paragraph above requires. An absent section means "not recorded", never
+"nothing to record".
+
+### 2.4 Circuit breaker
+
+A level in force (Minimal / Standard / Comprehensive) bounds session length with
+a circuit breaker at three times the `stage-protocol.md` §8 depth guidance:
+**Minimal 12, Standard
+24, Comprehensive 36** rendered questions in total across all rounds, including
+estimate confirmations and demoted or clarifying follow-ups. Free is exempt —
+its safety valves are the per-round human gate and `done`.
+
+When the breaker is reached, stop and **disclose that the tree was not fully
+traversed**: name the frontier still open and carry it into the workflow
+approval boundary record or the standalone terminal agreement summary alongside
+the deferred nodes. Proceed directly to C-4; do not open another round.
+
+Silent truncation is forbidden. Never present a summary as a completed
+traversal when the breaker fired, and never end a session by quietly not asking
+the next round — an unasked frontier is disclosed or it is asked.
+
+**Rounds are atomic at the breaker boundary (appended ⇔ presented).** When the
+remaining capacity before the breaker cannot present the whole next round, do
+not append that round to the questions file and do not present a partial round
+— the round is either fully appended-and-presented or neither. Its questions
+stay in the frontier and pass to C-4 as the disclosed open frontier, so the
+questions file never carries appended-but-unpresented blank `[Answer]:` tags
+and `stage-protocol.md` §3 Step 4's blank-tag check cannot silently reopen the
+session after the breaker. A consequence: the breaker may fire at a round
+boundary before the numeric ceiling is exactly reached — the count is a
+ceiling, not a target (§2.1).
+
+### 2.5 Recording obligations (workflow only)
+
+- **Mode marker.** The questions file is created header-only in
+  `stage-protocol.md` §3 Step 2; its first line is
+  `<!-- amadeus-grilling:v1 mode=grilling -->`. The marker declares that this
+  file records a grilling session, so its question count is read against the
+  frontier contract rather than a fixed ceiling.
+- **One entry per question.** Round batching changes presentation only, never
+  the record: each question is appended to the questions file with a blank
+  `[Answer]:` tag **before** the round is presented, each answer is written back
+  to its own tag before the next round, and the `decision` / `answer` audit
+  pair is emitted per question, in order. No new event types, no batched entry.
+- **Recorded justification on exceeding the depth ceiling.** Crossing the
+  `stage-protocol.md` §8 Depth-Level Contract ceiling (Minimal 4 / Standard 8 /
+  Comprehensive 12) is
+  expected under frontier-driven termination. At the moment the total crosses
+  it, append exactly one line to the questions file:
+
+  ```text
+  <!-- amadeus-grilling:justification depth=<Depth> questions=<N> frontier-driven -->
+  ```
+
+  with `<Depth>` the active depth and `<N>` the total rendered questions at the
+  crossing. This line is the standing form of the recorded-justification clause
+  in `stage-protocol.md` §8. Fixed shape, one line, no free text, written once
+  per session — it is machine-matched verbatim, so it is never reworded and
+  never merged into another line.
+- **Deferred-node section.** The agreement summary's deferred section (§2.3) is
+  appended to the questions file as well, opened by
+  `<!-- amadeus-grilling:deferred -->` on its own line. Written once per
+  session, including when nothing was pruned.
+
+### 2.6 Facts, estimates, decisions
+
+- **Facts are the agent's job** (§1). Dispatch a sub-agent for anything the
+  environment can answer and do not block the round on it: only the questions
+  downstream of a running exploration wait, and they simply belong to a later
+  round.
+- **A fact self-research cannot settle** is put as an estimate with a
+  confidence level (high / medium / low) for confirmation. If the user rejects
+  the estimate, demote it to a regular judgement question.
+- **Decisions are always the user's.** A recommended answer is a
+  recommendation, never a default the agent may apply on the user's behalf —
+  autonomy is never inferred.
 
 ## 3. Question Spec Templates
 
-One spec block = one question, using the annex's existing field mapping.
-Options stay within 2-4; the "Other" escape is the harness built-in or the
-annex-defined explicit option (existing contract — do not add it to `options`).
+One spec block = one question; a round is several of them presented together
+(§4). Options stay within 2-4; the "Other" escape is the harness built-in or
+the annex-defined explicit option (existing contract — do not add it to
+`options`).
 
-### C-2: Grilling question (one at a time)
+### C-2: Round question
 
 ```question
 prompt: "Q[n]. [Question]. [1-2 sentence rationale for the recommendation]"
@@ -89,24 +240,17 @@ options:
     description: "[Description]"
 ```
 
-Estimate-confirmation variant (D4): the prompt includes "Based on my research,
-I estimate [X] (confidence: high/medium/low)." with two options — "Yes,
-proceed on that basis (recommended)" / "No, that's wrong (demote to a regular
-question)".
-
-### C-3: Ceiling transition
-
-When the finite total question ceiling is reached, state that the ceiling has
-been reached. In workflow mode, record unresolved material decisions for the
-existing approval boundary. In standalone mode, include them in the terminal
-agreement summary. Proceed directly to C-4; do not render another question or
-offer a continuation option. "done" is accepted as free text at any point in
-the dialogue (D6).
+Estimate-confirmation variant (§2.6): the prompt includes "Based on my
+research, I estimate [X] (confidence: high/medium/low)." with two options —
+"Yes, proceed on that basis (recommended)" / "No, that's wrong (demote to a
+regular question)".
 
 ### C-4: Agreement summary confirmation
 
 Present immediately after printing the full decision table (question →
-decision) to the terminal:
+decision) to the terminal, followed by the required "Deferred as below the
+threshold" section (§2.3) and any frontier left open by the circuit breaker
+(§2.4):
 
 ```question
 prompt: "That is the full set of agreed decisions. Confirm this understanding?"
@@ -119,18 +263,37 @@ options:
     description: Point at what to change (the answer is updated and the summary re-presented)
 ```
 
-Do not enter the generation flow until "Yes, confirmed" is selected.
+Do not enter the generation flow until "Yes, confirmed" is selected. A
+correction request updates the affected answer (workflow: its `[Answer]:` tag)
+and re-presents the summary.
 
 ## 4. Workflow vs Standalone
 
-The discipline (§1, §2) is identical in both contexts. Only the recording
-obligations differ:
+The discipline (§1, §2) is identical in both contexts. Only the level source
+and the recording obligations differ:
 
 | Aspect | Grill me mode (workflow) | /amadeus-grilling (standalone) |
 |---|---|---|
 | Entry | Mode selection in stage-protocol §3 Step 2 | Skill invocation, subject via argument |
-| Budget source | Active stage depth | Explicit Minimal / Standard / Comprehensive request; Standard (8) by default |
-| Questions file | REQUIRED — append each question with a blank `[Answer]:` tag before presenting; write each answer back before the next question | None — terminal only |
+| Level source | Active stage depth (Minimal / Standard / Comprehensive) | Explicitly requested level; Free by default |
+| Pruning | Per §2.2 at the active depth | Only when a level is requested; Free prunes nothing |
+| Circuit breaker | Per §2.4 | Per §2.4 when a level is requested; exempt under Free |
+| Questions file | REQUIRED — mode marker, one entry per question, blank `[Answer]:` before presenting, write-back before the next round, justification line on the depth-ceiling crossing, deferred-node section with its marker | None — terminal only |
 | Audit log | REQUIRED — `bun {{HARNESS_DIR}}/tools/amadeus-log.ts decision` before each question, `... answer` after each answer (per question; existing event types only) | None — read-only classification, no audit events |
-| After confirmation | Stage artifact generation (stage-protocol Step 4+) | Terminal summary including unresolved material points; file written only on explicit user request |
+| After confirmation | Stage artifact generation (stage-protocol Step 4+) | Terminal summary including deferred nodes and unresolved material points; file written only on explicit user request |
 | State | Stage pointer advances via the normal stage lifecycle | Never touches the workflow stage pointer |
+
+### Rendering a round through the annex
+
+The round boundary is a semantic unit and is preserved on every harness:
+
+- **Harness renders several questions per call** — present the round in one
+  call. If the round exceeds the harness's per-call limit (the Claude Code
+  annex allows up to 4), split it into consecutive calls within the same round
+  and collect all answers before recomputing the frontier.
+- **Harness renders a single question per call** — present the round's
+  questions consecutively, in order, without recomputing the frontier between
+  them. The tree is recomputed only after the round's last answer.
+
+Either way, the questions file and audit record stay one entry per question
+(§2.5).

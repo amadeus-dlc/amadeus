@@ -1,6 +1,170 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260809-report-done-kind-split）
+## 実行メタデータ（現在: 260812-tla-proof-receipt）
+
+- Date: `2026-08-12`
+- Base commit: `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（`reverse-engineering-timestamp.md` + `re-scans/*.md` の全 observed のうち **HEAD の祖先で距離最小**。`git merge-base --is-ancestor ce3c3ccfd HEAD` = exit 0、`git rev-list --count ce3c3ccfd..HEAD` = **34 commits / 734 files**。次に近い祖先は 50 / 53 / 55 / 63。`cid:reverse-engineering:rescan-base-ancestry`）
+- Observed commit: `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD、`origin/main` 系譜。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、build `bun`
+- Focus: [Issue #2913](https://github.com/amadeus-dlc/amadeus/issues/2913)（ミラー #2917、bug / P1 / S2-CRITICAL）— TLA+ の author-new した proof と model-map 登録が循環し、実 TLC を実行できない
+- Scan mode: **xrev differential scan**（`cid:reverse-engineering:c1-xrev-scan-mode` / `c1-xrev-single-issue`）— クロスレビュー 2 名（run `xrev-2913-20260812`、reviewer-1 / reviewer-2 とも **CONFIRMED_WITH_REFINEMENTS**、target-sha `3fc024e44`）の verdict を Developer scan の一次入力とし、Architect が observed 断面の verbatim 実読で二重化
+- 行番号引用の currency（**実測の記録であり免除の主張ではない**）: レビュー target SHA `3fc024e44` ≠ observed のため SHA 一致による免除は不成立。測定区間を **`review..observed` に固定**した `git diff --name-only 3fc024e44 854692fd7 -- <被引用 15 パス>` は**空出力**（区間全体は 87 files）→ 行番号再解決は構造的 no-op（`cid:reverse-engineering:E-XBB-RE-S13-c2`）。加えて `base..observed` でも患部は無変更（plugin 内変更 9 files はいずれも被引用外、`tests/formal-verif/**` は変更 0）。起票・レビューの行番号には **off-by-one 4 件**（`fs-tlc-toolchain.ts` 検証呼び出し `:1640`→`:1641` / 中断 `:1642`→`:1643`、`tla-model-receipt.ts` 検証器宣言 `:143`→`:142` / identity 比較 `:159`→`:161-169`、`tla-model-loader-internal.ts` seam コメント `:460-463`→`:461-462`）があり、いずれも採番誤りで行シフト起因ではない。訂正後が正本
+- 中核知見: 欠陥は**独立した 2 つ**である。**D1** = 検証器 `validateVerifiedTlaModelReceipt`（`tla-model-receipt.ts:142`）が登録済み model-map へ直接結合（`:154` / `:156`）し、未登録モデルの receipt を `:157` で拒否する。**D2** = identity のエンコーディング分裂 — referee は object `{bytes: base64}`（`tla-referee-toolchain.ts:47`）、loader とバイト照合は文字列（`tla-model-loader-internal.ts:279` / `fs-tlc-toolchain.ts:731`）。`createVerifiedTlaModelReceipt` が identity を再計算せずコピーする（`:104-112`）ため分裂が無検出で共存する。**D2 は D1 修正の前提条件**（D1 のみ直すと失敗が `MODEL_RECEIPT` から `SOURCE_IDENTITY` へ 1 層下がるだけ）。さらに `validateModelCheckReceipt` の消費者は **2 つ**あり（準備段 `fs-tlc-toolchain.ts:1641`、出力解析段 `tlc-toolchain.ts:647`）、片方だけの修正は失敗を移動させる。loader 消費者 4 件中 3 件は DI seam を持ち、検証器だけが持たない（S1）。loader 内部 seam の禁止（`:461-462`）は**方針であって能力の制約ではない**（root 選択能力は実在、`t403:94-100` が使用）。`tests/formal-verif/**` は `run-tests.ts:750-759` のスコープ固定と `.test.ts` フィルタにより**構造的に CI 除外**で、修正すべき除外リストは存在しない。`t447:568-651` は TLC 到達前の失敗経路とバージョン行のみを覆い、整形式モデルを `preparePlanned` へ通すテストは 0 件
+- Verification: git 状態変更・GitHub 書込・`bun run build`・engine/state 操作は**すべてゼロ**。書き込みは codekb 配下のみ
+- Updated artifacts: `architecture.md`（新現在節「receipt 信頼境界の二重欠陥」— 照合器と自己完結検証器の契約不一致、D1 / D2、消費者 2 系統、policy-vs-capability）/ `component-inventory.md`（新現在節 — receipt 生成器・検証器・消費者の棚卸しと loader 消費者の seam 有無表）/ `code-quality-assessment.md`（新現在節 — seam 非対称 S1、型で守られないエンコーディング契約、t447 の成功経路欠落、`tests/formal-verif/**` の構造的 CI 除外）/ `api-documentation.md`（新現在節 — `createVerifiedTlaModelReceipt` / `validateVerifiedTlaModelReceipt` / `canonicalIdentity` / 内部 seam の入力ドメイン）。直前の現在節は本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）
+- Reviewed-and-unchanged artifacts（**沈黙のスキップではなく、レビュー済みで無変更**）: `code-structure.md`（モジュールの移動も新規ファイルもなく、欠陥は既存モジュール間の関係にのみ存在）/ `dependencies.md`（依存エッジの追加削除なし。referee は既に receipt モジュールを import している）/ `technology-stack.md`（TLC / JDK のピンは本欠陥と無関係）/ `business-overview.md`（ワークフロー停止の業務影響は Issue と record に既述で、ここへ書くと informing でなく duplicating になる — Developer scan が judgement call として提起した件を Architect が非更新で裁定）
+- Per-intent record: `re-scans/260812-tla-proof-receipt.md`（述語 P0〜P5、引用 currency 表、D1 / D2、修正面の全数列挙 (a)〜(d)、同根スイープ S1〜S3、テストピン 5 files、CI 配線、仮説 H1〜H3 と未測定 3 件の正本）
+- 適用範囲外（明示）: 修正の設計・選定（D1 の解の形、D2 のエンコーディング統一方向、probe の CI 配線可否、`tests/formal-verif/**` 全体の扱い）は requirements-analysis / application-design の所掌
+
+## 実行メタデータ（履歴: 260811-allowlist-semantic-audit）
+
+- Date: `2026-08-11`
+- Base commit: `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（直前 intent `260810-test-time-factor` の observed。`git merge-base --is-ancestor ce3c3ccfdb3f93e619a081386a70c8185b84f1db 854692fd7a11b124236b0427fe3d59e2fe6bf785` = **exit 0**、`git rev-list --count ce3c3ccfd..854692fd7` = **34 commits**。`cid:reverse-engineering:rescan-base-ancestry`）
+- Observed commit: `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD、`git rev-parse HEAD` の実出力。`cid:reverse-engineering:measurement-ref-in-artifacts`）
+- Scope: Brownfield、単一 repo `amadeus`、build `bun`
+- Focus: [Issue #1622](https://github.com/amadeus-dlc/amadeus/issues/1622)（`enhancement` / `P1` / `in-progress`）— `tests/.coverage-patch-allowlist.json` の全エントリを `reason` と現行行内容で直読照合し、無音転位を棚卸しする
+- Scan mode: **台帳の全数機械解決を一次証拠とする差分リフレッシュ**。xrev differential scan（`cid:reverse-engineering:c1-xrev-scan-mode` / `c1-xrev-single-issue`）は**採らなかった** — #1622 のクロスレビュー verdict 2 件（2026-07-28、いずれも CONFIRMED）は `tests/coverage-patch-gate.ts:125-151` / `:154-170` / `:266-277` と「300件」を引くが、PR #2127 の意味的セレクタ移行により台帳スキーマも実装座標も置換済みで、verdict の file:line と件数がいずれも observed に対応しない（現行の同機構は `parseAllowlist` `:360` / `findStaleAllowlistEntries` `:407-419`、件数 **623**）。`cid:reverse-engineering:E-XBB-RE-S13-c2` の免除条件は成立せず、verdict を一次入力にできない
+- 行番号引用の currency: 本 RE の全 file:line は observed 断面で実読・機械解決して採取している（`cid:reverse-engineering:upstream-cite-reresolve-on-shift`）。区間 `ce3c3ccfd..854692fd7` の患部交差は `git diff --name-only` の実測で `amadeus-graph.ts` と `amadeus-orchestrate.ts` の 2 件のみ（被引用 11 ソースパスで絞った結果）。ゲート実装 `tests/coverage-patch-gate.ts` と t229 両テストは**区間内無変更**、台帳のみ `+109/−10`（614 → 623）
+- 中核知見: **解決は fail-closed、意味は fail-open という非対称が構造の本体**。`resolveSemanticSelector`（`:288-313`）はスコープ名・指紋の非一意を throw し `runCheck`（`:552`）が exit 1 へ落とすが、`findStaleAllowlistEntries`（`:407-419`）は引数が `entries` / `lcov` のみで `reason` を受け取らず、判定は DA レコードの**存在**のみ。免除の適用も `allowlisted`（`:421-426`）の行番号包含だけ。PR #2127 の意味的セレクタ移行は「行シフト起因の stale」を消した一方、**誤った行から採取された指紋を固定**し、以後シフトを跨いで正確に追従させる（`amadeus-election.ts` の実測: Issue 報告時 `:317` → observed `:417`、指紋は同一）。**確定転位 18 件**（下限、全数照合は未実施）。腐敗はエントリ単位で混在し、同一 `reason` 文字列の群でも一致と転位が並存する。さらに**反証不能な選言型 `reason` が 45 件**存在する（「defensive, type-only, or spawned-boundary path」20 件 + 「Residual defensive, invalid-input, replay, or process-boundary」25 件）
+- コーパス実測（測定 ref = observed）: エントリ **623** / 対象ファイル **106** / distinct `reason` **310** / `expiry` 保持 **597** / `<module>` スコープ **90** / 単一行アンカー **233**（37%）/ 旧行ピン **0** / セレクタ解決失敗 **0**（`entries=623 resolveFailures=0`）
+- 手法メモ: 全数解決は repo 外 scratch の bun スクリプトから `resolveSemanticSelector` を直 import して実行し、出力の md5 が Developer scan の dump と**バイト一致**することで決定性を確認した。ガード不在の確認に選択肢を `|` で長く連ねた 1 本の `grep -rniE` を使わない — ローカルの `grep`（ugrep ラッパ）が複雑度上限で exit 1 になり、その空出力が「0 hit」と誤読される（本 intent で Developer scan の述語1がこれに該当し、`git grep` の分割述語で再実測して訂正した）
+- Verification: git 状態変更・GitHub 書込・`bun run build`・engine/state 操作は**すべてゼロ**。書き込みは codekb 配下のみ
+- Updated artifacts: `code-quality-assessment.md`（新現在節「coverage 免除台帳の意味論が無検査 — 解決 fail-closed / 意味 fail-open の非対称」）/ `architecture.md`（新現在節「patch coverage ゲートの判定パイプラインと免除の適用段」）/ `component-inventory.md`（新現在節「coverage patch gate の構成要素棚卸し」）/ `api-documentation.md`（新現在節「coverage 免除台帳のデータ契約」）。各成果物の直前の現在節は本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel` — 降格対象は `260810-test-time-factor` と `260810-plugin-manifest-resoluti` の 2 節で、両者が現在マーカーを併存させていた状態も同時に解消した）
+- Reviewed-and-unchanged artifacts（**沈黙のスキップではなく、レビュー済みで無変更**）: `code-structure.md` / `dependencies.md` / `technology-stack.md` / `business-overview.md` の 4 面。理由 — 本 scan の新規事実は既存の単一ファイル `tests/coverage-patch-gate.ts` と単一データファイルの**意味論**に関するもので、(a) モジュール配置・新規ファイル・ディレクトリ構造の変化はゼロ（区間内でゲート実装は無変更、追加されたのは台帳エントリのみ）、(b) 依存エッジの追加削除はゼロ（`ts` は既に import 済み）、(c) 技術スタック（Bun / TypeScript / Biome / LCOV）に変更なし、(d) 業務価値面の所見（免除の正当性が検証不能であることの統制上の意味）は品質評価節へ集約した
+- Per-intent record: `re-scans/260811-allowlist-semantic-audit.md`（述語 P0〜P7、scan mode 選定根拠、確定転位 18 件の一覧、候補 51 件と未判定 43 件の扱い、Developer scan への訂正 5 件、UNMEASURED-1〜6 の正本）
+- 適用範囲外（明示）: 転位 18 件の是正方法の選定、全数照合の進め方と工数見積り、機械ガードの設置先と CI 配線位置、選言型 `reason` 45 件の可否方針、#1622 と #2162 / #2135 / #2134 / #2216 / #2112 / #2133 の統合・分離の裁定はいずれも requirements-analysis / application-design の所掌
+
+## 実行メタデータ（履歴、2026-08-11: 260811-pr-convergence-gate）
+
+- Date: `2026-08-11`
+- Observed commit: `854692fd7`
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`
+- Depth: `Minimal`
+- Focus: [Issue #2838](https://github.com/amadeus-dlc/amadeus/issues/2838) — 4 self-* scope の mandatory PR convergence と手書き report bypass の fail-closed 化
+- Result: scope/stage wiring、per-unit engine coverage、PR content provenance は実装済み。report attestation、blocking sensor wiring、local delivery prerequisites、direct completion all-required guard、要求 matrix 回帰は未実装であり、Issue は未解決。
+- Scan record: `re-scans/260811-pr-convergence-gate.md`
+
+### Freshness
+
+このファイルは repo 単位の共有 freshness pointer であり、intent 固有の差分 base は scan record に記録する。共有9成果物は last-writer-wins derived cache として本 scan の current snapshot に更新した。
+
+## 260810-test-time-factor
+
+- Date: `2026-08-10T14:26:50Z`
+- Base commit: `7b9391be2db4fad791d637293ea442d5a1462bac`
+- Observed commit: `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`
+- Focus: `TEST_TIME_FACTOR` によるテスト timeout/wait の CI 能力係数化
+- Scan record: `re-scans/260810-test-time-factor.md`
+
+## 実行メタデータ（履歴: 260810-plugin-manifest-resoluti）
+
+- Date: `2026-08-10`
+- Base commit: `df1c874cfb397fafe877a72f00a82664a59689ae`（`re-scans/` 中で最新の observed = 直前 intent `260810-plugin-harness-dir-token` の測定 ref。HEAD の祖先であることを実測確認。`git rev-list --count df1c874cf..HEAD` = **13 commits**、**302 files changed**。`cid:reverse-engineering:rescan-base-ancestry`）
+- Observed commit: `7b9391be2db4fad791d637293ea442d5a1462bac`（= 本 worktree HEAD。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、build `bun`、Depth: **Minimal**
+- Focus: [Issue #2823](https://github.com/amadeus-dlc/amadeus/issues/2823)（ミラー #2829）— plugin manifest 所在非対称（composed ツリーに `plugin.json` が配送されないのに宣言の読み手は `<projectRoot>/plugins/<name>/plugin.json` のみ）+ evaluator argv の repo ルート相対（`plugins/formal-model-check/plugin.json:61`）。クロスレビュー 2/2 CONFIRMED_WITH_REFINEMENTS → ESTABLISHED_WITH_REFINEMENTS（run `xrev-2823-20260810T094918Z`）
+- Scan mode: **xrev differential scan**（`cid:reverse-engineering:c1-xrev-scan-mode` / `c1-xrev-single-issue`）— レビュー verdict を Developer scan の一次入力とし、observed 断面の verbatim 実読で二重化
+- 行番号引用の currency（**実測の記録であり免除の主張ではない**）: `git diff --name-only c51afbd0a..HEAD`（cross-review target SHA）を引用パスで絞った結果は**空** → 行番号再解決は構造的 no-op（`cid:reverse-engineering:E-XBB-RE-S13-c2`）。base..observed は **PR #2811**（staging seed での `{{HARNESS_DIR}}` 解決、`amadeus-plugin.ts` / `plugin-projection.ts` / `amadeus-harness.ts` / t531 新設）を含むため、`amadeus-plugin.ts` 系の行番号は observed で取り直した（`copyPluginSource`/`copyRealFiles` `:702-741`、`collectPluginSources`/`seedStaging` `:874-906`）
+- 中核知見: 欠陥は**契約の継ぎ目**にある — 配送側（compose は stages/tools のみ、`amadeus-plugin-compose.ts:895`/`:1390-1408`）も消費側（`pluginManifestPath` = `<projectRoot>/plugins/<name>/plugin.json` のみ、`amadeus-advisory-declaration.ts:295-297`、読み手は `:312`/`:392` の 2 箇所）も個々には設計どおり。**新規発見**: `install <path>` verb の persistent 腕（`amadeus-plugin.ts:1117-1118`/`:1160`）は FULL bundle を `<projectRoot>/plugins/<name>/` へ永続化し、両レビュアの共有前提「repo ルート `plugins/` を作らせる文書化経路は無い」を falsify する。folder-drop（installDoc primary 腕、`plugin-projection.ts:634`）では advisory は無音で全滅（(a)）、self-install では常に動く（dogfood masking、(c)）。t445:155-160 が無音 fail-open を**契約として pin**
+- Verification: git 状態変更・GitHub 書込・`bun run build`・engine/state 操作は**すべてゼロ**。書き込みは codekb 配下のみ
+- Updated artifacts: `architecture.md`（新現在節「plugin manifest 解決の所在非対称と advisory 消費者グラフ」— #2811 差分 + 消費者グラフ + install 経路 settlement）/ `component-inventory.md`（新現在節、行番号を observed で取り直し + advisory 宣言コンポーネント追加）/ `code-quality-assessment.md`（新現在節 — t531 着地済みのガード現況、無音 degradation、doc 矛盾、installDoc 2 腕）/ `api-documentation.md`（新現在節 — manifest 解決契約と evaluator spawn 契約）/ `business-overview.md`（新現在節 — 文書化経路で advisory 価値が届かない業務影響）。直前の現在節は本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）
+- Reviewed-and-unchanged artifacts（**沈黙のスキップではなく、レビュー済みで無変更**）: `code-structure.md` / `dependencies.md` / `technology-stack.md` の 3 面。理由 — 本 scan の新規事実は既存モジュール間の**読み点と解決規則**に関するもので、モジュールの配置・依存エッジの追加削除・技術スタックのいずれも変えない（消費者グラフの構造面は `component-inventory.md` と `architecture.md` に集約した）
+- Per-intent record: `re-scans/260810-plugin-manifest-resoluti.md`（述語 P0〜P11、N-1〜N-9、install 経路 4 分類の settlement、#2267 との関係、テスト/ガード面、UNMEASURED 3 項目の正本）
+- 適用範囲外（明示）: 修正案の設計・選定、および Issue #2267 との統合/分離の裁定は requirements-analysis / application-design の所掌
+
+## 実行メタデータ（履歴: 260810-plugin-prose-seed-guard）
+
+- Date: `2026-08-10`
+- Base commit: `df1c874cfb397fafe877a72f00a82664a59689ae`（直前 intent `260810-plugin-harness-dir-token` の observed。`git merge-base --is-ancestor df1c874cf HEAD` で祖先性を実測確認。区間 `git rev-list --count df1c874cf..c51afbd0a` = **8 commits**、非 record の実質変更は PR #2811 の squash 1 本。`cid:reverse-engineering:rescan-base-ancestry`）
+- Observed commit: `c51afbd0a99b2eb3f0b9c1ee4e2cef2772378131`（= PR #2811 squash 着地後の `origin/main`。worktree HEAD `ff06d945b` は record-only merge のため observed に採らない。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、build `bun`、Depth: **Minimal**
+- Focus: [Issue #2810](https://github.com/amadeus-dlc/amadeus/issues/2810)（bug/P2/S3-MAJOR — plugin stage prose の root-relative ツール参照 11 行）+ [Issue #2812](https://github.com/amadeus-dlc/amadeus/issues/2812)（bug/P2/S3-MAJOR — reframe 済み: rename 規則は `KNOWN_RULES_SUBDIR` 2 キー欠落により `.cursor`/`.opencode` で既に乖離。`KNOWN_RULES_SUBDIR` 修正 in scope）。兄弟 [#2823](https://github.com/amadeus-dlc/amadeus/issues/2823)（plugin.json:61 evaluator argv、S2-CRITICAL）は分離済みで射程外
+- Scan mode: **xrev differential scan**（`cid:reverse-engineering:c1-xrev-scan-mode`）— 収束: #2810 = ESTABLISHED_WITH_REFINEMENTS / #2812 = REFRAME_REQUIRED → ユーザー裁定で reframe 適用。run `xrev-2810-20260810T080817Z` / `xrev-2812-20260810T080817Z`。レビュー verdict を Developer scan の一次入力とし、Architect が observed 断面の verbatim 実読で二重化（scan 訂正 2 件を検出）
+- 行番号引用の currency: #2810 の 11 行は observed で全数逐語一致・シフトゼロ。#2812 の患部（`amadeus-harness.ts` / `amadeus-plugin.ts`）は区間内 M のため免除不成立 — レビュアー2名+scan+Architect が observed で再解決済み（`cid:reverse-engineering:E-XBB-RE-S13-c2`）
+- 中核知見: (1) 直前 intent の中核前提「経路B に置換器なし」は #2811 の `seedBytesForHarness` 新設で解消済み。(2) 新たな非対称は rename 規則の**データ源二重化** — packager = manifest `rulesRename` / core = `KNOWN_RULES_SUBDIR`（5 キー、`.cursor`/`.opencode` 欠落 → `?? "rules"` fail-open）で、両実装を突き合わせるテストは 0 件（P6∩P7=∅）。(3) `KNOWN_RULES_SUBDIR` の消費経路は `rulesSubdirFor` 経由に加え `rulesSubdir()` の env 分岐 `:194`・descriptor 欠落 fallback `:196` の計 3 面（第 4 の面 = env 分岐は descriptor を見ない、はレビュー未指摘で scan が検出）。(4) 11 行のトークン化は両経路の実測済み通過面に乗り、compose-time seeding の新設不要。(5) 既存テストで明示改訂が必要なものは 0 件
+- Verification: git 状態変更・GitHub 書込・`bun run build`・engine/state 操作はすべてゼロ（クロスレビューのコメント投稿・Issue 訂正・#2823 起票は RE 外の conductor 工程として実施済み）。書き込みは codekb 配下のみ
+- Updated artifacts: `architecture.md`（rename データ源二重化と 3 消費経路の節を追加）/ `code-structure.md`（#2811 新規ファイル: harness-dir-fixture / t2790 / t531 / boundary-guard predicate 3）/ `component-inventory.md`（seedBytesForHarness / stagingHarnessDirOf / stagingEntryState / rulesSubdirFor）/ `code-quality-assessment.md`(ガード不在: 両実装を import するテスト 0 件、t2790 は一致キーのみサンプル、corpus 遮蔽)。直前の現在節は本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）。`technology-stack.md` / `dependencies.md` / `api-documentation.md` / `business-overview.md` は**変更なし**(区間が患部と非交差で既存記述を無効化する事実なし)
+- Per-intent record: `re-scans/260810-plugin-prose-seed-guard.md`（述語 P1〜P13、manifest 8 面実測表、patch-surface inventory、テストピン棚卸し、仮説 4 項目の正本）
+- 適用範囲外（明示）: 修正案の設計・選定(#2810 のトークン化範囲、ガード述語の設置先 t146 vs t531、#2812 の等価性テストの層と形)は requirements-analysis 以降の所掌
+
+## 実行メタデータ（履歴、2026-08-10: 260810-control-byte-gate）
+
+- Date: `2026-08-10`
+- Base commit: `df1c874cfb397fafe877a72f00a82664a59689ae`（直前 intent `260810-plugin-harness-dir-token` の observed。`git merge-base --is-ancestor df1c874cf HEAD` = 真、`git rev-list --count df1c874cf..HEAD` = **10 commits**。`cid:reverse-engineering:rescan-base-ancestry`）
+- Observed commit: `f1270d710193d102b6fe8a728873a1c3e27dc094`（= 本 worktree HEAD。`git branch -r --contains f1270d710` が `origin/main` にヒットするため **origin/main 系譜上**であることを実測確認。`origin/main` は 1 コミット先行し `40056d0ecf140daa5636ddd2916734047098108b`。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-feature`、Brownfield、単一 repo `amadeus`、build `bun`、Depth: **Standard**
+- Focus: [Issue #2814](https://github.com/amadeus-dlc/amadeus/issues/2814)（ミラー #2821）— tracked source への制御バイト（NUL 等）混入を CI で決定的にブロックするゲートが存在しない。既知の機序は `cid:requirements-analysis:control-byte-guard`（PM1-8 2026-07-10、#786 実測）— 制御バイトは git diff（8KB 以降不可視）にも grep（binary 化で偽陰性）にもレビューにも構造的に見えない
+- Scan mode: **xrev differential scan**（`cid:reverse-engineering:c1-xrev-scan-mode` / `c1-xrev-single-issue`）— クロスレビュー verdict を Developer scan の一次入力とし、observed 断面の verbatim 実読で二重化
+- 行番号引用の currency（**実測の記録であり免除の主張ではない**）: 述語は逐語 `git diff --name-only c909b61300e0a5b770e39a96fe38280879bb8bbd f1270d710193d102b6fe8a728873a1c3e27dc094`（exit 0、36 files）。被引用 13 パス（`amadeus-migrate.ts` / `amadeus-lib.ts` / `amadeus-stage-stats.ts` / `amadeus-subagent-stats.ts` / `t-learnings-persist-seam.test.ts` / `t55-test-suite-drift.test.ts` / `detect-ci-changes.sh` / `ci.yml` / `no-silent-drop/engine.ts` / `unchecked-cast-guard.ts` / `.gitignore` / `assets/AI-DLC-Workflows-2.0-Specification.pdf`）との**交差は空**。よって全 file:line は observed で有効（`cid:reverse-engineering:E-XBB-RE-S13-c2` — 測定区間は `review..observed` に固定）
+- 中核知見: **全域制御バイトゲートは 0 件**。既存の検出面は 4 つだけで、いずれも射程外 — `isUtf8`（`amadeus-migrate.ts:477` + 呼び出し 5 箇所）は**入力面限定**、`CONTROL_CHARS`（`amadeus-lib.ts:4298`/`:4304`）は**表示層の除去**、#786 guard（`t-learnings-persist-seam.test.ts:246-262`）は**単一ファイル**、t55 の NUL-skip（`t55-test-suite-drift.test.ts:664-678`）は**同じ fail-open 側**。CI 配線では sensors が **ci.yml に 0 hit** のため sensor 形態単独では CI ブロック不成立。Issue 宣言スコープは先例 SCAN_ROOTS 2 本の**上位集合**（`tests/` は両先例が明示除外、`docs/` はどちらも未走査）。`docs/` を含める場合は `detect-ci-changes.sh` が docs を 2 ファイル名指しでしか `full=true` にしないため分岐追加が必須
+- コーパス実測（測定 ref = observed）: tracked **16124** files 中、制御バイト含有は **1 件**（`assets/AI-DLC-Workflows-2.0-Specification.pdf`、first NUL offset 248）のみ。Issue 宣言スコープ 5 ルート **2576** files は NUL/C0（TAB/LF/CR 除く）**0 hit**。`.github/` 15 files も 0 hit。`dist/` は tracked **0**（`.gitignore:19`）のため投影増幅は不成立
+- 手法メモ: バイト検査に grep 系ラッパを使わない（NUL 含有ファイルを binary 扱いで無音脱落させ偽陰性を作る = 欠陥機序そのもの）。走査は `git ls-files -z` を起点に Python/perl の binary モード直走査で行い read error 数も報告する
+- Verification: git 状態変更・GitHub 書込・`bun run build`・engine/state 操作は**すべてゼロ**。書き込みは codekb 配下のみ
+- Updated artifacts: `code-quality-assessment.md`（「制御バイト混入クラスの防御在庫」節を新設）/ `re-scans/260810-control-byte-gate.md`（新規・正本）
+- Reviewed-and-unchanged artifacts（**沈黙のスキップではなく、レビュー済みで無変更**）: `architecture.md` / `code-structure.md` / `technology-stack.md` / `dependencies.md` / `api-documentation.md` / `component-inventory.md` / `business-overview.md` — 本 intent は新規ゲートの追加であり、既存のアーキテクチャ・依存・API 記述を変更する所見は出ていない
+- Per-intent record: `re-scans/260810-control-byte-gate.md`（述語 P0〜P11、N-1〜N-6、検証面ピン、UNMEASURED 6 項目の正本）
+- 適用範囲外（明示）: ゲートの実装形態（standalone script / sensor / 併設）、走査スコープの最終確定、allowlist 機構の有無、CI 配線位置の選定は requirements-analysis / application-design の所掌。本 RE は裁定を証拠から下せる状態にすることのみを行った
+
+## 実行メタデータ（履歴、2026-08-10: 260810-plugin-harness-dir-token）
+
+- Date: `2026-08-10`
+- Base commit: `91f37ec8589cdf468599b4787e27e5125d4d16e8`（`re-scans/` 中で最新の observed。HEAD の祖先であることを実測確認。`git rev-list --count 91f37ec85..HEAD` = **20 commits**、**117 files changed**。`cid:reverse-engineering:rescan-base-ancestry`）
+- Observed commit: `df1c874cfb397fafe877a72f00a82664a59689ae`（= 本 worktree HEAD = `origin/main`。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、build `bun`、Depth: **Minimal**
+- Focus: [Issue #2790](https://github.com/amadeus-dlc/amadeus/issues/2790)（ミラー #2799）— `plugins/pr-convergence/stages/pr-convergence.md:180` がハーネス中立であるべき plugin stage doc に Claude 固有リテラル `.claude/tools/amadeus-sensor.ts` を焼き込んでいる。クロスレビュー 2/2 CONFIRMED（run `xrev-2790-20260810T033737Z`）
+- Scan mode: **xrev differential scan**（`cid:reverse-engineering:c1-xrev-scan-mode` / `c1-xrev-single-issue`）— レビュー verdict を Developer scan の一次入力とし、observed 断面の verbatim 実読で二重化
+- 行番号引用の currency（**実測の記録であり免除の主張ではない**）: `git diff --name-only 91f37ec85..HEAD` を患部 7 パス（`plugins/pr-convergence/**`、`scripts/harness-transform.ts`、`scripts/plugin-projection.ts`、`packages/framework/core/tools/amadeus-plugin.ts`、`tests/unit/t146-core-hygiene.test.ts`）へ絞った結果は**空**。クロスレビュー target SHA `5564dccd1` / `d95d719ce` についても同パスに変更なし。よって全 file:line は observed で有効（`cid:reverse-engineering:E-XBB-RE-S13-c2`）
+- 中核知見: plugin 配布には**二経路**があり、`{{HARNESS_DIR}}` 置換器は経路A（build-time packager）にしか存在しない。N-3 により **self-install 5 面は build script（`promote-self.ts:382` → `projectInTemporaryWorkspace`）の中から経路B（runtime compose）に乗り、`transform()` を一度も通らない**。「build-time = 置換済み / runtime = 逐語」という二分法は偽。加えて同根の兄弟欠陥が **計 12 行**あり、必要な機構は 1 つ（`{{HARNESS_DIR}}` 置換）
+- Verification: git 状態変更・GitHub 書込・`bun run build`・engine/state 操作は**すべてゼロ**。書き込みは codekb 配下のみ
+- Updated artifacts: `architecture.md`（「plugin 配布の二経路と非対称なトークン置換器」節を新設。Mermaid 経路図 + テキスト代替つき）/ `code-quality-assessment.md`（「ハーネス中立性ガードの穴」節を新設 — N-5 / N-6 / t377 の述語・corpus ミスマッチ）/ `component-inventory.md`（「plugin 配布経路の構成要素棚卸し」節を新設）。直前の現在節はいずれも本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）
+- Reviewed-and-unchanged artifacts（**沈黙のスキップではなく、レビュー済みで無変更**）: `code-structure.md` / `technology-stack.md` / `dependencies.md` / `api-documentation.md` / `business-overview.md` の 5 面。理由 — 本 focus は既存コンポーネントの**配置・技術スタック・外部依存・公開 API 契約・業務価値**のいずれも変更しておらず（患部は散文 1 行と、その散文を運ぶ配布経路の非対称性）、既存記述を無効化する事実が区間 `91f37ec85..HEAD` に存在しない（患部 7 パス非交差）。テスト層の棚卸しは `code-quality-assessment.md` の検証面小節に集約した
+- Per-intent record: `re-scans/260810-plugin-harness-dir-token.md`（述語 P0〜P11、N-1〜N-9、12 行の全数列挙、harnessDir 実測表、検証面ピン、UNMEASURED 5 項目の正本）
+- 適用範囲外（明示）: 修正案の設計・選定（(a) compose 側置換 / (b) パス規約変更 / (c) packager 経由 seed）は requirements-analysis / application-design の所掌。本 RE は裁定を証拠から下せる状態にすることのみを行った
+
+## 実行メタデータ（履歴、2026-08-10: 260810-grilling-frontier-resync）
+
+- Date: `2026-08-10`
+- Base commit: `91f37ec8589cdf468599b4787e27e5125d4d16e8`（直前 intent `260810-tla-applicability-wiring` の observed。`git merge-base --is-ancestor 91f37ec8589cdf468599b4787e27e5125d4d16e8 HEAD` で**祖先性を実測確認**（exit 0）。距離 `git rev-list --count 91f37ec85..HEAD` = **14 commits**。祖先であるため merge-base fallback は不要）
+- Observed commit: `5564dccd14acf1f47218ff255b5a0e63d53541bf`（= 本 worktree HEAD = `origin/main` 系譜。`git rev-parse HEAD` で実測。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-feature`、Brownfield、単一 repo `amadeus`、Depth: Standard
+- Focus: [Issue #2785](https://github.com/amadeus-dlc/amadeus/issues/2785)（grilling の depth を質問数予算から枝刈り閾値へ再定義し、上流 `mattpocock/skills` の frontier 駆動 grilling — ピン SHA `1495d014303e041c51c29f9e442485ba06f5878d` — を骨格として `grilling-protocol.md` を再同期する）
+- Scan mode: **xrev differential scan**（`cid:reverse-engineering:c1-xrev-scan-mode` / `c1-xrev-single-issue`）— クロスレビュー2名成立済みの単発 Issue（target SHA `28e1f40c`）。レビュー verdict を Developer scan の一次入力とし、Architect が observed 断面の verbatim 実読で二重化
+- 行番号引用の currency（**二段判定**、`cid:reverse-engineering:E-XBB-RE-S13-c2`）: レビュー target SHA `28e1f40c` ≠ observed `5564dccd1` のため SHA 一致による免除は不成立。判定は `review..observed` の実 diff で行う — `git diff --name-only 28e1f40c..HEAD`（exit 0）が touch した 60 ファイルのうち患部2ファイル(`stage-protocol.md` / `amadeus-directive.ts`)が含まれるが、両ファイルの diff は**いずれも #2766 advisory `handoff_stage` 追加1ハンクのみ**(`stage-protocol.md` は旧行 ~994 付近に段落追加、`amadeus-directive.ts` は `AdvisoryChoiceDirectiveAdvisory` への `handoff_stage?: string` フィールドと `checkAwaitAdvisoryChoice` のバリデーション追加の2ハンク)で、grilling/depth 節(§3 depth 表・Step 3d・§8・semi 経路・`VALID_DEPTH_VALUES`)より後方に位置し先行行番号を一切シフトしない。したがって全患部引用は**行番号・verbatim とも review 断面と HEAD で一致**することを個別に再解決確認した(下記所見参照)。`grilling-protocol.md` / `amadeus-sensor-question-budget.ts` / `conductor.md` / `SKILL.md` / test pin 群は `git diff --name-only 28e1f40c..HEAD | grep -iE "grilling|conductor|question-budget"` が**空**(0 hit)で非交差確定
+- Verification: git 状態変更・GitHub 書込・engine 操作は**すべてゼロ**。coverage / test 実行もゼロ(dist ビルドも未実施 — 下記 t199 の注意参照)。検証は observed 断面の verbatim 直読(`sed -n` / `git grep -n` / `git diff --name-only`)による。exit code はパイプ非経由で個別取得(`cid:code-generation:no-exit-capture-through-pipe`)
+- **⭐ 主要所見 — 用語ドリフト1点、機構ゼロ変更**: `grilling-protocol.md`(137行)の D6 は現行で `**Bounded termination.**` と改名済みだが、参照元 `stage-protocol.md:349` の Step 3d には旧称 `hybrid termination` が verbatim 残存する。同じ旧称が `docs/reference/04-stage-protocol.md:320`(英)と同 `.ja.md:264`(和訳 `ハイブリッド終了`)にも残る — **計3ファイル3箇所**が resync 対象。canonical 側(`grilling-protocol.md`)自体には `hybrid` 語彙は0 hit(全文確認済み)
+- **所見2 — depth ceiling は現行「質問数予算」のまま、frontier 駆動への再定義は未着手**: `stage-protocol.md` §3(:300-311)の depth 表は `Minimal 4 / Standard 8 / Comprehensive 12`(質問**数**上限)、`grilling-protocol.md` D6(:34)も同じ数値を「rendered questions」の総数上限として踏襲。`amadeus-directive.ts:62` の `VALID_DEPTH_VALUES`(`["Minimal","Standard","Comprehensive"]`)と `amadeus-sensor-question-budget.ts` の `QUESTION_BUDGETS`(:39-43、同じ 4/8/12)・`DEPTH_LEVELS`(:47、directive.ts からの mirror とコメント明記)が機械契約として同じ枠組みを閉語彙で強制する。上流 `mattpocock/skills` の frontier 駆動 grilling(枝刈り閾値ベース)への再定義は、この閉語彙・数値契約を置き換える設計判断であり、本 RE 断面ではまだ着手されていない(要件段の論点として持ち上がる)
+- **所見3 — 機械ゲートの二重固定**: `tests/integration/t415-interaction-budget-contract.test.ts:26-54` が `stage-protocol.md` の3段階数値文言と `grilling-protocol.md` の D6 文言・§3(C-3 ceiling transition)文言を verbatim `toContain`/`not.toContain` で29個ピンしている。`tests/unit/t199-grilling-distribution.test.ts` は **`dist/` 配下**(4ハーネスの投影コピー)の存在・frontmatter・MIT 表示のみを検査し、`hybrid`/`bounded` の用語は一切ピンしていない — ただし `dist/` は `bun run build` で再生成されるため、`grilling-protocol.md` / `stage-protocol.md` の正本編集後は**リビルドしないと t199 の dist 面検査が古い内容のまま緑を返す**(検査対象外の用語だが、他の resync 変更が dist 側検査に反映されない一般的注意として記録)
+- **所見4 — "one question at a time" の prose 消費者は7箇所、和訳は別語彙**: `docs/guide/02-your-first-workflow.{md,ja.md}:89`、`docs/guide/07-interaction-modes.{md:22/37, ja.md:18}`、`conductor.md:51`、`stage-protocol.md:349`、`skills/amadeus-grilling/SKILL.md:5` の7箇所が英語で同一フレーズを踏襲。日本語は「1問ずつ」ではなく「一度に1質問」(`docs/reference/04-stage-protocol.ja.md:264`)が使われており、和訳語彙は英語 prose 消費者側の grep パターンでは捕捉できない(検索キー面の注意)
+- **所見5 — question-budget センサーは29ステージ宣言、専用 manifest ファイルなし**: `git grep -l "question-budget" -- packages/framework/core/amadeus-common/stages/` が **29 ファイル**(ideation 7 / inception 8 / construction 7 / operation 7)。`packages/framework/core/tools/` にセンサーを名前で列挙する専用 manifest ファイルは存在しない(`amadeus-baseline-manifest.ts` に `question-budget` 0 hit、他に `*manifest*` ファイルなし) — depth 契約の再定義は少なくともこの29ステージ全数のセンサー適用面に影響しうる
+- tNNN 予約: 使用済み最大 **`t529`**(`find tests -type f -iname "t[0-9]*" | grep -oE '/t[0-9]+' | grep -oE '[0-9]+' | sort -n | tail -3` で機械再計算、上位3件は `528, 528, 529`)。本 intent は **`t530`** 以降を予約。⚠ `t528` を共有する2ファイルの存在(単体/統合バリアントか真の重複採番かは未調査)を loose thread として記録 — `cid:code-generation:swarm-test-number-reservation` に従い、PR 発行前・マージ直前に固定 base SHA の `tests/` で再確認すること(`cid:code-generation:c1-tnnn-collision-on-regrounding`)
+- Updated artifacts: `component-inventory.md` に「grilling 対話契約の棚卸し(260810-grilling-frontier-resync)」節を追加。`code-structure.md` / `architecture.md` / `business-overview.md` / `api-documentation.md` / `technology-stack.md` / `dependencies.md` / `code-quality-assessment.md` は**変更なし**(区間 `review..observed` が患部と非交差・grilling 関連ファイルの構造自体は不変で、既存記述を無効化する変更が無いため)。直前の現在断面(`260810-tla-applicability-wiring`)は本文保持のまま履歴へ降格(`cid:reverse-engineering:c3-relabel`)。履歴節の file:line は当時の observed 時点を指すため変更していない(`cid:requirements-analysis:historical-section-cite-check-at-observed`)
+- Per-intent record: `re-scans/260810-grilling-frontier-resync.md`(患部インベントリ全数・xrev 判定根拠・test pin 棚卸し・用語ドリフト3箇所・機械契約の閉語彙構造の正本)
+
+## 実行メタデータ（履歴、2026-08-10: 260810-tla-applicability-wiring）
+
+- Date: `2026-08-10`
+- Base commit: `778567dd03b00f22cb887eec06f025557eeaaaf4`（直前 intent `260809-sensor-parseflags-failop` の observed。`cid:reverse-engineering:rescan-base-ancestry` に従い `git merge-base --is-ancestor 778567dd03b00f22cb887eec06f025557eeaaaf4 HEAD` で**祖先性を実測確認**（exit 0）。距離 `git rev-list --count 778567dd0..HEAD` = **17 commits**。祖先であるため merge-base fallback は不要）
+- Observed commit: `91f37ec8589cdf468599b4787e27e5125d4d16e8`（= 本 worktree HEAD = `origin/main` 系譜。`git rev-parse HEAD` で実測。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、Depth: Minimal
+- Focus: [Issue #2766](https://github.com/amadeus-dlc/amadeus/issues/2766)（TLA+ applicability 判定が常に no-hold — `authoring-subjects.json` に**書き手が存在しない**ため供給が空のまま）+ ユーザー裁定 **案A**（接続完成 + FR-005 receipt 閉包。BR-U2-05 / ADR-6 の契約衝突は設計段で明示裁定）
+- Scan mode: **xrev differential scan**（`cid:reverse-engineering:c1-xrev-scan-mode` / `c1-xrev-single-issue`）— クロスレビュー2名 ESTABLISHED_WITH_REFINEMENTS 済みの単発 Issue。レビュー verdict を Developer scan の一次入力とし、Architect が observed 断面の verbatim 実読で二重化
+- 行番号引用の currency（**二重根拠**）: (1) レビュー target SHA ≡ observed（**完全一致**）→ `review..observed` の実 diff は空で再解決は構造的 no-op（`cid:reverse-engineering:E-XBB-RE-S13-c2`。測定区間は `review..observed` に固定、`..HEAD` ではない）。(2) 加えて `base..observed` の **68 ファイル**に患部 7 パス（`plugins/formal-model-check/**` 4面 / `amadeus-advisory-choice.ts` / `amadeus-advisory-declaration.ts` / `tests/integration/t445-*`）が**1件も含まれない**（`git diff --name-only 778567dd0..HEAD` を患部語彙で絞って **0 hit**）。**免除の主張ではなく実測の記録**である
+- Verification: git 状態変更・GitHub 書込・engine 操作は**すべてゼロ**。coverage 実行もゼロ（`cid:code-generation:c1-coverage-single-owner`）。検証は observed 断面の verbatim 直読（`sed` / `grep` / `git diff` / `git merge-base`）と全数列挙による。exit code はパイプ非経由で個別取得（`cid:code-generation:no-exit-capture-through-pipe`）
+- **⭐ 主要所見 — 鎖は両端が完成していて中央だけが空**: advisory 供給チェーン（宣言 parse → checkpoint 発火 → guard → run-now ルート → 評価 → 解除）のうち、engine 側の宣言 parse・発火・ルート供給は**すべて実装済みでテスト固定済み**（`t445-advisory-declaration-supply:297-322` の `RUNNABLE_DECLARATION` がトークン解決込みで PASS）。欠けているのは **subjects 宣言の書き手ただ1点**（`git grep -n "authoring-subjects"` = **7 hit** の内訳が record 3 / docs 2 / 読み手 1 / テスト 1 = **書き手 0 件**）。実 manifest の `formalCheck` を非 null にすれば engine 変更なしでルートが立つ
+- **🔴 R1 新規発見（Issue にも両レビューにも無い）— 要件見出しの文法が実コーパスとほぼ一致しない**: `tla-evidence.ts:45` 逐語 `const REQUIREMENTS_HEADING_RE = /^###\s+((?:FR|NFR|AC)-\d{3})\b/;` は3桁ゼロ埋めを要求するが、`amadeus/spaces/default/intents/*/inception/requirements-analysis/requirements.md` **134 ファイル中一致は 3 ファイルのみ**（Architect 独立再実測）。対照として decisions 側（:46 `/^##\s+(ADR-\d+)\b/`）は **56 中 54** で健全。intent 要件を直接読む供給設計は現行文法では大半で `unresolvable-id` fail-closed（= 全 checkpoint が赤）になる。**requirements-analysis へ持ち上げるべき第一級の論点**
+- **🔴 R2 subjects の置き場が advisory 監視 glob の内側（演繹、未実測）**: `amadeus-plugin-activation.ts:51` 逐語 `export const ACTIVATION_WATCH_GLOBS: readonly string[] = ["tla/**"];`。直前の :49-50 が「the evidence store (`<specsRoot>/tla-evidence`) sits outside the glob by construction」と設計意図を明言する一方、`defaultSubjectsPath`（`tla-authoring.ts:453-455`）の解決先 `specs/tla/authoring-subjects.json` は **glob の内側**。subjects 更新のたび spec-hash が変わり兄弟 advisory が発火する見込み — **ハッシュ再計算の実測は未実施**。書き手を作る前に置き場の裁定が要る
+- **stage ハードコード（案A 項目2 の核心）**: `amadeus-advisory-choice.ts:948` 逐語 `stage: "formal-model-check",` — ADR-6 が一般化したのは argv（`declaredFormalCheckArgv` :334-348）だけで**遷移先 stage は一般化されていない**ため、`tla-authoring` を指す手段が現行の一般化点に存在しない
+- **FR-005 receipt の owner が不在**: 永続化する書き手は `bundle build`（`tla-authoring.ts:201-228`）のみで、`applicability receipt`（:373-397）は stdout に返すだけ。加えて `stages/tla-authoring.md:40-44` が終端経路（`impl-only` / `non-target`）を明示拒否 → **非対象 receipt を発行する owner がワークフロー上どこにも無い**（reviewer-2 の FR-005 空文化指摘の機構レベル裏付け）。`t450-tla-authoring-stage-e2e:163` が「owner は stage 外」を固定するピンで衝突しうる
+- **evidence store が実在しない**: `amadeus/spaces/default/specs/tla-evidence` は**未作成**（`ls -d` 実測）。案A で hold を実発火させると全 intent の RA/FD/B&T で `no-applicability-receipt` hold が立つため、**段階導入（governed subjects を最小集合から開始）を設計に織り込まないと着地直後に全 intent が止まる**
+- **BR-U2-05 衝突の純化**: 実 `plugins/formal-model-check/plugin.json` の `advisories` を assert するテストは **0 件**（述語 `git grep -n "advisories" -- tests/ | grep -i formal-model-check`）。t445 はすべて架空 `demo` fixture 駆動 → **実 manifest の `formalCheck` を埋めても既存テストは1件も壊れない**。衝突は「テスト破壊」ではなく「BR-U2-05 の意味論（解除権は評価器のみ）を run-now ルート追加が侵さないか」という**設計裁定に純化される**
+- Same-root: **#2267（OPEN）と交差**。`pluginManifestPath` は `<projectRoot>/plugins/<plugin>/plugin.json` を読むため、案A の効果は `plugins/` を持つ本 repo 限定で、ユーザーワークスペースには #2267 解消まで届かない。**受け入れ基準を「本 repo で効く」で書くか「配布面でも効く」で書くかが分岐点**。#2018 は CLOSED で交差なし
+- tNNN 予約: 使用済み最大 **`t523`**（`find tests -name 't[0-9]*' -type f | grep -oE '/t[0-9]+' | grep -oE '[0-9]+' | sort -n | tail -1` で機械再計算）、本 intent は **`t524`** 以降を予約。⚠ 直近区間に **`t521` の二重採番**が実在（`t521-census-exitcode-drain` / `t521-sensor-flag-value-arms`）— `cid:code-generation:swarm-test-number-reservation` の実例が本区間内にあるため事前予約を明示し、PR 発行前・マージ直前に固定 base SHA の `tests/` で再確認すること（`cid:code-generation:c1-tnnn-collision-on-regrounding`）
+- Updated artifacts: `component-inventory.md` に「formal-model-check advisory 供給チェーンの棚卸し」節を追加。`code-structure.md` / `architecture.md` / `business-overview.md` / `api-documentation.md` / `technology-stack.md` / `dependencies.md` / `code-quality-assessment.md` は**変更なし**（区間が患部と非交差・構造不変で、既存記述を無効化する変更が無いため）。直前の現在断面（`260809-sensor-parseflags-failop`）は本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）
+- ⚠ **codekb 整合の申し送り（マージ衝突予告）**: 本線チェックアウト側で intent `260809-report-done-kind-split` の RE が**未コミットで並行進行中**（本セッション開始時点の `git status`: `M component-inventory.md` / `M reverse-engineering-timestamp.md` / `?? re-scans/260809-report-done-kind-split.md`）。同 RE も現在マーカーを主張するため、本 intent の節と**同一アンカー行で衝突する**見込み。`cid:code-generation:shared-ledger-insert-collision` に従い、解消は「和集合 + 実施時刻の新しい側を現在」で行うこと（`cid:reverse-engineering:re-timestamp-merge-resolution`）
+- Per-intent record: `re-scans/260810-tla-applicability-wiring.md`（検索述語 P0〜P6・患部非交差の証明・供給チェーン全数・テストピン棚卸し・未検証4項目の正本）
+
+## 実行メタデータ（履歴、2026-08-09: 260809-report-done-kind-split）
 
 - Date: `2026-08-09`
 - Base commit: `778567dd03b00f22cb887eec06f025557eeaaaf4`（直前 intent `260809-sensor-parseflags-failop` の observed。`cid:reverse-engineering:rescan-base-ancestry` に従い `git merge-base --is-ancestor 778567dd03b00f22cb887eec06f025557eeaaaf4 HEAD` で**祖先性を実測確認**（exit 0）。祖先であるため merge-base fallback は不要）
@@ -39,6 +203,24 @@
 - tNNN 予約: 使用済み最大 **`t519`**、新規は **`t520`** から（Architect 独立実測。直前節の「次は `t484`」は**陳腐化**）
 - Updated artifacts: `component-inventory.md` に「per-sensor argv parse の所在と現況」節を追加。`code-structure.md` / `architecture.md` は構造不変・患部が既存コンポーネント内のため**変更なし**。直前の現在断面（`260807-intent-2328-tests-e2e-au`）は本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）
 - Per-intent record: `re-scans/260809-sensor-parseflags-failop.md`（検索述語 P1〜P4・全数列挙・verbatim・exit code・裁定候補6件の正本）
+
+## 実行メタデータ（履歴、2026-08-09: 260809-cg-attribution-stats）
+
+- Date: `2026-08-09T13:37:08Z`
+- Base commit: `a5621236c6c69f1c54f3d496bdf91792d4ef12fc`（直前の共有 CodeKB 現在断面 `260807-intent-2328-tests-e2e-au` の observed。`git merge-base --is-ancestor a5621236c HEAD` = exit 0、距離220 commitsを実測）
+- Observed commit: `82e2f30c0c6d1bbebeb3d6201584a314306d00ac`（本 worktree HEAD。self-feature intent のScope Definitionまでをparkしたrecord commit）
+- Reachable upstream tip: `origin/main` = `fefbbcf0158b47a76cf8873c518fdd6e295e2dbd`（HEADより10 commits先、branchは1 commit ahead。`HEAD..origin/main` で CodeKB と `amadeus-stage-stats.ts` は無変更。関連差分はNFR sensor面のみ）
+- Scope: `self-feature`、Brownfield、単一 repo `amadeus`、Depth `Standard`、Test Strategy `Comprehensive`（`amadeus-state.md:4-23`）
+- Focus: [Issue #2695](https://github.com/amadeus-dlc/amadeus/issues/2695) — CG window 内の既存 audit から、決定的に閉じた観測可能 lifecycle 区間、全category union、coverage、帰属不能残余、overlap、outliers、候補×不採用理由を遡及集計する。CAP-01〜CAP-10は全Mustで縮小なし（`scope-document.md:25-34,122`; `intent-backlog.md:9-20,119`）
+- Scan mode: differential refresh + Issue本文の全契約照合 + Developer real-corpus probe。現 worktree と到達可能 `origin/main` の差分を確認し、患部が同じことを検証した
+- Corpus probe: 229 shards / 136,011 rows、constructed 1,603、measured 1,154、CG measured 109、attribution eligible 102（zero-net 4、ambiguous 3を除外）。sensor-only coverage 0.446%、eligible 102/102がunattributable rate 50%超
+- Focused verification: `t486` + `t487` = 80 pass / 0 fail / 221 expect（Developer scan）。現出力 bytesはMD 53,121 / CSV 48,619 / JSON 107,248で、既存#2700 oversized pipe proofはJSONのみ
+- Updated artifacts: 8 body artifacts、本 freshness pointer、per-intent `re-scans/260809-cg-attribution-stats.md`、stage memory。`architecture.md` には正準データフローとInteraction Diagramを含む
+- Main decisions: 既存measured statsを保存しattribution populationを分離、raw normalized journalを正本としruntime containmentを不使用、explicit stage/start/terminal/identityだけを採用、category/global unionとresidualを単一semantic modelから3形式へ描画、全candidate familyを理由付きinventory、#2700既修正後も3形式>65,536 bytes証明を本intentに残す
+
+## 差分スキャン結果
+
+現行 `amadeus-stage-stats.ts` はwindow/idle/既存stats/3 rendererを持つが、attribution model、`--stage`、`--outliers`、event-set inner展開、interval union、candidate×reasonを持たない。execution/unit-pool等の契約は部分的に素材を提供する一方、現corpusではterminalまたはstage identityが不足する。したがって観測できない残余を推定配分せず、採用可能なsensor lifecycle等だけを明示区間化し、残りを帰属不能として会計する設計断面へ更新した。
 
 ## 実行メタデータ（履歴、2026-08-08: 260807-intent-2328-tests-e2e-au）
 

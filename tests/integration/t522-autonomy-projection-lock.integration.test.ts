@@ -46,6 +46,7 @@
 // acquireAuditLock's reaper refuses to steal (the shape t161, t505 and t506
 // use).
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -205,7 +206,7 @@ describe("t522 the autonomy state projection takes the workspace audit-lock buck
       // A blocked acquire never enters the section, so no field lands.
       expect(state(projectDir)).toBe(before);
     },
-    BLOCKED_ACQUIRE_TIMEOUT_MS,
+    scaleTestTime(BLOCKED_ACQUIRE_TIMEOUT_MS),
   );
 
   test(
@@ -235,7 +236,7 @@ describe("t522 the autonomy state projection takes the workspace audit-lock buck
       expect(again.error).toContain("Failed to acquire audit lock");
       expect(state(projectDir)).toBe(drifted);
     },
-    BLOCKED_ACQUIRE_TIMEOUT_MS,
+    scaleTestTime(BLOCKED_ACQUIRE_TIMEOUT_MS),
   );
 
   // The negative control. A wrap that locked "everything" would block here too;
@@ -250,7 +251,7 @@ describe("t522 the autonomy state projection takes the workspace audit-lock buck
       expect(declareSemi(projectDir)).toMatchObject({ ok: true, projection: { mode: "semi" } });
       expect(state(projectDir).split("\n")).toContain("- **Intent Autonomy Mode**: semi");
     },
-    BLOCKED_ACQUIRE_TIMEOUT_MS,
+    scaleTestTime(BLOCKED_ACQUIRE_TIMEOUT_MS),
   );
 
   // The lock must be RELEASED on the happy path (the withAuditLock finally), or
@@ -264,6 +265,6 @@ describe("t522 the autonomy state projection takes the workspace audit-lock buck
       expect(declareSemi(projectDir)).toMatchObject({ ok: true });
       expect(existsSync(workspaceLockDir(projectDir))).toBe(false);
     },
-    BLOCKED_ACQUIRE_TIMEOUT_MS,
+    scaleTestTime(BLOCKED_ACQUIRE_TIMEOUT_MS),
   );
 });

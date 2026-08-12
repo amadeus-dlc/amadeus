@@ -39,11 +39,13 @@ import {
   buildPluginProjection,
   checkHarnessTree,
   discoverPluginSources,
+  installArtifacts,
   PACKAGE_HARNESSES,
   SELF_INSTALL_HARNESSES,
   validatePluginSources,
 } from "../../scripts/plugin-projection.ts";
 import { packageFreshnessArgs } from "../../scripts/promote-self.ts";
+import { foreignHarnessDirs, harnessDirOf } from "../helpers/harness-dir-fixture.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const FIXTURE = "zz-u09-fixture";
@@ -161,6 +163,38 @@ describe("t-plugin-projection-packaging — U09 FR-6 item 19", () => {
     for (const rel of ["scripts/promote-self.ts", "scripts/package.ts"]) {
       const src = readFileSync(join(REPO_ROOT, rel), "utf-8");
       expect({ rel, declares: faceLiteral.test(src) }).toEqual({ rel, declares: false });
+    }
+  });
+});
+
+// #2790 — the consumer install bundle is path A (build-time packager), which DOES
+// run harness-transform's transform(). Until this test existed the plugin corpus
+// had never carried a {{HARNESS_DIR}} token, so that substituter had never fired
+// on plugin prose: the assertion below is a first demonstration, not a
+// re-statement of proven behaviour. Driven over the REAL authoring plugins/ tree
+// (not the hermetic fixture) because the acceptance condition is about the
+// shipped corpus.
+describe("consumer install bundle resolves plugin prose per face (#2790)", () => {
+  const composedStage = "plugins/pr-convergence/stages/pr-convergence.md";
+
+  test("all eight package faces name their own harness dir and no other", () => {
+    const plugin = discoverPluginSources(join(REPO_ROOT, "plugins")).find(
+      (candidate) => candidate.directoryName === "pr-convergence",
+    );
+    expect(plugin, "pr-convergence source missing").toBeDefined();
+    for (const harness of PACKAGE_HARNESSES) {
+      const dir = harnessDirOf(harness);
+      const artifact = installArtifacts(plugin!, harness).find((a) => a.relativePath === composedStage);
+      expect(artifact, `${harness}: ${composedStage} missing from install bundle`).toBeDefined();
+      const text = artifact!.bytes.toString("utf-8");
+      expect(
+        text.split(`${dir}/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts`).length - 1,
+        harness,
+      ).toBe(1);
+      expect(text.includes("{{HARNESS_DIR}}"), `${harness}: raw token survived`).toBe(false);
+      for (const foreign of foreignHarnessDirs(harness)) {
+        expect(text.includes(`${foreign}/`), `${harness}: foreign literal ${foreign}/`).toBe(false);
+      }
     }
   });
 });

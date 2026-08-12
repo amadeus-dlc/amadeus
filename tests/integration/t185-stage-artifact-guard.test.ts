@@ -20,8 +20,8 @@
 //
 // Source under test (dist/claude/.claude/tools/amadeus-state.ts):
 //   verifyStageArtifacts(pd, stage) - two layers:
-//     1. producesArtifactsExist - a stage that declares produces[] must have at
-//        least one declared .md on disk under <record>/<phase>/<slug>/ (or
+//     1. producesArtifactsExist - a stage that declares produces[] must have
+//        every required declared .md on disk under <record>/<phase>/<slug>/ (or
 //        <record>/construction/<unit>/<slug>/ for per-unit stages, or
 //        <space>/codekb/<repo>/ for codekb stages). Empty-produces stages
 //        vacuously pass.
@@ -36,6 +36,7 @@
 // test re-enables enforcement by DELETING that var from the spawned tool's env
 // - otherwise it would be testing the bypass, not the guard.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -180,10 +181,22 @@ describe("t185: stage-completion artifact guard (#366)", () => {
     expect(r.rc).toBe(0);
   });
 
-  test("approve PASSES once a declared produces[] artifact exists", () => {
+  test("approve REFUSES while any required produces[] artifact is absent", () => {
     const slug = field(proj, "Current Stage"); // feasibility, phase ideation
     guarded(proj, ["checkbox", `${slug}=in-progress`]);
     writeRecordDoc(proj, `ideation/${slug}/feasibility-assessment.md`);
+    guarded(proj, ["gate-start", slug]);
+    const r = guarded(proj, ["approve", slug, "--user-input", "ok"]);
+    expect(r.rc).not.toBe(0);
+    expect(r.out).toContain("missing required");
+  });
+
+  test("approve PASSES once every required produces[] artifact exists", () => {
+    const slug = field(proj, "Current Stage");
+    guarded(proj, ["checkbox", `${slug}=in-progress`]);
+    for (const artifact of ["feasibility-assessment", "constraint-register", "raid-log", "feasibility-questions"]) {
+      writeRecordDoc(proj, `ideation/${slug}/${artifact}.md`);
+    }
     guarded(proj, ["gate-start", slug]);
     const r = guarded(proj, ["approve", slug, "--user-input", "ok"]);
     expect(r.rc).toBe(0);
@@ -320,10 +333,14 @@ describe("t185: stage-completion artifact guard (#366)", () => {
       expect(r.out).toContain("Refusing to complete");
     });
 
-    test("PASSES reverse-engineering once a codekb artifact exists", () => {
+    test("PASSES reverse-engineering once every codekb artifact exists", () => {
       guarded(proj, ["set", "Current Stage=reverse-engineering"]);
       guarded(proj, ["checkbox", "reverse-engineering=in-progress"]);
-      writeCodekbDoc("business-overview"); // a declared produces[] of RE
+      for (const artifact of [
+        "business-overview", "architecture", "code-structure", "api-documentation",
+        "component-inventory", "technology-stack", "dependencies",
+        "code-quality-assessment", "reverse-engineering-timestamp",
+      ]) writeCodekbDoc(artifact);
       guarded(proj, ["gate-start", "reverse-engineering"]);
       const r = guarded(proj, ["approve", "reverse-engineering", "--user-input", "ok"]);
       expect(r.rc).toBe(0);
@@ -384,7 +401,7 @@ describe("t185: stage-completion artifact guard (#366)", () => {
       const r = approveCodeGen();
       expect(r.rc).not.toBe(0);
       expect(r.out).toContain("workspace_requires");
-    }, 30000);
+    }, scaleTestTime(30000));
 
     // Uncommitted/untracked new source this session -> PASS.
     test("PASSES with an uncommitted new source file this session", () => {
@@ -394,7 +411,7 @@ describe("t185: stage-completion artifact guard (#366)", () => {
       writeWorkspaceFile(proj, "src/auth/login.ts"); // untracked, uncommitted
       const r = approveCodeGen();
       expect(r.rc).toBe(0);
-    }, 30000);
+    }, scaleTestTime(30000));
 
     // commit-then-approve (clean tree, code in the LAST commit) -> PASS. This is
     // the exact pattern #366 Update 3 reported as a false-block under a naive
@@ -408,7 +425,7 @@ describe("t185: stage-completion artifact guard (#366)", () => {
       git(["commit", "-q", "-m", "code-generation output"]);
       const r = approveCodeGen();
       expect(r.rc).toBe(0);
-    }, 30000);
+    }, scaleTestTime(30000));
 
     // SINGLE-commit clean tree, the source IS in the sole commit -> PASS. The
     // greenfield "git init, generate, commit, approve" path: there is no parent,
@@ -427,6 +444,6 @@ describe("t185: stage-completion artifact guard (#366)", () => {
       git(["commit", "-q", "-m", "first commit: code-generation output"]);
       const r = approveCodeGen();
       expect(r.rc).toBe(0);
-    }, 30000);
+    }, scaleTestTime(30000));
   });
 });

@@ -15,6 +15,7 @@
 // explicit "distributionVersion 書き換え" technique, avoiding the need for a
 // second distinct real archive body.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { createServer, type Server } from "node:http";
@@ -202,7 +203,7 @@ describe("amadeus-setup upgrade (E2E, offline fixture)", () => {
         await close();
       }
     },
-    60_000,
+    scaleTestTime(60_000),
   );
 });
 
@@ -241,7 +242,7 @@ describe("amadeus-setup upgrade (E2E, REL-U02: all 6 no-change paths write nothi
         expect(snapshot(target)).toEqual(before);
       });
     },
-    60_000,
+    scaleTestTime(60_000),
   );
 
   test(
@@ -259,7 +260,7 @@ describe("amadeus-setup upgrade (E2E, REL-U02: all 6 no-change paths write nothi
         expect(snapshot(target)).toEqual(before);
       });
     },
-    60_000,
+    scaleTestTime(60_000),
   );
 
   test(
@@ -273,7 +274,7 @@ describe("amadeus-setup upgrade (E2E, REL-U02: all 6 no-change paths write nothi
         expect(snapshot(target)).toEqual(before);
       });
     },
-    60_000,
+    scaleTestTime(60_000),
   );
 
   test(
@@ -297,7 +298,7 @@ describe("amadeus-setup upgrade (E2E, REL-U02: all 6 no-change paths write nothi
         await close();
       }
     },
-    60_000,
+    scaleTestTime(60_000),
   );
 
   test(
@@ -316,7 +317,7 @@ describe("amadeus-setup upgrade (E2E, REL-U02: all 6 no-change paths write nothi
         expect(snapshot(target)).toEqual(before);
       });
     },
-    60_000,
+    scaleTestTime(60_000),
   );
 
   test(
@@ -331,7 +332,7 @@ describe("amadeus-setup upgrade (E2E, REL-U02: all 6 no-change paths write nothi
         expect(snapshot(target)).toEqual(before);
       });
     },
-    60_000,
+    scaleTestTime(60_000),
   );
 
   // Note (deviation, flagged to the architect): infrastructure-design/

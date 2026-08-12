@@ -15,6 +15,7 @@
 // the same trees t149 does. Nested spawns (adapter → compose → recompile) run
 // under a 60s timeout each, like t299.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -72,7 +73,7 @@ function fireSessionStart(face: (typeof FACES)[number]): ReturnType<typeof spawn
     encoding: "utf-8",
     input: "{}",
     cwd: host,
-    timeout: 60_000,
+    timeout: scaleTestTime(60_000),
     // CLAUDE_PROJECT_DIR anchors resolveProjectDirFromHook (kiro/kiro-ide rung 2);
     // codex/cursor/kimi resolve from cwd. Both point at the staged host.
     env: { ...process.env, CLAUDE_PROJECT_DIR: host },

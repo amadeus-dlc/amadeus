@@ -86,6 +86,7 @@
 // here, so post-fire counts are unambiguous). All temp dirs cleaned in afterAll.
 // NOTHING is written under tests/fixtures/**.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { normalizeAuditRecord } from "../harness/audit-records.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -385,7 +386,7 @@ describe("t27 amadeus-utility status", () => {
     state(["gate-start", current], p);
     const r = util(["status"], p);
     expect(r.stdout).toContain("Awaiting your approval");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("68: status shows Revising and revision count for [R] stage", () => {
     const p = bareProj();
@@ -399,7 +400,7 @@ describe("t27 amadeus-utility status", () => {
     const r = util(["status"], p);
     expect(r.stdout).toContain("Revising");
     expect(r.stdout).toContain("revision 1 of 3");
-  }, 30000);
+  }, scaleTestTime(30000));
 });
 
 // ============================================================
@@ -867,14 +868,14 @@ describe("t27 amadeus-utility detect-scope", () => {
     // STRONGER: the .sh only grepped the event; assert the JSON ack + field.
     expect(r.stdout).toContain('"emitted":"SCOPE_DETECTED"');
     expect(auditFieldIn(audit, "SCOPE_DETECTED", "Detected scope")).toBe("feature");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   test("66: detect-scope rejects invalid scope (exit 1)", () => {
     const p = bareProj();
     util(["init", "--scope", "fix"], p);
     const r = util(["detect-scope", "--scope", "bogus", "--input", "x"], p);
     expect(r.status).toBe(1);
-  }, 30000);
+  }, scaleTestTime(30000));
 });
 
 // ============================================================

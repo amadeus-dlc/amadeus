@@ -27,6 +27,9 @@ import { parseStageFrontmatter } from "../../dist/claude/.claude/tools/amadeus-l
 // golden-regen-from-shipped-surface discipline.
 const DIST_TOOLS = join(import.meta.dir, "..", "..", "dist", "claude", ".claude", "tools");
 const COMMITTED_GRAPH = join(DIST_TOOLS, "data", "stage-graph.json");
+const REPO_ROOT = join(import.meta.dir, "..", "..");
+const FORMAL_MODEL_STAGES = join(REPO_ROOT, "plugins", "formal-model-check", "stages");
+const SELF_SCOPES = ["self-document", "self-feature", "self-fix", "self-refactor"] as const;
 
 // A valid stage frontmatter body (all REQUIRED_FIELDS). Optional overrides let a
 // case set sensors / scopes / phase / slug without re-authoring the block.
@@ -252,6 +255,31 @@ describe("compileStageGraph plugin merge (U2)", () => {
     expect(injected.stages.some((s) => s.slug === "zz-dummy-plugin-stage")).toBe(true);
     // GREEN restored: the empty host equals the committed baseline.
     expect(baseline).toBe(readFileSync(COMMITTED_GRAPH, "utf-8"));
+  });
+
+  test("the formal lifecycle authors before checking on every self scope", () => {
+    const host = freshHost();
+    for (const file of ["formal-model-check.md", "tla-authoring.md"]) {
+      writePluginStage(
+        host,
+        "formal-model-check",
+        file,
+        readFileSync(join(FORMAL_MODEL_STAGES, file), "utf8"),
+      );
+    }
+
+    const compiled = compileWithPluginHost(host);
+    const grid = JSON.parse(compiled.gridJson) as Record<string, { stages: Record<string, string> }>;
+    for (const scope of SELF_SCOPES) {
+      expect(grid[scope]?.stages["tla-authoring"], `${scope} must assess and supply missing models`).toBe("EXECUTE");
+      expect(grid[scope]?.stages["formal-model-check"], `${scope} must check registered models`).toBe("EXECUTE");
+    }
+
+    const authoring = compiled.stages.find((stage) => stage.slug === "tla-authoring");
+    const checking = compiled.stages.find((stage) => stage.slug === "formal-model-check");
+    expect(authoring?.number).toBe("3.8");
+    expect(checking?.number).toBe("3.9");
+    expect(checking?.requires_stage).toContain("tla-authoring");
   });
 
   // U3 (#1598): the join stamps a provenance discriminant on the plugin-joined

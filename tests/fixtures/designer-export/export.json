@@ -2001,7 +2001,7 @@
       "name": "Nfr Design",
       "phase": "construction",
       "execution": "CONDITIONAL",
-      "condition": "NFR Requirements was executed and NFR patterns need design. Skip if NFR Requirements was skipped.",
+      "condition": "NFR patterns need design. Membership is decided by the scopes: list alone, and a scope may run this stage while skipping NFR Requirements (self-feature does) — the upstream inputs then arrive marked absent-and-expected.",
       "lead_agent": "amadeus-architect-agent",
       "support_agents": [
         "amadeus-aws-platform-agent"

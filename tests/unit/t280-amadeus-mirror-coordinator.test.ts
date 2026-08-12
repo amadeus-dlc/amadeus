@@ -122,7 +122,7 @@ function input(
             github: { issue: { creation: { mode: "prompt" } } },
           },
           swarm: { unit: { concurrency: { limit: 4 } } },
-          plugin: { activation: { names: [] } },
+          plugin: { activation: { names: [] }, scopeBindings: {} },
           subagent: { dispatch: { enforcedModels: ["opus", "sonnet"] } },
         },
         sources: ["/project/amadeus/config.json"],

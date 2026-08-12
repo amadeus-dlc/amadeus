@@ -152,11 +152,153 @@ export function parseDiffAddedLines(diff: string): Map<string, Set<number>> {
   return byFile;
 }
 
+// ---------------------------------------------------------------------------
+// Syntax classes (#1622). The kinds of row the ledger's exemptions appeal to.
+//
+// Three of them are properties of the lines themselves and so are decidable
+// from the AST. `spawn-only` is a claim about reachability and
+// `unmeasurable-other` has no predicate at all, which is why neither can be
+// declared on an entry — see DECLARABLE_SYNTAX_CLASSES.
+// ---------------------------------------------------------------------------
+export type SyntaxClass = "type-only" | "catch-arm" | "dispatch-case" | "spawn-only" | "unmeasurable-other";
+
+export const DECLARABLE_SYNTAX_CLASSES = ["type-only", "catch-arm", "dispatch-case"] as const;
+export type DeclaredSyntaxClass = (typeof DECLARABLE_SYNTAX_CLASSES)[number];
+
+interface TokenWithAncestry {
+  token: ts.Node;
+  ancestry: ts.Node[];
+}
+
+// Parsing is the expensive step and the ledger asks about the same handful of
+// files hundreds of times over, so the tree is parsed once per source.
+const sourceFileCache = new Map<string, ts.SourceFile>();
+
+function parsedSourceFile(file: string, source: string): ts.SourceFile {
+  const key = `${file}\n${source}`;
+  const cached = sourceFileCache.get(key);
+  if (cached) return cached;
+  const parsed = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  sourceFileCache.set(key, parsed);
+  return parsed;
+}
+
+/**
+ * Every leaf token whose text touches [range.start, range.end], with its
+ * ancestor chain.
+ *
+ * The walk goes through `getChildren`, not `forEachChild`: the latter visits
+ * only the named children of a node, so keywords and punctuation are never
+ * reached. A line like `} catch {` is made entirely of those, and skipping them
+ * left the range empty — which every class predicate then answers "no" to.
+ */
+function tokensInRange(file: string, source: string, range: ResolvedLineRange): TokenWithAncestry[] {
+  const sourceFile = parsedSourceFile(file, source);
+  const found: TokenWithAncestry[] = [];
+  const stack: ts.Node[] = [];
+  const visit = (node: ts.Node): void => {
+    const start = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1;
+    const end = sourceFile.getLineAndCharacterOfPosition(node.getEnd()).line + 1;
+    if (end < range.start || start > range.end) return;
+    const children = node.getChildren(sourceFile);
+    if (children.length === 0) {
+      if (start >= range.start && start <= range.end) found.push({ token: node, ancestry: [...stack] });
+      return;
+    }
+    stack.push(node);
+    for (const child of children) visit(child);
+    stack.pop();
+  };
+  for (const child of sourceFile.getChildren(sourceFile)) visit(child);
+  return found;
+}
+
+/**
+ * Punctuation belongs to whatever construct happens to end or begin at that
+ * character; it carries no class of its own. `catch` on `} catch {` is a
+ * keyword and does carry one, so classification reads the meaningful tokens and
+ * lets the braces be. A range with no meaningful token stays unclassified.
+ */
+function carriesClass(token: ts.Node): boolean {
+  return token.kind < ts.SyntaxKind.FirstPunctuation || token.kind > ts.SyntaxKind.LastPunctuation;
+}
+
+/** `if (import.meta.main) …` — the branch that only a spawned process enters. */
+function isImportMetaMainBranch(node: ts.Node): boolean {
+  if (!ts.isIfStatement(node)) return false;
+  const test = node.expression;
+  if (!ts.isPropertyAccessExpression(test) || test.name.text !== "main") return false;
+  const target = test.expression;
+  return ts.isMetaProperty(target) && target.keywordToken === ts.SyntaxKind.ImportKeyword;
+}
+
+/** The `main` entrypoint itself: only the spawned CLI boundary calls it. */
+function isMainEntrypoint(node: ts.Node): boolean {
+  if (ts.isFunctionDeclaration(node)) return node.name?.text === "main";
+  if (ts.isArrowFunction(node) || ts.isFunctionExpression(node)) {
+    const parent = node.parent;
+    return ts.isVariableDeclaration(parent) && ts.isIdentifier(parent.name) && parent.name.text === "main";
+  }
+  return false;
+}
+
+/** Constructs that TypeScript erases before the code ever runs. */
+function isTypeErasedNode(node: ts.Node): boolean {
+  if (ts.isTypeNode(node)) return true;
+  if (ts.isTypeAliasDeclaration(node) || ts.isInterfaceDeclaration(node)) return true;
+  if (ts.isTypeParameterDeclaration(node)) return true;
+  if (ts.isTypeOnlyImportOrExportDeclaration(node)) return true;
+  return false;
+}
+
+export function matchesSyntaxClass(
+  file: string,
+  source: string,
+  range: ResolvedLineRange,
+  cls: SyntaxClass,
+): boolean {
+  const tokens = tokensInRange(file, source, range).filter(({ token }) => carriesClass(token));
+  if (tokens.length === 0) return false;
+  switch (cls) {
+    case "type-only":
+      return tokens.every(({ ancestry }) => ancestry.some(isTypeErasedNode));
+    case "catch-arm":
+      return tokens.every(({ ancestry }) => ancestry.some(ts.isCatchClause));
+    case "dispatch-case":
+      return tokens.every(({ ancestry }) => ancestry.some((n) => ts.isCaseClause(n) || ts.isDefaultClause(n)));
+    case "spawn-only":
+      return tokens.every(({ ancestry }) => ancestry.some((n) => isImportMetaMainBranch(n) || isMainEntrypoint(n)));
+    // unmeasurable-other is the absence of a class, so nothing satisfies it.
+    // One line keeps the label measurable (bun lcov stamps a bare label 0).
+    default: return false;
+  }
+}
+
+// Reporting order for "what is this range actually?". The three syntactic forms
+// come first because they are properties of the lines themselves; spawn-only is
+// a property of the enclosing entrypoint and so is the weaker claim. A catch arm
+// inside `main` is reported as a catch arm.
+const CLASS_PRECEDENCE: readonly SyntaxClass[] = ["type-only", "catch-arm", "dispatch-case", "spawn-only"];
+
+export function classifyRange(file: string, source: string, range: ResolvedLineRange): SyntaxClass {
+  for (const cls of CLASS_PRECEDENCE) {
+    if (matchesSyntaxClass(file, source, range, cls)) return cls;
+  }
+  return "unmeasurable-other";
+}
+
 export interface SemanticSelector {
   function: string;
   fingerprint: string;
   anchorLines: number;
   targetLines: string;
+  /**
+   * Optional declaration of what kind of row the exemption covers, checked
+   * against the AST by the gate. Absent means the entry opts out of the check —
+   * the ledger predates the field, so this is a ratchet: entries take it on as
+   * they are revisited, and none of them can regress once they have.
+   */
+  class?: DeclaredSyntaxClass;
 }
 
 export interface ResolvedLineRange {
@@ -186,7 +328,7 @@ function functionScopes(file: string, source: string): FunctionScope[] {
   const cacheKey = `${file}\0${source}`;
   const cached = functionScopeCache.get(cacheKey);
   if (cached) return cached;
-  const sourceFile = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const sourceFile = parsedSourceFile(file, source);
   const scopes: FunctionScope[] = [{ name: "<module>", start: 1, end: source.split(/\r?\n/).length }];
   const lineRange = (node: ts.Node): ResolvedLineRange => ({
     start: sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile)).line + 1,
@@ -345,7 +487,10 @@ function validSemanticSelector(value: unknown): value is SemanticSelector {
     typeof selector.anchorLines !== "number" ||
     !Number.isInteger(selector.anchorLines) ||
     selector.anchorLines < 1 ||
-    typeof selector.targetLines !== "string"
+    typeof selector.targetLines !== "string" ||
+    // Closed vocabulary, fail-closed: an unknown, empty, or non-string class is
+    // a malformed entry, never a silently skipped check.
+    (selector.class !== undefined && !DECLARABLE_SYNTAX_CLASSES.some((known) => known === selector.class))
   ) {
     return false;
   }
@@ -374,7 +519,7 @@ export function parseAllowlist(json: string): AllowlistEntry[] {
       (e.expiry !== undefined && typeof e.expiry !== "string")
     ) {
       throw new Error(
-        `coverage-patch-gate: malformed allowlist entry (file/selector/reason required, reason non-empty, expiry string when present): ${JSON.stringify(e)}`,
+        `coverage-patch-gate: malformed allowlist entry (file/selector/reason required, reason non-empty, expiry string when present, selector.class one of ${DECLARABLE_SYNTAX_CLASSES.join("/")} when present): ${JSON.stringify(e)}`,
       );
     }
   }
@@ -416,6 +561,101 @@ export function findStaleAllowlistEntries(
     }
     return true;
   });
+}
+
+// Declared-class check (#1622). An exemption whose `reason` no longer describes
+// the code its selector lands on is a waiver granted for a property the code
+// does not have. Prose cannot be graded — four attempts to read a subject out
+// of `reason` all foundered on the same fact, that the field mixes target,
+// rationale, coverage status and reachability. So the entry DECLARES its class
+// instead, and the declaration is what the AST is held to. Nothing here parses
+// prose, so nothing here can misread it.
+export interface SyntaxClassMismatch {
+  file: string;
+  function: string;
+  declared: DeclaredSyntaxClass;
+  actual: SyntaxClass;
+  start: number;
+  end: number;
+}
+
+export function findSyntaxClassMismatches(
+  entries: readonly AllowlistEntry[],
+  sources: ReadonlyMap<string, string>,
+): SyntaxClassMismatch[] {
+  const mismatches: SyntaxClassMismatch[] = [];
+  for (const entry of entries) {
+    const declared = entry.selector.class;
+    if (declared === undefined) continue;
+    const source = sources.get(entry.file);
+    if (source === undefined) {
+      throw new Error(`coverage-patch-gate: source not found for declared-class allowlist entry: ${entry.file}`);
+    }
+    const range = resolveSemanticSelector(entry.file, source, entry.selector);
+    if (matchesSyntaxClass(entry.file, source, range, declared)) continue;
+    mismatches.push({
+      file: entry.file,
+      function: entry.selector.function,
+      declared,
+      actual: classifyRange(entry.file, source, range),
+      start: range.start,
+      end: range.end,
+    });
+  }
+  return mismatches;
+}
+
+export function renderSyntaxClassMismatches(mismatches: readonly SyntaxClassMismatch[]): string {
+  return mismatches
+    .map(
+      (m) =>
+        `  ${m.file}:${formatLineRange(m)} (${m.function}) declares ${m.declared} but the lines are ${m.actual}`,
+    )
+    .join("\n");
+}
+
+// The ratchet floor. Every ledger range the AST could classify was pinned once
+// (#2901), and a pin only protects an entry that carries one — so a NEW entry
+// arriving with a decidable range but no declaration would quietly re-open the
+// gap. The floor closes it: decidable means declared. Ranges the AST cannot
+// classify (spawn-only reachability, plain statements) stay exempt, because a
+// declaration nothing can check would add confidence without adding a check.
+export interface UndeclaredDecidableEntry {
+  file: string;
+  function: string;
+  actual: DeclaredSyntaxClass;
+  start: number;
+  end: number;
+}
+
+export function findUndeclaredDecidableEntries(
+  entries: readonly AllowlistEntry[],
+  sources: ReadonlyMap<string, string>,
+): UndeclaredDecidableEntry[] {
+  const found: UndeclaredDecidableEntry[] = [];
+  for (const entry of entries) {
+    if (entry.selector.class !== undefined) continue;
+    const source = sources.get(entry.file);
+    if (source === undefined) {
+      throw new Error(`coverage-patch-gate: source not found for allowlist entry: ${entry.file}`);
+    }
+    const range = resolveSemanticSelector(entry.file, source, entry.selector);
+    for (const cls of DECLARABLE_SYNTAX_CLASSES) {
+      if (!matchesSyntaxClass(entry.file, source, range, cls)) continue;
+      found.push({ file: entry.file, function: entry.selector.function, actual: cls, start: range.start, end: range.end });
+      break;
+    }
+  }
+  return found;
+}
+
+export function renderUndeclaredDecidableEntries(entries: readonly UndeclaredDecidableEntry[]): string {
+  return entries
+    .map(
+      (e) =>
+        `  ${e.file}:${formatLineRange(e)} (${e.function}) is ${e.actual} but declares nothing — add "class": "${e.actual}" to its selector`,
+    )
+    .join("\n");
 }
 
 function allowlisted(entries: ResolvedAllowlistEntry[], file: string, line: number): boolean {
@@ -550,6 +790,23 @@ export function runCheck(repoRoot: string = REPO_ROOT): number {
       allowlist = resolveAllowlistEntries(entries, sources);
     } catch (error) {
       console.error(`coverage-patch-gate: STALE semantic allowlist entry: ${(error as Error).message}`);
+      return 1;
+    }
+    // resolveAllowlistEntries above already resolved every entry against these
+    // same sources, so this cannot fail for a reason that one did not already
+    // catch. A surprise still fails closed: the throw leaves runCheck non-zero.
+    const mismatches = findSyntaxClassMismatches(entries, sources);
+    if (mismatches.length > 0) {
+      console.error(
+        `coverage-patch-gate: allowlist entries whose declared selector.class no longer matches the code (re-point the selector, restate the class, or drop the entry):\n${renderSyntaxClassMismatches(mismatches)}`,
+      );
+      return 1;
+    }
+    const undeclared = findUndeclaredDecidableEntries(entries, sources);
+    if (undeclared.length > 0) {
+      console.error(
+        `coverage-patch-gate: allowlist entries whose range the AST can classify but that declare no selector.class (the ratchet floor — decidable means declared):\n${renderUndeclaredDecidableEntries(undeclared)}`,
+      );
       return 1;
     }
     const stale = findStaleAllowlistEntries(allowlist, lcov);

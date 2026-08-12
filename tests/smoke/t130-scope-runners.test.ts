@@ -70,6 +70,7 @@
 //   .sh "non-batch scope (refactor) has no runner"  -> "non-batch scope refactor ships no runner dir"
 //   .sh "generator emits a runner for a new scope"  -> CLI "AMADEUS_SCOPES_DIR + --all --out emits a runner for a dropped scope file"
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -192,7 +193,7 @@ describe("t130 scope-runners — structural conformance of the shipped first-bat
     // .sh asserted only `ok` on exit 0; STRONGER: also assert the in-sync headline.
     expect(r.status).toBe(0);
     expect(`${r.stdout ?? ""}`).toContain("scope-runner(s) in sync");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // ===========================================================================
   // Negative — a non-batch scope ships no runner (1 test). `refactor` is a
@@ -255,5 +256,5 @@ describe("t130 scope-runners — structural conformance of the shipped first-bat
     expect(emittedBody).toContain("next --scope hotfix");
     // STRONGER: the emitted runner is spec-conformant (name == dir) too.
     expect(frontmatterName(emittedBody)).toBe("amadeus-hotfix");
-  }, 30000);
+  }, scaleTestTime(30000));
 });

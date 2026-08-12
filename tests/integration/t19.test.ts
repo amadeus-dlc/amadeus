@@ -50,6 +50,7 @@
 //
 // It SPENDS TOKENS — driveAidlc drives a real (tiny) /echo turn on Opus/Bedrock.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { driveAidlc } from "../harness/sdk-drive.ts";
@@ -94,7 +95,7 @@ describe.skip("t19 preflight health (sdk live substrate)", () => {
       }
       expect(sts.status).toBe(0);
     },
-    AWS_STS_TIMEOUT_MS + 5_000,
+    scaleTestTime(AWS_STS_TIMEOUT_MS + 5_000),
   );
 
   // .sh tests 1+3+4: a real driven turn completes cleanly with non-empty output.

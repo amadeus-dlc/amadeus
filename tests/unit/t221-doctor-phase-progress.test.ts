@@ -24,6 +24,7 @@
 //      with the flagged record + phases, and adding the contradictory record
 //      does NOT change doctor's exit code (the FR-2 exit-neutrality contract).
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -357,5 +358,5 @@ describe("t221 doctor CLI — Check 8 advisory line and exit-neutrality (#882)",
       rmSync(clean, { recursive: true, force: true });
       rmSync(flagged, { recursive: true, force: true });
     }
-  }, 60000);
+  }, scaleTestTime(60000));
 });

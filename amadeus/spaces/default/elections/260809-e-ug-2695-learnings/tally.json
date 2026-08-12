@@ -1,0 +1,47 @@
+{
+  "result": {
+    "kind": "hold",
+    "reason": "tie",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-09T15:24:50Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-UG-2695-LEARNINGS",
+      "voter": "units-generation-learning-voter-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 6,
+      "goa": 3,
+      "reservation": "sourceとtestの非交差ownershipを保ちつつ、複数Unitを横断する統合検証には単一の明示的ownerと実行順を割り当て、検証責任を分割の隙間に落とさないこと。",
+      "rationale": "受入条件を実際に変更するsource/test fileのownerへ分配し、各UnitのDoDがdownstream Unitの所有物に依存しないようにする原則は、機能固有の構造を越えて再利用できる。並行作業時の編集衝突を減らし、Unit単体で完了判定できるclosed contractを作り、暗黙の依存による偽の完了や作業順序の直列化を防げるため、最も実務的なproject practiceである。",
+      "submittedAt": "2026-08-09T15:23:51Z",
+      "receivedAt": "2026-08-09T15:24:08Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-UG-2695-LEARNINGS",
+      "voter": "units-generation-learning-voter-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 5,
+      "goa": 2,
+      "reservation": "foundation Unit は、複数の後続 Unit が必要とする安定した契約とその完了条件を単独所有できる場合にだけ独立させる。便宜的な共通コード置き場にすると Unit overhead と結合が増えるため避ける。",
+      "rationale": "internalNo 5 を選ぶ。相互依存する後続 Unit から共有契約を小さな foundation Unit として切り出し、closed contract owner を置く実践は、特定の attribution 機能やファイル構成に依存しない。これにより循環 edge を除去し、後続 Unit を独立枝として並行実装・検証できるため、Units Generation の主要目的である所有権の明確化、acyclic topology、並行可能性を同時に改善する。Unit 数が増えるコストはあるが、安定した共有契約に適用範囲を限定すれば、次回以降の複数 Unit 設計でも再利用価値が高い。",
+      "submittedAt": "2026-08-09T15:24:01Z",
+      "receivedAt": "2026-08-09T15:24:26Z"
+    }
+  ],
+  "resolutions": [
+    {
+      "reason": "tie",
+      "resolution": "choice:6",
+      "resumedTo": "tallied",
+      "at": "2026-08-09T15:25:41Z"
+    }
+  ]
+}

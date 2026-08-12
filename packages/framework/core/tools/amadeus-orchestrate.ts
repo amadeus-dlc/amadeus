@@ -93,6 +93,7 @@ import {
   type ErrorDirective,
   GATE_UNRESOLVED,
   type GateValue,
+  type InvokeSwarmDirective,
   type ParkedDirective,
   type PrintDirective,
   renderAdvisoryChoiceQuestion,
@@ -101,6 +102,7 @@ import {
   VALID_DEPTH_VALUES,
   validateDirective,
 } from "./amadeus-directive.ts";
+import { hasDurableReviewProjection } from "./amadeus-reviewer.ts";
 import {
   ADVISORY_CHOICE_OPTIONS,
   advisoryReportHoldReason,
@@ -193,11 +195,15 @@ import type {
   AutonomyProjection,
 } from "./amadeus-intent-autonomy.ts";
 import {
+  admitProductionStageFailure,
   applyProductionAutonomyMode,
   observeLaunchTurnToken,
   previewProductionAutonomyGrant,
   productionStageAutonomy,
   readProductionAutonomyProjection,
+  readProductionRepairStall,
+  type ProductionRepairStall,
+  type ProductionStageFailureResult,
 } from "./amadeus-intent-autonomy-production.ts";
 import { detectHarnessType } from "./amadeus-harness.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
@@ -221,10 +227,23 @@ import {
   subgraphForScope,
 } from "./amadeus-graph.ts";
 import {
+  PerUnitConsumeFanoutError,
+  resolvePerUnitConsumeFanout,
+  type PerUnitConsumeOutcome,
+} from "./amadeus-per-unit-consume-fanout.ts";
+import { foldUnitPoolEventSets } from "./amadeus-unit-pool.ts";
+import { readUnitPoolEventSetsFromAudit } from "./amadeus-unit-pool-runtime.ts";
+import {
   authorizeMainConductor,
   callerAuthorizationError,
 } from "./amadeus-caller-authorization.ts";
 import { resolveAmadeusConfig } from "./amadeus-config.ts";
+import { createAuditUnitPoolRepository, createUnitPoolCoordinator } from "./amadeus-unit-pool-runtime.ts";
+import {
+  constructionFailureTransition,
+  normalizeConstructionOutcomeAudit,
+  projectConstructionOutcomes,
+} from "./amadeus-construction-outcome-projection.ts";
 import {
   mirrorIssueNumberFromDocument,
   succeededMirrorCreateExists,
@@ -253,21 +272,14 @@ import {
 // import is safe (amadeus-utility.ts main() runs only under import.meta.main,
 // and utility never imports this module - no cycle).
 import { inferScopeFromText } from "./amadeus-utility.ts";
-// U6 activation-policy (C6). The spec-hash judgment + advisory + verdict-record
-// machinery lives in amadeus-plugin-activation.ts as pure, injectable-FS seams;
-// this module only wires the three engine touch points (advisory before
-// build-and-test, `--single`-free reach of a composed plugin stage, verdict
-// record on stage completion). It re-implements none of that logic.
+// Generic plugin runtime seams: advisory presentation, composition lookup, and
+// direct reach of a composed plugin stage.
 import {
-  ACTIVATION_PLUGIN,
-  ACTIVATION_WATCH_GLOBS,
   type Advisory,
   isComposedPluginStage,
-  recordActivationVerdict,
   unlatchedAdvisories,
-} from "./amadeus-plugin-activation.ts";
-// The advisory supply the engine consumes: the spec-hash judgment plus whatever
-// composed plugins declare (ADR-6 revision).
+} from "./amadeus-plugin-runtime.ts";
+// The advisory supply declared by plugins composed into the current host.
 import { advisoriesForHost } from "./amadeus-advisory-declaration.ts";
 
 function trustedHostSessionId(projectDir: string | undefined): string | undefined {
@@ -820,7 +832,7 @@ function applyPendingAdvisoryGuard(directive: Directive): Directive {
     advisoryProjectDir,
     directive.stage,
     pending,
-    pluginActivationHostRoot(),
+    pluginHostRoot(),
   );
   if (guard.kind === "allow") return directive;
   // #2253 FR-ADV-1/2. A hold is offered to the autonomy ladder before it is
@@ -858,9 +870,6 @@ function applyPendingAdvisoryGuard(directive: Directive): Directive {
     question: renderAdvisoryChoiceQuestion(guard.advisories),
     options: ADVISORY_CHOICE_OPTIONS.map((option) => option.label) as AwaitAdvisoryChoiceDirective["options"],
     advisories: guard.advisories,
-    ...(guard.runRequired
-      ? { run_required: true, formal_checks: guard.formalChecks }
-      : {}),
   };
   return choiceDirective;
 }
@@ -1758,15 +1767,14 @@ export function _trustedPluginStageFileForTests(slug: string): string | null {
 }
 
 // ---------------------------------------------------------------------------
-// U6 activation-policy engine touch points (C6). All three delegate the DECISION
-// to amadeus-plugin-activation.ts (in-process seams) and keep the engine glue
-// thin. The plugin host root is the same one trustedPluginStageFile resolves
+// Plugin runtime touch points. The plugin host root is the same one
+// trustedPluginStageFile resolves
 // (env override, else the harness dir), so the composition record + spec files +
 // state file are all read from one consistent root. Resolution is total: a
 // missing/misconfigured root degrades to the raw path so an advisory failure can
 // never break `next`.
 // ---------------------------------------------------------------------------
-export function pluginActivationHostRoot(): string {
+export function pluginHostRoot(): string {
   const configured = process.env.AMADEUS_PLUGINS_HOST_ROOT ?? dirname(TOOLS_DIR);
   try {
     return realpathSync(configured);
@@ -1775,49 +1783,25 @@ export function pluginActivationHostRoot(): string {
   }
 }
 
-// The CHECKPOINTS whose imminent directive triggers the advisory (U5 / FR-B3,
-// ruling Q3=A). Was the single build-and-test slug; a spec change that
-// contradicts the requirements should surface while the requirements are being
-// written, not one phase later, so the set is:
-//   requirements-analysis — the upstream catch (a spec/requirement conflict)
-//   functional-design     — the design-time catch
-//   build-and-test        — the final safety net (the original, retained)
-const ACTIVATION_ADVISORY_STAGES: ReadonlySet<string> = new Set([
-  "requirements-analysis",
-  "functional-design",
-  "build-and-test",
-]);
 
-// Flow 2 — raise the formal-model-check activation advisories for the stage the
-// engine is about to emit a directive for. Silent when the slug is not a
-// checkpoint, when formal-model-check is not composed (0-plugin zero-impact), or
-// when the spec is unchanged (`current`).
-//
-// TWO CALL SITES, NOT ONE (U5 / business-logic-model L3): emitForSlug (the main
-// workflow) AND emitSingleRunStage (the `--single` stage-runner path). The
-// earlier "single guarded call site so no latch is needed" invariant is
-// RETIRED — with three checkpoints reachable from two paths, the same judgment
-// would otherwise be repeated at every `next`. `latchDir` supplies the run-level
-// de-duplication (business-logic-model L4): the first raise per (plugin, code)
-// wins for the run and later ones are dropped. Passing null/undefined disables
-// the latch (every raise fires), which is what the pure-decision seam tests use.
-//
-// Returns the advisories it raised so the caller can put them on the directive
-// (the machine channel, FR-B2); the `err` sink still receives one line each, so
-// the human channel is unchanged (L5 — additive, never a replacement).
-export function emitActivationAdvisory(
+// Raise every composed plugin advisory declared for the stage the engine is
+// about to emit. Both the main workflow and direct stage-runner call this seam.
+// `latchDir` de-duplicates by (plugin, code) for one run; null disables the
+// latch for pure decision tests. The return value feeds the machine-readable
+// directive while `err` preserves the human-readable channel.
+export function emitPluginAdvisories(
   slug: string,
   hostRoot: string,
   err: (line: string) => void,
   latchDir?: string | null,
 ): Advisory[] {
-  if (!ACTIVATION_ADVISORY_STAGES.has(slug)) return [];
   const raised = latchDir
     ? unlatchedAdvisories(latchDir, advisoriesForHost(hostRoot, slug))
     : advisoriesForHost(hostRoot, slug);
   for (const advisory of raised) err(advisory.message);
   return raised;
 }
+
 
 // The advisories raised for the directive currently being composed. A
 // module-scoped slot rather than a parameter on every emit call site: the two
@@ -1841,12 +1825,10 @@ function takePendingAdvisories(): Advisory[] {
 // The activation advisory work for one about-to-be-emitted slug: raise (with the
 // run latch), write the human line to stderr, and stage the structured result
 // for emit(). Shared by BOTH emit paths so the two can never drift.
-function raiseActivationAdvisoriesFor(slug: string, projectDir: string): void {
-  const hostRoot = pluginActivationHostRoot();
-  const advisories = ACTIVATION_ADVISORY_STAGES.has(slug)
-    ? advisoriesForHost(hostRoot, slug)
-    : [];
-  emitActivationAdvisory(
+function raisePluginAdvisoriesFor(slug: string, projectDir: string): void {
+  const hostRoot = pluginHostRoot();
+  const advisories = advisoriesForHost(hostRoot, slug);
+  emitPluginAdvisories(
     slug,
     hostRoot,
     (line) => process.stderr.write(`${line}\n`),
@@ -1894,14 +1876,6 @@ export function emitComposedPluginStageIfInstalled(
   if (!isComposedPluginStage(hostRoot, flags.stage)) return false;
   emitSingleRunStage(flags.stage, scope, projectType, recordPrefix, codekbCtx, resolveDepth(stateContent, scope));
   return true;
-}
-
-// Flow 4 — record the activation verdict when the formal-model-check stage
-// completes (the explicit-run completion signal). The SOLE writer of
-// SpecHashState (BR-U6-6); every advisory/doctor read path is read-only.
-export function recordActivationVerdictIfActivationStage(slug: string, hostRoot: string): void {
-  if (slug !== ACTIVATION_PLUGIN) return;
-  recordActivationVerdict(hostRoot, ACTIVATION_WATCH_GLOBS);
 }
 
 // --- The conductor persona (decision D-E, SPIKE 6) ---
@@ -2156,6 +2130,22 @@ function loadRuntimeUnitRows(projectDir: string, intent?: string): unknown[] | n
   }
 }
 
+export function loadRuntimeUnitBatches(projectDir: string): string[][] | null {
+  try {
+    const graph: unknown = JSON.parse(readFileSync(runtimeGraphPath(projectDir), "utf-8"));
+    const batches = runtimeObjectField(runtimeObjectField(graph, "bolt_dag"), "batches");
+    if (!Array.isArray(batches)) return null;
+    const validBatches = batches.filter((batch): batch is string[] =>
+      Array.isArray(batch) && batch.every((unit) => typeof unit === "string" && unit.trim() !== "")
+    );
+    return validBatches.length === batches.length
+      ? validBatches.map((batch) => [...batch])
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 interface RuntimeUnitKindRow {
   name: string;
   kind?: UnitKind;
@@ -2310,7 +2300,7 @@ function isCodekb(node: GraphStage): boolean {
 // codekbRepoName(projectDir); `space` is the active-space cursor. When absent
 // (a non-codekb caller, e.g. a test invoking buildRunStageDirective with
 // defaults) the codekb branch never fires and the record-dir path stands.
-type CodekbCtx = { projectDir: string; space: string; codekbRepo: string };
+export type CodekbCtx = { projectDir: string; space: string; codekbRepo: string };
 
 // Build the CodekbCtx for a live projectDir, resolving the active-space cursor
 // and the deterministic codekb repo name (both read-only). One place so the
@@ -2410,9 +2400,54 @@ function projectTypeFrom(
 // the resolved path, so the presence split downstream can key producer lookups
 // and required-ness off the authored vocabulary instead of re-deriving the
 // name from the path shape.
-type ResolvedConsume = { artifact: string; required: boolean; path: string };
+export type ResolvedConsume = {
+  artifact: string;
+  required: boolean;
+  path: string;
+  perUnitSucceeded?: true;
+};
 
-function resolveConsumes(
+export interface PerUnitConsumePopulation {
+  readonly declaredUnits: readonly string[];
+  readonly outcomes: readonly PerUnitConsumeOutcome[];
+}
+
+export function readPerUnitConsumePopulation(
+  projectDir: string,
+): PerUnitConsumePopulation | undefined {
+  const rows = loadRuntimeUnitRows(projectDir);
+  if (rows === null || rows.length === 0) return undefined;
+  const declaredUnits = rows.flatMap((row) => {
+    const name = runtimeObjectField(row, "name");
+    return typeof name === "string" && name.trim() !== "" ? [name] : [];
+  });
+  const eventSets = readUnitPoolEventSetsFromAudit(projectDir);
+  const outcomes: PerUnitConsumeOutcome[] = [];
+  const batches = loadRuntimeUnitBatches(projectDir) ?? [];
+  for (const [index, units] of batches.entries()) {
+    const projection = foldUnitPoolEventSets(eventSets, String(index + 1));
+    const currentUnits = new Set(units);
+    for (const terminal of projection.terminal) {
+      if (!currentUnits.has(terminal.unitId)) continue;
+      outcomes.push({
+        unit: terminal.unitId,
+        outcome: terminal.outcome === "succeeded" || terminal.outcome === "cancelled"
+          ? terminal.outcome
+          : "failed",
+      });
+    }
+  }
+  return { declaredUnits, outcomes };
+}
+
+function hasRequiredPerUnitConsumes(node: GraphStage): boolean {
+  return !isPerUnit(node) && (node.consumes ?? []).some((consume) => {
+    const producer = producersOf(consume.artifact)[0];
+    return consume.required && producer !== undefined && isPerUnit(producer);
+  });
+}
+
+export function resolveConsumes(
   consumes: Consume[],
   node: GraphStage,
   projectType: "brownfield" | "greenfield" | null,
@@ -2420,6 +2455,7 @@ function resolveConsumes(
   recordPrefix: string | null,
   codekbCtx?: CodekbCtx,
   unitKind?: UnitKind,
+  population?: PerUnitConsumePopulation,
 ): ResolvedConsume[] {
   const resolved: ResolvedConsume[] = [];
   for (const consume of consumes) {
@@ -2447,7 +2483,34 @@ function resolveConsumes(
       path: resolveConsumePath(consume.artifact, node, unit, recordPrefix, codekbCtx),
     });
   }
-  return resolved;
+  if (population === undefined || isPerUnit(node)) return resolved;
+  const fanoutCandidates = resolved.filter((consume) => {
+    const producer = producersOf(consume.artifact)[0];
+    return consume.required && producer !== undefined && isPerUnit(producer);
+  });
+  if (fanoutCandidates.length === 0) return resolved;
+  const fanout = resolvePerUnitConsumeFanout({
+    graph: loadGraph(),
+    declaredUnits: population.declaredUnits,
+    outcomes: population.outcomes,
+    templates: fanoutCandidates.map((consume) => ({
+      artifact: consume.artifact,
+      path: consume.path,
+    })),
+  });
+  const expanded = fanout.map((consume) => ({
+    artifact: consume.artifact,
+    required: true,
+    path: consume.path,
+    perUnitSucceeded: true as const,
+  }));
+  const fanoutArtifacts = new Set(fanoutCandidates.map((consume) => consume.artifact));
+  const firstFanoutIndex = resolved.findIndex((consume) => fanoutArtifacts.has(consume.artifact));
+  return [
+    ...resolved.slice(0, firstFanoutIndex),
+    ...expanded,
+    ...resolved.slice(firstFanoutIndex).filter((consume) => !fanoutArtifacts.has(consume.artifact)),
+  ];
 }
 
 // Split resolved consumes into PRESENT (file exists on disk) and ABSENT
@@ -2470,6 +2533,21 @@ function resolveConsumes(
 //     check against; everything stays in `consumes`, exactly as before.
 //   - a path still carrying the {unit-name} placeholder → existence is
 //     unknowable pre-Bolt; it stays in `consumes`.
+export function consumePresentOnDisk(consume: ResolvedConsume, absolutePath: string): boolean {
+  if (!consume.perUnitSucceeded) return existsSync(absolutePath);
+  try {
+    return statSync(absolutePath).isFile();
+  } catch (error) {
+    const code = error !== null && typeof error === "object" && "code" in error
+      ? error.code
+      : undefined;
+    if (code !== "ENOENT" && code !== "ENOTDIR") {
+      throw new PerUnitConsumeFanoutError("consume-presence-read-failed", [consume.path]);
+    }
+    return false;
+  }
+}
+
 function splitConsumesByPresence(
   consumes: ResolvedConsume[],
   scope: string,
@@ -2485,14 +2563,14 @@ function splitConsumesByPresence(
       continue;
     }
     const abs = join(codekbCtx.projectDir, ...c.path.split("/"));
-    if (existsSync(abs)) {
+    if (consumePresentOnDisk(c, abs)) {
       present.push(c.path);
       continue;
     }
     if (!c.required) continue; // optional + missing → not an input, not a gap
     const producers = producersOf(c.artifact);
     const producerOnPath = producers.some((p) => onPath.has(p.slug));
-    absent.push({ path: c.path, expected: !producerOnPath });
+    absent.push({ path: c.path, expected: c.perUnitSucceeded ? false : !producerOnPath });
   }
   return { present, absent };
 }
@@ -2673,9 +2751,11 @@ function buildRunStageDirective(
   recordPrefix: string | null = null,
   codekbCtx?: CodekbCtx,
   unitKind?: UnitKind,
+  population?: PerUnitConsumePopulation,
 ): RunStageDirective {
   const resolvedConsumes = resolveConsumes(
     node.consumes ?? [], node, projectType, unit, recordPrefix, codekbCtx, unitKind,
+    population,
   );
   const { present, absent } = splitConsumesByPresence(resolvedConsumes, scope, codekbCtx);
   const resolvedProduces = resolveProduces(
@@ -2956,6 +3036,47 @@ function freshReadonlyLatchLabel(projectDir: string | undefined): string | null 
   return null;
 }
 
+// Surface a REPAIR_STALLED suspension as the terminal `parked` directive, or
+// report that no such stop is pending. An explicit re-entry (`--resume`,
+// `--stage`, `--phase`, `--new-intent`) is a deliberate continuation and is
+// handled by the branch that owns it, so it never reads the stall.
+function emitRepairStalledIfSuspended(
+  projectDir: string,
+  stateContent: string | null,
+  flags: ParsedFlags,
+): boolean {
+  const explicitReEntry = Boolean(flags.resume || flags.stage || flags.phase || flags.newIntent);
+  if (stateContent === null || explicitReEntry) return false;
+  const stall = readProductionRepairStall(projectDir);
+  if (stall === null) return false;
+  emit(parkedDirective(repairStalledReason(stall), stall.stageInstanceId));
+  return true;
+}
+
+// The turn-scoped no-op-next guard (Kiro roll-forward defense). On Kiro the
+// userPromptSubmit seam handles a read-only/navigation command deterministically
+// off-band but CANNOT block the turn, so the conductor relays the output AND may
+// still fire a bare `next` (sometimes several times the same turn), rolling the
+// active workflow forward. The seam stamps amadeus/.amadeus-readonly-latch with
+// the CURRENT turn counter; a TRULY BARE advancing next (none of its own flags
+// set) checks the latch BEFORE any state inspection and emits `done` instead of
+// routing to a run-stage. Turn-scoped — a legitimate advancing next in a LATER
+// turn (counter bumped, latch now stale) is never swallowed.
+function emitReadonlyLatchDone(
+  projectDir: string | undefined,
+  flags: ParsedFlags,
+  migration: ReturnType<typeof classifyMigrationRequest>,
+): boolean {
+  if (!isBareAdvancingNext(flags, migration)) return false;
+  const latchLabel = freshReadonlyLatchLabel(projectDir);
+  if (latchLabel === null) return false;
+  emit({
+    kind: "done",
+    reason: `The read-only/navigation command (${latchLabel}) already ran this turn and its output was shown above. This was a read-only utility or a workspace switch, not workflow work — there is nothing to advance. The workflow is unchanged; if one is active it remains paused where it was. STOP.`,
+  });
+  return true;
+}
+
 // The `next` handler — pure read of workflow state, emits exactly one
 // directive. Its only write is the machine-local sensor-invocation projection
 // emit() drops beside the hooks-health heartbeat for run-stage directives.
@@ -2970,26 +3091,9 @@ export function handleNext(args: string[], projectDir: string | undefined): void
   const flags = parseNextFlags(args);
   const migration = classifyMigrationRequest(args);
 
-  // Branch 0 — turn-scoped no-op-next guard (Kiro roll-forward defense). On Kiro
-  // the userPromptSubmit seam handles a read-only/navigation command
-  // deterministically off-band but CANNOT block the turn, so the conductor relays
-  // the output AND may still fire a bare `next` (sometimes several times the same
-  // turn), rolling the active workflow forward. The seam stamps
-  // amadeus/.amadeus-readonly-latch with the CURRENT turn counter; here, BEFORE any
-  // state inspection, a TRULY BARE advancing next (none of its own flags set)
-  // checks the latch: when the latch is fresh (same turn) we emit `done` instead
-  // of routing to a run-stage. Turn-scoped — a legitimate advancing next in a
-  // LATER turn (counter bumped, latch now stale) is never swallowed.
-  if (isBareAdvancingNext(flags, migration)) {
-    const latchLabel = freshReadonlyLatchLabel(projectDir);
-    if (latchLabel !== null) {
-      emit({
-        kind: "done",
-        reason: `The read-only/navigation command (${latchLabel}) already ran this turn and its output was shown above. This was a read-only utility or a workspace switch, not workflow work — there is nothing to advance. The workflow is unchanged; if one is active it remains paused where it was. STOP.`,
-      });
-      return;
-    }
-  }
+  // Branch 0 — turn-scoped no-op-next guard, before any state inspection
+  // (emitReadonlyLatchDone owns the rule).
+  if (emitReadonlyLatchDone(projectDir, flags, migration)) return;
 
   // Branch 1 — read-only utility flags dispatch FIRST, before any state
   // inspection (SKILL.md absolute-precedence rule: --status/--help/--doctor/
@@ -3075,6 +3179,16 @@ export function handleNext(args: string[], projectDir: string | undefined): void
   // <repo>/ (dropping the intents/<slug> tail) without re-reading the disk in
   // the pure resolver. codekbRepoName is read-only (intentRepos never throws).
   const codekbCtx = codekbCtxFor(pd);
+
+  // Branch 2.4 - REPAIR_STALLED suspension (issue #2912). When bounded Quality
+  // Repair parks a semi/full run, the stop lives in the Intent autonomy
+  // projection, not in the `Parked` state field Branch 2.5 reads — so without
+  // this branch `next` kept re-issuing the very run-stage whose referee had
+  // already failed closed. Surfacing the stall is the safe stop the canon names
+  // for `full`: the grant stays active and the resume condition is explicit. The
+  // self-disable set matches Branch 2.5 — an explicit re-entry is a deliberate
+  // continuation and must reach the branch that handles it.
+  if (emitRepairStalledIfSuspended(pd, stateContent, flags)) return;
 
   // Branch 2.5 - PARKED workflow (issue #367). The `park` subcommand persists a
   // `Parked` runtime field (via amadeus-state.ts park) without advancing any
@@ -3385,7 +3499,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
     // NO `--single` — the opt-in reach that install alone grants. This precedes
     // the jump path so a composed opt-in stage (scopes: []), which the jump would
     // reject as "skipped for scope", instead runs as an isolated single stage.
-    if (emitComposedPluginStageIfInstalled(flags, scope, projectType, recordPrefix, codekbCtx, pluginActivationHostRoot(), stateContent)) {
+    if (emitComposedPluginStageIfInstalled(flags, scope, projectType, recordPrefix, codekbCtx, pluginHostRoot(), stateContent)) {
       return;
     }
     emitJumpDirective(flags, scope, pd, projectType);
@@ -3547,6 +3661,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
     // stage (one unit per `next`, gate suppressed on every uncovered unit with
     // the real gate only on the all-covered re-entry; issue #368) and emits a
     // single directive for every other stage — or stops on a plan mismatch.
+    if (emitConstructionFailureIfPresent(pd, currentSlug, flags.resume === true)) return;
     emitSwarmOrPerUnit(currentSlug, projectType, scope, stateContent, recordPrefix, codekbCtx, pd);
     return;
   }
@@ -3589,6 +3704,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
   // swarm path, emitForSlug drives the engine's per-unit for_each loop for a
   // per-unit Construction stage (issue #368) and emits a single directive
   // otherwise — unless the refusal breaks the compiled plan, which stops.
+  if (emitConstructionFailureIfPresent(pd, next.slug, flags.resume === true)) return;
   emitSwarmOrPerUnit(next.slug, projectType, scope, stateContent, recordPrefix, codekbCtx, pd);
 }
 
@@ -3630,15 +3746,38 @@ function firstUncoveredBatch(
   codekbCtx: CodekbCtx,
 ): { units: string[]; batchNumber: number } | null {
   const unitKinds = readUnitKinds(projectDir);
+  const cancelledUnits = cancelledConstructionUnits(projectDir, node.slug);
   for (let index = 0; index < batches.length; index++) {
     const batch = batches[index];
     if (!Array.isArray(batch) || batch.length === 0) continue;
+    const terminalOutcomes = new Map(
+      createUnitPoolCoordinator(createAuditUnitPoolRepository(projectDir))
+        .readProjection(String(index + 1)).terminal
+        .map((entry) => [entry.unitId, entry.outcome] as const),
+    );
     const uncovered = batch.filter(
-      (u) => !unitCovered(projectDir, node, u, recordPrefix, codekbCtx, unitKinds.get(u)),
+      (u) => !cancelledUnits.has(u) &&
+        terminalOutcomes.get(u) !== "cancelled" &&
+        terminalOutcomes.get(u) !== "succeeded" &&
+        !unitCovered(projectDir, node, u, recordPrefix, codekbCtx, unitKinds.get(u)),
     );
     if (uncovered.length > 0) return { units: uncovered, batchNumber: index + 1 };
   }
   return null;
+}
+
+function cancelledConstructionUnits(projectDir: string, stage: string): ReadonlySet<string> {
+  const intent = activeIntent(projectDir, activeSpace(projectDir));
+  if (!intent) return new Set();
+  const normalized = normalizeConstructionOutcomeAudit(readAllAuditShards(projectDir));
+  if (!normalized.ok) return new Set();
+  const projected = projectConstructionOutcomes(normalized.records, { intent, stage });
+  if (!projected.ok) return new Set();
+  return new Set(
+    projected.projection.units
+      .filter((entry) => entry.outcome === "cancelled")
+      .map((entry) => entry.unit),
+  );
 }
 
 // The batch-end gate question owed before batch `nextBatchNumber` (1-origin) may
@@ -3785,6 +3924,132 @@ function emitConfiguredSwarm(projectDir: string, units: string[]): void {
   emit(repos.length === 1 ? { ...directive, repo: repos[0] } : directive);
 }
 
+export function preparedSwarmRetryDirective(
+  projectDir: string,
+  batch: string,
+  unit: string,
+): InvokeSwarmDirective {
+  const repos = intentRepos(projectDir);
+  const directive: InvokeSwarmDirective = {
+    kind: "invoke-swarm",
+    units: [unit],
+    cap: 1,
+    prepared_batch: batch,
+    retry_unit: unit,
+  };
+  return repos.length === 1 ? { ...directive, repo: repos[0] } : directive;
+}
+
+function canonicalConstructionFailurePending(projectDir: string): boolean {
+  const state = loadStateFileIfPresent(projectDir);
+  const stage = state ? getField(state, "Current Stage")?.trim() : undefined;
+  const intent = activeIntent(projectDir, activeSpace(projectDir));
+  if (!stage || !intent) return false;
+  const normalized = normalizeConstructionOutcomeAudit(readAllAuditShards(projectDir));
+  if (!normalized.ok) return false;
+  const projected = projectConstructionOutcomes(normalized.records, {
+    intent,
+    stage,
+    batches: readBoltDagBatches(projectDir) ?? [],
+  });
+  return projected.ok && constructionFailureTransition(projected.projection).kind === "await-unit-ruling";
+}
+
+// A terminal `failed` without its BOLT_FAILED / batch-closure join stops `next`
+// only where the ruling loop lives: the per-unit build stage that dispatched the
+// Unit, and only for a batch the compiled Bolt DAG still carries. A failure from
+// a batch outside the current runtime population is history, and at a downstream
+// consumer stage a failed producer is reported by the per-unit consume fan-out
+// (`producer-outcome-failed`) — neither may freeze the workflow here.
+function terminalFailureStopsNext(
+  projectDir: string,
+  stageSlug: string,
+  units: readonly { unit: string; batch?: string; outcome: string }[],
+): boolean {
+  const node = nodeForSlug(stageSlug);
+  if (node === undefined || !isPerUnit(node)) return false;
+  const batches = readBoltDagBatches(projectDir) ?? [];
+  return units.some((entry) => {
+    if (entry.outcome !== "failed") return false;
+    const index = entry.batch === undefined ? Number.NaN : Number.parseInt(entry.batch, 10) - 1;
+    return Number.isInteger(index) && index >= 0 && index < batches.length &&
+      batches[index].includes(entry.unit);
+  });
+}
+
+// The ruling prompt shares the same population scope as the terminal guard
+// above: a closed failure (terminal + SWARM_BATON_RETURNED) whose batch the
+// compiled Bolt DAG no longer carries is history and must not stop `next`
+// with `await-unit-ruling` either. Anything that is not a strict positive
+// decimal batch id — non-numeric identities (solo retries), malformed
+// numerics ("99x" partial-parse), zero-padded or zero ids — and a missing
+// batch id cannot be proven historical, so they keep the fail-closed
+// ruling behavior.
+function failureOutsideRuntimePopulation(
+  entry: { unit: string; batch?: string },
+  batches: readonly (readonly string[])[],
+): boolean {
+  if (entry.batch === undefined || !/^[1-9][0-9]*$/.test(entry.batch)) return false;
+  const index = Number.parseInt(entry.batch, 10) - 1;
+  return index >= batches.length || !batches[index].includes(entry.unit);
+}
+
+function emitConstructionFailureIfPresent(
+  projectDir: string,
+  stageSlug: string,
+  resume: boolean,
+): boolean {
+  const intent = activeIntent(projectDir, activeSpace(projectDir));
+  if (!intent) return false;
+  const normalized = normalizeConstructionOutcomeAudit(readAllAuditShards(projectDir));
+  if (!normalized.ok) {
+    emit(errorDirective(`Construction outcome audit is incomplete: ${JSON.stringify(normalized.diagnostics)}`));
+    return true;
+  }
+  const batches = readBoltDagBatches(projectDir);
+  const result = projectConstructionOutcomes(normalized.records, {
+    intent,
+    stage: stageSlug,
+    batches: batches ?? [],
+  });
+  if (!result.ok) {
+    emit(errorDirective(`Construction outcome join failed closed: ${JSON.stringify(result.diagnostics)}`));
+    return true;
+  }
+  if (result.projection.constructionSuspended && !resume) {
+    emit(parkedDirective(
+      `Construction parked after an Abort ruling at "${stageSlug}". Failure evidence and Unit worktrees are preserved. Resume explicitly with /amadeus --resume.`,
+      stageSlug,
+    ));
+    return true;
+  }
+  // Scope the ruling loop to the current runtime population, mirroring the
+  // terminal guard below: without a compiled DAG there is no population to
+  // scope against, so the fail-closed ruling behavior is kept as-is.
+  const transition = constructionFailureTransition(
+    batches === null
+      ? result.projection
+      : {
+        ...result.projection,
+        unresolvedFailures: result.projection.unresolvedFailures.filter(
+          (entry) => !failureOutsideRuntimePopulation(entry, batches),
+        ),
+      },
+  );
+  if (transition.kind === "await-unit-ruling") {
+    const siblingSummary = transition.siblings.map((entry) => `${entry.unit}:${entry.outcome}`).join(", ") || "none";
+    emit(askDirective(
+      `Unit "${transition.target.unit}" failed during ${stageSlug} (attempt ${transition.target.attempt}, batch ${transition.target.batch}; siblings: ${siblingSummary}). Choose exactly one: Retry, Skip, or Abort. The answer is committed through the ordinary ask report path.`,
+    ));
+    return true;
+  }
+  if (terminalFailureStopsNext(projectDir, stageSlug, result.projection.units)) {
+    emit(errorDirective("Construction Unit failure is terminal but its BOLT_FAILED / batch-closure join is incomplete; waiting fail-closed."));
+    return true;
+  }
+  return false;
+}
+
 function tryEmitSwarm(
   slug: string,
   scope: string,
@@ -3904,6 +4169,9 @@ function emitRunStageForSlug(
     recordPrefix,
     codekbCtx,
     unitKind,
+    stateContent !== null && codekbCtx !== undefined && hasRequiredPerUnitConsumes(node)
+      ? readPerUnitConsumePopulation(codekbCtx.projectDir)
+      : undefined,
   );
   if (unit !== UNIT_NAME_PLACEHOLDER) directive.unit = unit;
   emit(routeMainWorkflowDirective(directive, stateContent, codekbCtx));
@@ -3923,9 +4191,10 @@ function emitRunStageForSlug(
 // completes the unit's body, writes its artifacts, and re-runs `next` WITHOUT
 // reporting; the single checkbox stays in-flight and the engine hands back the
 // next uncovered unit. Once the LAST unit's artifacts land on disk, the next
-// `next` re-enters with no uncovered units and presents the stage's real gate
+// `next` recovers any missing reviewer verdicts before it presents the real gate
 // (see emitPerUnitRunStage's pick === null branch), so the human approves once
-// (covering all units, only after every unit is built) and the checkbox flips.
+// (covering all units, only after every unit is built and reviewed) and the
+// checkbox flips.
 // No unit DAG (a scope that SKIPs units-generation, or pre-compile) degrades to
 // today's single {unit-name} directive, zero behaviour change.
 
@@ -4129,12 +4398,97 @@ function nextUncoveredUnit(
   return { unit: uncovered[0], uncovered };
 }
 
+// A reviewer verdict is projected onto the first required output path. This is
+// the same observable contract enforced by amadeus-state.ts at approval time,
+// but `next` checks it earlier so a covered unit can be recovered before the
+// conductor reaches a terminal gate refusal (#2836).
+function directiveCarriesReview(
+  projectDir: string,
+  directive: RunStageDirective,
+): boolean {
+  const optional = new Set(directive.optional_produces ?? []);
+  const primary = directive.produces.find((path) => !optional.has(path));
+  if (primary === undefined) return true;
+  try {
+    return hasDurableReviewProjection(
+      readFileSync(join(projectDir, ...primary.split("/")), "utf-8"),
+      directive.reviewer!,
+    );
+  } catch {
+    return false;
+  }
+}
+
+function buildReviewerRecoveryDirective(
+  node: GraphStage,
+  projectType: "brownfield" | "greenfield" | null,
+  unit: string,
+  scope: string,
+  stateContent: string | null,
+  recordPrefix: string | null,
+  codekbCtx: CodekbCtx,
+  projectDir: string,
+  unitKind: UnitKind | undefined,
+): RunStageDirective | null {
+  const directive = buildRunStageDirective(
+    node, projectType, unit, scope, stateContent, recordPrefix, codekbCtx, unitKind,
+  );
+  directive.unit = unit;
+  if (directive.reviewer === undefined || directiveCarriesReview(projectDir, directive)) {
+    return null;
+  }
+  directive.gate = false;
+  directive.review_only = true;
+  delete directive.next_stage;
+  return directive;
+}
+
+function firstReviewerRecoveryDirective(
+  node: GraphStage,
+  projectType: "brownfield" | "greenfield" | null,
+  units: string[],
+  scope: string,
+  stateContent: string | null,
+  recordPrefix: string | null,
+  codekbCtx: CodekbCtx,
+  projectDir: string,
+  unitKinds: ReadonlyMap<string, UnitKind>,
+): RunStageDirective | null {
+  for (const unit of units) {
+    const recovery = buildReviewerRecoveryDirective(
+      node, projectType, unit, scope, stateContent, recordPrefix, codekbCtx,
+      projectDir, unitKinds.get(unit),
+    );
+    if (recovery !== null) return recovery;
+  }
+  return null;
+}
+
+function reviewerRecoveryForCoveredUnit(
+  node: GraphStage,
+  projectType: "brownfield" | "greenfield" | null,
+  picked: ReturnType<typeof resolveDegradeUnit>,
+  scope: string,
+  stateContent: string | null,
+  recordPrefix: string | null,
+  codekbCtx: CodekbCtx,
+  projectDir: string,
+  unitKind: UnitKind | undefined,
+): RunStageDirective | null {
+  if (picked.unit === null || picked.uncovered.includes(picked.unit)) return null;
+  return buildReviewerRecoveryDirective(
+    node, projectType, picked.unit, scope, stateContent, recordPrefix, codekbCtx,
+    projectDir, unitKind,
+  );
+}
+
 // Emit ONE iteration of a per-unit Construction stage. The engine owns the
 // for_each loop here: it resolves the next uncovered unit, substitutes the real
 // unit name for {unit-name} in every path, and suppresses the gate for EVERY
 // not-yet-covered unit. The stage's real gate is presented exactly once, on the
-// all-covered re-entry (pick === null), after the last unit's artifacts exist on
-// disk. See the ledger note above emitRunStageForSlug's per-unit section.
+// all-covered-and-reviewed re-entry (pick === null), after the last unit's
+// artifacts and every reviewer verdict exist on disk. See the ledger note above
+// emitRunStageForSlug's per-unit section.
 function emitPerUnitRunStage(
   node: GraphStage,
   projectType: "brownfield" | "greenfield" | null,
@@ -4168,6 +4522,7 @@ function emitPerUnitRunStage(
   // it downstream.
   const units = orderedUnits(projectDir);
   const unitKinds = readUnitKinds(projectDir);
+  const cancelledUnits = cancelledConstructionUnits(projectDir, node.slug);
   if (units.length === 0) {
     const degradeUnits = unitDirsUnderConstruction(projectDir, recordPrefix);
     const picked = resolveDegradeUnit(
@@ -4185,6 +4540,14 @@ function emitPerUnitRunStage(
         ? decideDegradeUnitCompletion(parseDegradeUnitDeclaration(stateContent), degradeUnits)
         : null;
       if (completion !== null && completion.kind === "gate") {
+        const recovery = firstReviewerRecoveryDirective(
+          node, projectType, degradeUnits, scope, stateContent, recordPrefix,
+          codekbCtx, projectDir, unitKinds,
+        );
+        if (recovery !== null) {
+          emit(recovery);
+          return;
+        }
         emitDegradeCompletionGate(
           node, projectType, scope, stateContent, recordPrefix, codekbCtx,
           completion.unit, unitKinds.get(completion.unit),
@@ -4193,6 +4556,14 @@ function emitPerUnitRunStage(
       }
       const refusal = completion !== null && completion.kind === "refuse" ? completion.reason : null;
       emit(degradeUnitResolutionError(node.slug, recordPrefix, degradeUnits, picked.uncovered, refusal));
+      return;
+    }
+    const recovery = reviewerRecoveryForCoveredUnit(
+      node, projectType, picked, scope, stateContent, recordPrefix, codekbCtx,
+      projectDir, unitKinds.get(picked.unit),
+    );
+    if (recovery !== null) {
+      emit(recovery);
       return;
     }
     emitRunStageForSlug(
@@ -4218,7 +4589,7 @@ function emitPerUnitRunStage(
   const pickUnit = selectNextUnitForStage(
     node.slug,
     units,
-    (u) => unitCovered(projectDir, node, u, recordPrefix, codekbCtx, unitKinds.get(u)),
+    (u) => cancelledUnits.has(u) || unitCovered(projectDir, node, u, recordPrefix, codekbCtx, unitKinds.get(u)),
     readConstructionIteration(stateContent),
   );
   if (pickUnit === null) {
@@ -4227,10 +4598,18 @@ function emitPerUnitRunStage(
     // stage. There is nothing left to PRODUCE, so present the stage gate now (its
     // REAL computed gate) on the last unit, so the human approves once and the
     // engine advances. This is the ONLY directive on which the gate fires, so the
-    // approval is reached only after every unit's artifacts exist (closing the
-    // last-unit hole: no unit, not even the final one, can be skipped). It is also
+    // approval is reached only after every unit's artifacts and reviewer verdict
+    // exist (closing both last-unit holes). It is also
     // the re-entry after a "request changes" that re-ran a unit and then
     // everything is covered again.
+    const recovery = firstReviewerRecoveryDirective(
+      node, projectType, units, scope, stateContent, recordPrefix, codekbCtx,
+      projectDir, unitKinds,
+    );
+    if (recovery !== null) {
+      emit(recovery);
+      return;
+    }
     const lastUnit = units[units.length - 1];
     const directive = buildRunStageDirective(
       node, projectType, lastUnit, scope, stateContent, recordPrefix, codekbCtx,
@@ -4277,11 +4656,11 @@ function emitForSlug(
   codekbCtx: CodekbCtx,
   projectDir: string,
 ): void {
-  // Flow 2: the formal-model-check activation advisories are raised here — the
+  // Plugin advisories are raised here — the
   // MAIN-WORKFLOW call site — just before this stage's directive is emitted. The
   // `--single` path raises them at its own site (emitSingleRunStage); the run
   // latch is what keeps the two from repeating each other.
-  raiseActivationAdvisoriesFor(slug, projectDir);
+  raisePluginAdvisoriesFor(slug, projectDir);
   const node = nodeForSlug(slug);
   if (node && isPerUnit(node)) {
     emitPerUnitRunStage(node, projectType, scope, stateContent, recordPrefix, codekbCtx, projectDir);
@@ -4328,15 +4707,6 @@ function emitSingleRunStage(
   // buildRunStageDirective's scope-default fallback in charge.
   depth?: DepthLevel,
 ): void {
-  // The SECOND activation-advisory call site (business-logic-model L3). A
-  // stage-runner skill (/amadeus-requirements-analysis and friends) IS this
-  // path, so without a raise here the two new upstream checkpoints would be
-  // unreachable for every stage-runner user — the exact "the signal exists but
-  // never arrives" failure U5 removes. Raised before the guards below because
-  // the advisory is about the HOST, not about whether this stage resolves; a
-  // guard that returns an error directive simply drops the pending raise
-  // (an error directive carries no advisories field).
-  raiseActivationAdvisoriesFor(slug, resolveProjectDir(_handlerProjectDir));
   const node = nodeForSlug(slug);
   if (!node) {
     emit(errorDirective(
@@ -4348,16 +4718,7 @@ function emitSingleRunStage(
     emit(errorDirective(SINGLE_INIT_ERROR));
     return;
   }
-  // An opt-in plugin stage belongs to NO scope (scopes: []), so it is EXECUTE in
-  // no scope grid and `--single` is the ONLY way to run it. The skip-for-scope
-  // guard below exists to stop you from `--single`-ing a stage that a scope
-  // deliberately SKIPs (it belongs to OTHER scopes); it does not apply to a
-  // stage that belongs to no scope at all. So exempt empty-scopes stages from the
-  // guard while still rejecting a stock stage skipped for THIS scope (its scopes
-  // are non-empty). No core stage ships with empty scopes, so this uniquely
-  // targets opt-in / plugin stages (intent 260722-tla-plugin FR-1.4, ruling
-  // E-TLAU2 option A — this orchestrate change crosses the U2 core-change
-  // boundary, declared in the PR).
+  // Empty-scope stages are explicit capabilities and remain directly runnable.
   const isOptInStage = (node.scopes ?? []).length === 0;
   const inScopeSlugs = new Set(subgraphForScope(scope).map((s) => s.slug));
   if (!isOptInStage && !inScopeSlugs.has(node.slug)) {
@@ -4367,6 +4728,9 @@ function emitSingleRunStage(
     ));
     return;
   }
+  // Evaluate plugin declarations only after the requested stage is known to be
+  // runnable, immediately before its directive is built.
+  raisePluginAdvisoriesFor(slug, resolveProjectDir(_handlerProjectDir));
   // Build the directive from the graph node alone (stateContent: null → no main
   // state read, no skeleton round-trip, no main-pointer persona signal), then
   // attach the persona explicitly: this is the conductor's first directive of the
@@ -4644,6 +5008,7 @@ interface ReportFlags {
   single?: boolean; // --single: commit a synthetic-id STAGE_STARTED/COMPLETED pair, never the main pointer
   stage?: string; // --stage <slug>: the acted stage (required under --single; preferred for main workflow reports)
   mirrorBoundary?: string;
+  failure?: string; // --failure <detail>: the typed failure a stage's referee returned, admitted to Quality Repair
 }
 
 // Extract report's flags. --result is the verdict; --user-input rides through
@@ -4678,6 +5043,9 @@ function parseReportFlags(args: string[]): ReportFlags {
       i++;
     } else if (a === "--mirror-boundary" && i + 1 < args.length) {
       flags.mirrorBoundary = args[i + 1];
+      i++;
+    } else if (a === "--failure" && i + 1 < args.length) {
+      flags.failure = args[i + 1];
       i++;
     } else if (a === "--single") {
       flags.single = true;
@@ -4893,7 +5261,7 @@ function handleSingleReport(
   }
 
   const pd = resolveProjectDir(projectDir);
-  const advisoryHold = advisoryReportHoldReason(pd, node.slug, pluginActivationHostRoot());
+  const advisoryHold = advisoryReportHoldReason(pd, node.slug, pluginHostRoot());
   if (advisoryHold !== null) {
     emit(errorDirective(`Cannot report stage "${node.slug}": ${advisoryHold}.`));
     return;
@@ -5382,6 +5750,72 @@ function handleAuthorizedApprovalReport(
   emit({ kind: "committed", reason: approvedReason });
 }
 
+// Whether this Intent runs a Quality Repair loop a stage failure can be
+// admitted into. `none` does not, and keeps the historical forward-only
+// report contract.
+function runsQualityRepair(projectDir: string): boolean {
+  const mode = readProductionAutonomyProjection(projectDir)?.mode;
+  return mode === "semi" || mode === "full";
+}
+
+// The one wording for a REPAIR_STALLED stop, shared by the `report` that parks
+// and by every later `next` that has to surface the same stall. Both name the
+// resume routes the park's resume condition actually accepts.
+function repairStalledReason(stall: ProductionRepairStall): string {
+  const scope = stall.qualityScopeId === null
+    ? "the stalled quality scope"
+    : `quality scope ${JSON.stringify(stall.qualityScopeId)}`;
+  return `Workflow parked as REPAIR_STALLED at ${JSON.stringify(stall.stageInstanceId)}: bounded quality repair ` +
+    `stopped making progress on evidence ${stall.evidenceFingerprint}. The Intent autonomy grant stays active. ` +
+    `Resume ${scope} with \`bun ${harnessDir()}/tools/amadeus-bolt.ts resume-quality --input <carrier>\` once the ` +
+    "evidence strictly improves, or after an explicit human retry.";
+}
+
+// The directive an admission outcome calls for: the REPAIR_STALLED stop, the
+// refusal when Quality Repair could not take the failure, or the next move in
+// the bounded loop (another repair round, or the single replan). Exported as a
+// pure function so every outcome — including the refusals only a racing Intent
+// can produce in production — is drivable from a test.
+export function stageFailureDirective(
+  stage: string,
+  admitted: ProductionStageFailureResult,
+): Directive {
+  if (admitted.kind === "error") {
+    return errorDirective(`Cannot admit the failure of stage ${JSON.stringify(stage)}: ${admitted.reason}.`);
+  }
+  if (admitted.kind === "parked") return parkedDirective(repairStalledReason(admitted.stall), stage);
+  const move = admitted.kind === "replanned"
+    ? "Quality Repair replanned the repair context"
+    : "Quality Repair recorded the obligation for another repair round";
+  const next = "Repair the recorded obligation, re-run the stage, and report its outcome again.";
+  return printDirective(`Stage ${JSON.stringify(stage)} failed closed and the failure was admitted to Quality Repair. ${move} (evidence ${admitted.evidenceFingerprint}). ${next}`);
+}
+
+// Admit a typed stage-referee failure into Quality Repair and name the move the
+// outcome calls for: another bounded repair round, the one replan, or the
+// REPAIR_STALLED stop. The stall is read back from the park envelope so the
+// directive carries the same resume condition the projection recorded.
+function handleStageFailureReport(flags: ReportFlags, projectDir: string): void {
+  // Only a stage the graph carries can fail: the slug keys the quality scope the
+  // repair loop reads back, so an unknown one would open a scope nothing resumes.
+  // A state file the reader cannot supply a Current Stage from lands in the same
+  // refusal rather than in a scope keyed by nothing.
+  const stateContent = loadStateFileIfPresent(projectDir) ?? "";
+  const stage = (flags.stage ?? getField(stateContent, "Current Stage") ?? "").trim();
+  if (nodeForSlug(stage) === undefined) {
+    emit(errorDirective(`Cannot admit a failure for unknown stage ${JSON.stringify(stage)}.`));
+    return;
+  }
+  const detail = flags.failure?.trim();
+  if (detail === undefined || detail.length === 0) {
+    emit(errorDirective(
+      "report --result failed requires --failure <detail> — the typed failure the stage's referee returned.",
+    ));
+    return;
+  }
+  emit(stageFailureDirective(stage, admitProductionStageFailure({ projectDir, stage, failureDetail: detail })));
+}
+
 // The `report` handler. Reads the acted stage + scope from state, decides the
 // committing subcommand(s) (gate status, then finality), shells out to the
 // atomic state tool, and emits a non-terminal `committed` directive on success
@@ -5541,6 +5975,30 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
     }
   }
 
+  const answer = flags.userInput?.trim().toLowerCase();
+  if (
+    flags.result === undefined &&
+    (answer === "retry" || answer === "skip" || answer === "abort") &&
+    canonicalConstructionFailurePending(resolveProjectDir(projectDir))
+  ) {
+    handleFailureRuling(args, projectDir);
+    return;
+  }
+
+  // A stage-owned referee that failed closed (issue #2912). `report` commits
+  // forward transitions only and the generic manual park is refused under an
+  // autonomous Construction run, so without this route a typed failure has no
+  // admission path and `next` re-issues the same run-stage forever. Under semi
+  // or full the failure belongs to Quality Repair: it becomes an unresolved
+  // obligation, bounded repair owns the recovery, and a nonproductive loop parks
+  // as REPAIR_STALLED with the grant intact. Under `none` there is no repair
+  // loop to admit it into, so the forward-only contract below still answers.
+  const failureAdmissionDir = resolveProjectDir(projectDir);
+  if (flags.result === "failed" && runsQualityRepair(failureAdmissionDir)) {
+    handleStageFailureReport(flags, failureAdmissionDir);
+    return;
+  }
+
   // A verdict is required: report commits the outcome of an acted directive, so
   // it cannot run without one. An unrecognised verdict is a hard error (clean
   // boundaries) rather than a silent no-op.
@@ -5573,7 +6031,7 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
       ));
       return;
     }
-    const advisoryHold = advisoryReportHoldReason(pd, slug, pluginActivationHostRoot());
+    const advisoryHold = advisoryReportHoldReason(pd, slug, pluginHostRoot());
     if (advisoryHold !== null) {
       emit(errorDirective(`Cannot report stage "${slug}": ${advisoryHold}.`));
       return;
@@ -5606,7 +6064,7 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
   }
   const explicitStage = flags.stage?.trim();
   const slug = explicitStage && explicitStage.length > 0 ? explicitStage : currentSlug;
-  const advisoryHold = advisoryReportHoldReason(pd, slug, pluginActivationHostRoot());
+  const advisoryHold = advisoryReportHoldReason(pd, slug, pluginHostRoot());
   if (advisoryHold !== null) {
     emit(errorDirective(`Cannot report stage "${slug}": ${advisoryHold}.`));
     return;
@@ -5863,6 +6321,65 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
 // subcommand - the engine itself writes nothing, mirroring report's discipline.
 // A non-zero exit (e.g. the autonomy refusal, or an already-completed workflow)
 // is relayed verbatim as an error directive.
+export function handleFailureRuling(args: string[], projectDir: string | undefined): void {
+  _handlerProjectDir = projectDir;
+  const flags = parseReportFlags(args);
+  const pd = resolveProjectDir(projectDir);
+  const state = loadStateFileIfPresent(pd);
+  // biome-ignore format: One evaluated tuple keeps Bun's line coverage from reporting the two executed initializers as zero-hit regions.
+  const [stage, intent, normalized] = [flags.stage?.trim() || (state ? getField(state, "Current Stage")?.trim() : undefined), activeIntent(pd, activeSpace(pd)), normalizeConstructionOutcomeAudit(readAllAuditShards(pd))] as const;
+  if (!stage || !intent || !normalized.ok) { emit(errorDirective("Cannot resolve the canonical Construction failure target.")); return; }
+  const projected = projectConstructionOutcomes(normalized.records, { intent, stage, batches: readBoltDagBatches(pd) ?? [] });
+  if (!projected.ok) { emit(errorDirective(`Construction outcome join failed closed: ${JSON.stringify(projected.diagnostics)}`)); return; }
+  if (projected.projection.constructionSuspended) { emit(errorDirective("Construction is suspended after Abort; resume explicitly before any new failure ruling.")); return; }
+  const pending = constructionFailureTransition(projected.projection);
+  if (pending.kind !== "await-unit-ruling" || !pending.target.attempt || !pending.target.batch) { emit(errorDirective("No unresolved Construction Unit failure is eligible for a ruling.")); return; }
+  const answer = flags.userInput?.trim().toLowerCase();
+  if (answer !== "retry" && answer !== "skip" && answer !== "abort") { emit(errorDirective("resolve-failure requires --user-input Retry, Skip, or Abort.")); return; }
+  const solo = pending.target.batch.startsWith("solo:");
+  const soloBatchNumber = solo ? pending.target.batch.split(":")[1] : undefined;
+  if (solo && (!soloBatchNumber || !/^[1-9][0-9]*$/.test(soloBatchNumber))) { emit(errorDirective("Solo Construction failure has an invalid explicit batch identity.")); return; }
+  const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(pd));
+  if (answer === "retry") {
+    if (solo) {
+      const started = runTool(pd, "amadeus-bolt.ts", [
+        "start", "--name", pending.target.unit, "--batch", soloBatchNumber!, "--project-dir", pd,
+      ]);
+      if (!started.ok) { emit(errorDirective(`Solo Retry transition refused: ${toolErrorMessage(started)}`)); return; }
+      emit({ kind: "committed", reason: `Retry committed for solo Unit "${pending.target.unit}" with a fresh immutable attempt; run next to continue.` });
+      return;
+    }
+    const retried = pool.retryFailedUnit({ idempotencyKey: `failure-ruling:${pending.target.attempt}:retry`, batchId: pending.target.batch, unitId: pending.target.unit });
+    if (!retried.ok) { emit(errorDirective(`Retry transition refused: ${retried.reason}`)); return; }
+    emit(preparedSwarmRetryDirective(pd, pending.target.batch, pending.target.unit));
+    return;
+  }
+  if (answer === "skip") {
+    if (solo) {
+      const appended = spawnAuditAppend(pd, "BOLT_COMPLETED", {
+        "Bolt names": pending.target.unit,
+        "Bolt slug": pending.target.unit,
+        "Batch number": soloBatchNumber!,
+        "Batch Id": pending.target.batch,
+        "Attempt Id": pending.target.attempt,
+        Stage: stage,
+        Outcome: "cancelled",
+        Reason: "skipped",
+      });
+      if (appended.exitCode !== 0) { emit(errorDirective(`Solo Skip audit commit failed: ${appended.stderr.trim() || appended.stdout.trim()}`)); return; }
+      emit({ kind: "committed", reason: `Skip committed for solo Unit "${pending.target.unit}" as cancelled.` });
+      return;
+    }
+    const skipped = pool.skipFailedUnit({ idempotencyKey: `failure-ruling:${pending.target.attempt}:skip`, batchId: pending.target.batch, unitId: pending.target.unit, reason: "skipped" });
+    if (!skipped.ok) { emit(errorDirective(`Skip transition refused: ${skipped.reason}`)); return; }
+    emit({ kind: "committed", reason: `Skip committed for Unit "${pending.target.unit}" as cancelled; sibling outcomes are preserved.` });
+    return;
+  }
+  const aborted = runTool(pd, "amadeus-bolt.ts", ["abort", "--name", pending.target.unit, "--slug", pending.target.unit, "--reason", "Construction failure ruling", "--stage", stage, "--attempt", pending.target.attempt, "--batch-id", pending.target.batch, "--project-dir", pd]);
+  if (!aborted.ok) { emit(errorDirective(`Abort transition refused: ${toolErrorMessage(aborted)}`)); return; }
+  emit(parkedDirective(`Construction parked after Abort for Unit "${pending.target.unit}"; failure evidence and worktree are preserved.`, stage));
+}
+
 function handlePark(_args: string[], projectDir: string | undefined): void {
   _handlerProjectDir = projectDir;
   if (refuseUnauthorizedKimiCaller(projectDir)) return;
@@ -6269,6 +6786,9 @@ function main(): void {
     case "report":
       handleReport(subArgs, projectDir);
       break;
+    case "resolve-failure":
+      handleFailureRuling(subArgs, projectDir);
+      break;
     case "park":
       handlePark(subArgs, projectDir);
       break;
@@ -6283,7 +6803,7 @@ function main(): void {
       // sibling tools (amadeus-state.ts default -> error()): record an
       // ERROR_LOGGED row before exiting so a bad subcommand leaves audit
       // evidence, not just a stderr line (Issue #878). No-op pre-init.
-      const usage = `Unknown subcommand: ${subcommand ?? "(none)"}. Valid: next, report, park, gate-reserve, gate-reject`;
+      const usage = `Unknown subcommand: ${subcommand ?? "(none)"}. Valid: next, report, resolve-failure, park, gate-reserve, gate-reject`;
       recordEngineError(usage, projectDir);
       console.error(usage);
       process.exit(1);

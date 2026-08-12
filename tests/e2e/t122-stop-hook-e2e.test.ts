@@ -119,6 +119,7 @@
 // Bedrock. Tests 4-6 are deterministic (no model in the loop) but spawn the
 // real engine, so they get a generous-but-bounded spawn timeout.
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -276,7 +277,7 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
         cleanupTestProject(proj);
       }
     },
-    HOOK_SPAWN_TIMEOUT_MS + 30_000,
+    scaleTestTime(HOOK_SPAWN_TIMEOUT_MS + 30_000),
   );
 
   // =========================================================================
@@ -298,7 +299,7 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
         cleanupTestProject(proj);
       }
     },
-    HOOK_SPAWN_TIMEOUT_MS + 30_000,
+    scaleTestTime(HOOK_SPAWN_TIMEOUT_MS + 30_000),
   );
 
   // =========================================================================
@@ -339,7 +340,7 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
         cleanupTestProject(proj);
       }
     },
-    HOOK_SPAWN_TIMEOUT_MS + 30_000,
+    scaleTestTime(HOOK_SPAWN_TIMEOUT_MS + 30_000),
   );
 
   // =========================================================================
@@ -379,7 +380,7 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
         cleanupTestProject(proj);
       }
     },
-    HOOK_SPAWN_TIMEOUT_MS + 30_000,
+    scaleTestTime(HOOK_SPAWN_TIMEOUT_MS + 30_000),
   );
 
   // =========================================================================
@@ -422,7 +423,7 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
         cleanupTestProject(proj);
       }
     },
-    HOOK_SPAWN_TIMEOUT_MS + 30_000,
+    scaleTestTime(HOOK_SPAWN_TIMEOUT_MS + 30_000),
   );
 
   // =========================================================================
@@ -485,7 +486,7 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
         cleanupTestProject(proj);
       }
     },
-    HOOK_SPAWN_TIMEOUT_MS + 30_000,
+    scaleTestTime(HOOK_SPAWN_TIMEOUT_MS + 30_000),
   );
 
   // =========================================================================
@@ -545,7 +546,7 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
         cleanupTestProject(proj);
       }
     },
-    HOOK_SPAWN_TIMEOUT_MS + 30_000,
+    scaleTestTime(HOOK_SPAWN_TIMEOUT_MS + 30_000),
   );
 
   // =========================================================================
@@ -633,6 +634,6 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
         cleanupTestProject(proj);
       }
     },
-    HOOK_SPAWN_TIMEOUT_MS + 30_000,
+    scaleTestTime(HOOK_SPAWN_TIMEOUT_MS + 30_000),
   );
 });

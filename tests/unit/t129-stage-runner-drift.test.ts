@@ -88,6 +88,7 @@
 //   .sh test 7 (removing the orphan + regenerating restores sync)
 //        -> test 6: `write` then `check` in the SANDBOX returns to status 0 + "in sync".
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -228,7 +229,7 @@ describe("t129 stage-runner drift guard (migrated from t129-stage-runner-drift.s
     expect(r.status).toBe(0);
     expect(r.out).toContain("in sync with the compiled stage graph");
     expect(r.out).toContain("(29 runners)");
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // ===========================================================================
   // Test 4 — §6-E NON-GOLDEN: the guard CATCHES a MISSING runner. In a SANDBOX
@@ -249,7 +250,7 @@ describe("t129 stage-runner drift guard (migrated from t129-stage-runner-drift.s
     // STRONGER than the .sh (which only grepped the word "MISSING"): the diff
     // NAMES the exact slug whose runner was deleted (drift surfaced, not silent).
     expect(r.out).toContain(victim);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // ===========================================================================
   // Test 5 — §6-E NON-GOLDEN: the guard CATCHES an ORPHAN runner. In a SANDBOX,
@@ -286,7 +287,7 @@ describe("t129 stage-runner drift guard (migrated from t129-stage-runner-drift.s
     expect(r.out).toContain("ORPHAN");
     // STRONGER than the .sh's word grep: the diff NAMES the orphan slug.
     expect(r.out).toContain(orphanSlug);
-  }, 30000);
+  }, scaleTestTime(30000));
 
   // ===========================================================================
   // Test 6 — regenerating restores sync AND write PRUNES orphans (#785 FR-3). In
@@ -334,7 +335,7 @@ describe("t129 stage-runner drift guard (migrated from t129-stage-runner-drift.s
     expect(r.status).toBe(0);
     expect(r.out).toContain("in sync with the compiled stage graph");
     expect(r.out).toContain("(29 runners)");
-  }, 60000);
+  }, scaleTestTime(60000));
 
   // ===========================================================================
   // Test 7 — the /amadeus-init wrapper routes a freeform description via the
