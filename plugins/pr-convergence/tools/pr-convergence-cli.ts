@@ -556,11 +556,14 @@ function projectRootForRecord(record: string): string {
   return resolve(record, "../../../../..");
 }
 
-function existingReportKind(path: string): {
-  kind: string;
-  attestation: ReportAttestation | null;
-  payloadDigest: string;
-} | null {
+/** What the report file on disk currently says about itself. */
+interface ExistingReport {
+  readonly kind: string;
+  readonly attestation: ReportAttestation | null;
+  readonly payloadDigest: string;
+}
+
+function existingReportKind(path: string): ExistingReport | null {
   try {
     const body = readFileSync(path, "utf-8");
     const kind = body.match(/^- kind:\s*(\S+)\s*$/m)?.[1];

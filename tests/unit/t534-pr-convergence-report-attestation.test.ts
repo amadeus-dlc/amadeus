@@ -72,6 +72,9 @@ describe("t534 self create git prerequisites", () => {
     ["dirty", { "status --porcelain --untracked-files=no": { code: 0, stdout: " M src/change.ts\n" } }, "dirty"],
     ["uncommitted", { "diff --name-only main...HEAD": { code: 0, stdout: "" } }, "no target changes"],
     ["unpublished", { "ls-remote --exit-code --heads origin refs/heads/feature/2838": { code: 2, stdout: "" } }, "missing"],
+    // Exercises the no-matching-line exit of remoteBranchSha: ls-remote
+    // succeeds but only tail-matched decoys come back, never the exact ref.
+    ["decoy-only", { "ls-remote --exit-code --heads origin refs/heads/feature/2838": { code: 0, stdout: `${"c".repeat(40)}\trefs/heads/other/feature/2838\n` } }, "missing"],
     ["mismatch", { "ls-remote --exit-code --heads origin refs/heads/feature/2838": { code: 0, stdout: `${"b".repeat(40)}\trefs/heads/feature/2838\n` } }, "differ"],
   ];
   for (const [name, override, message] of failures) {

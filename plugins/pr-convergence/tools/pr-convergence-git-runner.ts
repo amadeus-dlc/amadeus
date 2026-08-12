@@ -50,10 +50,12 @@ function run(git: GitSpawn, cwd: string, args: readonly string[]): GitRunResult 
  * they carry. Exactly two paths are exempt, and both are derived from the
  * record and unit this invocation names; everything else still refuses.
  */
-function selfOutputPaths(prefix: string, unit: string): {
+interface SelfOutputPaths {
   readonly report: string;
   readonly auditDir: string;
-} {
+}
+
+function selfOutputPaths(prefix: string, unit: string): SelfOutputPaths {
   return {
     report: `${prefix}construction/${unit}/code-generation/pr-convergence-report.md`,
     auditDir: `${prefix}audit/`,
@@ -68,7 +70,7 @@ function statusPath(line: string): string {
   return renamed === -1 ? body : body.slice(renamed + 4);
 }
 
-function isSelfOutput(path: string, self: ReturnType<typeof selfOutputPaths>): boolean {
+function isSelfOutput(path: string, self: SelfOutputPaths): boolean {
   if (path === self.report) return true;
   if (!path.startsWith(self.auditDir) || !path.endsWith(".jsonl")) return false;
   return !path.slice(self.auditDir.length).includes("/");

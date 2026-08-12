@@ -157,6 +157,32 @@ describe("t511 — evaluateBlockingSensors decision table (#2671 c)", () => {
     }
   });
 
+  test("a {{HARNESS_DIR}}/ placeholder command resolves relative to the harness root", () => {
+    const previous = process.env.AMADEUS_SENSOR_SCRIPT_DIR;
+    delete process.env.AMADEUS_SENSOR_SCRIPT_DIR;
+    try {
+      expect(resolveScriptPath(
+        "bun {{HARNESS_DIR}}/tools/amadeus-sensor-placeholder-probe.ts",
+      )).toEndWith("/dist/claude/.claude/tools/amadeus-sensor-placeholder-probe.ts");
+    } finally {
+      if (previous === undefined) delete process.env.AMADEUS_SENSOR_SCRIPT_DIR;
+      else process.env.AMADEUS_SENSOR_SCRIPT_DIR = previous;
+    }
+  });
+
+  test("a bare script command with no directory falls back to sibling resolution", () => {
+    const previous = process.env.AMADEUS_SENSOR_SCRIPT_DIR;
+    delete process.env.AMADEUS_SENSOR_SCRIPT_DIR;
+    try {
+      expect(resolveScriptPath(
+        "bun amadeus-sensor-bare-probe.ts",
+      )).toEndWith("/dist/claude/.claude/tools/amadeus-sensor-bare-probe.ts");
+    } finally {
+      if (previous === undefined) delete process.env.AMADEUS_SENSOR_SCRIPT_DIR;
+      else process.env.AMADEUS_SENSOR_SCRIPT_DIR = previous;
+    }
+  });
+
   test("a vanished output hashes to a deterministic missing marker", () => {
     expect(digestFile("/definitely/missing/t511-output.md")).toBe("missing");
   });

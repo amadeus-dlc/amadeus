@@ -24,7 +24,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import { __resetGraphCache } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 import { _resetStageGraphForTests } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
@@ -370,6 +370,25 @@ describe("t511 — enforcement cutoff and guard unit (#2671 c)", () => {
     seedSensorAudit([FIRED, FAILED]);
     const r = captureExit(() => verifyBlockingSensors(proj, { slug: STAGE, name: "Requirements Analysis" }));
     expect(r.threw).toBe(false);
+  });
+
+  // verifyBlockingSensors' currentDigest reads the real output file off disk
+  // (evaluateBlockingSensors' pure decision table, exercised in the unit
+  // spec, is handed a fake digest fn instead). A vanished output makes that
+  // readFileSync throw, which the real callback swallows into a "missing"
+  // signal (null) rather than crashing the guard — and a null digest against
+  // a recorded PASSED digest resolves the sensor "stale", not silently clean.
+  test("a vanished PASSED output resolves stale instead of throwing (real fs digest seam)", () => {
+    redateRecord(POST_CUTOFF);
+    seedArtifacts();
+    useGraphWithBlockingSensor();
+    seedSensorAudit([FIRED, PASSED]);
+    rmSync(join(recordDir(), `${STAGE}-output.md`));
+    const r = captureExit(() => verifyBlockingSensors(proj, { slug: STAGE, name: "Requirements Analysis" }));
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain(SENSOR);
+    expect(r.stderr).toContain("passed different bytes");
+    expect(r.stderr).toContain("Re-fire it against the current artifact");
   });
 });
 

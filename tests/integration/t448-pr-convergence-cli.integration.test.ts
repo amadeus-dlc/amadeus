@@ -21,6 +21,11 @@ import {
   runCli as invokeCli,
 } from "../../plugins/pr-convergence/tools/pr-convergence-cli.ts";
 import {
+  attestationId,
+  renderAttestation,
+  reportPayloadDigest,
+} from "../../plugins/pr-convergence/tools/pr-convergence-attestation.ts";
+import {
   createNodeGitSpawn,
   GIT_TIMEOUT_MS,
   type GitSpawn,
@@ -1415,18 +1420,31 @@ function makeSelfFixture(): SelfFixture {
     "utf-8",
   );
   writeFileSync(join(record, "amadeus-state.md"), "- **Scope**: self-fix\n", "utf-8");
+  writeFileSync(
+    join(record, "audit", "human.jsonl"),
+    `${JSON.stringify({
+      eventId: "aaaaaaaa-0000-0000-0000-00000000f001",
+      seq: 1,
+      timestamp: "2026-08-12T00:00:00Z",
+      attributes: { Event: "HUMAN_TURN" },
+    })}\n`,
+    "utf-8",
+  );
   const bodyFile = join(root, "body.md");
   writeFileSync(bodyFile, "## Summary\n\nIssue 2838.\n", "utf-8");
   return { root, record, bodyFile };
 }
 
-function selfGit(overrides: Record<string, { code: number; stdout: string }> = {}): GitSpawn {
+function selfGit(
+  overrides: Record<string, { code: number; stdout: string }> = {},
+  sha: string = SELF_SHA,
+): GitSpawn {
   return (argv) => {
     const key = argv.slice(1).join(" ");
     const defaults: Record<string, { code: number; stdout: string }> = {
       "rev-parse --show-toplevel": { code: 0, stdout: "/repo\n" },
       "branch --show-current": { code: 0, stdout: `${SELF_BRANCH}\n` },
-      "rev-parse HEAD": { code: 0, stdout: `${SELF_SHA}\n` },
+      "rev-parse HEAD": { code: 0, stdout: `${sha}\n` },
       "rev-parse --show-prefix": {
         code: 0,
         stdout: "amadeus/spaces/default/intents/260812-pr-gate/\n",
@@ -1435,7 +1453,7 @@ function selfGit(overrides: Record<string, { code: number; stdout: string }> = {
       "status --porcelain --untracked-files=no": { code: 0, stdout: "" },
       [`ls-remote --exit-code --heads origin refs/heads/${SELF_BRANCH}`]: {
         code: 0,
-        stdout: `${SELF_SHA}\trefs/heads/${SELF_BRANCH}\n`,
+        stdout: `${sha}\trefs/heads/${SELF_BRANCH}\n`,
       },
     };
     return { ...(overrides[key] ?? defaults[key] ?? { code: 1, stdout: "" }), stderr: "" };
@@ -1449,6 +1467,10 @@ interface SelfGhOptions {
   readonly headRefName?: string;
   readonly headRefOid?: string;
   readonly provenance?: { title: string; body: string };
+  /** Drops headRefOid from the state payload, as a response predating it does. */
+  readonly omitHeadRefOid?: boolean;
+  readonly merged?: boolean;
+  readonly threads?: string;
 }
 
 function selfGh(options: SelfGhOptions = {}): GhSpawn {
@@ -1461,7 +1483,14 @@ function selfGh(options: SelfGhOptions = {}): GhSpawn {
       return options.create ?? ok("https://github.com/amadeus-dlc/amadeus/pull/2838\n");
     }
     if (text.includes("pr list")) return options.list ?? ok("[]");
-    if (text.includes("reviewThreads")) return ok(fixture("measured-pr-2268"));
+    if (text.includes("reviewThreads")) return ok(fixture(options.threads ?? "measured-pr-2268"));
+    const merged = options.merged === true
+      ? {
+          state: "MERGED",
+          mergedAt: "2026-08-12T00:00:00Z",
+          mergeCommit: { oid: "e".repeat(40), statusCheckRollup: { state: "SUCCESS" } },
+        }
+      : { state: "OPEN" };
     return ok(
       JSON.stringify({
         data: {
@@ -1469,8 +1498,10 @@ function selfGh(options: SelfGhOptions = {}): GhSpawn {
             pullRequest: {
               mergeable: "MERGEABLE",
               mergeStateStatus: "CLEAN",
-              state: "OPEN",
-              headRefOid: options.headRefOid ?? SELF_SHA,
+              ...merged,
+              ...(options.omitHeadRefOid === true
+                ? {}
+                : { headRefOid: options.headRefOid ?? SELF_SHA }),
               headRefName: options.headRefName ?? SELF_BRANCH,
               title: options.provenance?.title ?? "",
               body: options.provenance?.body ?? "",
@@ -2054,6 +2085,299 @@ describe("CLI self delivery — the CLI's own outputs do not block the next verb
     );
     expect(out.exitCode).toBe(1);
     expect(out.stderr).toContain("dirty");
+  });
+});
+
+describe("CLI self record — the identity a verdict is bound to", () => {
+  test("a PR state without a head SHA is a boundary fault", async () => {
+    const f = makeSelfFixture();
+    const out = await invokeCli(
+      reportArgs(f),
+      selfSeams(f.record, { gh: selfGh({ provenance: SELF_PROVENANCE, omitHeadRefOid: true }) }),
+    );
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain("PR head SHA is unavailable");
+  });
+
+  test("a body whose UUID names another Intent is refused as provenance", async () => {
+    const f = makeSelfFixture();
+    // Everything checkProvenance compares matches; only the UUID — which binds
+    // the pull request to THIS Intent — is another one's.
+    const foreign = {
+      title: SELF_PROVENANCE.title,
+      body: SELF_PROVENANCE.body.replace("uuid-2838", "uuid-someone-else"),
+    };
+    const out = await invokeCli(reportArgs(f), selfSeams(f.record, { gh: selfGh({ provenance: foreign }) }));
+    expect(out.exitCode).toBe(3);
+    expect(out.stderr).toContain("does not match the active Intent");
+  });
+
+  test("a merged pull request is not convergence evidence for a self record", async () => {
+    const f = makeSelfFixture();
+    const out = await invokeCli(
+      reportArgs(f),
+      selfSeams(f.record, { gh: selfGh({ provenance: SELF_PROVENANCE, merged: true }) }),
+    );
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain("landed is not convergence evidence");
+  });
+
+  test("the report verb refuses when the branch is published at another commit", async () => {
+    const f = makeSelfFixture();
+    expect((await invokeCli(createArgs(f), selfSeams(f.record))).exitCode).toBe(0);
+    const out = await invokeCli(
+      reportArgs(f),
+      selfSeams(f.record, {
+        gh: selfGh({ provenance: SELF_PROVENANCE }),
+        git: selfGit({
+          [`ls-remote --exit-code --heads origin refs/heads/${SELF_BRANCH}`]: {
+            code: 0,
+            stdout: `${"d".repeat(40)}\trefs/heads/${SELF_BRANCH}\n`,
+          },
+        }),
+      }),
+    );
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain("local HEAD, remote branch, and PR head must be identical");
+  });
+});
+
+describe("CLI override verb on a self record", () => {
+  const overrideArgs = (f: SelfFixture) => [
+    "override",
+    "--repo",
+    "amadeus-dlc/amadeus",
+    "--pr",
+    "2838",
+    "--unit",
+    "cli",
+    "--record",
+    f.record,
+    "--reason",
+    "GitHub unreachable; landing under human ruling",
+  ];
+
+  test("advances a created report to override and attests it", async () => {
+    const f = makeSelfFixture();
+    expect((await invokeCli(createArgs(f), selfSeams(f.record))).exitCode).toBe(0);
+    const out = await invokeCli(
+      overrideArgs(f),
+      selfSeams(f.record, { gh: selfGh({ provenance: SELF_PROVENANCE, threads: "measured-pr-1945" }) }),
+    );
+    expect(out.exitCode).toBe(0);
+    const body = readFileSync(reportPathFor(f.record, "cli"), "utf-8");
+    expect(body).toContain("- kind: override");
+    expect(body).toContain("## CLI Attestation");
+  });
+
+  test("refuses to walk a converged report back to override", async () => {
+    const f = makeSelfFixture();
+    expect((await invokeCli(createArgs(f), selfSeams(f.record))).exitCode).toBe(0);
+    expect(
+      (
+        await invokeCli(
+          reportArgs(f),
+          selfSeams(f.record, { gh: selfGh({ provenance: SELF_PROVENANCE }) }),
+        )
+      ).exitCode,
+    ).toBe(0);
+    const out = await invokeCli(
+      overrideArgs(f),
+      selfSeams(f.record, { gh: selfGh({ provenance: SELF_PROVENANCE, threads: "measured-pr-1945" }) }),
+    );
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain("report lifecycle refused: converged -> override");
+  });
+});
+
+describe("CLI self report lifecycle — states the report file can be found in", () => {
+  /** A receipt-carrying report whose payload the caller shapes. */
+  function attestedReport(payload: string): string {
+    const unsigned = {
+      intent: "pr-gate",
+      intentUuid: SELF_UUID,
+      record: "amadeus/spaces/default/intents/260812-pr-gate/",
+      bolt: "delivery",
+      unit: "cli",
+      repo: "amadeus-dlc/amadeus",
+      pr: 2838,
+      localHead: SELF_SHA,
+      remoteHead: SELF_SHA,
+      prHead: SELF_SHA,
+      contentDigest: reportPayloadDigest(payload),
+    };
+    return `${payload}${renderAttestation({ id: attestationId(unsigned), ...unsigned })}`;
+  }
+
+  function writeReportFile(f: SelfFixture, body: string): void {
+    mkdirSync(join(f.record, "construction", "cli", "code-generation"), { recursive: true });
+    writeFileSync(reportPathFor(f.record, "cli"), body, "utf-8");
+  }
+
+  test("a report whose payload lost its kind line cannot be advanced", async () => {
+    const f = makeSelfFixture();
+    // The receipt is intact and binds this delivery, so the run gets as far as
+    // the lifecycle — which cannot read a state the report no longer declares.
+    writeReportFile(
+      f,
+      attestedReport(
+        [
+          "# PR Convergence Report",
+          "",
+          "- pull request: amadeus-dlc/amadeus#2838",
+          "- generated at: 2026-08-12T00:00:00Z",
+          "- converged: false",
+          "",
+        ].join("\n"),
+      ),
+    );
+    const out = await invokeCli(
+      reportArgs(f),
+      selfSeams(f.record, { gh: selfGh({ provenance: SELF_PROVENANCE }) }),
+    );
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain("create must establish the created state first");
+  });
+
+  test("create refuses a report file that carries no attestation at all", async () => {
+    const f = makeSelfFixture();
+    writeReportFile(f, "# PR Convergence Report\n\n- kind: created\n- converged: false\n");
+    const out = await invokeCli(createArgs(f), selfSeams(f.record));
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain("current report has no valid CLI attestation");
+  });
+
+  test("create at a new head opens a fresh created epoch over the old report", async () => {
+    const f = makeSelfFixture();
+    expect((await invokeCli(createArgs(f), selfSeams(f.record))).exitCode).toBe(0);
+    const before = readFileSync(reportPathFor(f.record, "cli"), "utf-8");
+    const moved = "b".repeat(40);
+    const out = await invokeCli(
+      createArgs(f),
+      selfSeams(f.record, {
+        gh: selfGh({ headRefOid: moved }),
+        git: selfGit({}, moved),
+      }),
+    );
+    expect(out.exitCode).toBe(0);
+    const after = readFileSync(reportPathFor(f.record, "cli"), "utf-8");
+    expect(after).toContain(`- pr head: ${moved}`);
+    expect(after).not.toBe(before);
+  });
+});
+
+describe("CLI create verb — boundary faults around the created pull request", () => {
+  test("a gh that vanishes mid-create is reported by its typed kind", async () => {
+    const f = makeSelfFixture();
+    let call = 0;
+    const gh: GhSpawn = async () => {
+      call += 1;
+      if (call <= 2) return ok("ready");
+      throw new Error("gh vanished mid-run");
+    };
+    const out = await invokeCli(createArgs(f), selfSeams(f.record, { gh }));
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain("not-runnable");
+  });
+
+  test("an existing pull request carrying another Intent's UUID is refused", async () => {
+    const f = makeSelfFixture();
+    const out = await invokeCli(
+      createArgs(f),
+      selfSeams(f.record, {
+        gh: selfGh({
+          create: { code: 1, stdout: "", stderr: "already exists" },
+          list: ok(
+            JSON.stringify([
+              {
+                number: 2838,
+                url: "https://github.com/amadeus-dlc/amadeus/pull/2838",
+                headRefName: SELF_BRANCH,
+                headRefOid: SELF_SHA,
+                title: SELF_PROVENANCE.title,
+                body: SELF_PROVENANCE.body.replace("uuid-2838", "uuid-someone-else"),
+              },
+            ]),
+          ),
+        }),
+      }),
+    );
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain("does not carry this delivery's identity");
+  });
+
+  test("a created pull request whose head cannot be read is a boundary fault", async () => {
+    const f = makeSelfFixture();
+    const out = await invokeCli(
+      createArgs(f),
+      selfSeams(f.record, { gh: selfGh({ omitHeadRefOid: true }) }),
+    );
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain("created PR head could not be verified");
+  });
+
+  test("a created pull request built from another commit is refused", async () => {
+    const f = makeSelfFixture();
+    const out = await invokeCli(
+      createArgs(f),
+      selfSeams(f.record, { gh: selfGh({ headRefOid: "d".repeat(40) }) }),
+    );
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain("created PR head differs from local/remote HEAD");
+    expect(existsSync(reportPathFor(f.record, "cli"))).toBe(false);
+  });
+
+  test("create refuses when the checked-out branch is not --head", async () => {
+    const f = makeSelfFixture();
+    const out = await invokeCli(
+      createArgs(f),
+      selfSeams(f.record, {
+        git: selfGit({ "branch --show-current": { code: 0, stdout: "some-other-branch\n" } }),
+      }),
+    );
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain(`checked-out branch must equal --head ${SELF_BRANCH}`);
+  });
+
+  test("create refuses when the local HEAD does not resolve to a commit", async () => {
+    const f = makeSelfFixture();
+    const out = await invokeCli(
+      createArgs(f),
+      selfSeams(f.record, {
+        git: selfGit({ "rev-parse HEAD": { code: 0, stdout: "not-a-sha\n" } }),
+      }),
+    );
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain("local HEAD commit is missing");
+  });
+});
+
+describe("fetchOpenPrForHead — a malformed listing is a typed failure", () => {
+  const duplicate = { code: 1, stdout: "", stderr: "already exists" };
+
+  test("an unparseable listing is reported, not read as absence", async () => {
+    const f = makeSelfFixture();
+    const out = await invokeCli(
+      createArgs(f),
+      selfSeams(f.record, { gh: selfGh({ create: duplicate, list: ok("not json") }) }),
+    );
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain("could not be read");
+  });
+
+  test("a listing whose fields have the wrong types is reported", async () => {
+    const f = makeSelfFixture();
+    const out = await invokeCli(
+      createArgs(f),
+      selfSeams(f.record, {
+        gh: selfGh({
+          create: duplicate,
+          list: ok(JSON.stringify([{ number: "2838", url: 7, headRefName: null }])),
+        }),
+      }),
+    );
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain("could not be read");
   });
 });
 

@@ -28,6 +28,7 @@ import {
   handleApprove,
   handleCompleteWorkflow,
   handleFinalize,
+  handleSkip,
   verifyPhaseCheckArtifact,
 } from "../../dist/claude/.claude/tools/amadeus-state.ts";
 import { handleExecute } from "../../dist/claude/.claude/tools/amadeus-jump.ts";
@@ -554,5 +555,77 @@ describe("t-phase-check-gate-seam: a non-boundary approve is not gated (#2143 ne
     const r = captureExit(() => handleApprove(["feasibility"]));
     expect(r.threw).toBe(false);
     expect(readFileSync(seededStateFile(proj), "utf-8")).toContain("- **Ideation**: Active");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// #2932 CodeRabbit review — mandatoryPluginStages / verifyMandatoryPluginStages
+// in-process coverage seam. The guard (amadeus-state.ts) refuses a
+// complete-workflow / skip when a host-bound plugin scope-binding names the
+// target stage mandatory for the current scope, or refuses closed when the
+// bound config layer itself fails to resolve. verifyMandatoryPluginStages
+// runs BEFORE the Goal-reconciliation / artifact / phase-check guards inside
+// completeWorkflowForTarget, so these fixtures need no Goal receipt, no
+// produces artifacts, and no phase-check file — the mandatory-stage guard (or
+// the config-resolution failure feeding it) is reached and refuses first.
+// ---------------------------------------------------------------------------
+describe("t-phase-check-gate-seam: mandatory-plugin-stage guard (#2932)", () => {
+  beforeEach(() => {
+    proj = createTestProject();
+    resetOtelPerProject();
+    seedStateFile(proj, "state-fix-final-construction.md");
+    saveEnv();
+    setEnv(false); // bypass the unrelated artifact/phase-check guards entirely
+  });
+  afterEach(() => {
+    restoreEnv();
+    cleanupTestProject(proj);
+  });
+
+  test("a config layer that fails structured validation refuses closed before any stage judgement", () => {
+    // "fixture-stage" bound to an EMPTY scopes array is invalid per the
+    // scope-bindings schema (amadeus-config.ts), so resolveAmadeusConfig
+    // returns kind "invalid" and mandatoryPluginStages refuses closed.
+    writeFileSync(
+      join(proj, "amadeus", "config.json"),
+      JSON.stringify({ plugin: { "scope-bindings": { "fixture-plugin": { "fixture-stage": [] } } } }),
+    );
+    const r = captureExit(() => handleCompleteWorkflow(["build-and-test"]));
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("Cannot enforce plugin scope bindings");
+  });
+
+  test("complete-workflow refuses when a DIFFERENT stage is host-bound mandatory and not completed", () => {
+    // market-research sits [S] SKIP in the fix-scope fixture — mandatory but
+    // never completed, and not the slug being completed, so the loop's
+    // continue guard does not excuse it: the refusal fires.
+    writeFileSync(
+      join(proj, "amadeus", "config.json"),
+      JSON.stringify({ plugin: { "scope-bindings": { "fixture-plugin": { "market-research": ["fix"] } } } }),
+    );
+    const before = readFileSync(seededStateFile(proj), "utf-8");
+    const r = captureExit(() => handleCompleteWorkflow(["build-and-test"]));
+    const after = readFileSync(seededStateFile(proj), "utf-8");
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("host-bound plugin stage");
+    expect(r.stderr).toContain("market-research");
+    expect(r.stderr).toContain("mandatory for scope");
+    expect(r.stderr).toContain("fix");
+    expect(after).toBe(before);
+  });
+
+  test("skip refuses a target stage the host config binds mandatory for the current scope", () => {
+    writeFileSync(
+      join(proj, "amadeus", "config.json"),
+      JSON.stringify({ plugin: { "scope-bindings": { "fixture-plugin": { "build-and-test": ["fix"] } } } }),
+    );
+    const before = readFileSync(seededStateFile(proj), "utf-8");
+    const r = captureExit(() => handleSkip(["build-and-test"], proj));
+    const after = readFileSync(seededStateFile(proj), "utf-8");
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain("Cannot skip");
+    expect(r.stderr).toContain("build-and-test");
+    expect(r.stderr).toContain("host-bound mandatory plugin stage for scope");
+    expect(after).toBe(before);
   });
 });
