@@ -466,6 +466,13 @@ describe("mandatory-plugin-stage guard resolves config for the targeted Intent, 
       .map((f) => readFileSync(join(intentsDirAudit(project, recordA), f), "utf8"))
       .join("\n");
     expect(eventsA).toContain("WORKFLOW_COMPLETED");
+
+    // Symmetric negative control: explicitly targeting Intent B must resolve
+    // B's (invalid) config and fail closed. Without this, a seam that skips
+    // config resolution entirely would still satisfy the assertions above.
+    const targetedB = runComplete(project, recordB);
+    expect(targetedB.status, `${targetedB.stdout}${targetedB.stderr}`).not.toBe(0);
+    expect(`${targetedB.stdout}${targetedB.stderr}`).toContain("Cannot enforce plugin scope bindings");
   });
 
   function intentsDirAudit(project: string, record: string): string {

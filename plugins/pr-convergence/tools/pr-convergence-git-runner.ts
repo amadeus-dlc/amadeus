@@ -92,6 +92,24 @@ function foreignDirtyPaths(git: GitSpawn, cwd: string, unit: string | null): rea
   return lines.map(statusPath).filter((path) => !isSelfOutput(path, self));
 }
 
+/**
+ * The SHA origin publishes for exactly `refs/heads/<head>`. `ls-remote`
+ * matches patterns against the TAIL of ref names, so a bare branch pattern can
+ * return several refs (e.g. `feature/x` also matches `refs/heads/y/feature/x`)
+ * and the first line would be an unrelated branch's SHA. Only the line whose
+ * ref column equals the fully qualified name is accepted.
+ */
+function remoteBranchSha(git: GitSpawn, cwd: string, head: string): string {
+  const fullRef = `refs/heads/${head}`;
+  const remote = run(git, cwd, ["ls-remote", "--exit-code", "--heads", "origin", fullRef]);
+  if (remote.code !== 0) return "";
+  for (const line of remote.stdout.split("\n")) {
+    const [sha, ref] = line.trim().split(/\s+/);
+    if (ref === fullRef && sha !== undefined && /^[0-9a-f]{40,64}$/i.test(sha)) return sha;
+  }
+  return "";
+}
+
 export function verifyCreatePrerequisites(
   cwd: string,
   head: string,
@@ -122,9 +140,8 @@ export function verifyCreatePrerequisites(
   if (foreignDirtyPaths(git, cwd, unit).length > 0) {
     return { ok: false, message: "tracked worktree is dirty; commit or restore tracked changes before create" };
   }
-  const remote = run(git, cwd, ["ls-remote", "--exit-code", "--heads", "origin", head]);
-  const remoteHead = remote.stdout.trim().split(/\s+/)[0] ?? "";
-  if (remote.code !== 0 || !/^[0-9a-f]{40,64}$/i.test(remoteHead)) {
+  const remoteHead = remoteBranchSha(git, cwd, head);
+  if (remoteHead === "") {
     return { ok: false, message: `remote branch origin/${head} is missing; push the branch before create` };
   }
   const localHead = local.stdout.trim();
@@ -162,9 +179,8 @@ export function verifyCurrentPrerequisites(
   if (foreignDirtyPaths(git, cwd, unit).length > 0) {
     return { ok: false, message: "tracked worktree is dirty; commit or restore it" };
   }
-  const remote = run(git, cwd, ["ls-remote", "--exit-code", "--heads", "origin", head]);
-  const remoteHead = remote.stdout.trim().split(/\s+/)[0] ?? "";
-  if (remote.code !== 0 || remoteHead === "") return { ok: false, message: `remote branch origin/${head} is missing; push it` };
+  const remoteHead = remoteBranchSha(git, cwd, head);
+  if (remoteHead === "") return { ok: false, message: `remote branch origin/${head} is missing; push it` };
   if (localHead !== remoteHead || localHead !== expected.oid) {
     return { ok: false, message: "local HEAD, remote branch, and PR head must be identical; push and refresh the PR" };
   }

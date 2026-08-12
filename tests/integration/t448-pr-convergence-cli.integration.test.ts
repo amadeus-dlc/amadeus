@@ -1433,7 +1433,7 @@ function selfGit(overrides: Record<string, { code: number; stdout: string }> = {
       },
       "diff --name-only main...HEAD": { code: 0, stdout: "plugins/pr-convergence/tool.ts\n" },
       "status --porcelain --untracked-files=no": { code: 0, stdout: "" },
-      [`ls-remote --exit-code --heads origin ${SELF_BRANCH}`]: {
+      [`ls-remote --exit-code --heads origin refs/heads/${SELF_BRANCH}`]: {
         code: 0,
         stdout: `${SELF_SHA}\trefs/heads/${SELF_BRANCH}\n`,
       },
@@ -1493,7 +1493,10 @@ interface SelfSeamsOptions {
  *  carriage check sees exactly what a real emission would have written. */
 function selfSeams(record: string, options: SelfSeamsOptions = {}): CliSeams {
   const emit: CliSeams["emitAttestation"] = async (argv) => {
-    const attributes: Record<string, string> = { Event: "ARTIFACT_ATTESTED" };
+    // The event name comes from the argv the CLI built (`append <event> ...`),
+    // so the shard records what the CLI actually asked to emit.
+    const at = argv.indexOf("append");
+    const attributes: Record<string, string> = { Event: argv[at + 1] ?? "" };
     for (let i = 0; i < argv.length; i += 1) {
       if (argv[i] !== "--field") continue;
       const value = argv[++i] ?? "";

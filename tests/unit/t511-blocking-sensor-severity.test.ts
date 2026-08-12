@@ -1,4 +1,4 @@
-// covers: function:resolveSensorsForStage, function:evaluateBlockingSensors, function:resolveScriptPath, function:digestFile
+// covers: function:resolveSensorsForStage, function:evaluateBlockingSensors, file:packages/framework/core/tools/amadeus-sensor.ts
 //
 // t511 (unit) — Issue #2671 item (c): the `blocking` sensor severity, in its two
 // pure layers.

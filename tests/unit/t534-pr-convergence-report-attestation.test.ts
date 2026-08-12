@@ -24,7 +24,7 @@ function gitSpawn(overrides: Partial<Record<string, { code: number; stdout: stri
       "rev-parse HEAD": { code: 0, stdout: `${SHA}\n` },
       "diff --name-only main...HEAD": { code: 0, stdout: "src/change.ts\n" },
       "status --porcelain --untracked-files=no": { code: 0, stdout: "" },
-      "ls-remote --exit-code --heads origin feature/2838": { code: 0, stdout: `${SHA}\trefs/heads/feature/2838\n` },
+      "ls-remote --exit-code --heads origin refs/heads/feature/2838": { code: 0, stdout: `${SHA}\trefs/heads/feature/2838\n` },
     };
     const result = overrides[key] ?? defaults[key] ?? { code: 1, stdout: "" };
     return { ...result, stderr: "" };
@@ -55,11 +55,24 @@ describe("t534 self create git prerequisites", () => {
     });
   });
 
+  test("reads only the exact refs/heads line when ls-remote tail-matches extra refs", () => {
+    // `ls-remote` matches patterns against the TAIL of ref names, so a decoy
+    // branch sharing the tail can precede the real one; its SHA must not win.
+    const decoy = "c".repeat(40);
+    const result = verifyCreatePrerequisites("/repo", "feature/2838", "main", gitSpawn({
+      "ls-remote --exit-code --heads origin refs/heads/feature/2838": {
+        code: 0,
+        stdout: `${decoy}\trefs/heads/other/feature/2838\n${SHA}\trefs/heads/feature/2838\n`,
+      },
+    }));
+    expect(result).toEqual({ ok: true, localHead: SHA, remoteHead: SHA, base: "main" });
+  });
+
   const failures: ReadonlyArray<readonly [string, Partial<Record<string, { code: number; stdout: string }>>, string]> = [
     ["dirty", { "status --porcelain --untracked-files=no": { code: 0, stdout: " M src/change.ts\n" } }, "dirty"],
     ["uncommitted", { "diff --name-only main...HEAD": { code: 0, stdout: "" } }, "no target changes"],
-    ["unpublished", { "ls-remote --exit-code --heads origin feature/2838": { code: 2, stdout: "" } }, "missing"],
-    ["mismatch", { "ls-remote --exit-code --heads origin feature/2838": { code: 0, stdout: `${"b".repeat(40)}\trefs/heads/feature/2838\n` } }, "differ"],
+    ["unpublished", { "ls-remote --exit-code --heads origin refs/heads/feature/2838": { code: 2, stdout: "" } }, "missing"],
+    ["mismatch", { "ls-remote --exit-code --heads origin refs/heads/feature/2838": { code: 0, stdout: `${"b".repeat(40)}\trefs/heads/feature/2838\n` } }, "differ"],
   ];
   for (const [name, override, message] of failures) {
     test(`rejects ${name} before delivery`, () => {
