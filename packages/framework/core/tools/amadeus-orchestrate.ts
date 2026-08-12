@@ -195,11 +195,14 @@ import type {
   AutonomyProjection,
 } from "./amadeus-intent-autonomy.ts";
 import {
+  admitProductionStageFailure,
   applyProductionAutonomyMode,
   observeLaunchTurnToken,
   previewProductionAutonomyGrant,
   productionStageAutonomy,
   readProductionAutonomyProjection,
+  readProductionRepairStall,
+  type ProductionRepairStall,
 } from "./amadeus-intent-autonomy-production.ts";
 import { detectHarnessType } from "./amadeus-harness.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
@@ -3032,6 +3035,47 @@ function freshReadonlyLatchLabel(projectDir: string | undefined): string | null 
   return null;
 }
 
+// Surface a REPAIR_STALLED suspension as the terminal `parked` directive, or
+// report that no such stop is pending. An explicit re-entry (`--resume`,
+// `--stage`, `--phase`, `--new-intent`) is a deliberate continuation and is
+// handled by the branch that owns it, so it never reads the stall.
+function emitRepairStalledIfSuspended(
+  projectDir: string,
+  stateContent: string | null,
+  flags: ParsedFlags,
+): boolean {
+  const explicitReEntry = Boolean(flags.resume || flags.stage || flags.phase || flags.newIntent);
+  if (stateContent === null || explicitReEntry) return false;
+  const stall = readProductionRepairStall(projectDir);
+  if (stall === null) return false;
+  emit(parkedDirective(repairStalledReason(stall), stall.stageInstanceId));
+  return true;
+}
+
+// The turn-scoped no-op-next guard (Kiro roll-forward defense). On Kiro the
+// userPromptSubmit seam handles a read-only/navigation command deterministically
+// off-band but CANNOT block the turn, so the conductor relays the output AND may
+// still fire a bare `next` (sometimes several times the same turn), rolling the
+// active workflow forward. The seam stamps amadeus/.amadeus-readonly-latch with
+// the CURRENT turn counter; a TRULY BARE advancing next (none of its own flags
+// set) checks the latch BEFORE any state inspection and emits `done` instead of
+// routing to a run-stage. Turn-scoped — a legitimate advancing next in a LATER
+// turn (counter bumped, latch now stale) is never swallowed.
+function emitReadonlyLatchDone(
+  projectDir: string | undefined,
+  flags: ParsedFlags,
+  migration: ReturnType<typeof classifyMigrationRequest>,
+): boolean {
+  if (!isBareAdvancingNext(flags, migration)) return false;
+  const latchLabel = freshReadonlyLatchLabel(projectDir);
+  if (latchLabel === null) return false;
+  emit({
+    kind: "done",
+    reason: `The read-only/navigation command (${latchLabel}) already ran this turn and its output was shown above. This was a read-only utility or a workspace switch, not workflow work — there is nothing to advance. The workflow is unchanged; if one is active it remains paused where it was. STOP.`,
+  });
+  return true;
+}
+
 // The `next` handler — pure read of workflow state, emits exactly one
 // directive. Its only write is the machine-local sensor-invocation projection
 // emit() drops beside the hooks-health heartbeat for run-stage directives.
@@ -3046,26 +3090,9 @@ export function handleNext(args: string[], projectDir: string | undefined): void
   const flags = parseNextFlags(args);
   const migration = classifyMigrationRequest(args);
 
-  // Branch 0 — turn-scoped no-op-next guard (Kiro roll-forward defense). On Kiro
-  // the userPromptSubmit seam handles a read-only/navigation command
-  // deterministically off-band but CANNOT block the turn, so the conductor relays
-  // the output AND may still fire a bare `next` (sometimes several times the same
-  // turn), rolling the active workflow forward. The seam stamps
-  // amadeus/.amadeus-readonly-latch with the CURRENT turn counter; here, BEFORE any
-  // state inspection, a TRULY BARE advancing next (none of its own flags set)
-  // checks the latch: when the latch is fresh (same turn) we emit `done` instead
-  // of routing to a run-stage. Turn-scoped — a legitimate advancing next in a
-  // LATER turn (counter bumped, latch now stale) is never swallowed.
-  if (isBareAdvancingNext(flags, migration)) {
-    const latchLabel = freshReadonlyLatchLabel(projectDir);
-    if (latchLabel !== null) {
-      emit({
-        kind: "done",
-        reason: `The read-only/navigation command (${latchLabel}) already ran this turn and its output was shown above. This was a read-only utility or a workspace switch, not workflow work — there is nothing to advance. The workflow is unchanged; if one is active it remains paused where it was. STOP.`,
-      });
-      return;
-    }
-  }
+  // Branch 0 — turn-scoped no-op-next guard, before any state inspection
+  // (emitReadonlyLatchDone owns the rule).
+  if (emitReadonlyLatchDone(projectDir, flags, migration)) return;
 
   // Branch 1 — read-only utility flags dispatch FIRST, before any state
   // inspection (SKILL.md absolute-precedence rule: --status/--help/--doctor/
@@ -3151,6 +3178,16 @@ export function handleNext(args: string[], projectDir: string | undefined): void
   // <repo>/ (dropping the intents/<slug> tail) without re-reading the disk in
   // the pure resolver. codekbRepoName is read-only (intentRepos never throws).
   const codekbCtx = codekbCtxFor(pd);
+
+  // Branch 2.4 - REPAIR_STALLED suspension (issue #2912). When bounded Quality
+  // Repair parks a semi/full run, the stop lives in the Intent autonomy
+  // projection, not in the `Parked` state field Branch 2.5 reads — so without
+  // this branch `next` kept re-issuing the very run-stage whose referee had
+  // already failed closed. Surfacing the stall is the safe stop the canon names
+  // for `full`: the grant stays active and the resume condition is explicit. The
+  // self-disable set matches Branch 2.5 — an explicit re-entry is a deliberate
+  // continuation and must reach the branch that handles it.
+  if (emitRepairStalledIfSuspended(pd, stateContent, flags)) return;
 
   // Branch 2.5 - PARKED workflow (issue #367). The `park` subcommand persists a
   // `Parked` runtime field (via amadeus-state.ts park) without advancing any
@@ -4970,6 +5007,7 @@ interface ReportFlags {
   single?: boolean; // --single: commit a synthetic-id STAGE_STARTED/COMPLETED pair, never the main pointer
   stage?: string; // --stage <slug>: the acted stage (required under --single; preferred for main workflow reports)
   mirrorBoundary?: string;
+  failure?: string; // --failure <detail>: the typed failure a stage's referee returned, admitted to Quality Repair
 }
 
 // Extract report's flags. --result is the verdict; --user-input rides through
@@ -5004,6 +5042,9 @@ function parseReportFlags(args: string[]): ReportFlags {
       i++;
     } else if (a === "--mirror-boundary" && i + 1 < args.length) {
       flags.mirrorBoundary = args[i + 1];
+      i++;
+    } else if (a === "--failure" && i + 1 < args.length) {
+      flags.failure = args[i + 1];
       i++;
     } else if (a === "--single") {
       flags.single = true;
@@ -5708,6 +5749,71 @@ function handleAuthorizedApprovalReport(
   emit({ kind: "committed", reason: approvedReason });
 }
 
+// Whether this Intent runs a Quality Repair loop a stage failure can be
+// admitted into. `none` does not, and keeps the historical forward-only
+// report contract.
+function runsQualityRepair(projectDir: string): boolean {
+  const mode = readProductionAutonomyProjection(projectDir)?.mode;
+  return mode === "semi" || mode === "full";
+}
+
+// The one wording for a REPAIR_STALLED stop, shared by the `report` that parks
+// and by every later `next` that has to surface the same stall. Both name the
+// resume routes the park's resume condition actually accepts.
+function repairStalledReason(stall: ProductionRepairStall): string {
+  const scope = stall.qualityScopeId === null
+    ? "the stalled quality scope"
+    : `quality scope ${JSON.stringify(stall.qualityScopeId)}`;
+  return `Workflow parked as REPAIR_STALLED at ${JSON.stringify(stall.stageInstanceId)}: bounded quality repair ` +
+    `stopped making progress on evidence ${stall.evidenceFingerprint}. The Intent autonomy grant stays active. ` +
+    `Resume ${scope} with \`bun ${harnessDir()}/tools/amadeus-bolt.ts resume-quality --input <carrier>\` once the ` +
+    "evidence strictly improves, or after an explicit human retry.";
+}
+
+// Admit a typed stage-referee failure into Quality Repair and name the move the
+// outcome calls for: another bounded repair round, the one replan, or the
+// REPAIR_STALLED stop. The stall is read back from the park envelope so the
+// directive carries the same resume condition the projection recorded.
+function handleStageFailureReport(flags: ReportFlags, projectDir: string): void {
+  const stateContent = loadStateFileIfPresent(projectDir);
+  if (!stateContent) {
+    emit(errorDirective("No workflow state found — nothing to admit a stage failure against."));
+    return;
+  }
+  const stage = (flags.stage ?? getField(stateContent, "Current Stage") ?? "").trim();
+  if (stage.length === 0) {
+    emit(errorDirective("Cannot admit a stage failure: pass --stage <slug> or set Current Stage."));
+    return;
+  }
+  const detail = flags.failure?.trim();
+  if (detail === undefined || detail.length === 0) {
+    emit(errorDirective(
+      "report --result failed requires --failure <detail> — the typed failure the stage's referee returned.",
+    ));
+    return;
+  }
+  const admitted = admitProductionStageFailure({ projectDir, stage, failureDetail: detail });
+  if (admitted.kind === "error") {
+    emit(errorDirective(`Cannot admit the failure of stage ${JSON.stringify(stage)}: ${admitted.reason}.`));
+    return;
+  }
+  if (admitted.kind === "parked") {
+    const stall = readProductionRepairStall(projectDir);
+    emit(stall === null
+      ? errorDirective(`Stage ${JSON.stringify(stage)} parked as REPAIR_STALLED but no park envelope was recorded.`)
+      : parkedDirective(repairStalledReason(stall), stage));
+    return;
+  }
+  const move = admitted.kind === "replanned"
+    ? "Quality Repair replanned the repair context"
+    : "Quality Repair recorded the obligation for another repair round";
+  emit(printDirective(
+    `Stage ${JSON.stringify(stage)} failed closed and the failure was admitted to Quality Repair. ${move} ` +
+      `(evidence ${admitted.evidenceFingerprint}). Repair the recorded obligation, re-run the stage, and report ` +
+      "its outcome again.",
+  ));
+}
+
 // The `report` handler. Reads the acted stage + scope from state, decides the
 // committing subcommand(s) (gate status, then finality), shells out to the
 // atomic state tool, and emits a non-terminal `committed` directive on success
@@ -5874,6 +5980,20 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
     canonicalConstructionFailurePending(resolveProjectDir(projectDir))
   ) {
     handleFailureRuling(args, projectDir);
+    return;
+  }
+
+  // A stage-owned referee that failed closed (issue #2912). `report` commits
+  // forward transitions only and the generic manual park is refused under an
+  // autonomous Construction run, so without this route a typed failure has no
+  // admission path and `next` re-issues the same run-stage forever. Under semi
+  // or full the failure belongs to Quality Repair: it becomes an unresolved
+  // obligation, bounded repair owns the recovery, and a nonproductive loop parks
+  // as REPAIR_STALLED with the grant intact. Under `none` there is no repair
+  // loop to admit it into, so the forward-only contract below still answers.
+  const failureAdmissionDir = resolveProjectDir(projectDir);
+  if (flags.result === "failed" && runsQualityRepair(failureAdmissionDir)) {
+    handleStageFailureReport(flags, failureAdmissionDir);
     return;
   }
 

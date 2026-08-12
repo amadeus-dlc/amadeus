@@ -1075,6 +1075,84 @@ function parkProductionQuality(
     : { kind: "parked", qualityScopeId: status.qualityScopeId, workflowResult: parked.result };
 }
 
+// The Bolt id a stage-owned referee failure is scoped under. A stage referee
+// fails outside any Unit of Work, so the quality scope is keyed by the stage
+// alone and this constant names where the evidence came from.
+const STAGE_REFEREE_BOLT_ID = "stage-referee";
+
+export interface ProductionStageFailureInput {
+  readonly projectDir: string;
+  readonly stage: string;
+  readonly failureDetail: string;
+}
+
+// A stage-owned referee that fails closed leaves a quality obligation, not a
+// forward transition: `report` commits forward outcomes only, and the generic
+// manual park is refused under an autonomous Construction run. Projecting the
+// typed failure onto the first-party Quality Repair contribution is the route
+// the canon already defines — bounded repair, one replan, then a REPAIR_STALLED
+// park that keeps the grant. The obligation identity is derived from the
+// failure payload, so an unchanged failure reads as non-progress and the
+// bounded loop terminates instead of re-issuing the same run-stage forever.
+export function admitProductionStageFailure(
+  input: ProductionStageFailureInput,
+): ProductionQualityObservationResult {
+  return commitProductionQualityObservation({
+    projectDir: input.projectDir,
+    evidence: {
+      providerId: "quality-evidence-v1",
+      monitorId: "quality-repair",
+      stageInstanceId: input.stage,
+      boltId: STAGE_REFEREE_BOLT_ID,
+      observations: [{
+        kind: "condition",
+        conditionKind: "verification",
+        conditionId: qualityStableId("stage-referee-failure", [input.stage, input.failureDetail]),
+        status: "unsatisfied",
+        verifierId: STAGE_REFEREE_BOLT_ID,
+        receipt: qualityDigest([input.stage, input.failureDetail]),
+      }],
+    },
+    replanContext: `Stage "${input.stage}" referee failed: ${input.failureDetail}`,
+  });
+}
+
+export interface ProductionRepairStall {
+  readonly stageInstanceId: string;
+  readonly evidenceFingerprint: string;
+  readonly resumeConditionIdentity: string;
+  readonly qualityScopeId: string | null;
+}
+
+// What a REPAIR_STALLED park left behind, read back for the caller that has to
+// surface the stop. The quality scope is recovered from the stall event that
+// carries the same evidence fingerprint the park suspended on, so the resume
+// instruction names a scope that exists rather than one recomputed from
+// assumptions about how the evidence was keyed.
+export function readProductionRepairStall(projectDir: string): ProductionRepairStall | null {
+  const resolved = resolveIntent(projectDir);
+  if (resolved === null) return null;
+  const envelope = coordinatorFor(projectDir, resolved).readProjection().parkEnvelope;
+  if (envelope === null || envelope.reason !== "REPAIR_STALLED") return null;
+  const evidenceFingerprint = envelope.resumeCondition.evidenceFingerprint ?? "";
+  const repository = createAuditQualityRepairRepository({
+    projectDir,
+    intent: resolved.intentDir,
+    space: resolved.space,
+  });
+  const stalled = repository.readTransactions().filter((transaction) =>
+    transaction.qualityEvents.some((event) =>
+      event.type === "REPAIR_STALLED" && event.latch.evidenceFingerprint === evidenceFingerprint,
+    ),
+  ).at(-1);
+  return {
+    stageInstanceId: envelope.triggerOccurrenceId,
+    evidenceFingerprint,
+    resumeConditionIdentity: envelope.resumeCondition.identity,
+    qualityScopeId: stalled?.qualityScopeId ?? null,
+  };
+}
+
 function freshHumanRetryTurn(
   projectDir: string,
   resolved: ResolvedIntent,
