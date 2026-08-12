@@ -614,6 +614,50 @@ export function renderSyntaxClassMismatches(mismatches: readonly SyntaxClassMism
     .join("\n");
 }
 
+// The ratchet floor. Every ledger range the AST could classify was pinned once
+// (#2901), and a pin only protects an entry that carries one — so a NEW entry
+// arriving with a decidable range but no declaration would quietly re-open the
+// gap. The floor closes it: decidable means declared. Ranges the AST cannot
+// classify (spawn-only reachability, plain statements) stay exempt, because a
+// declaration nothing can check would add confidence without adding a check.
+export interface UndeclaredDecidableEntry {
+  file: string;
+  function: string;
+  actual: DeclaredSyntaxClass;
+  start: number;
+  end: number;
+}
+
+export function findUndeclaredDecidableEntries(
+  entries: readonly AllowlistEntry[],
+  sources: ReadonlyMap<string, string>,
+): UndeclaredDecidableEntry[] {
+  const found: UndeclaredDecidableEntry[] = [];
+  for (const entry of entries) {
+    if (entry.selector.class !== undefined) continue;
+    const source = sources.get(entry.file);
+    if (source === undefined) {
+      throw new Error(`coverage-patch-gate: source not found for allowlist entry: ${entry.file}`);
+    }
+    const range = resolveSemanticSelector(entry.file, source, entry.selector);
+    for (const cls of DECLARABLE_SYNTAX_CLASSES) {
+      if (!matchesSyntaxClass(entry.file, source, range, cls)) continue;
+      found.push({ file: entry.file, function: entry.selector.function, actual: cls, start: range.start, end: range.end });
+      break;
+    }
+  }
+  return found;
+}
+
+export function renderUndeclaredDecidableEntries(entries: readonly UndeclaredDecidableEntry[]): string {
+  return entries
+    .map(
+      (e) =>
+        `  ${e.file}:${formatLineRange(e)} (${e.function}) is ${e.actual} but declares nothing — add "class": "${e.actual}" to its selector`,
+    )
+    .join("\n");
+}
+
 function allowlisted(entries: ResolvedAllowlistEntry[], file: string, line: number): boolean {
   return entries.some((e) => {
     if (e.file !== file) return false;
@@ -755,6 +799,13 @@ export function runCheck(repoRoot: string = REPO_ROOT): number {
     if (mismatches.length > 0) {
       console.error(
         `coverage-patch-gate: allowlist entries whose declared selector.class no longer matches the code (re-point the selector, restate the class, or drop the entry):\n${renderSyntaxClassMismatches(mismatches)}`,
+      );
+      return 1;
+    }
+    const undeclared = findUndeclaredDecidableEntries(entries, sources);
+    if (undeclared.length > 0) {
+      console.error(
+        `coverage-patch-gate: allowlist entries whose range the AST can classify but that declare no selector.class (the ratchet floor — decidable means declared):\n${renderUndeclaredDecidableEntries(undeclared)}`,
       );
       return 1;
     }

@@ -100,7 +100,7 @@ describe("t537 process boundary: --check via AMADEUS_PATCH_* seams", () => {
     expect(spawnSync("git", ["commit", "-m", "test: seed fixture"], { cwd: repo, encoding: "utf8" }).status).toBe(0);
 
     const inputs = tempDir("declared-class-inputs-");
-    writeFileSync(join(inputs, "lcov.info"), "SF:tracked.ts\nDA:5,0\nend_of_record\n");
+    writeFileSync(join(inputs, "lcov.info"), "SF:tracked.ts\nDA:3,0\nDA:5,0\nend_of_record\n");
     writeFileSync(join(inputs, "pr.diff"), "");
     process.env.AMADEUS_PATCH_LCOV = join(inputs, "lcov.info");
     process.env.AMADEUS_PATCH_DIFF = join(inputs, "pr.diff");
@@ -112,8 +112,8 @@ describe("t537 process boundary: --check via AMADEUS_PATCH_* seams", () => {
   const inputsFor = new Map<string, string>();
 
   // The ledger is JSON on disk, so an invalid class is just a value to write.
-  function writeLedger(repo: string, cls: string | undefined): void {
-    const selector = createSemanticSelector("tracked.ts", FIXTURE_SOURCE, "5");
+  function writeLedger(repo: string, cls: string | undefined, lines = "5"): void {
+    const selector = createSemanticSelector("tracked.ts", FIXTURE_SOURCE, lines);
     const entry = {
       file: "tracked.ts",
       selector: cls === undefined ? selector : { ...selector, class: cls },
@@ -151,9 +151,22 @@ describe("t537 process boundary: --check via AMADEUS_PATCH_* seams", () => {
     expect(check(d).code).toBe(0);
   });
 
-  test("an entry declaring nothing passes — the ledger predates the field", () => {
+  // The floor (#2901): the fixture range is a catch arm, so leaving it
+  // undeclared is no longer the ledger predating the field — it is a decidable
+  // range dodging the ratchet, and the gate says exactly what to add.
+  test("an entry declaring nothing on a decidable range turns the gate red", () => {
     const d = fixtureRepo();
     writeLedger(d, undefined);
+    const red = check(d);
+    expect(red.code).toBe(1);
+    expect(red.stderr).toContain("the ratchet floor");
+    expect(red.stderr).toContain('add "class": "catch-arm"');
+  });
+
+  test("an entry declaring nothing on an unclassifiable range passes", () => {
+    const d = fixtureRepo();
+    // Line 3 is a plain statement inside the try block: no decidable class.
+    writeLedger(d, undefined, "3");
     expect(check(d).code).toBe(0);
   });
 

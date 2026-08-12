@@ -22,9 +22,11 @@ import {
   DECLARABLE_SYNTAX_CLASSES,
   type DeclaredSyntaxClass,
   findSyntaxClassMismatches,
+  findUndeclaredDecidableEntries,
   matchesSyntaxClass,
   parseAllowlist,
   renderSyntaxClassMismatches,
+  renderUndeclaredDecidableEntries,
 } from "../coverage-patch-gate.ts";
 
 const FILE = "fixture.ts";
@@ -103,7 +105,7 @@ describe("t536 declared class against the AST", () => {
     expect(findSyntaxClassMismatches([entryFor("11", "type-only")], SOURCES)).toEqual([]);
   });
 
-  test("an undeclared entry is not checked at all", () => {
+  test("an undeclared entry is not checked for a mismatch — the floor check owns it", () => {
     expect(findSyntaxClassMismatches([entryFor("3")], SOURCES)).toEqual([]);
   });
 
@@ -155,6 +157,41 @@ describe("t536 declared class against the AST", () => {
 
 // NFR-4: a field no one reads is a field that cannot be wrong, which is how
 // verification theatre starts. Every field of the verdict reaches the operator.
+// The ratchet floor. A declaration pins a range so later drift turns red, but a
+// pin only protects entries that carry one — nothing stopped a NEW entry with a
+// perfectly decidable range from arriving undeclared and re-opening the gap the
+// bulk pinning closed. The floor makes the ratchet monotone: a range the AST
+// can classify must say so.
+describe("t536 the ratchet floor: a decidable range must declare its class", () => {
+  test("an undeclared catch-arm range is reported with the class to add", () => {
+    const found = findUndeclaredDecidableEntries([entryFor("5")], SOURCES);
+    expect(found).toHaveLength(1);
+    expect(found[0].actual).toBe("catch-arm");
+    expect(found[0].file).toBe(FILE);
+  });
+
+  test("an undeclared type-only range is reported as type-only", () => {
+    const found = findUndeclaredDecidableEntries([entryFor("11")], SOURCES);
+    expect(found).toHaveLength(1);
+    expect(found[0].actual).toBe("type-only");
+  });
+
+  test("a range the AST cannot classify stays exempt from the floor", () => {
+    expect(findUndeclaredDecidableEntries([entryFor("3")], SOURCES)).toEqual([]);
+  });
+
+  test("a declared entry is the mismatch check's business, not the floor's", () => {
+    expect(findUndeclaredDecidableEntries([entryFor("5", "catch-arm")], SOURCES)).toEqual([]);
+    expect(findUndeclaredDecidableEntries([entryFor("5", "type-only")], SOURCES)).toEqual([]);
+  });
+
+  test("the rendered line names the range and the exact declaration to add", () => {
+    const rendered = renderUndeclaredDecidableEntries(findUndeclaredDecidableEntries([entryFor("5")], SOURCES));
+    expect(rendered).toContain("fixture.ts:5");
+    expect(rendered).toContain('"class": "catch-arm"');
+  });
+});
+
 describe("t536 the report consumes every field of the verdict", () => {
   test("the rendered line carries file, range, function, declaration, and finding", () => {
     const mismatches = findSyntaxClassMismatches([entryFor("9-13", "catch-arm")], SOURCES);
