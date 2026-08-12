@@ -122,7 +122,11 @@ recovery for a `created` attestation invalidated by later pushes ("PR head
 changed"): push the current HEAD, then run `create` again; the pull request is
 reused, never closed and reopened. An existing pull request whose head or
 identity does not match refuses with the remediation named on stderr (`gh pr
-edit` for provenance, push for a stale head).
+edit` for provenance, push for a stale head). `report` and `override` name this
+same remedy on stderr when they meet a report whose attestation is intact and
+names this delivery but was bound to an earlier head — they still refuse and
+still write nothing. A receipt that is tampered, copied, or replayed keeps the
+undifferentiated refusal: it earns no diagnosis it could steer.
 
 Pass `--record`, `--bolt`, and `--unit` together when the pull request is linked
 to an Amadeus Intent. The CLI resolves the record against the adjacent
