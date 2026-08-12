@@ -52,3 +52,17 @@
 
 - 承認済み要件・設計から逸脱する必要に気づいたら実装前に停止して裁定(cid:requirements-analysis:implementation-deviation-election)。既存様式への準拠と判断する場合も停止対象(deviation-applicability-not-solo)。
 - 検証は同期(フォアグラウンド)で完遂し、モニタ/バックグラウンド待ちでターンを終えない(builder-prompt-sync-completion)。
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-12T04:39:05Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+FR-1〜7/NFR-1〜2 全てが実装・テストへ実測トレース可能。検証劇場なし・無申告逸脱なし。NIT 1件(判別サイト件数のスコープ表記 — conductor 是正済み)、FOLLOW-UP 1件(git sweep — conductor が squash commit の name-only 実測で閉包: 非record面は申告どおり8ファイル)
+
+### Findings
+
+- None

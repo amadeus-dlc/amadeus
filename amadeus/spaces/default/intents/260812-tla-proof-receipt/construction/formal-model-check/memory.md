@@ -2,7 +2,6 @@
 > This file is maintained by the orchestrator during stage execution. Add observations at the gate ritual, not by editing here directly.
 
 ## Interpretations
-- 2026-08-12T03:00:00Z — ユーザーから standing マージ委託を受領(逐語「以後のすべてのマージ承認はあなたに委託します。CI green条件クリアしていればマージしてよいです。」)。適用条件: 必須チェック全green+未解決actionableスレッド0+MERGEABLE の実測後にconductorがマージ実行し、着地確認付きで報告する。セッションスコープ。
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations

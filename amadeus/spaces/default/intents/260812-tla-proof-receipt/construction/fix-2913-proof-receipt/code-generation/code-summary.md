@@ -46,5 +46,5 @@
 
 1. **trace パーサの既存制約2件(#2913 と独立、未修正 — 別 Issue 起票対象)**: (a) 単一変数モデルは TLC 出力形(`ticks = 0`、先頭 `/\` なし)により parseTrace(`tlc-toolchain.ts:539`)が counterexample を必ず GRAMMAR にする (b) TLC はアルファベット順印字だが referee の `traceStateVariablesOf` は VARIABLES 宣言順を返し位置一致要求と衝突。修正後に初めて出力解析へ到達して顕在化した独立欠陥。
 2. 既存 probe `tla-referee-real-toolchain-probe.ts` は単一変数モデルのため exit 1 のまま(スコープ外、新規テストが同経路をカバー)。
-3. 判別サイト6箇所の guard 切替は FR-6 充足に必須の波及対応として実施(verified 受理集合不変を既存 90 pass で確認)— 申告済み。
+3. 判別サイトの guard 切替(`fs-tlc-toolchain.ts` 内6箇所: :1579/:1608/:1646/:1665/:1688/:1689、`tlc-toolchain.ts` 内3箇所: :253/:298/:598)は FR-6 充足に必須の波及対応として実施(verified 受理集合不変を既存 90 pass で確認)— 申告済み。件数の測定 ref = merge commit `71523ecaf`、述語 = `grep -n isSourceBoundTlaModelReceipt <両ファイル>` の非定義行。
 4. `ModelCheckReceiptBundle` に bytes を持たないメンバを追加(null 埋めでなく型から落とし明示分岐)— parse-don't-validate 準拠の設計判断、申告済み。
