@@ -43,8 +43,13 @@ export interface RefereeToolchainOptions {
   readonly deadlineMs?: number;
 }
 
+/**
+ * Hashes the decoded source, the one encoding the loader and the toolchain's
+ * byte check already agree on. Anything else produces a receipt the toolchain
+ * cannot re-verify against the very bytes it was derived from (#2913, D2).
+ */
 function sourceIdentityOf(bytes: Uint8Array, domain: string): string {
-  return canonicalIdentity({ bytes: Buffer.from(bytes).toString("base64") }, domain).sha256;
+  return canonicalIdentity(new TextDecoder("utf-8", { fatal: true }).decode(bytes), domain).sha256;
 }
 
 function declaredInvariantsOf(config: string): readonly string[] {
@@ -210,6 +215,7 @@ export function createRefereeToolchain(options: RefereeToolchainOptions = {}): T
 
 export const RefereeToolchainInternals = {
   describeMutant,
+  sourceIdentityOf,
   declaredInvariantsOf,
   traceStateVariablesOf,
 } as const;
