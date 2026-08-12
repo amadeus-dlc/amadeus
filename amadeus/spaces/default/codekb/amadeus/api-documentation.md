@@ -1,6 +1,40 @@
 # API ドキュメント
 
-## テスト時間設定 API の現状（260810-test-time-factor、現在、observed `ce3c3ccfd`）
+## TLA+ receipt API の入力ドメイン（260812-tla-proof-receipt、現在、observed `854692fd7`）
+
+**観測 ref**: 本節の file:line はすべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD）時点。正本は `re-scans/260812-tla-proof-receipt.md`。パスは `plugins/formal-model-check/tools/` 配下。
+
+### `createVerifiedTlaModelReceipt(source: VerifiedModelSource)`（`tla-model-receipt.ts:89-130`）
+
+- 読む入力は `source.moduleIdentity` / `source.cfgIdentity` / `source.auxIdentities` の 3 つのみ（`:104-112`）
+- **identity をバイト列から再計算しない** — 呼び出し元が置いた値をそのままコピーし、`identityInput` オブジェクト全体を `:124-127` でハッシュして `modelIdentity` を作る
+- したがって identity のエンコーディングは本 API ではなく `VerifiedModelSource` の**生産者**が決める。現在の生産者は 2 系統あり形式が異なる（loader = デコード済み文字列 `tla-model-loader-internal.ts:279`、referee の `describeMutant` = オブジェクト `{bytes: base64}` `tla-referee-toolchain.ts:47`）。この「コピーであって計算ではない」性質が、2 つのエンコーディングを無検出で共存させている
+
+### `validateVerifiedTlaModelReceipt(input: unknown)`（`tla-model-receipt.ts:142`）
+
+- 名目上の入力は `unknown` だが、**実効的な入力ドメインは「登録済み model-map に存在するモデルの receipt」に限られる**
+- 基準値は引数ではなく loader から作られる: `:154` `loadVerifiedTlaSources()` → `:156` `selectVerifiedModel(loaded.value, input.modelName)` → `:158` `createVerifiedTlaModelReceipt(selected.value)`
+- 拒否は 2 段階 — 未登録なら `:157` `verified model is unavailable: ${input.modelName}`、登録済みでも identity 比較（`:161-169`）が合わなければ `:169` `"receipt differs from the selected verified model"`
+- 形状検査は `exactPlainObject(input, VERIFIED_RECEIPT_KEYS)`（`:145`、実装 `:69-75`）で**キー集合の完全一致**を要求する。union へ新しいメンバを足す設計はこの厳格さを踏まえる必要がある
+- ディスパッチャは `validateModelCheckReceipt`（`:184`、`:187` で `isVerifiedTlaModelReceipt` により verified 分岐へ委譲）
+
+### `canonicalIdentity(value, domain)` の呼び出し規約（現状は不統一）
+
+| 呼び出し元 | 渡す値 | file:line |
+|---|---|---|
+| referee | `{ bytes: Buffer.from(bytes).toString("base64") }` | `tla-referee-toolchain.ts:47` |
+| loader | デコード済みソース文字列 | `tla-model-loader-internal.ts:279` |
+| toolchain のバイト照合 | デコード済みソース文字列 | `fs-tlc-toolchain.ts:731` |
+
+同じ `domain` に対して 2 種類の入力形式が使われており、同一バイト列から異なる sha256 が出る。この規約は型で強制されていない（`canonicalIdentity` は任意の JSON 値を受ける）。
+
+### `loadVerifiedTlaSourcesInternal(moduleUrl, fs)`（`tla-model-loader-internal.ts:463`）
+
+- 公開 API ではなく test 専用 seam。本番呼び出し元は無引数ラッパ `loadVerifiedTlaSources`（`tla-model-loader.ts:31-33`）を使う契約
+- 直上コメント `:461-462` は逐語で `// Internal/test-only seam. Production callers must use the no-argument wrapper` / `// in tla-model-loader.ts so runtime input cannot select a root or filesystem.`
+- **この禁止は方針であって能力の制約ではない** — `findRepositoryRoot`（`:151-168`）により root は実際に選択でき、`tests/integration/t403-tla-loader-generalization.test.ts:94-100` が合成ワークスペースでその能力を使っている。選べないのは root から独立した任意の model-map パスのみ
+
+## テスト時間設定 API の現状（260810-test-time-factor、履歴、observed `ce3c3ccfd`）
 
 | 入力/API | 現状 | 備考 |
 |---|---|---|
@@ -10,7 +44,7 @@
 
 要件化すべき公開契約候補は、未指定時 `1`、有限の正値のみ受理、基準ミリ秒に係数を乗算することである。丸めと上限、明示 `--test-timeout-ms` に係数を掛けるかは requirements-analysis で固定する。
 
-## plugin advisory 宣言の解決契約（260810-plugin-manifest-resoluti、現在、observed `7b9391be2`）
+## plugin advisory 宣言の解決契約（260810-plugin-manifest-resoluti、履歴、observed `7b9391be2`）
 
 **観測 ref**: すべて observed = `7b9391be2db4fad791d637293ea442d5a1462bac`。正本は `re-scans/260810-plugin-manifest-resoluti.md`。
 

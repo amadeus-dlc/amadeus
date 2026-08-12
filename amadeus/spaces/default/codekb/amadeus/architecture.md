@@ -1,6 +1,64 @@
 # アーキテクチャ
 
-## テスト時間係数の未接続境界（260810-test-time-factor、現在、observed `ce3c3ccfd`）
+## receipt 信頼境界の二重欠陥（260812-tla-proof-receipt、現在、observed `854692fd7`）
+
+**観測 ref**: 本節の file:line はすべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD、`origin/main` 系譜）時点。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（HEAD の祖先のうち距離最小 = **34 commits**）。currency 根拠・全述語・全数列挙の正本は `re-scans/260812-tla-proof-receipt.md`。
+
+**Focus**: [Issue #2913](https://github.com/amadeus-dlc/amadeus/issues/2913)（ミラー #2917）— `tla-authoring` ステージの proof が receipt 検証で止まり、TLC 実行に到達しない。クロスレビュー 2 名成立済み。
+
+### 中核: 「レジストリ照合器」を「自己完結 receipt 検証器」として使っている
+
+`validateVerifiedTlaModelReceipt`（`plugins/formal-model-check/tools/tla-model-receipt.ts:142`）は、入力 receipt を **登録済み model-map と突き合わせる照合器**である。検証の基準値 `expected` は、引数からではなく loader が返す登録済みソースから作られる（`:154` `const loaded = loadVerifiedTlaSources();` / `:156` `const selected = selectVerifiedModel(loaded.value, input.modelName);` / `:158` `const expected = createVerifiedTlaModelReceipt(selected.value);`）。
+
+一方 referee は、**登録されていないディスク上のバイト列**から receipt を作る（`tla-referee-toolchain.ts:158` `const receipt = createVerifiedTlaModelReceipt(described.value.source);`）。この receipt は登録済み model-map に存在しないため、照合器は構造的に「一致する登録モデルがない」として拒否する。すなわち**生成器と検証器の契約が食い違っている**のであって、どちらか一方の実装バグではない。
+
+### 欠陥は 2 つあり、独立している
+
+| ID | 欠陥 | 所在 | 効果 |
+|---|---|---|---|
+| **D1** | 検証器が model-map に直接結合している（DI seam なし） | `tla-model-receipt.ts:154` / `:156` | 未登録モデルの receipt は `verified model is unavailable: <name>`（`:157`）で拒否 |
+| **D2** | identity のエンコーディングが producer 間で分裂している | `tla-referee-toolchain.ts:47` vs `tla-model-loader-internal.ts:279` / `fs-tlc-toolchain.ts:731` | 登録済みモデルでも identity 比較が不一致になり `receipt differs from the selected verified model`（`:169`）で拒否 |
+
+**D2 の内訳**（3 サイトのうち 2 形式が併存）:
+
+| サイト | `canonicalIdentity` への入力 | file:line |
+|---|---|---|
+| referee | **オブジェクト** `{ bytes: <base64> }` | `tla-referee-toolchain.ts:47` `return canonicalIdentity({ bytes: Buffer.from(bytes).toString("base64") }, domain).sha256;` |
+| loader | **デコード済み文字列** | `tla-model-loader-internal.ts:279` `canonicalIdentity(source, domain).sha256` |
+| toolchain のバイト照合 | **デコード済み文字列** | `fs-tlc-toolchain.ts:731` `if (canonicalIdentity(source, domain).sha256 !== expectedIdentity) {` |
+
+分裂が検出されないまま共存できる理由は、`createVerifiedTlaModelReceipt`（`tla-model-receipt.ts:89-130`）が **identity を再計算せず呼び出し元の値をコピーする**ことにある（`:104-112` `moduleBytesIdentity: source.moduleIdentity,` / `cfgBytesIdentity: source.cfgIdentity,` / `auxIdentities.map(...)`）。エンコーディングは receipt 構築器ではなく `VerifiedModelSource` の**生産者**が決めるため、referee 経路と loader 経路で別々の形式がそのまま receipt に載る。
+
+**D2 は D1 の修正の前提条件である。** 現在のバイト照合は loader 形式どうしの比較で自己整合しているが（`verifyPlannedModelSources` が `model.value.moduleBytesIdentity` を `readVerifiedSourceBytes` へ渡す — `fs-tlc-toolchain.ts:1645` / `:1651`、補助モジュールは `:1777`。`model.value` は `tla-model-receipt.ts:177` `...expected.value` 由来 = loader 形式）、D1 だけを直して自己完結 receipt 経路を通すと、referee 自身の object 形式 identity が同じバイト照合へ渡り、`MODEL_RECEIPT` の代わりに `SOURCE_IDENTITY` で落ちる。失敗が 1 層下へ移動するだけになる。
+
+### `validateModelCheckReceipt` の消費者は 2 つある
+
+片方だけを直しても失敗は解消せず、発生箇所が移動する。
+
+| 消費者 | 段階 | 失敗の出方 |
+|---|---|---|
+| `fs-tlc-toolchain.ts:1641` `const model = validateModelCheckReceipt(input.modelReceipt);`（`verifyPlannedModelSources`、宣言 `:1635`） | **準備段**（TLC 実行前） | `:1643` `toolchainAbort("PreparationError", "MODEL_RECEIPT", model.error.message);` — #2913 が現に発火している箇所 |
+| `tlc-toolchain.ts:647` `const model = validateModelCheckReceipt(input.modelReceipt);`（`parseTlcOutput174`） | **出力解析段**（TLC 実行完了後） | `GRAMMAR` `TLC output model receipt is invalid: ...`。準備段で止まる現状では**到達しない**が、同じ model-map 依存を持つ第 2 の実例 |
+
+```mermaid
+flowchart TD
+    Referee["referee describeMutant<br/>tla-referee-toolchain.ts:47<br/>object form identity"] --> Ctor["createVerifiedTlaModelReceipt<br/>tla-model-receipt.ts:104-112<br/>copies identity, no recompute"]
+    Loader["loadVerifiedTlaSources<br/>tla-model-loader-internal.ts:279<br/>string form identity"] --> Ctor
+    Ctor --> Validator["validateVerifiedTlaModelReceipt<br/>tla-model-receipt.ts:142"]
+    Loader -->|"D1: hard call :154 / :156"| Validator
+    Validator -->|"MODEL_RECEIPT"| Prep["fs-tlc-toolchain.ts:1641 preparation"]
+    Validator -->|"GRAMMAR"| Parse["tlc-toolchain.ts:647 output parse"]
+    Prep --> ByteCheck["readVerifiedSourceBytes<br/>fs-tlc-toolchain.ts:731<br/>string form compare"]
+```
+<!-- Text fallback: referee(object形式) と loader(string形式) の双方が createVerifiedTlaModelReceipt へ流れ込むが、構築器は identity を再計算せずコピーする(D2)。検証器は loader を直接呼んで基準値を作る(D1)。検証器の下流には準備段(fs-tlc-toolchain.ts:1641)と出力解析段(tlc-toolchain.ts:647)の 2 消費者があり、さらに準備段の先には string 形式のバイト照合(:731)がある。 -->
+
+### loader 内部 seam は「能力の欠如」ではなく「方針の禁止」
+
+`loadVerifiedTlaSourcesInternal`（`tla-model-loader-internal.ts:463`）の直上コメント `:461-462` は逐語で `// Internal/test-only seam. Production callers must use the no-argument wrapper` / `// in tla-model-loader.ts so runtime input cannot select a root or filesystem.` である。ただしこの seam は **root を選択する能力を実際に持つ**（`findRepositoryRoot` `:151-168` が `moduleUrl` から `.git` + `package.json` を持つ最初のディレクトリまで遡る）。`tests/integration/t403-tla-loader-generalization.test.ts:94-100` は合成ワークスペースから fixture モデルを読ませるためにこの能力を使っている。
+
+したがって `:461-462` は**方針上の禁止**であって能力上の制約ではない。設計段でこの区別を明示しておかないと、「seam を開ければ簡単に直る」という再発見が起きる。
+
+## テスト時間係数の未接続境界（260810-test-time-factor、履歴、observed `ce3c3ccfd`）
 
 現行は `.github/workflows/*.yml` からテスト runner へ環境能力を渡す境界がない。`tests/lib/run-tests-args.ts` が固定の既定 timeout を解決し、`tests/run-tests.ts` が各 Bun child へ `--timeout` として配布する。一方、テスト内の `Bun.sleep`、poll、settle、child process timeout は各ファイルの固定値であり、runner の上限だけを伸ばしても内部待機は伸びない。
 
@@ -19,7 +77,7 @@ flowchart LR
 ```
 <!-- Text fallback: GitHub Actions は TEST_TIME_FACTOR=2/3、ローカルは未指定=1として共通 resolver へ渡し、runner timeout と負荷依存 wait を拡張する。明示 live-test override は最終値として二重乗算しない。 -->
 
-## plugin manifest 解決の所在非対称と advisory 消費者グラフ（260810-plugin-manifest-resoluti、現在、observed `7b9391be2`）
+## plugin manifest 解決の所在非対称と advisory 消費者グラフ（260810-plugin-manifest-resoluti、履歴、observed `7b9391be2`）
 
 **観測 ref**: 本節の file:line はすべて observed = `7b9391be2db4fad791d637293ea442d5a1462bac`（= repo HEAD）時点。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`（HEAD の祖先、**13 commits / 302 files**、**PR #2811 を含む**）。currency 根拠・全述語・全数列挙の正本は `re-scans/260810-plugin-manifest-resoluti.md`。
 
