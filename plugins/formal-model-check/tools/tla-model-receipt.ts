@@ -266,6 +266,10 @@ function invariantSourceMapCovers(value: unknown, invariants: readonly string[])
  * identities and vocabulary, and an identity that still hashes to the value it
  * carries. No model map is consulted — the model is not registered yet.
  */
+function sha256Field(value: unknown): value is string {
+  return typeof value === "string" && SHA256.test(value);
+}
+
 export function validateRefereeTlaModelReceipt(
   input: unknown,
 ): Result<RefereeTlaModelReceipt, ModelCheckReceiptValidationError> {
@@ -279,9 +283,7 @@ export function validateRefereeTlaModelReceipt(
   if (modelName === TLA_EXECUTION_MODEL_NAME) {
     return reject(`${TLA_EXECUTION_MODEL_NAME} requires the frozen model receipt`);
   }
-  if (typeof modelIdentity !== "string" || !SHA256.test(modelIdentity)
-    || typeof moduleBytesIdentity !== "string" || !SHA256.test(moduleBytesIdentity)
-    || typeof cfgBytesIdentity !== "string" || !SHA256.test(cfgBytesIdentity)) {
+  if (!sha256Field(modelIdentity) || !sha256Field(moduleBytesIdentity) || !sha256Field(cfgBytesIdentity)) {
     return reject("receipt byte identities are invalid");
   }
   if (!auxiliaryModulesAreWellFormed(input.auxiliaryModules, modelName)) {
