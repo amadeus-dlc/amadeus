@@ -317,6 +317,29 @@ describe("the output-parse consumer accepts the referee receipt", () => {
     }
   });
 
+  test("a stdlib Integers parse line is consumed, not rejected as unframed", () => {
+    // PrConvergenceGate-class models EXTENDS Integers; TLC then prints a
+    // "Parsing file .../.tlc-stdlib/Integers.tla" line that the referee arm
+    // must consume as module transcript instead of failing GRAMMAR (#2838).
+    const chunks = [new TextEncoder().encode("Parsing file /workspace/.tlc-stdlib/Integers.tla\n")];
+    const exploration = parseTlcOutput174({
+      chunks,
+      exitCode: 0,
+      signal: null,
+      timedOut: false,
+      expectedModuleName: "Counter",
+      expectedModulePath: "/workspace/Counter.tla",
+      expectedStandardModuleDirectory: "/workspace/.tlc-stdlib",
+      verifiedArtifactDescriptorIdentity: FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY,
+      modelReceipt: refereeReceipt() as never,
+      vocabulary: { moduleName: "Counter", namedInvariants: ["TypeOK"], traceStateVariables: ["ticks"] },
+    });
+    expect(exploration.kind).toBe("HARNESS_ERROR");
+    if (exploration.kind === "HARNESS_ERROR") {
+      expect(exploration.detail).not.toContain("Integers.tla");
+    }
+  });
+
   test("output for a different module is still unbound", () => {
     const exploration = parse(refereeReceipt(), "Other");
     expect(exploration.kind).toBe("HARNESS_ERROR");

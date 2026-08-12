@@ -243,10 +243,17 @@ function decodeChunks(chunks: Uint8Array[]): string | FailedTlcExploration {
 }
 
 const STANDARD_MODULES = ["Naturals", "Sequences", "FiniteSets", "TLC"] as const;
+// The source-bound arms accept the wider TLA+ standard library: an authored
+// model may EXTENDS Integers (negative sentinels), which the exact-transcript
+// frozen arm never sees, so the widening stays off that strict contract.
+const SOURCE_BOUND_STANDARD_MODULES = [...STANDARD_MODULES, "Integers"] as const;
 function parsedAuxiliaryModule(line: string, input: TlcOutputInput): string | null {
   if (line === `Parsing file ${input.expectedModulePath}`) return input.expectedModuleName;
   const directory = input.expectedStandardModuleDirectory.replace(/\/+$/, "");
-  const standard = STANDARD_MODULES.find(
+  const catalog = isSourceBoundTlaModelReceipt(input.modelReceipt)
+    ? SOURCE_BOUND_STANDARD_MODULES
+    : STANDARD_MODULES;
+  const standard = catalog.find(
     (module) => line === `Parsing file ${directory}/${module}.tla`,
   );
   if (standard !== undefined) return standard;
@@ -271,7 +278,7 @@ function verifiedModuleTranscriptIsValid(
   ];
   const parsedNames = parsed.map((entry) => entry.slice(2));
   const semanticNames = semantic.map((entry) => entry.slice(2));
-  const standardModules = new Set<string>(STANDARD_MODULES);
+  const standardModules = new Set<string>(SOURCE_BOUND_STANDARD_MODULES);
   const standardParsed = parsedNames.filter((name) => standardModules.has(name));
   const standardSemantic = semanticNames.filter((name) => standardModules.has(name));
   const exactlyOnce = (names: readonly string[], name: string) =>
