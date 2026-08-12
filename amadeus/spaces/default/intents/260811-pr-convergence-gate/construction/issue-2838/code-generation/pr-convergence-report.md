@@ -1,20 +1,20 @@
 # PR Convergence Report
 
 - kind: created
-- pull request: amadeus-dlc/amadeus#2911
-- generated at: 2026-08-11T23:00:33Z
+- pull request: amadeus-dlc/amadeus#2930
+- generated at: 2026-08-12T06:55:05Z
 - converged: false
 ## CLI Attestation
 
-- attestation id: prca:b1195c5e8c5a450ed8f26686f7d0bd02f2ed2905933ee23e13832e60f0761512
+- attestation id: prca:5b73a3d3944bb2dbb3e7bbbd8a6eb5706e4e174bfe88e348423c2c2903dcbf23
 - intent: pr-convergence-gate
 - intent uuid: 019ff124-287b-77ff-8667-8565a8b879fd
 - record: amadeus/spaces/default/intents/260811-pr-convergence-gate/
 - bolt: pr-convergence
 - unit: issue-2838
 - repository: amadeus-dlc/amadeus
-- pr: 2911
-- local head: 6214c7f46dd7bda23f0769b3ca75f1c33f546363
-- remote head: 6214c7f46dd7bda23f0769b3ca75f1c33f546363
-- pr head: 6214c7f46dd7bda23f0769b3ca75f1c33f546363
-- content digest: sha256:68b589d6f5cf896684841d484b239faf834b5d1a02e16ffa09fc50faa2bca57c
+- pr: 2930
+- local head: 9229f72528cf03cc3737466ccf2a3c14b9aa0860
+- remote head: 9229f72528cf03cc3737466ccf2a3c14b9aa0860
+- pr head: 9229f72528cf03cc3737466ccf2a3c14b9aa0860
+- content digest: sha256:c4021b0b3cb787f812a618676330cd4258a005196198ccff1c4cab50081379d0
