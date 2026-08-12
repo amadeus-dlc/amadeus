@@ -1,4 +1,4 @@
-// covers: function:resolveSensorsForStage, function:evaluateBlockingSensors, function:resolveScriptPath
+// covers: function:resolveSensorsForStage, function:evaluateBlockingSensors, function:resolveScriptPath, function:digestFile
 //
 // t511 (unit) — Issue #2671 item (c): the `blocking` sensor severity, in its two
 // pure layers.

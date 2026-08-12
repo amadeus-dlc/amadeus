@@ -1095,6 +1095,7 @@ describe("t92 Group J: audit-row required fields per event type", () => {
     expect(auditFieldCount(f, "SENSOR_FAILED")).toBe(9);
     expect(auditField(f, "SENSOR_FAILED", "Detail path")).not.toBe("");
     expect(isInteger(auditField(f, "SENSOR_FAILED", "Findings count"))).toBe(true);
+    expect(auditField(f, "SENSOR_FAILED", "Output digest")).toMatch(/^sha256:[0-9a-f]{64}$/);
   });
 
   test("35: SENSOR_BUDGET_OVERRIDE — 10 fields including digest and cap evidence", () => {
@@ -1110,6 +1111,7 @@ describe("t92 Group J: audit-row required fields per event type", () => {
     expect(auditField(f, "SENSOR_BUDGET_OVERRIDE", "Cap layer")).toBe("registry");
     expect(isInteger(auditField(f, "SENSOR_BUDGET_OVERRIDE", "Cap value"))).toBe(true);
     expect(isInteger(auditField(f, "SENSOR_BUDGET_OVERRIDE", "Observed value"))).toBe(true);
+    expect(auditField(f, "SENSOR_BUDGET_OVERRIDE", "Output digest")).toMatch(/^sha256:[0-9a-f]{64}$/);
   }, scaleTestTime(15000));
 });
 

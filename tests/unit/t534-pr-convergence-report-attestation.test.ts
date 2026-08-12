@@ -1,4 +1,4 @@
-// covers: file:plugins/pr-convergence/tools/pr-convergence-attestation.ts, file:plugins/pr-convergence/tools/pr-convergence-git-runner.ts, audit:ARTIFACT_ATTESTED
+// covers: file:plugins/pr-convergence/tools/pr-convergence-attestation.ts, file:plugins/pr-convergence/tools/pr-convergence-git-runner.ts
 import { describe, expect, test } from "bun:test";
 import {
   attestationId,

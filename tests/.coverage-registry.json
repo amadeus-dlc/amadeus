@@ -32,7 +32,7 @@
     },
     "coveredByClass": {
       "function": 186,
-      "audit": 45,
+      "audit": 44,
       "scope": 15,
       "stage": 8,
       "hook": 15,
@@ -45,13 +45,8 @@
       "unitClass": "audit",
       "unitId": "ARTIFACT_ATTESTED",
       "minMechanism": "none",
-      "coveredBy": [
-        {
-          "file": "tests/unit/t534-pr-convergence-report-attestation.test.ts",
-          "mechanism": "none"
-        }
-      ],
-      "status": "covered"
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "audit",

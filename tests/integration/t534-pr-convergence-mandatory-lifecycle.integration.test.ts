@@ -12,14 +12,16 @@ import type { GitSpawn } from "../../plugins/pr-convergence/tools/pr-convergence
 const roots: string[] = [];
 afterEach(() => { while (roots.length > 0) rmSync(roots.pop()!, { recursive: true, force: true }); });
 
-function fixture(): { root: string; record: string; body: string; sha: string } {
+type Scope = "self-fix" | "self-feature" | "self-refactor" | "self-document";
+
+function fixture(scope: Scope): { root: string; record: string; body: string; sha: string } {
   const root = mkdtempSync(join(tmpdir(), "t534-self-")); roots.push(root);
   const record = join(root, "amadeus/spaces/default/intents/260812-pr-gate");
   mkdirSync(join(record, "audit"), { recursive: true });
   writeFileSync(join(root, "amadeus/spaces/default/intents/intents.json"), JSON.stringify([
     { slug: "pr-gate", uuid: "uuid-2838", dirName: "260812-pr-gate", status: "in-flight" },
   ]));
-  writeFileSync(join(record, "amadeus-state.md"), "- **Scope**: self-fix\n");
+  writeFileSync(join(record, "amadeus-state.md"), `- **Scope**: ${scope}\n`);
   const body = join(root, "body.md"); writeFileSync(body, "## Summary\n\nIssue 2838.\n");
   execFileSync("git", ["init", "-q"], { cwd: root });
   execFileSync("git", ["config", "user.email", "t534@example.com"], { cwd: root });
@@ -54,6 +56,7 @@ function gh(sha: string, calls: string[][], provenance?: { title: string; body: 
     }
     return { code: 0, stdout: JSON.stringify({ data: { repository: { pullRequest: {
       mergeable: "MERGEABLE", mergeStateStatus: "CLEAN", state: "OPEN", headRefOid: sha,
+      headRefName: "feature/2838",
       title: provenance?.title ?? "", body: provenance?.body ?? "",
     } } } }), stderr: "" };
   };
@@ -75,9 +78,11 @@ function seams(record: string, sha: string, calls: string[][], dirty = false, pr
   };
 }
 
-describe("t534 self delivery lifecycle", () => {
+const SCOPES: readonly [Scope][] = [["self-fix"], ["self-feature"], ["self-refactor"], ["self-document"]];
+
+describe.each(SCOPES)("t534 self delivery lifecycle (scope=%s)", (scope) => {
   test("create writes an attested created report and fires no GitHub mutation when prerequisites fail", async () => {
-    const f = fixture(); const calls: string[][] = [];
+    const f = fixture(scope); const calls: string[][] = [];
     const args = ["create", "--repo", "amadeus-dlc/amadeus", "--head", "feature/2838", "--base", "main",
       "--title", "fix: gate", "--body-file", f.body, "--record", f.record, "--bolt", "delivery", "--unit", "cli"];
     const refused = await runCli(args, seams(f.record, f.sha, calls, true));
@@ -94,7 +99,7 @@ describe("t534 self delivery lifecycle", () => {
   });
 
   test("advances created to converged, is idempotent, and rejects tampered bytes", async () => {
-    const f = fixture(); const calls: string[][] = [];
+    const f = fixture(scope); const calls: string[][] = [];
     const createArgs = ["create", "--repo", "amadeus-dlc/amadeus", "--head", "feature/2838", "--base", "main",
       "--title", "fix: gate", "--body-file", f.body, "--record", f.record, "--bolt", "delivery", "--unit", "cli"];
     expect((await runCli(createArgs, seams(f.record, f.sha, calls))).exitCode).toBe(0);
