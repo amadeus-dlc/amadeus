@@ -90,6 +90,21 @@ export function reportPayload(body: string): string {
   return start === -1 ? body : body.slice(0, start);
 }
 
+/**
+ * Threat model for the attestation check.
+ *
+ * The receipt id is an unkeyed digest over public identity fields, so it proves
+ * derivation, not authorship. Pairing it with this audit-carriage check defends
+ * against the failure this gate actually exists to stop: a convergence report
+ * that no CLI run produced — hand-written, hand-edited, copied from another
+ * unit, or left behind by a process mistake. Each of those leaves the shard
+ * without a matching receipt.
+ *
+ * It does NOT defend against a deliberate adversary holding repository write
+ * access: that adversary can append the matching ARTIFACT_ATTESTED line to the
+ * audit shards themselves. Defending against them needs a signing key the
+ * repository does not hold, and is outside this gate's trust boundary.
+ */
 export function auditCarriesAttestation(recordRoot: string, attestation: ReportAttestation): boolean {
   const auditDir = join(recordRoot, "audit");
   if (!existsSync(auditDir)) return false;

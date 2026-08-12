@@ -33,10 +33,13 @@ import { spawn } from "node:child_process";
 import { join, resolve } from "node:path";
 import {
   createGhRunner,
+  fetchOpenPrForHead,
   fetchRawPrState,
+  type GhError,
   type GhRunner,
   type GhSpawn,
   nodeGhSpawn,
+  type OpenPrSummary,
   parsePrRef,
   type PrRef,
   type RawPrState,
@@ -538,7 +541,15 @@ interface DeliveryWork {
 }
 
 type SelfContext =
-  | { readonly ok: true; readonly work: DeliveryWork; readonly heads: DeliveryHeads }
+  | {
+      readonly ok: true;
+      readonly work: DeliveryWork;
+      readonly heads: DeliveryHeads;
+      // The receipt of an existing report whose bytes and identity check out but
+      // whose audit line never landed — an interrupted earlier run. The caller
+      // completes that emission instead of refusing the record forever.
+      readonly pendingReceipt: ReportAttestation | null;
+    }
   | { readonly ok: false; readonly outcome: CliOutcome };
 
 function projectRootForRecord(record: string): string {
@@ -568,22 +579,47 @@ function transitionAllowed(current: string, next: string): boolean {
   return current === "override" && next === "converged";
 }
 
+/**
+ * The self-record gate for one verb. `status` is read-only: it reports what the
+ * pull request currently is, so it is exempt from the delivery prerequisites
+ * (clean worktree, local == remote == PR head) and from the created-report
+ * requirement — demanding those would make the verb unusable mid-work. The
+ * self-scope flag rule and the provenance check still apply to it; `report` and
+ * `override` stay fully fail-closed.
+ */
+function selfContextFor(
+  options: ConvergenceOptions,
+  evaluation: Evaluation,
+  seams: CliSeams,
+): SelfContext | null {
+  if (!isSelfRecord(options.record)) return null;
+  if (options.unlinked) {
+    return { ok: false, outcome: { exitCode: 1, stdout: "", stderr: "--unlinked true is forbidden for self-* scopes\n" } };
+  }
+  if (options.verb === "status") return null;
+  return currentSelfContext(options, evaluation, seams);
+}
+
 function currentSelfContext(
   options: ConvergenceOptions,
   evaluation: Evaluation,
   seams: CliSeams,
 ): SelfContext {
-  if (!isSelfRecord(options.record)) {
-    return { ok: false, outcome: { exitCode: 2, stdout: "", stderr: "not a self record\n" } };
-  }
-  if (options.unlinked) {
-    return { ok: false, outcome: { exitCode: 1, stdout: "", stderr: "--unlinked true is forbidden for self-* scopes\n" } };
-  }
   const prHead = evaluation.provenanceSource.headRefOid;
   if (prHead === undefined) {
     return { ok: false, outcome: { exitCode: 2, stdout: "", stderr: "PR head SHA is unavailable\n" } };
   }
-  const git = verifyCurrentPrerequisites(options.record, prHead, seams.gitSpawn ?? nodeGitSpawn);
+  const prHeadRef = evaluation.provenanceSource.headRefName;
+  if (prHeadRef === undefined) {
+    // Fail closed: without the branch name the checkout cannot be proved to be
+    // the pull request's head rather than a second branch on the same commit.
+    return { ok: false, outcome: { exitCode: 2, stdout: "", stderr: "PR head branch is unavailable\n" } };
+  }
+  const git = verifyCurrentPrerequisites(
+    options.record,
+    { oid: prHead, ref: prHeadRef },
+    seams.gitSpawn ?? nodeGitSpawn,
+  );
   if (!git.ok) {
     return { ok: false, outcome: { exitCode: 1, stdout: "", stderr: `delivery prerequisite failed: ${git.message}\n` } };
   }
@@ -597,28 +633,112 @@ function currentSelfContext(
   try { body = readFileSync(path, "utf-8"); } catch {
     return { ok: false, outcome: { exitCode: 1, stdout: "", stderr: "created report is missing; run create first\n" } };
   }
+  const work: DeliveryWork = {
+    intent: intent.value.name, intentUuid: intent.value.uuid, record: intent.value.recordPath,
+    bolt: provenance.bolt, unit: options.unit,
+  };
+  const heads: DeliveryHeads = { localHead: git.localHead, remoteHead: git.remoteHead, prHead };
   const receipt = parseAttestation(body);
-  const expected = receipt === null ? null : attestationId({
-    intent: receipt.intent, intentUuid: receipt.intentUuid, record: receipt.record,
-    bolt: receipt.bolt, unit: receipt.unit, repo: receipt.repo, pr: receipt.pr,
-    localHead: receipt.localHead, remoteHead: receipt.remoteHead, prHead: receipt.prHead,
-    contentDigest: receipt.contentDigest,
-  });
   if (
-    receipt === null || receipt.id !== expected || receipt.contentDigest !== reportPayloadDigest(reportPayload(body)) ||
-    receipt.intent !== intent.value.name || receipt.intentUuid !== intent.value.uuid ||
-    receipt.record !== intent.value.recordPath || receipt.bolt !== provenance.bolt ||
-    receipt.unit !== options.unit || receipt.repo !== options.ref.repo || receipt.pr !== options.ref.number ||
-    receipt.localHead !== git.localHead || receipt.remoteHead !== git.remoteHead || receipt.prHead !== prHead ||
-    !auditCarriesAttestation(options.record, receipt)
+    receipt === null || !attestationIsIntact(receipt, body) ||
+    !attestationBindsIdentity(receipt, work, heads, options.ref)
   ) {
     return { ok: false, outcome: { exitCode: 1, stdout: "", stderr: "report attestation is missing, stale, tampered, copied, or replayed\n" } };
   }
-  return {
-    ok: true,
-    work: { intent: intent.value.name, intentUuid: intent.value.uuid, record: intent.value.recordPath, bolt: provenance.bolt, unit: options.unit },
-    heads: { localHead: git.localHead, remoteHead: git.remoteHead, prHead },
-  };
+  // A receipt with no audit line is an interrupted run, not a forgery: the
+  // caller replays the emission rather than refusing the record forever.
+  const pendingReceipt = auditCarriesAttestation(options.record, receipt) ? null : receipt;
+  return { ok: true, work, heads, pendingReceipt };
+}
+
+/** The receipt is self-consistent and still describes the bytes on disk. */
+function attestationIsIntact(receipt: ReportAttestation, body: string): boolean {
+  const { id, ...unsigned } = receipt;
+  return id === attestationId(unsigned) &&
+    receipt.contentDigest === reportPayloadDigest(reportPayload(body));
+}
+
+/** The receipt names THIS delivery — a receipt copied from another intent, unit,
+ *  pull request, or head is intact but not ours. */
+function attestationBindsIdentity(
+  receipt: ReportAttestation,
+  work: DeliveryWork,
+  heads: DeliveryHeads,
+  ref: { readonly repo: string; readonly number: number },
+): boolean {
+  return receipt.intent === work.intent && receipt.intentUuid === work.intentUuid &&
+    receipt.record === work.record && receipt.bolt === work.bolt && receipt.unit === work.unit &&
+    receipt.repo === ref.repo && receipt.pr === ref.number &&
+    receipt.localHead === heads.localHead && receipt.remoteHead === heads.remoteHead &&
+    receipt.prHead === heads.prHead;
+}
+
+/**
+ * Replays the same-kind run whose report is already on disk and intact: whatever
+ * of the audit emission and the sensor fire did not complete last time is
+ * completed now. The report bytes are never rewritten, so the content digest
+ * the attestation binds cannot drift.
+ */
+async function resumeSelfReport(
+  record: string,
+  path: string,
+  attestation: ReportAttestation,
+  seams: CliSeams,
+  stage: "code-generation" | "pr-convergence",
+): Promise<CliOutcome> {
+  if (!auditCarriesAttestation(record, attestation)) {
+    const emitted = await emitAttestationReceipt(record, attestation, seams);
+    if (emitted !== null) return emitted;
+  }
+  const fired = await fireReportSensor(record, path, stage, seams);
+  if (fired !== null) return fired;
+  return { exitCode: 0, stdout: `${path}\n`, stderr: "" };
+}
+
+type SelfReportLifecycle =
+  | { readonly kind: "write" }
+  | { readonly kind: "resume"; readonly attestation: ReportAttestation }
+  | { readonly kind: "refuse"; readonly outcome: CliOutcome };
+
+/** What the state already on disk allows this run to do. */
+function selfReportLifecycle(
+  path: string,
+  report: ConvergenceReport,
+  heads: DeliveryHeads,
+  work: DeliveryWork,
+  ref: { readonly repo: string; readonly number: number },
+): SelfReportLifecycle {
+  const refuse = (message: string): SelfReportLifecycle => ({
+    kind: "refuse",
+    outcome: { exitCode: 1, stdout: "", stderr: `${message}\n` },
+  });
+  const previous = existingReportKind(path);
+  if (previous === null) {
+    return report.kind === "created"
+      ? { kind: "write" }
+      : refuse("report lifecycle refused: create must establish the created state first");
+  }
+  if (previous.attestation === null) {
+    return refuse("report lifecycle refused: current report has no valid CLI attestation");
+  }
+  if (previous.attestation.prHead !== heads.prHead) {
+    return report.kind === "created"
+      ? { kind: "write" }
+      : refuse("report lifecycle stale: PR head changed; run create to begin a new created epoch");
+  }
+  if (previous.kind !== report.kind) {
+    return transitionAllowed(previous.kind, report.kind)
+      ? { kind: "write" }
+      : refuse(`report lifecycle refused: ${previous.kind} -> ${report.kind}`);
+  }
+  const { id, ...unsigned } = previous.attestation;
+  if (
+    id !== attestationId(unsigned) || previous.attestation.contentDigest !== previous.payloadDigest ||
+    !attestationBindsIdentity(previous.attestation, work, heads, ref)
+  ) {
+    return refuse("report lifecycle refused: current attestation is stale, tampered, copied, or replayed");
+  }
+  return { kind: "resume", attestation: previous.attestation };
 }
 
 async function writeSelfReport(
@@ -631,30 +751,10 @@ async function writeSelfReport(
 ): Promise<CliOutcome> {
   if (report.kind === "landed") return { exitCode: 1, stdout: "", stderr: "landed is not convergence evidence\n" };
   const path = reportPathFor(record, work.unit);
-  const previous = existingReportKind(path);
-  if (previous !== null) {
-    if (previous.attestation === null) {
-      return { exitCode: 1, stdout: "", stderr: "report lifecycle refused: current report has no valid CLI attestation\n" };
-    }
-    if (previous.attestation.prHead !== heads.prHead) {
-      if (report.kind !== "created") {
-        return { exitCode: 1, stdout: "", stderr: "report lifecycle stale: PR head changed; run create to begin a new created epoch\n" };
-      }
-    } else if (previous.kind === report.kind) {
-      const { id, ...unsigned } = previous.attestation;
-      if (
-        id !== attestationId(unsigned) ||
-        previous.attestation.contentDigest !== previous.payloadDigest ||
-        !auditCarriesAttestation(record, previous.attestation)
-      ) {
-        return { exitCode: 1, stdout: "", stderr: "report lifecycle refused: current attestation is stale, tampered, copied, or replayed\n" };
-      }
-      return { exitCode: 0, stdout: `${path}\n`, stderr: "" };
-    } else if (!transitionAllowed(previous.kind, report.kind)) {
-      return { exitCode: 1, stdout: "", stderr: `report lifecycle refused: ${previous.kind} -> ${report.kind}\n` };
-    }
-  } else if (report.kind !== "created") {
-    return { exitCode: 1, stdout: "", stderr: "report lifecycle refused: create must establish the created state first\n" };
+  const lifecycle = selfReportLifecycle(path, report, heads, work, report.prRef);
+  if (lifecycle.kind === "refuse") return lifecycle.outcome;
+  if (lifecycle.kind === "resume") {
+    return resumeSelfReport(record, path, lifecycle.attestation, seams, stage);
   }
 
   const payload = renderReport(report);
@@ -669,30 +769,137 @@ async function writeSelfReport(
   mkdirSync(join(record, "construction", work.unit, "code-generation"), { recursive: true });
   writeFileSync(path, body, "utf-8");
 
-  const emit = seams.emitAttestation ?? seams.emitDecision;
+  const emitted = await emitAttestationReceipt(record, attestation, seams);
+  if (emitted !== null) return emitted;
+  const fired = await fireReportSensor(record, path, stage, seams);
+  if (fired !== null) return fired;
+  return { exitCode: 0, stdout: `${path}\n`, stderr: "" };
+}
+
+/** Emits the canonical audit receipt. Returns null on success, or the failure
+ *  outcome — the caller re-runs the same verb to complete it. */
+async function emitAttestationReceipt(
+  record: string,
+  attestation: ReportAttestation,
+  seams: CliSeams,
+): Promise<CliOutcome | null> {
   const fields: ReadonlyArray<readonly [string, string]> = [
     ["Attestation Id", attestation.id], ["Intent", attestation.intent], ["Intent UUID", attestation.intentUuid],
     ["Record", attestation.record], ["Bolt", attestation.bolt], ["Unit", attestation.unit],
     ["Repository", attestation.repo], ["PR", String(attestation.pr)], ["Local Head", attestation.localHead],
     ["Remote Head", attestation.remoteHead], ["PR Head", attestation.prHead], ["Content Digest", attestation.contentDigest],
   ];
+  const emit = seams.emitAttestation ?? seams.emitDecision;
   const emitted = await emit([
     "bun", siblingCoreTool(DEFAULT_AUDIT_TOOL_RELATIVE), "append", ATTESTATION_EVENT,
     "--project-dir", projectRootForRecord(record),
     ...fields.flatMap(([key, value]) => ["--field", `${key}=${value}`]),
   ]);
-  if (emitted.code !== 0) {
-    return { exitCode: 2, stdout: "", stderr: `attestation emission failed (exit ${emitted.code}) ${emitted.stderr}\n` };
-  }
+  return emitted.code === 0
+    ? null
+    : { exitCode: 2, stdout: "", stderr: `attestation emission failed (exit ${emitted.code}) ${emitted.stderr}; re-run the same verb to complete it\n` };
+}
+
+/** Fires the report-format sensor. Returns null on success, or the failure
+ *  outcome — the fire is replayed by re-running the same verb. */
+async function fireReportSensor(
+  record: string,
+  path: string,
+  stage: "code-generation" | "pr-convergence",
+  seams: CliSeams,
+): Promise<CliOutcome | null> {
   const fire = seams.fireSensor ?? seams.emitDecision;
   const fired = await fire([
     "bun", siblingCoreTool(DEFAULT_SENSOR_TOOL_RELATIVE), "fire", "pr-convergence-report-format",
     "--stage", stage, "--output-path", path, "--project-dir", projectRootForRecord(record),
   ]);
-  if (fired.code !== 0) {
-    return { exitCode: 2, stdout: "", stderr: `sensor fire failed (exit ${fired.code}) ${fired.stderr}\n` };
+  return fired.code === 0
+    ? null
+    : { exitCode: 2, stdout: "", stderr: `sensor fire failed (exit ${fired.code}) ${fired.stderr}; re-run the same verb to complete it\n` };
+}
+
+function describeGhError(error: GhError): string {
+  return error.kind === "command-failed"
+    ? `${error.kind} (exit ${error.exitCode}, stderr ${error.stderrDigest})`
+    : error.kind;
+}
+
+/**
+ * `gh pr create` failed. For a linked self delivery that failure is routinely
+ * "the pull request already exists" — the earlier run created it and then lost
+ * the report (or the head moved on and this run opens a new created epoch).
+ * Rather than leaving the delivery with a pull request and no evidence, the
+ * open pull request for this head is read back and, when it IS this delivery,
+ * the created report is written for it. Nothing is re-created and nothing is
+ * edited: the pull request already carries its `## Amadeus Work` section, and
+ * a section that does not match is a human's `gh pr edit` to make.
+ */
+async function recoverCreateFailure(
+  options: CreateOptions,
+  seams: CliSeams,
+  gh: GhRunner,
+  error: GhError,
+  linkedWork: DeliveryWork | null,
+  prerequisite: ReturnType<typeof verifyCreatePrerequisites> | null,
+): Promise<CliOutcome> {
+  const detail = `gh failed creating pull request: ${describeGhError(error)}`;
+  if (options.record === null || linkedWork === null || prerequisite === null || !prerequisite.ok) {
+    return { exitCode: 2, stdout: "", stderr: `${detail}\n` };
   }
-  return { exitCode: 0, stdout: `${path}\n`, stderr: "" };
+  const existing = await fetchOpenPrForHead(gh, options.repo, options.head);
+  if (!existing.ok) {
+    return { exitCode: 2, stdout: "", stderr: `${detail}; the open pull request for ${options.head} could not be read: ${describeGhError(existing.error)}\n` };
+  }
+  if (existing.value === null) {
+    return {
+      exitCode: 2,
+      stdout: "",
+      stderr: `${detail}; no open pull request for head ${options.head} exists to recover — fix the reported failure and run create again\n`,
+    };
+  }
+  const pr = existing.value;
+  const ref = parsePrRef(options.repo, pr.number);
+  if (ref === null) {
+    return { exitCode: 2, stdout: "", stderr: `${detail}; the existing pull request number ${pr.number} is unusable\n` };
+  }
+  if (pr.headRefOid !== prerequisite.localHead || pr.headRefName !== options.head) {
+    return {
+      exitCode: 1,
+      stdout: "",
+      stderr: `existing pull request #${pr.number} head ${pr.headRefName}@${pr.headRefOid} is not the local/remote HEAD ${options.head}@${prerequisite.localHead}; push the current HEAD, then run create again\n`,
+    };
+  }
+  const mismatch = existingWorkMismatch(pr, linkedWork);
+  if (mismatch !== null) {
+    return { exitCode: 1, stdout: "", stderr: `existing pull request #${pr.number} does not carry this delivery's identity\n${mismatch}\n` };
+  }
+  const delivered = await writeSelfReport(
+    options.record,
+    { kind: "created", generatedAt: seams.now(), prRef: refValue(ref) },
+    linkedWork,
+    { localHead: prerequisite.localHead, remoteHead: prerequisite.remoteHead, prHead: pr.headRefOid },
+    seams,
+    "code-generation",
+  );
+  if (delivered.exitCode !== 0) return delivered;
+  return { exitCode: 0, stdout: `${pr.url}\n`, stderr: "" };
+}
+
+/** The remediation text when the existing pull request is not this delivery's,
+ *  or null when its title and body do name this Intent, Bolt, and Unit. */
+function existingWorkMismatch(pr: OpenPrSummary, work: DeliveryWork): string | null {
+  const provenance = checkProvenance({
+    title: pr.title,
+    body: pr.body,
+    record: work.record,
+    unit: work.unit,
+  });
+  if (!provenance.ok) return renderProvenanceRemediation(provenance.violations);
+  const fields = parseAmadeusWork(pr.body);
+  if (fields === null || fields.uuid !== work.intentUuid || fields.bolt !== work.bolt) {
+    return renderProvenanceRemediation([{ kind: "work-section-missing" }]);
+  }
+  return null;
 }
 
 async function createPullRequest(options: CreateOptions, seams: CliSeams): Promise<CliOutcome> {
@@ -757,11 +964,7 @@ async function createPullRequest(options: CreateOptions, seams: CliSeams): Promi
   ];
   const created = await runner.value(argv);
   if (!created.ok) {
-    const detail =
-      created.error.kind === "command-failed"
-        ? `${created.error.kind} (exit ${created.error.exitCode}, stderr ${created.error.stderrDigest})`
-        : created.error.kind;
-    return { exitCode: 2, stdout: "", stderr: `gh failed creating pull request: ${detail}\n` };
+    return recoverCreateFailure(options, seams, runner.value, created.error, linkedWork, prerequisite);
   }
   if (options.record !== null && linkedWork !== null && prerequisite?.ok) {
     const match = created.value.match(/\/pull\/(\d+)/);
@@ -817,6 +1020,7 @@ interface ProvenanceSource {
   readonly title: string;
   readonly body: string;
   readonly headRefOid?: string;
+  readonly headRefName?: string;
 }
 
 type EvaluationResult =
@@ -1043,10 +1247,14 @@ async function runConvergence(options: ConvergenceOptions, seams: CliSeams): Pro
   }
   const provenanceFailure = provenanceOutcome(options, evaluation.value);
   if (provenanceFailure !== null) return provenanceFailure;
-  const selfContext = isSelfRecord(options.record)
-    ? currentSelfContext(options, evaluation.value, seams)
-    : null;
+  const selfContext = selfContextFor(options, evaluation.value, seams);
   if (selfContext !== null && !selfContext.ok) return selfContext.outcome;
+  if (selfContext !== null && selfContext.pendingReceipt !== null) {
+    // Complete the earlier run's interrupted emission before this verb adds a
+    // new epoch on top of it.
+    const resumed = await emitAttestationReceipt(options.record, selfContext.pendingReceipt, seams);
+    if (resumed !== null) return resumed;
+  }
 
   if (options.verb === "status") {
     const payload = JSON.stringify(

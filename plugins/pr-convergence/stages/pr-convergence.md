@@ -75,6 +75,12 @@ skips only provenance checking. It does not skip GitHub reads, convergence
 evaluation, or the report contract. Self-development scopes reject
 `--unlinked true`; their report must remain bound to the active Intent.
 
+`status` is a read-only diagnostic and stays runnable mid-work: for a
+self-development record it is exempt from the delivery prerequisites (clean
+worktree, matching heads) and from the created-report requirement. Provenance
+checking and the self-scope `--unlinked` rejection still apply to it; `report`
+and `override` remain fully fail-closed.
+
 ### (1) Create the pull request
 
 Create the pull request for this Bolt if it does not exist yet. One Bolt, one
@@ -102,10 +108,21 @@ working directory and checked-out branch never select the pull request source.
 For a self-development Intent, `create` first verifies that the checked-out
 branch is the requested non-base branch, the local commit contains target
 changes, tracked files are clean, the branch exists on `origin`, and the local
-and remote head SHAs match. It never commits or pushes. A failed prerequisite
-refuses before any GitHub mutation. A successful create immediately writes a
-`created` report, emits its canonical attestation, and fires the blocking
-sensor in that order.
+and remote head SHAs — and the head branch name — match. It never commits or
+pushes. A failed prerequisite refuses before any GitHub mutation. A successful
+create immediately writes a `created` report, emits its canonical attestation,
+and fires the blocking sensor in that order.
+
+When an open pull request for the same head branch already exists, `create`
+does not fail on the duplicate: it verifies the existing pull request's head
+SHA and branch name against the local/remote HEAD and its title/body against
+this delivery's identity, then re-mints the `created` report, attestation, and
+sensor pass for that pull request — a new created epoch. This is also the
+recovery for a `created` attestation invalidated by later pushes ("PR head
+changed"): push the current HEAD, then run `create` again; the pull request is
+reused, never closed and reopened. An existing pull request whose head or
+identity does not match refuses with the remediation named on stderr (`gh pr
+edit` for provenance, push for a stale head).
 
 Pass `--record`, `--bolt`, and `--unit` together when the pull request is linked
 to an Amadeus Intent. The CLI resolves the record against the adjacent
@@ -196,8 +213,10 @@ machine-derived; do not hand-write or hand-edit the file. The
 tampered, copied, or replayed evidence. The CLI writes the report, emits the
 canonical `ARTIFACT_ATTESTED` event, and fires the sensor automatically. A
 failed emission or sensor fire returns non-zero and leaves the completion guard
-closed; manual report edits and manual sensor invocation are not delivery
-paths.
+closed; re-running the same verb with the same identity resumes the interrupted
+delivery (it completes the missing audit emission and sensor fire), while
+tampered or copied evidence is still refused. Manual report edits and manual
+sensor invocation are not delivery paths.
 
 The packaged checker resource is
 `{{HARNESS_DIR}}/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts`;

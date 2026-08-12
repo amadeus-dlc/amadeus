@@ -20,8 +20,9 @@
 //
 // Dispatcher contract: every check
 // outcome — pass or fail — exits 0. The only exit-1 path is a missing CLI flag.
-// A non-existent --output-path is likewise not an error: absence is the
-// artifact guard's business, not the sensor's.
+// A non-existent --output-path is not an exception to that: it exits 0 like any
+// other outcome, but as a BLOCKING finding, because the convergence evidence
+// the stage requires is absent.
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { basename, dirname } from "node:path";
