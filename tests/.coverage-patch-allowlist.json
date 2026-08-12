@@ -5,7 +5,8 @@
       "function": "createInitialGoalLineage",
       "fingerprint": "sha256:aa9db9fd606387f2fc77dde113fc248ac0677b6ee629199547afb5955253769d",
       "anchorLines": 5,
-      "targetLines": "1-5"
+      "targetLines": "1-5",
+      "class": "type-only"
     },
     "reason": "These lines contain only the multiline TypeScript input type. The function body and its validation are covered directly by t427 integration tests, but Bun emits zero-hit DA records for the type-only signature only in the merged suite.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
@@ -16,7 +17,8 @@
       "function": "createRevisionZeroLineage",
       "fingerprint": "sha256:643e898cf6780993049f58b618db994663ac9a2c1af80cf72601ce959528363d",
       "anchorLines": 7,
-      "targetLines": "1-7"
+      "targetLines": "1-7",
+      "class": "type-only"
     },
     "reason": "These lines contain only the multiline TypeScript input type. Initial and legacy revision-zero bodies and validation are covered directly by t427 integration tests; the signature has no runtime statement.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
@@ -27,7 +29,8 @@
       "function": "createLegacyGoalLineage",
       "fingerprint": "sha256:e4749fa3fae250f2a0b7a18f1bbe36b4c5be389ded28f11019b107bb9bed3281",
       "anchorLines": 6,
-      "targetLines": "1-6"
+      "targetLines": "1-6",
+      "class": "type-only"
     },
     "reason": "These lines contain only the multiline TypeScript input type. Legacy lineage creation and round-trip validation are covered directly by t427 integration tests; the signature has no runtime statement.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
@@ -38,7 +41,8 @@
       "function": "goalCompletionContextDigest",
       "fingerprint": "sha256:ba5bff0b9100b74358805c0b8a13a8de2d3982a8a5b0c6fb440e1ad4706a6ef5",
       "anchorLines": 3,
-      "targetLines": "1-3"
+      "targetLines": "1-3",
+      "class": "type-only"
     },
     "reason": "These lines contain only the multiline TypeScript input type. Context digest creation is covered directly by t427 integration and workflow authorization tests; the signature has no runtime statement.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
@@ -49,7 +53,8 @@
       "function": "authorizeGoalCompletion",
       "fingerprint": "sha256:c168e473d32f10a0a5afdbe778d616e2309a0fe38304d6afc36ff315304f2b0a",
       "anchorLines": 7,
-      "targetLines": "1-7"
+      "targetLines": "1-7",
+      "class": "type-only"
     },
     "reason": "These lines contain only the multiline TypeScript input type. Every authorization acceptance and rejection branch is covered directly by t427 integration tests; the signature has no runtime statement.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
@@ -71,7 +76,8 @@
       "function": "createLegacyGoalMigrationProposal",
       "fingerprint": "sha256:9415851a8974065f9d2127e99522db74335590e384767224d5628a208c1fd7c4",
       "anchorLines": 10,
-      "targetLines": "1-10"
+      "targetLines": "1-10",
+      "class": "type-only"
     },
     "reason": "These lines contain only the multiline TypeScript input type. Legacy proposal creation, paired evidence validation, persistence, collision, and tamper paths are covered directly by t427 integration tests.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
@@ -82,7 +88,8 @@
       "function": "buildApprovedGoalRevision",
       "fingerprint": "sha256:66735cde53f940fb6343fa9df856d9695d18e6de9bd87d089b274c92d8661f54",
       "anchorLines": 4,
-      "targetLines": "1-4"
+      "targetLines": "1-4",
+      "class": "type-only"
     },
     "reason": "These lines contain only the multiline TypeScript input type. Current, stale, ordinary, and legacy-reconstruction approval paths are covered directly by t427 integration tests.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
@@ -93,7 +100,8 @@
       "function": "approveGoalRevision",
       "fingerprint": "sha256:ec662b2ef0cee60e6ee0a5685f6be9d90be76de3c5946b65574c517c759c1c87",
       "anchorLines": 4,
-      "targetLines": "1-4"
+      "targetLines": "1-4",
+      "class": "type-only"
     },
     "reason": "These lines contain only the multiline TypeScript input type. Persisted proposal approval and lineage write-back are covered directly by t427 integration tests.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
@@ -104,7 +112,8 @@
       "function": "createGoalReconciliationReceipt",
       "fingerprint": "sha256:39e25bde59f93ca6f7793b14b930c2b7ba282f075a2430ff79e87ef850336c4f",
       "anchorLines": 8,
-      "targetLines": "1-8"
+      "targetLines": "1-8",
+      "class": "type-only"
     },
     "reason": "These lines contain only the multiline TypeScript input type. Receipt creation, persistence, evidence binding, and complete-current-Goal item validation are covered directly by t427 integration tests.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
@@ -115,7 +124,8 @@
       "function": "authorizeWorkflowCompletion",
       "fingerprint": "sha256:804ac7039322be3ad4f3a8f2c471be032de8a996ad673ac719a8778a607f2a3e",
       "anchorLines": 5,
-      "targetLines": "1-5"
+      "targetLines": "1-5",
+      "class": "type-only"
     },
     "reason": "These lines contain only the multiline TypeScript input type. Successful, non-final, invalid-scope, projection-mismatch, and stale-receipt paths are covered directly by t427 integration tests.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
@@ -126,7 +136,8 @@
       "function": "authorizePersistedCompletedWorkflow",
       "fingerprint": "sha256:3fc260a67f73826372182342cc0b30149608a397747ad0fde39651be606b73cf",
       "anchorLines": 3,
-      "targetLines": "1-3"
+      "targetLines": "1-3",
+      "class": "type-only"
     },
     "reason": "These lines contain only the multiline TypeScript input type. Successful persisted authorization and missing Last Completed Stage rejection are covered directly by t427 integration tests.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
@@ -137,7 +148,8 @@
       "function": "appendLifecycleAuditEntryUnlocked",
       "fingerprint": "sha256:73cf0edc195997e6e54fb79d7ad1b9294d5ba52a7398fc23519a3a63efb577d8",
       "anchorLines": 4,
-      "targetLines": "1-4"
+      "targetLines": "1-4",
+      "class": "type-only"
     },
     "reason": "These four added lines are TypeScript-only event union members and have no runtime statements for Bun to attribute. The writer behavior is exercised in-process by t205 and t258, while the new Goal event variants are exercised through the shipped CLI by t428 and t429.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
@@ -192,7 +204,8 @@
       "function": "handleNext",
       "fingerprint": "sha256:7e7dedd64f9db58e4473654f7c8d8f205b17603e3986e70988732379a17c3119",
       "anchorLines": 5,
-      "targetLines": "1-5"
+      "targetLines": "1-5",
+      "class": "catch-arm"
     },
     "reason": "The completed-workflow recovery refusal and legacy migration instruction are asserted through the generated next CLI in t429 integration. handleNext executes in a child process outside parent Bun LCOV.",
     "expiry": "remove when handleNext completion recovery receives injected authorization and output ports"
@@ -203,7 +216,8 @@
       "function": "handleReport",
       "fingerprint": "sha256:ef58860e329655f59e7751821aec6db6268169e42fda91f5c5bef6774cdc909e",
       "anchorLines": 5,
-      "targetLines": "1-5"
+      "targetLines": "1-5",
+      "class": "catch-arm"
     },
     "reason": "The already-completed report recovery refusal and legacy migration instruction are asserted through the generated report CLI in t429 integration. handleReport executes in a child process outside parent Bun LCOV.",
     "expiry": "remove when handleReport completion recovery receives injected authorization and output ports"
@@ -214,7 +228,8 @@
       "function": "emitWorkflowCompletionAuditRows",
       "fingerprint": "sha256:5d99e8e2c8db4268cb4d1c0274c8613e861f53443b74596a12e8adaf5f92e1cc",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "type-only"
     },
     "reason": "This added line is a TypeScript-only receipt property in the function parameter type and has no runtime statement for Bun to attribute. Workflow completion audit behavior is exercised through t427 integration.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
@@ -269,7 +284,8 @@
       "function": "<module>",
       "fingerprint": "sha256:bf4504c44edabebf738299f6454014d9bba99bb7e1c3e12d522e3554d3faf66e",
       "anchorLines": 3,
-      "targetLines": "2"
+      "targetLines": "2",
+      "class": "catch-arm"
     },
     "reason": "The lazy childEnv block (fail-open fallback and dispatcher env) is exercised by t95's spawned-hook drive (subprocess bun hook in fixture projects, including otel-absent ones); spawned main paths are not attributed to the parent Bun LCOV process (same class as the orchestrate.ts entries).",
     "expiry": "remove when the sensor-fire hook dispatch is driven in-process"
@@ -346,7 +362,8 @@
       "function": "<module>",
       "fingerprint": "sha256:d36ce9c03039b1312033d3f265e1a3c713912cf6b7daa27541a441e6d760b0ac",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "type-only"
     },
     "reason": "`export type RegisteredEventName = (typeof REGISTERED_EVENTS)[number][\"name\"]` is a type-only declaration erased before runtime; Bun stamps DA:0 on the line and nothing can ever execute it. The union it derives is enforced by tsc and by the registry drift guard (tests/integration/event-registry-drift.test.ts).",
     "expiry": "remove if Bun stops emitting DA records for erased type declarations"
@@ -390,7 +407,8 @@
       "function": "create",
       "fingerprint": "sha256:93cda30b768cbbaf26f8d41569288bb2567343bee404c36e3f624d9ff949cfde",
       "anchorLines": 4,
-      "targetLines": "2-3"
+      "targetLines": "2-3",
+      "class": "catch-arm"
     },
     "reason": "Defensive readdirSync catch after mkdirSync(root, {recursive:true}) already succeeded. Normal I/O creation failures are covered; reaching this second guard requires a permission or filesystem race between mkdir and readdir.",
     "expiry": "remove when Store.create gains an injectable filesystem seam for post-mkdir readdir failure"
@@ -401,7 +419,8 @@
       "function": "create",
       "fingerprint": "sha256:dec59460ac8310b500cb32770ac9cc194edb3961f2f12cd8ca140a47b6d6fa94",
       "anchorLines": 3,
-      "targetLines": "2"
+      "targetLines": "2",
+      "class": "catch-arm"
     },
     "reason": "Defensive election-directory mkdirSync catch after the registry append has committed and after the same root was created and read successfully. Normal root creation, registry-write, and store-write I/O failures are covered; reaching this row requires a permission or filesystem race between the registry append and the directory mkdir.",
     "expiry": "remove when Store.create gains an injectable filesystem seam for post-registry directory creation failure"
@@ -478,7 +497,8 @@
       "function": "validateGrid",
       "fingerprint": "sha256:fc2bc8ee73ff94e6212383681bdce7f0a2650e4630265a009f556e402ef4c822",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "type-only"
     },
     "reason": "Optional graph snapshot property in validateGrid's multi-line opts type; runtime-erased, bun lcov stamps the type-only line DA:0 even though the injected snapshot path is exercised in-process by t257 (bun-multiline-arg-da0 class).",
     "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
@@ -523,7 +543,8 @@
       "function": "isJsonValue",
       "fingerprint": "sha256:f85e7a3dc66639492ef16009f2e56b1203cc12efc810c3d15e24adc35fa7624b",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "dispatch-case"
     },
     "reason": "isJsonValue's `default:` switch label carries no executable statement, so Bun stamps DA:0 on it permanently. The arm's body (the `return false;` beneath it) is driven in-process by the serialize rejection test for a non-JSON attribute value in tests/integration/t-otel-core-plumbing.test.ts.",
     "expiry": "remove if Bun stops stamping switch labels in LCOV or the validator is restructured"
@@ -534,7 +555,8 @@
       "function": "main",
       "fingerprint": "sha256:bd2368e0b6a6b67acb08e30c740df410f2d91db1d9f8f6db9e87a16bdfc9064c",
       "anchorLines": 3,
-      "targetLines": "1-3"
+      "targetLines": "1-3",
+      "class": "dispatch-case"
     },
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocess thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
@@ -611,7 +633,8 @@
       "function": "decodeMarkerIdentity",
       "fingerprint": "sha256:8e13859d3b62d179c3b494f41fffff00a92ea47ef284c148fc047a661796ad15",
       "anchorLines": 3,
-      "targetLines": "2"
+      "targetLines": "2",
+      "class": "catch-arm"
     },
     "reason": "t274, t279, and t282 exercise marker parsing, ownership verification, digest validation, and mismatch outcomes; these residual rows are multiline type/defensive guard rows stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -622,7 +645,8 @@
       "function": "verifyOwnership",
       "fingerprint": "sha256:44d0dee6155d71a921f8db065994acae8ad3aa69e9f4fb3f9e20a7dac22bd5b2",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "type-only"
     },
     "reason": "t274, t279, and t282 exercise marker parsing, ownership verification, digest validation, and mismatch outcomes; these residual rows are multiline type/defensive guard rows stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -666,7 +690,8 @@
       "function": "atomicWrite",
       "fingerprint": "sha256:9bc439caa63fb9ceac77a3357a12400c3cf3bf80d0b743abcff140cf4509bafe",
       "anchorLines": 5,
-      "targetLines": "3"
+      "targetLines": "3",
+      "class": "catch-arm"
     },
     "reason": "t278 and t282 exercise real atomic file/lock operations plus read, parse, reducer, audit, write, and cleanup failures; these residual rows require narrow filesystem races or are multiline failure construction stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -952,7 +977,8 @@
       "function": "<module>",
       "fingerprint": "sha256:f0e631af02e8e6131b11f66202cf6f11feb593d7a867e825c6745ee1f10413f8",
       "anchorLines": 5,
-      "targetLines": "1-5"
+      "targetLines": "1-5",
+      "class": "type-only"
     },
     "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -963,7 +989,8 @@
       "function": "<module>",
       "fingerprint": "sha256:60fb55059031efa739b371ab6089a3395ae319e7699d43b9158889cf17b66392",
       "anchorLines": 3,
-      "targetLines": "1-3"
+      "targetLines": "1-3",
+      "class": "type-only"
     },
     "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -974,7 +1001,8 @@
       "function": "<module>",
       "fingerprint": "sha256:1d06c67a12ae517b37e850167fdec5437d397643fcebb4363a1d8cdcf1797b7d",
       "anchorLines": 5,
-      "targetLines": "1-5"
+      "targetLines": "1-5",
+      "class": "type-only"
     },
     "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -985,7 +1013,8 @@
       "function": "<module>",
       "fingerprint": "sha256:16b3a1bc726989b6e3055183fbababb2055d1f1c66426a39f8204d45ddfa324a",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "type-only"
     },
     "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -996,7 +1025,8 @@
       "function": "<module>",
       "fingerprint": "sha256:158bc7dc98b09f14a3653d4be559b8870d234bfaa9a66a37d08cdafdfae57cb0",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "type-only"
     },
     "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -1007,7 +1037,8 @@
       "function": "<module>",
       "fingerprint": "sha256:87c537bdaf2a396d2e867cc6d61500aba0df59058432521395377da7578cdc75",
       "anchorLines": 6,
-      "targetLines": "1-6"
+      "targetLines": "1-6",
+      "class": "type-only"
     },
     "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -1018,7 +1049,8 @@
       "function": "<module>",
       "fingerprint": "sha256:ec5f98606abca2a91313a070f06ab27b9d9011e6e3857c7fda7fb67c72ff5920",
       "anchorLines": 5,
-      "targetLines": "1-5"
+      "targetLines": "1-5",
+      "class": "type-only"
     },
     "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -1029,7 +1061,8 @@
       "function": "<module>",
       "fingerprint": "sha256:9132c4f6a65b561ce9451bd73b343b825cfe8cc3237efa3acb5bf8a4e005313e",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "type-only"
     },
     "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -1040,7 +1073,8 @@
       "function": "<module>",
       "fingerprint": "sha256:3cba5edf90c7ed900b6ca10e2627336184ecc8f6e72d1fce8e7364630716221e",
       "anchorLines": 8,
-      "targetLines": "1-8"
+      "targetLines": "1-8",
+      "class": "type-only"
     },
     "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -1051,7 +1085,8 @@
       "function": "defaultDeps",
       "fingerprint": "sha256:b26737adee5d7fa32ba1fd37b53da63f1cf76a7935543e71e01abcfc6e8b82d1",
       "anchorLines": 5,
-      "targetLines": "1-5"
+      "targetLines": "1-5",
+      "class": "type-only"
     },
     "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -1062,7 +1097,8 @@
       "function": "<module>",
       "fingerprint": "sha256:c55f86497a278c2ccc35f5475062edc8640fa1706b391573b408f4c652070f13",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "type-only"
     },
     "reason": "t273 exercises real default ports plus Unix, Windows, timeout, bounded-output, spawn-error, and null-exit branches; these residual rows are runtime-erased port types and process-group race guards stamped DA:0 by Bun.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -1139,7 +1175,8 @@
       "function": "main",
       "fingerprint": "sha256:4925d08a7ae33544a3dd4b24be224b0cf985be760128e58cf8aee7ea749577da",
       "anchorLines": 6,
-      "targetLines": "1-6"
+      "targetLines": "1-6",
+      "class": "dispatch-case"
     },
     "reason": "The write --out argv adapter is exercised by the deterministic self-install projection integration, which invokes the shipped runner generator through the plugin CLI child process. Bun does not attribute child-process execution to the parent LCOV report; handleWrite itself is covered in-process by t351.",
     "expiry": "remove when runner-gen argument parsing gains an in-process seam or Bun merges child-process coverage"
@@ -1172,7 +1209,8 @@
       "function": "main",
       "fingerprint": "sha256:6ad50b39e0c2d8d2c42fd2a24279a41d835ee52cc2bb934491df9b25d4484633",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "dispatch-case"
     },
     "reason": "Unknown-subcommand usage message string in main()'s default case. The shipped CLI tests assert the error contract, while Bun does not attribute the spawned main() process to the parent LCOV report.",
     "expiry": "remove when main() gains an in-process argv driver"
@@ -1183,7 +1221,8 @@
       "function": "main",
       "fingerprint": "sha256:a98f35782eadc819e1f2034d4045571ad83de788919c30a0800d16bfba79b1e4",
       "anchorLines": 3,
-      "targetLines": "1-3"
+      "targetLines": "1-3",
+      "class": "dispatch-case"
     },
     "reason": "main() dispatch case for the `resolve` subcommand (#1157 driver-contract-core). main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handler it dispatches (handleResolve) is fully covered in-process by t233-driver-resolution. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); the pre-existing prepare/check/finalize cases are unmeasured the same way.",
     "expiry": "remove when main() gains an in-process argv driver"
@@ -1194,7 +1233,8 @@
       "function": "main",
       "fingerprint": "sha256:d884425711d9034f54b603ae61ab6622d9ce43311b366709fe26e4382c7f9f4d",
       "anchorLines": 3,
-      "targetLines": "1-3"
+      "targetLines": "1-3",
+      "class": "dispatch-case"
     },
     "reason": "main() dispatch case for the new retry subcommand. t414-swarm-retry-budget drives handleRetry in-process across authorization, replay, exhaustion, invalid facts, invalid policy, inconsistent state, and policy mismatch; the spawned CLI dispatch rows are not attributed by Bun.",
     "expiry": "remove when main() gains an in-process argv driver or Bun merges child-process coverage"
@@ -1217,7 +1257,8 @@
       "function": "inspectHookHeartbeats",
       "fingerprint": "sha256:395096960af0902b08ae4fe4b20506f1ea2dc9c1a94f74066707191a58afa765",
       "anchorLines": 3,
-      "targetLines": "1-3"
+      "targetLines": "1-3",
+      "class": "type-only"
     },
     "reason": "Multi-line Pick type for hookHeartbeatDoctorCheck's context snapshot; runtime-erased, bun lcov stamps these type-only lines DA:0 even though t226 and t257 drive migration, platform, and swap-target values in-process (bun-multiline-arg-da0 class).",
     "expiry": "remove if the signature is collapsed or bun lcov stops stamping erased lines"
@@ -1283,7 +1324,8 @@
       "function": "telemetryProjectDir",
       "fingerprint": "sha256:32647f83f87e95914ce43c8b9ced2d915ffee1b2d0dcd194e1ad98700bda9ebd",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "catch-arm"
     },
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
@@ -1294,7 +1336,8 @@
       "function": "main",
       "fingerprint": "sha256:1527e7ef248b640ae9aa7194bcac567a9ec81d997574f8772ba4061d2a1f4b72",
       "anchorLines": 3,
-      "targetLines": "1-3"
+      "targetLines": "1-3",
+      "class": "dispatch-case"
     },
     "reason": "Phase 2 telemetry wiring (initProcessObservability entry / observeSubprocessSpan thunk / runtime-attrs write) inside a spawn-only main or hook path: 0-stamped by in-process imports while the enclosing entrypoint only runs as a subprocess. The seam logic itself (config gate, buffer append, span write, redaction) is covered in-process by t357; behaviour with observability disabled is byte-identical by construction. Spawn-blindspot-two-step (ii).",
     "expiry": "remove when the enclosing entrypoint gains an in-process driver"
@@ -1404,7 +1447,8 @@
       "function": "isTrustedMainStop",
       "fingerprint": "sha256:6f5243a048d2da45558231945388da94da559b82be3352162b379763d9f2e939",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "catch-arm"
     },
     "reason": "Fail-closed catch in the Stop trust check (unreadable current-session carrier). t365 asserts the missing-carrier state is a silent no-op through the spawned hook boundary; spawned execution is not attributed to the parent Bun LCOV report.",
     "expiry": "remove when the Stop trust matrix gains an in-process driver"
@@ -1415,7 +1459,8 @@
       "function": "<module>",
       "fingerprint": "sha256:8d85c45acc856fe9e2b49de2b9a0a6a6a3c6f8df63ddc15a6d9aca9f743d6805",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "type-only"
     },
     "reason": "Type/interface declaration line (ParseCounters); runtime-erased, DA:0 via bun lcov chunk merge (bun-inbody/multiline DA:0 class).",
     "expiry": "remove if bun lcov stops stamping erased lines"
@@ -1458,7 +1503,8 @@
       "function": "readCandidates",
       "fingerprint": "sha256:96c4397449a9f781a48e0811f1f8724f6ac025f1142d67be4d7a1d51f0c90104",
       "anchorLines": 3,
-      "targetLines": "1-3"
+      "targetLines": "1-3",
+      "class": "type-only"
     },
     "reason": "Multi-line Record<string, unknown> type assertion in readCandidates; the type-only lines are runtime-erased and Bun's full-suite LCOV merge stamps them DA:0. Tests drive both valid and invalid election.json parsing through the surrounding statement.",
     "expiry": "remove if the assertion is collapsed or Bun LCOV stops stamping erased type lines"
@@ -1469,7 +1515,8 @@
       "function": "verifyFidelity",
       "fingerprint": "sha256:bffd6e53c14bfab701285c511db9b121ee683df64f8da215dfc8838441d94fa4",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "catch-arm"
     },
     "reason": "Defensive resolver catch for an I/O race after a registry was read successfully. Normal missing-directory and invalid-registry outcomes are covered in-process; reaching this catch requires the filesystem or registry to become unreadable between those two operations.",
     "expiry": "remove when verifyFidelity gains an injectable resolver seam for I/O race fault injection"
@@ -1535,7 +1582,8 @@
       "function": "classifyDeadline",
       "fingerprint": "sha256:3e1c226fb300f94976eb635d1d8ed28056fe5959ef6e5026b52ded35732aa8dc",
       "anchorLines": 3,
-      "targetLines": "1-3"
+      "targetLines": "1-3",
+      "class": "type-only"
     },
     "reason": "Runtime-erased inline object type fields for classifyDeadline. t222 calls the function in-process for ready, pending, and timeout outcomes, but Bun's full-suite LCOV merge stamps the type-only rows DA:0.",
     "expiry": "remove if the parameter type is named or Bun LCOV stops marking erased type fields as executable and uncovered"
@@ -1579,7 +1627,8 @@
       "function": "<module>",
       "fingerprint": "sha256:cadadc7d9a098adbbf71b3981845293ccee65831d29f481121a2eeedde05dda7",
       "anchorLines": 4,
-      "targetLines": "1-4"
+      "targetLines": "1-4",
+      "class": "catch-arm"
     },
     "reason": "t292 exercises complete, missing, mismatched, dispersion, p95, and RSS aggregate outcomes in-process; the residual rows are spawned file-input and process-exit wrapper paths not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -1623,7 +1672,8 @@
       "function": "readProjectionFile",
       "fingerprint": "sha256:ef6cf1432695a5b827a2e4b21328719b30e2f6a70b9428202d0cce0f5cc0a7c1",
       "anchorLines": 3,
-      "targetLines": "1-3"
+      "targetLines": "1-3",
+      "class": "catch-arm"
     },
     "reason": "distribution integration tests exercise parity, digest, missing, extra, and mismatch outcomes through the shipped CLI; these residual main and diagnostic rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -1634,7 +1684,8 @@
       "function": "inspectRoot",
       "fingerprint": "sha256:b3599f41bdbd2fd03d1112fffd10d143487f9206df50ff5f88a5ebf7f07b930c",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "catch-arm"
     },
     "reason": "distribution integration tests exercise parity, digest, missing, extra, and mismatch outcomes through the shipped CLI; these residual main and diagnostic rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -1711,7 +1762,8 @@
       "function": "validateDocument",
       "fingerprint": "sha256:2fdd8eecc875ccfbd5c57e32edf9ae71e2b0cb09cbd5f8287e8e6ef7290e2747",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "catch-arm"
     },
     "reason": "documentation contract integration tests exercise every required section and mismatch outcome through the shipped CLI; these residual diagnostic/main rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -1766,7 +1818,8 @@
       "function": "validateMirrorDocs",
       "fingerprint": "sha256:ec361686197437bbcfea71601efc5fb6d9079f0239a53f825a05b30fa1bfda63",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "catch-arm"
     },
     "reason": "documentation contract integration tests exercise every required section and mismatch outcome through the shipped CLI; these residual diagnostic/main rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -1821,7 +1874,8 @@
       "function": "scanPublicProjections",
       "fingerprint": "sha256:ec361686197437bbcfea71601efc5fb6d9079f0239a53f825a05b30fa1bfda63",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "catch-arm"
     },
     "reason": "projection scan integration tests exercise clean, missing, and forbidden public projection outcomes through the shipped CLI; these residual scanner/main rows are not attributed to parent Bun LCOV.",
     "expiry": "remove when Bun LCOV attributes this path in-process or the cited test seam covers the exact row directly"
@@ -1865,7 +1919,8 @@
       "function": "measureCallsites",
       "fingerprint": "sha256:b3599f41bdbd2fd03d1112fffd10d143487f9206df50ff5f88a5ebf7f07b930c",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "catch-arm"
     },
     "reason": "Fail-soft catch of measureCallsites: the scan throwing is what turns condition (c) into UNKNOWN. Reaching it needs an unreadable source tree; the behaviour it produces (checkCallsitesZero(null) -> UNKNOWN) is tested directly in t371-deletion-gate.",
     "expiry": "remove if the scan roots become injectable, which would make the throw reachable in process"
@@ -1876,7 +1931,8 @@
       "function": "measureRegistryDrift",
       "fingerprint": "sha256:4fd7f03de4839febb29dde107cb24bb9ab71ca4ca0b32eaf51cc1d0577552105",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "catch-arm"
     },
     "reason": "Fail-soft catch of measureRegistryDrift: same shape as 364, for condition (b). collectDriftSets throws only on an unreadable shipped tree; the resulting UNKNOWN is tested via checkRegistryComplete(null).",
     "expiry": "remove if the harness dir becomes injectable"
@@ -2108,7 +2164,8 @@
       "function": "rejectForTarget",
       "fingerprint": "sha256:f28c3b29deab7be7964a40a27f6bd88112ab9e07cb04062137ed077a1a7a4219",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "type-only"
     },
     "reason": "Type-only continuation of the targeted rejection reservation/session pair. Bun attributes a zero-hit DA row to this erased annotation even though t365 executes the targeted branch and proves the verified session is reused through consume.",
     "expiry": "remove when Bun no longer emits coverage rows for erased multiline type annotations"
@@ -2262,7 +2319,8 @@
       "function": "main",
       "fingerprint": "sha256:b7acbdfdd4b105c15c8af12ccab1510fd1de0fecc6f318da45c082941f3f068c",
       "anchorLines": 23,
-      "targetLines": "1-23"
+      "targetLines": "1-23",
+      "class": "dispatch-case"
     },
     "reason": "Spawn-only main() dispatch arms for the fixed-pool commands. The handlers' protocol is exercised by t135 and pinned by t425, while Bun does not attribute child-process main dispatch to parent LCOV.",
     "expiry": "remove when main() receives an in-process argv driver"
@@ -2273,7 +2331,8 @@
       "function": "readUnitPoolEventSetsFromAudit",
       "fingerprint": "sha256:cbdd51621e370fd9f915857955ac7248418a96efb5d07cfaf8b99758fd8a924e",
       "anchorLines": 3,
-      "targetLines": "1-3"
+      "targetLines": "1-3",
+      "class": "catch-arm"
     },
     "reason": "Error-prefix normalization after a malformed canonical Event Set is the catch sibling of decodeUnitPoolEventSet. tests/unit/t425-unit-pool.test.ts drives malformed JSON and invalid event shapes directly; reaching this wrapper additionally requires installing a malformed committed audit row.",
     "expiry": "remove when audit-row enumeration receives an injectable row source"
@@ -2284,7 +2343,8 @@
       "function": "<module>",
       "fingerprint": "sha256:5fc999842bd3d09b89b1f0c423e71bbdbd3bcb116bcbd7389bdf4a18f8e4e6a4",
       "anchorLines": 16,
-      "targetLines": "1-16"
+      "targetLines": "1-16",
+      "class": "type-only"
     },
     "reason": "Unit-pool outcome, phase, result, plan, and validation declarations are TypeScript-only and erased at runtime. Their closed values and behavior are enforced by tsc and tests/unit/t425-unit-pool.test.ts; Bun emits DA:0 records that cannot execute.",
     "expiry": "remove if Bun stops emitting DA records for erased type declarations"
@@ -2295,7 +2355,8 @@
       "function": "<module>",
       "fingerprint": "sha256:fb0a6a0761031ea9dadac3cc0ec5ca9a9d7283badd0b53445be91d5e04a1fe6f",
       "anchorLines": 40,
-      "targetLines": "1-40"
+      "targetLines": "1-40",
+      "class": "type-only"
     },
     "reason": "Queue, active-attempt, terminal, reconciliation, and projection interfaces are TypeScript-only and erased at runtime. Their shapes are exercised through coordinator projections in t425 and enforced by tsc; Bun emits non-executable DA:0 rows.",
     "expiry": "remove if Bun stops emitting DA records for erased type declarations"
@@ -2306,7 +2367,8 @@
       "function": "<module>",
       "fingerprint": "sha256:57b67117cd2b62596dc1732896336948be50583853676950f4ba8d5085bd7c3d",
       "anchorLines": 18,
-      "targetLines": "1-18"
+      "targetLines": "1-18",
+      "class": "type-only"
     },
     "reason": "Canonical Unit-pool Event and Event Set declarations are TypeScript-only. Runtime decoding validates their concrete shapes in amadeus-unit-pool-runtime.ts and t425, while tsc enforces producers; the declarations themselves cannot execute.",
     "expiry": "remove if Bun stops emitting DA records for erased type declarations"
@@ -2317,7 +2379,8 @@
       "function": "<module>",
       "fingerprint": "sha256:7cc059fc55abc4afe9b317998349872726c56706fd5fc4e87fbaf07467fc9e7e",
       "anchorLines": 15,
-      "targetLines": "1-15"
+      "targetLines": "1-15",
+      "class": "type-only"
     },
     "reason": "Unit-pool Command and Proposal unions are erased TypeScript declarations. Every command family is driven through the coordinator in t425; Bun's DA:0 records on these declaration lines are not executable.",
     "expiry": "remove if Bun stops emitting DA records for erased type declarations"
@@ -2328,7 +2391,8 @@
       "function": "<module>",
       "fingerprint": "sha256:4663e181e229327f47519cb31e361441da28f5c0f5357247786ffa118e055f97",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "type-only"
     },
     "reason": "PoolCommand and SettlementCommand are compile-time extraction aliases erased before runtime. tsc enforces their narrowing and t425 drives each settlement command kind.",
     "expiry": "remove if Bun stops emitting DA records for erased type declarations"
@@ -2361,7 +2425,8 @@
       "function": "handleCheckbox",
       "fingerprint": "sha256:e404aff33f4945335510002eb4b1ee09c34a3acb8f56054818c7e61058e2da2e",
       "anchorLines": 3,
-      "targetLines": "1-3"
+      "targetLines": "1-3",
+      "class": "catch-arm"
     },
     "reason": "The checkbox adapter translates StateMutationTargetError into the structured slug-tagged CLI error. t224 drives a duplicate canonical row through the shipped checkbox command and asserts duplicate-target plus byte identity; error() exits the child, so the catch wiring is not parent-LCOV visible.",
     "expiry": "remove when handleCheckbox receives a non-exiting error port or Bun merges child coverage"
@@ -2416,7 +2481,8 @@
       "function": "inspectCompletedAdvanceState",
       "fingerprint": "sha256:3eeda055454f7996397529e641370fd79eb48b158466e5e8c6660448b40086f1",
       "anchorLines": 4,
-      "targetLines": "1-4"
+      "targetLines": "1-4",
+      "class": "type-only"
     },
     "reason": "This multiline return-type declaration for inspectCompletedAdvanceState is erased TypeScript. Its three concrete fields are consumed by handleAdvance and covered by t17 and the in-process advance seams; Bun emits non-executable DA:0 rows for the annotation continuation.",
     "expiry": "remove if Bun stops emitting DA records for erased type declarations or the signature is collapsed"
@@ -2438,7 +2504,8 @@
       "function": "emitAdvanceAudit",
       "fingerprint": "sha256:fed924ee8492cb66b9d10bcfcec8b44b58360f4b262fd1fbfca7aeee2a37ff37",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "catch-arm"
     },
     "reason": "Fail-closed phase-audit catch wiring is the sibling of the advance audit failure exercised by t125, which asserts non-zero exit and byte-identical state when audit storage fails. The handler is driven through the spawned CLI and error() exits, leaving this catch row outside parent LCOV.",
     "expiry": "remove when advance audit emission and error handling receive injectable in-process ports"
@@ -2449,7 +2516,8 @@
       "function": "handleAdvance",
       "fingerprint": "sha256:fed924ee8492cb66b9d10bcfcec8b44b58360f4b262fd1fbfca7aeee2a37ff37",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "catch-arm"
     },
     "reason": "Fail-closed STAGE_STARTED audit catch wiring is the sibling of the advance audit failure exercised by t125, which asserts non-zero exit and byte-identical state when audit storage fails. The handler is driven through the spawned CLI and error() exits, leaving this catch row outside parent LCOV.",
     "expiry": "remove when advance audit emission and error handling receive injectable in-process ports"
@@ -2482,7 +2550,8 @@
       "function": "advisoryOccurrenceMatchesDecision",
       "fingerprint": "sha256:799d1c5f4401c6ade45fffbe154d25ef353610a8f9fd6261328a51ecdd9fa451",
       "anchorLines": 5,
-      "targetLines": "1-5"
+      "targetLines": "1-5",
+      "class": "type-only"
     },
     "reason": "These lines contain only the multiline TypeScript input type. The function body — the true, false, and fail-closed catch outcomes — is covered directly by t459 unit tests, but Bun emits zero-hit DA records for the type-only signature only in the merged suite.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
@@ -2493,7 +2562,8 @@
       "function": "resolveAdvisoryChoiceAutonomously",
       "fingerprint": "sha256:0a9e7bf8c6eaf43ece44a49989a8bb312185246b2baab4538c033935c5d94a9e",
       "anchorLines": 4,
-      "targetLines": "1-4"
+      "targetLines": "1-4",
+      "class": "type-only"
     },
     "reason": "These lines contain only the multiline TypeScript input type. The function body — the resolved, human-required, and decision-failure catch outcomes — is covered directly by t458 integration tests, but Bun emits zero-hit DA records for the type-only signature only in the merged suite.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
@@ -2614,7 +2684,8 @@
       "function": "<module>",
       "fingerprint": "sha256:4bb43d005045ca3abe93d212b7a5279cbe5cb5d207057fbf20cd7a81b7b99a6c",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "type-only"
     },
     "reason": "Bun LCOV records the erased environment type alias as a zero-hit line even though it has no runtime branch or statement.",
     "expiry": "remove when Bun no longer emits DA records for erased TypeScript declarations"
@@ -2625,7 +2696,8 @@
       "function": "inspectLedgerLock",
       "fingerprint": "sha256:943abd9b87fa2659e45fcf60684df3fe550db8a4bbf262886582059fb3e36207",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "catch-arm"
     },
     "reason": "This fail-closed branch requires the lock directory to disappear or become unreadable between existsSync and statSync. Fresh, stale, live-owner, dead-owner, and malformed-owner states are covered deterministically; the remaining TOCTOU race is not reproducible without an injected filesystem port.",
     "expiry": "remove when lock inspection receives an injectable filesystem port"
@@ -2647,7 +2719,8 @@
       "function": "reapLedgerLock",
       "fingerprint": "sha256:c9bb1b7662439312172ba0a3031914b1986bfac85f281f29c61d722fee8fca6f",
       "anchorLines": 4,
-      "targetLines": "2-3"
+      "targetLines": "2-3",
+      "class": "catch-arm"
     },
     "reason": "The generic recovery failure belt covers rename/removal races after recoverability was established. Deterministic tests cover blocked reaping and successful stale/dead reaping; inducing a post-check filesystem race needs an injectable filesystem port.",
     "expiry": "remove when lock reaping receives an injectable filesystem port"
@@ -2658,7 +2731,8 @@
       "function": "acquireLedgerLock",
       "fingerprint": "sha256:d53c91a7d36af7981e7ad47d0670de5a1ffea393bd0cf2c74dd9e165b3969e10",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "catch-arm"
     },
     "reason": "This cleanup and classification branch requires mkdirSync to succeed while the immediately following exclusive owner stamp fails. Lock timeout and normal acquisition are covered; deterministic owner-stamp fault injection requires a filesystem port.",
     "expiry": "remove when lock acquisition receives an injectable filesystem port"
@@ -2669,7 +2743,8 @@
       "function": "persistNewReceipt",
       "fingerprint": "sha256:e6010284a9050d26148907a13c15711890c45650099cd822e9bf6872bfe00078",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "catch-arm"
     },
     "reason": "The rename failure mapping is a fail-closed filesystem boundary after a successful durable temporary write. Successful atomic rename, directory fsync failure, and recovery are covered; a deterministic rename-only failure requires an injected filesystem port.",
     "expiry": "remove when receipt persistence receives an injectable rename port"
@@ -2735,7 +2810,8 @@
       "function": "driveAidlc",
       "fingerprint": "sha256:3ab331e01f2983e0ec336aec11641420922fd59be844436c4c12558a9da8ad0c",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "catch-arm"
     },
     "reason": "The swallowed-abort predicate is evaluated only when the real SDK generator throws after an orchestrator-owned abort. Timeout/abort/reap semantics are covered through offline adapters; CI cannot start the credential-bearing SDK stream.",
     "expiry": "remove when driveAidlc receives an injectable SDK query stream"
@@ -2779,7 +2855,8 @@
       "function": "closeProbeFile",
       "fingerprint": "sha256:6f5243a048d2da45558231945388da94da559b82be3352162b379763d9f2e939",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "catch-arm"
     },
     "reason": "The remaining filesystem, catalog, trust, and receipt rejection rows are exercised through the spawned Pi doctor diagnostics and dispatch suites; Bun does not merge spawned CLI coverage into the parent LCOV report.",
     "expiry": "remove when Pi doctor has an in-process command driver or Bun merges spawned CLI coverage"
@@ -2845,7 +2922,8 @@
       "function": "filesBelow",
       "fingerprint": "sha256:4fd7f03de4839febb29dde107cb24bb9ab71ca4ca0b32eaf51cc1d0577552105",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "catch-arm"
     },
     "reason": "The remaining filesystem, catalog, trust, and receipt rejection rows are exercised through the spawned Pi doctor diagnostics and dispatch suites; Bun does not merge spawned CLI coverage into the parent LCOV report.",
     "expiry": "remove when Pi doctor has an in-process command driver or Bun merges spawned CLI coverage"
@@ -2878,7 +2956,8 @@
       "function": "captureExecutableSnapshot",
       "fingerprint": "sha256:b3599f41bdbd2fd03d1112fffd10d143487f9206df50ff5f88a5ebf7f07b930c",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "catch-arm"
     },
     "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
     "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
@@ -2933,7 +3012,8 @@
       "function": "parseEnvelope",
       "fingerprint": "sha256:4fd7f03de4839febb29dde107cb24bb9ab71ca4ca0b32eaf51cc1d0577552105",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "catch-arm"
     },
     "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
     "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
@@ -2944,7 +3024,8 @@
       "function": "verifyEnvelope",
       "fingerprint": "sha256:6f5243a048d2da45558231945388da94da559b82be3352162b379763d9f2e939",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "catch-arm"
     },
     "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
     "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
@@ -2966,7 +3047,8 @@
       "function": "writeGuardianControl",
       "fingerprint": "sha256:6f5243a048d2da45558231945388da94da559b82be3352162b379763d9f2e939",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "catch-arm"
     },
     "reason": "The Pi guardian and child driver run only as spawned RPC processes in the integration suite; their lifecycle, replay, termination, and failure outcomes are asserted, but Bun does not merge child-process coverage.",
     "expiry": "remove when the Pi driver gains an in-process transport driver or Bun merges spawned child coverage"
@@ -3021,7 +3103,8 @@
       "function": "reserve",
       "fingerprint": "sha256:51ea722a4a962b55616b3b1a518a721f96eba14421027288946531439423d8b2",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "catch-arm"
     },
     "reason": "Replay reservation, guardian acceptance, terminal commit, and recovery are exercised through the spawned Pi child-driver integration suite; Bun does not merge that child store coverage.",
     "expiry": "remove when the replay store is driven in-process or Bun merges spawned child coverage"
@@ -3043,7 +3126,8 @@
       "function": "auditMapping",
       "fingerprint": "sha256:f85e7a3dc66639492ef16009f2e56b1203cc12efc810c3d15e24adc35fa7624b",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "dispatch-case"
     },
     "reason": "The residual snapshot, reconciliation, and extension-registration rows are fail-closed host-boundary fallbacks; Pi lifecycle adapter suites assert the public mappings and decisions without a corrupt live host state.",
     "expiry": "remove when the Pi host state and extension registration ports become injectable"
@@ -3076,7 +3160,8 @@
       "function": "amadeusPiExtension",
       "fingerprint": "sha256:92a11927241e5dbcefd1d18c8d095cff2e2478eb97403f904e5fa2cad26831da",
       "anchorLines": 8,
-      "targetLines": "1-8"
+      "targetLines": "1-8",
+      "class": "type-only"
     },
     "reason": "The residual snapshot, reconciliation, and extension-registration rows are fail-closed host-boundary fallbacks; Pi lifecycle adapter suites assert the public mappings and decisions without a corrupt live host state.",
     "expiry": "remove when the Pi host state and extension registration ports become injectable"
@@ -3274,7 +3359,8 @@
       "function": "resolveQualityPluginActivation",
       "fingerprint": "sha256:9cbaae85537e8dc8a026001e0ed28eb538dad402543608a1a7cbc2e2d3b2e497",
       "anchorLines": 3,
-      "targetLines": "1-3"
+      "targetLines": "1-3",
+      "class": "type-only"
     },
     "reason": "These lines contain only the multiline TypeScript input type. Every activation branch is covered directly by the t428 unit and t429 integration tests; the signature has no runtime statement.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
@@ -3285,7 +3371,8 @@
       "function": "createMemoryQualityRepairRepository",
       "fingerprint": "sha256:6a770df7bfa06807e51565b1f265a96c9c00e6f3ac10aca0f637bd1dd529f9e0",
       "anchorLines": 3,
-      "targetLines": "1-3"
+      "targetLines": "1-3",
+      "class": "type-only"
     },
     "reason": "These lines contain only the multiline TypeScript input type. The in-memory repository's transaction and commit paths are covered directly by t429 integration tests; the signature has no runtime statement.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
@@ -3296,7 +3383,8 @@
       "function": "createMemoryQualityRepairRepository",
       "fingerprint": "sha256:01ade2dfdb20001585531e747b39508dd06735690eeddc50331635fcb5d01812",
       "anchorLines": 3,
-      "targetLines": "1-3"
+      "targetLines": "1-3",
+      "class": "type-only"
     },
     "reason": "These lines contain only the multiline TypeScript type annotation of the active local binding. This staged-transaction state is exercised directly by t429 integration tests; the annotation has no runtime statement.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
@@ -3307,7 +3395,8 @@
       "function": "createQualityRepairCoordinator",
       "fingerprint": "sha256:9514bb56c20c53305bc3ce345b4c8113fb6fb9bea62d04d17c0774a6185a348f",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "type-only"
     },
     "reason": "These lines contain only the multiline TypeScript input type. Coordinator construction and every dispatch/resume/status branch it exposes are covered directly by t429 integration tests; the signature has no runtime statement.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
@@ -3318,7 +3407,8 @@
       "function": "rebaseResumeEvidence",
       "fingerprint": "sha256:50d05ad16f9dfdce52605e81172dde639c634978c7c8cd6dd623616720fdb824",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "type-only"
     },
     "reason": "These lines contain only the multiline TypeScript return type annotation. Every resume-rebase branch is covered directly by t429 integration tests; the annotation has no runtime statement.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
@@ -3340,7 +3430,8 @@
       "function": "createAuditQualityRepairRepository",
       "fingerprint": "sha256:32a5766c6bde07c0f6a4c0e2707acf84def94a5aa25333d9e6902654268002e8",
       "anchorLines": 3,
-      "targetLines": "1-3"
+      "targetLines": "1-3",
+      "class": "type-only"
     },
     "reason": "These lines contain only the multiline TypeScript input type. The audit repository's commit, reload, and replay paths are covered directly by t429 integration tests; the signature has no runtime statement.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
@@ -3351,7 +3442,8 @@
       "function": "replayQualityRepairScope",
       "fingerprint": "sha256:5eecfbafe54e32327197aee81a425fbfcb7b5b5675a44d508afb37d385f927ae",
       "anchorLines": 4,
-      "targetLines": "1-4"
+      "targetLines": "1-4",
+      "class": "type-only"
     },
     "reason": "These lines contain only the multiline TypeScript return type annotation. Scope replay including the not-found rejection is covered directly by t429 integration tests; the annotation has no runtime statement.",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
@@ -3494,7 +3586,8 @@
       "function": "createAuditIntentAutonomyRepository",
       "fingerprint": "sha256:32a5766c6bde07c0f6a4c0e2707acf84def94a5aa25333d9e6902654268002e8",
       "anchorLines": 3,
-      "targetLines": "1-3"
+      "targetLines": "1-3",
+      "class": "type-only"
     },
     "reason": "t431/t432 cover the autonomy domain, coordinator, persistence, replay, reservation, conflict, grant, park, resume, and completion contracts in-process; this residual range is a defensive or malformed-state arm outside those valid transitions.",
     "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
@@ -3516,7 +3609,8 @@
       "function": "createLoopMonitorCoordinator",
       "fingerprint": "sha256:9a2c63c190dd7ab3dc642320bc23b6528a7a284af953aa9a87c35203548e2453",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "type-only"
     },
     "reason": "t426/t427 cover the loop monitor domain, coordinator, replay, fixed-point, churn, latch, and five-harness projection in-process; this residual range is a defensive or malformed-state arm outside those valid transitions.",
     "expiry": "remove when deterministic fault injection reaches this residual defensive arm, or Bun stops stamping the non-executable row"
@@ -3549,7 +3643,8 @@
       "function": "isFullyAutonomousIntent",
       "fingerprint": "sha256:b3599f41bdbd2fd03d1112fffd10d143487f9206df50ff5f88a5ebf7f07b930c",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "catch-arm"
     },
     "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
     "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
@@ -3637,7 +3732,8 @@
       "function": "createAuditIntentAutonomyRepository",
       "fingerprint": "sha256:8e36a32e68294953eeb2a5f1aa6a90abfdbacb30dcbbd776a73e302c26483ac2",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "type-only"
     },
     "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
     "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
@@ -3648,7 +3744,8 @@
       "function": "main",
       "fingerprint": "sha256:acb663282982152af7b16532e4cb95ab8cd3b2f6e8a34935ea116fa5986c2742",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "dispatch-case"
     },
     "reason": "Focused regression suites exercise the surrounding behavior; this selector is limited to the exact added lines that remain zero-hit in the merged Bun LCOV report (defensive, type-only, or spawned-boundary path).",
     "expiry": "remove when deterministic in-process coverage reaches this exact residual range"
@@ -3747,7 +3844,8 @@
       "function": "latestHumanTurnId",
       "fingerprint": "sha256:2fdd8eecc875ccfbd5c57e32edf9ae71e2b0cb09cbd5f8287e8e6ef7290e2747",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "catch-arm"
     },
     "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
     "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
@@ -3758,7 +3856,8 @@
       "function": "commitProductionStageGateDecision",
       "fingerprint": "sha256:b6d8fd2fba7482e8cb2bfe948a8ed24e0d18b277caf721a2c71bf3a0af055b99",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "type-only"
     },
     "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
     "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
@@ -3912,7 +4011,8 @@
       "function": "createMemoryIntentAutonomyRepository",
       "fingerprint": "sha256:97daef3107d283f00099aca34f8b80e6acffaacaa0137e307de63001b30b5522",
       "anchorLines": 3,
-      "targetLines": "1-3"
+      "targetLines": "1-3",
+      "class": "type-only"
     },
     "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
     "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
@@ -3945,7 +4045,8 @@
       "function": "createIntentAutonomyCoordinator",
       "fingerprint": "sha256:e409e1eaf609f6dc4fe2ff2ff2330b226e9123dbe24e4f802cfd4dbd7cddd848",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "type-only"
     },
     "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
     "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
@@ -3967,7 +4068,8 @@
       "function": "createSelectedGateDecision",
       "fingerprint": "sha256:7472cd237d4d0b4768d0919ec033c2f2418c6addbd2a25f1aca0456dc5d535de",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "catch-arm"
     },
     "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
     "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
@@ -3989,7 +4091,8 @@
       "function": "park",
       "fingerprint": "sha256:2e95beb2d513dce1850b612f77ba6a7023ee3d97aebd27b6300dfa5dab33d00b",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "catch-arm"
     },
     "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
     "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
@@ -4022,7 +4125,8 @@
       "function": "readStatusAutonomy",
       "fingerprint": "sha256:b3599f41bdbd2fd03d1112fffd10d143487f9206df50ff5f88a5ebf7f07b930c",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "catch-arm"
     },
     "reason": "The status projection read is driven in-process by t435; this residual line is the defensive catch arm for an unreadable audit projection, not reachable from a healthy record.",
     "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
@@ -4220,7 +4324,8 @@
       "function": "planTerminalCommit",
       "fingerprint": "sha256:0b48e4b4a14154a8410cf50df721e8f03ebd67b64fbd8ae438eec9ab2e4fb6fe",
       "anchorLines": 3,
-      "targetLines": "2"
+      "targetLines": "2",
+      "class": "catch-arm"
     },
     "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
     "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
@@ -4242,7 +4347,8 @@
       "function": "planTerminalCommit",
       "fingerprint": "sha256:8facb76af6f40556cb8d26efa96af750d426bf0331c24cc0f4fcd99a5a15f4f7",
       "anchorLines": 3,
-      "targetLines": "2"
+      "targetLines": "2",
+      "class": "catch-arm"
     },
     "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
     "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
@@ -4275,7 +4381,8 @@
       "function": "parseCompletionEvidencePayload",
       "fingerprint": "sha256:413a2c93374cc0bcdab8ebb02954865cab94e8ac359ae10a063421640003da73",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "catch-arm"
     },
     "reason": "Deep fail-closed arm of the live conformance pipeline (forged/partial multi-stage state that the public seams cannot construct); the reachable contract rejections — registry, cohort, validation-set bound, evidence payload, run transitions, terminal receipt, replay — are pinned in-process by t434.",
     "expiry": "remove when the arm gains a deterministic in-process driver, or Bun merges child-process coverage"
@@ -4286,7 +4393,8 @@
       "function": "hasRecordedAdvisoryPresentation",
       "fingerprint": "sha256:b3599f41bdbd2fd03d1112fffd10d143487f9206df50ff5f88a5ebf7f07b930c",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "catch-arm"
     },
     "reason": "The catch arm cannot fire in the record flow: latestHumanTurn read the same audit shard successfully one call earlier under the same audit lock, so the file cannot vanish before this read. Kept as defensive I/O parity with the prompt route's fail-closed reads.",
     "expiry": "remove if the presentation check ever runs outside the audit lock or before the human-turn read"
@@ -4362,7 +4470,8 @@
       "function": "prepareMutation",
       "fingerprint": "sha256:bda3a97be133821caccd913666f0a89f89ab8c03a60cc4473e3d59d92a58c6e4",
       "anchorLines": 3,
-      "targetLines": "1-3"
+      "targetLines": "1-3",
+      "class": "catch-arm"
     },
     "reason": "The defensive catch around the mutant write/copy only fires when writeFileSync or cpSync throws inside a directory mkdtempSync just created; the portable injections (absent path, dangling symlink) are all absorbed earlier as typed failures, and a directory-shaped module diverges between macOS (EISDIR throw) and Linux (empty read), so a deterministic cross-platform red is not constructible (bun-readfilesync-dir-platform-divergence).",
     "expiry": "remove if the workshop gains an injectable filesystem port"
@@ -4428,7 +4537,8 @@
       "function": "isBotAuthor",
       "fingerprint": "sha256:1e243b10516f555fae1eaf42523214579b01d2f0d12ae7fa576eda43dc4ce6a8",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "type-only"
     },
     "reason": "These lines are the multiline TypeScript parameter type of isBotAuthor; the body is covered directly by t447 but Bun stamps the type-only signature lines 0 under the merged-suite union (bun-multiline-arg-da0).",
     "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
@@ -4439,7 +4549,8 @@
       "function": "main",
       "fingerprint": "sha256:50b83672a1ce2bc04c6e20e052de6cadcefb21d4ea662753c78c035be3d0202c",
       "anchorLines": 3,
-      "targetLines": "1-3"
+      "targetLines": "1-3",
+      "class": "dispatch-case"
     },
     "reason": "main() dispatch case for the session-takeover verb. main() is the CLI entry — never driven in-process — so bun --coverage cannot measure its switch arms; the handler it dispatches (handleSessionTakeover) is driven in-process by tests/integration/t464 and end-to-end by t462. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
     "expiry": "remove when main() gains an in-process argv driver"
@@ -4450,7 +4561,8 @@
       "function": "main",
       "fingerprint": "sha256:03cbfc34b017bfcdea58a24f7004065c48efffee8b48769784f47c54200a1000",
       "anchorLines": 3,
-      "targetLines": "1-3"
+      "targetLines": "1-3",
+      "class": "dispatch-case"
     },
     "reason": "main() dispatch case for the declare-units-done verb (issue #2358). main() is unexported and runs only under import.meta.main, so bun --coverage cannot measure its switch arms; the handler it dispatches (handleDeclareUnitsDone) is driven in-process by tests/integration/t480-declare-units-done and end-to-end by the same suite's spawned CLI arms. Dispatch-case rows are the named second-resort allowlist case in spawn-blindspot-two-step (ii); every pre-existing verb case is unmeasured the same way.",
     "expiry": "remove when main() gains an in-process argv driver"
@@ -4526,7 +4638,8 @@
       "function": "handleApproveBatch",
       "fingerprint": "sha256:060da3403e267d19639f710d64f8dee413cbc325e5cf4e1436cc40173ee8104d",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "catch-arm"
     },
     "reason": "The audit-failure catch arm of approve-batch. Its only statement is error(), which is amadeus-bolt.ts's emitError wrapper: emitError ends in process.exit(1) unconditionally (amadeus-lib.ts, emitError), so entering this arm in-process terminates the test runner rather than returning a verdict — measured directly, an in-process driver never survives to assert. It also latches emitError's module-level _errorEmitInProgress flag, which is never reset, so a driver that stubbed process.exit would silently suppress the audit row of every later error in the same bun process. The lines this arm guards are covered: the happy path (emit then write) and the idempotent early return are both driven in-process by t507, and t145 spawns the real CLI across the lock race. Behaviour-preserving collapse (spawn-blindspot-two-step (i)) does not help — the catch clause line is the patch line either way.",
     "expiry": "remove when error()/emitError gains an in-process throw seam instead of process.exit"
@@ -4537,7 +4650,8 @@
       "function": "handleExecute",
       "fingerprint": "sha256:060da3403e267d19639f710d64f8dee413cbc325e5cf4e1436cc40173ee8104d",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "catch-arm"
     },
     "reason": "The audit-failure catch arm of jump execute, the same shape already waived for amadeus-bolt handleApproveBatch. Its only statement is error(), amadeus-jump.ts's emitError wrapper: emitError ends in process.exit(1) unconditionally (amadeus-lib.ts, emitError), so entering this arm in-process terminates the test runner rather than returning a verdict, and it latches emitError's module-level _errorEmitInProgress flag, which is never reset — a driver that stubbed process.exit would silently suppress the audit row of every later error in the same bun process. Reaching it also needs emitAudit itself to throw, and there is no injectable audit port on this path. Everything the arm guards is covered: the emit-then-write happy path is driven in-process by t-jump-direction-seam / t-jump-phase-events-seam / t-phase-check-gate-seam / t19, and t145 spawns the real CLI across the #2729 lock race. Behaviour-preserving collapse (spawn-blindspot-two-step (i)) does not help — the catch clause line is the patch line either way; it WAS applied to this function's other patch row, the SKIP-target guard, which is now measured (DA 76).",
     "expiry": "remove when error()/emitError gains an in-process throw seam instead of process.exit"
@@ -4548,7 +4662,8 @@
       "function": "safeReaddir",
       "fingerprint": "sha256:344567af092d785dc64ffa5db33fe5d72a63d400001c7a692c245bc06d2b886f",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "catch-arm"
     },
     "reason": "The catch arm of safeReaddir, a diagnostics-only helper on the copyTreeWithRetry failure path. Its caller reportCopyTreeFailure only calls it when existsSync(src) already returned true, so reaching the arm needs src to disappear or turn unreadable BETWEEN that check and the readdir — the very race the arm exists to survive, and one that cannot be scheduled deterministically. The arm is also downstream of an injected copy failure, so a driver would have to force cpSync to throw first. Everything the helper decides on the reachable path (the entry count that lands in the diagnostic line) is exercised whenever the retry path runs.",
     "expiry": "remove when reportCopyTreeFailure takes an injectable readdir port"
@@ -4599,7 +4714,8 @@
       "function": "validateWindowNetSeconds",
       "fingerprint": "sha256:2fdd8eecc875ccfbd5c57e32edf9ae71e2b0cb09cbd5f8287e8e6ef7290e2747",
       "anchorLines": 1,
-      "targetLines": "1"
+      "targetLines": "1",
+      "class": "catch-arm"
     },
     "reason": "Fail-closed double-check of smart-constructor invariants: the inputs carry branded ids/intervals that the public constructors already reject, so the arm cannot fire through the exported accounting seam; kept per the typed-invariant fail-closed design."
   },
@@ -4629,7 +4745,8 @@
       "function": "createWindowAttribution",
       "fingerprint": "sha256:f325af5443fe2245124df422a9efd0002a3ec1ab385380e92c3ce1ddb3ae81b9",
       "anchorLines": 2,
-      "targetLines": "1-2"
+      "targetLines": "1-2",
+      "class": "catch-arm"
     },
     "reason": "Fail-closed double-check of smart-constructor invariants: the inputs carry branded ids/intervals that the public constructors already reject, so the arm cannot fire through the exported accounting seam; kept per the typed-invariant fail-closed design."
   },
