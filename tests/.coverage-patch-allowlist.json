@@ -6497,9 +6497,9 @@
     "file": "plugins/pr-convergence/tools/pr-convergence-cli.ts",
     "selector": {
       "function": "nodeDecisionEmitter",
-      "fingerprint": "sha256:dadde3570381c97b13b9a900c4fa727371dfdd55f92d74b29e6f61402ab0c7ce",
-      "anchorLines": 13,
-      "targetLines": "1-13"
+      "fingerprint": "sha256:5b0c00d1583bfea20129eaf54aa6ed6f697f99f9e64c5951b318bc5b2d5d15ff",
+      "anchorLines": 17,
+      "targetLines": "1-17"
     },
     "reason": "The production DecisionEmitter spawns the host's real amadeus-log tool; every test drives the CLI through the injected emitDecision seam so no real audit is ever emitted from a test run (t448 covers the seam contract, not the child_process wiring).",
     "expiry": "remove if a hermetic audit-tool fixture makes the real spawn drivable in CI"
