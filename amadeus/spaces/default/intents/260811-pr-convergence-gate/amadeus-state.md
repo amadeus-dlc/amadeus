@@ -11,7 +11,7 @@ autonomy=fullで
 - **Scope**: self-fix
 - **Start Date**: 2026-08-11T14:05:06Z
 - **State Version**: 7
-- **Active Agent**: amadeus-developer-agent
+- **Active Agent**: amadeus-architect-agent
 - **Harness**: codex
 - **Harness Version**: {"state":"unavailable","reason":"native-harness-version-not-exposed"}
 - **Model**: {"state":"unavailable","reason":"native-model-not-exposed"}
@@ -33,8 +33,8 @@ autonomy=fullで
 
 ## Execution Plan Summary
 - **Total Stages**: 10
-- **Completed**: 8
-- **In Progress**: pr-convergence
+- **Completed**: 7
+- **In Progress**: tla-authoring
 
 ## Runtime State
 - **Revision Count**: 0
@@ -91,8 +91,8 @@ Per unit: [TBD]
 - [x] code-generation — EXECUTE
 - [x] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
-- [x] tla-authoring — EXECUTE
-- [-] pr-convergence — EXECUTE
+- [-] tla-authoring — EXECUTE
+- [ ] pr-convergence — EXECUTE
 - [ ] formal-model-check — EXECUTE
 
 ### OPERATION PHASE
@@ -106,17 +106,17 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: pr-convergence
-- **Next Stage**: formal-model-check
+- **Current Stage**: tla-authoring
+- **Next Stage**: pr-convergence
 - **Status**: Running
 - **Intent Autonomy Mode**: semi
 - **Intent Grant**: none
 - **Construction Autonomy Mode**: gated
-- **Last Updated**: 2026-08-12T06:33:46Z
+- **Last Updated**: 2026-08-12T05:13:59Z
 
 ## Session Resume Point
-- **Last Completed Stage**: tla-authoring
-- **Next Action**: Execute Pr Convergence
+- **Last Completed Stage**: build-and-test
+- **Next Action**: Execute TLA+ Authoring
 - **Pending Artifacts**: none
 
 <!-- amadeus:mirror-state:v1:start -->
