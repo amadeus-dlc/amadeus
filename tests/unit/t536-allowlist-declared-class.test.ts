@@ -190,6 +190,10 @@ describe("t536 the ratchet floor: a decidable range must declare its class", () 
     expect(rendered).toContain("fixture.ts:5");
     expect(rendered).toContain('"class": "catch-arm"');
   });
+
+  test("a source the floor cannot read throws instead of passing", () => {
+    expect(() => findUndeclaredDecidableEntries([entryFor("5")], new Map())).toThrow(/source not found/);
+  });
 });
 
 describe("t536 the report consumes every field of the verdict", () => {
