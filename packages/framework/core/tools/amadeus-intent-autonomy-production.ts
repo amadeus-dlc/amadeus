@@ -1094,10 +1094,15 @@ export interface ProductionStageFailureInput {
 // park that keeps the grant. The obligation identity is derived from the
 // failure payload, so an unchanged failure reads as non-progress and the
 // bounded loop terminates instead of re-issuing the same run-stage forever.
+export type ProductionStageFailureResult =
+  | { readonly kind: "READY" | "repair" | "replanned"; readonly evidenceFingerprint: string }
+  | { readonly kind: "parked"; readonly stall: ProductionRepairStall }
+  | { readonly kind: "error"; readonly reason: string };
+
 export function admitProductionStageFailure(
   input: ProductionStageFailureInput,
-): ProductionQualityObservationResult {
-  return commitProductionQualityObservation({
+): ProductionStageFailureResult {
+  const observed = commitProductionQualityObservation({
     projectDir: input.projectDir,
     evidence: {
       providerId: "quality-evidence-v1",
@@ -1115,6 +1120,12 @@ export function admitProductionStageFailure(
     },
     replanContext: `Stage "${input.stage}" referee failed: ${input.failureDetail}`,
   });
+  if (observed.kind !== "parked") return observed;
+  // The park just happened, so its envelope is what the caller has to surface.
+  // An absent envelope means the projection and the park disagree — fail closed
+  // rather than announce a stop nobody can resume.
+  const stall = readProductionRepairStall(input.projectDir);
+  return stall === null ? { kind: "error", reason: "repair-stall-envelope-missing" } : { kind: "parked", stall };
 }
 
 export interface ProductionRepairStall {

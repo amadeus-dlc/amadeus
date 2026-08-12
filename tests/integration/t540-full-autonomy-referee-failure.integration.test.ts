@@ -15,7 +15,11 @@ import {
   previewProductionAutonomyGrant,
   readProductionAutonomyProjection,
 } from "../../dist/claude/.claude/tools/amadeus-intent-autonomy-production.ts";
-import { handleNext, handleReport } from "../../dist/claude/.claude/tools/amadeus-orchestrate.ts";
+import {
+  handleNext,
+  handleReport,
+  stageFailureDirective,
+} from "../../dist/claude/.claude/tools/amadeus-orchestrate.ts";
 
 class ExitSignal extends Error {}
 
@@ -151,6 +155,38 @@ describe("full autonomy typed referee failure", () => {
     expect(advanced.kind).toBe("parked");
     expect(String(advanced.reason)).toContain("REPAIR_STALLED");
     expect(String(advanced.reason)).toContain("resume-quality");
+  });
+
+  test("refuses an admission it cannot ground", () => {
+    projectDir = bornProject();
+    grantFullAutonomy(projectDir);
+
+    const noDetail = directive(capture(() => handleReport(
+      ["--stage", "code-generation", "--result", "failed"],
+      projectDir,
+    )));
+    expect(noDetail.kind).toBe("error");
+    expect(String(noDetail.message)).toContain("--failure <detail>");
+
+    // A slug the graph does not carry would open a quality scope nothing resumes.
+    const badStage = directive(capture(() => handleReport(
+      ["--stage", "not a stage id", "--result", "failed", "--failure", FAILURE],
+      projectDir,
+    )));
+    expect(badStage.kind).toBe("error");
+    expect(String(badStage.message)).toContain("unknown stage");
+  });
+
+  test("refuses to name a move when Quality Repair could not take the failure", () => {
+    // Production reaches this only when the Intent stops being admissible between
+    // the mode read and the admission; the refusal itself is a pure mapping.
+    expect(stageFailureDirective("code-generation", {
+      kind: "error",
+      reason: "active-intent-required",
+    })).toEqual({
+      kind: "error",
+      message: 'Cannot admit the failure of stage "code-generation": active-intent-required.',
+    });
   });
 
   test("keeps the forward-only report contract when autonomy is not granted", () => {

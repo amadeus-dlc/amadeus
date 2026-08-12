@@ -203,6 +203,7 @@ import {
   readProductionAutonomyProjection,
   readProductionRepairStall,
   type ProductionRepairStall,
+  type ProductionStageFailureResult,
 } from "./amadeus-intent-autonomy-production.ts";
 import { detectHarnessType } from "./amadeus-harness.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
@@ -5770,19 +5771,42 @@ function repairStalledReason(stall: ProductionRepairStall): string {
     "evidence strictly improves, or after an explicit human retry.";
 }
 
+// The directive an admission outcome calls for: the REPAIR_STALLED stop, the
+// refusal when Quality Repair could not take the failure, or the next move in
+// the bounded loop (another repair round, or the single replan). Exported as a
+// pure function so every outcome — including the refusals only a racing Intent
+// can produce in production — is drivable from a test.
+export function stageFailureDirective(
+  stage: string,
+  admitted: ProductionStageFailureResult,
+): Directive {
+  if (admitted.kind === "error") {
+    return errorDirective(`Cannot admit the failure of stage ${JSON.stringify(stage)}: ${admitted.reason}.`);
+  }
+  if (admitted.kind === "parked") return parkedDirective(repairStalledReason(admitted.stall), stage);
+  const move = admitted.kind === "replanned"
+    ? "Quality Repair replanned the repair context"
+    : "Quality Repair recorded the obligation for another repair round";
+  return printDirective(
+    `Stage ${JSON.stringify(stage)} failed closed and the failure was admitted to Quality Repair. ${move} ` +
+      `(evidence ${admitted.evidenceFingerprint}). Repair the recorded obligation, re-run the stage, and report ` +
+      "its outcome again.",
+  );
+}
+
 // Admit a typed stage-referee failure into Quality Repair and name the move the
 // outcome calls for: another bounded repair round, the one replan, or the
 // REPAIR_STALLED stop. The stall is read back from the park envelope so the
 // directive carries the same resume condition the projection recorded.
 function handleStageFailureReport(flags: ReportFlags, projectDir: string): void {
-  const stateContent = loadStateFileIfPresent(projectDir);
-  if (!stateContent) {
-    emit(errorDirective("No workflow state found — nothing to admit a stage failure against."));
-    return;
-  }
+  // Only a stage the graph carries can fail: the slug keys the quality scope the
+  // repair loop reads back, so an unknown one would open a scope nothing resumes.
+  // A state file the reader cannot supply a Current Stage from lands in the same
+  // refusal rather than in a scope keyed by nothing.
+  const stateContent = loadStateFileIfPresent(projectDir) ?? "";
   const stage = (flags.stage ?? getField(stateContent, "Current Stage") ?? "").trim();
-  if (stage.length === 0) {
-    emit(errorDirective("Cannot admit a stage failure: pass --stage <slug> or set Current Stage."));
+  if (nodeForSlug(stage) === undefined) {
+    emit(errorDirective(`Cannot admit a failure for unknown stage ${JSON.stringify(stage)}.`));
     return;
   }
   const detail = flags.failure?.trim();
@@ -5792,26 +5816,7 @@ function handleStageFailureReport(flags: ReportFlags, projectDir: string): void 
     ));
     return;
   }
-  const admitted = admitProductionStageFailure({ projectDir, stage, failureDetail: detail });
-  if (admitted.kind === "error") {
-    emit(errorDirective(`Cannot admit the failure of stage ${JSON.stringify(stage)}: ${admitted.reason}.`));
-    return;
-  }
-  if (admitted.kind === "parked") {
-    const stall = readProductionRepairStall(projectDir);
-    emit(stall === null
-      ? errorDirective(`Stage ${JSON.stringify(stage)} parked as REPAIR_STALLED but no park envelope was recorded.`)
-      : parkedDirective(repairStalledReason(stall), stage));
-    return;
-  }
-  const move = admitted.kind === "replanned"
-    ? "Quality Repair replanned the repair context"
-    : "Quality Repair recorded the obligation for another repair round";
-  emit(printDirective(
-    `Stage ${JSON.stringify(stage)} failed closed and the failure was admitted to Quality Repair. ${move} ` +
-      `(evidence ${admitted.evidenceFingerprint}). Repair the recorded obligation, re-run the stage, and report ` +
-      "its outcome again.",
-  ));
+  emit(stageFailureDirective(stage, admitProductionStageFailure({ projectDir, stage, failureDetail: detail })));
 }
 
 // The `report` handler. Reads the acted stage + scope from state, decides the
