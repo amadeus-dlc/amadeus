@@ -4,7 +4,7 @@
 // without the registered-model pin being loosened (issue #2913, defect D1).
 
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -13,9 +13,12 @@ import {
   isRefereeTlaModelReceipt,
   REFEREE_RECEIPT_IDENTITY_DOMAIN,
   isVerifiedTlaModelReceipt,
+  REFEREE_RECEIPT_SCHEMA,
   validateModelCheckReceipt,
+  validateRefereeTlaModelReceipt,
   validateVerifiedTlaModelReceipt,
 } from "../../plugins/formal-model-check/tools/tla-model-receipt.ts";
+import { TLA_EXECUTION_MODEL_NAME } from "../../plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts";
 import {
   createRefereeToolchain,
   createRefereeTlaModelReceipt,
@@ -168,6 +171,34 @@ describe("the referee receipt is a self-contained receipt kind", () => {
     expect(validateModelCheckReceipt(tampered).ok).toBe(false);
   });
 
+  test("a receipt whose model name is not a module name is refused", () => {
+    const tampered = { ...refereeReceipt(), modelName: "9Counter" };
+    const validated = validateModelCheckReceipt(tampered);
+    expect(validated.ok).toBe(false);
+    if (validated.ok) throw new Error("the receipt was accepted");
+    expect(validated.error.message).toBe("receipt schema or model name is invalid");
+  });
+
+  // The schema is what routes a receipt to this validator, so a rewritten one
+  // never reaches it through validateModelCheckReceipt — call it directly.
+  test("a receipt carrying another schema is refused by the referee validator", () => {
+    const tampered = { ...refereeReceipt(), schema: "amadeus.other-receipt.v1" };
+    const validated = validateRefereeTlaModelReceipt(tampered);
+    expect(validated.ok).toBe(false);
+    if (validated.ok) throw new Error("the receipt was accepted");
+    expect(validated.error.message).toBe("receipt schema or model name is invalid");
+    expect(REFEREE_RECEIPT_SCHEMA).not.toBe(tampered.schema);
+  });
+
+  test("the frozen execution model cannot be carried on a referee receipt", () => {
+    const tampered = { ...refereeReceipt(), modelName: TLA_EXECUTION_MODEL_NAME };
+    const validated = validateModelCheckReceipt(tampered);
+    expect(validated.ok).toBe(false);
+    if (validated.ok) throw new Error("the receipt was accepted");
+    expect(validated.error.message)
+      .toBe(`${TLA_EXECUTION_MODEL_NAME} requires the frozen model receipt`);
+  });
+
   // "0".repeat(64) is well-formed hex, so the tampering tests above reach the
   // identity comparison instead of the byte-identity shape check.
   test("a receipt whose byte identity is not hex is refused", () => {
@@ -240,12 +271,24 @@ describe("the referee receipt constructor refuses an underivable model", () => {
   });
 });
 
+// There is no dependency seam on acquisition, so the proof that it never ran is
+// observable instead: the cache root is created by nothing but acquire, whose
+// first act is `mkdirSync(<cacheRoot>/<artifact identity>, {recursive: true})`
+// (fs-tlc-toolchain.ts, FsTlcArtifactCache#acquireLock, reached only from
+// acquire). Constructing the toolchain only joins paths. A cache root that
+// still does not exist after the run therefore means acquire was never entered
+// — and the toolchain is not even constructed until after the failing line.
 describe("the referee toolchain refuses to run a model it cannot mint a receipt for", () => {
-  test("the run fails before the toolchain is acquired", async () => {
+  test("the run fails without ever acquiring the toolchain", async () => {
     const { modulePath, configPath } = workspace(MODULE, MISSING_INVARIANT_CONFIG);
-    const toolchain = createRefereeToolchain({});
+    const cacheParent = mkdtempSync(join(tmpdir(), "amadeus-t535-cache-"));
+    roots.push(cacheParent);
+    const cacheRoot = join(cacheParent, "unacquired");
+    expect(existsSync(cacheRoot)).toBe(false);
+    const toolchain = createRefereeToolchain({ cacheRoot });
     await expect(toolchain.run({ kind: "baseline", modulePath, configPath } as never))
       .rejects.toThrow("referee toolchain: model Counter is missing invariant formula Absent");
+    expect(existsSync(cacheRoot)).toBe(false);
   });
 });
 
