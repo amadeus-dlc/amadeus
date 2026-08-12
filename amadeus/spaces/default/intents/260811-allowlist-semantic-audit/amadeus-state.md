@@ -28,7 +28,7 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 10
-- **Completed**: 9
+- **Completed**: 10
 - **In Progress**: formal-model-check
 
 ## Runtime State
@@ -41,6 +41,9 @@
 - **Mirror Initial Create Receipt**: completed
 - **Mirror Boundary Receipts**: {"inception":"completed"}
 - **Skeleton Stance**: scope-dependent
+- **Workflow Completion Instance**: terminal:formal-model-check
+- **Workflow Completion Stage**: formal-model-check
+- **Workflow Completion Status**: pending
 ## Phase Progress
 <!-- Status values: Pending, Active, Verified, Skipped -->
 
@@ -88,7 +91,7 @@ Per unit: [TBD]
 - [ ] ci-pipeline — SKIP
 - [x] tla-authoring — EXECUTE
 - [x] pr-convergence — EXECUTE
-- [-] formal-model-check — EXECUTE
+- [x] formal-model-check — EXECUTE
 
 ### OPERATION PHASE
 - [ ] deployment-pipeline — SKIP
@@ -107,10 +110,10 @@ Per unit: [TBD]
 - **Intent Autonomy Mode**: full
 - **Intent Grant**: intent-grant-1642e86062e5c0cd0cfa70e93725e9df
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-08-11T23:58:40Z
+- **Last Updated**: 2026-08-12T00:00:21Z
 
 ## Session Resume Point
-- **Last Completed Stage**: pr-convergence
+- **Last Completed Stage**: formal-model-check
 - **Next Action**: Execute Formal Model Check
 - **Pending Artifacts**: none
 
