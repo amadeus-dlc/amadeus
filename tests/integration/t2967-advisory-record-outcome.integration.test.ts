@@ -17,7 +17,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 
 import {
@@ -34,7 +33,7 @@ import {
   findAllEvents,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import type { Advisory } from "../../packages/framework/core/tools/amadeus-plugin-runtime.ts";
-import { cleanupTestProject, setupIntegrationProject } from "../harness/fixtures.ts";
+import { cleanupTestProject, createTestProject, FIXTURES_DIR, seedStateFile } from "../harness/fixtures.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
 
@@ -50,20 +49,8 @@ const advisory: Advisory = {
 };
 
 function bornProject(): string {
-  const projectDir = setupIntegrationProject({ noAidlcDocs: true, stripEnvScope: true });
-  const birth = spawnSync(
-    process.execPath,
-    [
-      join(projectDir, ".claude", "tools", "amadeus-utility.ts"),
-      "intent-birth",
-      "--scope",
-      "feature",
-      "--project-dir",
-      projectDir,
-    ],
-    { cwd: projectDir, encoding: "utf8", env: { ...process.env } },
-  );
-  expect(birth.status).toBe(0);
+  const projectDir = createTestProject();
+  seedStateFile(projectDir, join(FIXTURES_DIR, "state-mid-inception.md"));
   return projectDir;
 }
 
