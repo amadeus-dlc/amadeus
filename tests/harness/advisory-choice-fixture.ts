@@ -40,7 +40,5 @@ export function chooseRunNow(projectDir: string): void {
     timestamp: planted.timestamp,
     eventIdentity: createHash("sha256").update(event.block).digest("hex"),
   });
-  if (outcome.kind === "refused") {
-    throw new Error(`the advisory choice was not recorded: ${outcome.reason}`);
-  }
+  if (outcome.kind === "refused") throw new Error(`the advisory choice was not recorded: ${outcome.reason}`);
 }
