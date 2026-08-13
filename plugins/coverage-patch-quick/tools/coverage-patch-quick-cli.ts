@@ -299,13 +299,23 @@ export function renderSelectionReport(mapping: ReverseMapping): string {
   return lines.join("\n");
 }
 
-export function runQuickCheck(io: QuickIo): number {
+interface RepoInputs {
+  readonly repoRoot: string;
+  readonly gatePath: string;
+  readonly registryPath: string;
+}
+
+/**
+ * The three inputs every run needs — repo root, the gate, the registry — or
+ * the loud refusal naming the first one that is missing.
+ */
+function locateRepoInputs(io: QuickIo): RepoInputs | null {
   const root = io.runGit(["rev-parse", "--show-toplevel"]);
   if (root.code !== 0) {
     io.err(
       `coverage-patch-quick: not a git repository (git rev-parse --show-toplevel failed): ${root.stderr.trim()}`,
     );
-    return EXIT_INFRASTRUCTURE_FAILURE;
+    return null;
   }
   const repoRoot = root.stdout.trim();
   const gatePath = join(repoRoot, GATE_RELATIVE_PATH);
@@ -313,16 +323,22 @@ export function runQuickCheck(io: QuickIo): number {
     io.err(
       `coverage-patch-quick: the patch coverage gate is absent at ${gatePath}. This plugin reuses the repository own gate at runtime and is only meaningful inside the Amadeus development repository.`,
     );
-    return EXIT_INFRASTRUCTURE_FAILURE;
+    return null;
   }
-
   const registryPath = join(repoRoot, REGISTRY_RELATIVE_PATH);
   if (!io.exists(registryPath)) {
     io.err(
       `coverage-patch-quick: the coverage registry is absent at ${registryPath}; the changed-file to test mapping has no input.`,
     );
-    return EXIT_INFRASTRUCTURE_FAILURE;
+    return null;
   }
+  return { repoRoot, gatePath, registryPath };
+}
+
+export function runQuickCheck(io: QuickIo): number {
+  const inputs = locateRepoInputs(io);
+  if (inputs === null) return EXIT_INFRASTRUCTURE_FAILURE;
+  const { repoRoot, gatePath, registryPath } = inputs;
 
   const baseRef = io.env.AMADEUS_PATCH_BASE_REF ?? DEFAULT_BASE_REF;
   const diff = io.runGit(["diff", "--name-only", `${baseRef}...HEAD`]);
