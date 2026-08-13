@@ -33,7 +33,9 @@ describe("team-up launcher absence", () => {
   test("tracked sources are gone", () => {
     expect(gitLsFiles("packages/framework/core/tools/team-up.sh")).toEqual([]);
     expect(gitLsFiles("packages/framework/core/tools/team-up-codex-safety-wait.ts")).toEqual([]);
-    expect(gitLsFiles("tests/**/*team-up*")).toEqual([]);
+    expect(gitLsFiles("tests/**/*team-up*")).toEqual([
+      "tests/unit/t-remove-team-up-absence.test.ts",
+    ]);
   });
 
   test("user guides do not teach a live team-up.sh invocation", () => {

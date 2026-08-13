@@ -6,7 +6,7 @@
 - **Scope**: self-fix
 - **Start Date**: 2026-08-13T13:54:07Z
 - **State Version**: 7
-- **Active Agent**: amadeus-developer-agent
+- **Active Agent**: amadeus-architect-agent
 - **Harness**: claude-code
 - **Harness Version**: {"state":"unavailable","reason":"native-harness-version-not-exposed"}
 - **Model**: {"state":"unavailable","reason":"native-model-not-exposed"}
@@ -28,8 +28,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 10
-- **Completed**: 5
-- **In Progress**: code-generation
+- **Completed**: 7
+- **In Progress**: tla-authoring
 
 ## Runtime State
 - **Revision Count**: 0
@@ -82,10 +82,10 @@ Per unit: [TBD]
 - [ ] nfr-requirements — SKIP
 - [ ] nfr-design — SKIP
 - [ ] infrastructure-design — SKIP
-- [?] code-generation — EXECUTE
-- [ ] build-and-test — EXECUTE
+- [x] code-generation — EXECUTE
+- [x] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
-- [ ] tla-authoring — EXECUTE
+- [-] tla-authoring — EXECUTE
 - [ ] pr-convergence — EXECUTE
 - [ ] formal-model-check — EXECUTE
 
@@ -100,17 +100,17 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: code-generation
-- **Next Stage**: build-and-test
+- **Current Stage**: tla-authoring
+- **Next Stage**: pr-convergence
 - **Status**: Running
 - **Intent Autonomy Mode**: full
 - **Intent Grant**: intent-grant-70bd19602b3b400c4ce854fda0f93ae6
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-08-13T14:56:37Z
+- **Last Updated**: 2026-08-13T15:16:11Z
 
 ## Session Resume Point
-- **Last Completed Stage**: requirements-analysis
-- **Next Action**: Execute Code Generation
+- **Last Completed Stage**: build-and-test
+- **Next Action**: Execute TLA+ Authoring
 - **Pending Artifacts**: none
 
 <!-- amadeus:mirror-state:v1:start -->
