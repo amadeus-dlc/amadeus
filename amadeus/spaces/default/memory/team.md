@@ -43,7 +43,7 @@
 
 ### レビュー・ゲート・マージ
 
-- PR を作成したら収束スキル(`j5ik2o-gh-pr-converge-loop` 等)を必ず発動し、base 競合 → 未解決レビュースレッド → 失敗・保留の必須 check を順に処理する。push のたび mergeability から再確認し、三者が同時に解消するまで継続する。収束確認はマージ承認を代替しない <!-- cid:requirements-analysis:pr-converge-loop-required -->
+- PR を作成したら `pr-convergence` プラグイン stage の手順に従い、base 競合 → 未解決レビュースレッド → 失敗・保留の必須 check を順に処理する。push のたび mergeability から再確認し、三者が同時に解消するまで継続する。収束確認はマージ承認を代替しない <!-- cid:requirements-analysis:pr-converge-loop-required -->
 - 独立レビューの観点: 完全性(実測)、正本と生成物の同期、surgical、落ちる実証、検証エビデンスの実測 exit code、無申告の逸脱。PR 発行前に deslop を通し、除去後は全検証コマンドを再実行する <!-- cid:requirements-analysis:independent-review-on-pr -->
 - AI は PR のマージを自発実行しない。CI green とレビュー READY を実測してユーザーへ諮り、承認後にスカッシュマージする。実行前に mergeable・現 head の必須 CI・verdict を再実測し、head が実質変化していれば増分再レビューのうえ再度諮る <!-- cid:requirements-analysis:leader-executes-merge -->
 - Issue のクローズは PR の MERGED 状態と着地面の実読・grep の出力を確認した後にのみ行う <!-- cid:requirements-analysis:close-after-landing-verification -->
@@ -82,7 +82,7 @@
 
 ## Testing Posture
 
-テストは Bun で unit・integration・smoke を日常 CI に載せ、e2e と形式検証は対象リスクに応じて追加する。実行可能な振る舞いの追加・変更・欠陥修正は TDD を既定かつ必須とする。実装前に合意済みの公開 seam へ失敗テストを1件追加して Red を実測し、それを通す最小実装で Green にする vertical slice を1件ずつ反復する。テストの一括先行・実装後のテスト追加・実装後の落ちる実証は TDD 実施とみなさない。適用外は (1) 振る舞いを持たない文書・書式だけの変更 (2) 振る舞い不変のリファクタリング (3) 正本から機械生成される投影物だけの同期 (4) 破棄する探索的 spike に限り、適用外でも既存テストの前後 Green・characterization test・drift check・文書検査を行う。挙動変更を含むリファクタリング、正本・generator・投影規則の変更、機械的に消費される文書は適用外にしない。変更が小さい・急ぎ・テストが難しい・既存 seam がないことも理由にしない。seam が未確定なら実装前に停止して合意を取り、迷えば TDD に倒す。coverage ratchet、patch coverage、complexity、生成物 drift は blocking gate として維持する <!-- cid:code-generation:tdd-default-with-narrow-exceptions -->
+テストは Bun で unit・integration・smoke を日常 CI に載せ、e2e と形式検証は対象リスクに応じて追加する。実行可能な振る舞いの追加・変更・欠陥修正は TDD を既定かつ必須とする。実装前に合意済みの公開 seam へ失敗テストを1件追加して Red を実測し、それを通す最小実装で Green にする vertical slice を1件ずつ反復する。テストの一括先行・実装後のテスト追加・実装後の落ちる実証は TDD 実施とみなさない。エラーパス・復旧分岐・防御的 catch も「実行可能な振る舞い」に含まれ、この既定の適用対象である — レビュー指摘対応で追加する分岐を含め、エラーパスのテスト後回しを許容しない。適用外は (1) 振る舞いを持たない文書・書式だけの変更 (2) 振る舞い不変のリファクタリング (3) 正本から機械生成される投影物だけの同期 (4) 破棄する探索的 spike に限り、適用外でも既存テストの前後 Green・characterization test・drift check・文書検査を行う。挙動変更を含むリファクタリング、正本・generator・投影規則の変更、機械的に消費される文書は適用外にしない。変更が小さい・急ぎ・テストが難しい・既存 seam がないことも理由にしない。seam が未確定なら実装前に停止して合意を取り、迷えば TDD に倒す。coverage ratchet、patch coverage、complexity、生成物 drift は blocking gate として維持する <!-- cid:code-generation:tdd-default-with-narrow-exceptions -->
 
 検証は二層で運用する。日常 CI は property-based/unit/integration を回し、並行プロトコル(状態機械・相互排除の不変量)の spec 変更時のみ単一形式モデルの完全探索(TLA+/TLC 等)を専用ジョブで追加する(全変更への一律義務化はしない)<!-- cid:build-and-test:two-layer-verification-posture -->
 

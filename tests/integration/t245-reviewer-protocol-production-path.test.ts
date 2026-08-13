@@ -454,6 +454,86 @@ describe("t245 reviewer protocol production caller", () => {
     expect(local.output().stderr).toContain("<missing>");
   });
 
+  test("covers basename owner admission and rejection in-process", async () => {
+    const runtime = await import(
+      "../../packages/framework/core/tools/amadeus-reviewer-runtime.ts"
+    );
+    const check = (
+      prepare: (current: Fixture, local: ReturnType<typeof localRuntime>) => void,
+    ) => {
+      const current = fixture();
+      const local = localRuntime(current, current.directive);
+      prepare(current, local);
+      runtime.runReviewerCommand(["scope"], local.deps);
+      expect(local.output().exitCode).toBe(0);
+      local.replaceInput({
+        directive: current.directive,
+        invocationId: TEST_INVOCATION_ID,
+        iteration: 1,
+        transcript: [],
+        request: {
+          ...readRequest(current),
+          ownerEvidence: {
+            path: current.contract,
+            excerpt: local.files.get(join(current.root, current.contract))
+              ?.split("\n")[2],
+          },
+        },
+      });
+      runtime.runReviewerCommand(["check-read"], local.deps);
+      return local.output();
+    };
+
+    const admitted = check((current, local) => {
+      local.files.set(
+        join(current.root, current.contract),
+        "# Integration contract\n\nOwned implementation: integration-owned.ts.\n",
+      );
+      local.files.set(
+        join(current.root, (current.directive.consumes as string[])[0]),
+        `# Requirements\n\nINT-245 requires ${current.requested}.\n`,
+      );
+    });
+    expect(admitted.exitCode).toBe(0);
+
+    const selfReported = check((current, local) => {
+      local.files.set(
+        join(current.root, current.contract),
+        "# Integration contract\n\nOwned implementation: integration-owned.ts.\n",
+      );
+      local.files.set(
+        join(current.root, current.primary),
+        `# Code summary\n\nINT-245 requires ${current.requested}.\n`,
+      );
+    });
+    expect(selfReported.exitCode).toBe(1);
+    expect(selfReported.stderr).toContain(
+      "basename owner evidence requires one exact path corroboration",
+    );
+
+    const repeatedBasename = check((current, local) => {
+      local.files.set(
+        join(current.root, current.contract),
+        "# Integration contract\n\nOwned implementation: integration-owned.ts or integration-owned.ts.\n",
+      );
+    });
+    expect(repeatedBasename.exitCode).toBe(1);
+    expect(repeatedBasename.stderr).toContain(
+      "owner evidence does not uniquely match the requested path",
+    );
+
+    const inexactId = check((current, local) => {
+      local.files.set(
+        join(current.root, current.contract),
+        `# Integration contract\n\nINT-2450 owns ${current.requested}.\n`,
+      );
+    });
+    expect(inexactId.exitCode).toBe(1);
+    expect(inexactId.stderr).toContain(
+      "owner evidence does not uniquely match the requested path",
+    );
+  });
+
   test("rejects malformed scope and spot-check inputs in-process", async () => {
     const runtime = await import(
       "../../packages/framework/core/tools/amadeus-reviewer-runtime.ts"
@@ -1062,6 +1142,253 @@ describe("t245 reviewer protocol production caller", () => {
     expect(artifact).toContain("**Iteration:** 1");
     expect(artifact).toContain(
       `**Scope decision:** approved — INT-245 — ${current.requested}`,
+    );
+  });
+
+  test("admits a unique basename-only owner while rejecting ambiguous basename evidence", () => {
+    const basenameOwner = fixture();
+    writeFileSync(
+      join(basenameOwner.root, basenameOwner.contract),
+      "# Integration contract\n\nOwned implementation: integration-owned.ts.\n",
+    );
+    const corroboratingConsume = (basenameOwner.directive.consumes as string[])[0];
+    writeFileSync(
+      join(basenameOwner.root, corroboratingConsume),
+      `# Requirements\n\nINT-245 requires ${basenameOwner.requested}.\n`,
+    );
+    const basenameInvocation = issued(basenameOwner);
+    const basenameRequest = {
+      ...readRequest(basenameOwner),
+      ownerEvidence: {
+        path: basenameOwner.contract,
+        excerpt: "Owned implementation: integration-owned.ts.",
+      },
+    };
+
+    const admitted = run(basenameOwner, "check-read", {
+      directive: basenameOwner.directive,
+      invocationId: basenameInvocation,
+      iteration: 1,
+      transcript: [],
+      request: basenameRequest,
+    });
+    expect(admitted.status).toBe(0);
+    expect(JSON.parse(admitted.stdout).transcript[0]).toMatchObject({
+      decision: "approved",
+      integrationId: "INT-245",
+      path: basenameOwner.requested,
+      ownerEvidence: basenameRequest.ownerEvidence,
+    });
+
+    const partialToken = fixture();
+    writeFileSync(
+      join(partialToken.root, partialToken.contract),
+      "# Integration contract\n\nINT-245 owns other-integration-owned.ts.\n",
+    );
+    const partialRejected = run(partialToken, "check-read", {
+      directive: partialToken.directive,
+      invocationId: issued(partialToken),
+      iteration: 1,
+      transcript: [],
+      request: {
+        ...readRequest(partialToken),
+        ownerEvidence: {
+          path: partialToken.contract,
+          excerpt: "INT-245 owns other-integration-owned.ts.",
+        },
+      },
+    });
+    expect(partialRejected.status).toBe(1);
+    expect(partialRejected.stderr).toContain(
+      "owner evidence does not uniquely match the requested path",
+    );
+
+    const repeatedToken = fixture();
+    writeFileSync(
+      join(repeatedToken.root, repeatedToken.contract),
+      "# Integration contract\n\nINT-245 owns integration-owned.ts or integration-owned.ts.\n",
+    );
+    const repeatedRejected = run(repeatedToken, "check-read", {
+      directive: repeatedToken.directive,
+      invocationId: issued(repeatedToken),
+      iteration: 1,
+      transcript: [],
+      request: {
+        ...readRequest(repeatedToken),
+        ownerEvidence: {
+          path: repeatedToken.contract,
+          excerpt: "INT-245 owns integration-owned.ts or integration-owned.ts.",
+        },
+      },
+    });
+    expect(repeatedRejected.status).toBe(1);
+    expect(repeatedRejected.stderr).toContain(
+      "owner evidence does not uniquely match the requested path",
+    );
+
+    const multipleOwners = fixture();
+    writeFileSync(
+      join(multipleOwners.root, multipleOwners.contract),
+      "# Integration contract\n\nINT-245 owns integration-owned.ts.\n",
+    );
+    const secondOwner = (multipleOwners.directive.consumes as string[])[0];
+    writeFileSync(
+      join(multipleOwners.root, secondOwner),
+      `# Second contract\n\nINT-245 owns integration-owned.ts.\nINT-245 requires ${multipleOwners.requested}.\n`,
+    );
+    const multipleRejected = run(multipleOwners, "check-read", {
+      directive: multipleOwners.directive,
+      invocationId: issued(multipleOwners),
+      iteration: 1,
+      transcript: [],
+      request: {
+        ...readRequest(multipleOwners),
+        ownerEvidence: {
+          path: multipleOwners.contract,
+          excerpt: "INT-245 owns integration-owned.ts.",
+        },
+      },
+    });
+    expect(multipleRejected.status).toBe(1);
+    expect(multipleRejected.stderr).toContain(
+      "spot-check requires exactly one passed owner path",
+    );
+
+    const uncorroboratedOwner = fixture();
+    writeFileSync(
+      join(uncorroboratedOwner.root, uncorroboratedOwner.contract),
+      "# Integration contract\n\nOwned implementation: integration-owned.ts.\n",
+    );
+    const unrelatedConsume =
+      (uncorroboratedOwner.directive.consumes as string[])[0];
+    writeFileSync(
+      join(uncorroboratedOwner.root, unrelatedConsume),
+      "# Requirements\n\nINT-245 requires packages/other/integration-owned.ts.\n",
+    );
+    const uncorroboratedRejected = run(uncorroboratedOwner, "check-read", {
+      directive: uncorroboratedOwner.directive,
+      invocationId: issued(uncorroboratedOwner),
+      iteration: 1,
+      transcript: [],
+      request: {
+        ...readRequest(uncorroboratedOwner),
+        ownerEvidence: {
+          path: uncorroboratedOwner.contract,
+          excerpt: "Owned implementation: integration-owned.ts.",
+        },
+      },
+    });
+    expect(uncorroboratedRejected.status).toBe(1);
+    expect(uncorroboratedRejected.stderr).toContain(
+      "basename owner evidence requires one exact path corroboration",
+    );
+  });
+
+  test("rejects inexact or ambiguous full-path corroboration for a basename owner", () => {
+    const rejectCorroboration = (corroboration: string): void => {
+      const current = fixture();
+      writeFileSync(
+        join(current.root, current.contract),
+        "# Integration contract\n\nOwned implementation: integration-owned.ts.\n",
+      );
+      const corroboratingConsume = (current.directive.consumes as string[])[0];
+      writeFileSync(
+        join(current.root, corroboratingConsume),
+        `# Requirements\n\n${corroboration}\n`,
+      );
+      const rejected = run(current, "check-read", {
+        directive: current.directive,
+        invocationId: issued(current),
+        iteration: 1,
+        transcript: [],
+        request: {
+          ...readRequest(current),
+          ownerEvidence: {
+            path: current.contract,
+            excerpt: "Owned implementation: integration-owned.ts.",
+          },
+        },
+      });
+      expect(rejected.status, corroboration).toBe(1);
+      expect(rejected.stderr, corroboration).toContain(
+        "basename owner evidence requires one exact path corroboration",
+      );
+    };
+
+    rejectCorroboration(
+      "INT-2450 requires packages/framework/core/tools/integration-owned.ts.",
+    );
+    rejectCorroboration(
+      "INT-245 requires packages/framework/core/tools/integration-owned.ts.bak.",
+    );
+    rejectCorroboration([
+      "INT-245 requires packages/framework/core/tools/integration-owned.ts.",
+      "INT-245 also references packages/other/integration-owned.ts.",
+    ].join("\n"));
+  });
+
+  test("rejects basename corroboration reported only by a produced artifact", () => {
+    const current = fixture();
+    writeFileSync(
+      join(current.root, current.contract),
+      "# Integration contract\n\nOwned implementation: integration-owned.ts.\n",
+    );
+    writeFileSync(
+      join(current.root, current.primary),
+      `# Code summary\n\nINT-245 requires ${current.requested}.\n`,
+    );
+
+    const rejected = run(current, "check-read", {
+      directive: current.directive,
+      invocationId: issued(current),
+      iteration: 1,
+      transcript: [],
+      request: {
+        ...readRequest(current),
+        ownerEvidence: {
+          path: current.contract,
+          excerpt: "Owned implementation: integration-owned.ts.",
+        },
+      },
+    });
+
+    expect(rejected.status).toBe(1);
+    expect(rejected.stderr).toContain(
+      "basename owner evidence requires one exact path corroboration",
+    );
+  });
+
+  test("rejects inexact integration ID and path tokens in full-path owner evidence", () => {
+    const rejectExactOwner = (excerpt: string): void => {
+      const current = fixture();
+      writeFileSync(
+        join(current.root, current.contract),
+        `# Integration contract\n\n${excerpt}\n`,
+      );
+      const rejected = run(current, "check-read", {
+        directive: current.directive,
+        invocationId: issued(current),
+        iteration: 1,
+        transcript: [],
+        request: {
+          ...readRequest(current),
+          ownerEvidence: { path: current.contract, excerpt },
+        },
+      });
+      expect(rejected.status, excerpt).toBe(1);
+      expect(rejected.stderr, excerpt).toContain(
+        "owner evidence does not uniquely match the requested path",
+      );
+    };
+
+    rejectExactOwner(
+      "INT-245 owns packages/framework/core/tools/integration-owned.ts.bak.",
+    );
+    rejectExactOwner(
+      "INT-2450 owns packages/framework/core/tools/integration-owned.ts.",
+    );
+    rejectExactOwner(
+      "INT-245 owns packages/framework/core/tools/integration-owned.ts and packages/other/integration-owned.ts.",
     );
   });
 
