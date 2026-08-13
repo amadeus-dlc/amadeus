@@ -60,6 +60,7 @@
 - 起票前に open/closed 双方の既存 Issue と origin/main・関連 PR を検索し、現行状態でも起票が必要だと確認する。着手時にも既存 open PR を棚卸しし、あれば再実装せずその PR の収束へ回す <!-- cid:requirements-analysis:pre-filing-dup-and-branch-check -->
 - 本文は (1) 背景・対象範囲 (2) 根拠・実測証拠 (3) 期待結果・完了条件 (4) 影響・価値 (5) 関連 Issue/PR/intent (6) 初期分類 を必須とし、事実・観測・仮説を区別する。種別固有の様式は `.github/ISSUE_TEMPLATE/*.yml` を正本とし、同じ変更で同期する <!-- cid:requirements-analysis:issue-canonical-body -->
 - Issue-first で起票したら、起票者以外の独立2名が主張・分類・重複検索を一次資料と突き合わせ、実行コマンドと結果・file:line・可能なら再現結果をコメントに残す。要約や追認は数えない。2名が揃うまで実装バッチへ組み込まない <!-- cid:requirements-analysis:issue-cross-review -->
+- Issue に着手したら(ユーザーの着手決定を受けた時点で)`in-progress` ラベルを付与し、クローズ時に除去する。intent-first のミラー Issue は engine のラベル同期(`intent-initialized` / `workflow-completed` 境界)が同じ役割を担うため手動付与しない <!-- cid:requirements-analysis:issue-in-progress-label -->
 - オープンバグゼロを目標にトリアージとバッチ編成を回す。着手順は優先度をキュー順、依存を実行可能性制約とし、同一ファイル・進行中 PR との交差は直列化する。潜在バグ探索では修正せず実測だけを起票する。学びの回収は §13 学習選定と定期のポストモーテムの二段構え <!-- cid:requirements-analysis:bug-zero-goal -->
 
 ## 検証・実測規律(P2 の派生)
