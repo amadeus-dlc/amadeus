@@ -2,6 +2,8 @@
 > This file is maintained by the orchestrator during stage execution. Add observations at the gate ritual, not by editing here directly.
 
 ## Interpretations
+
+- 2026-08-13T17:11:12Z — ホスト経路の Step 1 に従い、tla-authoring の terminal 判定を根拠に NOT_APPLICABLE を記録(TLC 不起動)。advisory handoff 由来の TLC NOT_DETECTED ×2 は独立エビデンスとして参照記録。
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations
