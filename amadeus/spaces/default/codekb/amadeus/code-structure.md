@@ -1,5 +1,17 @@
 # コード構造
 
+## Focus Area: team-up ランチャ廃止（260813-remove-team-up、現在、observed `97581b3e3`）
+
+| ファイル | 分類 |
+|---|---|
+| `packages/framework/core/tools/team-up.sh` | 正本ランチャ（bash） |
+| `packages/framework/core/tools/team-up-codex-safety-wait.ts` | ランチャ専用 supervisor |
+| `packages/framework/harness/*/manifest.ts` `coreDirs.tools` | 8 harness への無条件投影 |
+| `docs/guide/20-team-mode.md` 対訳 | ユーザー向け起動手順 |
+| `tests/**/*team-up*` ほか `t266` `t267` `t226` | 検証 |
+
+区間 `854692fd7..HEAD` でこれらのパスに差分は無い。モジュール移動も無し。変更は「残置か削除か」であり配置そのものは base と同一。
+
 ## Repository Organization
 
 | パス | 分類 | 責務 |

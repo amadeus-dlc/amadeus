@@ -1,6 +1,22 @@
 # API ドキュメント
 
-## advisory choice の内部契約と directive shape（260813-advisory-requestion-fix、現在、observed `c0f9edf27`）
+## team-up.sh CLI と safety-wait 結合（260813-remove-team-up、現在、observed `97581b3e3`）
+
+**観測 ref**: `packages/framework/core/tools/team-up.sh` ヘッダ `:15-21` と Usage `:580`、helper `:59`。
+
+公開面（ドキュメントとヘッダが一致）:
+
+- `bash <harness-dir>/tools/team-up.sh` — 既定 6 engineer
+- `-4` / `--codex` / `-c` / `--kill` / `-i` / `--list-instances` / `--msg agmsg|herdr`
+
+内部結合:
+
+- `SAFETY_WAIT_HELPER` 既定 = `$TOOL_DIR/team-up-codex-safety-wait.ts`（`:59`）
+- 状態ファイル: `current-run` / `active-run` / `status` / `session`（`:1702-1710`、`stack_column` 成功後にのみ書かれる）
+
+doctor 公開面: `amadeus-utility.ts:964` が修復として同一 CLI を指名する。ランチャ削除時はこの文字列が残存 API になる。
+
+## advisory choice の内部契約と directive shape（260813-advisory-requestion-fix、履歴、observed `c0f9edf27`）
 
 **観測 ref**: observed = `c0f9edf27828def6fa3dbbbc4101d753b398e025`、base = `854692fd7a11b124236b0427fe3d59e2fe6bf785`。正本は `re-scans/260813-advisory-requestion-fix.md`。
 

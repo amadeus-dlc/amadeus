@@ -1,6 +1,22 @@
 # コンポーネント棚卸し
 
-## advisory 再質問経路の構成要素棚卸し（260813-advisory-requestion-fix、現在、observed `c0f9edf27`）
+## team-up 廃止面の構成要素（260813-remove-team-up、現在、observed `97581b3e3`）
+
+**観測 ref**: `97581b3e39187b13413c046e86f820d290a389eb`。述語 P3–P7 は `re-scans/260813-remove-team-up.md`。
+
+| コンポーネント | パス | 本番消費者 |
+|---|---|---|
+| Team Mode ランチャ | `packages/framework/core/tools/team-up.sh` | ユーザー / doctor fix 文言 / 全 harness tools 投影 |
+| Codex safety-wait | `packages/framework/core/tools/team-up-codex-safety-wait.ts` | `team-up.sh:59` のみ |
+| チームメッセージ | `packages/framework/core/tools/team-msg.sh` | 削除対象（当初は独立残置、2026-08-14 に同 Intent へ編入） |
+| doctor trust 修復 | `amadeus-utility.ts:964` | 文字列でランチャを指名 |
+| ユーザーガイド | `docs/guide/20-team-mode.md` 対訳ほか 8 docs | 現行手順として掲載 |
+| 名前付きテスト | `tests/**/*team-up*` 12 files | ランチャ / supervisor |
+| 非名前付きテスト | `t266` / `t267` / `t226` | 起動・clean-env・doctor 文字列 |
+
+`git ls-files | rg -i team-up` = **17**（record 3 + 正本 2 + test 12）。safety-wait リテラルの非 record ヒットは **5 files**。
+
+## advisory 再質問経路の構成要素棚卸し（260813-advisory-requestion-fix、履歴、observed `c0f9edf27`）
 
 **観測 ref**: observed = `c0f9edf27828def6fa3dbbbc4101d753b398e025`（`git rev-parse HEAD`）。base = `854692fd7a11b124236b0427fe3d59e2fe6bf785`。正本は `re-scans/260813-advisory-requestion-fix.md`。
 

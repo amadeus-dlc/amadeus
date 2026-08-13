@@ -1,6 +1,15 @@
 # コード品質評価
 
-## advisory 経路の品質所見 — 契約 drift 8/8・再入経路の未被覆・欠陥挙動のピン（260813-advisory-requestion-fix、現在、observed `c0f9edf27`）
+## team-up.sh は失敗を exit 0 で隠し、ガイドは現行機能のまま残る（260813-remove-team-up、現在、observed `97581b3e3`）
+
+**観測 ref**: `97581b3e39187b13413c046e86f820d290a389eb`。#2970 サイトは直読。対象テストの再実行は未実施（Issue が main で 16+2 fail を報告、区間内 team-up 差分 0）。
+
+1. **偽成功**: `set -euo pipefail`（`:3`）と空配列 `for mem in "${members[@]}"`（`:1170`）の組み合わせは bash 3.2 で即死する。`handle_exit`（`:1409-1420`）は unbound を非 0 として扱わず `exit 0` しうる。状態書込（`:1702-1710`）は未到達。検証劇場と同型。
+2. **配布と文書の残留**: 利用停止判断と独立に、8 harness 投影と `20-team-mode.md` がランチャを現行手順として残す。削除 PR がソースだけを消すと docs/doctor が死んだコマンドを指す。
+3. **safety-wait の結合**: supervisor 正本の本番消費者はランチャ 1 点。ランチャだけ残して supervisor を残す理由は observed に無い。
+4. **stale path**: core glossary はまだ `scripts/team-up.sh` と書く（実装は `packages/framework/core/tools/`）。
+
+## advisory 経路の品質所見 — 契約 drift 8/8・再入経路の未被覆・欠陥挙動のピン（260813-advisory-requestion-fix、履歴、observed `c0f9edf27`）
 
 **観測 ref**: observed = `c0f9edf27828def6fa3dbbbc4101d753b398e025`、base = `854692fd7a11b124236b0427fe3d59e2fe6bf785`。正本は `re-scans/260813-advisory-requestion-fix.md`。
 

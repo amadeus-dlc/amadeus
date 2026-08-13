@@ -1,6 +1,42 @@
 # アーキテクチャ
 
-## advisory hold の裁定・記録・再入経路と run-now の解除不能（260813-advisory-requestion-fix、現在、observed `c0f9edf27`）
+## team-up.sh ランチャの起動列と空配列クラッシュ点（260813-remove-team-up、現在、observed `97581b3e3`）
+
+**観測 ref**: observed = `97581b3e39187b13413c046e86f820d290a389eb`。差分 base = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（34 commits、team-up パス差分 0）。正本は `re-scans/260813-remove-team-up.md`。
+
+### 配置と投影
+
+`packages/framework/core/tools/team-up.sh` はハーネス中立の Team Mode ランチャ正本。8 harness すべての `manifest.ts` `coreDirs` が `{ src: "tools", dst: "tools" }` のため、正本は全 dist / self-install へ漏出する。Codex 専用の待ちは同ディレクトリの `team-up-codex-safety-wait.ts`（`SAFETY_WAIT_HELPER`、`team-up.sh:59`）。
+
+### 起動シーケンス（#2970 が切れる場所）
+
+```mermaid
+sequenceDiagram
+  participant CLI as team-up.sh
+  participant Mux as herdr mux
+  participant Trap as handle_exit
+  participant FS as run record
+  CLI->>CLI: set -euo pipefail
+  CLI->>Mux: mux_new_session / mux_split (left0, leader, right0)
+  CLI->>CLI: stack_column left[1:] / right[1:]
+  Note over CLI: 2-engineer layout: slice is empty
+  CLI--xTrap: bash 3.2 unbound members[@]
+  Trap->>Trap: rc from previous success (often 0)
+  Trap-->>CLI: exit 0
+  Note over FS: current-run / active-run / status never written
+```
+
+Text fallback: create_run が左右ペインを切ったあと `stack_column` に `left[@]:1` を渡す。メンバーが列あたり 1 人だと空配列になる。bash 3.2 は `set -u` 下で `"${members[@]}"` を unbound として即死させる。EXIT trap の `local rc=$?` は unbound をコマンド失敗として見ないため 0 のまま `exit 0`。状態ファイル書込（`:1702-1710`）は到達しない。
+
+### 隣接境界
+
+- `team-msg.sh` は削除対象（2026-08-14 利用者指示）。mint 分類器の `[team-msg ` 接頭辞は過去ログ用に残す
+- doctor の Codex project-trust 修復はランチャ再実行を指名（`amadeus-utility.ts:964`）
+- ユーザーガイド `docs/guide/20-team-mode.md` はランチャを現行手順として残している
+
+利用者指示は経路のパッチではなく削除。削除は上記投影・docs・doctor・テストを同一変更で切らないと配送面が残る。
+
+## advisory hold の裁定・記録・再入経路と run-now の解除不能（260813-advisory-requestion-fix、履歴、observed `c0f9edf27`）
 
 **観測 ref**: 全 file:line は observed = `c0f9edf27828def6fa3dbbbc4101d753b398e025`（= 本 worktree HEAD = `origin/main`、`git rev-parse HEAD`）の断面で実読・解決した。差分区間は base `854692fd7a11b124236b0427fe3d59e2fe6bf785`..observed（33 コミット / 224 ファイル、`git log --oneline 854692fd7..c0f9edf27 | wc -l` / `git diff --name-only … | wc -l`）。**患部 `packages/framework/core/tools/amadeus-advisory-choice.ts` は本区間に含まれない**（`git diff --name-only 854692fd7..c0f9edf27 -- packages/framework/core/tools/amadeus-advisory-choice.ts` が空出力）— base 断面から不変である。正本は `re-scans/260813-advisory-requestion-fix.md`。
 

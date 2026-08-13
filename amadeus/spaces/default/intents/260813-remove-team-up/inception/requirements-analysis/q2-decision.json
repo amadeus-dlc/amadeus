@@ -1,0 +1,1 @@
+{"stage":"requirements-analysis","phase":"inception","questionId":"q2-team-mode-docs","selector":"requirements-analysis:team-mode-docs","question":"How should user-facing Team Mode docs change when the launcher is deleted?","optionIds":["rewrite-removed","delete-guides","leave-docs"],"recommendedOptionId":"rewrite-removed"}

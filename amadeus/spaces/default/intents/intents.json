@@ -1126,6 +1126,13 @@
     "status": "complete"
   },
   {
+    "uuid": "019ffb66-d1c4-7d3c-9aa7-50e0f6966e57",
+    "slug": "remove-team-up",
+    "dirName": "260813-remove-team-up",
+    "scope": "self-fix",
+    "status": "in-flight"
+  },
+  {
     "uuid": "019ffb1a-d46b-7016-938d-5de854a84362",
     "slug": "advisory-requestion-fix",
     "dirName": "260813-advisory-requestion-fix",
