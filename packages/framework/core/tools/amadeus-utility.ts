@@ -1575,6 +1575,45 @@ function codexHooksProjectDoctorCheck(projectDir: string): DoctorCheck {
   };
 }
 
+const SELF_INSTALL_DRIFT_DIAGNOSTIC_RE = /^(?:DIFFERS|MISSING|ORPHAN|MISPLACED):\s+.+$/;
+
+function selfInstallProjectionDoctorChecks(projectDir: string): DoctorCheck[] {
+  if (!isSelfDevWorkspace(projectDir)) {
+    return [{
+      pass: true,
+      label: "Self-install projection freshness: N/A (scripts/promote-self.ts is absent)",
+    }];
+  }
+
+  const promoteSelf = join(projectDir, "scripts", "promote-self.ts");
+  const result = observeSubprocessSpan(projectDir, "promote-self:doctor-check", () =>
+    Bun.spawnSync(["bun", promoteSelf, "--check"], {
+      cwd: projectDir,
+      stdout: "pipe",
+      stderr: "pipe",
+    }),
+  );
+  const diagnostics = [result.stdout, result.stderr]
+    .flatMap((stream) => stream.toString().split("\n"))
+    .map((line) => line.trim())
+    .filter((line) => SELF_INSTALL_DRIFT_DIAGNOSTIC_RE.test(line));
+  if (diagnostics.length > 0) {
+    return diagnostics.map((diagnostic) => ({
+      pass: false,
+      label: `Self-install projection drift: ${diagnostic}`,
+      fix: "run `bun scripts/promote-self.ts --apply` after reviewing the generated projection",
+    }));
+  }
+  if (result.exitCode !== 0) {
+    return [{
+      pass: false,
+      label: "Self-install projection freshness: scripts/promote-self.ts --check failed",
+      fix: "run `bun scripts/promote-self.ts --check` for details",
+    }];
+  }
+  return [{ pass: true, label: "Self-install projection freshness: in sync" }];
+}
+
 export function handleDoctor(context: DoctorContext): DoctorRunResult {
   const {
     projectDir,
@@ -1613,6 +1652,7 @@ export function handleDoctor(context: DoctorContext): DoctorRunResult {
       ? "install via `npm install -g bun` or `powershell -c \"irm bun.sh/install.ps1 | iex\"`"
       : "install via `curl -fsSL https://bun.sh/install | bash`",
   });
+  results.push(...selfInstallProjectionDoctorChecks(projectDir));
 
   // The compose marker uses the same pure freshness projection as the Stop
   // hook. Doctor only observes it: stale or unreadable markers are reported

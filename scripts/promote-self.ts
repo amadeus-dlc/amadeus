@@ -61,7 +61,7 @@ const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 // and the self-learning loop appends to its ## Corrections sections at
 // runtime, so promoting the shipped seed over it would clobber user content.
 // The engine seeds it from the bundled copy only when it is missing.
-const managedDirs: ManagedDir[] = [
+export const managedDirs: ManagedDir[] = [
   { src: "dist/claude/.claude", dst: ".claude" },
   { src: "dist/codex/.codex", dst: ".codex" },
   { src: "dist/codex/.agents", dst: ".agents" },

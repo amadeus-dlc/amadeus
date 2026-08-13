@@ -235,7 +235,7 @@ for prerequisites, supported revisions, transformations, and recovery.
 
 ### `/amadeus --doctor` — Health check
 
-Validate that all of this implementation's prerequisites, configuration, and stage-graph integrity are in place. Exits 0 on full pass, 1 on any failure; the full report writes to stdout in both cases so the orchestrator surfaces it either way. `--doctor` is **read-only** — on a fresh shell with no intent yet (no `audit/` shards) it creates no files, so it is safe to run before the first intent is born; once an intent exists it records a `HEALTH_CHECKED` audit row.
+Validate that all of this implementation's prerequisites, configuration, and stage-graph integrity are in place. Exits 0 on full pass, 1 on any failure; the full report writes to stdout in both cases so the orchestrator surfaces it either way. `--doctor` is **read-only** — on a fresh shell with no intent yet (no `audit/` shards) it creates no files, so it is safe to run before the first intent is born; once an intent exists it records a `HEALTH_CHECKED` audit row. In the self-development repository, its always-on self-install projection check may regenerate `dist/` while comparing the current canonical source with every managed delivery tree, and creates the gitignored `amadeus/active-space` runtime cursor when it is absent; it never rewrites tracked files or the projection trees.
 
 **Syntax:**
 
@@ -248,6 +248,7 @@ Validate that all of this implementation's prerequisites, configuration, and sta
 | Check | What it validates |
 |-------|-------------------|
 | Prerequisites | `bun` is installed and on PATH |
+| Self-install projection freshness | In the self-development repository, runs build-backed `scripts/promote-self.ts --check` against every managed delivery tree. Each `DIFFERS`, `MISSING`, `ORPHAN`, or `MISPLACED` result is a failing drift row and makes doctor exit 1. When that script is absent, reports one passing N/A row and skips the check. |
 | Hook presence | Every hook `settings.json` wires (its `hooks` blocks + the `statusLine` command — all framework hooks) exists in `.claude/hooks/`; a wired-but-missing hook fails loudly. Sourcing the expected roster from `settings.json` means adding a hook there auto-checks it |
 | Project structure | `.claude/settings.json` exists (file presence only, no content validation) |
 | Workspace shell | `.claude/` + `amadeus/spaces/default/memory/` are present (the shipped shell) |
@@ -268,6 +269,7 @@ Validate that all of this implementation's prerequisites, configuration, and sta
 
 ```
 ✓ bun installed (required for CLI tools and hooks)
+✓ Self-install projection freshness: N/A (scripts/promote-self.ts is absent)
 ✓ amadeus-audit-logger.ts present
 ✓ amadeus-sync-statusline.ts present
 ✓ amadeus-validate-state.ts present
