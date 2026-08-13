@@ -74,9 +74,9 @@ git add <resolved paths> && git commit
 Reconstruct each conflicted file from the three-stage blobs rather than by
 pasting around markers, verify no conflict markers remain (`<<<<<<<` /
 `>>>>>>>` / `|||||||`) as an independent check, run the fast, targeted
-validation the touched surface requires, then commit and push under the
-workspace's approval boundary for remote writes. Do not commit, push, or tag
-before the resolution is inspected.
+validation the touched surface requires, and inspect the staged resolution
+(`git diff --staged`) before committing. Commit and push under the
+workspace's approval boundary for remote writes.
 
 `mergeable` is computed asynchronously: the first read after a push is almost
 always `UNKNOWN`. The CLI already retries a bounded number of times at a fixed
@@ -199,7 +199,6 @@ itself can change between heads.
   the same failure set on the unmodified base before classifying it as
   pre-existing. If the base has since fixed it, merge the latest base instead
   of patching around it inside this pull request.
-- Do not bypass hooks (`--no-verify`) to force progress.
 
 ### (4) Triage each actionable thread
 
@@ -347,9 +346,7 @@ These rules are part of this stage, not a pointer to something outside it.
 
 - **Failures come first.** Read the failing check's log and the failing
   assertion's text before forming any theory about it. A summary line, a job
-  name, or a wall-clock note is not a diagnosis. Do not classify a failure as
-  environmental or unrelated until the same failure set reproduces on the
-  unmodified base.
+  name, or a wall-clock note is not a diagnosis.
 - **No flat comments.** A reply belongs on the thread it answers, so the thread
   can terminalise. A top-level comment that responds to an inline finding leaves
   that finding open, and the verdict will keep counting it — correctly.
@@ -357,10 +354,7 @@ These rules are part of this stage, not a pointer to something outside it.
   filing Issues are all writes to a shared surface. Follow this workspace's
   approval boundary for them, and never merge: merging is a separate human
   decision and no convergence verdict authorises it.
-- **A red check outranks every pending one.** Never wait for pending checks
-  while any failure is visible; step (3) handles the red before anything else
-  queues, and a serial watch parked on pending checks is the exact posture
-  this rule forbids.
+- **No hook bypass.** Do not bypass hooks (`--no-verify`) to force progress.
 - **Flakes are evidence, not noise.** Re-run a suspected flake and record both
   outcomes. If it passes on re-run, say so explicitly rather than quietly
   discarding the red run, and do not assume a re-run failure shares the first
