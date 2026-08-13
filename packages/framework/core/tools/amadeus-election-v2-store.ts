@@ -17,6 +17,7 @@ import {
   type CanonicalElectionDefinition,
   type CanonicalTally,
   ElectionDefinitionCodec,
+  LEGACY_QUESTION_ID,
   TallyV2Codec,
 } from "./amadeus-election-codec.ts";
 import type { ElectionState } from "./amadeus-election-model.ts";
@@ -254,10 +255,12 @@ function decodeBallot(
   raw: unknown,
   definition: CanonicalElectionDefinition,
 ): ElectionV2StoreResult<CanonicalBallot> {
-  if (!isRecord(raw) || !Array.isArray(raw.responses)) return err("corrupt");
-  const ids = raw.responses.flatMap((response) =>
-    isRecord(response) && typeof response.questionId === "string" ? [response.questionId] : [],
-  );
+  if (!isRecord(raw)) return err("corrupt");
+  const ids = Array.isArray(raw.responses)
+    ? raw.responses.flatMap((response) =>
+        isRecord(response) && typeof response.questionId === "string" ? [response.questionId] : [],
+      )
+    : [LEGACY_QUESTION_ID];
   const decoded = BallotV2Codec.decode(raw, definition, { targetQuestionIds: ids });
   return decoded.ok ? ok(decoded.value) : err(codecError(decoded.error.category));
 }
