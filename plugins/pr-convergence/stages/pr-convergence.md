@@ -240,8 +240,8 @@ Every push invalidates the previous reading. Review bots re-post against the new
 head, checks re-run, and threads that were outdated may become live again.
 Return to (2) after **each** push — not once at the end. While the re-started
 CI runs, keep working per *CI observation and local validation ordering*
-below: local validation, thread triage, and the next fix all proceed in
-parallel with CI, never behind it.
+below: any still-running local validation, thread triage, and the next fix
+all proceed in parallel with CI, never behind it.
 
 ### (6) Report convergence
 
