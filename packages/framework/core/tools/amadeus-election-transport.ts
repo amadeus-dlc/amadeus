@@ -22,6 +22,7 @@
 
 import { type Result, err, ok } from "./amadeus-election-model";
 import { existsSync } from "node:fs";
+import { createHash } from "node:crypto";
 
 // The model layer keys elections and voters by plain strings; these aliases
 // carry the domain-entities.md naming without changing the underlying shape.
@@ -204,4 +205,97 @@ export function distribute(
     voter,
     result: transport.notify(voter, buildShortNotification(electionId, viewPathFor(voter))),
   }));
+}
+
+// --- canonical multi-question delivery booking ----------------------------
+
+// Transport execution stays question-blind. This function only enriches the
+// factory-minted execution receipt with the distribution identity needed by
+// the durable booking layer; it never reads a view or interprets its content.
+declare const canonicalDeliveryRecordBrand: unique symbol;
+export type CanonicalDeliveryRecord = {
+  readonly electionId: ElectionId;
+  readonly distributionRunId: string;
+  readonly voter: VoterId;
+  readonly viewPath: string;
+  readonly transport: TransportKind;
+  readonly provenance: Provenance;
+  readonly at: string;
+  readonly fingerprint: string;
+  readonly [canonicalDeliveryRecordBrand]: true;
+};
+
+export type DeliveryBookingError = "delivery-conflict";
+
+export type DeliveryBookingResult = Result<
+  {
+    readonly status: "booked" | "idempotent";
+    readonly records: readonly CanonicalDeliveryRecord[];
+  },
+  DeliveryBookingError
+>;
+
+function deliveryFingerprint(value: {
+  electionId: ElectionId;
+  distributionRunId: string;
+  voter: VoterId;
+  viewPath: string;
+  transport: TransportKind;
+  provenance: Provenance;
+  at: string;
+}): string {
+  const bytes = JSON.stringify([
+    value.electionId,
+    value.distributionRunId,
+    value.voter,
+    value.viewPath,
+    value.transport,
+    value.provenance,
+    value.at,
+  ]);
+  return `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+}
+
+export function canonicalizeDeliveryRecord(
+  execution: DeliveryRecord,
+  electionId: ElectionId,
+  distributionRunId: string,
+  viewPath: string,
+): CanonicalDeliveryRecord {
+  const value = {
+    electionId,
+    distributionRunId,
+    voter: execution.voter,
+    viewPath,
+    transport: execution.transport,
+    provenance: execution.provenance,
+    at: execution.at,
+  };
+  return Object.freeze({
+    ...value,
+    fingerprint: deliveryFingerprint(value),
+  }) as unknown as CanonicalDeliveryRecord;
+}
+
+function deliveryIdentity(record: CanonicalDeliveryRecord): string {
+  return JSON.stringify([record.distributionRunId, record.voter]);
+}
+
+// Create-only semantics over the caller's durable snapshot. The caller writes
+// `records` atomically only for "booked"; idempotent and conflict paths leave
+// the supplied collection untouched.
+export function bookDelivery(
+  existing: readonly CanonicalDeliveryRecord[],
+  candidate: CanonicalDeliveryRecord,
+): DeliveryBookingResult {
+  const matching = existing.filter(
+    (record) => deliveryIdentity(record) === deliveryIdentity(candidate),
+  );
+  if (matching.length > 1) return err("delivery-conflict");
+  const prior = matching[0];
+  if (prior === undefined) return ok({ status: "booked", records: [...existing, candidate] });
+  if (prior.fingerprint === candidate.fingerprint) {
+    return ok({ status: "idempotent", records: existing });
+  }
+  return err("delivery-conflict");
 }
