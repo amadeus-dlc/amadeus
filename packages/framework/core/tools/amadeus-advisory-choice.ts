@@ -900,25 +900,9 @@ export function recordAdvisoryChoice(
     if (provenance.kind === "human-turn" && provenance.shard !== auditShardName(projectDir)) {
       return { kind: "refused", reason: "the human turn belongs to another audit shard" };
     }
-    // Single spend, hoisted ahead of the kind-specific checks so it holds across
-    // provenance kinds (FR-ADV-3): one decision, or one turn, is spent once. What
-    // that spend settles is decided below and differs by kind — a turn covers the
-    // batch it was shown, a decision covers the occurrence it names.
-    //
-    // Spent on THIS choice is the idempotent replay; spent on a different one is
-    // a conflict, and the two do not share an answer.
-    const spent = receiptsSpentBy(store.receipts, provenance);
-    if (spent.length > 0) {
-      return spent.every((receipt) => receipt.choice === choice)
-        ? { kind: "already-settled", receipts: spent }
-        : {
-            kind: "refused",
-            reason: `this provenance already recorded a different choice: ${spent.map((receipt) => receipt.choice).join(", ")}`,
-          };
-    }
-    // The instance-level gate, also ahead of the kind-specific checks: an
-    // advisory already answered does not accept a second answer from EITHER
-    // route until its own evidence says the answer did not settle it.
+    // The instance-level gate: an advisory already answered does not accept a
+    // second answer from EITHER route until its own evidence says the answer did
+    // not settle it.
     const open = store.pending.filter(
       (pending) =>
         pending.closedAt === undefined &&
@@ -926,6 +910,32 @@ export function recordAdvisoryChoice(
           Math.floor(Date.parse(provenance.timestamp) / 1000) >= Math.floor(Date.parse(pending.createdAt) / 1000)) &&
         acceptsFreshChoice(pending, store.receipts),
     );
+    // Single spend (FR-ADV-3): one decision, or one turn, is spent once. What
+    // that spend settles is decided below and differs by kind — a turn covers the
+    // batch it was shown, a decision covers the occurrence it names.
+    //
+    // Spent already splits three ways (#2967 FR-ADV-4), and the split is what
+    // keeps the idempotent case from becoming fail-open. It is `already-settled`
+    // only when this provenance wrote THIS choice and nothing it could still
+    // answer is left open — a pure replay of the pass that already succeeded.
+    // Anything still open means the spend does not cover it, and a second spend
+    // is exactly what single-spend forbids, so that is a refusal rather than a
+    // free pass.
+    const spent = receiptsSpentBy(store.receipts, provenance);
+    if (spent.length > 0) {
+      if (!spent.every((receipt) => receipt.choice === choice)) {
+        return {
+          kind: "refused",
+          reason: `this provenance already recorded a different choice: ${spent.map((receipt) => receipt.choice).join(", ")}`,
+        };
+      }
+      return open.length === 0
+        ? { kind: "already-settled", receipts: spent }
+        : {
+            kind: "refused",
+            reason: "this provenance is already spent and does not settle the still-open advisories",
+          };
+    }
     if (open.length === 0) {
       return { kind: "refused", reason: "no open advisory accepts a fresh choice from this provenance" };
     }

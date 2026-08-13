@@ -154,6 +154,29 @@ describe("t2967 recordAdvisoryChoice outcome (FR-ADV-4)", () => {
     expect(conflicting.reason.length).toBeGreaterThan(0);
   });
 
+  // already-settled must never become a free pass for an advisory this
+  // provenance did NOT answer. A second advisory raised after the turn was spent
+  // is still open, so the replay is a refusal rather than a settled read.
+  test("spent済みprovenanceでも未回答のadvisoryが残ればrefusedになる", () => {
+    projectDir = bornProject();
+    expect(guardAdvisoryChoices(projectDir, STAGE, [advisory]).kind).not.toBe("allow");
+    const pending = firstPending(projectDir);
+    const humanTurn = presentAndPlantTurn(projectDir, pending);
+    expect(recordAdvisoryChoice(projectDir, "run-now", { kind: "human-turn", ...humanTurn }).kind)
+      .toBe("recorded");
+
+    // A second, unanswered advisory at the same checkpoint.
+    const second: Advisory = { ...advisory, specIdentity: "sha256:def", message: "advisory: a second raise" };
+    expect(guardAdvisoryChoices(projectDir, STAGE, [advisory, second]).kind).not.toBe("allow");
+
+    const replay = recordAdvisoryChoice(projectDir, "run-now", { kind: "human-turn", ...humanTurn });
+    expect(replay.kind).toBe("refused");
+    const store = JSON.parse(
+      readFileSync(join(docsRoot(projectDir), ".amadeus-advisory-choice.json"), "utf-8"),
+    ) as AdvisoryChoiceStore;
+    expect(store.receipts).toHaveLength(1);
+  });
+
   test("接地しないhuman-turnはrefusedで、理由を持つ", () => {
     projectDir = bornProject();
     expect(guardAdvisoryChoices(projectDir, STAGE, [advisory]).kind).not.toBe("allow");
