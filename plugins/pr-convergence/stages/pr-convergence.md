@@ -322,17 +322,18 @@ local validation still running, and no fix in flight. Prefer a background or
 timer-based re-read over a dedicated foreground watch when the harness offers
 one.
 
-**Push first when CI is slow.** Estimate the pull request's CI wall clock from
-its recent runs (`gh run list` durations, or the durations on the previous
-check read). When that estimate exceeds **3 minutes** — or when no estimate
-exists — do not make local verification a pre-push gate: push the coherent
-minimal fix first so CI restarts immediately, then run the relevant local
-build and tests **in parallel** with the CI run. Before such a push, run only
-the fast sanity checks needed to avoid an obviously invalid commit (for
-example a typecheck of the touched files), never the full suite. If local
-validation later fails, diagnose, fix, and push again without waiting for the
-in-flight CI run. Only when CI reliably completes within 3 minutes may local
-verification run to completion before the push.
+**Push first when local validation is slow.** The threshold is the wall
+clock of the local validation this change requires, estimated from recent
+runs of the relevant suites — not the CI duration. When that estimate is
+under **3 minutes**, run the validation to completion before the push: the
+push then carries locally verified work and CI becomes confirmation. When it
+is **3 minutes or more** — or when no estimate exists — do not make it a
+pre-push gate: push the coherent minimal fix first so CI restarts
+immediately, then run that validation **in parallel** with the CI run.
+Before such a push, run only the fast sanity checks needed to avoid an
+obviously invalid commit (for example a typecheck of the touched files). If
+the parallel validation fails, diagnose, fix, and push again without waiting
+for the in-flight CI run.
 
 Push-first changes the *ordering* of validation, never the approval boundary:
 every push remains a remote write and still follows the workspace's approval
