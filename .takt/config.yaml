@@ -105,6 +105,21 @@ auto_routing:
     tags:
       coding: implementation
 
+# --- Codex permission profile --------------------------------------------
+# The edit steps run `bun run build`, whose self-install projection writes to
+# `.agents/` — a directory the Codex workspace-write sandbox blocks as
+# protected agent config (EPERM, measured 2026-08-13). `full` maps to
+# danger-full-access (no sandbox) for those steps only; read-only steps keep
+# the default sandbox.
+provider_profiles:
+  codex:
+    default_permission_mode: edit
+    step_permission_overrides:
+      fix: full
+      fix-retry: full
+      implement: full
+      write_tests: full
+
 # Routing decisions are written locally to .takt/events/ as NDJSON. Nothing is uploaded.
 telemetry:
   routing_decisions: true
