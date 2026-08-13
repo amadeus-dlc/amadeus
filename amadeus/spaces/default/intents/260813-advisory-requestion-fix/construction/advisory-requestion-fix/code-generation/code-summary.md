@@ -29,6 +29,13 @@
 - 配送先述語: `git grep -nE 'run_required|formal_checks' -- packages/framework/harness/` exit 1(0 hit)、自己インストール面 `.claude/skills/amadeus/SKILL.md` の `run_required` 0 hit・`execute-advisory-handoff` 2 hit
 - フルスイート `bash tests/run-tests.sh --ci` exit 2: 失敗は `t-team-up-run-lifecycle.serial` の16件のみで、未改変 base で同一再現(帰属切り分け済み・既存環境起因、Issue #2978 起票)。advisory 領域は全て green
 
+## 未検証面(reviewer FOLLOW-UP 対応の書き分け)
+
+- ローカル実測済み: typecheck / lint / build(単発)/ フルスイート(既存 #2978 の16件を除き green)/ 配送先 grep 述語 / advisory 対象10ファイル 142 pass
+- **PR #2980 の CI で検証する面(本成果物の実測範囲外)**: 隔離2回ビルドの再現性検査、`source-only:check`、グラフ不変量検査、Project Coverage Gate(絶対 + 相対の AND)、Patch Coverage Gate、plugin-conformance-e2e。これらは build-and-test ステージで PR CI の実測結果として確認する
+- 落ちる実証は「実装3ファイル→base 復元での集約 Red(10 fail / 1 pass)」の1回で、Step 3-5 の個別 Red 証跡は集約実行に含まれる(fail の内訳: t2967-advisory-handoff-directive の full/human-turn/semi 経路 + t2967-advisory-record-outcome の型付き outcome 系)
+- pr-convergence-report.md は create 直後のスナップショット(`kind: created`)。収束後の最新化は build-and-test / マージ前の pr-convergence 手順で行う
+
 ## 計画からの逸脱
 
 - builder の最終報告が返らず(セッション停止)、Step 9-10 の検証と落ちる実証は conductor が引き取って実測した(実装・テストは builder の7コミットで完結していた)

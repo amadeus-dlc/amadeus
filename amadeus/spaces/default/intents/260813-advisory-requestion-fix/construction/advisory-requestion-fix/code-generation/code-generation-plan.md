@@ -30,3 +30,19 @@
 - 統合: Step 3(full/auto-decision)、Step 4(human-turn)、Step 5(semi)— いずれも隔離 project-dir、実 record 非接触
 - 既存回帰: Step 6 の7ファイル + フルスイート
 - 性能・セキュリティ検査は生成しない(requirements.md「非機能要件」の判定: 適用可能な数値目標を持つ NFR 不在。検証劇場を作らない)
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-13T16:13:20Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+code-generation-plan/code-summary は FR-ADV-1〜8 全件をStep単位でtraceabilityし、落ちる実証(注入→赤10fail/1pass→revert残渣ゼロ)・green(142 pass)・typecheck/lint/build exit 0・配送先述語0 hitを実測exit codeつきで記録し、2件の逸脱(builder報告欠落の引き取り、PR head差し替え)も前例(#2932)付きで申告されており、BLOCKERは見当たらない。
+
+### Findings
+
+- FOLLOW-UP | requirements.md の制約節が明示する『ブロッキングゲート全通過(隔離2回ビルド再現性検査/source-only:check/グラフ不変量検査/coverage両条件/patch coverage/plugin-conformance-e2e)』のうち、code-summary.md の『検証』節は typecheck・lint・単一build・フルスイート・grep述語のみを実測記載しており、残りのCI専用ゲートについて『PR側CIで検証予定』等の明示的な書き分けがない。pr-convergence-report.md も converged:false・チェック内訳なしのため、これらのゲートが実際に緑であることを本成果物からは確認できない。verdict-names-unverified-facets の観点でこの未検証面を code-summary に明記すべき。
+- FOLLOW-UP | plan の Step 3〜5 はそれぞれ個別のRed実測(『Red実測(現行コードではawait-advisory-choiceが返るため必然的にRed=落ちる実証)』等)を主張するが、code-summary.md の落ちる実証エビデンスは『実装3ファイルのみをbaseへ戻し新テスト実行→10 fail/1 pass』という単一の集約実行のみを記録しており、Step単位の個別Red証跡とテストファイル対応(どのfailがどのFR/Stepに対応するか)が成果物上で追跡できない。
+- NIT | pr-convergence-report.md の `converged: false` は作成直後のスナップショットであることが自明でなく、pr-convergence stage側での収束完了時点の最新レポートが本成果物セットに含まれるか(あるいは別ステージで追って更新される旨)が code-summary から読み取れない。
