@@ -1,0 +1,110 @@
+# TAKT project configuration (amadeus)
+#
+# Provider/model resolution ladder (higher wins):
+#   CLI/env override > step YAML > workflow_call override
+#     > provider_routing.steps > provider_routing.tags > provider_routing.personas
+#     > auto_routing > workflow_config > this file > ~/.takt/config.yaml
+#
+# Policy for this project:
+#   - Planning and review steps are pinned to Claude Fable 5 (they bypass auto_routing).
+#   - Everything else (coding steps) is auto-routed across the Codex gpt-5.6 tiers.
+
+language: ja
+
+# Note: worktree_dir is a global-only key; it is set in ~/.takt/config.yaml
+# (project-level config rejects it). Without it, clones would land in
+# ../takt-worktrees, beside the Orca-managed worktrees.
+
+# Used outside workflow steps (AI task-slug generation, sync conflict resolver, ...)
+# and as the fallback when auto_routing does not apply.
+provider: codex
+model: gpt-5.6-terra
+
+# Assistant conversations (interactive planning, instruct, retry) never go through
+# auto_routing, so they are pinned explicitly.
+takt_providers:
+  assistant:
+    provider: claude
+    model: fable
+
+# --- Hard pins ------------------------------------------------------------
+# These sit above auto_routing in the ladder, so any step matched here skips
+# auto-routing entirely.
+#
+# In the `default` workflow:
+#   tag `plan`   -> plan, replan, fix-plan
+#   tag `review` -> arch/security/testing/coding/ai-antipattern reviewers,
+#                   review-adjudication, final-gate, fix-verifier
+#   persona `loop-judge` -> loop_monitors judges (supervisor persona)
+provider_routing:
+  tags:
+    plan:
+      provider: claude
+      model: fable
+    review:
+      provider: claude
+      model: fable
+    # Network for the edit steps only. `capabilities: edit` maps to Codex
+    # `workspace-write`, where the sandbox blocks network by default, and a
+    # fresh worktree clone has no node_modules, so `bun install` needs it.
+    # Only provider_options is set here — no `provider` — so these steps still
+    # go through auto_routing (which is skipped only once `provider` resolves).
+    coding:
+      provider_options:
+        codex:
+          network_access: true
+  personas:
+    loop-judge:
+      provider: claude
+      model: fable
+
+# --- Auto routing ---------------------------------------------------------
+# Applies to the remaining steps, i.e. the `coding` tag: write_tests, implement,
+# fix, fix-retry. The router only estimates the required tier; TAKT then picks
+# the candidate deterministically.
+auto_routing:
+  strategy: balanced # cost | balanced | performance
+  router:
+    provider: codex
+    model: gpt-5.6-luna
+  candidates:
+    - name: advanced
+      description: 設計判断を伴う実装、広範囲にまたがる変更、原因が不明なデバッグ
+      provider: codex
+      model: gpt-5.6-sol
+      routing_tier: high
+      provider_options:
+        codex:
+          reasoning_effort: high
+    - name: coding
+      description: 通常の実装、テスト作成、リファクタリング
+      provider: codex
+      model: gpt-5.6-terra
+      routing_tier: medium
+      provider_options:
+        codex:
+          reasoning_effort: medium
+    - name: lightweight
+      description: 整形、命名修正、小さな機械的編集
+      provider: codex
+      model: gpt-5.6-luna
+      routing_tier: low
+      provider_options:
+        codex:
+          reasoning_effort: low
+  default_pool: general
+  candidate_pools:
+    # Coding work never drops to the low tier.
+    implementation:
+      candidates: [coding, advanced]
+      fallback: advanced
+    general:
+      candidates: [lightweight, coding, advanced]
+      fallback: coding
+  pool_rules:
+    tags:
+      coding: implementation
+
+# Routing decisions are written locally to .takt/events/ as NDJSON. Nothing is uploaded.
+telemetry:
+  routing_decisions: true
