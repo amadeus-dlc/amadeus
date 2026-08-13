@@ -58,9 +58,12 @@ function recordAdvisoryChoiceViaPrompt(
 ): boolean {
   const choice = choiceFromExactPrompt(prompt);
   if (choice === null) return false;
-  return now === undefined
+  // True only when a receipt was WRITTEN, which is what this boolean has always
+  // meant; an already-settled replay stays false here (#2967 FR-ADV-4).
+  const outcome = now === undefined
     ? recordAdvisoryChoice(projectDir, choice, { kind: "human-turn", ...humanTurn })
     : recordAdvisoryChoice(projectDir, choice, { kind: "human-turn", ...humanTurn }, now);
+  return outcome.kind === "recorded";
 }
 
 

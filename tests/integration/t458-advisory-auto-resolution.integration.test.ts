@@ -187,7 +187,7 @@ describe("advisory auto-resolution: authorized (FR-ADV-1)", () => {
       projectionRevision: resolution.projectionRevision,
       phase: PHASE,
       graphRevision: GRAPH,
-    })).toBe(true);
+    }).kind).toBe("recorded");
 
     const receipts = readStore(projectDir).receipts;
     expect(receipts).toHaveLength(1);
@@ -233,7 +233,7 @@ describe("advisory auto-resolution: authorized (FR-ADV-1)", () => {
       projectionRevision: resolution.projectionRevision,
       phase: PHASE,
       graphRevision: GRAPH,
-    })).toBe(true);
+    }).kind).toBe("recorded");
 
     // One decision, one receipt — and it names the advisory the decision was about.
     const receipts = readStore(projectDir).receipts;
@@ -280,7 +280,7 @@ describe("advisory auto-resolution: unauthorized (FR-ADV-2 fail-closed)", () => 
       projectionRevision: 1,
       phase: PHASE,
       graphRevision: GRAPH,
-    })).toBe(false);
+    }).kind).toBe("refused");
     expect(readStore(projectDir).receipts).toHaveLength(0);
   });
 
@@ -307,7 +307,7 @@ describe("advisory auto-resolution: unauthorized (FR-ADV-2 fail-closed)", () => 
       projectionRevision: resolution.projectionRevision,
       phase: "inception",
       graphRevision: GRAPH,
-    })).toBe(false);
+    }).kind).toBe("refused");
     expect(readStore(projectDir).receipts).toHaveLength(0);
   });
 });
@@ -322,7 +322,7 @@ describe("advisory auto-resolution: provenance crossing (FR-ADV-3)", () => {
     expect(recordAdvisoryChoice(projectDir, "defer-with-risk", {
       kind: "human-turn",
       ...plantHumanTurn(projectDir),
-    })).toBe(true);
+    }).kind).toBe("recorded");
     expect(readStore(projectDir).receipts).toHaveLength(1);
 
     const resolution = resolveAdvisoryChoiceAutonomously({
@@ -340,7 +340,7 @@ describe("advisory auto-resolution: provenance crossing (FR-ADV-3)", () => {
         projectionRevision: resolution.projectionRevision,
         phase: PHASE,
         graphRevision: GRAPH,
-      })).toBe(false);
+      }).kind).toBe("refused");
     }
     expect(readStore(projectDir).receipts).toHaveLength(1);
   });
@@ -369,7 +369,7 @@ describe("advisory auto-resolution: schema 1 store (ADR-9)", () => {
       projectionRevision: 1,
       phase: PHASE,
       graphRevision: GRAPH,
-    })).toBe(false);
+    }).kind).toBe("refused");
   });
 });
 
@@ -389,7 +389,7 @@ describe("advisory auto-resolution: unreadable autonomy journal (fail-closed)", 
       projectionRevision: 1,
       phase: PHASE,
       graphRevision: GRAPH,
-    })).toBe(false);
+    }).kind).toBe("refused");
     expect(readStore(projectDir).receipts).toHaveLength(0);
   });
 

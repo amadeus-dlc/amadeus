@@ -850,9 +850,11 @@ function applyPendingAdvisoryGuard(directive: Directive): Directive {
     phase: directive.phase,
     graphRevision,
   });
-  if (
-    auto.kind === "resolved"
-    && recordAdvisoryChoice(advisoryProjectDir, auto.choice, {
+  if (auto.kind === "resolved") {
+    // `recorded` and `already-settled` both mean this advisory now carries a
+    // live receipt for the ladder's choice (#2967 FR-ADV-4); only `refused`
+    // leaves it unanswered and falls to the human.
+    const outcome = recordAdvisoryChoice(advisoryProjectDir, auto.choice, {
       kind: "auto-decision",
       decisionId: auto.decision.decisionId,
       basisKind: auto.decision.basisKind,
@@ -860,9 +862,8 @@ function applyPendingAdvisoryGuard(directive: Directive): Directive {
       projectionRevision: auto.projectionRevision,
       phase: directive.phase,
       graphRevision,
-    })
-  ) {
-    return directive;
+    });
+    if (outcome.kind !== "refused") return directive;
   }
   const choiceDirective: AwaitAdvisoryChoiceDirective = {
     kind: "await-advisory-choice",
