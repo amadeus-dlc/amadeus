@@ -1,8 +1,8 @@
 ## Summary
 
-- Remove the unused Team Mode launcher `team-up.sh` and its Codex safety-wait helper
-- Drop launcher-driven tests and rewrite Team Mode docs so they no longer teach a live launcher
-- Keep `team-msg.sh`; replace doctor trust repair copy that recommended the removed CLI
+- Remove the unused Team Mode launcher `team-up.sh`, its Codex safety-wait helper, and `team-msg.sh`
+- Drop launcher- and messaging-CLI tests; rewrite Team Mode docs so they no longer teach those CLIs
+- Replace doctor trust repair copy that recommended the removed launcher
 
 Closes the reproduction path for #2970 by deletion rather than a bash 3.2 empty-array guard.
 

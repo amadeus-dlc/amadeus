@@ -13,9 +13,9 @@
 
 ## トレーサビリティ
 
-- 利用者目的「未使用の Team Mode ランチャを削除する（#2970 の bash ガードは実装しない）」は FR-1（正本削除）、FR-2（safety-wait 削除）、FR-3（ランチャ専用テスト）、FR-4（doctor 文言）、FR-5（ガイド書き換え）、FR-6（build 投影）、FR-7（`team-msg.sh` 残置）、FR-8（クラッシュ修正禁止）に全数分解した。
+- 利用者目的「未使用の Team Mode ランチャを削除する（#2970 の bash ガードは実装しない）」は FR-1（正本削除）、FR-2（safety-wait 削除）、FR-3（ランチャ専用テスト）、FR-4（doctor 文言）、FR-5（ガイド書き換え）、FR-6（build 投影）、FR-7（`team-msg.sh` 削除、2026-08-14 上書き）、FR-8（クラッシュ修正禁止）に全数分解した。
 - RE の消費者表（正本2、名前付きテスト12、t266/t267、t226、docs/glossary）は FR-1〜FR-6 に対応し、孤児の未対応面はない。
-- Q1 keep-team-msg、Q2 rewrite-removed、Q3 note-obsolete-followup は Requirements の FR-7 / FR-5 / Out of scope に反映済み。
+- Q1 は当初 keep-team-msg、2026-08-14 に delete へ上書き。Q2 rewrite-removed、Q3 note-obsolete-followup は Requirements の FR-7 / FR-5 / Out of scope に反映済み。
 - §12a iteration 1 は `READY`（BLOCKER 0）。FOLLOW-UP 2件は Construction で経路ピンと回帰ファイル名を決める。
 
 ## 品質ゲート

@@ -7,7 +7,7 @@
 - [x] Step 1: ランチャ正本を削除する（FR-1, FR-2, FR-8）
 - [x] Step 2: ランチャ駆動テストと fixture を削除する（FR-3）
 - [x] Step 3: doctor の trust 修復文言を置換する（FR-4）
-- [x] Step 4: Team Mode 文書と glossary を書き換え、`team-msg.sh` コメントを中立化する（FR-5, FR-7）
+- [x] Step 4: Team Mode 文書と glossary を書き換え、`team-msg.sh` を削除する（FR-5, FR-7）
 - [x] Step 5: 不在回帰テストを追加する（NFR-1）
 - [x] Step 6: 削除テストの test-time-factor allowlist 行を落とす（FR-3）
 - [x] Step 7: `bun run build`（dist は手編集しない）（FR-6, NFR-3）

@@ -27,6 +27,8 @@ X. Other (please specify)
 **Decision id:** auto-decision-2eac2ed6c3f1769fa858f1d267ab9471
 **Degraded:** solo-election unavailable
 
+**Superseded:** 2026-08-14T00:32:00+09:00 — 利用者指示「team-msg.shも不要」。採用は B（同変更で削除）。当初の残置裁定は無効。
+
 ---
 
 ## Q2. User-facing Team Mode documentation

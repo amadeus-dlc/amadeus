@@ -10,11 +10,11 @@
 
 Amadeus は `team-up.sh` を同梱しません。配布物からそのランチャは消えています。
 付属していた Codex safety-wait ヘルパーも同時に削除されています。
+`team-msg.sh` も同梱しません。
 
-チームメッセージング(`team-msg.sh`)と選挙 CLI は残ります。チームモード契約が
-必要なセッションは、これまでどおり完全一致のマーカー
-`AMADEUS_OPERATING_MODE=team` を使います。Amadeus はそのマーカーを設定する
-ランチャを提供しません。
+選挙 CLI は残ります。チームモード契約が必要なセッションは、これまでどおり
+完全一致のマーカー `AMADEUS_OPERATING_MODE=team` を使います。Amadeus はその
+マーカーを設定するランチャも、チームメッセージング CLI も提供しません。
 
 ## 概要
 
@@ -41,15 +41,8 @@ $amadeus --doctor
 
 ## メッセージング
 
-インストール済みツールディレクトリから送受信します:
-
-```bash
-bash {{HARNESS_DIR}}/tools/team-msg.sh send e1 "Please review the proposal."
-bash {{HARNESS_DIR}}/tools/team-msg.sh read leader
-```
-
-トランスポートは `TEAM_MSG` を `agmsg`(既定)または `herdr` にします。role は
-`leader`、`e1`、`e2` などです。詳細は
+Amadeus は `team-msg.sh` を同梱しません。本ガイドに live の送受信レシピは
+ありません。経緯は
 [チームメッセージングバックエンド](team-messaging.ja.md) を参照してください。
 
 ## 選挙の実行

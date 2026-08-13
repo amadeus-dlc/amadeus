@@ -30,15 +30,15 @@ bash 3.2 の空配列クラッシュを直すのではなく、使われなく�
 
 ### FR-5: ユーザーガイドから起動手順を除去
 
-`docs/guide/20-team-mode.md` 対訳を「ランチャは廃止」と書き換え、live `bash …/team-up.sh` レシピを残さない。glossary / team-messaging / codex-cli 対訳と core glossary の `scripts/team-up.sh` も同期する。受け入れ: 現行起動コマンドとして `team-up.sh` を教える文が docs に無い。
+`docs/guide/20-team-mode.md` 対訳を「ランチャは廃止」と書き換え、live `bash …/team-up.sh` および live `team-msg.sh` レシピを残さない。glossary / team-messaging / codex-cli 対訳と core glossary の `scripts/team-up.sh` も同期する。受け入れ: 現行起動コマンドとして `team-up.sh` / `team-msg.sh` を教える文が docs/guide に無い。
 
 ### FR-6: 配送面は build で消える
 
 8 harness の `coreDirs.tools` 投影は維持し、正本削除後 `bun run build` で dist / self-install から当該ファイルが消えることを確認する。受け入れ: 生成面を手編集しない。ソース削除 + build が唯一の経路。
 
-### FR-7: `team-msg.sh` は残す
+### FR-7: `team-msg.sh` も削除する
 
-メッセージング CLI は本 Intent の削除対象外（Q1 `keep-team-msg`）。受け入れ: `packages/framework/core/tools/team-msg.sh` が残る。ランチャ言及コメントは必要なら中立化する。
+メッセージング CLI も未使用のため同 Intent で削除する（当初 Q1 は残置だったが、2026-08-14 の利用者指示で上書き）。受け入れ: `git ls-files` に `packages/framework/core/tools/team-msg.sh` が無く、専用テスト `tests/integration/t-team-msg.test.ts` も無く、ユーザーガイドに live `team-msg.sh` レシピが無い。herdr / agmsg 本体と選挙 CLI は削除しない。
 
 ### FR-8: #2970 は削除で閉じる
 
@@ -47,7 +47,7 @@ bash 3.2 の空配列クラッシュを直すのではなく、使われなく�
 ## Non-functional requirements
 
 - **NFR-1 テスト**: Comprehensive。削除したテストの代わりに「正本・投影・docs に `team-up.sh` 起動レシピが無い」ことを固定する回帰を 1 本以上置く。
-- **NFR-2 互換**: 公開 CLI `/amadeus` のソロ経路は変えない。Team Mode ランチャだけを落とす。
+- **NFR-2 互換**: 公開 CLI `/amadeus` のソロ経路は変えない。落とすのは Team Mode ランチャと `team-msg.sh` だけ。
 - **NFR-3 再現性**: `bun run typecheck` / `lint` / source-only / 隔離 2 回 build を満たす。
 
 ## Constraints
@@ -58,13 +58,13 @@ bash 3.2 の空配列クラッシュを直すのではなく、使われなく�
 
 ## Assumptions
 
-- 利用者の「利用しない」は Team Mode ランチャの廃止であり、`team-msg.sh` や herdr 一般の廃止ではない。
+- 利用者の「利用しない」は Team Mode ランチャと `team-msg.sh` の廃止である。herdr / agmsg 本体と選挙 CLI は対象外。
 - 区間 `854692fd7..HEAD` で team-up パス差分 0 のため、RE の消費者表は observed で有効。
 
 ## Out of scope
 
 - #2970 の bash 3.2 ガード実装
-- `team-msg.sh` の機能追加・削除
+- `team-msg.sh` の代替トランスポート新設
 - herdr / agmsg 本体
 - 関連 Issue #1250 / #998 / #1136 / #1087 の GitHub close（廃止注記のみ。close は削除 PR 後の follow-up）
 - swarm / election / Orca worktree 一般

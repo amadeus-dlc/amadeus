@@ -23,7 +23,7 @@
 | FR-4 | doctor の trust 修復文言置換 | non-target | 案内文字列の変更。プロセス内の同期 CLI |
 | FR-5 | Team Mode 文書から live 起動レシピを除去 | non-target | 文書成果物 |
 | FR-6 | `bun run build` による配送面の消失 | non-target | 生成パイプラインの再実行。新規並行プロトコルなし |
-| FR-7 | `team-msg.sh` 残置 | non-target | 無変更の維持。本 Intent はメッセージング状態機械を触らない |
+| FR-7 | `team-msg.sh` 削除 | non-target | CLI と専用テストの除去。選挙 CLI / herdr / agmsg 本体は触らない |
 | FR-8 | #2970 クラッシュガードを実装しない | non-target | 不作為。ランチャ経路の消滅であり、既存 TLA モデルの遷移を変えない |
 | NFR-1 | 不在回帰テスト | non-target | `git ls-files` と文字列走査。決定的な存在検査 |
 | NFR-2 | ソロ `/amadeus` 互換 | non-target | 公開 CLI を変えないという制約 |

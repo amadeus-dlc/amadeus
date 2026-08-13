@@ -33,13 +33,16 @@ describe("team-up launcher absence", () => {
   test("tracked sources are gone", () => {
     expect(gitLsFiles("packages/framework/core/tools/team-up.sh")).toEqual([]);
     expect(gitLsFiles("packages/framework/core/tools/team-up-codex-safety-wait.ts")).toEqual([]);
+    expect(gitLsFiles("packages/framework/core/tools/team-msg.sh")).toEqual([]);
     expect(gitLsFiles("tests/**/*team-up*")).toEqual([
       "tests/unit/t-remove-team-up-absence.test.ts",
     ]);
+    expect(gitLsFiles("tests/**/*team-msg*")).toEqual([]);
   });
 
-  test("user guides do not teach a live team-up.sh invocation", () => {
-    const recipe = /(?:bash\s+\S*)?(?:\{\{HARNESS_DIR\}\}|<harness-dir>)\/tools\/team-up\.sh|scripts\/team-up\.sh/;
+  test("user guides do not teach a live team-up.sh or team-msg.sh invocation", () => {
+    const recipe =
+      /(?:bash\s+\S*)?(?:\{\{HARNESS_DIR\}\}|<harness-dir>)\/tools\/team-(?:up|msg)\.sh|scripts\/team-(?:up|msg)\.sh/;
     const hits: string[] = [];
     for (const file of markdownFiles(join(ROOT, "docs/guide"))) {
       const text = readFileSync(file, "utf8");

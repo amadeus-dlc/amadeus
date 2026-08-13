@@ -45,7 +45,7 @@ quality-repair: 修復前 `observe-quality` → `repair`(`sha256:cbea9065443cbd6
 | FR-4 | doctor が死んだ CLI を推奨しない | absence + t226 10 pass | ✅ |
 | FR-5 | live `team-up.sh` レシピが docs に無い | absence ガイド走査 + t414 投影 | ✅ |
 | FR-6 | 生成面は build のみ。self-install から消える | `bun run build` exit 0、`.claude/tools/team-up.sh` 不在 | ✅ |
-| FR-7 | `team-msg.sh` 残置 | 本 Intent は当該ファイルを削除していない(code-summary) | ✅ |
+| FR-7 | `team-msg.sh` 削除 | 正本と `t-team-msg` を削除。ガイドに live レシピ無し | ✅ |
 | FR-8 | bash 空配列ガードを実装しない | ランチャ経路無し。クラッシュ修正差分なし | ✅ |
 | NFR-1 | 不在回帰 1 本以上 | `t-remove-team-up-absence.test.ts` 3 pass | ✅ |
 | NFR-2 | ソロ `/amadeus` を変えない | 変更面はランチャ・docs・doctor・テスト | ✅ |

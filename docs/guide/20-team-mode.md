@@ -11,10 +11,11 @@ are distributed.
 
 Amadeus no longer ships `team-up.sh`. That launcher is gone from the
 distribution. The former Codex safety-wait helper is gone with it.
+`team-msg.sh` is gone as well.
 
-Team messaging (`team-msg.sh`) and the election CLI remain. Sessions that need
-the Team Mode contract still use the exact marker
-`AMADEUS_OPERATING_MODE=team`; Amadeus does not provide a launcher that sets it.
+The election CLI remains. Sessions that need the Team Mode contract still use
+the exact marker `AMADEUS_OPERATING_MODE=team`; Amadeus does not provide a
+launcher that sets it, and it does not ship a team messaging CLI.
 
 ## Overview
 
@@ -42,15 +43,8 @@ $amadeus --doctor
 
 ## Messaging
 
-Send or inspect a message through the installed tool directory:
-
-```bash
-bash {{HARNESS_DIR}}/tools/team-msg.sh send e1 "Please review the proposal."
-bash {{HARNESS_DIR}}/tools/team-msg.sh read leader
-```
-
-Set `TEAM_MSG` to `agmsg` (default) or `herdr` for the transport. Roles use
-`leader`, `e1`, `e2`, and so on. For backend details see
+Amadeus no longer ships `team-msg.sh`. There is no live send/read recipe in
+this guide. Historical backend notes are in
 [Team Messaging Backend](team-messaging.md).
 
 ## Running an election

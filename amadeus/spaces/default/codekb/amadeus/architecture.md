@@ -30,7 +30,7 @@ Text fallback: create_run が左右ペインを切ったあと `stack_column` �
 
 ### 隣接境界
 
-- `team-msg.sh` はメッセージング専用でランチャを exec しない
+- `team-msg.sh` は削除対象（2026-08-14 利用者指示）。mint 分類器の `[team-msg ` 接頭辞は過去ログ用に残す
 - doctor の Codex project-trust 修復はランチャ再実行を指名（`amadeus-utility.ts:964`）
 - ユーザーガイド `docs/guide/20-team-mode.md` はランチャを現行手順として残している
 
