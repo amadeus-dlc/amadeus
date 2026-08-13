@@ -236,14 +236,13 @@ describe("t2967 settled advisory is handed off, not re-asked", () => {
 
     const handoff = nextDirective();
     expect(handoff.kind).toBe("execute-advisory-handoff");
-    expect(Array.isArray(handoff.handoff_stages)).toBe(true);
     expect(handoff.advisories?.length).toBe(1);
     // BR-U2-05 is unchanged: opening the stage is an entry point, not a release.
     expect(handoff.advisories?.[0]?.result ?? "").toContain("evaluator to return no-hold");
-    // Whatever stages the advisories name, the array carries exactly those.
-    expect(handoff.handoff_stages).toEqual(
-      [...new Set((handoff.advisories ?? []).flatMap((item) => item.handoff_stage === undefined ? [] : [item.handoff_stage]))],
-    );
+    // The literal destination the shipped manifest declares for `spec-change`,
+    // not a value re-derived from the directive itself.
+    expect(handoff.advisories?.[0]?.handoff_stage).toBe("formal-model-check");
+    expect(handoff.handoff_stages).toEqual(["formal-model-check"]);
   });
 
   // The unresolved case is untouched: an advisory with no receipt is still a
