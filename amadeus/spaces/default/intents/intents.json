@@ -1124,5 +1124,12 @@
     "dirName": "260812-tla-proof-receipt",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019ffbce-7316-7c96-9bcc-8ae7a4714543",
+    "slug": "lifecycle-guard-runtime",
+    "dirName": "260813-lifecycle-guard-runtime",
+    "scope": "self-fix",
+    "status": "in-flight"
   }
 ]

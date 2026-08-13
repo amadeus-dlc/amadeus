@@ -1,5 +1,41 @@
 # アーキテクチャ
 
+## ライフサイクル進行ガードの集約構造と分散（260813-lifecycle-guard-runtime、現在、observed `89532174c`）
+
+**観測 ref**: すべて observed = `89532174c30ef9cc7ff29496cd6916586fdda00a`（= 本 worktree HEAD = `origin/main`）。差分 base = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（`git merge-base --is-ancestor` exit 0、`git rev-list --count` = 35 commits / 233 files）。全数列挙・検索述語 P1〜P13・G1〜G40 の棚卸しは `re-scans/260813-lifecycle-guard-runtime.md` を正本とする。本節はそこから**構造だけ**を転記する。
+
+### Guard Runtime は存在しない（不在の実測）
+
+`GuardRuntime` / `guard-runtime` / `guardRuntime` / `LifecycleGuard` / `lifecycle-guard` / `lifecycleGuard` / `before-intent-birth` / `beforeIntentBirth` / `registerGuard` / `Guard Runtime` の **10 パターンすべてが rc=1 / hits=0**（1 パターン 1 実行・rc 個別採取、re-scan §2 P1）。observed のガードは共通 Runtime を持たず、checkpoint ごとに独立配線されている。
+
+### 4 checkpoint の集約度は一様でない
+
+| checkpoint | 集約点 | 集約状態 |
+| --- | --- | --- |
+| Intent 生成前 | なし（`handleIntentBirth` `amadeus-utility.ts:4387` 内に直列で 4 ガード G1〜G4） | **未集約** |
+| Stage 完了 | `verifyStageCompletionGuards`（`amadeus-state.ts:2539`） | **集約済み**。呼出 4 経路 `:2763` advance / `:2877` finalize / `:3054` complete-workflow / `:3998` approve |
+| Phase 境界 | `verifyPhaseCheckArtifact`（`amadeus-state.ts:392`、export） | 単一関数だが呼出側で個別配線。呼出 5 箇所 `:2775` / `:2926` / `:3059` / `:4009` + `amadeus-jump.ts:581` |
+| Workflow 完了 | なし（`completeWorkflowForTarget` `amadeus-state.ts:2963` 内に G13 `:3002` / G14 `:3008` / G15 `:3030` / G16 `:3010-3013` が直列） | **未集約** |
+
+`amadeus-state.ts:2520-2526` の宣言コメント verbatim: `FOUR handlers mark a stage [x] — approve, advance, finalize and complete-workflow — each under its own lock, with no shared transition function between them. ... this function is the fix for that gap and the place any fifth guard goes.` — **Issue #2771 が「新設」と書く集約点は、Stage 完了に限りすでに存在する**。不足しているのは共通 Interface と、残り 3 checkpoint への水平展開である。
+
+**jump は第 5 の権威ある遷移**である（`amadeus-jump.ts:581` `if (hasExecuted) verifyPhaseCheckArtifact(pd, phase);`、`:576` コメント `on disk, the same gate advance / approve apply. verifyPhaseCheckArtifact`）。ただし jump は `verifyStageCompletionGuards` を通さない — `[S]` / `pending` 化であって完了ではないため、**設計上正しい非対称**である。
+
+### ガードは 2 層に分かれる
+
+1. **CLI ツール層** — G1〜G39（`packages/framework/core/tools/`）。`error()` による process exit を主たる拒否手段とする。
+2. **harness hook 層** — G40（`packages/framework/core/hooks/amadeus-subagent-model-guard.ts:89` `permissionDecision: "deny"`）。CLI ツール層の外にあり、`permissionDecision` を持つのはこの 1 箇所のみ（re-scan §2 P10）。加えて G30（park 拒否）は state.ts と Stop hook に**同一ガードの二重実装**を持つ（`amadeus-state.ts:1390-1398` コメント verbatim: `This is defence-in-depth beside the Stop hook's identical guard`）。
+
+単一 Runtime を名乗るなら **hook 層の扱いが主要論点**になる。
+
+### checkpoint 語彙の全体像は 4 点より広い
+
+`amadeus-state.ts` の verb dispatch は **15 verb**（`:1034`〜`:1108`、re-scan §2 P9）。Issue の 4 checkpoint はこの部分集合であり、外側にさらに jump（`amadeus-jump.ts:581`）、Bolt batch gate（`amadeus-bolt.ts:1197-1214`）、swarm retry（`amadeus-swarm.ts:763` ほか `kind: "retry-refused"`）がある。移行対象集合は **G1〜G40** を正本とする。
+
+### base 以後に増えたガード（G22）
+
+`16d94927d`（#2945）が `admitProductionStageFailure`（`amadeus-intent-autonomy-production.ts:1102`）+ `stageFailureDirective`（`amadeus-orchestrate.ts:5779`、`:5816` で emit）を追加し、full autonomy の型付き stage failure を Quality Repair / REPAIR_STALLED へ接続した。**Issue #2771 の「ガードを追加するたび手作業配線」premise の追加実例であり、同時に移行対象の増加でもある。**
+
 ## patch coverage ゲートの判定パイプラインと免除の適用段（260811-allowlist-semantic-audit、履歴、observed `854692fd7`）
 
 **観測 ref**: すべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（34 commits）。正本は `re-scans/260811-allowlist-semantic-audit.md`。
@@ -45,7 +81,7 @@ PR #2127 は台帳を「絶対行番号ピン → 関数スコープ名 + ソー
 
 台帳は 106 ファイルへ 623 エントリを張る**横断的な結合点**であり、`packages/framework/core/tools/` の主要モジュールへの変更はほぼ必ず接触する（上位: `amadeus-orchestrate.ts` 63 / `amadeus-state.ts` 61 / `amadeus-quality-repair-runtime.ts` 19 / `amadeus-advisory-choice.ts` 18 / `amadeus-intent-completion.ts` 18 / `amadeus-utility.ts` 18）。区間 `ce3c3ccfd..854692fd7` でもゲート実装は無変更のまま台帳のみ `+109/−10`（614 → 623）で、**台帳だけが動き続ける**構造が続いている。
 
-## receipt 信頼境界の二重欠陥（260812-tla-proof-receipt、現在、observed `854692fd7`）
+## receipt 信頼境界の二重欠陥（260812-tla-proof-receipt、履歴、observed `854692fd7`）
 
 **観測 ref**: 本節の file:line はすべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD、`origin/main` 系譜）時点。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（HEAD の祖先のうち距離最小 = **34 commits**）。currency 根拠・全述語・全数列挙の正本は `re-scans/260812-tla-proof-receipt.md`。
 
@@ -1389,6 +1425,17 @@ flowchart TD
 ## phase boundary verification と approval の結線構造（260804-phase-boundary-approval、履歴、observed `b938898f3`）
 
 本節の file:line はすべて observed `b938898f364160d4b5857e153579b40b5ab18372` 時点。差分 base は `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（祖先性 `git merge-base --is-ancestor` exit 0、距離 134 commits / 1041 files）。全数列挙・実測手順は `re-scans/260804-phase-boundary-approval.md` を正本とする。
+
+> **行ピンの再解決（2026-08-14 追記、260813-lifecycle-guard-runtime）**: 本節の `:379-396` / `:3472` / `:3484` / `:2263` / `:2413` / `:2539` / `amadeus-jump.ts:545` は**本節が宣言する observed `b938898f3` 時点の値**であり、そのまま保存する（`cid:reverse-engineering:c1` — 履歴節の file:line はその節が宣言する observed で照合する）。observed `89532174c` での対応値は次のとおり。以後、現在断面の記述はこちらを引くこと。
+>
+> | 本節（`b938898f3`） | observed `89532174c` |
+> | --- | --- |
+> | `verifyPhaseCheckArtifact` 定義 `:379-396` | **`:392`**（コメントは `:384-391`） |
+> | approve 経路の guard `:3472` → checkbox `:3484` | **`:4009` → `:4021`**（順序は不変） |
+> | 呼出 advance `:2263` / finalize `:2413` / complete-workflow `:2539` | **`:2775` / `:2926` / `:3059`** |
+> | jump 側 `amadeus-jump.ts:545` | **`amadeus-jump.ts:581`** |
+>
+> observed の `:2539` は `verifyPhaseCheckArtifact` の呼出ではなく **`verifyStageCompletionGuards` の定義**であり、同じ数字が別の機構を指す。混同しないこと。
 
 ### phase boundary verification の現行経路
 
@@ -4618,7 +4665,9 @@ setup パッケージの3欠陥は独立ファイルだが manifest read/write �
 
 → **横断結論(delivery-planning への含意)**: バッチ3の fix site は core tools(#746 lib/swarm、#744/#749/#750 orchestrate+jump+state、#786 learnings)・setup(#742/#743/#747)・codex(#751)・tests(#741)に分散し、CI 設定/biome/root package.json のいずれにも触れない(別 intent の complexity-gate 面と非交差)。**U1(#746)と U6(#744/#749/#750)は `amadeus-lib.ts` で file 交差**する唯一の直列化圧力だが、上記 (b) のとおり #744 を各サイトへローカル own-key ガード適用(#788 前例)すれば U6 は lib を触らず交差が消えて並行可能になる。他 Unit(#786 / setup / #741 / #751)は相互に file 非交差で隔離並行ディスパッチ可(cid:code-generation:c6)。
 
-## docs-repair-batch9(2026-07-11)の観測面 — restart 境界で失われた2契約(#885 slug 正規化 / #886 phase-check ゲート)
+## docs-repair-batch9(2026-07-11)の観測面 — restart 境界で失われた2契約(#885 slug 正規化 / #886 phase-check ゲート)（履歴、observed `13598b752`）
+
+> **現在時制の失効（2026-08-14 追記、260813-lifecycle-guard-runtime）**: 本節 (b) の「ゲート完全不在」「現行4経路のいずれも `verifyPhaseCheckArtifact` を呼ばず」という記述は **observed `13598b752` 当時の観測**であり、**observed `89532174c` では成立しない**。#886 は解決済みで、`verifyPhaseCheckArtifact` は `packages/framework/core/tools/amadeus-state.ts:392` に実在し、`:2775`(advance) / `:2926`(finalize) / `:3059`(complete-workflow) / `:4009`(approve) + `amadeus-jump.ts:581`(前進 jump) の**5 箇所**から呼ばれる（述語 `git grep -nI "verifyPhaseCheckArtifact"`、re-scan §2 P4）。以下は当時断面として保存する。現在断面は本ファイル冒頭「ライフサイクル進行ガードの集約構造と分散」節を参照。
 
 現行 HEAD `13598b752`(base `b845478bb`→observed、59コミット)で確定。出典は本 intent の `inception/reverse-engineering/scan-notes.md`(全 file:line 実測付き)。#885/#886 はいずれも **restart-loss** クラスタ — restart 前の旧系譜 `.agents/amadeus/tools/` に実在した契約が、現行正本 `packages/framework/core/tools/` へ移植されずに失われ、区間内の #880/#869 再構築でも復元されなかった欠陥。「旧系譜契約 vs 現行」の乖離を系統として1節に記録する(修理は旧パス移植不可 → 現行正本への再適用が方向)。
 

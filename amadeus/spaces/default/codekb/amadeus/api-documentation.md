@@ -1,5 +1,43 @@
 # API ドキュメント
 
+## ライフサイクルガードの内部契約（260813-lifecycle-guard-runtime、現在、observed `89532174c`）
+
+**観測 ref**: すべて observed = `89532174c30ef9cc7ff29496cd6916586fdda00a`。差分 base = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（35 commits）。全数列挙（G1〜G40）は `re-scans/260813-lifecycle-guard-runtime.md` を正本とする。
+
+### checkpoint ガードのシグネチャ（observed 断面）
+
+| 契約 | 位置 | シグネチャ / 返り値 | 呼出 |
+|---|---|---|---|
+| `verifyStageCompletionGuards` | `amadeus-state.ts:2539` | `(pd: string, stage: VerifiableStage): void` — 内部で `verifyStageArtifacts` → `verifyBlockingSensors` を順に呼ぶ。拒否は `error()` = process exit | `:2763` advance / `:2877` finalize / `:3054` complete-workflow / `:3998` approve |
+| `verifyStageArtifacts` | `amadeus-state.ts:2460` | `(pd: string, stage: VerifiableStage): void` | `verifyStageCompletionGuards` のみ |
+| `verifyBlockingSensors` | `amadeus-state.ts:1835`（export） | `(pd: string, stage: {...}): void` | `verifyStageCompletionGuards` |
+| `evaluateBlockingSensors` | `amadeus-state.ts:1752`（export） | → `BlockingSensorFinding \| null`（`never-fired` / `stale` / terminal）。**純関数、exit しない** | 上記 + テスト |
+| `verifyPhaseCheckArtifact` | `amadeus-state.ts:392`（export） | `(pd: string, phase: string): void` | `:2775` / `:2926` / `:3059` / `:4009` + `amadeus-jump.ts:581` |
+| `verifyPreparedWorkflowCompletion` | `amadeus-state.ts:6011` | `(pd, content, completedSlug, requestedInstance): void` | `:3002` |
+| `verifyMandatoryPluginStages` | `amadeus-state.ts:4689` | `(pd, content, completedSlug): void` | `:3008` |
+| `authorizeWorkflowCompletion` | `amadeus-workflow-completion.ts:161` | receipt を返す。未確定時は `WorkflowCompletionNotSettledError` を throw（呼出側が catch して `awaitCompletion` / `error()` へ分岐） | `amadeus-state.ts:3030` / `amadeus-orchestrate.ts:613` |
+| `IntentOperationGuardResult` | `amadeus-lib.ts:3042`（`:3085` returns） | `{kind:"allowed"} \| {kind:"rejected", error:{..., recovery}}` — **復旧案を型に持つ唯一の系統** | intent 操作（archive / unarchive / select 等） |
+| `admitProductionStageFailure` ★ | `amadeus-intent-autonomy-production.ts:1102`（export） | `(input: ProductionStageFailureInput): ProductionStageFailureResult` — 判別ユニオン。`:1128` `return stall === null ? { kind: "error", reason: "repair-stall-envelope-missing" } : { kind: "parked", stall };` | `amadeus-orchestrate.ts:5816` |
+| `stageFailureDirective` ★ | `amadeus-orchestrate.ts:5779`（export） | 上記結果を directive へ射影する出口 | `:5816` |
+| `commitProductionStageGateDecision` | `amadeus-intent-autonomy-production.ts:794`（export） | `{ readonly kind: "not-authorized"; readonly reason: string } \| ...` | stage gate 梯子 |
+
+★ **`admitProductionStageFailure` / `stageFailureDirective` は base 以後の新規契約**（`16d94927d` / #2945）。full autonomy の型付き stage failure を Quality Repair / REPAIR_STALLED へ接続する。移行対象に加算される。
+
+### 判定語彙は 5 系統に分裂している（呼出側契約の非一様性）
+
+(a) `error()` process-exit、(b) 判別ユニオン + `recovery`、(c) boolean、(d) typed error class、(e) `{ok, reason}` Result。`export type ...(Guard|Verdict|Outcome)... =` は core tools で **38 件**（述語は re-scan §2 P6）。単一 Runtime を導入するなら、この 5 系統をどう畳むかが公開面の設計論点になる。
+
+### 環境変数による off-switch 契約（4 種）
+
+| 変数 | 実装 | 消費するガード |
+|---|---|---|
+| `AMADEUS_SKIP_ARTIFACT_GUARD` | `artifactGuardDisabled()` `amadeus-state.ts:1653` | `verifyStageArtifacts` / `verifyPhaseCheckArtifact`（**共有**） |
+| `AMADEUS_SKIP_BLOCKING_SENSOR_GUARD` | `blockingSensorGuardDisabled()` `amadeus-state.ts:1817` | `verifyBlockingSensors` |
+| `AMADEUS_SKIP_HUMAN_PRESENCE_GUARD` | `humanPresenceGuardDisabled()` `amadeus-lib.ts:5342` | approve/reject gate・delegate-approval・delegate-rejection・question 応答記録 |
+| `AMADEUS_SKIP_GATE_REVISION_RECOVERY` | — | gate revision 復旧 |
+
+加えて `BLOCKING_SENSOR_CUTOFF_YYMMDD = 260809`（`amadeus-state.ts:667` / `:1841`）が intent 日付による適用除外を持つ。**これらは公開契約であり、Runtime 化時に意味論を保存する必要がある。**
+
 ## coverage 免除台帳のデータ契約（260811-allowlist-semantic-audit、履歴、observed `854692fd7`）
 
 **観測 ref**: すべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`。正本は `re-scans/260811-allowlist-semantic-audit.md`。
@@ -44,7 +82,7 @@
 
 `bun tests/coverage-patch-gate.ts --check` が唯一の CI 入口（`.github/workflows/ci.yml` の `Patch coverage gate` ステップ、PR イベント限定）。base ref は環境変数 `AMADEUS_PATCH_BASE_REF` で与える。
 
-## TLA+ receipt API の入力ドメイン（260812-tla-proof-receipt、現在、observed `854692fd7`）
+## TLA+ receipt API の入力ドメイン（260812-tla-proof-receipt、履歴、observed `854692fd7`）
 
 **観測 ref**: 本節の file:line はすべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD）時点。正本は `re-scans/260812-tla-proof-receipt.md`。パスは `plugins/formal-model-check/tools/` 配下。
 
@@ -153,7 +191,7 @@ bun <harness>/plugins/pr-convergence/tools/pr-convergence-cli.ts override \
 | `ProvenanceVerdict` | `pr-convergence-provenance.ts` | canonical title/body と record/unit の整合性 |
 | `applyPluginScopeBindings` | `amadeus-graph.ts` | host binding を既存 scope row へ加算 |
 | `unitCovered` | `amadeus-orchestrate.ts` | per-unit required produces の全件存在判定 |
-| `verifyStageCompletionGuards` | `amadeus-state.ts` | direct transition の artifact/sensor chokepoint |
+| `verifyStageCompletionGuards` | `amadeus-state.ts:2539` | direct transition の artifact/sensor chokepoint。呼出 4 経路 `:2763` / `:2877` / `:3054` / `:3998`（observed `89532174c` で再解決、2026-08-14） |
 | `evaluateReportFormat` | report sensor | Markdown field shape と自己矛盾の検査 |
 
 ### Report Format Sensor Contract

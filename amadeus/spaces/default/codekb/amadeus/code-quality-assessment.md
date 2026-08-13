@@ -1,5 +1,57 @@
 # コード品質評価
 
+## ライフサイクルガードの品質所見 — fail 方向の衝突と迂回路（260813-lifecycle-guard-runtime、現在、observed `89532174c`）
+
+**観測 ref**: すべて observed = `89532174c30ef9cc7ff29496cd6916586fdda00a`（= 本 worktree HEAD）。差分 base = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（35 commits / 233 files）。全数列挙は `re-scans/260813-lifecycle-guard-runtime.md` を正本とする。
+
+### Q-1: fail-closed と fail-open が同一経路で衝突する（最重要）
+
+blocking sensor 経路は 2 段で構成され、**段ごとに fail 方向が逆**である。
+
+| 段 | 位置 | 異常時の挙動 |
+| --- | --- | --- |
+| sensor 実行 → verdict 生成 | `amadeus-sensor.ts:19-31` の真理値表 | **fail-open**。verbatim: `//   e) status non-0/non-127 (non-timeout)  → PASSED script-error: exit-<n>` / `//   f) bad JSON / missing pass  → PASSED script-error: bad-output` |
+| verdict 消費 → 完了可否 | `amadeus-state.ts:1835` `verifyBlockingSensors` | **fail-closed**。verbatim（`:1855-1857`）: `A blocking sensor that never ran is not a pass.` |
+
+上段が異常を PASSED へ倒すため、**下段の fail-closed は「実行されなかった」ケースしか捕まえられず、「実行して壊れた」ケースは素通りする**。`amadeus-sensor.ts` は `base..observed` で `46 ++--` の変更を受けているが、**分岐 e/f は fail-open のまま**である（verbatim 再確認済み）。Issue #2771 が掲げる「移行前後で判定結果が変わらない」AC と「fail-closed」AC は、ここで**構造的に両立しない** — どちらを採るかは requirements の裁定事項であり、暗黙に片方へ倒してはならない。
+
+### Q-2: 判定語彙が 5 系統に分裂している
+
+| 系統 | 代表 | 位置 |
+| --- | --- | --- |
+| (a) `error()` process-exit | 大多数 | `amadeus-state.ts` で **157 箇所**（述語 `grep -cE '^[^/]*\berror\(' <file>`。orchestrate 8 / bolt 75 / lib 3） |
+| (b) 判別ユニオン + `recovery` | `IntentOperationGuardResult` | `amadeus-lib.ts:3042`（`:3085` returns）— `{kind:"allowed"}` / `{kind:"rejected", error:{..., recovery}}` |
+| (c) boolean | `emitMirrorBoundaryIfNeeded` / `checkConverged` | `amadeus-orchestrate.ts:591` / `amadeus-swarm.ts:236` |
+| (d) typed error class | `WorkflowCompletionNotSettledError` | `amadeus-workflow-completion.ts:161` の呼出側 catch |
+| (e) `{ok, reason}` Result | provenance / declare-units-done | `amadeus-intent-autonomy-production.ts:744` / `amadeus-lib.ts`（declare-units-done ×2） |
+
+`export type ...(Guard|Verdict|Outcome)... =` は core tools で **38 件**（述語は re-scan §2 P6）。同一の「ガード判定」概念に対し 5 通りの表現があるため、**呼出側の扱いを機械的に検査できない**。
+
+**(c) は情報損失を伴う**: `emitMirrorBoundaryIfNeeded` は `MirrorBoundaryOutcome`（`amadeus-mirror-coordinator.ts:71`）を内部で boolean へ潰すため、**復旧情報が呼出側に届かない**。逆に (b) の `IntentOperationGuardResult` は Issue が求める「復旧案付き」語彙を**すでに実装している** — 新規 Runtime を起こす前の reuse inventory の第一候補である。
+
+### Q-3: 迂回路が 3 系統あり、いずれも一元管理されていない
+
+1. **off-switch 4 種**（述語 `git grep -hoI 'AMADEUS_SKIP[A-Z_]*' | sort -u`）: `AMADEUS_SKIP_ARTIFACT_GUARD`（`artifactGuardDisabled()` `amadeus-state.ts:1653`、G6 と G11 が共有）/ `AMADEUS_SKIP_BLOCKING_SENSOR_GUARD`（`:1817`）/ `AMADEUS_SKIP_GATE_REVISION_RECOVERY` / `AMADEUS_SKIP_HUMAN_PRESENCE_GUARD`（`amadeus-lib.ts:5342`、G25 / G26 / G27 / G29 が消費）。
+2. **日付 cutoff 1 種**: `BLOCKING_SENSOR_CUTOFF_YYMMDD = 260809`（`amadeus-state.ts:667` / `:1841`）。intent の日付という**ガード外の属性**で適用可否が決まる。
+3. **hook 層の別配線**: `amadeus-state.ts:1390-1398` が明言する二重実装（verbatim: `This is defence-in-depth beside the Stop hook's identical guard`）と、CLI 層の外にある `packages/framework/core/hooks/amadeus-subagent-model-guard.ts:89`（`permissionDecision: "deny"`）。
+
+**単一 Runtime へ寄せる際、off-switch の意味論を保存できるかが移行の主要リスク**である。`verifyStageCompletionGuards`（`amadeus-state.ts:2539`）の宣言コメントは、2 つの off-switch を独立に保つ理由を明示している — verbatim: `a fixture that wants artifacts unchecked does not thereby want sensor verdicts unchecked, so neither disables the other.`
+
+### Q-4: 免除がガード本体に埋め込まれている
+
+human presence ガード（`amadeus-state.ts:3452`）の拒否文言は `Refusing to ${verb} "${slug}": a real human has not acted at this gate since it opened. ... (autonomous Construction is exempt)` であり、**autonomy による免除がガード内に埋め込まれている**。ガード本体と適用条件が分離されていないため、Runtime へ移す際に「判定」と「適用可否」を切り分ける作業が要る。
+
+### Q-5: 型宣言の重複
+
+`InteractionKind` 相当の文字列ユニオンが 2 箇所に独立して存在する — `amadeus-intent-autonomy.ts:14`（`export type InteractionKind = "stage-gate" | "phase-gate" | "walking-skeleton" | "question";`）と `amadeus-autonomy-review.ts:1070`（`readonly allowedInteractionKinds: readonly ("stage-gate" | "phase-gate" | "walking-skeleton" | "question")[];`）。片側だけの追加が型検査で捕まらない。
+
+### 現在確認できる強み
+
+- **完了 chokepoint の宣言が意図まで残している**: `amadeus-state.ts:2520-2526` は 4 ハンドラが集約点を要する理由と「五つ目のガードもここへ置く」ことを明記する。設計意図がコード内に残る良い例。
+- **`verifyPhaseCheckArtifact`（`:392`）は拒否時に state file を無傷で残す**。コメント `:389-390` verbatim: `Callers invoke it BEFORE writeStateFile; error() exits, so a refusal` / `leaves the state file untouched (the in-memory content flips are discarded).`
+- **G15 の 3 値語彙**: `authorizeWorkflowCompletion`（`amadeus-workflow-completion.ts:161`）は settled=通過 / not-settled=待機 / それ以外=拒否を型で分けており、現行で最も語彙が豊富。「拒否」と「まだ決まっていない」を潰していない。
+- **宣言駆動の適用解決**: `blockingSensorIdsForStage`（`amadeus-state.ts:1824`）が `sensors_applicable` から適用集合を導くため、ガードの適用対象が手書きリストではない。Runtime 化の reuse 候補。
+
 ## coverage 免除台帳の意味論が無検査 — 解決 fail-closed / 意味 fail-open の非対称（260811-allowlist-semantic-audit、履歴、observed `854692fd7`）
 
 **観測 ref**: すべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD）。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（34 commits）。正本は `re-scans/260811-allowlist-semantic-audit.md`。
@@ -42,7 +94,7 @@ Issue #1622 起票時の「約272件」、クロスレビュー時点（2026-07-
 
 全数照合は未実施であり、確定 18 件は**下限**である。`findStaleAllowlistEntries` の実行結果（現行 stale 件数）は LCOV を要するため未測定。転位の双方向の実害（偽赤 / 偽緑の件数）も未定量。詳細は `re-scans/260811-allowlist-semantic-audit.md` § UNMEASURED。
 
-## TLA+ receipt 経路の品質所見（260812-tla-proof-receipt、現在、observed `854692fd7`）
+## TLA+ receipt 経路の品質所見（260812-tla-proof-receipt、履歴、observed `854692fd7`）
 
 **観測 ref**: 本節の file:line はすべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD）時点。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（距離 34）。正本は `re-scans/260812-tla-proof-receipt.md`。
 
@@ -988,7 +1040,7 @@ canonical key のドットパス化（`amadeus-config.ts:59-64` 型宣言、`:47
 
 ### 現在確認できる強み（本区間）
 
-- ガード `verifyPhaseCheckArtifact` は `error()` が exit する設計により、**拒否時に state file が無傷で残る**（`:379` 直上のコメントが明示）。approve 経路で `:3472` が checkbox 書込 `:3484` より前に置かれている順序も実読で確認済み。
+- ガード `verifyPhaseCheckArtifact` は `error()` が exit する設計により、**拒否時に state file が無傷で残る**（`:379` 直上のコメントが明示）。approve 経路で `:3472` が checkbox 書込 `:3484` より前に置かれている順序も実読で確認済み。（**行ピンは本節が宣言する observed `b938898f3` 時点。** observed `89532174c` では定義 `:392`、approve 経路 `:4009` → checkbox `:4021`。順序と fail-closed 性は不変 — 2026-08-14 追記、260813-lifecycle-guard-runtime）
 - `parseApprovalProcessResult`（`amadeus-approval-authorization.ts:55-80`）は承認サブプロセスの出力を**単一 JSON 行 `{"kind":"approved"}` のみ**に絞り、exit code・stderr・行数・キー構成の4段で fail-closed に落とす。曖昧な成功解釈の余地がない。
 - `classifyApprovalAuthority`（`:20-48`）は target / reservation の**片方だけ**を `partial authorization carrier` として明示的に拒否する。部分的な権限キャリアが黙って通る経路がない。
 - `directive.phase_boundary` は宣言コメント（`amadeus-directive.ts:144-149`）で「scope override 適用後に算出されるため早期 phase 退出も覆う」ことを明記しており、ハーネス側が graph から phase 遷移を再導出する必要をなくしている。設計意図がコード内に残されている良い例である。
@@ -2495,7 +2547,7 @@ EQUIVALENT 候補は、`amadeus-orchestrate.ts:1961-1972` の全 batch 走査と
 - **#763(S4/documentation)**: `docs/reference/18-workspace-layout.md`(145行、ADR 体裁)に `.ja.md` ペアが欠落。`docs/reference/*.md` 全数走査で `.ja.md` ペア欠落は **18-workspace-layout.md のみ**(他19ファイル=00〜17・diagrams は全ペア有り、実測)。E-L56 の「ペア規約の唯一の欠落が 18 のまま」を再確認、新規欠落なし。
 - **#728(S4/documentation)**: `tests/` 配下13ファイル・14参照が旧名 `assertNotSiblingWorktree` を stale 参照。product は `resolveWorktreeAnchor` へ改名済み(`amadeus-worktree.ts:167` 定義、旧名は source に**不在**=`grep` 0 件、実測)。コメントは行番号(`:101` / `:101-121` / `:112` / `:459->101` / `:162`)も stale で、現定義 `:167` と不一致。`tests/harness/fixtures.ts` のみ2参照(`:283` `:542`)、他12ファイルは各1参照。
 
-## docs-repair-batch9(2026-07-11)の観測面 — フォーカス5欠陥の現存確認(#812 #824 #680 #885 #886)
+## docs-repair-batch9(2026-07-11)の観測面 — フォーカス5欠陥の現存確認(#812 #824 #680 #885 #886)（履歴、observed `13598b752`）
 
 現行 HEAD `13598b752`(base `b845478bb`=前回 bughunt-fix-batch observed からの diff-refresh、59コミット)で確定した、docs/harness 修理バッチ第9弾フォーカス5欠陥の現物照合。出典は本 intent(docs-repair-batch9)の `inception/reverse-engineering/scan-notes.md`(全 file:line 実測付き)。5欠陥の欠陥クラス分類: **byte-copy localize 漏れ2件**(#812 SKILL.md / #824 onboarding.fills.ts)+ **ヘッダ契約乖離1件**(#680 sensor self-contained)+ **restart-loss 2件**(#885 slug 正規化 / #886 phase-check ゲート、詳細は architecture.md「docs-repair-batch9 の観測面」節)。#812/#824/#680 の欠陥3ファイルは `b845478bb..HEAD` 区間内で**一切変更されず欠陥が区間を貫通して現存**、#885/#886 の lib/state/worktree は区間内で #880 flip 配線・#869 jump per-phase の行番号シフトを受けたが**欠陥自体(normalizeWorktreeSlug 喪失 / phase-check ゲート喪失)は未修復で残存**。
 
@@ -2527,7 +2579,7 @@ EQUIVALENT 候補は、`amadeus-orchestrate.ts:1961-1972` の全 batch 走査と
 
 - 両件とも restart 前旧系譜 `.agents/amadeus/tools/` の契約が現行正本 `packages/framework/core/tools/` へ未移植で喪失し、区間内の #880/#869 再構築でも復元されなかった **restart-loss** クラスタ。品質観点の欠陥形状(機能面だけ再構築し precondition/正規化を復元しない非対称)と旧系譜 vs 現行の file:line 対照は **architecture.md「docs-repair-batch9(2026-07-11)の観測面」節** に詳述。
 - **#885**: `normalizeWorktreeSlug` grep 0件。旧 `63314bc82`(#478 gap2)が lib/worktree/state の slug 境界を同一チョークポイントへ一本化し大文字混じり slug を寛容受理+小文字正規化していたが、現行は `amadeus-lib.ts:2099` worktreePath 無正規化 / `:2580` validateBoltSlug + `amadeus-worktree.ts:195` / `amadeus-state.ts:250` validateSlug が大文字を reject。batch8 #850 gap2 と同一 archive の分割で lib.ts 交差。
-- **#886**: `phase-check|PHASE_CHECK|verifyPhaseCheck` core 全域 0件。旧 `8cf816138` の `verifyPhaseCheckArtifact`(`verification/phase-check-<phase>.md` を PHASE_VERIFIED 前に強制)が現行 state.ts 4経路(advance :1104 / finalize :1333 / complete-workflow :1428 / approve :1670)+ jump のいずれからも呼ばれず、#880 flip 配線(`setPhaseProgress` :101 / `markPhaseVerified` :114)・#869 jump per-phase が flip のみ再構築し precondition 未復元。
+- **#886**（**当時断面。observed `89532174c` では解決済み** — `verifyPhaseCheckArtifact` は `amadeus-state.ts:392` に実在し `:2775` / `:2926` / `:3059` / `:4009` + `amadeus-jump.ts:581` の 5 箇所から呼ばれる。2026-08-14 追記、260813-lifecycle-guard-runtime）: `phase-check|PHASE_CHECK|verifyPhaseCheck` core 全域 0件。旧 `8cf816138` の `verifyPhaseCheckArtifact`(`verification/phase-check-<phase>.md` を PHASE_VERIFIED 前に強制)が現行 state.ts 4経路(advance :1104 / finalize :1333 / complete-workflow :1428 / approve :1670)+ jump のいずれからも呼ばれず、#880 flip 配線(`setPhaseProgress` :101 / `markPhaseVerified` :114)・#869 jump per-phase が flip のみ再構築し precondition 未復元。
 
 ## p2-repair-batch7 の観測面 — restart-loss クラス5欠陥の現物照合(#834 #839 #844 #845 #849)
 
