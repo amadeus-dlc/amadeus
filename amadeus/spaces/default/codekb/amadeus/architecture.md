@@ -1,5 +1,41 @@
 # アーキテクチャ
 
+## team-up.sh ランチャの起動列と空配列クラッシュ点（260813-remove-team-up、現在、observed `97581b3e3`）
+
+**観測 ref**: observed = `97581b3e39187b13413c046e86f820d290a389eb`。差分 base = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（34 commits、team-up パス差分 0）。正本は `re-scans/260813-remove-team-up.md`。
+
+### 配置と投影
+
+`packages/framework/core/tools/team-up.sh` はハーネス中立の Team Mode ランチャ正本。8 harness すべての `manifest.ts` `coreDirs` が `{ src: "tools", dst: "tools" }` のため、正本は全 dist / self-install へ漏出する。Codex 専用の待ちは同ディレクトリの `team-up-codex-safety-wait.ts`（`SAFETY_WAIT_HELPER`、`team-up.sh:59`）。
+
+### 起動シーケンス（#2970 が切れる場所）
+
+```mermaid
+sequenceDiagram
+  participant CLI as team-up.sh
+  participant Mux as herdr mux
+  participant Trap as handle_exit
+  participant FS as run record
+  CLI->>CLI: set -euo pipefail
+  CLI->>Mux: mux_new_session / mux_split (left0, leader, right0)
+  CLI->>CLI: stack_column left[1:] / right[1:]
+  Note over CLI: 2-engineer layout: slice is empty
+  CLI--xTrap: bash 3.2 unbound members[@]
+  Trap->>Trap: rc from previous success (often 0)
+  Trap-->>CLI: exit 0
+  Note over FS: current-run / active-run / status never written
+```
+
+Text fallback: create_run が左右ペインを切ったあと `stack_column` に `left[@]:1` を渡す。メンバーが列あたり 1 人だと空配列になる。bash 3.2 は `set -u` 下で `"${members[@]}"` を unbound として即死させる。EXIT trap の `local rc=$?` は unbound をコマンド失敗として見ないため 0 のまま `exit 0`。状態ファイル書込（`:1702-1710`）は到達しない。
+
+### 隣接境界
+
+- `team-msg.sh` は削除対象（2026-08-14 利用者指示）。mint 分類器の `[team-msg ` 接頭辞は過去ログ用に残す
+- doctor の Codex project-trust 修復はランチャ再実行を指名（`amadeus-utility.ts:964`）
+- ユーザーガイド `docs/guide/20-team-mode.md` はランチャを現行手順として残している
+
+利用者指示は経路のパッチではなく削除。削除は上記投影・docs・doctor・テストを同一変更で切らないと配送面が残る。
+
 ## patch coverage ゲートの判定パイプラインと免除の適用段（260811-allowlist-semantic-audit、履歴、observed `854692fd7`）
 
 **観測 ref**: すべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（34 commits）。正本は `re-scans/260811-allowlist-semantic-audit.md`。
@@ -45,7 +81,7 @@ PR #2127 は台帳を「絶対行番号ピン → 関数スコープ名 + ソー
 
 台帳は 106 ファイルへ 623 エントリを張る**横断的な結合点**であり、`packages/framework/core/tools/` の主要モジュールへの変更はほぼ必ず接触する（上位: `amadeus-orchestrate.ts` 63 / `amadeus-state.ts` 61 / `amadeus-quality-repair-runtime.ts` 19 / `amadeus-advisory-choice.ts` 18 / `amadeus-intent-completion.ts` 18 / `amadeus-utility.ts` 18）。区間 `ce3c3ccfd..854692fd7` でもゲート実装は無変更のまま台帳のみ `+109/−10`（614 → 623）で、**台帳だけが動き続ける**構造が続いている。
 
-## receipt 信頼境界の二重欠陥（260812-tla-proof-receipt、現在、observed `854692fd7`）
+## receipt 信頼境界の二重欠陥（260812-tla-proof-receipt、履歴、observed `854692fd7`）
 
 **観測 ref**: 本節の file:line はすべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD、`origin/main` 系譜）時点。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（HEAD の祖先のうち距離最小 = **34 commits**）。currency 根拠・全述語・全数列挙の正本は `re-scans/260812-tla-proof-receipt.md`。
 

@@ -1,6 +1,21 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260812-tla-proof-receipt）
+## 実行メタデータ（現在: 260813-remove-team-up）
+
+- Date: `2026-08-13`
+- Base commit: `854692fd7a11b124236b0427fe3d59e2fe6bf785`（先行 re-scan 無し。`re-scans/*.md` の observed のうち HEAD 祖先で距離最小。`git merge-base --is-ancestor 854692fd7 HEAD` = exit 0、`git rev-list --count` = **34**。`cid:reverse-engineering:rescan-base-ancestry`）
+- Observed commit: `97581b3e39187b13413c046e86f820d290a389eb`（= HEAD = `origin/main`。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、build `bun`
+- Focus: 利用者指示による `team-up.sh` 削除 + [Issue #2970](https://github.com/amadeus-dlc/amadeus/issues/2970)（ミラー #2973）
+- Scan mode: focused differential refresh。区間 `854692fd7..HEAD` の team-up パス差分は **0**（実装面は base から無変更）。xrev は未成立のため一次入力にしない
+- 中核知見: #2970 の空配列 `stack_column`（`:1167-1170` / 呼び出し `:1697-1698`）と `handle_exit`（`:1409-1420`）は observed で現存。一方 Intent の作業はクラッシュ修正ではなく**削除**。正本 2 + 名前付きテスト 12 に加え docs 8・doctor 文言・`t266`/`t267`/`t226` が消費者。`team-up-codex-safety-wait.ts` の本番消費者はランチャのみ。全 8 harness が `coreDirs.tools` で投影する。ユーザーガイドはまだ現行機能として掲載している
+- Verification: git 状態変更・GitHub 書込・`bun run build`・engine/state 操作はゼロ。書き込みは codekb のみ。Task(developer/architect) はモデル使用上限で失敗し conductor がインライン実行
+- Updated artifacts: `architecture.md` / `component-inventory.md` / `code-quality-assessment.md` / `code-structure.md` / `api-documentation.md`。直前の現在節は履歴へ降格（`cid:reverse-engineering:c3-relabel`）
+- Reviewed-and-unchanged artifacts: `business-overview.md` / `technology-stack.md` / `dependencies.md`
+- Per-intent record: `re-scans/260813-remove-team-up.md`
+- 適用範囲外: Team Mode 概念の残置範囲、`team-msg.sh` の同梱可否、関連 Issue の close 方針は requirements-analysis の所掌
+
+## 実行メタデータ（履歴: 260812-tla-proof-receipt）
 
 - Date: `2026-08-12`
 - Base commit: `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（`reverse-engineering-timestamp.md` + `re-scans/*.md` の全 observed のうち **HEAD の祖先で距離最小**。`git merge-base --is-ancestor ce3c3ccfd HEAD` = exit 0、`git rev-list --count ce3c3ccfd..HEAD` = **34 commits / 734 files**。次に近い祖先は 50 / 53 / 55 / 63。`cid:reverse-engineering:rescan-base-ancestry`）
