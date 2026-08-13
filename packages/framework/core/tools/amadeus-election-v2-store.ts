@@ -89,12 +89,31 @@ interface TallyEntry {
   readonly legacy: boolean;
 }
 
-type TimelineEvent = {
+export type ElectionV2TimelineEvent = {
   readonly schemaVersion: 2;
   readonly kind: "tallied";
   readonly runId: string;
   readonly at: string;
 };
+
+export type ElectionV2TimelineRow = ElectionV2TimelineEvent | {
+  readonly kind: "distributed" | "ballot" | "tallied" | "late";
+  readonly at: string;
+  readonly receivedAt?: string;
+  readonly detail: string;
+  readonly voter?: string;
+};
+
+export interface ElectionV2Snapshot {
+  readonly definition: CanonicalElectionDefinition;
+  readonly state: ElectionV2State;
+  readonly pending: readonly CanonicalBallot[];
+  readonly ledger: readonly CanonicalBallot[];
+  readonly materialized: readonly CanonicalBallot[];
+  readonly currentTally: CanonicalTally | null;
+  readonly history: readonly CanonicalTally[];
+  readonly timeline: readonly ElectionV2TimelineRow[];
+}
 
 const V2_STATES = new Set<string>([
   "draft",
@@ -355,6 +374,24 @@ function materialize(
   return ok(undefined);
 }
 
+function readMaterialized(
+  dir: string,
+  voters: readonly string[],
+  definition: CanonicalElectionDefinition,
+): ElectionV2StoreResult<CanonicalBallot[]> {
+  const ballots: CanonicalBallot[] = [];
+  for (const voter of voters) {
+    const path = join(dir, "ballots", `${voter}.json`);
+    if (!existsSync(path)) continue;
+    const read = readJson(path);
+    if (!read.ok) return read;
+    const ballot = decodeBallot(read.value.raw, definition);
+    if (!ballot.ok || ballot.value.voter !== voter) return err("corrupt");
+    ballots.push(ballot.value);
+  }
+  return ok(ballots);
+}
+
 function consumePending(dir: string, voters: readonly string[]): ElectionV2StoreResult<void> {
   try {
     for (const voter of voters) rmSync(pendingPath(dir, voter), { force: true });
@@ -576,7 +613,7 @@ function readTimeline(path: string): ElectionV2StoreResult<unknown[]> {
   return Array.isArray(read.value.raw) ? ok(read.value.raw) : err("corrupt");
 }
 
-function isTimelineEvent(value: unknown): value is TimelineEvent {
+function isTimelineEvent(value: unknown): value is ElectionV2TimelineEvent {
   return (
     isRecord(value) &&
     value.schemaVersion === 2 &&
@@ -594,7 +631,7 @@ function isLegacyTimelineEvent(value: unknown): boolean {
   return value.receivedAt === undefined || typeof value.receivedAt === "string";
 }
 
-function validTimeline(events: readonly unknown[]): boolean {
+function validTimeline(events: readonly unknown[]): events is readonly ElectionV2TimelineRow[] {
   return events.every((event) => isTimelineEvent(event) || isLegacyTimelineEvent(event));
 }
 
@@ -602,7 +639,7 @@ function appendTimeline(path: string, tally: CanonicalTally): ElectionV2StoreRes
   const timeline = readTimeline(path);
   if (!timeline.ok) return timeline;
   if (!validTimeline(timeline.value)) return err("corrupt");
-  const event: TimelineEvent = {
+  const event: ElectionV2TimelineEvent = {
     schemaVersion: 2,
     kind: "tallied",
     runId: tally.runId,
@@ -718,6 +755,41 @@ export const ElectionV2Store = {
           legacy: loaded.value.legacy,
         })
       : loaded;
+  },
+
+  readSnapshot(root: string, electionId: string): ElectionV2StoreResult<ElectionV2Snapshot> {
+    const loaded = load(root, electionId);
+    if (!loaded.ok) return loaded;
+    const pending = readAllPending(loaded.value.resolved.dir, loaded.value.definition);
+    if (!pending.ok) return pending;
+    const ledger = readLedger(loaded.value.resolved.dir, loaded.value.definition);
+    if (!ledger.ok) return ledger;
+    const materialized = readMaterialized(
+      loaded.value.resolved.dir,
+      loaded.value.definition.voters,
+      loaded.value.definition,
+    );
+    if (!materialized.ok) return materialized;
+    const history = readHistory(loaded.value.resolved.dir, loaded.value.definition);
+    if (!history.ok) return history;
+    const current = readCurrent(loaded.value.resolved.dir, loaded.value.definition);
+    if (!current.ok) return current;
+    if (history.value.length > 0) {
+      const verified = verifyHistory(loaded.value.resolved.dir, loaded.value.definition);
+      if (!verified.ok) return verified;
+    }
+    const timeline = readTimeline(join(loaded.value.resolved.dir, "timeline.json"));
+    if (!timeline.ok || !validTimeline(timeline.value)) return err("corrupt");
+    return ok({
+      definition: loaded.value.definition,
+      state: loaded.value.state,
+      pending: pending.value.map((event) => event.ballot),
+      ledger: ledger.value,
+      materialized: materialized.value,
+      currentTally: current.value?.tally ?? null,
+      history: history.value.map((entry) => entry.tally),
+      timeline: timeline.value,
+    });
   },
 
   setState(
