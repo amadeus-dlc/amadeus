@@ -142,6 +142,7 @@ export const DARWIN_NETWORK_DENY_POLICY_IDENTITY = canonicalIdentity({
   probes: ["TCP_LOOPBACK", "UDP_LOOPBACK", "DNS"],
 }, SANDBOX_POLICY_DOMAIN).sha256;
 export const MAX_TLC_STREAM_BYTES = 16 * 1024 * 1024;
+export const FIXED_TLC_VERSION_LINE = "TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)";
 interface TlcEnvelope {
   code: number;
   severity: number;
@@ -201,8 +202,11 @@ const ALLOWED_CODES = new Map<number, { severity: number; repeat: boolean }>([
   [2220, { severity: 0, repeat: false }],
   [2219, { severity: 0, repeat: false }],
   [2185, { severity: 0, repeat: false }],
+  [2212, { severity: 0, repeat: false }],
   [2189, { severity: 0, repeat: false }],
   [2190, { severity: 0, repeat: false }],
+  [2192, { severity: 0, repeat: false }],
+  [2267, { severity: 0, repeat: false }],
   [2193, { severity: 0, repeat: false }],
   [2200, { severity: 0, repeat: true }],
   [2199, { severity: 0, repeat: false }],
@@ -257,7 +261,6 @@ function parsedAuxiliaryModule(line: string, input: TlcOutputInput): string | nu
     (module) => line === `Parsing file ${directory}/${module}.tla`,
   );
   if (standard !== undefined) return standard;
-  if (!isSourceBoundTlaModelReceipt(input.modelReceipt)) return null;
   const modelDirectory = input.expectedModulePath.replace(/[\\/][^\\/]+$/, "");
   return input.modelReceipt.auxiliaryModules.find(
     ({ name }) => line === `Parsing file ${modelDirectory}/${name}.tla`,
@@ -266,9 +269,9 @@ function parsedAuxiliaryModule(line: string, input: TlcOutputInput): string | nu
 
 type EnvelopeRead = { ok: true; envelope: TlcEnvelope; next: number; repeat: boolean } | { ok: false; error: FailedTlcExploration };
 
-function verifiedModuleTranscriptIsValid(
+function receiptBoundModuleTranscriptIsValid(
   transcript: readonly string[],
-  input: TlcOutputInput & { readonly modelReceipt: Extract<ModelCheckReceipt, { schema: string }> },
+  input: TlcOutputInput,
 ): boolean {
   const parsed = transcript.filter((entry) => entry.startsWith("P:"));
   const semantic = transcript.filter((entry) => entry.startsWith("S:"));
@@ -278,7 +281,11 @@ function verifiedModuleTranscriptIsValid(
   ];
   const parsedNames = parsed.map((entry) => entry.slice(2));
   const semanticNames = semantic.map((entry) => entry.slice(2));
-  const standardModules = new Set<string>(SOURCE_BOUND_STANDARD_MODULES);
+  const standardModules = new Set<string>(
+    isSourceBoundTlaModelReceipt(input.modelReceipt)
+      ? SOURCE_BOUND_STANDARD_MODULES
+      : STANDARD_MODULES,
+  );
   const standardParsed = parsedNames.filter((name) => standardModules.has(name));
   const standardSemantic = semanticNames.filter((name) => standardModules.has(name));
   const exactlyOnce = (names: readonly string[], name: string) =>
@@ -302,20 +309,7 @@ function moduleTranscriptIsValid(
   transcript: readonly string[],
   input: TlcOutputInput,
 ): boolean {
-  if (isSourceBoundTlaModelReceipt(input.modelReceipt)) {
-    return verifiedModuleTranscriptIsValid(transcript, {
-      ...input,
-      modelReceipt: input.modelReceipt,
-    });
-  }
-  const expected = [
-    `P:${input.expectedModuleName}`,
-    ...STANDARD_MODULES.map((module) => `P:${module}`),
-    ...STANDARD_MODULES.map((module) => `S:${module}`),
-    `S:${input.expectedModuleName}`,
-  ];
-  return transcript.length === expected.length
-    && transcript.every((entry, index) => entry === expected[index]);
+  return receiptBoundModuleTranscriptIsValid(transcript, input);
 }
 
 function readEnvelope(lines: string[], startIndex: number): EnvelopeRead {
@@ -438,8 +432,9 @@ function validOutdegree(payload: string): boolean {
     && percentile <= maximum;
 }
 
-function lifecyclePrefixCodes(initialViolation: boolean): number[] {
-  return initialViolation ? [2262, 2187, 2220, 2219, 2185, 2189] : [2262, 2187, 2220, 2219, 2185, 2189, 2190];
+function lifecyclePrefixCodes(initialViolation: boolean, temporal: boolean): number[] {
+  const prefix = [2262, 2187, 2220, 2219, 2185, ...(temporal ? [2212] : []), 2189];
+  return initialViolation ? prefix : [...prefix, 2190];
 }
 
 // After a MSG 2107 terminal only progress lines and the Finished marker may follow.
@@ -468,12 +463,19 @@ function validateLifecyclePayloads(envelopes: TlcEnvelope[]): string | null {
   const initialViolation = count(envelopes, 2107) === 1;
   const countsError = lifecycleCodeCountsError(envelopes, initialViolation);
   if (countsError !== null) return countsError;
+  const temporal = count(envelopes, 2212);
+  const temporalCheck = count(envelopes, 2192);
+  const temporalFinished = count(envelopes, 2267);
+  if (temporal > 1 || temporalCheck > 1 || temporalFinished > 1
+    || (temporalCheck === 1) !== (temporalFinished === 1)
+    || temporalCheck > temporal) return "temporal lifecycle markers disagree";
   const payloadChecks: Array<[number, RegExp]> = [
-    [2262, /^TLC2 Version 2\.19 of 08 August 2024 \(rev: 5a47802\)$/],
+    [2262, new RegExp(`^${FIXED_TLC_VERSION_LINE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`)],
     [2187, /^Running breadth-first search Model-Checking .+ with 1 worker(?:\.| on .+)$/],
     [2220, /^Starting SANY\.\.\.$/],
     [2219, /^SANY finished\.$/],
     [2185, /^Starting\.\.\. \(.+\)$/],
+    [2212, /^Implied-temporal checking--satisfiability problem has [1-9][0-9]* branches?\.$/],
     [2189, /^Computing initial states\.\.\.$/],
     [2190, /^Finished computing initial states: [0-9]+ distinct state(?:s)? generated at .+\.$/],
     [2186, /^Finished in .+ at \(.+\)$/],
@@ -481,7 +483,18 @@ function validateLifecyclePayloads(envelopes: TlcEnvelope[]): string | null {
   for (const [code, pattern] of payloadChecks) {
     const envelope = only(envelopes, code);
     if (envelope === undefined && code === 2190 && initialViolation) continue;
+    if (envelope === undefined && code === 2212) continue;
     if (envelope === undefined || !pattern.test(envelope.payload)) return `invalid payload for code ${code}`;
+  }
+  const temporalStart = only(envelopes, 2192);
+  if (temporalStart !== undefined
+    && !/^Checking temporal properties for the complete state space with [1-9][0-9]* total distinct states at \(.+\)$/.test(temporalStart.payload)) {
+    return "invalid payload for code 2192";
+  }
+  const temporalEnd = only(envelopes, 2267);
+  if (temporalEnd !== undefined
+    && !/^Finished checking temporal properties in .+ at .+$/.test(temporalEnd.payload)) {
+    return "invalid payload for code 2267";
   }
   if (envelopes.filter(({ code }) => code === 2200).some(({ payload }) => !validProgress(payload))) return "invalid payload for code 2200";
   const outdegree = only(envelopes, 2268);
@@ -491,11 +504,15 @@ function validateLifecyclePayloads(envelopes: TlcEnvelope[]): string | null {
 
 function validateLifecycleOrder(envelopes: TlcEnvelope[]): string | null {
   const codes = envelopes.map(({ code }) => code);
-  const prefix = lifecyclePrefixCodes(codes.includes(2107));
+  const prefix = lifecyclePrefixCodes(codes.includes(2107), codes.includes(2212));
   if (prefix.some((code, index) => codes[index] !== code)) return "lifecycle prefix codes are out of order";
   let index = prefix.length;
   while (codes[index] === 2200) index += 1;
   if (codes[index] === 2107) return initialViolationOrderError(codes, index + 1);
+  if (codes[index] === 2192) {
+    if (codes[index + 1] !== 2267) return "temporal completion markers are out of order";
+    index += 2;
+  }
   if (codes[index] === 2193) {
     index += 1;
   } else {

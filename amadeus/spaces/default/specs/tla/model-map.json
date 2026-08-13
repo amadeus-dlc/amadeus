@@ -5,52 +5,58 @@
       "name": "FormalElection",
       "model": {
         "path": "amadeus/spaces/default/specs/tla/FormalElection.tla",
-        "identity": "e8cc39a918d6893dc3b8e2f31d8e81857e1885ac0f93dec6212ec2a0b11e7213"
+        "identity": "48a4545b1dc2a11a9d7de4c02da88dd9c144f1a83741f7a25a87f209c6985839"
       },
       "cfg": {
         "path": "amadeus/spaces/default/specs/tla/FormalElection.cfg",
-        "identity": "92656a5c8cf2a83a0251bc35fef8c8260e9cb1baec459bef2d87a104474ed62b"
+        "identity": "d687f5c9d68f0bc93bf7f5c13e0bd8d8b99afaad32aa9c1de4f60edfb59ad611"
       },
+      "auxiliaries": [
+        {
+          "path": "amadeus/spaces/default/specs/tla/FormalElectionCore.tla",
+          "identity": "0711f95454cb1c13d336327fbc82ec02d7c804b9fc14b8d6525c148ff3de78c9"
+        }
+      ],
       "entries": [
         {
-          "implPath": "packages/framework/core/tools/amadeus-election-model.ts",
-          "sha256": "1c7db437b6d2cfaa835506266704b50960bc4c01515d55547a62236da6a2b4c7"
+          "implPath": "packages/framework/core/tools/amadeus-election-codec.ts",
+          "sha256": "c0006dbd81d0e94b1d28903bb2c0e9899a01333f7492e47d9e8f13d2b2ee6b3e"
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election-record.ts",
-          "sha256": "c143cfc61bc40de195441688808bb0f36143da31d02fb45d74c8f0cbef98c264"
-        },
-        {
-          "implPath": "packages/framework/core/tools/amadeus-election-store.ts",
-          "sha256": "f3419faf5518fbe98692387e16cfecdc50e256976999ccf220ec9d9cca470ad4"
+          "sha256": "b776d2f74527fe0583b9b94b3548d79255902860ffb119413dc259d56c7dda90"
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election-transport.ts",
-          "sha256": "d1927f41434c126d49d37d502385add9b54990c00d982ebb575520177d7c77b1"
+          "sha256": "4a8e400eb9bf85ef2950686c6102b918f79ddbcb445d0630824fcc5d5acc5c18"
         },
         {
-          "implPath": "packages/framework/core/tools/amadeus-election.ts",
-          "sha256": "4ec2a232aed4f771fa22c2991ca72c0b1099fd6c15193a40fc256354f4760d29"
+          "implPath": "packages/framework/core/tools/amadeus-election-v2-cli.ts",
+          "sha256": "875c135700570e1effde81f2185fceccd6374cccfb63ba11b7637befb57f5437"
+        },
+        {
+          "implPath": "packages/framework/core/tools/amadeus-election-v2-store.ts",
+          "sha256": "d891882d4948afaa3e6970c0e4cb48b7cfe8cb244509dc744da6f4fdebdf4253"
         }
       ],
       "vocabulary": {
         "namedInvariants": [
-          "ChoiceWinner",
-          "UnknownChoiceRejected",
-          "ReceivedAtAxis",
-          "InvalidTimestampRejected",
-          "AmendSubmission",
-          "UnknownRefRejected",
-          "PerVoterResolution"
+          "TypeOK",
+          "QuestionIdsUnique",
+          "AcceptedDomain",
+          "ResultCompleteness",
+          "PerQuestionIsolation",
+          "EstablishedImmutable",
+          "HeldOnlyTargets",
+          "MixedLifecycle",
+          "ResponseCoverage"
         ],
         "traceStateVariables": [
-          "initialBudget",
-          "amendBudget",
           "accepted",
-          "holdMarkers",
-          "holdBudget",
-          "tally",
-          "reexamRequired"
+          "results",
+          "targets",
+          "preserved",
+          "phase"
         ]
       }
     },

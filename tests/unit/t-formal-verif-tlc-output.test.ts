@@ -22,6 +22,7 @@ const lifecyclePrefix = [
   envelope(2220, 0, "Starting SANY..."),
   [
     "Parsing file /workspace/FormalElection.tla",
+    "Parsing file /workspace/FormalElectionCore.tla",
     "Parsing file /fixed/Naturals.tla",
     "Parsing file /fixed/Sequences.tla",
     "Parsing file /fixed/FiniteSets.tla",
@@ -30,6 +31,7 @@ const lifecyclePrefix = [
     "Semantic processing of module Sequences",
     "Semantic processing of module FiniteSets",
     "Semantic processing of module TLC",
+    "Semantic processing of module FormalElectionCore",
     "Semantic processing of module FormalElection",
     "",
   ].join("\n"),
@@ -61,13 +63,11 @@ const successOutput = [
 
 function state(ordinal: number, label: string, _body: string): string {
   const body = [
-    "/\\ initialBudget = (V1 :> 1 @@ V2 :> 1 @@ V3 :> 1)",
-    "/\\ amendBudget = (V1 :> 1 @@ V2 :> 1 @@ V3 :> 1)",
-    "/\\ accepted = (V1 :> [choice |-> C1])",
-    "/\\ holdMarkers = <<>>",
-    "/\\ holdBudget = 1",
-    "/\\ tally = [kind |-> \"NONE\"]",
-    "/\\ reexamRequired = FALSE",
+    "/\\ accepted = (V1 :> (Q1 :> NoResponse @@ Q2 :> NoResponse) @@ V2 :> (Q1 :> NoResponse @@ Q2 :> NoResponse))",
+    "/\\ results = (Q1 :> ResultNone @@ Q2 :> ResultNone)",
+    "/\\ targets = {Q1, Q2}",
+    "/\\ preserved = {}",
+    "/\\ phase = PhaseCollecting",
   ].join("\n");
   return envelope(2217, 4, `${ordinal}: <${label}>\n${body}`);
 }
@@ -80,7 +80,7 @@ function counterexampleOutput(ordinals: readonly number[] = [1, 2, 3]): string {
   ].join("");
   return [
     lifecyclePrefix,
-    envelope(2110, 1, "Invariant InvalidTimestampRejected is violated."),
+    envelope(2110, 1, "Invariant PerQuestionIsolation is violated."),
     envelope(2121, 1, "The behavior up to this point is:"),
     states,
     envelope(2200, 0, "Progress(3): 3 states generated, 3 distinct states found, 0 states left on queue."),
@@ -141,7 +141,7 @@ function withoutEnvelope(output: string, code: number): string {
 }
 
 describe("TLC 1.7.4 -tool closed output grammar", () => {
-  test("requires the exact ordered SANY module transcript", () => {
+  test("requires a receipt-bound SANY module transcript", () => {
     expect(parse(successOutput).kind).toBe("COMPLETE");
     expect(parseTlcOutput174({
       chunks: [encoder.encode(successOutput)],
@@ -175,21 +175,16 @@ describe("TLC 1.7.4 -tool closed output grammar", () => {
     const extraStdlibPair = successOutput
       .replace("Parsing file /fixed/Naturals.tla\n", "Parsing file /fixed/Json.tla\nParsing file /fixed/Naturals.tla\n")
       .replace("Semantic processing of module Naturals\n", "Semantic processing of module Json\nSemantic processing of module Naturals\n");
-    const outOfOrder = successOutput
-      .replace("Parsing file /fixed/Naturals.tla\nParsing file /fixed/Sequences.tla\n", "Parsing file /fixed/Sequences.tla\nParsing file /fixed/Naturals.tla\n");
     const duplicatePair = successOutput
       .replace("Parsing file /fixed/Naturals.tla\n", "Parsing file /fixed/Naturals.tla\nParsing file /fixed/Naturals.tla\n")
       .replace("Semantic processing of module Naturals\n", "Semantic processing of module Naturals\nSemantic processing of module Naturals\n");
-    const missingStandardPair = successOutput
-      .replace("Parsing file /fixed/TLC.tla\n", "")
-      .replace("Semantic processing of module TLC\n", "");
     const forgedStandardOrigins = [
       "/tmp/attacker/Naturals.tla",
       "relative/Naturals.tla",
       "evil.jar!/Naturals.tla",
     ].map((path) => successOutput.replace("/fixed/Naturals.tla", path));
 
-    for (const candidate of [missingExpectedPair, extraIntegersPair, extraStdlibPair, outOfOrder, duplicatePair, missingStandardPair, ...forgedStandardOrigins]) {
+    for (const candidate of [missingExpectedPair, extraIntegersPair, extraStdlibPair, duplicatePair, ...forgedStandardOrigins]) {
       expectHarnessError(candidate);
     }
   });
@@ -236,12 +231,29 @@ describe("TLC 1.7.4 -tool closed output grammar", () => {
     expect(parse(commaFormattedProgress).kind).toBe("COMPLETE");
   });
 
+  test("accepts the temporal-property lifecycle emitted by the production model", () => {
+    const temporalOutput = successOutput
+      .replace(
+        envelope(2185, 0, "Starting... (2026-07-21 09:26:25)"),
+        envelope(2185, 0, "Starting... (2026-07-21 09:26:25)")
+          + envelope(2212, 0, "Implied-temporal checking--satisfiability problem has 1 branches."),
+      )
+      .replace(
+        envelope(2193, 0, completionPayload),
+        envelope(2192, 0, "Checking temporal properties for the complete state space with 2 total distinct states at (2026-07-21 09:26:25)")
+          + envelope(2267, 0, "Finished checking temporal properties in 1ms at 2026-07-21 09:26:25")
+          + envelope(2193, 0, completionPayload),
+      );
+
+    expect(parse(temporalOutput)).toEqual(parse(successOutput));
+  });
+
   test("accepts one fully closed exit-12 named counterexample with ordered states", () => {
     const result = parse(counterexampleOutput(), { exitCode: 12 });
     expect(result).toMatchObject({
       kind: "COUNTEREXAMPLE",
-      invariant: "InvalidTimestampRejected",
-      sourceLocation: frozenModel.invariantSourceMap.InvalidTimestampRejected,
+      invariant: "PerQuestionIsolation",
+      sourceLocation: frozenModel.invariantSourceMap.PerQuestionIsolation,
       generatedStates: 3,
       distinctStates: 3,
       statesLeftOnQueue: 0,
@@ -366,7 +378,7 @@ describe("TLC 1.7.4 -tool closed output grammar", () => {
     );
     const contradictory = successOutput.replace(
       envelope(2199, 0, "3 states generated, 2 distinct states found, 0 states left on queue."),
-      envelope(2110, 1, "Invariant InvalidTimestampRejected is violated.")
+      envelope(2110, 1, "Invariant PerQuestionIsolation is violated.")
         + envelope(2199, 0, "3 states generated, 2 distinct states found, 0 states left on queue."),
     );
     const missingFingerprintBlock = successOutput.replace(`\n${completionPayload.split("\n").slice(1).join("\n")}`, "");
@@ -451,7 +463,7 @@ describe("TLC 1.7.4 -tool closed output grammar", () => {
       "<Next line 160, col 8 to line 161, col 66 of module FormalElection>",
       "<ForgedAction>",
     );
-    const forgedBody = counterexampleOutput().replace("/\\ initialBudget =", "/\\ forged =");
+    const forgedBody = counterexampleOutput().replace("/\\ accepted =", "/\\ forged =");
 
     expectHarnessError(malformedProgress);
     expectHarnessError(impossibleStatistics);
@@ -476,7 +488,7 @@ describe("TLC 1.7.4 -tool closed output grammar", () => {
       },
     };
     const result = parseTlcOutput174({
-      chunks: [encoder.encode(counterexampleOutput().replace("InvalidTimestampRejected", "ForgedInvariant"))],
+      chunks: [encoder.encode(counterexampleOutput().replace("PerQuestionIsolation", "ForgedInvariant"))],
       exitCode: 12,
       signal: null,
       timedOut: false,
@@ -499,19 +511,17 @@ describe("TLC 1.7.4 -tool closed output grammar", () => {
 // ---------------------------------------------------------------------------
 describe("initial-state invariant violation (MSG 2107, #1359)", () => {
   const initialStateBody = [
-    "/\\ initialBudget = (V1 :> 1 @@ V2 :> 1 @@ V3 :> 1)",
-    "/\\ amendBudget = (V1 :> 1 @@ V2 :> 1 @@ V3 :> 1)",
-    "/\\ accepted = (V1 :> [choice |-> C1])",
-    "/\\ holdMarkers = <<>>",
-    "/\\ holdBudget = 1",
-    "/\\ tally = [kind |-> \"NONE\"]",
-    "/\\ reexamRequired = FALSE",
+    "/\\ accepted = (V1 :> (Q1 :> NoResponse @@ Q2 :> NoResponse) @@ V2 :> (Q1 :> NoResponse @@ Q2 :> NoResponse))",
+    "/\\ results = (Q1 :> ResultNone @@ Q2 :> ResultNone)",
+    "/\\ targets = {Q1, Q2}",
+    "/\\ preserved = {}",
+    "/\\ phase = PhaseCollecting",
   ].join("\n");
   const prefixWithout2190 = lifecyclePrefix.replace(
     envelope(2190, 0, "Finished computing initial states: 1 distinct state generated at 2026-07-21 09:26:25."),
     "",
   );
-  const initialViolationOutput = (invariant = "InvalidTimestampRejected"): string =>
+  const initialViolationOutput = (invariant = "PerQuestionIsolation"): string =>
     [
       prefixWithout2190,
       envelope(2107, 1, `Invariant ${invariant} is violated by the initial state:\n${initialStateBody}`),
@@ -522,9 +532,9 @@ describe("initial-state invariant violation (MSG 2107, #1359)", () => {
     const result = parse(initialViolationOutput(), { exitCode: 12 });
     expect(result.kind).toBe("COUNTEREXAMPLE");
     if (result.kind !== "COUNTEREXAMPLE") return;
-    expect(result.invariant).toBe("InvalidTimestampRejected");
+    expect(result.invariant).toBe("PerQuestionIsolation");
     expect(result.trace).toHaveLength(1);
-    expect(result.trace[0]!.label).toBe("Invariant InvalidTimestampRejected is violated by the initial state:");
+    expect(result.trace[0]!.label).toBe("Invariant PerQuestionIsolation is violated by the initial state:");
     expect(result.counterexampleIdentity).toMatch(/^[0-9a-f]{64}$/);
     // TLC prints no statistics for this shape — null, never an invented count.
     expect(result.generatedStates).toBeNull();
@@ -579,7 +589,7 @@ describe("initial-state invariant violation (MSG 2107, #1359)", () => {
   });
 
   test("a state dump with drifted variable order is rejected", () => {
-    const drifted = initialViolationOutput().replace("/\\ reexamRequired = FALSE", "/\\ zz = FALSE");
+    const drifted = initialViolationOutput().replace("/\\ phase = PhaseCollecting", "/\\ zz = FALSE");
     expectHarnessError(drifted, { exitCode: 12 });
   });
 });

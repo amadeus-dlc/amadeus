@@ -29,6 +29,8 @@ import {
   advisoryModelCheckOutputDir,
   verifyAdvisoryModelCheckOutcome,
 } from "../../plugins/formal-model-check/tools/advisory-model-check.ts";
+import { canonicalIdentity } from "../../plugins/formal-model-check/tools/canonical.ts";
+import { FIXED_TLC_VERSION_LINE } from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 import {
   auditFilePath,
   auditShardName,
@@ -114,15 +116,51 @@ function writeEvidence(
   const directory = advisoryModelCheckOutputDir(projectDir, pending.identity.advisoryInstance);
   mkdirSync(directory, { recursive: true });
   const runId = "00000000-0000-4000-8000-000000000001";
+  const provenanceBody = {
+    modelPath: "amadeus/spaces/default/specs/tla/FormalElection.tla",
+    cfgPath: "amadeus/spaces/default/specs/tla/FormalElection.cfg",
+    modelIdentity: "registered-model",
+    moduleIdentity: canonicalIdentity(
+      readFileSync(modelPath, "utf8"),
+      "amadeus.formal-verif.tla.module.v1",
+    ).sha256,
+    cfgIdentity: canonicalIdentity(
+      readFileSync(cfgPath, "utf8"),
+      "amadeus.formal-verif.tla.cfg.v1",
+    ).sha256,
+    moduleSha256: sha256(modelPath),
+    cfgSha256: sha256(cfgPath),
+    auxiliaries: [],
+    implementations: [],
+    constants: [],
+  };
+  const sourceProvenance = {
+    ...provenanceBody,
+    sourceIdentity: canonicalIdentity(
+      provenanceBody,
+      "amadeus.formal-verif.model-check-source.v1",
+    ).sha256,
+  };
   const expectedArtifacts: string[] = [];
   if (outcome === "NOT_DETECTED") {
-    writeJson(join(directory, "completion-marker.json"), { complete: true, runId });
+    writeJson(join(directory, "completion-marker.json"), {
+      complete: true,
+      runId,
+      sourceIdentity: sourceProvenance.sourceIdentity,
+    });
     writeJson(join(directory, "env-receipt.json"), {
       schema: "amadeus.env-receipt.v1",
       runId,
       inspections: [{ id: "network-deny", status: "passed" }],
     });
-    expectedArtifacts.push("completion-marker.json", "env-receipt.json");
+    writeFileSync(join(directory, "tlc-stdout.bin"), "complete");
+    writeFileSync(join(directory, "tlc-stderr.bin"), "");
+    expectedArtifacts.push(
+      "completion-marker.json",
+      "env-receipt.json",
+      "tlc-stdout.bin",
+      "tlc-stderr.bin",
+    );
   } else if (outcome === "DETECTED") {
     writeJson(join(directory, "counterexample.json"), { runId, counterexampleIdentity: "counterexample-1" });
     expectedArtifacts.push("counterexample.json");
@@ -145,14 +183,19 @@ function writeEvidence(
       specIdentity: pending.identity.specIdentity,
       instance: pending.identity.advisoryInstance,
     },
-    sourceProvenance: {
-      modelPath: "amadeus/spaces/default/specs/tla/FormalElection.tla",
-      cfgPath: "amadeus/spaces/default/specs/tla/FormalElection.cfg",
-      moduleIdentity: "registered-module",
-      cfgIdentity: "registered-cfg",
-      moduleSha256: sha256(modelPath),
-      cfgSha256: sha256(cfgPath),
-    },
+    sourceProvenance,
+    verification: outcome === "NOT_DETECTED"
+      ? {
+          toolchainVersion: FIXED_TLC_VERSION_LINE,
+          constants: [],
+          completionMarker: "Model checking completed. No error has been found.",
+          generatedStates: 3,
+          distinctStates: 2,
+          statesLeftOnQueue: 0,
+          searchDepth: 2,
+          sourceIdentity: sourceProvenance.sourceIdentity,
+        }
+      : null,
     errorCode: outcome === "HARNESS_ERROR" ? "TOOL_FAILED" : null,
     errorDetail: outcome === "HARNESS_ERROR" ? "synthetic failure" : null,
   };

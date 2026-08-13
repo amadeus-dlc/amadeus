@@ -7,6 +7,7 @@ import {
   readFileSync,
   readdirSync,
   rmSync,
+  writeFileSync,
 } from "node:fs";
 import { performance } from "node:perf_hooks";
 import { tmpdir } from "node:os";
@@ -27,6 +28,8 @@ import { NODE_RUN_MODEL_CHECK_FILESYSTEM } from "../../plugins/formal-model-chec
 import { StderrModelCheckReporter } from "../../plugins/formal-model-check/tools/run-model-check-reporter.ts";
 import { extractDiagnosticStatistics } from "../../plugins/formal-model-check/tools/run-model-check-diagnostic.ts";
 import { NodePlannerEnvironmentPort } from "../../plugins/formal-model-check/tools/tlc-spawn-planner.ts";
+import { createRefereeToolchain } from "../../plugins/formal-model-check/tools/tla-referee-toolchain.ts";
+import { InvariantNameCodec } from "../../plugins/formal-model-check/tools/tla-referees.ts";
 
 const REAL_TLC_AVAILABLE = process.env.AMADEUS_RUN_REAL_TLC === "1"
   && process.platform === "darwin"
@@ -63,7 +66,7 @@ describe("run-model-check real Darwin acceptance", () => {
   });
 
   for (const target of [
-    { name: "FormalElection", auxiliaryModules: [] },
+    { name: "FormalElection", auxiliaryModules: ["FormalElectionCore"] },
     { name: "MirrorLifecycle", auxiliaryModules: ["MirrorLifecycleCore"] },
   ] as const) {
     test.skipIf(!REAL_TLC_ENABLED)(
@@ -119,6 +122,61 @@ describe("run-model-check real Darwin acceptance", () => {
       180_000,
     );
   }
+
+  test.skipIf(!REAL_TLC_ENABLED)(
+    "detects a temporary cross-question result mutant with a receipt-bound trace",
+    async () => {
+      const root = mkdtempSync(join(tmpdir(), "formal-election-mutant-"));
+      roots.push(root);
+      const modulePath = join(root, "FormalElectionMutant.tla");
+      const configPath = join(root, "FormalElection.cfg");
+      const canonical = readFileSync(
+        "amadeus/spaces/default/specs/tla/FormalElection.tla",
+        "utf8",
+      );
+      const target = "QuestionResult(accepted, Voters, q, Block)";
+      const mutant = canonical
+        .replace("---- MODULE FormalElection ----", "---- MODULE FormalElectionMutant ----")
+        .replace(target, "QuestionResult(accepted, Voters, Q1, Block)");
+      expect(mutant).not.toBe(canonical);
+      writeFileSync(modulePath, mutant);
+      cpSync("amadeus/spaces/default/specs/tla/FormalElection.cfg", configPath);
+      cpSync(
+        "amadeus/spaces/default/specs/tla/FormalElectionCore.tla",
+        join(root, "FormalElectionCore.tla"),
+      );
+      const invariant = InvariantNameCodec.parse("PerQuestionIsolation");
+      if (!invariant.ok) throw new Error(JSON.stringify(invariant.error));
+
+      const exploration = await createRefereeToolchain({
+        cacheRoot: join(root, "cache"),
+        deadlineMs: 180_000,
+      }).run({
+        kind: "falling",
+        modulePath,
+        configPath,
+        invariant: invariant.value,
+        mutationRef: "question-local-result",
+      });
+
+      expect(exploration).toMatchObject({
+        kind: "COUNTEREXAMPLE",
+        invariant: "PerQuestionIsolation",
+      });
+      if (exploration.kind !== "COUNTEREXAMPLE") return;
+      expect(exploration.trace.length).toBeGreaterThan(1);
+      expect(exploration.sourceLocation.line).toBeGreaterThan(0);
+      for (const state of exploration.trace) {
+        const body = state.body.join("\n");
+        expect(body).toContain("/\\ accepted =");
+        expect(body).toContain("/\\ results =");
+        expect(body).toContain("/\\ targets =");
+        expect(body).toContain("/\\ preserved =");
+        expect(body).toContain("/\\ phase =");
+      }
+    },
+    180_000,
+  );
 
   test.skipIf(!PERFORMANCE_ENABLED)(
     "measures one warm-up and five Darwin production runs",

@@ -18,6 +18,10 @@ import type {
   EnvReceipt,
   ModelCheckOutcome,
 } from "./run-model-check-domain.ts";
+import {
+  FIXED_TLC_VERSION_LINE,
+  type TlcExploration,
+} from "./tlc-toolchain.ts";
 
 export interface ArtifactWorkspace {
   readonly runId: string;
@@ -37,6 +41,7 @@ export interface ModelCheckArtifactInput {
   readonly finishedAt: string;
   readonly advisory?: AdvisoryArtifactCorrelation;
   readonly sourceProvenance?: ModelCheckSourceProvenance;
+  readonly exploration?: TlcExploration;
 }
 
 export interface AdvisoryArtifactCorrelation {
@@ -48,10 +53,26 @@ export interface AdvisoryArtifactCorrelation {
 export interface ModelCheckSourceProvenance {
   readonly modelPath: string;
   readonly cfgPath: string;
+  readonly modelIdentity: string;
   readonly moduleIdentity: string;
   readonly cfgIdentity: string;
   readonly moduleSha256: string;
   readonly cfgSha256: string;
+  readonly auxiliaries: readonly { readonly path: string; readonly identity: string }[];
+  readonly implementations: readonly { readonly path: string; readonly identity: string }[];
+  readonly constants: readonly string[];
+  readonly sourceIdentity: string;
+}
+
+export interface ModelCheckVerification {
+  readonly toolchainVersion: string;
+  readonly constants: readonly string[];
+  readonly completionMarker: string | null;
+  readonly generatedStates: number | null;
+  readonly distinctStates: number | null;
+  readonly statesLeftOnQueue: number | null;
+  readonly searchDepth: number | null;
+  readonly sourceIdentity: string;
 }
 
 export interface ModelCheckArtifactEntry {
@@ -74,6 +95,7 @@ export interface ModelCheckManifest {
   readonly errorDetail: string | null;
   readonly advisory: AdvisoryArtifactCorrelation | null;
   readonly sourceProvenance: ModelCheckSourceProvenance | null;
+  readonly verification: ModelCheckVerification | null;
 }
 
 export interface PublishedModelCheckArtifacts {
@@ -189,6 +211,16 @@ export function publishModelCheckArtifacts(
     ) {
       return failure("OUT_PATH", "artifact workspace changed before publish");
     }
+    if (input.sourceProvenance !== undefined
+      && input.outcome.kind === "NOT_DETECTED"
+      && input.exploration?.kind !== "COMPLETE") {
+      return failure("WRITE", "NOT_DETECTED requires complete TLC exploration evidence");
+    }
+    if (input.sourceProvenance !== undefined
+      && input.outcome.kind === "DETECTED"
+      && input.exploration?.kind !== "COUNTEREXAMPLE") {
+      return failure("WRITE", "DETECTED requires counterexample TLC exploration evidence");
+    }
     rmSync(workspace.scratchRoot, { recursive: true, force: false });
     const paths = {
       receipt: join(workspace.temporaryDir, "env-receipt.json"),
@@ -202,13 +234,21 @@ export function publishModelCheckArtifacts(
     const expected = ["env-receipt.json", "tlc-stdout.bin", "tlc-stderr.bin"];
     if (input.outcome.kind === "NOT_DETECTED") {
       const marker = join(workspace.temporaryDir, "completion-marker.json");
-      writeDurable(marker, jsonBytes({ complete: true, runId: workspace.runId }));
+      writeDurable(marker, jsonBytes({
+        complete: true,
+        runId: workspace.runId,
+        sourceIdentity: input.sourceProvenance?.sourceIdentity ?? null,
+      }));
       expected.push(basename(marker));
     } else if (input.outcome.kind === "DETECTED") {
       const counterexample = join(workspace.temporaryDir, "counterexample.json");
+      const exploration = input.exploration?.kind === "COUNTEREXAMPLE" ? input.exploration : null;
       writeDurable(counterexample, jsonBytes({
         runId: workspace.runId,
         counterexampleIdentity: input.outcome.counterexampleIdentity,
+        invariant: exploration?.invariant ?? null,
+        sourceLocation: exploration?.sourceLocation ?? null,
+        trace: exploration?.trace ?? null,
       }));
       expected.push(basename(counterexample));
     }
@@ -230,6 +270,20 @@ export function publishModelCheckArtifacts(
       errorDetail: input.outcome.kind === "HARNESS_ERROR" ? input.outcome.detail : null,
       advisory: input.advisory ?? null,
       sourceProvenance: input.sourceProvenance ?? null,
+      verification: input.exploration?.kind === "COMPLETE" || input.exploration?.kind === "COUNTEREXAMPLE"
+        ? {
+            toolchainVersion: FIXED_TLC_VERSION_LINE,
+            constants: input.sourceProvenance?.constants ?? [],
+            completionMarker: input.exploration.kind === "COMPLETE"
+              ? input.exploration.completionMarker
+              : null,
+            generatedStates: input.exploration.generatedStates,
+            distinctStates: input.exploration.distinctStates,
+            statesLeftOnQueue: input.exploration.statesLeftOnQueue,
+            searchDepth: input.exploration.searchDepth,
+            sourceIdentity: input.sourceProvenance?.sourceIdentity ?? "",
+          }
+        : null,
     };
     writeDurable(
       join(workspace.temporaryDir, "manifest.json"),
