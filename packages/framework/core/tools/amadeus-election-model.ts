@@ -40,6 +40,7 @@ export type ElectionState =
   | "draft"
   | "open"
   | "collecting"
+  | "partial"
   | "tallied"
   | "rendered"
   | "recorded"
