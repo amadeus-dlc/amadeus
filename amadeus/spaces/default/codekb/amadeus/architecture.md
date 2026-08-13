@@ -1,5 +1,54 @@
 # アーキテクチャ
 
+## advisory hold の裁定・記録・再入経路と run-now の解除不能（260813-advisory-requestion-fix、現在、observed `c0f9edf27`）
+
+**観測 ref**: 全 file:line は observed = `c0f9edf27828def6fa3dbbbc4101d753b398e025`（= 本 worktree HEAD = `origin/main`、`git rev-parse HEAD`）の断面で実読・解決した。差分区間は base `854692fd7a11b124236b0427fe3d59e2fe6bf785`..observed（33 コミット / 224 ファイル、`git log --oneline 854692fd7..c0f9edf27 | wc -l` / `git diff --name-only … | wc -l`）。**患部 `packages/framework/core/tools/amadeus-advisory-choice.ts` は本区間に含まれない**（`git diff --name-only 854692fd7..c0f9edf27 -- packages/framework/core/tools/amadeus-advisory-choice.ts` が空出力）— base 断面から不変である。正本は `re-scans/260813-advisory-requestion-fix.md`。
+
+対象は [Issue #2967](https://github.com/amadeus-dlc/amadeus/issues/2967)（semi/full autonomy で run-now を自動裁定済みの advisory が人間へ再質問される）。
+
+### 現状の経路（4 コンポーネントの合成）
+
+| 段 | 実装 | 現況 |
+|---|---|---|
+| hold 評価 | `amadeus-advisory-choice.ts` `evaluateAdvisoryHold` :402-419 | 未解決 pending があれば `hold`。全 pending に receipt があり、そのうち1件でも `choice === "run-now"` なら `{ kind: "run-required", pending, receipts }` を返す（:417-419） |
+| run-required の帰結 | 同 `resolveRunRequiredHold` :682-701（`guardAdvisoryChoices` からは :716-719 経由） | run-now receipt が残る限り無条件に `{ kind: "hold", stage, advisories }`。`result` は `DECLARED_RELEASE_RULE` :666-667（逐語「declared advisory: release requires the plugin's own evaluator to return no-hold」）。**実行 route を持たず、run-now 自身が hold を解く経路は構造上存在しない** — 解除は宣言プラグイン側の評価器が raise をやめたときのみ |
+| autonomy 裁定 | `amadeus-intent-autonomy.ts` の `decisionId` = `autonomyStableId("auto-decision", [intentUuid, interactionId, occurrenceId, graphRevision])` :840-845 | 同一 advisory instance × 同一 graphRevision で**決定的に同値**。再入のたび同じ id が出る |
+| receipt 記録 | `amadeus-advisory-choice.ts` `recordAdvisoryChoice` :866-… | 二重の single-spend guard。(a) `advisoryProvenanceAlreadySpent` :881（key は :330-334 の `JSON.stringify(["auto-decision", decisionId])`）(b) `acceptsFreshChoice` :805-810 により active receipt を持つ pending が open 集合から外れ `open.length === 0` で `false` :886-890。→ **2回目は必ず false** |
+| directive 合成 | `amadeus-orchestrate.ts` `applyPendingAdvisoryGuard` :826-874 | `auto.kind === "resolved"` **かつ** `recordAdvisoryChoice(...)` が true のときだけ元 directive を返す（:853-865）。それ以外は無条件に human 向け `await-advisory-choice` を生成（:867-874） |
+
+### 機序（境界の欠陥）
+
+`applyPendingAdvisoryGuard` の二分岐は fail-closed 設計として明示コメント（:838-845）を持つが、**「既に settled（記録済み・裁定不要）」と「裁定不能（grant 無し・park・conflict・拒否）」が同じ else へ落ちる**。`recordAdvisoryChoice` の戻り値が `boolean` 1 本であることが直接の原因であり、呼び出し側は成功しなかった理由を区別できない。
+
+したがって semi/full では次のループが成立する。(1) 1回目の `next`: 評価器が raise → ladder が run-now 裁定 → record 成功 → 元 directive 通過。(2) 評価器は依然 raise。(3) 2回目の `next`: `evaluateAdvisoryHold` → `run-required` → `resolveRunRequiredHold` → hold。(4) ladder 再裁定で同一 `decisionId` → spend guard に衝突し record が false。(5) :867-874 で human 向け `await-advisory-choice` を発行。(6) 人間が run-now を再選択しても `acceptsFreshChoice` が refuse し、同じ hold が再提示される。
+
+```mermaid
+flowchart TD
+  A["next: applyPendingAdvisoryGuard :826"] --> B["guardAdvisoryChoices :831"]
+  B --> C{"guard.kind"}
+  C -->|allow| D["元 directive を返す"]
+  C -->|hold| E["resolveAdvisoryChoiceAutonomously :847"]
+  E --> F{"auto.kind === resolved かつ recordAdvisoryChoice が true"}
+  F -->|true| D
+  F -->|false| G["await-advisory-choice を生成 :867-874"]
+  G --> H["人間へ再質問（run-now 再選択も acceptsFreshChoice が拒否）"]
+  H --> A
+```
+
+テキストフォールバック（図と同一内容）: `next` → `applyPendingAdvisoryGuard`（:826）→ `guardAdvisoryChoices`（:831）→ allow なら元 directive、hold なら autonomy ladder（:847）→ 「resolved かつ record 成功」なら元 directive、それ以外はすべて `await-advisory-choice`（:867-874）→ 人間が答えても `acceptsFreshChoice` が拒否 → 次の `next` で同じ経路に戻る。
+
+### 回帰の由来（履歴）
+
+- `f7310bd76f`（PR #2318、2026-08-06）: advisory hold を autonomy ladder に載せた導入コミット。当時は `run_required` / `formal_checks` の型付き実行 route があり、run-now 裁定後の再入はその route で処理され human へ落ちなかった。
+- `387cbd0146`（PR #2890、2026-08-11）: `AdvisoryFormalCheckDirective` 型、directive の `run_required?` / `formal_checks?`、orchestrate の `...(guard.runRequired ? { run_required: true, formal_checks: guard.formalChecks } : {})`、`advisoryChoiceOptionIds(runRequired)` の run-required 分岐、`resolveRunRequiredHold` の実行 route 分岐を**すべて削除**。run-now の出口が消え、`resolveRunRequiredHold` は hold を返すだけの経路になった。
+
+### 差分区間で観測したその他の構造変化（本 intent の患部外、参考）
+
+- plugin 合成境界の拡張: `amadeus-plugin-compose.ts` に sensor コピー機構（`SensorCopy` / `parseSensors` / `collectSensorErrors`）、`WRITABLE_SEAMS = new Set<SeamName>(["produces", "sensors"])`。
+- full autonomy の型付き stage failure → Quality Repair 射影経路の新設（`amadeus-intent-autonomy-production.ts` +89、`STAGE_REFEREE_BOLT_ID = "stage-referee"` / `ProductionStageFailureInput` / `emitRepairStalledIfSuspended`、#2945）。
+- blocking sensor gate（`amadeus-state.ts` +185、`BLOCKING_SENSOR_CUTOFF_YYMMDD = 260809` / `SENSOR_TERMINAL_EVENTS`）と `amadeus-sensor.ts` の `digestFile` / `resolveScriptPath`。
+- Kiro roll-forward 防御の turn-scoped no-op-next guard（`.amadeus-readonly-latch`）。
+
 ## patch coverage ゲートの判定パイプラインと免除の適用段（260811-allowlist-semantic-audit、履歴、observed `854692fd7`）
 
 **観測 ref**: すべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（34 commits）。正本は `re-scans/260811-allowlist-semantic-audit.md`。
@@ -45,7 +94,7 @@ PR #2127 は台帳を「絶対行番号ピン → 関数スコープ名 + ソー
 
 台帳は 106 ファイルへ 623 エントリを張る**横断的な結合点**であり、`packages/framework/core/tools/` の主要モジュールへの変更はほぼ必ず接触する（上位: `amadeus-orchestrate.ts` 63 / `amadeus-state.ts` 61 / `amadeus-quality-repair-runtime.ts` 19 / `amadeus-advisory-choice.ts` 18 / `amadeus-intent-completion.ts` 18 / `amadeus-utility.ts` 18）。区間 `ce3c3ccfd..854692fd7` でもゲート実装は無変更のまま台帳のみ `+109/−10`（614 → 623）で、**台帳だけが動き続ける**構造が続いている。
 
-## receipt 信頼境界の二重欠陥（260812-tla-proof-receipt、現在、observed `854692fd7`）
+## receipt 信頼境界の二重欠陥（260812-tla-proof-receipt、履歴、observed `854692fd7`）
 
 **観測 ref**: 本節の file:line はすべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD、`origin/main` 系譜）時点。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（HEAD の祖先のうち距離最小 = **34 commits**）。currency 根拠・全述語・全数列挙の正本は `re-scans/260812-tla-proof-receipt.md`。
 

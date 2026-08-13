@@ -1,5 +1,40 @@
 # コード品質評価
 
+## advisory 経路の品質所見 — 契約 drift 8/8・再入経路の未被覆・欠陥挙動のピン（260813-advisory-requestion-fix、現在、observed `c0f9edf27`）
+
+**観測 ref**: observed = `c0f9edf27828def6fa3dbbbc4101d753b398e025`、base = `854692fd7a11b124236b0427fe3d59e2fe6bf785`。正本は `re-scans/260813-advisory-requestion-fix.md`。
+
+### Q1. engine 型 ↔ skill 散文契約の drift が 8/8 ハーネス（100%）
+
+述語 `git grep -n -E "run_required|formal_checks|runRequired|formalChecks" -- packages tests docs plugins .claude .agents scripts` = **10 行 / 8 ファイル**、ハーネス総数 `ls -d packages/framework/harness/*/ | wc -l` = **8**。PR #2890（`387cbd0146`）が directive 側の `run_required` / `formal_checks` を削除した一方、8 ハーネスすべての skill 散文が同フィールドの消費を指示し続けている。既存の drift guard（t546）は**文字列 literal の一致のみ**を見るため、「engine が発行しないフィールドを skill が指示している」という向きの乖離を捕捉しない。散文契約と型契約の間に機械照合が存在しないことが構造的な欠陥である。
+
+### Q2. `applyPendingAdvisoryGuard` の再入経路がテスト 0 件
+
+述語 `git grep -n "applyPendingAdvisoryGuard" -- tests` = **0 hit**。advisory 関連テストは 15 ファイル存在する（`git grep -ln "recordAdvisoryChoice\|resolveAdvisoryChoiceAutonomously\|advisoryProvenanceAlreadySpent\|evaluateAdvisoryHold\|guardAdvisoryChoices" -- tests | wc -l` = 15）が、**auto receipt 記録済みの advisory に orchestrator が再入したとき返る directive 種別**（ladder → record 拒否 → human フォールバックの合成経路）を検査するテストは存在しない。個々の部品（record の単一消費、hold 評価、option space）は密に固定されているのに、それらを合成する境界だけが空白という典型的な非対称である。
+
+### Q3. 欠陥挙動を仕様として固定しているテストが 4 箇所
+
+| テスト | 行 | 固定している内容 |
+|---|---|---|
+| t458（integration、412 行） | `:200-206` | 再 guard が hold を返すこと（= 本 Issue の欠陥挙動そのもの）。`:164` は full grant の無人裁定 + receipt |
+| t528 | `:134` | 「run-now は hold を解除しない」 |
+| t526 | `:100` | 同上 |
+| t-advisory-human-choice-boundaries | `:674` | 同上 |
+
+修正はこの 4 ピンの改訂を伴う。どれが「守るべき契約」でどれが「欠陥の固定」かの選別は requirements-analysis / application-design の所掌であり、RE では列挙に留める。あわせて t457（`:123` が #2890 後の option space を pin）と t459（`:192-231` が single spend を pin）が周辺契約を押さえている。
+
+### Q4. `recordAdvisoryChoice` の boolean 戻り値（本 Issue の直接の設計欠陥）
+
+`amadeus-advisory-choice.ts:866-` が `boolean` を返すため、`amadeus-orchestrate.ts:853-874` は「既 settled」「grant 無し」「park」「conflict」「receipt 拒否」を区別できない。fail-closed の意図（コメント `:838-845`）は正しいが、**成功しなかった理由の型が無いことが、正常系（既 settled）を異常系と同じ出口へ流している**。
+
+### Q5. 差分区間で観測したその他の負債（患部外）
+
+- `plugins/pr-convergence/tools/pr-convergence-cli.ts` の単一ファイル肥大（本区間 +569）。
+- `tests/.complexity-baseline.json` ±56 行（内訳は未確認 — **推測であり実測ではない**）。
+- `tests/.coverage-patch-allowlist.json` −2546 行（意味的セレクタ化による正味削減、#2902 系）。
+- reviewer-runtime に basename 証拠受理（`countPathTokenOccurrences` / `repositoryPathsForBasename` / `corroboratedFullPaths`）が追加され、証拠受理の裾野が広がった。
+- codekb 側の現在時制マーカー drift（`component-inventory.md:351` の `run_required` / `formal_checks`「実装済み」記述）は本 intent で履歴ラベルへ是正した（`cid:reverse-engineering:c1`）。`re-scans/260810-tla-applicability-wiring.md:78` は当時の断面の記録であり、履歴ファイルとして保持する。
+
 ## coverage 免除台帳の意味論が無検査 — 解決 fail-closed / 意味 fail-open の非対称（260811-allowlist-semantic-audit、履歴、observed `854692fd7`）
 
 **観測 ref**: すべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD）。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（34 commits）。正本は `re-scans/260811-allowlist-semantic-audit.md`。
@@ -42,7 +77,7 @@ Issue #1622 起票時の「約272件」、クロスレビュー時点（2026-07-
 
 全数照合は未実施であり、確定 18 件は**下限**である。`findStaleAllowlistEntries` の実行結果（現行 stale 件数）は LCOV を要するため未測定。転位の双方向の実害（偽赤 / 偽緑の件数）も未定量。詳細は `re-scans/260811-allowlist-semantic-audit.md` § UNMEASURED。
 
-## TLA+ receipt 経路の品質所見（260812-tla-proof-receipt、現在、observed `854692fd7`）
+## TLA+ receipt 経路の品質所見（260812-tla-proof-receipt、履歴、observed `854692fd7`）
 
 **観測 ref**: 本節の file:line はすべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD）時点。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（距離 34）。正本は `re-scans/260812-tla-proof-receipt.md`。
 
