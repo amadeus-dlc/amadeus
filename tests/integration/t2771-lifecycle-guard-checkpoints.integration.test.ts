@@ -520,6 +520,59 @@ describe("workflow-completion checkpoint", () => {
     expect(decision.refusal.audit).toBeUndefined();
   });
 
+  test("not-applicable: a prepared completion is not judged while the Intent mirror is off", () => {
+    // The preparation policy's mirror-off arm: with the mirror configured off
+    // there is no boundary to settle, so the policy declines the question
+    // instead of refusing the completion.
+    const pd = tempProject();
+    const intentDir = "260814-guard-runtime-abcd1234";
+    const recordDir = join(pd, "amadeus", "spaces", "default", "intents", intentDir);
+    mkdirSync(recordDir, { recursive: true });
+    writeFileSync(join(recordDir, "amadeus-state.md"), completionState({ prepared: true }));
+    writeFileSync(
+      join(pd, "amadeus", "config.json"),
+      `${JSON.stringify({ "intent-mirror": { github: { issue: { mode: "off" } } } }, null, 2)}\n`,
+    );
+    const decision = preparationDecision(
+      preparationContext({
+        pd,
+        content: completionState({ prepared: true }),
+        requestedInstance: "terminal:build-and-test",
+      }),
+    );
+    const prepared = decision.evaluations.find(
+      (e) => e.policyId === "workflow-completion.prepared",
+    );
+    expect(prepared?.verdict).toEqual({
+      kind: "not-applicable",
+      reason: "the Intent mirror is off",
+    });
+  });
+
+  test("unknown: the Goal receipt policy answers an unresolved record on its own", () => {
+    // Evaluated as the lone adapter: in the full registry the record-resolution
+    // policy denies first, so this arm of the Goal receipt policy is only
+    // reachable when that policy is not in the registry ahead of it.
+    const pd = tempProject();
+    const goalReceiptOnly = WORKFLOW_COMPLETION_AUTHORIZATION_GUARDS.filter(
+      (guard) => guard.id === "workflow-completion.goal-receipt",
+    );
+    expect(goalReceiptOnly).toHaveLength(1);
+    const decision = blocked(
+      evaluateLifecycleGuards<WorkflowAuthorizationGuardContext, GoalReconciliationReceipt>({
+        checkpoint: "workflow-completion",
+        targetRevision: "workflow:build-and-test@terminal:build-and-test",
+        adapters: goalReceiptOnly,
+        context: authorizationContext({ pd, recordDir: null }),
+      }),
+    );
+    expect(decision.policyId).toBe("workflow-completion.goal-receipt");
+    expect(decision.blockingKind).toBe("unknown");
+    expect(decision.refusal.reason).toBe(
+      "Goal reconciliation refused completion: Intent record is unresolved",
+    );
+  });
+
   test("unknown / exception: a probe that cannot answer blocks the completion", () => {
     const pd = tempProject();
     const decision = blocked(
@@ -606,6 +659,16 @@ describe("intent-birth checkpoint", () => {
     expect(decision.refusal.reason).toBe('Reserved intent name "help" cannot be created.');
     expect(decision.refusal.recovery).toBe("Choose a non-help intent name.");
     expect(decision.refusal.audit).toBe("none");
+  });
+
+  test("denied: an invalid --repos entry is refused before anything is minted", () => {
+    const pd = tempProject();
+    const decision = blocked(
+      birthDecision(birthContext({ projectDir: pd, flags: { repos: "../escape" } })),
+    );
+    expect(decision.policyId).toBe("intent-birth.repo-set");
+    expect(decision.blockingKind).toBe("denied");
+    expect(decision.refusal.reason).toContain('Invalid --repos entry "../escape"');
   });
 
   test("allowed: the workspace scan hands its classified snapshot to the birth pipeline", () => {

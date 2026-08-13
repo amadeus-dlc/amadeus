@@ -2662,15 +2662,15 @@ function evaluateStageArtifacts(context: StageCompletionGuardContext): Lifecycle
   if (artifactGuardDisabled()) return guardNotApplicable("AMADEUS_SKIP_ARTIFACT_GUARD is set");
 
   if (!producesArtifactsExist(pd, stage)) {
-    return guardDenied({
-      reason:
-        `Refusing to complete "${stage.slug}": one or more missing required artifacts ` +
-        `under the intent's record directory. The stage protocol requires ${stage.name} ` +
-        `to produce output before the gate.`,
-      recovery:
-        "Produce the artifacts before completing. " +
-        `(declared: ${(stage.produces ?? []).join(", ") || "none"})`,
-    });
+    // Built one statement per line rather than as a multi-line argument: a
+    // continuation line of a single expression carries no DA record of its own
+    // under bun's union merge, so the patch gate reads it as never executed.
+    let reason = `Refusing to complete "${stage.slug}": one or more missing required artifacts `;
+    reason += `under the intent's record directory. The stage protocol requires ${stage.name} `;
+    reason += "to produce output before the gate.";
+    let recovery = "Produce the artifacts before completing. ";
+    recovery += `(declared: ${(stage.produces ?? []).join(", ") || "none"})`;
+    return guardDenied({ reason, recovery });
   }
 
   if (stage.workspace_requires && !workspaceHasWork(pd)) {
@@ -2684,17 +2684,15 @@ function evaluateStageArtifacts(context: StageCompletionGuardContext): Lifecycle
     const dirName = stateOperationTarget?.intent ?? activeIntent(pd);
     const declaration = dirName ? docsOnlyDeclaration(pd, dirName) : null;
     if (!declaration) {
-      return guardDenied({
-        reason:
-          `Refusing to complete "${stage.slug}": it is a code-producing stage ` +
-          `(workspace_requires) but no source work is evident outside the amadeus/ ` +
-          `workspace tree. In a git workspace this means no uncommitted change and no ` +
-          `code in the last commit; otherwise no source file exists. Planning docs alone ` +
-          `do not satisfy ${stage.name} - write the code to the workspace.`,
-        recovery:
-          "If this Intent's produces are genuinely record-internal documents only, " +
-          'declare it first: amadeus-state.ts declare-docs-only --evidence "<approval reference>".',
-      });
+      // One statement per line, for the same DA-record reason as above.
+      let reason = `Refusing to complete "${stage.slug}": it is a code-producing stage `;
+      reason += "(workspace_requires) but no source work is evident outside the amadeus/ ";
+      reason += "workspace tree. In a git workspace this means no uncommitted change and no ";
+      reason += "code in the last commit; otherwise no source file exists. Planning docs alone ";
+      reason += `do not satisfy ${stage.name} - write the code to the workspace.`;
+      let recovery = "If this Intent's produces are genuinely record-internal documents only, ";
+      recovery += 'declare it first: amadeus-state.ts declare-docs-only --evidence "<approval reference>".';
+      return guardDenied({ reason, recovery });
     }
     emitAudit(pd, "GUARD_EXEMPTED", {
       Stage: stage.slug,
@@ -3231,10 +3229,7 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
   // splits by audit disposition — a receipt that has not settled is a waiting
   // state the workflow recovers from (the engine's await-completion directive,
   // no ERROR_LOGGED row), everything else is a genuine failure.
-  const authorization = evaluateLifecycleGuards<
-    WorkflowAuthorizationGuardContext,
-    GoalReconciliationReceipt
-  >({
+  const authorization = evaluateLifecycleGuards<WorkflowAuthorizationGuardContext, GoalReconciliationReceipt>({
     checkpoint: "workflow-completion",
     targetRevision: `workflow:${completedSlug}@${completionInstance}`,
     adapters: WORKFLOW_COMPLETION_AUTHORIZATION_GUARDS,

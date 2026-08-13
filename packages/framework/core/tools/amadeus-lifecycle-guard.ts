@@ -196,14 +196,18 @@ function evaluateAdapter<C, P>(
   }
 }
 
-export function evaluateLifecycleGuards<C, P = never>(input: {
+export interface EvaluateLifecycleGuardsInput<C, P> {
   readonly checkpoint: LifecycleCheckpoint;
   // What is being judged, at the revision it is being judged at. Named in the
   // evidence of an evaluation the runtime could not complete.
   readonly targetRevision: string;
   readonly adapters: readonly LifecycleGuardAdapter<C, P>[];
   readonly context: C;
-}): LifecycleGuardDecision<P> {
+}
+
+export function evaluateLifecycleGuards<C, P = never>(
+  input: EvaluateLifecycleGuardsInput<C, P>,
+): LifecycleGuardDecision<P> {
   const { checkpoint, targetRevision, context } = input;
   const evaluations: LifecycleGuardEvaluation<P>[] = [];
   for (const adapter of orderAdapters(input.adapters)) {

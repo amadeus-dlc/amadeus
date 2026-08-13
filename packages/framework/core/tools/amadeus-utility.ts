@@ -4581,10 +4581,7 @@ export function handleIntentBirth(projectDir: string, flags: Record<string, stri
     // Only a `classified` scan proceeds into the birth pipeline, and its exact
     // strings/observations are threaded to handleIntentBirthStateBuild so the
     // scan is projected once.
-    const scanDecision = evaluateLifecycleGuards<
-      WorkspaceScanGuardContext,
-      ClassifiedWorkspaceScan
-    >({
+    const scanDecision = evaluateLifecycleGuards<WorkspaceScanGuardContext, ClassifiedWorkspaceScan>({
       checkpoint: "intent-birth",
       targetRevision: `intent:${slugSource}`,
       adapters: INTENT_BIRTH_WORKSPACE_GUARDS,
