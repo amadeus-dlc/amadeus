@@ -151,11 +151,33 @@ export type AdvisoryChoiceDirectiveItem = {
 
 export type AdvisoryChoiceGuardResult =
   | { kind: "allow" }
+  // Unanswered. The choice question is still open, so this is what becomes a
+  // ladder offer and then, failing that, a question for the human.
   | {
       kind: "hold";
       stage: string;
       advisories: AdvisoryChoiceDirectiveItem[];
+    }
+  // Answered `run-now`, and still held (#2967). The receipt settles the QUESTION;
+  // it releases nothing, because only the declaring plugin's evaluator returning
+  // no-hold does that (BR-U2-05). Collapsing this into `hold` is what let the
+  // engine re-offer a decided advisory to the ladder and, when single-spend
+  // refused the duplicate receipt, re-ask the human. The destination each
+  // advisory named is on its `handoff_stage`.
+  | {
+      kind: "handoff";
+      stage: string;
+      advisories: AdvisoryChoiceDirectiveItem[];
     };
+
+// The outcome of accepting a choice, typed so a caller can tell a settled
+// advisory from a refused one (#2967 FR-ADV-4). `recorded` and `already-settled`
+// both mean a live receipt for THIS choice exists; only `refused` means the
+// advisory is still unanswered.
+export type AdvisoryChoiceRecordOutcome =
+  | { kind: "recorded"; receipts: AdvisoryChoiceReceipt[] }
+  | { kind: "already-settled"; receipts: AdvisoryChoiceReceipt[] }
+  | { kind: "refused"; reason: string };
 
 const STORE_FILE = ".amadeus-advisory-choice.json";
 const CHOICES = new Set<string>(ADVISORY_CHOICE_OPTIONS.map((option) => option.choice));
@@ -695,7 +717,7 @@ function resolveRunRequiredHold(
     return { kind: "allow" };
   }
   return {
-    kind: "hold",
+    kind: "handoff",
     stage,
     advisories: directiveItems,
   };
@@ -859,29 +881,41 @@ function autoDecidedPendings(
   );
 }
 
+// The receipts a provenance has already written, so a repeat call can be told
+// apart from a first one. Same spend key the single-spend gate uses.
+function receiptsSpentBy(
+  receipts: readonly AdvisoryChoiceReceipt[],
+  provenance: AdvisoryChoiceProvenance,
+): AdvisoryChoiceReceipt[] {
+  const key = provenanceSpendKey(provenance);
+  return receipts.filter((receipt) => provenanceSpendKey(receipt.provenance) === key);
+}
+
 // The ONE acceptance function (#2253 FR-ADV-3). Both provenance kinds clear the
 // same three checks at the same depth; only what counts as evidence differs.
 // There is no second function for the unattended route, so there is no way for
 // one route's guarantees to drift away from the other's.
+//
+// The outcome is typed rather than boolean (#2967 FR-ADV-4): a repeat of a
+// choice this provenance already wrote is `already-settled`, not a refusal. The
+// engine's caller reads that distinction — a `false` there meant "ask the human",
+// which turned a settled advisory back into a question.
 export function recordAdvisoryChoice(
   projectDir: string,
   choice: AdvisoryChoice,
   provenance: AdvisoryChoiceProvenance,
   now: string = new Date().toISOString(),
-): boolean {
+): AdvisoryChoiceRecordOutcome {
   return withAuditLock(projectDir, () => {
     const storeResult = readStore(projectDir);
-    if (!storeResult.ok) return false;
+    if (!storeResult.ok) return { kind: "refused", reason: storeResult.reason };
     const store = storeResult.value;
-    if (provenance.kind === "human-turn" && provenance.shard !== auditShardName(projectDir)) return false;
-    // Single spend, hoisted ahead of the kind-specific checks so it holds across
-    // provenance kinds (FR-ADV-3): one decision, or one turn, is spent once. What
-    // that spend settles is decided below and differs by kind — a turn covers the
-    // batch it was shown, a decision covers the occurrence it names.
-    if (advisoryProvenanceAlreadySpent(store.receipts, provenance)) return false;
-    // The instance-level gate, also ahead of the kind-specific checks: an
-    // advisory already answered does not accept a second answer from EITHER
-    // route until its own evidence says the answer did not settle it.
+    if (provenance.kind === "human-turn" && provenance.shard !== auditShardName(projectDir)) {
+      return { kind: "refused", reason: "the human turn belongs to another audit shard" };
+    }
+    // The instance-level gate: an advisory already answered does not accept a
+    // second answer from EITHER route until its own evidence says the answer did
+    // not settle it.
     const open = store.pending.filter(
       (pending) =>
         pending.closedAt === undefined &&
@@ -889,30 +923,63 @@ export function recordAdvisoryChoice(
           Math.floor(Date.parse(provenance.timestamp) / 1000) >= Math.floor(Date.parse(pending.createdAt) / 1000)) &&
         acceptsFreshChoice(pending, store.receipts),
     );
-    if (open.length === 0) return false;
+    // Single spend (FR-ADV-3): one decision, or one turn, is spent once. What
+    // that spend settles is decided below and differs by kind — a turn covers the
+    // batch it was shown, a decision covers the occurrence it names.
+    //
+    // Spent already splits three ways (#2967 FR-ADV-4), and the split is what
+    // keeps the idempotent case from becoming fail-open. It is `already-settled`
+    // only when this provenance wrote THIS choice and nothing it could still
+    // answer is left open — a pure replay of the pass that already succeeded.
+    // Anything still open means the spend does not cover it, and a second spend
+    // is exactly what single-spend forbids, so that is a refusal rather than a
+    // free pass.
+    const spent = receiptsSpentBy(store.receipts, provenance);
+    if (spent.length > 0) {
+      if (!spent.every((receipt) => receipt.choice === choice)) {
+        return {
+          kind: "refused",
+          reason: `this provenance already recorded a different choice: ${spent.map((receipt) => receipt.choice).join(", ")}`,
+        };
+      }
+      return open.length === 0
+        ? { kind: "already-settled", receipts: spent }
+        : {
+            kind: "refused",
+            reason: "this provenance is already spent and does not settle the still-open advisories",
+          };
+    }
+    if (open.length === 0) {
+      return { kind: "refused", reason: "no open advisory accepts a fresh choice from this provenance" };
+    }
     // What the evidence settles, not merely that it is valid. A human turn
     // answers the advisories it was shown together, so its settled set stays the
     // adjacent batch; a ladder decision names one occurrence, so its settled set
     // is that occurrence alone (#2479).
     let settled: readonly PendingAdvisory[] = open;
     if (provenance.kind === "human-turn") {
-      if (!isGroundedHumanTurn(projectDir, provenance)) return false;
-      if (!hasMatchingAdvisoryPresentation(projectDir, open, provenance)) return false;
+      if (!isGroundedHumanTurn(projectDir, provenance)) {
+        return { kind: "refused", reason: "the human turn is not grounded in the audit trail" };
+      }
+      if (!hasMatchingAdvisoryPresentation(projectDir, open, provenance)) {
+        return { kind: "refused", reason: "no protected presentation precedes this human turn" };
+      }
     } else {
       settled = autoDecidedPendings(projectDir, provenance, open);
-      if (settled.length === 0) return false;
+      if (settled.length === 0) {
+        return { kind: "refused", reason: "the decision names no open advisory occurrence" };
+      }
     }
-    for (const pending of settled) {
-      store.receipts.push({
-        schema: 2,
-        identity: pending.identity,
-        choice,
-        provenance,
-        recordedAt: now,
-      });
-    }
+    const written: AdvisoryChoiceReceipt[] = settled.map((pending) => ({
+      schema: 2,
+      identity: pending.identity,
+      choice,
+      provenance,
+      recordedAt: now,
+    }));
+    store.receipts.push(...written);
     writeStore(projectDir, store);
-    return true;
+    return { kind: "recorded", receipts: written };
   });
 }
 

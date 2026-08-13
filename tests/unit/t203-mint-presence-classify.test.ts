@@ -193,7 +193,9 @@ describe("t203: mint-presence classifies stdin before minting HUMAN_TURN (#708)"
 
     expect(humanTurnCount(proj)).toBe(1);
     expect(advisoryReceipts(proj)).toHaveLength(1);
-    expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]).kind).toBe("hold");
+    // The hold stands, now as the settled `handoff` verdict (#2967): the choice
+    // is on the record, so it is no longer a question.
+    expect(guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]).kind).toBe("handoff");
   });
 
   test.each(["2", "リスクを承知して延期する"])(
@@ -227,7 +229,7 @@ describe("t203: mint-presence classifies stdin before minting HUMAN_TURN (#708)"
     presentPendingAdvisory(proj, "functional-design");
     expect(mint(proj, hookInput("今すぐ実行する"))).toBe(0);
     const held = guardAdvisoryChoices(proj, "functional-design", [formalAdvisory]);
-    if (held.kind !== "hold") throw new Error("expected plugin-owned hold");
+    if (held.kind !== "handoff") throw new Error("expected plugin-owned hold");
     expect(held.advisories[0]?.advisory_instance).toBe(first.advisories[0]?.advisory_instance);
     expect(held.advisories[0]?.result).toContain("plugin's own evaluator");
     expect(advisoryReceipts(proj).map((receipt) => receipt.choice)).toEqual(["run-now"]);

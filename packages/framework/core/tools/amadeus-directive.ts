@@ -43,6 +43,7 @@ export type DirectiveKind =
   | "run-stage"
   | "dispatch-subagent"
   | "await-advisory-choice"
+  | "execute-advisory-handoff"
   | "invoke-swarm"
   | "present-gate"
   | "ask"
@@ -233,6 +234,24 @@ export interface AwaitAdvisoryChoiceDirective {
   advisories: AdvisoryChoiceDirectiveAdvisory[];
 }
 
+// execute-advisory-handoff — the advisories at `stage` were already answered
+// `run-now` and the hold still stands (#2967). There is no question left to ask,
+// so this directive carries WORK: open each stage in `handoff_stages` with
+// `--stage <slug> --single`, then re-run `next`. It is not a release — the hold
+// lifts only when the declaring plugin's evaluator returns no-hold — and it is
+// never presented as a choice, because the choice is already on the record.
+//
+// `handoff_stages` is the deduplicated, array-ordered projection of the
+// `advisories[].handoff_stage` values. It may be EMPTY: an advisory whose
+// declaration names no destination has nothing to open, and the conductor's
+// contract for that case is to report the standing hold rather than loop.
+export interface ExecuteAdvisoryHandoffDirective {
+  kind: "execute-advisory-handoff";
+  stage: string;
+  handoff_stages: string[];
+  advisories: AdvisoryChoiceDirectiveAdvisory[];
+}
+
 // dispatch-subagent — same as run-stage, but the stage runs via a Task call to
 // a named worker (e.g. code-generation, reverse-engineering). Carries every
 // run-stage field PLUS `worker` (the named worker the conductor Tasks).
@@ -390,6 +409,7 @@ export type Directive =
   | RunStageDirective
   | DispatchSubagentDirective
   | AwaitAdvisoryChoiceDirective
+  | ExecuteAdvisoryHandoffDirective
   | InvokeSwarmDirective
   | PresentGateDirective
   | AskDirective
@@ -414,6 +434,7 @@ export const VALID_KINDS = [
   "run-stage",
   "dispatch-subagent",
   "await-advisory-choice",
+  "execute-advisory-handoff",
   "invoke-swarm",
   "present-gate",
   "ask",
@@ -481,6 +502,8 @@ const AWAIT_ADVISORY_CHOICE_FIELDS = [
   "advisories",
 ] as const;
 
+const EXECUTE_ADVISORY_HANDOFF_FIELDS = ["kind", "stage", "handoff_stages", "advisories"] as const;
+
 const INVOKE_SWARM_FIELDS = ["kind", "units", "cap", "repo", "prepared_batch", "retry_unit"] as const;
 const PRESENT_GATE_FIELDS = ["kind", "stage", "phase", "memory_path"] as const;
 const ASK_FIELDS = ["kind", "question"] as const;
@@ -503,6 +526,7 @@ const KNOWN_FIELDS_BY_KIND: Readonly<Record<DirectiveKind, readonly string[]>> =
   "run-stage": RUN_STAGE_FIELDS,
   "dispatch-subagent": DISPATCH_SUBAGENT_FIELDS,
   "await-advisory-choice": AWAIT_ADVISORY_CHOICE_FIELDS,
+  "execute-advisory-handoff": EXECUTE_ADVISORY_HANDOFF_FIELDS,
   "invoke-swarm": INVOKE_SWARM_FIELDS,
   "present-gate": PRESENT_GATE_FIELDS,
   ask: ASK_FIELDS,
@@ -556,6 +580,7 @@ const FIELD_CHECKS_BY_KIND: Readonly<Record<DirectiveKind, DirectiveFieldCheck>>
     checkString(o, "worker", "dispatch-subagent", errors);
   },
   "await-advisory-choice": (o, errors) => checkAwaitAdvisoryChoice(o, errors),
+  "execute-advisory-handoff": (o, errors) => checkExecuteAdvisoryHandoff(o, errors),
   "invoke-swarm": (o, errors) => {
     checkStringArray(o, "units", "invoke-swarm", errors);
     if (!("cap" in o)) {
@@ -769,27 +794,19 @@ function checkAwaitApproval(
   }
 }
 
-function checkAwaitAdvisoryChoice(
+// The two advisory directives share the item shape and differ in everything
+// else, so the item check is shared and the surrounding rules are not.
+function checkAdvisoryItems(
   o: Record<string, unknown>,
+  kind: "await-advisory-choice" | "execute-advisory-handoff",
   errors: string[],
 ): void {
-  checkString(o, "stage", "await-advisory-choice", errors);
-  checkString(o, "question", "await-advisory-choice", errors);
-  checkStringArray(o, "options", "await-advisory-choice", errors);
-  if (
-    !Array.isArray(o.options) ||
-    o.options.length !== 2 ||
-    o.options[0] !== "今すぐ実行する" ||
-    o.options[1] !== "リスクを承知して延期する"
-  ) {
-    errors.push("await-advisory-choice: options must be the canonical two choices");
-  }
   if (!Array.isArray(o.advisories) || o.advisories.length === 0) {
-    errors.push("await-advisory-choice: advisories must be a non-empty array");
+    errors.push(`${kind}: advisories must be a non-empty array`);
     return;
   }
   o.advisories.forEach((item, index) => {
-    const prefix = `await-advisory-choice: advisories[${index}]`;
+    const prefix = `${kind}: advisories[${index}]`;
     if (!isPlainObject(item)) {
       errors.push(`${prefix} must be object, got ${describe(item)}`);
       return;
@@ -817,6 +834,60 @@ function checkAwaitAdvisoryChoice(
       errors.push(`${prefix}.handoff_stage must be non-empty string, got ${describe(item.handoff_stage)}`);
     }
   });
+}
+
+// #2967. `handoff_stages` is a PROJECTION of the advisories, so the validator
+// checks that relationship rather than the array alone: a stage the advisories
+// do not name would send the conductor somewhere nothing asked for, and a named
+// stage left out would silently drop the work. An empty array is legitimate —
+// advisories may declare no destination — so emptiness is not an error here.
+function checkExecuteAdvisoryHandoff(
+  o: Record<string, unknown>,
+  errors: string[],
+): void {
+  checkString(o, "stage", "execute-advisory-handoff", errors);
+  checkStringArray(o, "handoff_stages", "execute-advisory-handoff", errors);
+  checkAdvisoryItems(o, "execute-advisory-handoff", errors);
+  if (!Array.isArray(o.handoff_stages) || !Array.isArray(o.advisories)) return;
+  const declared = new Set(
+    o.advisories.flatMap((item) =>
+      isPlainObject(item) && typeof item.handoff_stage === "string" ? [item.handoff_stage] : []
+    ),
+  );
+  const seen = new Set<string>();
+  for (const stage of o.handoff_stages) {
+    if (typeof stage !== "string") continue;
+    if (!declared.has(stage)) {
+      errors.push(`execute-advisory-handoff: handoff_stages names ${stage}, which no advisory declares`);
+    }
+    if (seen.has(stage)) {
+      errors.push(`execute-advisory-handoff: handoff_stages repeats ${stage}`);
+    }
+    seen.add(stage);
+  }
+  for (const stage of declared) {
+    if (!seen.has(stage)) {
+      errors.push(`execute-advisory-handoff: handoff_stages omits declared stage ${stage}`);
+    }
+  }
+}
+
+function checkAwaitAdvisoryChoice(
+  o: Record<string, unknown>,
+  errors: string[],
+): void {
+  checkString(o, "stage", "await-advisory-choice", errors);
+  checkString(o, "question", "await-advisory-choice", errors);
+  checkStringArray(o, "options", "await-advisory-choice", errors);
+  if (
+    !Array.isArray(o.options) ||
+    o.options.length !== 2 ||
+    o.options[0] !== "今すぐ実行する" ||
+    o.options[1] !== "リスクを承知して延期する"
+  ) {
+    errors.push("await-advisory-choice: options must be the canonical two choices");
+  }
+  checkAdvisoryItems(o, "await-advisory-choice", errors);
 }
 
 // --- Helpers (mirror amadeus-stage-schema.ts: presence first, then type) ---

@@ -101,9 +101,18 @@ state-transition tools directly.
   verdict-only `report`. For a resume question, pass the resolved answer through
   `report --user-input "<resolved answer>"`. When another question names a
   continuation command, run that exact command once.
-- `await-advisory-choice`: if `directive.run_required === true`, execute every
-  `directive.formal_checks[].command` exactly as supplied and re-run `next`; do
-  not call `report`. Otherwise run
+- `execute-advisory-handoff`: the advisories at `directive.stage` were already
+  answered `run-now` — the choice is on the record, so do NOT present a
+  question. Run `/amadeus --stage <slug> --single` once for each slug in
+  `directive.handoff_stages`, in array order, then re-run `next`; do not call
+  `report`. If `directive.handoff_stages` is empty, no advisory names a
+  destination: report the standing hold using each
+  `directive.advisories[].message` and `directive.advisories[].result`, and
+  stop. Opening a handoff stage never releases the hold — the hold lifts only
+  when the declaring plugin's own evaluator returns no-hold on a later `next`.
+- `await-advisory-choice`: this is the human question route only; an advisory
+  that already carries its answer arrives as `execute-advisory-handoff`
+  instead. Run
   `bun .pi/tools/amadeus-log.ts advisory-decision --stage "<directive.stage>" --instances "<directive.advisories[].advisory_instance joined by comma in array order>"`
   first, then render `directive.question` and its two `directive.options` as
   numbered prose using `question-rendering.md`, and end the turn. On the answer

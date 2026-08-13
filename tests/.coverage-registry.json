@@ -7145,6 +7145,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/integration/t2851-doctor-self-install-freshness.serial.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/unit/t103.test.ts",
           "mechanism": "cli"
         },

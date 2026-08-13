@@ -187,7 +187,7 @@ describe("advisory auto-resolution: authorized (FR-ADV-1)", () => {
       projectionRevision: resolution.projectionRevision,
       phase: PHASE,
       graphRevision: GRAPH,
-    })).toBe(true);
+    }).kind).toBe("recorded");
 
     const receipts = readStore(projectDir).receipts;
     expect(receipts).toHaveLength(1);
@@ -200,8 +200,10 @@ describe("advisory auto-resolution: authorized (FR-ADV-1)", () => {
     // The choice itself is settled, but the plugin still raises the advisory.
     // The host therefore keeps the hold without inventing a plugin command.
     const after = guardAdvisoryChoices(projectDir, STAGE, [advisory]);
-    expect(after.kind).toBe("hold");
-    if (after.kind !== "hold") return;
+    // The hold stands under the settled `handoff` verdict (#2967): a decided
+    // advisory is never re-offered to the ladder or re-asked of the human.
+    expect(after.kind).toBe("handoff");
+    if (after.kind !== "handoff") return;
     expect(after.advisories[0]?.result).toContain("plugin's own evaluator");
   });
 
@@ -233,7 +235,7 @@ describe("advisory auto-resolution: authorized (FR-ADV-1)", () => {
       projectionRevision: resolution.projectionRevision,
       phase: PHASE,
       graphRevision: GRAPH,
-    })).toBe(true);
+    }).kind).toBe("recorded");
 
     // One decision, one receipt — and it names the advisory the decision was about.
     const receipts = readStore(projectDir).receipts;
@@ -280,7 +282,7 @@ describe("advisory auto-resolution: unauthorized (FR-ADV-2 fail-closed)", () => 
       projectionRevision: 1,
       phase: PHASE,
       graphRevision: GRAPH,
-    })).toBe(false);
+    }).kind).toBe("refused");
     expect(readStore(projectDir).receipts).toHaveLength(0);
   });
 
@@ -307,7 +309,7 @@ describe("advisory auto-resolution: unauthorized (FR-ADV-2 fail-closed)", () => 
       projectionRevision: resolution.projectionRevision,
       phase: "inception",
       graphRevision: GRAPH,
-    })).toBe(false);
+    }).kind).toBe("refused");
     expect(readStore(projectDir).receipts).toHaveLength(0);
   });
 });
@@ -322,7 +324,7 @@ describe("advisory auto-resolution: provenance crossing (FR-ADV-3)", () => {
     expect(recordAdvisoryChoice(projectDir, "defer-with-risk", {
       kind: "human-turn",
       ...plantHumanTurn(projectDir),
-    })).toBe(true);
+    }).kind).toBe("recorded");
     expect(readStore(projectDir).receipts).toHaveLength(1);
 
     const resolution = resolveAdvisoryChoiceAutonomously({
@@ -340,7 +342,7 @@ describe("advisory auto-resolution: provenance crossing (FR-ADV-3)", () => {
         projectionRevision: resolution.projectionRevision,
         phase: PHASE,
         graphRevision: GRAPH,
-      })).toBe(false);
+      }).kind).toBe("refused");
     }
     expect(readStore(projectDir).receipts).toHaveLength(1);
   });
@@ -369,7 +371,7 @@ describe("advisory auto-resolution: schema 1 store (ADR-9)", () => {
       projectionRevision: 1,
       phase: PHASE,
       graphRevision: GRAPH,
-    })).toBe(false);
+    }).kind).toBe("refused");
   });
 });
 
@@ -389,7 +391,7 @@ describe("advisory auto-resolution: unreadable autonomy journal (fail-closed)", 
       projectionRevision: 1,
       phase: PHASE,
       graphRevision: GRAPH,
-    })).toBe(false);
+    }).kind).toBe("refused");
     expect(readStore(projectDir).receipts).toHaveLength(0);
   });
 

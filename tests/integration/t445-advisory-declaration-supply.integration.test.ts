@@ -47,9 +47,12 @@ function recordAdvisoryChoiceViaPrompt(
 ): boolean {
   const choice = choiceFromExactPrompt(prompt);
   if (choice === null) return false;
-  return now === undefined
+  // True only when a receipt was WRITTEN, which is what this boolean has always
+  // meant; an already-settled replay stays false here (#2967 FR-ADV-4).
+  const outcome = now === undefined
     ? recordAdvisoryChoice(projectDir, choice, { kind: "human-turn", ...humanTurn })
     : recordAdvisoryChoice(projectDir, choice, { kind: "human-turn", ...humanTurn }, now);
+  return outcome.kind === "recorded";
 }
 
 
@@ -392,8 +395,9 @@ describe("declared advisory hold symmetry across next and report", () => {
     chooseAtCheckpoint(projectDir, "run-now");
 
     const guarded = guardAdvisoryChoices(projectDir, stage, [DECLARED_ADVISORY], hostRoot);
-    expect(guarded.kind).toBe("hold");
-    if (guarded.kind === "hold") {
+    // Still held, under the settled `handoff` verdict (#2967).
+    expect(guarded.kind).toBe("handoff");
+    if (guarded.kind === "handoff") {
       expect(guarded.advisories[0]?.result ?? "").toContain("no-hold");
     }
 

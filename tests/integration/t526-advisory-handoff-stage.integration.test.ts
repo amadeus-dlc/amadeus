@@ -104,8 +104,9 @@ describe("t526 declared advisory handoff stage", () => {
     chooseRunNow(projectDir);
 
     const guarded = guardAdvisoryChoices(projectDir, stage, [DECLARED_ADVISORY], hostRoot);
-    expect(guarded.kind).toBe("hold");
-    if (guarded.kind !== "hold") return;
+    // Still held, under the settled `handoff` verdict (#2967).
+    expect(guarded.kind).toBe("handoff");
+    if (guarded.kind !== "handoff") return;
     expect(guarded.advisories[0]?.handoff_stage).toBe("tla-authoring");
     // BR-U2-05 stands: the run-now route is an entry point into authoring, and
     // only the plugin's own evaluator returning no-hold releases the hold.
