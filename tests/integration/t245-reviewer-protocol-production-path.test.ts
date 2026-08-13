@@ -454,6 +454,86 @@ describe("t245 reviewer protocol production caller", () => {
     expect(local.output().stderr).toContain("<missing>");
   });
 
+  test("covers basename owner admission and rejection in-process", async () => {
+    const runtime = await import(
+      "../../packages/framework/core/tools/amadeus-reviewer-runtime.ts"
+    );
+    const check = (
+      prepare: (current: Fixture, local: ReturnType<typeof localRuntime>) => void,
+    ) => {
+      const current = fixture();
+      const local = localRuntime(current, current.directive);
+      prepare(current, local);
+      runtime.runReviewerCommand(["scope"], local.deps);
+      expect(local.output().exitCode).toBe(0);
+      local.replaceInput({
+        directive: current.directive,
+        invocationId: TEST_INVOCATION_ID,
+        iteration: 1,
+        transcript: [],
+        request: {
+          ...readRequest(current),
+          ownerEvidence: {
+            path: current.contract,
+            excerpt: local.files.get(join(current.root, current.contract))
+              ?.split("\n")[2],
+          },
+        },
+      });
+      runtime.runReviewerCommand(["check-read"], local.deps);
+      return local.output();
+    };
+
+    const admitted = check((current, local) => {
+      local.files.set(
+        join(current.root, current.contract),
+        "# Integration contract\n\nOwned implementation: integration-owned.ts.\n",
+      );
+      local.files.set(
+        join(current.root, (current.directive.consumes as string[])[0]),
+        `# Requirements\n\nINT-245 requires ${current.requested}.\n`,
+      );
+    });
+    expect(admitted.exitCode).toBe(0);
+
+    const selfReported = check((current, local) => {
+      local.files.set(
+        join(current.root, current.contract),
+        "# Integration contract\n\nOwned implementation: integration-owned.ts.\n",
+      );
+      local.files.set(
+        join(current.root, current.primary),
+        `# Code summary\n\nINT-245 requires ${current.requested}.\n`,
+      );
+    });
+    expect(selfReported.exitCode).toBe(1);
+    expect(selfReported.stderr).toContain(
+      "basename owner evidence requires one exact path corroboration",
+    );
+
+    const repeatedBasename = check((current, local) => {
+      local.files.set(
+        join(current.root, current.contract),
+        "# Integration contract\n\nOwned implementation: integration-owned.ts or integration-owned.ts.\n",
+      );
+    });
+    expect(repeatedBasename.exitCode).toBe(1);
+    expect(repeatedBasename.stderr).toContain(
+      "owner evidence does not uniquely match the requested path",
+    );
+
+    const inexactId = check((current, local) => {
+      local.files.set(
+        join(current.root, current.contract),
+        `# Integration contract\n\nINT-2450 owns ${current.requested}.\n`,
+      );
+    });
+    expect(inexactId.exitCode).toBe(1);
+    expect(inexactId.stderr).toContain(
+      "owner evidence does not uniquely match the requested path",
+    );
+  });
+
   test("rejects malformed scope and spot-check inputs in-process", async () => {
     const runtime = await import(
       "../../packages/framework/core/tools/amadeus-reviewer-runtime.ts"
