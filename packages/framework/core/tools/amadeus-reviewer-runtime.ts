@@ -421,12 +421,22 @@ function countOccurrences(content: string, needle: string): number {
   return content.split(needle).length - 1;
 }
 
-function countPathTokenOccurrences(content: string, token: string): number {
-  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const pattern = new RegExp(
-    `(^|[^A-Za-z0-9._/\\-])${escaped}(?=$|[^A-Za-z0-9._/\\-]|\\.(?=\\s|$))`,
-    "g",
+const PATH_TOKEN_CHARACTERS = "A-Za-z0-9._/\\-";
+const PATH_TOKEN_TRAILING_BOUNDARY = "\\.(?=\\s|$)";
+
+function escapeRegExpToken(token: string): string {
+  return token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function pathTokenPattern(body: string): string {
+  return (
+    `(^|[^${PATH_TOKEN_CHARACTERS}])${body}` +
+    `(?=$|[^${PATH_TOKEN_CHARACTERS}]|${PATH_TOKEN_TRAILING_BOUNDARY})`
   );
+}
+
+function countPathTokenOccurrences(content: string, token: string): number {
+  const pattern = new RegExp(pathTokenPattern(escapeRegExpToken(token)), "g");
   return [...content.matchAll(pattern)].length;
 }
 
@@ -455,7 +465,7 @@ function ownerMatchesForRequest(
 }
 
 function countIdentifierTokenOccurrences(content: string, token: string): number {
-  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escaped = escapeRegExpToken(token);
   const pattern = new RegExp(
     `(^|[^A-Za-z0-9_-])${escaped}(?=$|[^A-Za-z0-9_-])`,
     "g",
@@ -467,10 +477,9 @@ function repositoryPathsForBasename(
   content: string,
   requestedBasename: string,
 ): string[] {
-  const escaped = requestedBasename.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escaped = escapeRegExpToken(requestedBasename);
   const pattern = new RegExp(
-    `(^|[^A-Za-z0-9._/\\-])((?:[A-Za-z0-9._-]+/)+${escaped})` +
-      `(?=$|[^A-Za-z0-9._/\\-]|\\.(?=\\s|$))`,
+    pathTokenPattern(`((?:[A-Za-z0-9._-]+/)+${escaped})`),
     "g",
   );
   return [...content.matchAll(pattern)].map((match) => match[2]);
@@ -479,7 +488,6 @@ function repositoryPathsForBasename(
 function corroboratedFullPaths(
   directive: RunStageDirective,
   request: ReadRequest,
-  currentArtifacts: string[],
   requestedBasename: string,
   deps: ReviewerRuntimeDeps,
 ): Set<string> {
@@ -494,7 +502,6 @@ function corroboratedFullPaths(
       }
     }
   };
-  for (const content of currentArtifacts) collect(content);
   for (const path of directive.consumes) {
     if (onDisk(path, deps)) {
       collect(deps.fs.readFile(absolutePath(path, deps), "utf8"));
@@ -553,7 +560,6 @@ function canonicalDecision(
     const corroboratedPaths = corroboratedFullPaths(
       directive,
       request,
-      currentArtifacts,
       requestedBasename,
       deps,
     );

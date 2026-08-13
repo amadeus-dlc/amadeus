@@ -1247,6 +1247,37 @@ describe("t245 reviewer protocol production caller", () => {
     ].join("\n"));
   });
 
+  test("rejects basename corroboration reported only by a produced artifact", () => {
+    const current = fixture();
+    writeFileSync(
+      join(current.root, current.contract),
+      "# Integration contract\n\nOwned implementation: integration-owned.ts.\n",
+    );
+    writeFileSync(
+      join(current.root, current.primary),
+      `# Code summary\n\nINT-245 requires ${current.requested}.\n`,
+    );
+
+    const rejected = run(current, "check-read", {
+      directive: current.directive,
+      invocationId: issued(current),
+      iteration: 1,
+      transcript: [],
+      request: {
+        ...readRequest(current),
+        ownerEvidence: {
+          path: current.contract,
+          excerpt: "Owned implementation: integration-owned.ts.",
+        },
+      },
+    });
+
+    expect(rejected.status).toBe(1);
+    expect(rejected.stderr).toContain(
+      "basename owner evidence requires one exact path corroboration",
+    );
+  });
+
   test("rejects inexact integration ID and path tokens in full-path owner evidence", () => {
     const rejectExactOwner = (excerpt: string): void => {
       const current = fixture();
