@@ -163,6 +163,18 @@ import {
   workflowCompletionPreparation,
 } from "./amadeus-workflow-completion.ts";
 import type { GoalReconciliationReceipt } from "./amadeus-goal-reconciliation.ts";
+import {
+  evaluateLifecycleGuards,
+  formatGuardRefusal,
+  guardAllowed,
+  guardDenied,
+  guardNotApplicable,
+  guardReceipt,
+  guardUnknown,
+  type LifecycleGuardAdapter,
+  type LifecycleGuardDecision,
+  type LifecycleGuardVerdict,
+} from "./amadeus-lifecycle-guard.ts";
 
 // All valid checkbox states (lib.ts adds [?] awaiting-approval and [R] revising)
 const VALID_CHECKBOX_STATES: CheckboxState[] = [
@@ -250,6 +262,154 @@ export const MIRROR_BOUNDARY_PHASES = [
 export const PHASE_CHECK_REQUIRED_PHASES: ReadonlySet<string> = new Set(
   MIRROR_BOUNDARY_PHASES,
 );
+
+// ---------------------------------------------------------------------------
+// LIFECYCLE GUARD REGISTRIES (#2771). The built-in adapters this tool commits
+// behind, one frozen array per checkpoint. There is no registration API: a
+// project cannot remove a system-invariant guard, and the only user-space policy
+// that reaches a checkpoint arrives through an adapter that reads it (the
+// blocking-sensor policy and the project's sensor manifests).
+//
+// Declared at module top, ABOVE the `import.meta.main` dispatch, for the same
+// reason HARNESS_DOC_DIRS is: the dispatch runs at top level, so a const
+// declared lower in the file would be in its temporal dead zone when an
+// approve/advance dispatch reaches a guard. The `evaluate` members are function
+// declarations, which hoist, so each policy body still lives beside the code it
+// judges.
+// ---------------------------------------------------------------------------
+
+// Each context is read-only and carries no writer: an adapter receives what it
+// needs to judge a transition and no means to perform one.
+export type StageCompletionGuardContext = {
+  readonly pd: string;
+  readonly stage: VerifiableStage;
+};
+
+export type PhaseTransitionGuardContext = {
+  readonly pd: string;
+  readonly phase: string;
+};
+
+// Workflow completion is judged in two rounds, so it has two contexts: the
+// preparation round sees the state document, the authorization round sees the
+// resolved completion instance and Intent record.
+export type WorkflowPreparationGuardContext = {
+  readonly pd: string;
+  readonly content: string;
+  readonly completedSlug: string;
+  readonly requestedInstance: string | undefined;
+};
+
+export type WorkflowAuthorizationGuardContext = {
+  readonly pd: string;
+  readonly content: string;
+  readonly completedSlug: string;
+  readonly completionInstance: string;
+  readonly recordDir: string | null;
+};
+
+// FOUR handlers mark a stage [x] — approve, advance, finalize and
+// complete-workflow — each under its own lock, with no shared transition
+// function between them. A guard wired into only one of them leaves the other
+// three an unguarded rubber-stamp backdoor on the direct-CLI surface, so every
+// completion guard belongs in this array rather than at the individual call
+// sites (issue #2671 item (c) shipped the sensor gate on approve alone;
+// verifyStageCompletionGuards is the fix for that gap and this array is where
+// any fifth guard goes).
+//
+// Order is load-bearing and each layer asks a narrower question than the last:
+// the artifact policy answers "did the stage produce anything", then the review
+// policy asks whether that work was reviewed, and only then is "is the blocking
+// sensor's verdict on those artifacts clean" meaningful — a sensor complaint
+// about a stage that produced nothing names the wrong fault. The artifact-shaped
+// policies and the sensor policy carry independent bypass switches
+// (AMADEUS_SKIP_ARTIFACT_GUARD vs AMADEUS_SKIP_BLOCKING_SENSOR_GUARD): a fixture
+// that wants artifacts unchecked does not thereby want sensor verdicts
+// unchecked, so neither disables the other.
+export const STAGE_COMPLETION_GUARDS: readonly LifecycleGuardAdapter<StageCompletionGuardContext>[] =
+  Object.freeze([
+    {
+      id: "stage-completion.artifacts",
+      checkpoint: "stage-completion",
+      order: 10,
+      evaluate: evaluateStageArtifacts,
+    },
+    {
+      id: "stage-completion.unit-review",
+      checkpoint: "stage-completion",
+      order: 20,
+      evaluate: evaluateUnitReview,
+    },
+    {
+      id: "stage-completion.blocking-sensors",
+      checkpoint: "stage-completion",
+      order: 30,
+      evaluate: evaluateBlockingSensorGuard,
+    },
+  ]);
+
+// FIVE paths cross a phase boundary — advance, finalize, complete-workflow,
+// approve, and jump's forward crossing — and all of them evaluate this registry.
+export const PHASE_TRANSITION_GUARDS: readonly LifecycleGuardAdapter<PhaseTransitionGuardContext>[] =
+  Object.freeze([
+    {
+      id: "phase-transition.phase-check-artifact",
+      checkpoint: "phase-transition",
+      order: 10,
+      evaluate: evaluatePhaseCheckArtifact,
+    },
+  ]);
+
+// Workflow completion evaluates in two rounds because its context is built in
+// two steps: the preparation round judges the state document alone, then the
+// completion instance and the Intent record are resolved and the authorization
+// round judges those. Splitting the rounds keeps the order the handler had
+// before the migration — a prepared-completion mismatch is reported ahead of a
+// Goal receipt question about an instance that mismatch already invalidated.
+export const WORKFLOW_COMPLETION_PREPARATION_GUARDS: readonly LifecycleGuardAdapter<WorkflowPreparationGuardContext>[] =
+  Object.freeze([
+    {
+      id: "workflow-completion.prepared",
+      checkpoint: "workflow-completion",
+      order: 10,
+      evaluate: evaluatePreparedWorkflowCompletion,
+    },
+    {
+      id: "workflow-completion.mandatory-plugin-stages",
+      checkpoint: "workflow-completion",
+      order: 20,
+      evaluate: evaluateMandatoryPluginStages,
+    },
+  ]);
+
+export const WORKFLOW_COMPLETION_GOAL_RECEIPT_POLICY = "workflow-completion.goal-receipt";
+
+export const WORKFLOW_COMPLETION_AUTHORIZATION_GUARDS: readonly LifecycleGuardAdapter<
+  WorkflowAuthorizationGuardContext,
+  GoalReconciliationReceipt
+>[] = Object.freeze([
+  {
+    id: "workflow-completion.record-resolution",
+    checkpoint: "workflow-completion",
+    order: 10,
+    evaluate: evaluateCompletionRecordResolution,
+  },
+  {
+    id: WORKFLOW_COMPLETION_GOAL_RECEIPT_POLICY,
+    checkpoint: "workflow-completion",
+    order: 20,
+    evaluate: evaluateGoalReconciliationReceipt,
+  },
+]);
+
+// Refuse a state transition the Lifecycle Guard Runtime blocked. Every migrated
+// checkpoint funnels here, so the refusal shape is one decision: `error()` exits
+// before any writeStateFile, which is what makes an in-memory content flip
+// discardable rather than a half-written transition.
+function refuseBlockedTransition<P>(decision: LifecycleGuardDecision<P>): void {
+  if (decision.kind === "allowed") return;
+  error(formatGuardRefusal(decision.refusal));
+}
 export type MirrorBoundaryPhase = (typeof MIRROR_BOUNDARY_PHASES)[number];
 export type MirrorBoundaryReceiptStatus = "pending" | "completed";
 export type MirrorBoundaryReceipts = Partial<
@@ -382,30 +542,50 @@ export function transitionMirrorInitialCreateReceipt(
 }
 
 // Refuse a phase-boundary completion when `phase` requires a phase-check
-// artifact and it is missing. No-op for phases outside
+// artifact and it is missing. Not applicable for phases outside
 // PHASE_CHECK_REQUIRED_PHASES. Honors the same AMADEUS_SKIP_ARTIFACT_GUARD
-// bypass as verifyStageArtifacts (the shared test/emergency seam the suite sets
-// globally) so it participates in one documented off-switch rather than a second
-// one. Callers invoke it BEFORE writeStateFile; error() exits, so a refusal
-// leaves the state file untouched (the in-memory content flips are discarded).
-// Exported so amadeus-jump.ts reuses the identical gate on its forward crossing.
-export function verifyPhaseCheckArtifact(pd: string, phase: string): void {
-  if (artifactGuardDisabled()) return;
-  if (!PHASE_CHECK_REQUIRED_PHASES.has(phase)) return;
+// bypass as the stage-completion artifact policy (the shared test/emergency seam
+// the suite sets globally) so it participates in one documented off-switch
+// rather than a second one.
+function evaluatePhaseCheckArtifact(
+  context: PhaseTransitionGuardContext,
+): LifecycleGuardVerdict {
+  const { pd, phase } = context;
+  if (artifactGuardDisabled()) return guardNotApplicable("AMADEUS_SKIP_ARTIFACT_GUARD is set");
+  if (!PHASE_CHECK_REQUIRED_PHASES.has(phase)) {
+    return guardNotApplicable(`the "${phase}" phase declares no phase-check artifact`);
+  }
   const rec = operationRecordDir(pd);
   if (rec === null) {
     let msg = `Refusing to verify the "${phase}" phase boundary: no active intent record resolves, `;
     msg += `so there is nowhere to check for verification/phase-check-${phase}.md.`;
-    error(msg);
+    return guardDenied({ reason: msg });
   }
   const artifactPath = join(rec, "verification", `phase-check-${phase}.md`);
   if (!existsSync(artifactPath)) {
     let msg = `Refusing to complete the "${phase}" phase boundary: verification/phase-check-${phase}.md `;
     msg += `does not exist under the intent's record directory. The phase-boundary protocol requires `;
-    msg += `a phase-check artifact before PHASE_VERIFIED. Produce verification/phase-check-${phase}.md `;
-    msg += `before completing. (expected: ${artifactPath})`;
-    error(msg);
+    msg += `a phase-check artifact before PHASE_VERIFIED.`;
+    let recovery = `Produce verification/phase-check-${phase}.md `;
+    recovery += `before completing. (expected: ${artifactPath})`;
+    return guardDenied({ reason: msg, recovery });
   }
+  return guardAllowed();
+}
+
+// The phase-transition commit path. Callers invoke it BEFORE writeStateFile; a
+// refusal exits, so it leaves the state file untouched (the in-memory content
+// flips are discarded). Exported so amadeus-jump.ts reuses the identical
+// checkpoint on its forward crossing — the fifth authoritative transition.
+export function verifyPhaseCheckArtifact(pd: string, phase: string): void {
+  refuseBlockedTransition(
+    evaluateLifecycleGuards<PhaseTransitionGuardContext>({
+      checkpoint: "phase-transition",
+      targetRevision: `phase:${phase}`,
+      adapters: PHASE_TRANSITION_GUARDS,
+      context: { pd, phase },
+    }),
+  );
 }
 
 // `advance <completed> <next>` is a FORWARD-only transition: the caller has just
@@ -1832,14 +2012,31 @@ function blockingSensorIdsForStage(slug: string): string[] {
   return ids;
 }
 
-export function verifyBlockingSensors(pd: string, stage: { slug: string; name: string }): void {
-  if (blockingSensorGuardDisabled()) return;
+// The stage-completion blocking-sensor policy. This is the user-space seam of
+// the stage-completion checkpoint: the adapter is built-in and cannot be
+// removed, while WHICH sensors it judges comes from the project's own sensor
+// manifests through the compiled graph's sensors_applicable rows. A project that
+// registers no blocking sensor is resolved not-applicable and sees no change.
+// The sensor's own PASSED/FAILED truth table (amadeus-sensor.ts) is the policy
+// content of an individual guard and is left exactly as it was — the Runtime's
+// fail-closed rule governs aggregation, not what a sensor decides.
+function evaluateBlockingSensorGuard(
+  context: StageCompletionGuardContext,
+): LifecycleGuardVerdict {
+  const { pd, stage } = context;
+  if (blockingSensorGuardDisabled()) {
+    return guardNotApplicable("AMADEUS_SKIP_BLOCKING_SENSOR_GUARD is set");
+  }
   const blocking = blockingSensorIdsForStage(stage.slug);
-  if (blocking.length === 0) return;
+  if (blocking.length === 0) {
+    return guardNotApplicable(`no blocking sensor applies to "${stage.slug}"`);
+  }
   const rd = operationRecordDir(pd);
   const intentDate = rd === null ? null : Number.parseInt(basename(rd).slice(0, 6), 10);
   const enforced = intentDate !== null && Number.isFinite(intentDate) && intentDate >= BLOCKING_SENSOR_CUTOFF_YYMMDD;
-  if (!enforced) return;
+  if (!enforced) {
+    return guardNotApplicable(`the intent predates the ${BLOCKING_SENSOR_CUTOFF_YYMMDD} cutoff`);
+  }
   const finding = evaluateBlockingSensors(blocking, operationReadAudit(pd), stage.slug, (outputPath) => {
     try {
       const path = isAbsolute(outputPath) ? outputPath : join(pd, outputPath);
@@ -1848,24 +2045,26 @@ export function verifyBlockingSensors(pd: string, stage: { slug: string; name: s
       return null;
     }
   });
-  if (finding === null) return;
+  if (finding === null) return guardAllowed();
   if (finding.kind === "never-fired") {
     let message = `Refusing to complete "${stage.slug}": the blocking sensor `;
     message += `"${finding.sensorId}" has no SENSOR_FIRED row for this stage, so its verdict is `;
-    message += `unknown. A blocking sensor that never ran is not a pass. ${BLOCKING_SENSOR_REMEDY}`;
-    error(message);
+    message += "unknown. A blocking sensor that never ran is not a pass.";
+    return guardDenied({ reason: message, recovery: BLOCKING_SENSOR_REMEDY });
   }
   if (finding.kind === "stale") {
-    error(
-      `Refusing to complete "${stage.slug}": the blocking sensor "${finding.sensorId}" ` +
-        `passed different bytes at ${finding.outputPath}. Re-fire it against the current artifact.`,
-    );
+    return guardDenied({
+      reason:
+        `Refusing to complete "${stage.slug}": the blocking sensor "${finding.sensorId}" ` +
+        `passed different bytes at ${finding.outputPath}.`,
+      recovery: "Re-fire it against the current artifact.",
+    });
   }
   const terminal = finding.terminal ?? "no terminal row";
   let message = `Refusing to complete "${stage.slug}": the blocking sensor `;
   message += `"${finding.sensorId}" has an unresolved verdict (${terminal}) on `;
-  message += `${finding.outputPath}. ${BLOCKING_SENSOR_REMEDY}`;
-  error(message);
+  message += `${finding.outputPath}.`;
+  return guardDenied({ reason: message, recovery: BLOCKING_SENSOR_REMEDY });
 }
 
 // Resolve the directories a stage's produces[] artifacts would live under,
@@ -2441,11 +2640,8 @@ function workspaceHasWork(pd: string): boolean {
   return workspaceHasSourceFile(pd);
 }
 
-// The guard itself. Called from approve/advance/finalize/complete-workflow
-// BEFORE any state mutation, so a refusal (error() -> process.exit) leaves state
-// untouched. `stage` is the StageEntry being completed. No-op when bypass active.
-// Declared at module scope so the type-only field lines carry no in-body
-// coverage records (they are erased at runtime).
+// The stage being completed. Declared at module scope so the type-only field
+// lines carry no in-body coverage records (they are erased at runtime).
 type VerifiableStage = {
   slug: string;
   name: string;
@@ -2457,16 +2653,24 @@ type VerifiableStage = {
   reviewer?: string;
   workspace_requires?: boolean;
 };
-function verifyStageArtifacts(pd: string, stage: VerifiableStage): void {
-  if (artifactGuardDisabled()) return;
+// Did the stage produce anything, and is there real work behind it? The
+// GUARD_EXEMPTED row this emits is audit evidence for a human declaration the
+// guard honored, not a lifecycle mutation: the transition itself still waits on
+// the decision this verdict feeds.
+function evaluateStageArtifacts(context: StageCompletionGuardContext): LifecycleGuardVerdict {
+  const { pd, stage } = context;
+  if (artifactGuardDisabled()) return guardNotApplicable("AMADEUS_SKIP_ARTIFACT_GUARD is set");
 
   if (!producesArtifactsExist(pd, stage)) {
-    error(
-      `Refusing to complete "${stage.slug}": one or more missing required artifacts ` +
+    return guardDenied({
+      reason:
+        `Refusing to complete "${stage.slug}": one or more missing required artifacts ` +
         `under the intent's record directory. The stage protocol requires ${stage.name} ` +
-        `to produce output before the gate. Produce the artifacts before completing. ` +
-        `(declared: ${(stage.produces ?? []).join(", ") || "none"})`
-    );
+        `to produce output before the gate.`,
+      recovery:
+        "Produce the artifacts before completing. " +
+        `(declared: ${(stage.produces ?? []).join(", ") || "none"})`,
+    });
   }
 
   if (stage.workspace_requires && !workspaceHasWork(pd)) {
@@ -2479,66 +2683,67 @@ function verifyStageArtifacts(pd: string, stage: VerifiableStage): void {
     // #366's gap detection.
     const dirName = stateOperationTarget?.intent ?? activeIntent(pd);
     const declaration = dirName ? docsOnlyDeclaration(pd, dirName) : null;
-    if (declaration) {
-      emitAudit(pd, "GUARD_EXEMPTED", {
-        Stage: stage.slug,
-        Evidence: declaration.evidence,
-      });
-    } else {
-      error(
-        `Refusing to complete "${stage.slug}": it is a code-producing stage ` +
+    if (!declaration) {
+      return guardDenied({
+        reason:
+          `Refusing to complete "${stage.slug}": it is a code-producing stage ` +
           `(workspace_requires) but no source work is evident outside the amadeus/ ` +
           `workspace tree. In a git workspace this means no uncommitted change and no ` +
           `code in the last commit; otherwise no source file exists. Planning docs alone ` +
-          `do not satisfy ${stage.name} - write the code to the workspace. If this Intent's ` +
-          `produces are genuinely record-internal documents only, declare it first: ` +
-          `amadeus-state.ts declare-docs-only --evidence "<approval reference>".`
-      );
+          `do not satisfy ${stage.name} - write the code to the workspace.`,
+        recovery:
+          "If this Intent's produces are genuinely record-internal documents only, " +
+          'declare it first: amadeus-state.ts declare-docs-only --evidence "<approval reference>".',
+      });
     }
+    emitAudit(pd, "GUARD_EXEMPTED", {
+      Stage: stage.slug,
+      Evidence: declaration.evidence,
+    });
   }
-
-  // Last, because it asks the narrowest question: the layers above establish
-  // that a Unit produced artifacts and that real work exists behind them, and
-  // only then is "was that work reviewed" a question worth asking. Ordering it
-  // ahead of those would answer a Unit that produced nothing with a complaint
-  // about its missing review.
-  const unreviewed = unitsMissingReview(pd, stage);
-  if (unreviewed.length > 0) {
-    // Built one statement per line rather than as a multi-line argument: a
-    // continuation line of a single call carries no DA record of its own under
-    // bun's union merge, so the patch gate reads it as never executed.
-    let message = `Refusing to complete "${stage.slug}": ${unreviewed.length} unit(s) produced `;
-    message += `artifacts with no reviewer verdict recorded on them — ${unreviewed.join(", ")}. `;
-    message += "The stage protocol requires the reviewer to run before the gate (§12a), and a ";
-    message += "unit whose artifacts already exist will not be re-emitted for one. Run §12a for ";
-    message += "each unit named above, or halt for human direction if its review cannot be ";
-    message += "established. Do not hand-write the Review block.";
-    error(message);
-  }
+  return guardAllowed();
 }
 
-// The completion chokepoint. FOUR handlers mark a stage [x] — approve, advance,
-// finalize and complete-workflow — each under its own lock, with no shared
-// transition function between them. A guard wired into only one of them leaves
-// the other three an unguarded rubber-stamp backdoor on the direct-CLI surface,
-// so every completion guard belongs here rather than at the individual call
-// sites (issue #2671 item (c) shipped the sensor gate on approve alone; this
-// function is the fix for that gap and the place any fifth guard goes).
-//
-// Order is load-bearing and each layer asks a narrower question than the last:
-// verifyStageArtifacts answers "did the stage produce anything", and only then
-// is "is the blocking sensor's verdict on those artifacts clean" meaningful —
-// a sensor complaint about a stage that produced nothing names the wrong fault.
-// The two carry independent bypass switches (AMADEUS_SKIP_ARTIFACT_GUARD vs
-// AMADEUS_SKIP_BLOCKING_SENSOR_GUARD): a fixture that wants artifacts unchecked
-// does not thereby want sensor verdicts unchecked, so neither disables the other.
+// Asked after the artifact policy because it is the narrower question: that
+// layer establishes that a Unit produced artifacts and that real work exists
+// behind them, and only then is "was that work reviewed" worth asking. Ordering
+// it ahead would answer a Unit that produced nothing with a complaint about its
+// missing review. Shares the artifact off-switch, as it did when the two lived
+// in one function.
+function evaluateUnitReview(context: StageCompletionGuardContext): LifecycleGuardVerdict {
+  const { pd, stage } = context;
+  if (artifactGuardDisabled()) return guardNotApplicable("AMADEUS_SKIP_ARTIFACT_GUARD is set");
+  const unreviewed = unitsMissingReview(pd, stage);
+  if (unreviewed.length === 0) return guardAllowed();
+  // Built one statement per line rather than as a multi-line argument: a
+  // continuation line of a single call carries no DA record of its own under
+  // bun's union merge, so the patch gate reads it as never executed.
+  let message = `Refusing to complete "${stage.slug}": ${unreviewed.length} unit(s) produced `;
+  message += `artifacts with no reviewer verdict recorded on them — ${unreviewed.join(", ")}. `;
+  message += "The stage protocol requires the reviewer to run before the gate (§12a), and a ";
+  message += "unit whose artifacts already exist will not be re-emitted for one.";
+  let recovery = "Run §12a for ";
+  recovery += "each unit named above, or halt for human direction if its review cannot be ";
+  recovery += "established. Do not hand-write the Review block.";
+  return guardDenied({ reason: message, recovery });
+}
+
+// The completion chokepoint. Called from approve/advance/finalize/
+// complete-workflow BEFORE any state mutation, so a refusal (error() ->
+// process.exit) leaves state untouched.
 //
 // Callers own the "is this transition actually completing" question: the three
 // direct paths skip this when the slug is already [x] (an approve-delegated or
 // replayed call already passed it), while approve always runs it.
 function verifyStageCompletionGuards(pd: string, stage: VerifiableStage): void {
-  verifyStageArtifacts(pd, stage);
-  verifyBlockingSensors(pd, stage);
+  refuseBlockedTransition(
+    evaluateLifecycleGuards<StageCompletionGuardContext>({
+      checkpoint: "stage-completion",
+      targetRevision: `stage:${stage.slug}`,
+      adapters: STAGE_COMPLETION_GUARDS,
+      context: { pd, stage },
+    }),
+  );
 }
 
 function advanceScopeOrError(content: string): string {
@@ -2999,13 +3204,16 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
 
   const completedStage = findStageBySlug(completedSlug);
   if (!completedStage) error(`Unknown stage: ${completedSlug}`);
-  verifyPreparedWorkflowCompletion(
-    pd,
-    content,
-    completedSlug,
-    requestedInstance,
+  // Round one of the workflow-completion checkpoint: everything answerable from
+  // the state document alone, before the completion instance is resolved.
+  refuseBlockedTransition(
+    evaluateLifecycleGuards<WorkflowPreparationGuardContext>({
+      checkpoint: "workflow-completion",
+      targetRevision: `workflow:${completedSlug}`,
+      adapters: WORKFLOW_COMPLETION_PREPARATION_GUARDS,
+      context: { pd, content, completedSlug, requestedInstance },
+    }),
   );
-  verifyMandatoryPluginStages(pd, content, completedSlug);
 
   // If the slug is already [x], approve already emitted STAGE_COMPLETED —
   // skip re-emission to avoid duplicates. Matches handleAdvance's
@@ -3019,26 +3227,34 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
     alreadyMarkedCompleted && hasStageAuditEvent(pd, "STAGE_COMPLETED", completedSlug);
   const completionInstance = completion?.instance ??
     `terminal:${completedSlug}`;
-  const completionRecord = operationRecordDir(pd);
-  if (completionRecord === null) {
-    // An unresolved Intent record is a broken workspace, not a completion
-    // waiting to settle: no Goal work clears it, so it keeps the error path.
-    error("Goal reconciliation refused completion: Intent record is unresolved");
-  }
-  let completionReceipt: GoalReconciliationReceipt;
-  try {
-    completionReceipt = authorizeWorkflowCompletion({
-      projectDir: pd,
-      recordDir: completionRecord,
+  // Round two: the Intent record and the Goal authority. A blocked decision here
+  // splits by audit disposition — a receipt that has not settled is a waiting
+  // state the workflow recovers from (the engine's await-completion directive,
+  // no ERROR_LOGGED row), everything else is a genuine failure.
+  const authorization = evaluateLifecycleGuards<
+    WorkflowAuthorizationGuardContext,
+    GoalReconciliationReceipt
+  >({
+    checkpoint: "workflow-completion",
+    targetRevision: `workflow:${completedSlug}@${completionInstance}`,
+    adapters: WORKFLOW_COMPLETION_AUTHORIZATION_GUARDS,
+    context: {
+      pd,
       content,
       completedSlug,
       completionInstance,
-    });
-  } catch (cause) {
-    const refusal = `Goal reconciliation refused completion: ${errorMessage(cause)}`;
-    if (cause instanceof WorkflowCompletionNotSettledError) awaitCompletion(refusal);
+      recordDir: operationRecordDir(pd),
+    },
+  });
+  if (authorization.kind === "blocked") {
+    const refusal = formatGuardRefusal(authorization.refusal);
+    if (authorization.refusal.audit === "none") awaitCompletion(refusal);
     error(refusal);
   }
+  const completionReceipt = guardReceipt(
+    authorization,
+    WORKFLOW_COMPLETION_GOAL_RECEIPT_POLICY,
+  );
   const stateAlreadyCompleted =
     getField(content, "Status")?.trim() === "Completed";
 
@@ -4686,21 +4902,26 @@ function mandatoryPluginStages(
   return requiredPluginStagesForScope(resolved.config.plugin.scopeBindings, scope);
 }
 
-function verifyMandatoryPluginStages(
-  pd: string,
-  content: string,
-  completingSlug?: string,
-): void {
+// Host-bound plugin stages a scope declares mandatory. Policy, not invariant:
+// which stages are mandatory comes from the project's plugin configuration, so a
+// project that configures none is answered allowed with nothing to judge.
+function evaluateMandatoryPluginStages(
+  context: WorkflowPreparationGuardContext,
+): LifecycleGuardVerdict {
+  const { pd, content } = context;
   const scope = getField(content, "Scope") ?? "";
   const rows = parseCheckboxes(content);
   for (const slug of mandatoryPluginStages(pd, scope, stateOperationTarget?.intent, stateOperationTarget?.space)) {
     const state = rows.find((row) => row.slug === slug)?.state;
-    if (state === "completed" || slug === completingSlug) continue;
-    error(
-      `Refusing workflow completion: host-bound plugin stage "${slug}" is mandatory ` +
-        `for scope "${scope}" and is ${state ?? "absent"}. Run and complete it before finishing.`,
-    );
+    if (state === "completed" || slug === context.completedSlug) continue;
+    return guardDenied({
+      reason:
+        `Refusing workflow completion: host-bound plugin stage "${slug}" is mandatory ` +
+        `for scope "${scope}" and is ${state ?? "absent"}.`,
+      recovery: "Run and complete it before finishing.",
+    });
   }
+  return guardAllowed();
 }
 
 // skip <slug> [--reason <text>] — transition [ ]/[-]/[R] → [S], emit STAGE_SKIPPED
@@ -5986,42 +6207,36 @@ export function handleDeclareUnitsDone(args: string[]): void {
   });
 }
 
-function verifyPreparedCompletionIdentity(
+function preparedCompletionIdentityRefusal(
   prepared: WorkflowCompletionPreparation,
   completedSlug: string,
   requestedInstance: string | undefined,
-): void {
+): string | null {
   if (prepared.stage !== completedSlug) {
-    error(
-      `Workflow completion was prepared for "${prepared.stage}", not "${completedSlug}".`,
-    );
+    return `Workflow completion was prepared for "${prepared.stage}", not "${completedSlug}".`;
   }
   if (requestedInstance === undefined) {
-    error(
-      `Prepared workflow completion requires --completion-instance "${prepared.instance}".`,
-    );
+    return `Prepared workflow completion requires --completion-instance "${prepared.instance}".`;
   }
   if (requestedInstance !== prepared.instance) {
-    error(
-      `Workflow completion instance mismatch: expected "${prepared.instance}", got "${requestedInstance}".`,
-    );
+    return `Workflow completion instance mismatch: expected "${prepared.instance}", got "${requestedInstance}".`;
   }
+  return null;
 }
 
-function verifyPreparedWorkflowCompletion(
-  pd: string,
-  content: string,
-  completedSlug: string,
-  requestedInstance: string | undefined,
-): void {
+function evaluatePreparedWorkflowCompletion(
+  context: WorkflowPreparationGuardContext,
+): LifecycleGuardVerdict {
+  const { pd, content, completedSlug, requestedInstance } = context;
   const prepared = workflowCompletionPreparation(content);
-  if (prepared === null) return;
-  verifyPreparedCompletionIdentity(prepared, completedSlug, requestedInstance);
+  if (prepared === null) return guardNotApplicable("no workflow completion was prepared");
+  const identity = preparedCompletionIdentityRefusal(prepared, completedSlug, requestedInstance);
+  if (identity !== null) return guardDenied({ reason: identity });
   const space = stateOperationTarget?.space ?? activeSpace(pd);
   const intent =
     stateOperationTarget?.intent ?? activeIntent(pd, space);
   if (!intent) {
-    error("Prepared workflow completion cannot resolve its Intent.");
+    return guardDenied({ reason: "Prepared workflow completion cannot resolve its Intent." });
   }
   const config = resolveAmadeusConfig(pd, intent, space);
   if (config.kind === "invalid") {
@@ -6030,23 +6245,31 @@ function verifyPreparedWorkflowCompletion(
         ? `${issue.layer}: ${issue.summary}`
         : `${issue.layer}: expected ${issue.expected}, got ${issue.actualType}`
     ).join("; ");
-    error(
-      `Prepared workflow completion cannot resolve mirror configuration: ${details}`,
-    );
+    return guardDenied({
+      reason: `Prepared workflow completion cannot resolve mirror configuration: ${details}`,
+    });
   }
-  if (config.config.intentMirror.github.issue.mode === "off") return;
+  if (config.config.intentMirror.github.issue.mode === "off") {
+    return guardNotApplicable("the Intent mirror is off");
+  }
   const entries = readIntentRegistry(pd, space).filter((entry) =>
     recordDirMatches(entry, intent)
   );
   if (entries.length !== 1) {
-    error("Prepared workflow completion must resolve exactly one Intent registry row.");
+    return guardDenied({
+      reason: "Prepared workflow completion must resolve exactly one Intent registry row.",
+    });
   }
   const parsed = parseMirrorStateDocument(content);
   if (parsed.kind === "invalid") {
-    error(`Prepared workflow completion has invalid mirror state: ${parsed.issues.join("; ")}`);
+    return guardDenied({
+      reason: `Prepared workflow completion has invalid mirror state: ${parsed.issues.join("; ")}`,
+    });
   }
   if (parsed.snapshot.auditOutbox !== null && parsed.snapshot.auditOutbox !== undefined) {
-    error("Prepared workflow completion still has a pending mirror audit outbox.");
+    return guardDenied({
+      reason: "Prepared workflow completion still has a pending mirror audit outbox.",
+    });
   }
   const settlement = workflowCompletionSettlement({
     intentUuid: entries[0].uuid,
@@ -6060,9 +6283,57 @@ function verifyPreparedWorkflowCompletion(
     const detail = settlement.kind === "pending"
       ? `operation "${settlement.operation}" is still pending`
       : `operation "${settlement.operation}" is ${settlement.status}`;
-    error(
-      `Prepared workflow completion cannot commit before its mirror boundary settles: ${detail}.`,
-    );
+    return guardDenied({
+      reason:
+        `Prepared workflow completion cannot commit before its mirror boundary settles: ${detail}.`,
+    });
+  }
+  return guardAllowed();
+}
+
+// An unresolved Intent record is a broken workspace, not a completion waiting to
+// settle: no Goal work clears it, so it keeps the audited error path rather than
+// the waiting channel the Goal receipt policy below can reach.
+function evaluateCompletionRecordResolution(
+  context: WorkflowAuthorizationGuardContext,
+): LifecycleGuardVerdict<GoalReconciliationReceipt> {
+  if (context.recordDir === null) {
+    return guardDenied({
+      reason: "Goal reconciliation refused completion: Intent record is unresolved",
+    });
+  }
+  return guardAllowed();
+}
+
+// The Goal authority's verdict on this completion. Three-valued, and the third
+// value is why the Runtime has an `unknown`: a receipt that has not settled is
+// not a refusal, it is an answer the workflow can still earn, so it maps to
+// `unknown` with the unaudited disposition and the commit path answers it with
+// the engine's await-completion directive. Identity refusals — a receipt about
+// another Intent, Goal or completion — never settle and stay denied.
+function evaluateGoalReconciliationReceipt(
+  context: WorkflowAuthorizationGuardContext,
+): LifecycleGuardVerdict<GoalReconciliationReceipt> {
+  const recordDir = context.recordDir;
+  if (recordDir === null) {
+    return guardUnknown({
+      reason: "Goal reconciliation refused completion: Intent record is unresolved",
+    });
+  }
+  try {
+    return guardAllowed(authorizeWorkflowCompletion({
+      projectDir: context.pd,
+      recordDir,
+      content: context.content,
+      completedSlug: context.completedSlug,
+      completionInstance: context.completionInstance,
+    }));
+  } catch (cause) {
+    const refusal = `Goal reconciliation refused completion: ${errorMessage(cause)}`;
+    if (cause instanceof WorkflowCompletionNotSettledError) {
+      return guardUnknown({ reason: refusal, audit: "none" });
+    }
+    return guardDenied({ reason: refusal });
   }
 }
 
