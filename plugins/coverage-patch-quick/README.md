@@ -32,8 +32,11 @@ failure where the gate is absent is the intended behaviour, not a defect.
 ## Usage
 
 ```bash
-bun plugins/coverage-patch-quick/tools/coverage-patch-quick-cli.ts --check
+bun {{HARNESS_DIR}}/plugins/coverage-patch-quick/tools/coverage-patch-quick-cli.ts --check
 ```
+
+(In this development repository the same tool is also runnable from its
+authoring source under the repo-root `plugins/` tree.)
 
 Environment:
 
