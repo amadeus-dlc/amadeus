@@ -1,5 +1,7 @@
 # Build & Test Results — 260813-lifecycle-guard-runtime
 
+上流入力(consumes 全数): `construction/lifecycle-guard-runtime/code-generation/code-generation-plan.md`(12 Steps の検証要求)と `code-summary.md`(実測一覧の転記元)。
+
 対象 tree: conductor ブランチ HEAD `62516c324`(コード内容は bolt head `f6b291e4a` の squash 取込と同一 — `git diff --stat backup/pre-squash-intake HEAD` は record 7 ファイルのみ、コード差分 0 を実測)。
 
 ## Build(実測)

@@ -3,6 +3,7 @@
 
 ## Interpretations
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
+- 2026-08-13T19:05:00Z — 本線 stage 実行: 直前の tla-authoring applicability outcome は terminal not-applicable(選択集合空、construction/tla-authoring/applicability-assessment.md)のため、stage 契約 Step 1 に従い TLC を起動せず **NOT_APPLICABLE** を記録して正常終了。なお advisory 解消のための single 実行 2 回で全 3 登録モデルの実TLC NOT_DETECTED は取得済み(最新: 2周目、model-map pin `cb3c7e63181a` 断面、runIds は fmc3 出力)。spec identity は plugin-activation record 済み
 - 2026-08-13T16:25:00Z — requirements-analysis 到達時の advisory(spec-change, instance a029025b)が run-now 記録済みだったため single モードで実行。先行 applicability outcome なしの explicit run として model-map.json の全 3 モデル(FormalElection / MirrorLifecycle / PrConvergenceGate)を `run-model-check.ts` でローカル実行 — 全て NOT_DETECTED / exit 0(runId: 48d35db6 / 07f6bdf7 / 4361b443)。CI ランナー(`run-model-check-ci.ts`)は Docker 前提でローカルでは DOCKER_TRACE 失敗のため、ステージ本文 step 2 のローカル経路を使用。spec identity は plugin-activation record 済み
 
 ## Deviations
