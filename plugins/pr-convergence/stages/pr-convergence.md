@@ -44,7 +44,7 @@ asked about.
 
 ## The loop
 
-Run the steps in order. Steps (2)-(4) repeat until (5) holds or the loop is
+Run the steps in order. Steps (2)-(5) repeat until (6) holds or the loop is
 handed back to a human.
 
 ### (0) Resolve conflicts first
@@ -62,10 +62,26 @@ cannot build the merge commit), so every check verdict read in that state is
 stale, and review threads re-anchor once the branch moves. Rebase or merge the
 base, push, and re-read.
 
+Materialize and resolve the conflict locally:
+
+```
+git fetch origin <base-branch>
+git merge origin/<base-branch>
+# resolve every unmerged path, then
+git add <resolved paths> && git commit
+```
+
+Reconstruct each conflicted file from the three-stage blobs rather than by
+pasting around markers, verify no conflict markers remain (`<<<<<<<` /
+`>>>>>>>` / `|||||||`) as an independent check, run the fast, targeted
+validation the touched surface requires, and inspect the staged resolution
+(`git diff --staged`) before committing. Commit and push under the
+workspace's approval boundary for remote writes.
+
 `mergeable` is computed asynchronously: the first read after a push is almost
 always `UNKNOWN`. The CLI already retries a bounded number of times at a fixed
 interval and then reports `UNKNOWN` as *not converged* rather than blocking —
-an unresolved `UNKNOWN` is a reason to come back at step (4), never a reason to
+an unresolved `UNKNOWN` is a reason to come back at step (5), never a reason to
 wait indefinitely.
 
 `status` and `report` treat the pull request as Intent-linked by default. For a
@@ -147,8 +163,8 @@ human's reading of the web UI. Exit codes:
 
 | exit | meaning | next |
 |---|---|---|
-| 0 | converged | go to (5) |
-| 1 | not converged — the JSON names the violating threads | go to (3) |
+| 0 | converged | go to (6) |
+| 1 | not converged — the JSON names the violating checks/threads | go to (3) |
 | 2 | the `gh` boundary failed (absent, unauthenticated, rate-limited, API fault) | stop; see *When GitHub is unreachable* |
 | 3 | linked PR provenance is invalid — JSON names every violation and stderr gives remediation | edit the PR title/body, then re-run (2) |
 
@@ -160,7 +176,31 @@ pull requests: `status`/`report` exits 3, raw body content is not printed, and
 `report` writes no file. Remediate with `gh pr edit --title ... --body-file ...`;
 the CLI never rewrites authored pull-request content automatically.
 
-### (3) Triage each actionable thread
+### (3) Act on failing checks — never wait behind a red
+
+Read the complete attached check set, not the first page and not only GitHub
+Actions:
+
+```
+gh pr checks <number> --json name,bucket,state,workflow,link
+```
+
+`gh pr checks` is the source of truth for the attached set; `gh run list`
+covers only GitHub Actions. Re-run this read after every push — the check set
+itself can change between heads.
+
+- **A visible failure outranks every pending check.** Never wait for pending
+  checks while any check is already red; the failure is actionable now.
+  Diagnose it from the failing check's own log (`gh run view <run-id>
+  --log-failed` when the check links to a GHA run), apply the smallest scoped
+  fix — one failure cause per fix when possible — and push per the ordering
+  policy in *CI observation and local validation ordering* below.
+- A failure that looks unrelated must be attributed, not assumed: reproduce
+  the same failure set on the unmodified base before classifying it as
+  pre-existing. If the base has since fixed it, merge the latest base instead
+  of patching around it inside this pull request.
+
+### (4) Triage each actionable thread
 
 Classify every violating thread on two axes, both settled by measurement rather
 than by impression:
@@ -174,7 +214,7 @@ The two axes give three dispositions:
 
 | caused by this diff | closes in this surface | disposition |
 |---|---|---|
-| yes | yes | **fix in this pull request** — push, then go to (4) |
+| yes | yes | **fix in this pull request** — push, then go to (5) |
 | yes | no | **file an Issue** and land this pull request first; resolve the thread citing the Issue number |
 | no | — | **reject** — reply with a falsifiable rebuttal citing the contract at `file:line`, then resolve |
 
@@ -194,13 +234,16 @@ A rejection is a claim, and claims carry evidence. "Not applicable here" with
 no citation is not a rebuttal; it is the thread being ignored, and the verdict
 will keep counting it.
 
-### (4) Re-observe after every push
+### (5) Re-observe after every push
 
 Every push invalidates the previous reading. Review bots re-post against the new
 head, checks re-run, and threads that were outdated may become live again.
-Return to (2) after **each** push — not once at the end.
+Return to (2) after **each** push — not once at the end. While the re-started
+CI runs, keep working per *CI observation and local validation ordering*
+below: local validation, thread triage, and the next fix all proceed in
+parallel with CI, never behind it.
 
-### (5) Report convergence
+### (6) Report convergence
 
 When `status` exits 0, write the report:
 
@@ -262,15 +305,48 @@ ruling, then writes and attests an `override` report with `converged: false`.
 There is no environment variable, flag, or state field that skips the guard
 silently: a bypass that leaves no record is not offered.
 
+## CI observation and local validation ordering
+
+Two standing rules govern how CI is watched and when local validation runs
+relative to a push. They exist because wall-clock is the scarcest resource in
+the loop, and a conductor that sits watching a spinner is spending it on
+nothing.
+
+**Do not watch CI serially.** Waiting on CI must never be the only thing the
+loop is doing. After a push, keep working — run local validation, triage the
+remaining review threads, prepare the next fix — and re-read the check set at
+the natural re-observe points (step (5)) instead of blocking on it. A blocking
+watch such as `gh pr checks --watch --fail-fast` is permitted only when
+nothing else remains: no failing check, no unresolved actionable thread, no
+local validation still running, and no fix in flight. Prefer a background or
+timer-based re-read over a dedicated foreground watch when the harness offers
+one.
+
+**Push first when CI is slow.** Estimate the pull request's CI wall clock from
+its recent runs (`gh run list` durations, or the durations on the previous
+check read). When that estimate exceeds **3 minutes** — or when no estimate
+exists — do not make local verification a pre-push gate: push the coherent
+minimal fix first so CI restarts immediately, then run the relevant local
+build and tests **in parallel** with the CI run. Before such a push, run only
+the fast sanity checks needed to avoid an obviously invalid commit (for
+example a typecheck of the touched files), never the full suite. If local
+validation later fails, diagnose, fix, and push again without waiting for the
+in-flight CI run. Only when CI reliably completes within 3 minutes may local
+verification run to completion before the push.
+
+Push-first changes the *ordering* of validation, never the approval boundary:
+every push remains a remote write and still follows the workspace's approval
+rules. Nor does it lower the finish line — the loop terminates only when the
+required check set is green **and** the relevant local validation has passed;
+a green CI run does not waive a still-running or failed local validation.
+
 ## Guardrail
 
 These rules are part of this stage, not a pointer to something outside it.
 
 - **Failures come first.** Read the failing check's log and the failing
   assertion's text before forming any theory about it. A summary line, a job
-  name, or a wall-clock note is not a diagnosis. Do not classify a failure as
-  environmental or unrelated until the same failure set reproduces on the
-  unmodified base.
+  name, or a wall-clock note is not a diagnosis.
 - **No flat comments.** A reply belongs on the thread it answers, so the thread
   can terminalise. A top-level comment that responds to an inline finding leaves
   that finding open, and the verdict will keep counting it — correctly.
@@ -278,6 +354,7 @@ These rules are part of this stage, not a pointer to something outside it.
   filing Issues are all writes to a shared surface. Follow this workspace's
   approval boundary for them, and never merge: merging is a separate human
   decision and no convergence verdict authorises it.
+- **No hook bypass.** Do not bypass hooks (`--no-verify`) to force progress.
 - **Flakes are evidence, not noise.** Re-run a suspected flake and record both
   outcomes. If it passes on re-run, say so explicitly rather than quietly
   discarding the red run, and do not assume a re-run failure shares the first
@@ -286,7 +363,6 @@ These rules are part of this stage, not a pointer to something outside it.
 - **Convergence is not merge.** Exit 0 means "ready to be asked about". The
   merge question goes to a human, every time.
 
-Credit: the loop shape and the triage axes are adapted from the
-`j5ik2o-gh-pr-converge-loop` skill; this stage carries them in full rather than
-by reference so an installed plugin behaves the same on every harness and in
-workspaces where that skill is absent.
+This stage is self-contained: the loop, the triage axes, and the CI ordering
+rules above are carried in full here, so an installed plugin behaves the same
+on every harness and requires no external skill or workspace-local document.
