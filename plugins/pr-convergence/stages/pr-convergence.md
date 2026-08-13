@@ -81,7 +81,7 @@ workspace's approval boundary for remote writes.
 `mergeable` is computed asynchronously: the first read after a push is almost
 always `UNKNOWN`. The CLI already retries a bounded number of times at a fixed
 interval and then reports `UNKNOWN` as *not converged* rather than blocking —
-an unresolved `UNKNOWN` is a reason to come back at step (4), never a reason to
+an unresolved `UNKNOWN` is a reason to come back at step (5), never a reason to
 wait indefinitely.
 
 `status` and `report` treat the pull request as Intent-linked by default. For a
