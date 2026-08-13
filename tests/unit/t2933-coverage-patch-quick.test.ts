@@ -10,6 +10,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   type CommandResult,
+  deriveAllowlist,
   extractExportedSymbols,
   parseChangedPaths,
   parseRegistryUnits,
@@ -118,6 +119,29 @@ describe("reverseMapTests", () => {
   test("a malformed registry is a loud parse failure", () => {
     expect(() => parseRegistryUnits("{}")).toThrow(/units/);
   });
+
+  test("a registry unit without a string unitId is a loud parse failure", () => {
+    expect(() => parseRegistryUnits(JSON.stringify({ units: [{ coveredBy: [] }] }))).toThrow(
+      /unitId/,
+    );
+  });
+});
+
+describe("deriveAllowlist", () => {
+  const ENTRIES = [
+    { file: "a.ts", selector: { function: "f", fingerprint: "sha256:1" }, reason: "kept" },
+    { file: "b.ts", selector: { function: "g", fingerprint: "sha256:2" }, reason: "dropped file" },
+    { file: "a.ts", selector: { function: "h", fingerprint: "sha256:3" }, reason: "dropped range" },
+  ];
+
+  test("keeps only entries whose file is lcov-resident and whose range the gate does not call stale", () => {
+    const derived = deriveAllowlist(ENTRIES, new Set(["a.ts"]), new Set([2]));
+    expect(derived).toEqual([ENTRIES[0]]);
+  });
+
+  test("resident, non-stale entries are preserved verbatim and in order", () => {
+    expect(deriveAllowlist(ENTRIES, new Set(["a.ts", "b.ts"]), new Set())).toEqual(ENTRIES);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -132,18 +156,43 @@ interface Recorder {
   readonly out: string[];
   readonly err: string[];
   readonly bunTestCalls: { files: readonly string[]; coverageDir: string }[];
-  readonly gateCalls: { gatePath: string; lcovPath: string }[];
+  readonly gateCalls: { gatePath: string; lcovPath: string; allowlistPath: string }[];
+  readonly writes: { path: string; content: string }[];
+}
+
+// The canonical allowlist as the fake gate module resolves it: one entry in a
+// file the targeted lcov measured, one in a file it never loaded.
+const ALLOWLIST = JSON.stringify([
+  { file: "measured.ts", selector: { function: "f", fingerprint: "sha256:1" }, reason: "kept" },
+  { file: "absent.ts", selector: { function: "g", fingerprint: "sha256:2" }, reason: "dropped" },
+]);
+
+function fakeGateApi() {
+  const resolved = [
+    { file: "measured.ts", start: 10, end: 10, reason: "kept" },
+    { file: "absent.ts", start: 4, end: 4, reason: "dropped" },
+  ];
+  return {
+    parseLcovLineHits: () => new Map([["measured.ts", new Map([[10, 1]])]]),
+    parseAllowlist: (json: string) => JSON.parse(json),
+    resolveAllowlistEntries: () => resolved,
+    findStaleAllowlistEntries: () => [resolved[1]],
+  };
 }
 
 function makeIo(overrides: Partial<QuickIo> = {}, files: Record<string, string> = {}): Recorder {
   const out: string[] = [];
   const err: string[] = [];
   const bunTestCalls: { files: readonly string[]; coverageDir: string }[] = [];
-  const gateCalls: { gatePath: string; lcovPath: string }[] = [];
+  const gateCalls: { gatePath: string; lcovPath: string; allowlistPath: string }[] = [];
+  const writes: { path: string; content: string }[] = [];
   const present: Record<string, string> = {
     "/repo/tests/coverage-patch-gate.ts": "// gate",
     "/repo/tests/.coverage-registry.json": REGISTRY,
-    "/scratch/lcov.info": "SF:x\nend_of_record\n",
+    "/repo/tests/.coverage-patch-allowlist.json": ALLOWLIST,
+    "/repo/measured.ts": "// measured",
+    "/repo/absent.ts": "// absent",
+    "/scratch/lcov.info": "SF:measured.ts\nDA:10,1\nend_of_record\n",
     ...files,
   };
   const base: QuickIo = {
@@ -156,8 +205,8 @@ function makeIo(overrides: Partial<QuickIo> = {}, files: Record<string, string> 
       bunTestCalls.push({ files: testFiles, coverageDir });
       return ok("1 pass");
     },
-    runGate: (gatePath, lcovPath) => {
-      gateCalls.push({ gatePath, lcovPath });
+    runGate: (gatePath, lcovPath, allowlistPath) => {
+      gateCalls.push({ gatePath, lcovPath, allowlistPath });
       return {
         code: 0,
         stdout: "Patch coverage gate: PASS\nmeasured added lines: 4, covered: 4, allowlisted: 0, uncovered: 0",
@@ -166,11 +215,16 @@ function makeIo(overrides: Partial<QuickIo> = {}, files: Record<string, string> 
     },
     exists: (path) => path in present,
     readText: (path) => present[path] ?? "",
+    writeText: (path, content) => {
+      writes.push({ path, content });
+      present[path] = content;
+    },
+    loadGateApi: () => fakeGateApi(),
     makeScratchDir: () => "/scratch",
     out: (line) => out.push(line),
     err: (line) => err.push(line),
   };
-  return { io: { ...base, ...overrides }, out, err, bunTestCalls, gateCalls };
+  return { io: { ...base, ...overrides }, out, err, bunTestCalls, gateCalls, writes };
 }
 
 describe("runQuickCheck", () => {
@@ -253,10 +307,35 @@ describe("runQuickCheck", () => {
       { files: ["tests/unit/t10-state.test.ts"], coverageDir: "/scratch" },
     ]);
     expect(rec.gateCalls).toEqual([
-      { gatePath: "/repo/tests/coverage-patch-gate.ts", lcovPath: "/scratch/lcov.info" },
+      {
+        gatePath: "/repo/tests/coverage-patch-gate.ts",
+        lcovPath: "/scratch/lcov.info",
+        allowlistPath: "/scratch/derived-allowlist.json",
+      },
     ]);
     expect(rec.out.join("\n")).toContain("Patch coverage gate: PASS");
     expect(rec.out.join("\n")).toContain("ADVISORY APPROXIMATION");
+  });
+
+  test("the derived allowlist is written to the scratch dir, never to the repository", () => {
+    const rec = makeIo();
+    expect(runQuickCheck(rec.io)).toBe(0);
+    expect(rec.writes.map((w) => w.path)).toEqual(["/scratch/derived-allowlist.json"]);
+    expect(JSON.parse(rec.writes[0]!.content)).toEqual([
+      { file: "measured.ts", selector: { function: "f", fingerprint: "sha256:1" }, reason: "kept" },
+    ]);
+    expect(rec.out.join("\n")).toContain("derived allowlist");
+  });
+
+  test("a gate module that cannot be loaded refuses loudly", () => {
+    const rec = makeIo({
+      loadGateApi: () => {
+        throw new Error("boom");
+      },
+    });
+    expect(runQuickCheck(rec.io)).not.toBe(0);
+    expect(rec.err.join("\n")).toContain("could not load the patch coverage gate");
+    expect(rec.gateCalls).toEqual([]);
   });
 
   test("a bun test spawn failure refuses loudly", () => {

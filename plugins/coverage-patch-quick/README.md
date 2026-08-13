@@ -69,11 +69,23 @@ coverage or test command of yours is running.
    the tool can report a false red.
 3. Green here does not guarantee green in CI. Only the CI Patch Coverage Gate
    decides a PR.
-4. The changed-file to test mapping is heuristic: it joins changed paths to
+4. The run evaluates against a **derived allowlist**, not the canonical one. The
+   gate's STALE check treats an exemption whose file or resolved range has no
+   measurable line as ledger rot and hard-fails before evaluating anything —
+   which a targeted LCOV structurally triggers (measured on this repository:
+   432 entries, 373 stale, gate exit 1 with no verdict). So the CLI writes a
+   filtered copy into its scratch dir, keeping only the exemptions the targeted
+   LCOV can still measure, and points `AMADEUS_PATCH_ALLOWLIST` at that copy.
+   `tests/.coverage-patch-allowlist.json` is read-only here and CI keeps using
+   it unchanged. Which entries survive is decided by the gate's own exported
+   resolver, loaded at runtime — the staleness logic is not reimplemented.
+   Dropping exemptions can only make this approximation stricter than CI, never
+   laxer.
+5. The changed-file to test mapping is heuristic: it joins changed paths to
    registry units by path token and exported symbol. Changed files that no test
    claims are reported as `UNMAPPED` — their added lines will read uncovered
    here.
-5. The sibling Project Coverage Gate (full-suite totals compared against a
+6. The sibling Project Coverage Gate (full-suite totals compared against a
    committed baseline) cannot be approximated from a targeted LCOV and is out of
    scope for this plugin.
 
