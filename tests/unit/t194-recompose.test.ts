@@ -33,6 +33,34 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+
+class ExitSignal extends Error {
+  constructor(public readonly code: number) {
+    super(`exit ${code}`);
+  }
+}
+function captureExit(fn: () => void): { threw: boolean; stderr: string } {
+  let stderr = "";
+  const origExit = process.exit.bind(process);
+  const origErr = console.error;
+  process.exit = ((code?: number) => {
+    throw new ExitSignal(code ?? 0);
+  }) as typeof process.exit;
+  console.error = (...a: unknown[]) => {
+    stderr += a.map(String).join(" ");
+  };
+  let threw = false;
+  try {
+    fn();
+  } catch (e) {
+    if (e instanceof ExitSignal) threw = true;
+    else throw e;
+  } finally {
+    process.exit = origExit;
+    console.error = origErr;
+  }
+  return { threw, stderr };
+}
 import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
   applyRecomposeSuffixFlips,
@@ -308,6 +336,49 @@ describe("t194 recompose - rejections", () => {
     const before = readState(proj);
     run(proj, "amadeus-utility.ts", ["recompose", "--skip", "functional-design"]);
     expect(readState(proj)).toBe(before);
+  });
+
+  // #2932 CodeRabbit review — recompose's own mandatory-plugin-stage guard
+  // (amadeus-utility.ts handleRecompose) resolves the same plugin
+  // scope-bindings config amadeus-state.ts's guard does. In-process so bun's
+  // coverage instrumentation sees it (spawned CLI runs above are a coverage
+  // blindspot for the source tree).
+  test("a config layer that fails structured validation refuses closed before any flip is judged", () => {
+    const proj = bornProject();
+    const restoreScopeData = useRealScopeData();
+    writeFileSync(
+      join(proj, "amadeus", "config.json"),
+      JSON.stringify({ plugin: { "scope-bindings": { "fixture-plugin": { "fixture-stage": [] } } } }),
+    );
+    try {
+      const before = readState(proj);
+      const r = captureExit(() => handleRecompose(proj, { skip: "market-research" }));
+      expect(r.threw).toBe(true);
+      expect(r.stderr).toContain("Cannot enforce plugin scope bindings");
+      expect(readState(proj)).toBe(before);
+    } finally {
+      restoreScopeData();
+    }
+  });
+
+  test("refuses a --skip target the host config binds mandatory for the current scope", () => {
+    const proj = bornProject();
+    const restoreScopeData = useRealScopeData();
+    writeFileSync(
+      join(proj, "amadeus", "config.json"),
+      JSON.stringify({ plugin: { "scope-bindings": { "fixture-plugin": { "market-research": ["feature"] } } } }),
+    );
+    try {
+      const before = readState(proj);
+      const r = captureExit(() => handleRecompose(proj, { skip: "market-research" }));
+      expect(r.threw).toBe(true);
+      expect(r.stderr).toContain("Cannot recompose");
+      expect(r.stderr).toContain("market-research");
+      expect(r.stderr).toContain("host-bound mandatory plugin stage for scope");
+      expect(readState(proj)).toBe(before);
+    } finally {
+      restoreScopeData();
+    }
   });
 });
 

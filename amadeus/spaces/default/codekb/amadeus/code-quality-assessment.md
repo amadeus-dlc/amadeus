@@ -1,6 +1,122 @@
 # コード品質評価
 
-## タイムアウト安定性評価（260810-test-time-factor、現在、observed `ce3c3ccfd`）
+## coverage 免除台帳の意味論が無検査 — 解決 fail-closed / 意味 fail-open の非対称（260811-allowlist-semantic-audit、履歴、observed `854692fd7`）
+
+**観測 ref**: すべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD）。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（34 commits）。正本は `re-scans/260811-allowlist-semantic-audit.md`。
+
+### 台帳の規模と成長（PROVEN、コマンド出力からの転記）
+
+| 指標 | 値 | 述語 |
+|---|---|---|
+| エントリ総数（observed） | **623** | `jq 'length' tests/.coverage-patch-allowlist.json` |
+| エントリ総数（base `ce3c3ccfd`） | **614** | `git show ce3c3ccfd:tests/.coverage-patch-allowlist.json \| jq 'length'` |
+| 対象ファイル数 | **106** | `jq -r '[.[].file] \| unique \| length' <台帳>` |
+| distinct な `reason` 文字列 | **310** | `jq -r '[.[].reason] \| unique \| length' <台帳>` |
+| 旧形式の絶対行ピン | **0** | `jq '[.[] \| select(.selector == null)] \| length' <台帳>` |
+| 単一行アンカー（`anchorLines == 1`） | **233**（37%） | `jq '[.[]\|select(.selector.anchorLines==1)]\|length' <台帳>` |
+
+Issue #1622 起票時の「約272件」、クロスレビュー時点（2026-07-28）の「300件」に対し observed は **623**。棚卸し対象は起票時の約 2.3 倍に膨張している。
+
+### 品質所見（PROVEN）
+
+1. **解決は fail-closed、意味は fail-open という非対称**。`resolveSemanticSelector`（`tests/coverage-patch-gate.ts:288-313`）はスコープ名の非一意（`:294-298`）と指紋の非一意（`:306-310`）を throw し、`runCheck` が exit 1 へ落とす（`:552`）。一方 `findStaleAllowlistEntries`（`:407-419`）は引数が `entries` と `lcov` のみで `reason` を受け取らず、判定は `hits.has(line)`（DA レコードの**存在**）だけ。免除の適用も `allowlisted`（`:421-426`）の**行番号包含**のみ。**免除の正当性を見る段はパイプラインのどこにも無い**。
+2. **PR #2127 の意味的セレクタ移行は転位を解消せず固定した**。指紋は「誤った行」を行シフトを跨いで正確に追従する。実測: `amadeus-election.ts` のエントリは Issue 報告時に `:317` へ解決していたが observed では `:417`（+100 行）で、指紋 `sha256:2d1d83f1...` は Issue 記載と同一。すなわち移行が消したのは「行シフト起因の stale」であって「意味の不一致」ではない。
+3. **確定転位 18 件**（`re-scans/260811-allowlist-semantic-audit.md` §4 の正本）。分布は `amadeus-state.ts` 6・`amadeus-orchestrate.ts` 3・`amadeus-graph.ts` 2・`amadeus-mirror-executor.ts` 2・`amadeus-election.ts` / `amadeus-runtime.ts` / `amadeus-learnings.ts` / `amadeus-utility.ts` / `tla-arm.ts` 各 1。うち 4 件は「type-only / runtime-erased」を主張しながら**実行文**へ解決しており（`amadeus-graph.ts:1711-1716` / `:1715-1720`、`amadeus-utility.ts:820-822`）、2 件は解決範囲に**コメント行**を含む（`amadeus-state.ts:5736-5739`、`amadeus-orchestrate.ts:944-951`）。
+4. **腐敗はエントリ単位で混在する**。同一ファイル・同一 `reason` 文字列の群の中でも一致と転位が並存する（`amadeus-state.ts` の telemetry reason は `:991` 一致 / `:916` 転位。`amadeus-graph.ts` の型 reason は `:1130` / `:1134` 一致 / `:1711-1720` 転位）。ファイル単位・reason 単位の一括処理では正しく捌けない。
+5. **反証不能な `reason` が 45 件存在する**。逐語「defensive, type-only, or spawned-boundary path」が **20 件**、「Residual defensive, invalid-input, replay, or process-boundary」が **25 件**。いずれも複数の可能性を `or` で並べており特定の構文クラスを主張しない。**どの機械述語でも真偽を決められない**構造であり、`reason` 非空という現行契約は満たすが監査可能性はゼロ。
+
+### ガード不在（反証確認済み、3 述語）
+
+- `git grep -nIE "semanticAudit|reasonMatches|auditAllowlistReasons"`（対象 `packages/` `scripts/` `tests/` `.github/` `plugins/` `docs/`）= **exit 1（0 hit）**
+- `tests/coverage-patch-gate.ts` の export 16 シンボルのうち `reason` を引数に取る関数 = **0 件**
+- t229 の 2 テストファイルで `reason` に触れる全行はフィクスチャ値生成か「非空」検査。**`reason` の内容を検査するテストは 0 件**
+
+→ **`reason` と実コードの意味整合を検査する機構は、リポジトリ内に存在しない。**
+
+### 検証面（failing-first テストの置き場、候補）
+
+- **AST 述語の決定的判定**: 構文クラスを主張する `reason`（type-only 76 / catch 32 / dispatch-usage 10、重複あり）に対し「解決先の全トークンが型位置にあるか」「解決先が `CatchClause` 内か」「解決先が `CaseClause` か」を `ts` で判定する（ゲートは既に `ts` を import 済み）。実測の転位 4 件（`amadeus-graph.ts` 2 / `amadeus-utility.ts` 1 / `amadeus-state.ts:961-964`）はこの述語で落ちる
+- **反証不能 reason の禁止**: 選言型 boilerplate 45 件を `parseAllowlist` の段で拒否する契約を置けば、以後の混入は構造的に止まる（既存 45 件の扱いは別裁定）
+
+### 品質上の限界（本 scan で測っていないこと）
+
+全数照合は未実施であり、確定 18 件は**下限**である。`findStaleAllowlistEntries` の実行結果（現行 stale 件数）は LCOV を要するため未測定。転位の双方向の実害（偽赤 / 偽緑の件数）も未定量。詳細は `re-scans/260811-allowlist-semantic-audit.md` § UNMEASURED。
+
+## TLA+ receipt 経路の品質所見（260812-tla-proof-receipt、現在、observed `854692fd7`）
+
+**観測 ref**: 本節の file:line はすべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD）時点。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（距離 34）。正本は `re-scans/260812-tla-proof-receipt.md`。
+
+### Q1: 依存 seam の非対称（S1）
+
+loader の消費者 4 件のうち 3 件は DI seam を持ち、検証器だけが持たない（`tla-model-receipt.ts:154` / `:156` のモジュール束縛直接呼び出し）。seam の設計パターンは兄弟ファイルに既に 3 例存在する（`run-model-check-ci.ts:19-20` / `:28-29`、`run-model-check-diagnostic.ts:326-327` / `:333-334`、`run-model-check-source.ts:40` / `:128`）。全数表は `component-inventory.md` の同 intent 節。
+
+この非対称は #2913 の D1 そのものであり、同時にテスト容易性の欠落でもある — 検証器だけが単体で model-map を差し替えられない。
+
+### Q2: エンコーディング契約が型で守られていない（D2）
+
+`canonicalIdentity` へ渡す形式が producer ごとに分裂している（referee = object `{bytes: base64}` `tla-referee-toolchain.ts:47`、loader = 文字列 `tla-model-loader-internal.ts:279`、バイト照合 = 文字列 `fs-tlc-toolchain.ts:731`）。`createVerifiedTlaModelReceipt` が identity を再計算せずコピーする（`tla-model-receipt.ts:104-112`）ため、分裂は型でも実行時でも検出されず、**最終的な identity ハッシュ比較の不一致という遠く離れた症状**としてのみ現れる。`parse-don't-validate` の適用漏れ（識別子文字列をブランド型で運んでいない）に該当する。
+
+### Q3: テストが成功経路を一切通していない（t447）
+
+`tests/integration/t447-tla-referees.integration.test.ts:568` の describe ブロック `"the production referee toolchain adapter (CI-safe surface)"` のうち、`createRefereeToolchain` を実際に駆動するテストは 2 件のみ:
+
+- `:624` `"run() folds a broken mutant into a loud referee-toolchain error before any TLC work"` — **TLC 到達前**に落ちる経路
+- `:635` `"the adapter's version line names the pinned jar and the pinned JDK"` — バージョン行のみ
+
+残りはすべて `RefereeToolchainInternals.describeMutant` / `declaredInvariantsOf` / `traceStateVariablesOf` を純関数として検査する。**整形式のモデルを `preparePlanned` へ通すテストは存在しない**。よって #2913 の欠陥はテストの盲点にちょうど収まっており、既存スイートが green のまま本番経路が全滅していた。
+
+### Q4: `tests/formal-verif/**` の構造的 CI 除外
+
+`tests/run-tests.ts` / `tests/run-tests.sh` に `formal-verif` の参照は **0 件**。除外は 2 重に構造的である:
+
+1. スコープ集合が固定 — `tests/run-tests.ts:852` および `:909` の `const scopes = ["smoke", "unit", "integration", "e2e"] as const;`。`levelFiles`（`:750-759`）は `readdirSync(join(SCRIPT_DIR, level))` で当該 4 ディレクトリの直下しか見ず、再帰もしない。
+2. 仮に見えても `.filter((f) => f.endsWith(".test.ts"))`（`:754`）で弾かれる — `tla-referee-real-toolchain-probe.ts` は `.ts`。
+
+**除外リストは存在しない**（`levelFiles` の `excludes` 引数は当該 4 階層内の個別ファイル除外用）ので、「除外リストから外す」形の是正は取れない。probe をスイートへ載せるにはティアへの移設（`.test.ts` 化）か新スコープの追加が要る。ただし probe のヘッダは除外が**意図的**であることを明言しており（`:5-7` `Same shape as tla-real-toolchain-probe.ts: a standalone probe, not a CI test.` / `It needs JAVA_HOME on the pinned OpenJDK and network access for the first` / `jar fetch, so the default suite never runs it.`）、単純な移設は JDK 依存・ネットワーク依存のテストを既定スイートへ持ち込む。トレードオフの裁定は後続ステージの所掌。
+
+この除外は本 Issue 1 件より広い系統的な盲点である — `tests/formal-verif/**` 全体が既定 CI の射程外にある。
+
+## PR 収束ゲートの品質評価と未解決 BLOCKER（260811-pr-convergence-gate、履歴、observed `854692fd7`）
+
+### Assessment Summary
+
+| 領域 | 評価 | 根拠 |
+|---|---|---|
+| Type safety | 良好 | TypeScript、discriminated union、typed boundary errors |
+| External command safety | 良好 | shell を介さない argv spawn、stderr digest |
+| Component separation | 良好 | adapter/predicate/ledger/provenance の分離 |
+| Scope/harness wiring | 良好 | 4 self-* binding と generated grid を検証 |
+| Report authenticity | 不十分 | shape-only、receipt/digest/signature なし |
+| Completion enforcement | 不十分 | advisory sensor、manual fire、direct guard any-one semantics |
+| Delivery preconditions | 不十分 | create が commit/clean/push/head SHA を未検査 |
+| Regression coverage | 部分的 | component tests はあるが要求 matrix が未閉包 |
+
+### Existing Verification
+
+Developer scan では関連5 test files の計81 tests が pass した。既存 suite は real plugin bundle の compose/drop、4 self-* binding、code-generation produces overlay、report 不在時の engine coverage、3種の canonical report format、GraphQL snapshot、Intent/Bolt/Unit PR provenance をカバーする。
+
+### Unresolved BLOCKER Findings
+
+- **BLOCKER**: `renderReport` は公開された deterministic Markdown であり、CLI 以外の writer が同じ bytes を作れる。writer provenance を検証する receipt/audit identity がない。
+- **BLOCKER**: format sensor は `default_severity: advisory`、finding でも exit 0、stage `sensors: []`、manual fire である。未実行・失敗が completion を止めない。
+- **BLOCKER**: direct completion artifact guard は required produces のうち最低1件があれば存在条件を満たし得る。通常 orchestrator path の all-artifact coverage と一致しない。
+- **BLOCKER**: `create` は `--head` を渡すが、clean worktree、local commit、push、remote head SHA 一致を検査しない。
+
+### Follow-up Risks
+
+- **FOLLOW-UP**: stage `produces: []` / `requires_stage: []` と code-generation overlay の責任分離が resume/completion behavior を分かりにくくする。
+- **FOLLOW-UP**: 4 self-* scope × 8 harness × compose/drop × resume × direct/engine completion の回帰 matrix がない。
+- **FOLLOW-UP**: secret signature を導入すると key management が過剰になり得る。audit event identity + canonical content digest + PR/head binding で threat model を満たすか先に判断する。
+
+### Quality Gates and Recommended Tests
+
+repository の標準 gate は typecheck、Biome lint、Bun test、deterministic isolated builds、source-only check、distribution/graph invariants、project/patch coverage、plugin conformance である。
+
+実装時は、手書き/copy/tamper/replay report、sensor never-fired/failed/passed、uncommitted/dirty/unpublished/SHA mismatch/valid head、4 scope と非 self control、全 harness、compose/drop、park/resume を固定する必要がある。
+
+本 Reverse Engineering は read-only synthesis であり、追加 test 実行や code 変更は行っていない。pass 数は Developer scan の結果を継承する。
+
+## タイムアウト安定性評価（260810-test-time-factor、履歴、observed `ce3c3ccfd`）
 
 | 観点 | 観測 | リスク |
 |---|---|---|
@@ -12,7 +128,7 @@
 
 品質上の最小闉包は、helper の parse/scale 契約テスト、runner の既定値と明示値の係数適用テスト、workflow 注入の契約テスト、高優先 wait の乗算実証である。perf suite、時計境界テスト、timeout 発火用 fixture は対象外とする彼我分類が必要である。
 
-## advisory 宣言の無音 degradation とガード空白（260810-plugin-manifest-resoluti、現在、observed `7b9391be2`）
+## advisory 宣言の無音 degradation とガード空白（260810-plugin-manifest-resoluti、履歴、observed `7b9391be2`）
 
 **観測 ref**: すべて observed = `7b9391be2db4fad791d637293ea442d5a1462bac`（= repo HEAD）。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`（13 commits / 302 files、PR #2811 を含む）。正本は `re-scans/260810-plugin-manifest-resoluti.md`。
 

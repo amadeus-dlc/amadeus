@@ -1066,22 +1066,24 @@ describe("t92 Group J: audit-row required fields per event type", () => {
     });
   });
 
-  test("32: SENSOR_FIRED — 6 fields (Timestamp, Event, Fire id, Sensor ID, Stage slug, Output path)", () => {
+  test("32: SENSOR_FIRED — 7 fields including Output digest", () => {
     const f = jProj;
-    expect(auditFieldCount(f, "SENSOR_FIRED")).toBe(6);
+    expect(auditFieldCount(f, "SENSOR_FIRED")).toBe(7);
     expect(auditField(f, "SENSOR_FIRED", "Fire id")).not.toBe("");
     expect(auditField(f, "SENSOR_FIRED", "Sensor ID")).toBe("required-sections");
     expect(auditField(f, "SENSOR_FIRED", "Stage slug")).toBe("intent-capture");
     expect(auditField(f, "SENSOR_FIRED", "Output path")).not.toBe("");
+    expect(auditField(f, "SENSOR_FIRED", "Output digest")).toMatch(/^sha256:[0-9a-f]{64}$/);
   });
 
-  test("33: SENSOR_PASSED — 7 fields including Duration ms (integer)", () => {
+  test("33: SENSOR_PASSED — 8 fields including Duration ms and Output digest", () => {
     const f = jProj;
-    expect(auditFieldCount(f, "SENSOR_PASSED")).toBe(7);
+    expect(auditFieldCount(f, "SENSOR_PASSED")).toBe(8);
     expect(isInteger(auditField(f, "SENSOR_PASSED", "Duration ms"))).toBe(true);
+    expect(auditField(f, "SENSOR_PASSED", "Output digest")).toBe(auditField(f, "SENSOR_FIRED", "Output digest"));
   });
 
-  test("34: SENSOR_FAILED — 8 fields including Detail path + Findings count (integer)", () => {
+  test("34: SENSOR_FAILED — 9 fields including digest, Detail path, and Findings count", () => {
     const proj = makeProj();
     writeFileSync(join(proj, "amadeus-docs", "test.md"), "stub\n", "utf-8");
     const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-fail.ts");
@@ -1090,12 +1092,13 @@ describe("t92 Group J: audit-row required fields per event type", () => {
       AMADEUS_SENSORS_DIR: sensors,
     });
     const f = proj;
-    expect(auditFieldCount(f, "SENSOR_FAILED")).toBe(8);
+    expect(auditFieldCount(f, "SENSOR_FAILED")).toBe(9);
     expect(auditField(f, "SENSOR_FAILED", "Detail path")).not.toBe("");
     expect(isInteger(auditField(f, "SENSOR_FAILED", "Findings count"))).toBe(true);
+    expect(auditField(f, "SENSOR_FAILED", "Output digest")).toMatch(/^sha256:[0-9a-f]{64}$/);
   });
 
-  test("35: SENSOR_BUDGET_OVERRIDE — 9 fields (+Cap layer/value, Observed value)", () => {
+  test("35: SENSOR_BUDGET_OVERRIDE — 10 fields including digest and cap evidence", () => {
     const proj = makeProj();
     writeFileSync(join(proj, "amadeus-docs", "test.md"), "stub\n", "utf-8");
     const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-slow.ts", "", 1);
@@ -1104,10 +1107,11 @@ describe("t92 Group J: audit-row required fields per event type", () => {
       AMADEUS_SENSORS_DIR: sensors,
     });
     const f = proj;
-    expect(auditFieldCount(f, "SENSOR_BUDGET_OVERRIDE")).toBe(9);
+    expect(auditFieldCount(f, "SENSOR_BUDGET_OVERRIDE")).toBe(10);
     expect(auditField(f, "SENSOR_BUDGET_OVERRIDE", "Cap layer")).toBe("registry");
     expect(isInteger(auditField(f, "SENSOR_BUDGET_OVERRIDE", "Cap value"))).toBe(true);
     expect(isInteger(auditField(f, "SENSOR_BUDGET_OVERRIDE", "Observed value"))).toBe(true);
+    expect(auditField(f, "SENSOR_BUDGET_OVERRIDE", "Output digest")).toMatch(/^sha256:[0-9a-f]{64}$/);
   }, scaleTestTime(15000));
 });
 

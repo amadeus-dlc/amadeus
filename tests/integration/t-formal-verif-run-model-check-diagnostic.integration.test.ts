@@ -290,7 +290,7 @@ describe("non-acceptance model-check diagnostic", () => {
       },
       writeError: (value) => writes.push(value),
     })).toBe(0);
-    expect(models).toEqual(["FormalElection", "MirrorLifecycle"]);
+    expect(models).toEqual(["FormalElection", "MirrorLifecycle", "PrConvergenceGate"]);
     expect(writes.at(-1)).toBe('{"errorCode":null}\n');
     expect(await runModelCheckDiagnosticMain([
       "--root", "/tmp/evidence", "--model", "unknown",

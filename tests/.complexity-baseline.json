@@ -15,12 +15,6 @@
       "ccn": 17
     },
     {
-      "path": "packages/framework/core/tools/amadeus-bolt.ts",
-      "name": "handleStart",
-      "ordinal": 0,
-      "ccn": 23
-    },
-    {
       "path": "packages/framework/core/tools/amadeus-goal.ts",
       "name": "(anonymous)",
       "ordinal": 8,
@@ -31,12 +25,6 @@
       "name": "(anonymous)",
       "ordinal": 4,
       "ccn": 33
-    },
-    {
-      "path": "packages/framework/core/tools/amadeus-jump.ts",
-      "name": "handleExecute",
-      "ordinal": 0,
-      "ccn": 37
     },
     {
       "path": "packages/framework/core/tools/amadeus-jump.ts",
@@ -165,18 +153,6 @@
       "ccn": 28
     },
     {
-      "path": "packages/framework/core/tools/amadeus-utility.ts",
-      "name": "handleScopeChange",
-      "ordinal": 0,
-      "ccn": 26
-    },
-    {
-      "path": "packages/framework/core/tools/amadeus-utility.ts",
-      "name": "handleStatus",
-      "ordinal": 0,
-      "ccn": 27
-    },
-    {
       "path": "packages/framework/core/tools/amadeus-worktree.ts",
       "name": "handleCreate",
       "ordinal": 0,
@@ -213,10 +189,40 @@
       "ccn": 23
     },
     {
+      "path": "plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts",
+      "name": "checkAttestation",
+      "ordinal": 0,
+      "ccn": 17
+    },
+    {
+      "path": "plugins/pr-convergence/tools/pr-convergence-cli.ts",
+      "name": "createPullRequest",
+      "ordinal": 0,
+      "ccn": 22
+    },
+    {
+      "path": "plugins/pr-convergence/tools/pr-convergence-cli.ts",
+      "name": "currentSelfContext",
+      "ordinal": 0,
+      "ccn": 26
+    },
+    {
+      "path": "plugins/pr-convergence/tools/pr-convergence-cli.ts",
+      "name": "runConvergence",
+      "ordinal": 0,
+      "ccn": 21
+    },
+    {
+      "path": "plugins/pr-convergence/tools/pr-convergence-cli.ts",
+      "name": "writeSelfReport",
+      "ordinal": 0,
+      "ccn": 18
+    },
+    {
       "path": "scripts/package.ts",
       "name": "buildTree",
       "ordinal": 0,
-      "ccn": 23
+      "ccn": 22
     }
   ]
 }

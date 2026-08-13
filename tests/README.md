@@ -22,6 +22,26 @@ bun tests/coverage-patch-gate.ts --create-selector <file> <current-lines>
 
 Replace only that entry's `selector`; keep its `reason` and `expiry`. Pass the current waived line or range, not the old `anchorLines` span. This also applies when a large anchor is invalidated by an edit anywhere inside it: rerun the command for the actual waived lines and accept the newly derived `fingerprint`, `anchorLines`, and `targetLines`. Then run `bun run coverage:ci` followed by `bun tests/coverage-patch-gate.ts --check`.
 
+### `selector.class` — declaring what the exemption covers
+
+Because a selector follows the AST, it survives edits that move its lines — and it also survives edits that move them onto *different code*. When that happens the entry keeps waiving lines its `reason` never described. An entry may therefore declare what kind of row it covers, and the gate holds the declaration to the syntax tree:
+
+```json
+"selector": { "function": "handleOpen", "fingerprint": "sha256:…", "anchorLines": 1, "targetLines": "1", "class": "catch-arm" }
+```
+
+The vocabulary is closed and has exactly three members — `type-only`, `catch-arm`, `dispatch-case` — because those are the three the AST can decide. Any other value, including an empty string, fails the gate as a malformed entry rather than being skipped. The field is optional only for ranges the AST cannot classify: the gate's ratchet floor fails any entry whose range IS decidable but declares nothing, and its message names the exact `"class"` to add. Entries whose ranges are none of the three classes stay undeclared and unchecked. Drop a declaration if a later edit makes the range something else — a stale declaration is meant to be loud.
+
+**A declaration is a syntactic pin, not an endorsement.** It records what kind of row the range is *at the moment of pinning*, verified against the AST — it does not certify that the `reason` correctly describes the range, which no machine check can decide. What the pin buys is drift detection from that moment on: if the selector later walks onto a different kind of code, the gate turns red instead of silently waiving it.
+
+**What this does not do.** The `selector.class` checks never evaluate `reason` — that is deliberate (the gate still requires `reason` to be a non-empty string at parse time and quotes it in stale-entry diagnostics, but no check interprets it). This leaves three things unchecked:
+
+- **Every entry whose range the AST cannot classify.** Those stay undeclared and unchecked, so a full semantic audit of the ledger is not automated. `tests/allowlist-semantic-audit.ts` grades every entry's prose against its code and is worth running by hand when triaging the ledger, but its verdicts are advisory and no CI step consumes them.
+- **`spawn-only` reachability.** Most of the ledger claims lines are unmeasurable because only a spawned process reaches them. That is a claim about reachability, not about syntax, and nothing here verifies it.
+- **Drift that only the prose reveals.** An entry whose `reason` describes a different function than its selector lands in is invisible to a check that never reads the prose. Four designs tried to extract the subject from `reason` and each was measured false-positive-prone: the field mixes target, rationale, coverage status and reachability in one human sentence. Finding this kind of drift is still a reading task.
+
+All three are tracked in amadeus-dlc/amadeus#2901 rather than pretended away. The ledger's `expiry` field is the same shape of gap — nothing reads the release conditions either — and is tracked in amadeus-dlc/amadeus#2900.
+
 ## Prerequisites / running the suite
 
 Different levels need different substrate. The deterministic levels (smoke,

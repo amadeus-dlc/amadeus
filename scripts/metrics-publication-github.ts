@@ -493,7 +493,11 @@ export class SnapshotCliPort implements SnapshotPublisherPort {
 
   async enableAutoMerge(url: string): Promise<OperationReceipt> {
     try {
-      command(this.#context, ["gh", "pr", "merge", "--auto", "--squash", "--delete-branch", url]);
+      // main's Ruleset requires the merge queue (#2888): the queue owns the
+      // merge strategy (ruleset merge_method=SQUASH) and branch deletion (repo
+      // delete_branch_on_merge=true), so `--squash` and `--delete-branch` are
+      // both rejected by gh CLI on this call (#2925).
+      command(this.#context, ["gh", "pr", "merge", "--auto", url]);
       return { operation: "auto-merge", target: url, status: "accepted" };
     } catch (error) {
       return { operation: "auto-merge", target: url, status: "rejected", detail: String(error) };
@@ -679,7 +683,9 @@ export class MaintenanceCliPort implements MaintenancePublisherPort {
 
   async enableAutoMerge(url: string): Promise<OperationReceipt> {
     try {
-      command(this.#context, ["gh", "pr", "merge", "--auto", "--squash", "--delete-branch", url]);
+      // See SnapshotCliPort#enableAutoMerge: main's merge queue owns strategy
+      // and branch deletion, so neither flag can be asserted here (#2925).
+      command(this.#context, ["gh", "pr", "merge", "--auto", url]);
       return { operation: "auto-merge", target: url, status: "accepted" };
     } catch (error) {
       return { operation: "auto-merge", target: url, status: "rejected", detail: String(error) };

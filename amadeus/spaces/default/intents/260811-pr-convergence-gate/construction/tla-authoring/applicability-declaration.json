@@ -1,0 +1,5 @@
+{
+  "subjects": ["FR-2", "FR-3", "FR-4", "FR-5"],
+  "kind": "new-subject",
+  "rationale": "PR report lifecycle, attestation, blocking sensor, and completion chokepoints coordinate resumable actors over shared state; a stale or missing verdict can otherwise permit a silent safety violation, and no registered model governs these subjects."
+}

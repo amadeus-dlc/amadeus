@@ -40,7 +40,18 @@ import {
 import { FIXED_DOCKER_IMAGE } from "../../plugins/formal-model-check/tools/tlc-spawn-planner.ts";
 import { FIXED_TLC_ARTIFACT_DESCRIPTOR } from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 
+// The models carrying semantic-mutation acceptance evidence (the N x 6 matrix).
 const MODEL_NAMES = ["FormalElection", "MirrorLifecycle"] as const;
+// Every model the map registers — what the CI `run` command selects. This is a
+// superset of MODEL_NAMES: PrConvergenceGate is registered and therefore run,
+// but carries no authored semantic mutation, so it stays out of the matrix.
+const REGISTERED_MODEL_NAMES = [...MODEL_NAMES, "PrConvergenceGate"] as const;
+const PR_CONVERGENCE_GATE_TARGET: CiModelTarget = {
+  name: "PrConvergenceGate",
+  modelPath: "amadeus/spaces/default/specs/tla/PrConvergenceGate.tla",
+  cfgPath: "amadeus/spaces/default/specs/tla/PrConvergenceGate.cfg",
+  layer: "verified-source",
+};
 const MODEL_TARGETS: Readonly<Record<(typeof MODEL_NAMES)[number], CiModelTarget>> = {
   FormalElection: {
     name: "FormalElection",
@@ -302,7 +313,7 @@ function acceptanceEvidence(): CiAcceptanceEvidence {
 }
 
 describe("t406 CI all-model acceptance", () => {
-  test("loads both targets in declaration order and keeps the two verification layers explicit", () => {
+  test("loads every registered target in declaration order and keeps the two verification layers explicit", () => {
     const loaded = loadVerifiedTlaSources();
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
@@ -319,6 +330,7 @@ describe("t406 CI all-model acceptance", () => {
         cfgPath: "amadeus/spaces/default/specs/tla/MirrorLifecycle.cfg",
         layer: "verified-source",
       },
+      PR_CONVERGENCE_GATE_TARGET,
     ]);
     expect(selectVerifiedModel(loaded.value, "NoSuch").ok).toBe(false);
   });
@@ -409,7 +421,7 @@ describe("t406 CI all-model acceptance", () => {
           return { exitCode: 0, reason: "NOT_DETECTED" };
         },
       })).toBe(0);
-      expect(selected).toEqual(MODEL_NAMES);
+      expect(selected).toEqual(REGISTERED_MODEL_NAMES);
       expect(writes.at(-1)).toBe('{"exitCode":0,"reason":"NOT_DETECTED"}\n');
 
       expect(await runCiMain(["run", "--root", root, "--model", "MirrorLifecycle"], {

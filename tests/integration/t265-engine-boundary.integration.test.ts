@@ -346,15 +346,20 @@ function seedFinalCompletionProject(
   mkdirSync(join(record, "construction", "build-and-test"), {
     recursive: true,
   });
-  writeFileSync(
-    join(
-      record,
-      "construction",
-      "build-and-test",
-      "build-and-test-summary.md",
-    ),
-    "# Build and Test Summary\n",
-  );
+  for (const artifact of [
+    "build-instructions",
+    "unit-test-instructions",
+    "integration-test-instructions",
+    "performance-test-instructions",
+    "security-test-instructions",
+    "build-and-test-summary",
+    "build-test-results",
+  ]) {
+    writeFileSync(
+      join(record, "construction", "build-and-test", `${artifact}.md`),
+      `# ${artifact}\n`,
+    );
+  }
   mkdirSync(join(record, "verification"), { recursive: true });
   writeFileSync(
     join(record, "verification", "phase-check-construction.md"),
@@ -384,7 +389,7 @@ function prepareWorkflowCompletion(): {
       );
     }),
   ) as { kind: string };
-  expect(directive.kind).toBe("print");
+  expect(directive.kind, JSON.stringify(directive)).toBe("print");
   const completionInstance = readFileSync(statePath, "utf-8").match(
     /- \*\*Workflow Completion Instance\*\*: ([^\n]+)/,
   )?.[1];

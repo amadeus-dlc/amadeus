@@ -18,11 +18,22 @@ function failure<T, E>(result: { ok: true; value: T } | { ok: false; error: E })
 }
 
 describe("IdentityDigest.normalizeStableId", () => {
-  test.each(["FR-006", "NFR-002", "AC-003", "ADR-7", "ADR-12"])("accepts %s", (raw) => {
+  test.each([
+    "FR-1",
+    "NFR-1",
+    "AC-1",
+    "FR-CROSS-1",
+    "FR-1-1",
+    "FR-006",
+    "NFR-002",
+    "AC-003",
+    "ADR-7",
+    "ADR-12",
+  ])("accepts %s", (raw) => {
     expect(String(unwrap(IdentityDigest.normalizeStableId(raw)))).toBe(raw);
   });
 
-  test.each(["FR-6", "FR-0006", "cid:code-generation:c1", "ADR-", "FR006", "fr-006", ""])(
+  test.each(["FR-NA", "cid:code-generation:c1", "ADR-", "FR006", "fr-006", ""])(
     "rejects %p as invalid-grammar",
     (raw) => {
       expect(failure(IdentityDigest.normalizeStableId(raw))).toEqual({

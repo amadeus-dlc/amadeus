@@ -141,6 +141,7 @@ describe("TLA model loader real-filesystem boundary", () => {
     expect(loaded.value.models.map((model) => model.model.name)).toEqual([
       "FormalElection",
       "MirrorLifecycle",
+      "PrConvergenceGate",
     ]);
     expect(loaded.value.models[1]?.auxIdentities).toHaveLength(1);
   });
@@ -456,7 +457,10 @@ describe("TLA model loader real-filesystem boundary", () => {
     const loaded = loadVerifiedTlaSourcesInternal(fixture.moduleUrl);
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
-    expect(loaded.value.models.map((model) => model.model.name)).toEqual(["MirrorLifecycle"]);
+    expect(loaded.value.models.map((model) => model.model.name)).toEqual([
+      "MirrorLifecycle",
+      "PrConvergenceGate",
+    ]);
     expect(selectVerifiedModel(loaded.value, "FormalElection")).toMatchObject({
       ok: false,
       error: { kind: "MODEL_LOAD", code: "MODEL_MAP_INVALID" },

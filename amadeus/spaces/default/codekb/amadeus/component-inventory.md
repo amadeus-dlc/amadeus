@@ -1,6 +1,163 @@
 # コンポーネント棚卸し
 
-## テスト時間制御コンポーネント（260810-test-time-factor、現在、observed `ce3c3ccfd`）
+## coverage patch gate の構成要素棚卸し（260811-allowlist-semantic-audit、履歴、observed `854692fd7`）
+
+**観測 ref**: すべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（34 commits、ゲート実装は区間内無変更）。正本は `re-scans/260811-allowlist-semantic-audit.md`。
+
+### `tests/coverage-patch-gate.ts` の公開面（`grep -n "^export "` の全 16 件）
+
+| 行 | シンボル | 種別 | `reason` を受け取るか |
+|---|---|---|---|
+| `:68` | `parseLcovLineHits` | 関数 | — |
+| `:109` | `parseDiffAddedLines` | 関数 | — |
+| `:155` | `SemanticSelector` | interface | — |
+| `:162` | `ResolvedLineRange` | interface | — |
+| `:237` | `createSemanticSelector` | 関数 | — |
+| `:288` | `resolveSemanticSelector` | 関数 | **否**（`file` / `source` / `selector`） |
+| `:318` | `AllowlistEntry` | interface | 型として保持 |
+| `:325` | `ResolvedAllowlistEntry` | interface | 型として保持 |
+| `:360` | `parseAllowlist` | 関数 | 非空検査のみ |
+| `:384` | `resolveAllowlistEntries` | 関数 | 素通し |
+| `:407` | `findStaleAllowlistEntries` | 関数 | **否**（`entries` / `lcov`） |
+| `:431` | `PatchGateResult` | interface | — |
+| `:438` | `evaluatePatch` | 関数 | **否**（`added` / `lcov` / `allowlist`） |
+| `:463` | `renderSummary` | 関数 | — |
+| `:481` | `runCheck` | 関数 | — |
+| `:571` | `main` | 関数 | — |
+
+**`reason` を判定に用いる公開関数は 0 件。** 非公開の `allowlisted`（`:421-426`）も `file` / `start` / `end` のみを見る。
+
+### 台帳 `tests/.coverage-patch-allowlist.json` のデータ形状
+
+| フィールド | 型 | 検査 |
+|---|---|---|
+| `file` | string | `join(repoRoot, entry.file)` で読取、LCOV の `SF:` と突合 |
+| `selector.function` | string | AST スコープ名。トップレベルは `<module>`（`:190`）。クラスメンバは `Class.member` 形 |
+| `selector.fingerprint` | string | `sha256:` + アンカー窓の sha256（`sourceFingerprint` `:181-183`） |
+| `selector.anchorLines` | number | アンカー窓の行数。1 が最多（233 件 = 37%） |
+| `selector.targetLines` | string | アンカー窓**内の相対**範囲。絶対化は `:312` |
+| `reason` | string | **非空のみ**。内容は無検査 |
+| `expiry` | string?（597 件が保持） | string 型のみ検査 |
+
+### 台帳が張る対象コンポーネント（上位 10、`jq` の group_by 出力からの転記）
+
+| 件数 | ファイル |
+|---|---|
+| 63 | `packages/framework/core/tools/amadeus-orchestrate.ts` |
+| 61 | `packages/framework/core/tools/amadeus-state.ts` |
+| 19 | `packages/framework/core/tools/amadeus-quality-repair-runtime.ts` |
+| 18 | `packages/framework/core/tools/amadeus-advisory-choice.ts` |
+| 18 | `packages/framework/core/tools/amadeus-intent-completion.ts` |
+| 18 | `packages/framework/core/tools/amadeus-utility.ts` |
+| 17 | `packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts` |
+| 16 | `packages/framework/core/tools/amadeus-process-runner.ts` |
+| 16 | `packages/framework/core/tools/amadeus-quality-repair.ts` |
+| 16 | `scripts/pi-live-rpc.ts` |
+
+### 転位が確定したコンポーネント（18 件の分布）
+
+| ファイル | 確定転位数 | 該当エントリの解決先 |
+|---|---|---|
+| `packages/framework/core/tools/amadeus-state.ts` | 6 | `:916` / `:925-940` / `:961-964` / `:1070` / `:5683` / `:5736-5739` |
+| `packages/framework/core/tools/amadeus-orchestrate.ts` | 3 | `:944-951` / `:1707` / `:6189-6190` |
+| `packages/framework/core/tools/amadeus-graph.ts` | 2 | `:1711-1716` / `:1715-1720` |
+| `packages/framework/core/tools/amadeus-mirror-executor.ts` | 2 | `:1471-1475` / `:1480-1484` |
+| `packages/framework/core/tools/amadeus-election.ts` | 1 | `:417` |
+| `packages/framework/core/tools/amadeus-runtime.ts` | 1 | `:878` |
+| `packages/framework/core/tools/amadeus-learnings.ts` | 1 | `:902-904` |
+| `packages/framework/core/tools/amadeus-utility.ts` | 1 | `:820-822` |
+| `plugins/formal-model-check/tools/tla-arm.ts` | 1 | `:199` |
+
+各エントリの `reason` と真の対象所在は `re-scans/260811-allowlist-semantic-audit.md` §4 が正本。**全数照合は未実施のため本表は下限**。
+
+### 契約を固定しているテスト
+
+| ファイル | 固定している allowlist 契約 |
+|---|---|
+| `tests/unit/t229-coverage-patch-gate.test.ts` | 旧行ピンの拒否（`:176`）、指紋の行シフト耐性（`:182`）、指紋窓の拡張（`:197`）、解決の fail-closed（`:283`）、ソース不在の fail-closed（`:308`）、`reason` 非空（`:315`）、`targetLines` 形式（`:321`）、契約外セレクタフィールド（`:329`）、`expiry` 型（`:337`）、stale 範囲検出（`:343`） |
+| `tests/integration/t229-coverage-patch-gate-check.test.ts` | プロセス境界での `--check` 挙動 |
+
+**`reason` の内容を検査するテストは両ファイルに 0 件。**
+
+## TLA+ receipt 生成・検証コンポーネント（260812-tla-proof-receipt、現在、observed `854692fd7`）
+
+**観測 ref**: 本節の file:line はすべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD）時点。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（距離 34）。正本は `re-scans/260812-tla-proof-receipt.md`。パスはすべて `plugins/formal-model-check/tools/` 配下（テストを除く）。
+
+### receipt の生成器・検証器・消費者
+
+| 構成要素 | file:line | 役割 |
+|---|---|---|
+| `createVerifiedTlaModelReceipt` | `tla-model-receipt.ts:89-130` | receipt 構築。**identity を再計算せず `source.moduleIdentity` / `source.cfgIdentity` / `source.auxIdentities` をコピー**（`:104-112`）し、`identityInput` 全体を `:124-127` でハッシュする |
+| `validateVerifiedTlaModelReceipt` | `tla-model-receipt.ts:142` | 検証器。基準値を loader から作る（`:154` / `:156` / `:158`）。identity 比較は `:161-169`、拒否文言は `:169` `"receipt differs from the selected verified model"` |
+| `validateModelCheckReceipt` | `tla-model-receipt.ts:184`（`:187` で verified 分岐へ委譲） | union のディスパッチャ |
+| `sourceIdentityOf`（referee） | `tla-referee-toolchain.ts:46-48` | referee 側の identity 生成。**object 形式** `{ bytes: <base64> }` |
+| receipt 生成（referee） | `tla-referee-toolchain.ts:158` | ディスク上のバイト列から receipt を作る（未登録モデル） |
+| identity 生成（loader） | `tla-model-loader-internal.ts:279` | **デコード済み文字列**形式 |
+| `readVerifiedSourceBytes` | `fs-tlc-toolchain.ts:702`、identity 照合 `:731`、呼び出し `:1645` / `:1651` / `:1777` | ステージング時のバイト照合。**文字列形式**で比較 |
+| `verifyPlannedModelSources` | `fs-tlc-toolchain.ts:1635`、検証呼び出し `:1641`、中断 `:1643` | 準備段の消費者 |
+| `parseTlcOutput174` | `tlc-toolchain.ts:647` | 出力解析段の消費者（現状は準備段で止まるため未到達） |
+| `loadVerifiedTlaSourcesInternal` | `tla-model-loader-internal.ts:463`（方針コメント `:461-462`、root 解決 `findRepositoryRoot` `:151-168`） | test 専用 seam。root 選択の**能力はある**が本番利用は方針で禁止 |
+
+### loader 消費者の DI seam 有無 — 非対称は 1 箇所のみ
+
+| 消費者 | seam | file:line |
+|---|---|---|
+| `run-model-check-ci.ts` | **あり** — `loadSources` / `selectModel` フィールド（既定値つき） | `:19-20` `readonly loadSources: typeof loadVerifiedTlaSources;` / `:28-29` |
+| `run-model-check-diagnostic.ts` | **あり** — 同形 | `:326-327` / `:333-334` |
+| `run-model-check-source.ts` | **あり** — `loadVerifiedSources?` 任意依存、`:128` `(dependencies.loadVerifiedSources ?? loadVerifiedTlaSources)()` | `:40` / `:128` |
+| `run-skeleton-ci.ts` | なし（ただし検証器ではなく最上位 CI スクリプト） | `:66` / `:70` |
+| **`tla-model-receipt.ts`** | **なし — モジュール束縛の直接呼び出し** | **`:154` / `:156`** |
+
+seam のパターンは兄弟ファイルに 3 例すでに存在し、必要な 1 箇所にだけ無い（`cid:requirements-analysis:symmetric-pair-review` の形）。
+
+### `ModelCheckReceipt` の生産側（本番 2 箇所）
+
+- `tla-referee-toolchain.ts:158` — referee がディスク上のバイト列から生成（#2913 の患部）
+- `run-model-check-source.ts:96` `const verified = createVerifiedTlaModelReceipt(source);` — loader 由来のソースから生成（非対称なし）
+
+## PR 収束プラグインのコンポーネント棚卸し（260811-pr-convergence-gate、履歴、observed `854692fd7`）
+
+### Repository-Level Components
+
+| コンポーネント | 責務 | 主な依存 | Health |
+|---|---|---|---|
+| Framework Core | lifecycle、graph、state、audit、artifact/sensor guard | Bun、filesystem | at-risk |
+| Harness Adapters | 8 host 向け filesystem/UI integration | Core、host conventions | healthy |
+| Plugin Runtime | compose/drop、stage/tool/sensor projection | Core graph、filesystem | healthy |
+| PR Convergence Plugin | PR delivery loop と report | `gh`、GitHub、record | degraded |
+| Build/Packaging | deterministic `dist/<harness>` と self promotion | Bun、manifest | healthy |
+| Test System | smoke/unit/integration/e2e/conformance | Bun test、fixtures | at-risk |
+| Workflow Record Store | Intent state、audit、artifacts、CodeKB | Markdown/JSON filesystem | healthy |
+
+### PR Convergence Components
+
+| コンポーネント | 責務 | 依存 | Health / 根拠 |
+|---|---|---|---|
+| Host activation/config | plugin 有効化、4 self-* binding | `amadeus/config.json` | healthy — 配線済み |
+| Scope binding compiler | binding を stock/composed grid に加算 | config、plugin stage metadata | healthy — 非 self opt-in を保持 |
+| Plugin manifest | stage/tool と code-generation produces seam の宣言 | plugin composer | healthy |
+| Plugin stage contract | convergence loop、manual sensor fire、merge 非権限 | CLI、sensor | degraded — own produces/requires/sensors が空 |
+| CLI dispatcher | `create/status/report/override` | adapter、predicate、ledger | at-risk — local delivery precondition 不在 |
+| GitHub runner | auth probe、GraphQL/PR create boundary | `gh` CLI | healthy |
+| Lifecycle/predicate | active/merged と convergence 判定 | raw PR state | healthy |
+| Review ledger | all-page thread classification | GitHub GraphQL | healthy |
+| PR provenance checker | Intent/Bolt/Unit と title/body の一致 | record registry、snapshot | healthy |
+| Presentation renderer | canonical linked PR title/body | intent reference | healthy |
+| Report renderer/writer | canonical Markdown の生成 | convergence facts、filesystem | degraded — attestation 不在 |
+| Report format sensor | required field と自己矛盾の検査 | report filesystem | degraded — shape-only/advisory |
+| Orchestrator coverage | per-unit required produces の全件存在 | compiled graph、filesystem | healthy on normal engine path |
+| State artifact guard | direct transition の evidence check | compiled graph、filesystem | degraded — any-one artifact semantics |
+| Blocking sensor guard | blocking sensor の fired/passed 要求 | graph severity、audit | healthy generic mechanism、未配線 |
+
+### Ownership Gaps
+
+- CLI execution receipt の発行 owner がない。
+- report content digest と audit identity の binding owner がない。
+- receipt/digest の completion-time verification owner がない。
+- local branch/commit/push/head SHA precondition の検査 owner がない。
+- pr-convergence stage と code-generation overlay の間で report lifecycle owner が分散している。
+
+## テスト時間制御コンポーネント（260810-test-time-factor、履歴、observed `ce3c3ccfd`）
 
 | コンポーネント | 責務 | 係数対応状況 |
 |---|---|---|
@@ -12,7 +169,7 @@
 
 追加候補 `tests/lib/test-time-factor.ts` は環境値の parse と基準時間の scale だけを担い、scheduler や個別 driver のドメイン判定は持たない小さな共通モジュールが妥当である。
 
-## advisory 宣言消費と plugin 供給経路の構成要素（260810-plugin-manifest-resoluti、現在、observed `7b9391be2`）
+## advisory 宣言消費と plugin 供給経路の構成要素（260810-plugin-manifest-resoluti、履歴、observed `7b9391be2`）
 
 **観測 ref**: すべて observed = `7b9391be2db4fad791d637293ea442d5a1462bac`（= repo HEAD）。差分 base = `df1c874cfb397fafe877a72f00a82664a59689ae`（**13 commits / 302 files**、**PR #2811 を含む** — 直下の履歴節の `amadeus-plugin.ts` 系行番号は陳腐化しており、本節で取り直す）。正本は `re-scans/260810-plugin-manifest-resoluti.md`。
 

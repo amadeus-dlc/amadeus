@@ -181,24 +181,25 @@ describe("t426 Issue Form contract", () => {
   test("the team norm separates common, type-specific, mirror, and post-filing rules", () => {
     const norm = readFileSync(TEAM_NORM_PATH, "utf8");
 
+    // Re-baselined by #2921 after the norm distillation in #2919. Two cids were
+    // consolidated away and their content is pinned as surviving substrings instead:
+    //   issue-type-specific-body   -> the delegation clause inside issue-canonical-body
+    //                                 (type-specific forms live in the ISSUE_TEMPLATE yml files,
+    //                                  whose fields this file already pins directly)
+    //   intent-first-mirror-issue  -> the (B) intent-first branch inside issue-taxonomy
     for (const cid of [
       "issue-taxonomy",
       "issue-type-decision",
       "issue-canonical-body",
       "pre-filing-dup-and-branch-check",
       "issue-cross-review",
-      "issue-type-specific-body",
-      "intent-first-mirror-issue",
     ]) {
       expect(norm, `missing canonical norm: ${cid}`).toContain(`cid:requirements-analysis:${cid}`);
     }
     expect(norm).toContain("`bug` / `enhancement` / `documentation` / `question`");
     expect(norm).toContain("**完了条件**を上から順に判定");
-    expect(norm).toContain("`.github/ISSUE_TEMPLATE/{bug,enhancement,documentation,question}.yml`");
-    expect(norm).toContain("`.github/workflows/issue-labels.yml`");
-    for (const field of ["ハーネス名", "ハーネスバージョン", "Amadeus バージョン"]) {
-      expect(norm, `missing bug field contract: ${field}`).toContain(field);
-    }
+    expect(norm).toContain("種別固有の様式は `.github/ISSUE_TEMPLATE/*.yml` を正本とし、同じ変更で同期する");
+    expect(norm).toContain("intent record を正本に engine がミラー Issue を生成し、record → Issue の一方向同期");
     expect(norm).not.toContain("cid:requirements-analysis:bug-issue-canonical-body");
     expect(norm).not.toContain("`.github/workflows/bug-labels.yml`");
   });
@@ -221,10 +222,13 @@ describe("t426 Issue Form contract", () => {
     expect(workflow.on.issues.types).toEqual(["opened", "edited"]);
     expect(workflow.permissions).toEqual({});
     expect(job.permissions).toEqual({ contents: "read", issues: "write" });
-    // The gate must key on the heading stem only. Pinning either paren width
-    // here would re-introduce #2408: the job silently skipped — and with it the
-    // whole fail-closed classification check — for every half-width body.
-    expect(job.if).toContain("### 優先度");
+    // The gate must key on the heading stem only, without pinning the heading
+    // level's hash count. Pinning either paren width or a fixed heading level
+    // (`### `) here would re-introduce #2408 / #2916: the job silently
+    // skipped — and with it the whole fail-closed classification check — for
+    // every half-width or non-H3 body.
+    expect(job.if).toContain("# 優先度");
+    expect(job.if).not.toContain("### 優先度");
     expect(job.if).not.toContain("（いつ対応するか）");
     expect(job.if).not.toContain("（いつ直すか）");
     expect(job.steps[0]?.uses).toBe(
@@ -377,6 +381,76 @@ describe("t426 Issue Form contract", () => {
     expect(full.failures).toEqual(half.failures);
   });
 
+  // #2916: the Issue Form always renders H3 (`### `), but a body built by
+  // hand or by `gh issue create --body-file` is not bound to that heading
+  // level. Gating and matching on a literal `### ` skipped the job entirely
+  // for an H2 (`## `) body, silencing the fail-closed classification check
+  // (same failure shape as #2408, on the heading-level axis instead of
+  // paren width).
+  test("t545: classification is independent of heading level (#2916)", async () => {
+    const workflow = Bun.YAML.parse(readFileSync(WORKFLOW_PATH, "utf8")) as {
+      jobs: { sync: { if: string; steps: Array<{ with?: { script?: string } }> } };
+    };
+    const job = workflow.jobs.sync;
+    const script = job.steps[0]?.with?.script ?? "";
+
+    // Evaluate the real gate expression, same as the #2408 test above.
+    const literals = [...job.if.matchAll(/contains\(github\.event\.issue\.body,\s*'([^']*)'\)/g)]
+      .map((match) => match[1]);
+    expect(literals.length).toBeGreaterThan(0);
+    const gateFires = (body: string): boolean => literals.some((literal) => body.includes(literal));
+
+    const h2Bug = issueBody(
+      "bug",
+      "P2 — 通常",
+      [
+        ["重大度（どれだけ深刻か）", "S3-MAJOR — 回避策あり"],
+        ["原因の所在", "未特定"],
+      ],
+      "full",
+      2,
+    );
+    const h1Bug = issueBody(
+      "bug",
+      "P2 — 通常",
+      [
+        ["重大度（どれだけ深刻か）", "S3-MAJOR — 回避策あり"],
+        ["原因の所在", "未特定"],
+      ],
+      "full",
+      1,
+    );
+    const h3Bug = issueBody("bug", "P2 — 通常", [
+      ["重大度（どれだけ深刻か）", "S3-MAJOR — 回避策あり"],
+      ["原因の所在", "未特定"],
+    ]);
+
+    // The body really is H2 — otherwise this test would pass for the wrong
+    // reason (this is #2913's exact shape: a CLI-filed body with H2 headings).
+    expect(h2Bug).toContain("## 優先度（いつ対応するか）");
+    expect(h2Bug).not.toContain("### 優先度");
+
+    expect(gateFires(h1Bug), "the job gate fires for an H1 body").toBe(true);
+    expect(gateFires(h2Bug), "the job gate fires for an H2 body").toBe(true);
+    expect(gateFires(h3Bug), "the job gate still fires for the Form's H3 body").toBe(true);
+    // A body with no priority heading at all (an Intent Mirror Issue, say) is
+    // still skipped: widening the gate to any heading level must not turn it
+    // into a catch-all.
+    expect(gateFires("# Intent Mirror\n\nstatus: running")).toBe(false);
+
+    const h1 = await executeWorkflow(script, h1Bug, []);
+    expect(h1.failures).toEqual([]);
+    expect(h1.added).toEqual([["bug", "P2", "S3-MAJOR"]]);
+
+    const h2 = await executeWorkflow(script, h2Bug, []);
+    expect(h2.failures).toEqual([]);
+    expect(h2.added).toEqual([["bug", "P2", "S3-MAJOR"]]);
+
+    const h3 = await executeWorkflow(script, h3Bug, []);
+    expect(h3.added).toEqual(h2.added);
+    expect(h3.failures).toEqual(h2.failures);
+  });
+
   test("the workflow rejects untouched placeholder classifications", async () => {
     const workflow = Bun.YAML.parse(readFileSync(WORKFLOW_PATH, "utf8")) as {
       jobs: { sync: { steps: Array<{ with?: { script?: string } }> } };
@@ -414,19 +488,23 @@ function issueBody(
   priority: string,
   fields: ReadonlyArray<readonly [string, string]> = [],
   parens: "full" | "half" = "full",
+  headingLevel = 3,
 ): string {
   // The Issue Form renders full-width （）; bodies assembled by hand or by
   // `gh issue create --body-file` routinely carry half-width (). Same heading,
   // different rendering — the classification must not depend on which.
   const widen = (heading: string): string =>
     parens === "full" ? heading : heading.replace(/（/g, "(").replace(/）/g, ")");
+  // The Issue Form always renders H3 (`### `), but a hand-written or
+  // `gh issue create --body-file` body isn't bound to that level (#2916).
+  const hashes = "#".repeat(headingLevel);
   return [
     `<!-- amadeus-issue-form:v1 type=${type} -->`,
     "",
-    widen("### 優先度（いつ対応するか）"),
+    widen(`${hashes} 優先度（いつ対応するか）`),
     "",
     priority,
-    ...fields.flatMap(([label, value]) => ["", widen(`### ${label}`), "", value]),
+    ...fields.flatMap(([label, value]) => ["", widen(`${hashes} ${label}`), "", value]),
   ].join("\n");
 }
 

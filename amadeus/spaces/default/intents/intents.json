@@ -1103,5 +1103,26 @@
     "dirName": "260810-test-time-factor",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019ff109-86d3-7bf0-a906-98e8be106ef7",
+    "slug": "allowlist-semantic-audit",
+    "dirName": "260811-allowlist-semantic-audit",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019ff124-287b-77ff-8667-8565a8b879fd",
+    "slug": "pr-convergence-gate",
+    "dirName": "260811-pr-convergence-gate",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019ff349-9d80-79ad-ae0b-ede0018cac73",
+    "slug": "tla-proof-receipt",
+    "dirName": "260812-tla-proof-receipt",
+    "scope": "self-fix",
+    "status": "complete"
   }
 ]

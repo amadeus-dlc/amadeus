@@ -100,6 +100,49 @@
           "boundaryIdx"
         ]
       }
+    },
+    {
+      "name": "PrConvergenceGate",
+      "model": {
+        "path": "amadeus/spaces/default/specs/tla/PrConvergenceGate.tla",
+        "identity": "96054dc8321cc5ef1b7d2b7f28f8daf539907d10ce2b5869315ba33020cba451"
+      },
+      "cfg": {
+        "path": "amadeus/spaces/default/specs/tla/PrConvergenceGate.cfg",
+        "identity": "02bf3d2a6f6b6cb8143edd06e46b26250c0f5959e2fa04325a260614c533b62b"
+      },
+      "entries": [
+        {
+          "implPath": "packages/framework/core/tools/amadeus-orchestrate.ts",
+          "sha256": "e25f44023abaffc3be1b469246a652ba0fb8f395ab7e7c34b14eb5707dacf883"
+        },
+        {
+          "implPath": "packages/framework/core/tools/amadeus-state.ts",
+          "sha256": "7f5a5902d1eaaba4e7f2ecbb4013379ed2d9d60dc93a1490251ab1cc770ca20d"
+        }
+      ],
+      "vocabulary": {
+        "namedInvariants": [
+          "TypeOK",
+          "EvidenceCurrentHead",
+          "SensorRequiresAttestation",
+          "CodeGenerationGuarded",
+          "WorkflowGuarded"
+        ],
+        "traceStateVariables": [
+          "workflowDone",
+          "artifactsComplete",
+          "verdict",
+          "codeGenerationDone",
+          "sensorPassed",
+          "reportHead",
+          "head",
+          "attested"
+        ]
+      },
+      "evidenceBundle": {
+        "digest": "sha256:64ff99d9c7785d0c93a3f0a20f370735fec8126ef32cf9420ca7cf2bad2bcf90"
+      }
     }
   ]
 }
