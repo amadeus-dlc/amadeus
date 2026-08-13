@@ -363,6 +363,24 @@ These rules are part of this stage, not a pointer to something outside it.
 - **Convergence is not merge.** Exit 0 means "ready to be asked about". The
   merge question goes to a human, every time.
 
+## Sensors
+
+This stage imports one blocking sensor, `pr-convergence-report-format`,
+overlaid onto `code-generation` at install time. It validates the
+machine-rendered report at
+`<record>/construction/<unit>/code-generation/pr-convergence-report.md`: a
+missing, malformed, stale, tampered, copied, or replayed report fails, and
+the shared required-all completion guard keeps the unit open until the
+latest verdict passes.
+
+The CLI fires the sensor itself after every successful `create`, `report`,
+and `override` delivery, through the host sensor dispatcher — so attestation
+and latest-verdict bookkeeping cannot be bypassed. Manual sensor invocation
+is not a delivery path; re-running the CLI verb with the same identity is
+the only way to re-mint a verdict.
+
+---
+
 This stage is self-contained: the loop, the triage axes, and the CI ordering
 rules above are carried in full here, so an installed plugin behaves the same
 on every harness and requires no external skill or workspace-local document.
