@@ -153,7 +153,9 @@ describe("t528 the authoring hold end to end", () => {
 
     chooseRunNow(projectDir);
     const afterRunNow = guardAdvisoryChoices(projectDir, CHECKPOINT, raised, hostRoot);
-    expect(afterRunNow.kind).toBe("hold");
+    // Still held, as the settled `handoff` verdict (#2967) — run-now answers the
+    // question without releasing anything.
+    expect(afterRunNow.kind).toBe("handoff");
     if (afterRunNow.kind !== "hold") return;
     expect(afterRunNow.advisories[0]?.result ?? "").toContain("evaluator to return no-hold");
 

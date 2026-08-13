@@ -111,6 +111,26 @@ function awaitAdvisoryChoice(): Record<string, unknown> {
   };
 }
 
+function executeAdvisoryHandoff(): Record<string, unknown> {
+  return {
+    kind: "execute-advisory-handoff",
+    stage: "functional-design",
+    handoff_stages: ["tla-authoring"],
+    advisories: [{
+      plugin: "formal-model-check",
+      code: "authoring-hold",
+      message: "advisory: formal-model-check authoring hold",
+      checkpoint: "functional-design",
+      target: "amadeus/spaces/default/specs/tla",
+      spec_identity: "sha256:abc",
+      intent_run: "019fc698-ba1f-7467-b6b6-57c4b5b50140",
+      advisory_instance: "019fc698-ba1f-7000-8000-000000000002",
+      result: "declared advisory: release requires the plugin's own evaluator to return no-hold",
+      handoff_stage: "tla-authoring",
+    }],
+  };
+}
+
 function selectIntent(): Record<string, unknown> {
   const options = ["first-intent", "second-intent"];
   return {
@@ -193,6 +213,44 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
     expect(errs({ ...base, advisories: [{ ...(base.advisories as object[])[0], handoff_stage: "" }] })).toContain(
       "advisories[0].handoff_stage must be non-empty string",
     );
+  });
+
+  // #2967. `handoff_stages` is a projection of the advisories, so the validator
+  // checks the RELATIONSHIP, not just the array's type. A stage nothing declared
+  // sends the conductor somewhere nobody asked for; a declared stage left out
+  // silently drops the work the directive exists to carry.
+  test("execute-advisory-handoff well-formed -> VALID", () => {
+    expect(errs(executeAdvisoryHandoff())).toBe("VALID");
+  });
+
+  test("execute-advisory-handoff accepts an empty handoff_stages when no advisory declares one", () => {
+    const base = executeAdvisoryHandoff();
+    const advisory = { ...(base.advisories as Record<string, unknown>[])[0] };
+    delete advisory.handoff_stage;
+    expect(errs({ ...base, handoff_stages: [], advisories: [advisory] })).toBe("VALID");
+  });
+
+  test("execute-advisory-handoff rejects a handoff stage no advisory declares", () => {
+    expect(errs({ ...executeAdvisoryHandoff(), handoff_stages: ["tla-authoring", "build-and-test"] }))
+      .toContain("handoff_stages names build-and-test, which no advisory declares");
+  });
+
+  test("execute-advisory-handoff rejects a declared stage the array omits", () => {
+    expect(errs({ ...executeAdvisoryHandoff(), handoff_stages: [] }))
+      .toContain("handoff_stages omits declared stage tla-authoring");
+  });
+
+  test("execute-advisory-handoff rejects a repeated handoff stage", () => {
+    expect(errs({ ...executeAdvisoryHandoff(), handoff_stages: ["tla-authoring", "tla-authoring"] }))
+      .toContain("handoff_stages repeats tla-authoring");
+  });
+
+  test("execute-advisory-handoff rejects malformed advisories and a non-array handoff_stages", () => {
+    const base = executeAdvisoryHandoff();
+    expect(errs({ ...base, advisories: [] })).toContain("advisories must be a non-empty array");
+    expect(errs({ ...base, handoff_stages: "tla-authoring" })).toContain("handoff_stages");
+    // It carries no question and no options — those belong to the human route.
+    expect(errs({ ...base, question: "why?" })).toContain("question");
   });
 
   test("dispatch-subagent well-formed -> VALID", () => {

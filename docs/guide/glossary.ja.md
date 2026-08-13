@@ -71,7 +71,7 @@ Terminology 表、Developer Reference の Terminology 表、`packages/framework/
 | **Gradients of Agreement(合意度スケール)** | すべての票に記す 8 段階の合意度。1(全面的支持)から 4(棄権)を経て 8(拒否・ブロック)まで。留保が必要な段階の票は 1 文の留保を伴い、それは裁定へ転記されます。 |
 | **Guardrail(ガードレール)** | space メモリレイヤー(`amadeus/spaces/<space>/memory/`)にある Rule ファイル内の本文セクション(`## Forbidden`、`## Mandated`、およびフェーズルールのガードレール見出し)で、規範的な振る舞いの制約を表現します。コンテナが Rule であり、「guardrail」はその中の規範的な内容を指します。**Rule** を参照。 |
 | **Harness(ハーネス)** | AI-DLC コアの CLI ディストリビューション — ハーネス中立な **Core** がレンダリングされる、1 つの有能なコマンドラインエージェント。このセットはオープンで成長可能です(今日: Claude Code、Codex CLI、Cursor、Kimi Code、Kiro CLI、Kiro IDE、OpenCode)。*注 — このリポジトリでは「harness」は文脈によって 4 つの意味を持ちます:* (1) **この正典的な CLI ディストリビューションの意味**; (2) rule+sensor の **control loop**(古い用法、現在は改名 — **Control loop** を参照); (3) `packages/framework/harness/<name>/` のソースサーフェスディレクトリ; (4) `tests/harness/` のテストヘルパーディレクトリ。ユーザードキュメントで「a harness」と言えるのは意味 1 だけです。 |
-| **herdr** | チームセッションの端末ペイン群を管理するランナー。`scripts/team-up.sh` 経由で起動されます。 |
+| **herdr** | チームセッションの端末ペイン群を管理するランナー。 |
 | **Hook(フック)** | Claude Code がイベントに応じて自動実行する TypeScript スクリプト。この実装はフレームワークのフックを使い、すべて `settings.json` にプロジェクト全体で登録されます: ワークフローの背骨(監査ログ、センサーディスパッチ、runtime-graph コンパイル、statusline 同期、compaction 時の状態検証、サブエージェント追跡、ターン終了時のループ強制)に加えて、セッションライフサイクル(resume コンテキスト、session-end 監査)、プロンプト送信時の human-turn mint、statusline コマンド。各々は自己ゲートし、アクティブなワークフローがなければ no-op します。 |
 | **HUMAN_TURN** | 人間の実入力ターンを記録する監査イベント。human-presence ゲートと委任承認はこれを根拠にします。 |
 | **Inline execution(インライン実行)** | オーケストレーターがエージェントペルソナをロードし、会話内で直接ステージを実行するデフォルトの実行モード。リアルタイムのユーザー対話をサポートします。 |

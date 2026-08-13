@@ -849,7 +849,7 @@ Key terms used throughout AI-DLC documentation:
 | **Planning** | Stages that analyze, question, and design, producing markdown artifacts. Contrast **Generation**. |
 | **Rule** | A persistent behavioural rule authored once in the space memory layer (`amadeus/spaces/<space>/memory/`) at the workspace root and pulled into context by each harness's native include (Claude `@`-import stub, Kiro resources glob, Codex `AMADEUS_RULES_DIR`), applied to every stage it covers. Rules resolve through a strict-additive five-layer chain — org → team → project → phase → stage — where every applicable rule appears in context; broader layers are never overridden, only added to. Rules are the feedforward half of the **control loop** and may pair with a Sensor for deterministic verification. See [Rules and the Learning Loop](docs/guide/09-rules-and-the-learning-loop.md). |
 | **Scope** | A named configuration that determines which stages execute and at what depth, one file per scope under `{{HARNESS_DIR}}/scopes/amadeus-<name>.md`: enterprise, feature, mvp, poc, fix, chore, refactor, infra, security-patch, workshop. Custom scopes can be added without editing the framework, and a scope can also be auto-detected from a freeform intent. |
-| **Sensor** | A deterministic verification check defined by a manifest in `{{HARNESS_DIR}}/sensors/` (e.g., `amadeus-linter.md`, `amadeus-type-check.md`). Sensors fire on Write/Edit to a stage's outputs via the PostToolUse hook and record `SENSOR_*` audit rows. A manifest's `default_severity` decides what those rows mean: an `advisory` Sensor never blocks your workflow, while a `blocking` Sensor holds the stage's approval for as long as any output it fired against has a latest terminal that is not `SENSOR_PASSED` — and, fail-closed, when the Sensor never fired for the stage at all. A stage declares which Sensors fire via its `sensors:` frontmatter list. Sensors are the feedback half of the **control loop**; Rules are the feedforward half. See [Rules and the Learning Loop](docs/guide/09-rules-and-the-learning-loop.md). |
+| **Sensor** | A deterministic verification check defined by a manifest in `{{HARNESS_DIR}}/sensors/` (e.g., `amadeus-linter.md`, `amadeus-type-check.md`). Sensors fire on Write/Edit to a stage's outputs via the PostToolUse hook and record advisory `SENSOR_*` audit rows — they never block your workflow. A stage declares which Sensors fire via its `sensors:` frontmatter list. Sensors are the feedback half of the **control loop**; Rules are the feedforward half. See [Rules and the Learning Loop](docs/guide/09-rules-and-the-learning-loop.md). |
 | **Service** | A deployable process or container (API server, worker, frontend app). |
 | **Stage** | One of the 32 discrete steps in the lifecycle. Each stage has a lead agent, defined inputs/outputs, and follows the stage protocol. Stages are numbered by phase (e.g., 1.1, 2.4, 3.5). |
 | **Unit of work** | An independently implementable piece of the solution, decomposed during stage 2.7 (Units Generation). One or more Units are bundled into a Bolt for Construction. |
@@ -1011,6 +1011,32 @@ An advisory whose declaration names a destination carries
 does **not** release the hold: the hold lifts only when the declaring plugin's
 own evaluator returns no-hold on a later `next`. A directive without advisories
 is unchanged.
+
+### The settled hold: `execute-advisory-handoff`
+
+Once an advisory carries a `run-now` receipt, the question is answered but the
+hold stands. The engine stops asking: the next `next` emits
+`execute-advisory-handoff` instead of `await-advisory-choice`. This holds for
+both provenance kinds — a human's answer and an autonomy-ladder decision settle
+the question identically — so an unattended run never stalls on a question it
+has already answered.
+
+The directive is **work, not a question**. Do not present it, and do not offer
+the two choices again.
+
+1. Run `/amadeus --stage <slug> --single` once for each slug in
+   `handoff_stages`, in array order. That array is the deduplicated projection
+   of the advisories' own `handoff_stage` values — the destinations their
+   declarations name, and nothing else.
+2. Re-run `next`. Do **not** call `report`.
+3. If `handoff_stages` is **empty**, no advisory names a destination and there
+   is nothing to open. Report the standing hold to the user from each
+   `advisories[].message` and `advisories[].result`, and stop — re-running
+   `next` would only re-emit this directive.
+
+BR-U2-05 is unchanged throughout: opening a handoff stage is an entry point into
+the work the advisory is holding for, never a release. The hold lifts only when
+the declaring plugin's own evaluator returns no-hold.
 
 ## 12. Phase Boundary Verification
 
