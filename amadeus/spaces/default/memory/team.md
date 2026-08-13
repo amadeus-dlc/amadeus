@@ -43,7 +43,7 @@
 
 ### レビュー・ゲート・マージ
 
-- PR を作成したら収束ループを必ず実行し、base 競合 → 未解決レビュースレッド → 失敗・保留の必須 check を順に処理する。push のたび mergeability から再確認し、三者が同時に解消するまで継続する。収束確認はマージ承認を代替しない <!-- cid:requirements-analysis:pr-converge-loop-required -->
+- PR を作成したら `pr-convergence` プラグイン stage(`plugins/pr-convergence/stages/pr-convergence.md`)の手順に従い、base 競合 → 未解決レビュースレッド → 失敗・保留の必須 check を順に処理する。push のたび mergeability から再確認し、三者が同時に解消するまで継続する。収束確認はマージ承認を代替しない <!-- cid:requirements-analysis:pr-converge-loop-required -->
 - 独立レビューの観点: 完全性(実測)、正本と生成物の同期、surgical、落ちる実証、検証エビデンスの実測 exit code、無申告の逸脱。PR 発行前に deslop を通し、除去後は全検証コマンドを再実行する <!-- cid:requirements-analysis:independent-review-on-pr -->
 - AI は PR のマージを自発実行しない。CI green とレビュー READY を実測してユーザーへ諮り、承認後にスカッシュマージする。実行前に mergeable・現 head の必須 CI・verdict を再実測し、head が実質変化していれば増分再レビューのうえ再度諮る <!-- cid:requirements-analysis:leader-executes-merge -->
 - Issue のクローズは PR の MERGED 状態と着地面の実読・grep の出力を確認した後にのみ行う <!-- cid:requirements-analysis:close-after-landing-verification -->
