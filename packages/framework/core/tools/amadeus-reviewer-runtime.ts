@@ -10,7 +10,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import type { RunStageDirective } from "./amadeus-directive.ts";
 import { validateDirective } from "./amadeus-directive.ts";
@@ -421,6 +421,88 @@ function countOccurrences(content: string, needle: string): number {
   return content.split(needle).length - 1;
 }
 
+function countPathTokenOccurrences(content: string, token: string): number {
+  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(
+    `(^|[^A-Za-z0-9._/\\-])${escaped}(?=$|[^A-Za-z0-9._/\\-]|\\.(?=\\s|$))`,
+    "g",
+  );
+  return [...content.matchAll(pattern)].length;
+}
+
+function ownerMatchesForRequest(
+  directive: RunStageDirective,
+  request: ReadRequest,
+  exactOwnerEvidence: boolean,
+  requestedBasename: string,
+  deps: ReviewerRuntimeDeps,
+): string[] {
+  const matches: string[] = [];
+  for (const path of directive.consumes) {
+    if (!onDisk(path, deps)) continue;
+    const content = deps.fs.readFile(absolutePath(path, deps), "utf8");
+    for (const line of content.split(/\r?\n/)) {
+      const linePaths = repositoryPathsForBasename(line, requestedBasename);
+      const lineMatches = exactOwnerEvidence
+        ? countIdentifierTokenOccurrences(line, request.integrationId) > 0 &&
+          linePaths.length === 1 &&
+          linePaths[0] === request.path
+        : countPathTokenOccurrences(line, requestedBasename) === 1;
+      if (lineMatches) matches.push(path);
+    }
+  }
+  return matches;
+}
+
+function countIdentifierTokenOccurrences(content: string, token: string): number {
+  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(
+    `(^|[^A-Za-z0-9_-])${escaped}(?=$|[^A-Za-z0-9_-])`,
+    "g",
+  );
+  return [...content.matchAll(pattern)].length;
+}
+
+function repositoryPathsForBasename(
+  content: string,
+  requestedBasename: string,
+): string[] {
+  const escaped = requestedBasename.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(
+    `(^|[^A-Za-z0-9._/\\-])((?:[A-Za-z0-9._-]+/)+${escaped})` +
+      `(?=$|[^A-Za-z0-9._/\\-]|\\.(?=\\s|$))`,
+    "g",
+  );
+  return [...content.matchAll(pattern)].map((match) => match[2]);
+}
+
+function corroboratedFullPaths(
+  directive: RunStageDirective,
+  request: ReadRequest,
+  currentArtifacts: string[],
+  requestedBasename: string,
+  deps: ReviewerRuntimeDeps,
+): Set<string> {
+  const paths = new Set<string>();
+  const collect = (content: string): void => {
+    for (const line of content.split(/\r?\n/)) {
+      if (countIdentifierTokenOccurrences(line, request.integrationId) === 0) {
+        continue;
+      }
+      for (const path of repositoryPathsForBasename(line, requestedBasename)) {
+        paths.add(path);
+      }
+    }
+  };
+  for (const content of currentArtifacts) collect(content);
+  for (const path of directive.consumes) {
+    if (onDisk(path, deps)) {
+      collect(deps.fs.readFile(absolutePath(path, deps), "utf8"));
+    }
+  }
+  return paths;
+}
+
 function canonicalDecision(
   directive: RunStageDirective,
   request: ReadRequest,
@@ -444,18 +526,50 @@ function canonicalDecision(
   if (!directive.consumes.includes(request.ownerEvidence.path)) {
     throw new Error("owner evidence is not a passed consume");
   }
-  const ownerMatches: string[] = [];
-  for (const path of directive.consumes) {
-    if (!onDisk(path, deps)) continue;
-    const content = deps.fs.readFile(absolutePath(path, deps), "utf8");
-    const lines = content
-      .split(/\r?\n/)
-      .filter(
-        (line) =>
-          line.includes(request.integrationId) && line.includes(request.path),
-      );
-    ownerMatches.push(...lines.map(() => path));
+  const requestedBasename = basename(request.path);
+  const ownerExcerptPaths = repositoryPathsForBasename(
+    request.ownerEvidence.excerpt,
+    requestedBasename,
+  );
+  const exactOwnerEvidence = ownerExcerptPaths.length > 0;
+  if (
+    exactOwnerEvidence &&
+    (ownerExcerptPaths.length !== 1 ||
+      ownerExcerptPaths[0] !== request.path ||
+      countIdentifierTokenOccurrences(
+        request.ownerEvidence.excerpt,
+        request.integrationId,
+      ) !== 1)
+  ) {
+    throw new Error("owner evidence does not uniquely match the requested path");
   }
+  if (
+    !exactOwnerEvidence &&
+    countPathTokenOccurrences(request.ownerEvidence.excerpt, requestedBasename) !== 1
+  ) {
+    throw new Error("owner evidence does not uniquely match the requested path");
+  }
+  if (!exactOwnerEvidence) {
+    const corroboratedPaths = corroboratedFullPaths(
+      directive,
+      request,
+      currentArtifacts,
+      requestedBasename,
+      deps,
+    );
+    if (corroboratedPaths.size !== 1 || !corroboratedPaths.has(request.path)) {
+      throw new Error(
+        "basename owner evidence requires one exact path corroboration",
+      );
+    }
+  }
+  const ownerMatches = ownerMatchesForRequest(
+    directive,
+    request,
+    exactOwnerEvidence,
+    requestedBasename,
+    deps,
+  );
   if (ownerMatches.length !== 1 || ownerMatches[0] !== request.ownerEvidence.path) {
     throw new Error("spot-check requires exactly one passed owner path");
   }
@@ -464,9 +578,7 @@ function canonicalDecision(
     "utf8",
   );
   if (
-    countOccurrences(ownerContent, request.ownerEvidence.excerpt) !== 1 ||
-    !request.ownerEvidence.excerpt.includes(request.integrationId) ||
-    !request.ownerEvidence.excerpt.includes(request.path)
+    countOccurrences(ownerContent, request.ownerEvidence.excerpt) !== 1
   ) {
     throw new Error("owner evidence does not uniquely match the requested path");
   }
