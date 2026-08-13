@@ -369,7 +369,8 @@ describe("t210 non-claude adapters classify the UserPromptSubmit payload before 
       ) as { receipts: Array<{ choice: string }> };
       expect(store.receipts.map((receipt) => receipt.choice)).toEqual(["run-now"]);
       const held = guardAdvisoryChoices(dir, "build-and-test", [advisory]);
-      expect(held.kind).toBe("hold");
+      // Still held, as the settled `handoff` verdict (#2967).
+      expect(held.kind).toBe("handoff");
       if (held.kind !== "hold") return;
       expect(held.advisories[0]?.result).toContain("plugin's own evaluator");
     } finally {

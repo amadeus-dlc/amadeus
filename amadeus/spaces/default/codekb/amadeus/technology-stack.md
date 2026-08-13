@@ -37,3 +37,12 @@
 - 現行 audit は filesystem record であり、digest と event identity を結ぶ決定的 receipt は既存 stack 内で実装可能である。
 - plugin は core module を直接 import しないため、汎用 receipt schema または process boundary contract が必要である。
 - generated `dist/` と self-install surface は編集元ではなく、source 修正後の build で同期する。
+
+## 差分リフレッシュ時点のスタック（260813-advisory-requestion-fix、現在、observed `c0f9edf27`）
+
+**観測 ref**: base `854692fd7a11b124236b0427fe3d59e2fe6bf785` → observed `c0f9edf27828def6fa3dbbbc4101d753b398e025`。
+
+- ランタイム・言語・lint・テストの構成に変化はない（`package.json` / `bun.lock` は本区間で無変更 — `git diff --name-only 854692fd7..c0f9edf27 -- package.json bun.lock` が空出力）。
+- 開発用ツールチェーンのピンのみ更新: `mise.toml` に `@openai/codex 0.146.0` / `takt 0.58.0`。
+- ハーネス配布面の総数は 8（`ls -d packages/framework/harness/*/ | wc -l`）。[Issue #2967](https://github.com/amadeus-dlc/amadeus/issues/2967) の修正は engine 型と 8 ハーネスの skill 散文の同時更新（+ `bun run build` によるセルフインストール面の再生成）を要する。
+- 有効プラグインは 3（`coverage-patch-quick` / `formal-model-check` / `pr-convergence`、`amadeus/config.json` の `plugin.activation.names`）。

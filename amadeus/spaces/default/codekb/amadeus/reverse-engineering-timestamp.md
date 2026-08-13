@@ -15,6 +15,22 @@
 - Per-intent record: `re-scans/260813-remove-team-up.md`
 - 適用範囲外: Team Mode 概念の残置範囲、`team-msg.sh` の同梱可否、関連 Issue の close 方針は requirements-analysis の所掌
 
+## 実行メタデータ（履歴: 260813-advisory-requestion-fix）
+
+- Date: `2026-08-13`
+- Base commit: `854692fd7a11b124236b0427fe3d59e2fe6bf785`（`reverse-engineering-timestamp.md` + `re-scans/*.md` の全 observed のうち **HEAD の祖先で距離最小**。`git merge-base --is-ancestor 854692fd7 HEAD` = exit 0、`git rev-list --count 854692fd7..HEAD` = **33 commits / 224 files**。`cid:reverse-engineering:rescan-base-ancestry`）
+- Observed commit: `c0f9edf27828def6fa3dbbbc4101d753b398e025`（= 本 worktree HEAD = `origin/main` 系譜、`git rev-parse HEAD` の実出力。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、build `bun`
+- Focus: [Issue #2967](https://github.com/amadeus-dlc/amadeus/issues/2967)（semi/full autonomy で run-now を自動裁定済みの advisory が人間へ再質問される）+ `base..observed` 差分全域
+- Scan mode: **通常の差分スキャン**。xrev differential scan（`cid:reverse-engineering:c1-xrev-scan-mode`）は**採らなかった** — Issue #2967 のクロスレビューは本 intent の進行中に並行実施中であり、**スキャン開始時点で verdict が未成立**のため一次入力にできない
+- 行番号引用の currency: 全 file:line を observed 断面で実読・再解決した（`cid:reverse-engineering:upstream-cite-reresolve-on-shift`）。Developer scan からの訂正は `recordAdvisoryChoice` の spend guard 消費点 `:877` → **`:881`**、open 集合判定 `:880-888` → **`:886-890`**、`applyPendingAdvisoryGuard` の終端 `:876` → **`:874`**（`grep -n` の実出力で確定）。主張の実質は不変
+- 中核知見: 欠陥は **`applyPendingAdvisoryGuard`（`amadeus-orchestrate.ts:826-874`）が「既 settled」と「裁定不能」を同一分岐へ落とす**ことにある。直接の原因は `recordAdvisoryChoice`（`amadeus-advisory-choice.ts:866-`）が `boolean` 1 本を返し失敗理由を型で運ばないこと。加えて `resolveRunRequiredHold`（`:682-701`）は run-now receipt が残る限り無条件に hold を返し、**run-now 自身が hold を解く経路が構造的に不在**（`DECLARED_RELEASE_RULE` `:666-667`）。`decisionId`（`amadeus-intent-autonomy.ts:840-845`）は同一 advisory instance × 同一 graphRevision で決定的に同値のため、再入で single-spend guard（`:881` / `:886-890`）に必ず衝突する。回帰の由来は PR #2890（`387cbd0146`）による `run_required` / `formal_checks` 実行 route の全削除（導入は PR #2318 `f7310bd76f`）。二次所見として、engine が発行しなくなった同フィールドの消費を **8/8 ハーネスの skill 散文が指示し続けている**（drift 100%）、`applyPendingAdvisoryGuard` を参照するテストが **0 件**、欠陥挙動を仕様として固定するテストが **4 箇所**（t458:200-206 / t528:134 / t526:100 / boundaries:674）
+- 患部の区間内変化: **無し** — `git diff --name-only 854692fd7..c0f9edf27 -- packages/framework/core/tools/amadeus-advisory-choice.ts` が空出力。患部は base 断面から不変
+- Verification: git 状態変更・GitHub 書込・`bun run build`・engine/state 操作は**すべてゼロ**。書き込みは codekb 配下のみ
+- Updated artifacts: `architecture.md`（新現在節「advisory hold の裁定・記録・再入経路と run-now の解除不能」— Mermaid + テキストフォールバック併記）/ `component-inventory.md`（新現在節 — 患部コンポーネント表、8/8 drift 表、区間の新規コンポーネント。あわせて **`:351` の `run_required` / `formal_checks`「実装済み」記述を履歴ラベルへ是正**、`cid:reverse-engineering:c1`）/ `code-quality-assessment.md`（新現在節 — Q1 drift 8/8、Q2 再入経路 0 hit、Q3 欠陥挙動ピン 4 件、Q4 boolean 戻り値、Q5 区間内の他負債）/ `api-documentation.md`（新現在節 — directive 5 フィールド契約と advisory choice 記録 API）/ `code-structure.md`（差分区間の構造変化節）/ `dependencies.md`（依存変化と患部エッジ節）/ `technology-stack.md`（区間時点のスタック節）/ `business-overview.md`（無人実行の前提が崩れる面）。直前の現在節（`260812-tla-proof-receipt`）は本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）
+- Per-intent record: `re-scans/260813-advisory-requestion-fix.md`（base 選定根拠、述語 P0〜P6、機序の 6 段、テスト棚卸しとギャップ、8/8 drift の全数、未実測項目の正本）
+- 適用範囲外（明示）: 修正方式の選定（戻り値の型付け、run-now 解除経路の設計、8 ハーネス散文の同期手順、欠陥挙動を固定する 4 テストの改訂可否）は requirements-analysis / application-design の所掌
+
 ## 実行メタデータ（履歴: 260812-tla-proof-receipt）
 
 - Date: `2026-08-12`

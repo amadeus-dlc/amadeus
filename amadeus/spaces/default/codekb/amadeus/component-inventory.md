@@ -16,6 +16,50 @@
 
 `git ls-files | rg -i team-up` = **17**（record 3 + 正本 2 + test 12）。safety-wait リテラルの非 record ヒットは **5 files**。
 
+## advisory 再質問経路の構成要素棚卸し（260813-advisory-requestion-fix、履歴、observed `c0f9edf27`）
+
+**観測 ref**: observed = `c0f9edf27828def6fa3dbbbc4101d753b398e025`（`git rev-parse HEAD`）。base = `854692fd7a11b124236b0427fe3d59e2fe6bf785`。正本は `re-scans/260813-advisory-requestion-fix.md`。
+
+### 患部コンポーネント（[Issue #2967](https://github.com/amadeus-dlc/amadeus/issues/2967)）
+
+| コンポーネント | 所在（observed） | 役割と現況 |
+|---|---|---|
+| `evaluateAdvisoryHold` | `packages/framework/core/tools/amadeus-advisory-choice.ts:402-419` | pending × receipt の突合。run-now receipt が1件でもあれば `run-required`（型定義 :129） |
+| `resolveRunRequiredHold` | 同 `:682-701` | run-now receipt が残る限り無条件に `hold`。`result` = `DECLARED_RELEASE_RULE`（`:666-667`）。**実行 route を持たない** |
+| single-spend guard | 同 `advisoryProvenanceAlreadySpent` 消費点 `:881`（key 生成 `:330-334`）/ `acceptsFreshChoice` `:805-810` / open 集合判定 `:886-890` | 同一 provenance の 2 回目記録を必ず拒否。active receipt を持つ pending は open 集合から除外される |
+| `recordAdvisoryChoice` | 同 `:866-` | 戻り値は `boolean` 1 本。**失敗理由（既 settled / 不正 / 競合）を呼び出し側へ伝えられない** |
+| `AdvisoryChoiceProvenance` | 同 `:97-112`（receipt schema 2 は `:113-121`） | auto arm = `{ kind: "auto-decision"; decisionId; basisKind; basisFingerprint; projectionRevision; phase; graphRevision }` |
+| `applyPendingAdvisoryGuard` | `amadeus-orchestrate.ts:826-874`（生成は `:867-874`、成功分岐は `:853-865`） | 「既 settled」と「裁定不能」を同一分岐に落とす合成点 |
+| `decisionId` 生成 | `amadeus-intent-autonomy.ts:840-845` | `autonomyStableId("auto-decision", [intentUuid, interactionId, occurrenceId, graphRevision])` — 再入で必ず同値 |
+| `AwaitAdvisoryChoiceDirective` | `amadeus-directive.ts:228-235`（検査 `checkAwaitAdvisoryChoice` `:772-810`） | `{ kind; stage; question; options; advisories }` の **5 フィールドのみ**。`run_required` / `formal_checks` は不在（`git grep -n "run_required\|formal_checks" -- packages/framework/core/tools/amadeus-directive.ts` = 0 hit） |
+
+### skill 側契約の drift（8/8 ハーネス）
+
+検索述語: `git grep -n -E "run_required|formal_checks|runRequired|formalChecks" -- packages tests docs plugins .claude .agents scripts` → **10 行 / 8 ファイル**。ハーネス総数は `ls -d packages/framework/harness/*/ | wc -l` = **8**。
+
+| ハーネス面 | 所在 |
+|---|---|
+| claude | `SKILL.md:65` |
+| codex | `SKILL.md:26,63` |
+| cursor | `commands/amadeus.md:62` |
+| kimi | `SKILL.md:67` |
+| kiro-ide | `SKILL.md:63` |
+| kiro | `SKILL.md:63` |
+| opencode | `commands/amadeus.md:62` |
+| pi | `SKILL.md:104-105` |
+
+逐語（claude）: `If \`directive.run_required === true\`, execute every \`directive.formal_checks[].command\` exactly as supplied, then re-run \`next\`; do not call \`report\`.` — engine が発行しないフィールドの消費を **8/8 ハーネスが指示**している。セルフインストール面（`.claude` / `.agents`）も同形だが正本投影であり、正本修正 + `bun run build` で解消する。`core/amadeus-common/protocols/stage-protocol.md` は `run_required` を含まない。
+
+### 差分区間の新規コンポーネント（患部外、base..observed）
+
+| コンポーネント | 所在 | 備考 |
+|---|---|---|
+| coverage-patch-quick CLI | `plugins/coverage-patch-quick/`（tool-only、`stages: []`） | 新設プラグイン（#2965、+509 + README + plugin.json） |
+| pr-convergence attestation | `plugins/pr-convergence/tools/pr-convergence-attestation.ts`（新規 +133） | #2932 系 |
+| pr-convergence git runner | `plugins/pr-convergence/tools/pr-convergence-git-runner.ts`（新規 +190） | 同上 |
+| allowlist 意味監査 | `tests/allowlist-semantic-audit.ts`（新規 +259） | #2902 / #2938 / #2939 |
+| TLA referee receipt | `plugins/formal-model-check/`（#2920 / #2943） | receipt / TLC trace 変数照合 |
+
 ## coverage patch gate の構成要素棚卸し（260811-allowlist-semantic-audit、履歴、observed `854692fd7`）
 
 **観測 ref**: すべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（34 commits、ゲート実装は区間内無変更）。正本は `re-scans/260811-allowlist-semantic-audit.md`。
@@ -364,7 +408,7 @@ self-install 5 面 × {`plugins/…`, `.amadeus-plugin-src/…`} = **10 ファ�
 | **宣言 parse** | `amadeus-advisory-declaration.ts` — `parseAdvisoryDeclarations` :110-128 / `parseOne` :90-99 / `declaredAdvisoriesForPlugin` :253-277 | **実装済み・稼働中**。`pluginManifestPath` :243-245 = `<projectRoot>/plugins/<plugin>/plugin.json` が本 repo に実在するため経路は生きている |
 | **no-hold の痕跡消失** | 同 :171 逐語 `if (isRecord(verdict) && verdict.kind === "no-hold") return null;` | **#2766 の症状面**。「評価器が走って no-hold」と「そもそも走っていない」が観測上区別できない |
 | **checkpoint 発火** | `amadeus-orchestrate.ts` — `ACTIVATION_ADVISORY_STAGES` :1785-1789（`requirements-analysis` / `functional-design` / `build-and-test`）、`emitActivationAdvisory` :1808-1820、`raiseActivationAdvisoriesFor` :1844-1858 | **実装済み・2 call site**。コメント :1796-1803 が両者の乖離を戒める → 供給側に触る変更は**両方を必ず棚卸し** |
-| **guard → directive** | `applyPendingAdvisoryGuard` :814-866 → `guardAdvisoryChoices` :819 → `await-advisory-choice`（`run_required` / `formal_checks` は :861-863） | 実装済み |
+| **guard → directive** | `applyPendingAdvisoryGuard` :814-866 → `guardAdvisoryChoices` :819 → `await-advisory-choice`（`run_required` / `formal_checks` は :861-863） | 当時（observed `91f37ec85`）は実装済み。**現在は不在** — `run_required` / `formal_checks` は PR #2890（`387cbd0146`、2026-08-11）で directive 型・orchestrate 生成側ともに削除済みで、observed `c0f9edf27` の `applyPendingAdvisoryGuard`（:826-874）は5フィールドの `await-advisory-choice` のみを生成する。本行は当時の断面の履歴記述であり現行契約ではない（260813-advisory-requestion-fix 節を参照） |
 | **run-now ルート供給** | `amadeus-advisory-choice.ts` — `declaredFormalCheckRoute` :925-955、予約トークン4種 :939-944、`resolveRunRequiredHold` :978-1019、`DECLARED_RELEASE_RULE` :962-963 | **実装済み・テストで両側固定**（`t445-advisory-declaration-supply.integration.test.ts:297-322`）。実 manifest の `formalCheck` を非 null にすれば **engine 変更なしでルートが立つ** |
 | **subjects 供給** | `plugins/formal-model-check/tools/tla-authoring.ts` — `defaultSubjectsPath` :453-455、`GovernedSubjects` :457-476、`governedIdentity` :479-496、`advisoryHold` :498-532 | **🔴 書き手が存在しない**。解決先 `amadeus/spaces/default/specs/tla/authoring-subjects.json` は**未作成**（`ls -d` 実測）。`advisoryHold` は ENOENT のみ no-hold（:507-508）で、それ以外は fail-closed |
 | **model-map 書込** | `plugins/formal-model-check/tools/tla-registration.ts:265-270`（staging + `renameSync` の atomic replace） | model-map **のみ**を書く。subjects 宣言の書き手はここにも無い |

@@ -55,3 +55,24 @@ pr-convergence-report.md
 ## Change Impact
 
 attestation を追加すると、report schema、CLI writer、sensor/validator、audit contract、state completion guard、tests の同時変更が必要になる。scope binding 自体は独立しており、非 self-* opt-in contract を変更する必要はない。
+
+## 差分リフレッシュでの依存変化（260813-advisory-requestion-fix、現在、observed `c0f9edf27`）
+
+**観測 ref**: base `854692fd7a11b124236b0427fe3d59e2fe6bf785` → observed `c0f9edf27828def6fa3dbbbc4101d753b398e025`。
+
+- **外部依存の変化なし**: `package.json` / `bun.lock` はいずれも本区間で無変更（`git diff --name-only 854692fd7..c0f9edf27 -- package.json bun.lock` が空出力）。
+- `mise.toml` に開発ツールの追加（`@openai/codex 0.146.0` / `takt 0.58.0`）。runtime dependency ではない。
+- `amadeus/config.json` の `plugin.activation.names` に `coverage-patch-quick` を追加 — 有効プラグインは計 3（`coverage-patch-quick` / `formal-model-check` / `pr-convergence`）。
+
+### Issue #2967 患部の依存エッジ
+
+```text
+amadeus-orchestrate.ts (applyPendingAdvisoryGuard :826-874)
+  -> amadeus-advisory-choice.ts (guardAdvisoryChoices :716 -> evaluateAdvisoryHold :402 -> resolveRunRequiredHold :682)
+  -> amadeus-intent-autonomy.ts (resolveAdvisoryChoiceAutonomously / decisionId :840-845)
+  -> amadeus-advisory-choice.ts (recordAdvisoryChoice :866, boolean)
+  -> amadeus-directive.ts (AwaitAdvisoryChoiceDirective :228-235)
+  -> harness skill 散文（run_required / formal_checks を消費する指示、8/8 で drift）
+```
+
+欠けているエッジは **`recordAdvisoryChoice` → 呼び出し側への失敗理由**（現状は `boolean` 1 本）と、**run-now 裁定 → hold 解除**（`resolveRunRequiredHold` に実行 route が無く、解除は宣言プラグインの評価器のみ）である。

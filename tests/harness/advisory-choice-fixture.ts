@@ -34,11 +34,11 @@ export function chooseRunNow(projectDir: string): void {
   if (event === undefined) throw new Error("no HUMAN_TURN was planted");
   const choice = choiceFromExactPrompt("run-now");
   if (choice === null) throw new Error("run-now did not classify");
-  const recorded = recordAdvisoryChoice(projectDir, choice, {
+  const outcome = recordAdvisoryChoice(projectDir, choice, {
     kind: "human-turn",
     shard: auditShardName(projectDir),
     timestamp: planted.timestamp,
     eventIdentity: createHash("sha256").update(event.block).digest("hex"),
   });
-  if (!recorded) throw new Error("the advisory choice was not recorded");
+  if (outcome.kind === "refused") throw new Error(`the advisory choice was not recorded: ${outcome.reason}`);
 }

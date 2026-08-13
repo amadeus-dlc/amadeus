@@ -16,6 +16,42 @@
 
 doctor 公開面: `amadeus-utility.ts:964` が修復として同一 CLI を指名する。ランチャ削除時はこの文字列が残存 API になる。
 
+## advisory choice の内部契約と directive shape（260813-advisory-requestion-fix、履歴、observed `c0f9edf27`）
+
+**観測 ref**: observed = `c0f9edf27828def6fa3dbbbc4101d753b398e025`、base = `854692fd7a11b124236b0427fe3d59e2fe6bf785`。正本は `re-scans/260813-advisory-requestion-fix.md`。
+
+### `await-advisory-choice` directive（ハーネス可視の契約）
+
+`packages/framework/core/tools/amadeus-directive.ts:228-235` の `AwaitAdvisoryChoiceDirective` は次の **5 フィールドのみ**である。
+
+| フィールド | 内容 |
+|---|---|
+| `kind` | `"await-advisory-choice"` |
+| `stage` | hold が立った stage slug |
+| `question` | `renderAdvisoryChoiceQuestion(guard.advisories)` の出力 |
+| `options` | `ADVISORY_CHOICE_OPTIONS` のラベル列 |
+| `advisories` | `AdvisoryChoiceDirectiveItem[]` |
+
+`AWAIT_ADVISORY_CHOICE_FIELDS` も同じ 5 件で、検査関数 `checkAwaitAdvisoryChoice`（`:772-810`）は `run_required` / `formal_checks` を一切見ない。両フィールドは PR #2890（`387cbd0146`、2026-08-11）で型・生成側ともに削除済みであり、**現行 engine はこれらを発行しない**（`git grep -n "run_required\|formal_checks" -- packages/framework/core/tools/amadeus-directive.ts` = 0 hit）。ハーネス skill 散文はなお消費を指示しており、drift は 8/8（`component-inventory.md` の本 intent 節を参照）。
+
+### advisory choice 記録 API
+
+| API | 所在 | 契約 |
+|---|---|---|
+| `evaluateAdvisoryHold(pending, receipts)` | `amadeus-advisory-choice.ts:402-419` | 返り値は `hold` / `run-required`（型定義 `:129`）/ `resolved` の判別ユニオン。run-now receipt が 1 件でもあれば `run-required` |
+| `recordAdvisoryChoice(projectDir, choice, provenance, now?)` | 同 `:866-` | **戻り値は `boolean`**。失敗理由（既 settled / spend 済み / open 集合が空 / shard 不一致 / store 読取失敗）は呼び出し側から区別できない |
+| `AdvisoryChoiceProvenance` | 同 `:97-112` | auto arm = `{ kind: "auto-decision"; decisionId; basisKind; basisFingerprint; projectionRevision; phase; graphRevision }`、human arm は turn 由来。receipt schema は 2（`:113-121`） |
+| single-spend key | 同 `:330-334` | `JSON.stringify(["auto-decision", provenance.decisionId])` |
+| `decisionId` | `amadeus-intent-autonomy.ts:840-845` | `autonomyStableId("auto-decision", [intentUuid, interactionId, occurrenceId, graphRevision])` — 同一 advisory instance × 同一 graphRevision で決定的に同値 |
+| `DECLARED_RELEASE_RULE` | `amadeus-advisory-choice.ts:666-667` | 逐語「declared advisory: release requires the plugin's own evaluator to return no-hold」。run-now が hold を解く経路は API 上存在しない |
+
+### 差分区間で観測したその他の契約面（患部外）
+
+- `packages/framework/core/otel/event-registry.ts` の `EXPECTED_CANONICAL_COUNT = 92`。
+- `amadeus-config.ts` に `requiredPluginStagesForScope`。
+- `amadeus-sensor.ts` に `digestFile` / `resolveScriptPath`。
+- `amadeus-state.ts` に blocking sensor 定数（`BLOCKING_SENSOR_CUTOFF_YYMMDD = 260809`、`SENSOR_TERMINAL_EVENTS`）。
+
 ## coverage 免除台帳のデータ契約（260811-allowlist-semantic-audit、履歴、observed `854692fd7`）
 
 **観測 ref**: すべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`。正本は `re-scans/260811-allowlist-semantic-audit.md`。

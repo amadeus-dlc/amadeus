@@ -1012,6 +1012,32 @@ does **not** release the hold: the hold lifts only when the declaring plugin's
 own evaluator returns no-hold on a later `next`. A directive without advisories
 is unchanged.
 
+### The settled hold: `execute-advisory-handoff`
+
+Once an advisory carries a `run-now` receipt, the question is answered but the
+hold stands. The engine stops asking: the next `next` emits
+`execute-advisory-handoff` instead of `await-advisory-choice`. This holds for
+both provenance kinds — a human's answer and an autonomy-ladder decision settle
+the question identically — so an unattended run never stalls on a question it
+has already answered.
+
+The directive is **work, not a question**. Do not present it, and do not offer
+the two choices again.
+
+1. Run `/amadeus --stage <slug> --single` once for each slug in
+   `handoff_stages`, in array order. That array is the deduplicated projection
+   of the advisories' own `handoff_stage` values — the destinations their
+   declarations name, and nothing else.
+2. Re-run `next`. Do **not** call `report`.
+3. If `handoff_stages` is **empty**, no advisory names a destination and there
+   is nothing to open. Report the standing hold to the user from each
+   `advisories[].message` and `advisories[].result`, and stop — re-running
+   `next` would only re-emit this directive.
+
+BR-U2-05 is unchanged throughout: opening a handoff stage is an entry point into
+the work the advisory is holding for, never a release. The hold lifts only when
+the declaring plugin's own evaluator returns no-hold.
+
 ## 12. Phase Boundary Verification
 
 > See `stage-protocol-governance.md` §13 — load at phase transitions to run traceability verification. Capturing corrections as durable rules is the §13 Learnings Ritual below, not a separate guardrail flow.
