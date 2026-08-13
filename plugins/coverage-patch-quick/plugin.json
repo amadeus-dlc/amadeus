@@ -1,0 +1,9 @@
+{
+  "name": "coverage-patch-quick",
+  "stages": [],
+  "seams": [],
+  "fragments": [],
+  "tools": [
+    "tools/coverage-patch-quick-cli.ts"
+  ]
+}
