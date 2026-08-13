@@ -1,0 +1,27 @@
+{
+  "electionId": "E-260813-RECORD-BUNDLING-NORM",
+  "kind": "norm-conflict-audit",
+  "question": "ノルム矛盾監査: team.md Way of Working は「短命ブランチから Bolt ごとに PR を出してスカッシュマージし、複数ユニット・工程記録・無関係なリファクタを束ねない」と定めるが、(a) pr-convergence CLI の create 前提は record が head checkout 内に実在し checked-out branch == head であることを要求し(plugins/pr-convergence/tools/pr-convergence-cli.ts の verifyCreatePrerequisites: cwd = --record、resolveIntentReference が record 隣接の intents.json を読む)、(b) 先例 PR #2920(260812-tla-proof-receipt の Bolt PR)は record 18 ファイルを同梱してマージ済み、(c) 本 intent の PR #2986 も先例に従い record 同梱で作成・マージ済み。文言と実践・CLI 構造が矛盾している。どう整理するか。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "team.md 文言を実践へ整合させる",
+      "description": "「複数ユニット・工程記録・無関係なリファクタを束ねない」を「複数ユニット・他 intent の工程記録・無関係なリファクタを束ねない。自 intent の record checkpoint の同梱は可(pr-convergence CLI の create 前提と record→PR の追跡性に整合)」へ是正する。CLI・実践は無変更。ノルム変更は origin/main 起点の単独ブランチ PR + 独立レビュー + 人間承認マージで行う"
+    },
+    {
+      "internalNo": 2,
+      "label": "文言を維持し CLI と実践を是正する",
+      "description": "team.md の「工程記録を束ねない」を字義どおり維持し、pr-convergence CLI を record が head checkout 外にあっても create 可能な構成へ改修する(検証面の再設計を含む)。以後の Bolt PR は record を含めず、record は別のチェックポイント PR で本線へ流す。CLI 改修の新 Issue 起票が必要"
+    },
+    {
+      "internalNo": 3,
+      "label": "現状維持(文言も実践も変えない)",
+      "description": "矛盾を既知として文書化のみ行い、team.md も CLI も変更しない。次に同じ判断点に来た intent は再び個別判断を迫られる"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

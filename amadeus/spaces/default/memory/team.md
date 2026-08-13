@@ -32,7 +32,7 @@
 
 ## Way of Working
 
-`main` 中心のトランクベース。短命ブランチから Bolt ごとに PR を出してスカッシュマージし、複数ユニット・工程記録・無関係なリファクタを束ねない。工程記録(`amadeus/`)はチェックポイントコミットで本線へ流す。Issue・PR は日本語(識別子・パス・ログ引用は原文保持)、コミットは英語 <!-- cid:requirements-analysis:issues-in-japanese -->
+`main` 中心のトランクベース。短命ブランチから Bolt ごとに PR を出してスカッシュマージし、複数ユニット・他 intent の工程記録・無関係なリファクタを束ねない。自 intent の record checkpoint の同梱は可(pr-convergence CLI の create 前提と record→PR の追跡性に整合。同梱の時機は pr-convergence stage 契約に従う — 収束レポートは head に束縛され、verdict 後の record checkpoint commit / それ以前の push は created epoch の再 mint を要する。E-260813-RECORD-BUNDLING-NORM 2-0)。工程記録(`amadeus/`)はチェックポイントコミット(単独または自 intent の Bolt PR への同梱)で本線へ流す。Issue・PR は日本語(識別子・パス・ログ引用は原文保持)、コミットは英語 <!-- cid:requirements-analysis:issues-in-japanese -->
 
 ### 意思決定とエスカレーション
 
