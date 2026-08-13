@@ -1,64 +1,98 @@
 # コンポーネント棚卸し
 
-## team-up 廃止面の構成要素（260813-remove-team-up、現在、observed `97581b3e3`）
+## ライフサイクル進行ガードの構成要素棚卸し（260813-lifecycle-guard-runtime、現在、observed `89532174c`）
 
-**観測 ref**: `97581b3e39187b13413c046e86f820d290a389eb`。述語 P3–P7 は `re-scans/260813-remove-team-up.md`。
+**観測 ref**: すべて observed = `89532174c30ef9cc7ff29496cd6916586fdda00a`。差分 base = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（35 commits / 233 files、うち `packages/framework/core/tools` は 9 files / +680 −105）。**G 番号付きの全数棚卸し（G1〜G40）と検索述語 P1〜P13 は `re-scans/260813-lifecycle-guard-runtime.md` を正本とする**。本節は checkpoint 群ごとの component だけを掲げる。
 
-| コンポーネント | パス | 本番消費者 |
-|---|---|---|
-| Team Mode ランチャ | `packages/framework/core/tools/team-up.sh` | ユーザー / doctor fix 文言 / 全 harness tools 投影 |
-| Codex safety-wait | `packages/framework/core/tools/team-up-codex-safety-wait.ts` | `team-up.sh:59` のみ |
-| チームメッセージ | `packages/framework/core/tools/team-msg.sh` | 削除対象（当初は独立残置、2026-08-14 に同 Intent へ編入） |
-| doctor trust 修復 | `amadeus-utility.ts:964` | 文字列でランチャを指名 |
-| ユーザーガイド | `docs/guide/20-team-mode.md` 対訳ほか 8 docs | 現行手順として掲載 |
-| 名前付きテスト | `tests/**/*team-up*` 12 files | ランチャ / supervisor |
-| 非名前付きテスト | `t266` / `t267` / `t226` | 起動・clean-env・doctor 文字列 |
+分類凡例 — **built-in**: フレームワーク不変条件 / **policy**: ユーザ設定・intent 属性依存 / **off-switch**: 環境変数による無効化面。パスの prefix は `packages/framework/core/tools/`（G40 のみ `packages/framework/core/hooks/`）。
 
-`git ls-files | rg -i team-up` = **17**（record 3 + 正本 2 + test 12）。safety-wait リテラルの非 record ヒットは **5 files**。
+### C1. Intent 生成前（`handleIntentBirth` `amadeus-utility.ts:4387`）
 
-## advisory 再質問経路の構成要素棚卸し（260813-advisory-requestion-fix、履歴、observed `c0f9edf27`）
+| コンポーネント | 位置 | 責務 | 種別 |
+| --- | --- | --- | --- |
+| `scanWorkspaceOrRefuse`（G1） | `amadeus-utility.ts:4097` | workspace 分類が `inconclusive` なら `refuseWithoutAudit` = mutation 前に exit | built-in |
+| `isReservedHelpRecordName`（G2） | `amadeus-utility.ts:4415` | 予約名の intent 生成を拒否 | built-in |
+| `birthAutonomyOrDie`（G3） | 呼出 `amadeus-utility.ts:4410`、定義 `:4362` | autonomy フラグの妥当性 | policy |
+| `resolveBirthRepoSet`（G4） | `amadeus-utility.ts:4428`（try/catch → `die`） | repo 集合の解決 | built-in |
 
-**観測 ref**: observed = `c0f9edf27828def6fa3dbbbc4101d753b398e025`（`git rev-parse HEAD`）。base = `854692fd7a11b124236b0427fe3d59e2fe6bf785`。正本は `re-scans/260813-advisory-requestion-fix.md`。
+**集約点なし** — 4 ガードが birth ハンドラ内に直列に置かれている。
 
-### 患部コンポーネント（[Issue #2967](https://github.com/amadeus-dlc/amadeus/issues/2967)）
+### C2. Stage 完了（**集約済み**）
 
-| コンポーネント | 所在（observed） | 役割と現況 |
-|---|---|---|
-| `evaluateAdvisoryHold` | `packages/framework/core/tools/amadeus-advisory-choice.ts:402-419` | pending × receipt の突合。run-now receipt が1件でもあれば `run-required`（型定義 :129） |
-| `resolveRunRequiredHold` | 同 `:682-701` | run-now receipt が残る限り無条件に `hold`。`result` = `DECLARED_RELEASE_RULE`（`:666-667`）。**実行 route を持たない** |
-| single-spend guard | 同 `advisoryProvenanceAlreadySpent` 消費点 `:881`（key 生成 `:330-334`）/ `acceptsFreshChoice` `:805-810` / open 集合判定 `:886-890` | 同一 provenance の 2 回目記録を必ず拒否。active receipt を持つ pending は open 集合から除外される |
-| `recordAdvisoryChoice` | 同 `:866-` | 戻り値は `boolean` 1 本。**失敗理由（既 settled / 不正 / 競合）を呼び出し側へ伝えられない** |
-| `AdvisoryChoiceProvenance` | 同 `:97-112`（receipt schema 2 は `:113-121`） | auto arm = `{ kind: "auto-decision"; decisionId; basisKind; basisFingerprint; projectionRevision; phase; graphRevision }` |
-| `applyPendingAdvisoryGuard` | `amadeus-orchestrate.ts:826-874`（生成は `:867-874`、成功分岐は `:853-865`） | 「既 settled」と「裁定不能」を同一分岐に落とす合成点 |
-| `decisionId` 生成 | `amadeus-intent-autonomy.ts:840-845` | `autonomyStableId("auto-decision", [intentUuid, interactionId, occurrenceId, graphRevision])` — 再入で必ず同値 |
-| `AwaitAdvisoryChoiceDirective` | `amadeus-directive.ts:228-235`（検査 `checkAwaitAdvisoryChoice` `:772-810`） | `{ kind; stage; question; options; advisories }` の **5 フィールドのみ**。`run_required` / `formal_checks` は不在（`git grep -n "run_required\|formal_checks" -- packages/framework/core/tools/amadeus-directive.ts` = 0 hit） |
+| コンポーネント | 位置 | 責務 | 種別 |
+| --- | --- | --- | --- |
+| `verifyStageCompletionGuards`（G5） | `amadeus-state.ts:2539` | 完了 chokepoint。呼出 `:2763` advance / `:2877` finalize / `:3054` complete-workflow / `:3998` approve | built-in |
+| `verifyStageArtifacts`（G6） | `amadeus-state.ts:2460` | 成果物の存在 | built-in + off-switch |
+| `verifyBlockingSensors`（G7） | `amadeus-state.ts:1835` | blocking sensor verdict の消費（fail-closed） | built-in + off-switch + policy |
+| `evaluateBlockingSensors` / `blockingSensorIdsForStage`（G8） | `amadeus-state.ts:1752` / `:1824` | `sensors_applicable` からの宣言駆動な適用解決。純関数 | built-in |
+| sensor verdict 真理値表（G9） | `amadeus-sensor.ts:19-31` | 実行結果 → verdict。**異常は PASSED（fail-open）** | built-in |
+| unit レビュー未了拒否（G10） | `amadeus-state.ts`（`"Refusing to complete ... unit(s) produced"`） | code-producing stage の unit ゲート | built-in |
 
-### skill 側契約の drift（8/8 ハーネス）
+### C3. Phase 境界
 
-検索述語: `git grep -n -E "run_required|formal_checks|runRequired|formalChecks" -- packages tests docs plugins .claude .agents scripts` → **10 行 / 8 ファイル**。ハーネス総数は `ls -d packages/framework/harness/*/ | wc -l` = **8**。
+| コンポーネント | 位置 | 責務 | 種別 |
+| --- | --- | --- | --- |
+| `verifyPhaseCheckArtifact`（G11） | `amadeus-state.ts:392`（export、コメント `:384-391`） | phase-check artifact の存在検査。不在なら `error()` で exit（fail-closed）。`amadeus-jump.ts` へ export | built-in + off-switch |
+| 呼出 5 箇所 | `amadeus-state.ts:2775` / `:2926` / `:3059` / `:4009` + `amadeus-jump.ts:581` | advance / finalize / complete-workflow / approve / 前進 jump | — |
 
-| ハーネス面 | 所在 |
-|---|---|
-| claude | `SKILL.md:65` |
-| codex | `SKILL.md:26,63` |
-| cursor | `commands/amadeus.md:62` |
-| kimi | `SKILL.md:67` |
-| kiro-ide | `SKILL.md:63` |
-| kiro | `SKILL.md:63` |
-| opencode | `commands/amadeus.md:62` |
-| pi | `SKILL.md:104-105` |
+**jump は第 5 の権威ある遷移**だが `verifyStageCompletionGuards` は通さない（`[S]` / `pending` 化であり完了ではないため、設計上正しい非対称）。
 
-逐語（claude）: `If \`directive.run_required === true\`, execute every \`directive.formal_checks[].command\` exactly as supplied, then re-run \`next\`; do not call \`report\`.` — engine が発行しないフィールドの消費を **8/8 ハーネスが指示**している。セルフインストール面（`.claude` / `.agents`）も同形だが正本投影であり、正本修正 + `bun run build` で解消する。`core/amadeus-common/protocols/stage-protocol.md` は `run_required` を含まない。
+### C4. Workflow 完了（`completeWorkflowForTarget` `amadeus-state.ts:2963`）
 
-### 差分区間の新規コンポーネント（患部外、base..observed）
+| コンポーネント | 位置 | 責務 | 種別 |
+| --- | --- | --- | --- |
+| `verifyPreparedWorkflowCompletion`（G13） | `amadeus-state.ts:6011` → 呼出 `:3002` | 完了準備の一貫性 | built-in |
+| `verifyMandatoryPluginStages`（G14） | `amadeus-state.ts:4689` → 呼出 `:3008` | 必須 plugin stage の完了 | policy |
+| `authorizeWorkflowCompletion`（G15） | `amadeus-workflow-completion.ts:161` → 呼出 `amadeus-state.ts:3030` / `amadeus-orchestrate.ts:613` | Goal receipt 照合。settled / not-settled / 拒否の 3 値 | built-in |
+| record 解決ガード（G16） | `amadeus-state.ts:3010-3013` | 未解決 record を「待機」でなく「拒否」へ倒す | built-in |
+| `emitMirrorBoundaryIfNeeded`（G17） | `amadeus-orchestrate.ts:591` → 呼出 `:673` / `:3427` / `:5682` / `:6179` | mirror boundary receipt。`MirrorBoundaryOutcome`（`amadeus-mirror-coordinator.ts:71`）を boolean へ潰す | policy |
 
-| コンポーネント | 所在 | 備考 |
-|---|---|---|
-| coverage-patch-quick CLI | `plugins/coverage-patch-quick/`（tool-only、`stages: []`） | 新設プラグイン（#2965、+509 + README + plugin.json） |
-| pr-convergence attestation | `plugins/pr-convergence/tools/pr-convergence-attestation.ts`（新規 +133） | #2932 系 |
-| pr-convergence git runner | `plugins/pr-convergence/tools/pr-convergence-git-runner.ts`（新規 +190） | 同上 |
-| allowlist 意味監査 | `tests/allowlist-semantic-audit.ts`（新規 +259） | #2902 / #2938 / #2939 |
-| TLA referee receipt | `plugins/formal-model-check/`（#2920 / #2943） | receipt / TLC trace 変数照合 |
+**集約点なし** — 5 ガードが完了ハンドラ内に直列に置かれている。
+
+### C5. Autonomy 裁定
+
+| コンポーネント | 位置 | 種別 |
+| --- | --- | --- |
+| `authorizeProductionOccurrence` / `emitAuthorizationRefusal`（G18） | `amadeus-intent-autonomy-production.ts:309` / `:291` | policy |
+| `resolveDeclarationProvenance`（G19） | `amadeus-intent-autonomy-production.ts:487`（`:744` returns） | built-in |
+| `grantScope` / `semiAuthorityScope`（G20） | `amadeus-intent-autonomy-production.ts:507` / `:532` | policy |
+| `commitProductionStageGateDecision`（G21） | `amadeus-intent-autonomy-production.ts:794` | policy |
+| **`admitProductionStageFailure`（G22 ★）** | `amadeus-intent-autonomy-production.ts:1102`、出口 `stageFailureDirective` `amadeus-orchestrate.ts:5779`（emit `:5816`） | policy |
+| `InteractionKind` / `StopReason`（G23） | `amadeus-intent-autonomy.ts:14-15` | policy |
+| `allowedInteractionKinds`（G24、**G23 と重複定義**） | `amadeus-autonomy-review.ts:1070` | policy |
+
+★ **G22 は base（`854692fd7`）以後に着地した新規コンポーネント**（`16d94927d` / #2945）。full autonomy の型付き stage failure を Quality Repair / REPAIR_STALLED へ接続する。
+
+### C6. Human presence / delegation
+
+| コンポーネント | 位置 | 種別 |
+| --- | --- | --- |
+| approve/reject gate presence（G25） | `amadeus-state.ts:3452` | built-in + policy（autonomy 免除が文言に埋込） |
+| delegate-approval presence（G26） | `amadeus-state.ts:4306` | built-in |
+| delegate-rejection presence（G27） | `amadeus-state.ts:4395` | built-in |
+| `humanPresenceGuardDisabled`（G28、共有 off-switch） | `amadeus-lib.ts:5342` | off-switch |
+| question 応答記録 presence（G29） | `amadeus-log.ts:280` | built-in |
+
+### C7. その他のライフサイクル遷移
+
+| コンポーネント | 位置 | 種別 |
+| --- | --- | --- |
+| park 拒否（G30、**Stop hook に二重実装**） | `amadeus-state.ts:1399`（コメント `:1390-1398`） | policy |
+| gate-start ruling 参照検査（G31） | `amadeus-state.ts:3362` / `:3365` | built-in |
+| declare-docs-only 群（G32、拒否文言 ×5） | `amadeus-state.ts` | built-in |
+| declare-units-done（G33、**exit せず `{ok:false, reason}` を返す**） | `amadeus-lib.ts`（×2） | built-in |
+| audit 捏造防止（G34、×3） | `amadeus-audit.ts` | built-in |
+| swarm retry 可否（G35、`classifyRetry`） | `amadeus-swarm.ts:763` `:784` `:798` `:813` `:852` `:854` | policy |
+| swarm 収束（G36） | `amadeus-swarm.ts:236` | policy |
+| Bolt batch gate（G37） | `amadeus-bolt.ts:1197-1214` | policy |
+| `IntentOperationGuardResult`（G38、**`recovery` を型に持つ**） | `amadeus-lib.ts:3042` / `:3085` | built-in |
+| `RecomposeGuardResult` / `AdvisoryHoldVerdict` / `AdvisoryChoiceGuardResult`（G39） | `amadeus-lib.ts:554` / `amadeus-advisory-choice.ts:127` / `:152` | policy |
+| subagent 起動 deny（G40、**CLI 層の外**） | `packages/framework/core/hooks/amadeus-subagent-model-guard.ts:89` | hook 層 |
+
+### Runtime 化の reuse 候補（inception ノルムの reuse inventory 入力）
+
+1. **G7 / G8** — 宣言駆動の適用解決（`sensors_applicable`）+ 監査受領証 + fail-closed。「どのガードがどの stage に適用されるか」を手書きリストでなく宣言から導く既存機構。
+2. **G38** — `{kind:"allowed"} | {kind:"rejected", error:{..., recovery}}`。Issue #2771 が求める「復旧案付き」判定語彙をすでに実装している。
 
 ## coverage patch gate の構成要素棚卸し（260811-allowlist-semantic-audit、履歴、observed `854692fd7`）
 
@@ -408,7 +442,7 @@ self-install 5 面 × {`plugins/…`, `.amadeus-plugin-src/…`} = **10 ファ�
 | **宣言 parse** | `amadeus-advisory-declaration.ts` — `parseAdvisoryDeclarations` :110-128 / `parseOne` :90-99 / `declaredAdvisoriesForPlugin` :253-277 | **実装済み・稼働中**。`pluginManifestPath` :243-245 = `<projectRoot>/plugins/<plugin>/plugin.json` が本 repo に実在するため経路は生きている |
 | **no-hold の痕跡消失** | 同 :171 逐語 `if (isRecord(verdict) && verdict.kind === "no-hold") return null;` | **#2766 の症状面**。「評価器が走って no-hold」と「そもそも走っていない」が観測上区別できない |
 | **checkpoint 発火** | `amadeus-orchestrate.ts` — `ACTIVATION_ADVISORY_STAGES` :1785-1789（`requirements-analysis` / `functional-design` / `build-and-test`）、`emitActivationAdvisory` :1808-1820、`raiseActivationAdvisoriesFor` :1844-1858 | **実装済み・2 call site**。コメント :1796-1803 が両者の乖離を戒める → 供給側に触る変更は**両方を必ず棚卸し** |
-| **guard → directive** | `applyPendingAdvisoryGuard` :814-866 → `guardAdvisoryChoices` :819 → `await-advisory-choice`（`run_required` / `formal_checks` は :861-863） | 当時（observed `91f37ec85`）は実装済み。**現在は不在** — `run_required` / `formal_checks` は PR #2890（`387cbd0146`、2026-08-11）で directive 型・orchestrate 生成側ともに削除済みで、observed `c0f9edf27` の `applyPendingAdvisoryGuard`（:826-874）は5フィールドの `await-advisory-choice` のみを生成する。本行は当時の断面の履歴記述であり現行契約ではない（260813-advisory-requestion-fix 節を参照） |
+| **guard → directive** | `applyPendingAdvisoryGuard` :814-866 → `guardAdvisoryChoices` :819 → `await-advisory-choice`（`run_required` / `formal_checks` は :861-863） | 実装済み |
 | **run-now ルート供給** | `amadeus-advisory-choice.ts` — `declaredFormalCheckRoute` :925-955、予約トークン4種 :939-944、`resolveRunRequiredHold` :978-1019、`DECLARED_RELEASE_RULE` :962-963 | **実装済み・テストで両側固定**（`t445-advisory-declaration-supply.integration.test.ts:297-322`）。実 manifest の `formalCheck` を非 null にすれば **engine 変更なしでルートが立つ** |
 | **subjects 供給** | `plugins/formal-model-check/tools/tla-authoring.ts` — `defaultSubjectsPath` :453-455、`GovernedSubjects` :457-476、`governedIdentity` :479-496、`advisoryHold` :498-532 | **🔴 書き手が存在しない**。解決先 `amadeus/spaces/default/specs/tla/authoring-subjects.json` は**未作成**（`ls -d` 実測）。`advisoryHold` は ENOENT のみ no-hold（:507-508）で、それ以外は fail-closed |
 | **model-map 書込** | `plugins/formal-model-check/tools/tla-registration.ts:265-270`（staging + `renameSync` の atomic replace） | model-map **のみ**を書く。subjects 宣言の書き手はここにも無い |
@@ -1106,6 +1140,8 @@ dispatch テーブル `:1212-1221` の実測: `set-autonomy` `:1213` / `preview-
 ## phase boundary approval の対象コンポーネント（260804-phase-boundary-approval、履歴、observed `b938898f3`）
 
 本節の file:line はすべて observed `b938898f364160d4b5857e153579b40b5ab18372` 時点。差分 base は `9458bbda85eb7257310a80882b4858dc6ce3d1fc`（距離 134 commits / 1041 files）。全数列挙は `re-scans/260804-phase-boundary-approval.md` を正本とする。core tools は **103 → 116**。
+
+> **行ピンの再解決（2026-08-14 追記、260813-lifecycle-guard-runtime）**: 下表の `:379-396` / `:3471-3472` / `:3484` は本節が宣言する observed `b938898f3` 時点の値であり、そのまま保存する。observed `89532174c` では `verifyPhaseCheckArtifact` 定義 = **`:392`**、approve 経路の phase gate = **`:4008-4009`**、checkbox 書込 = **`:4021`**（順序と fail-closed 性は不変）。core tools は **132 ファイル**（`ls packages/framework/core/tools/*.ts | wc -l`）。現在断面は本ファイル冒頭「ライフサイクル進行ガードの構成要素棚卸し」節を参照。
 
 ### 本 intent が直接触れるコンポーネント
 
@@ -2315,7 +2351,9 @@ plugin は source component、`dist/plugins` cache、host projection の3コン�
 
 > 以下は過去 intent の棚卸し。#735 の source-side scan と #701 の dist-root orphan は現行 `scripts/package.ts:692-725` で解消済みであり、旧表の「現存」記述は修正前の履歴を表す。
 
-## docs/harness 修理コンポーネント(intent 260711-docs-repair-batch9、フォーカス5欠陥)
+## docs/harness 修理コンポーネント(intent 260711-docs-repair-batch9、フォーカス5欠陥)（履歴、observed `13598b752`）
+
+> **現在時制の失効（2026-08-14 追記、260813-lifecycle-guard-runtime）**: 下表の「**#886 の主対象**(`verifyPhaseCheckArtifact` precondition 不在)」は observed `13598b752` 当時の観測であり、**observed `89532174c` では成立しない**。#886 は解決済みで、`verifyPhaseCheckArtifact` は `amadeus-state.ts:392` に実在し `:2775` / `:2926` / `:3059` / `:4009` + `amadeus-jump.ts:581` の 5 箇所から呼ばれる。境界完了 4 経路の行ピン `:1104` / `:1333` / `:1428` / `:1670` も旧系譜の値であり現行とは対応しない。
 
 現行 HEAD `13598b752`(base `b845478bb`、59コミット diff-refresh)で確定したフォーカス5欠陥の正本コンポーネント。出典は本 intent の `inception/reverse-engineering/scan-notes.md`(全 file:line 実測)。localize 3面(#812/#824 + question-rendering.md 同根)+ ヘッダ契約1面(#680)は区間内無変更、restart-loss 2面(#885/#886)は #880/#869 の行番号シフトのみで欠陥現存。
 

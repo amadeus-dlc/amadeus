@@ -1138,5 +1138,12 @@
     "dirName": "260813-advisory-requestion-fix",
     "scope": "self-fix",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019ffbce-7316-7c96-9bcc-8ae7a4714543",
+    "slug": "lifecycle-guard-runtime",
+    "dirName": "260813-lifecycle-guard-runtime",
+    "scope": "self-fix",
+    "status": "complete"
   }
 ]
