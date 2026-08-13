@@ -1,0 +1,29 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-260813-RECORD-BUNDLING-NORM",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "是正は team.md:35 だけでは閉じない。同一文言が project.md:12 (cid:units-generation:c1) にも '複数ユニット・工程記録・無関係リファクタを単一 PR に束ねない' として存在するため、両方を同じ変更で是正しないと矛盾が残る。また是正文言は '自 intent の record' に限定し、他 intent の record・複数ユニット・無関係リファクタの束ね禁止は字義どおり維持すべき。",
+      "rationale": "独立実測: (a) plugins/pr-convergence/tools/pr-convergence-cli.ts:976-977 が verifyCreatePrerequisites(options.record, ...) を呼び、pr-convergence-git-runner.ts:115-153 が cwd=record で rev-parse --show-toplevel / branch --show-current == head / foreignDirtyPaths による tracked clean を要求する。つまり record は head checkout 内に実在し、record 配下の変更は create 前に当該 Bolt ブランチへコミット済みでなければならない(自 unit の self output のみ免除)。record 同梱は規律の緩みではなく現行 CLI 構造の帰結。(b) gh pr view 2920: MERGED、files 26 件中 amadeus/spaces/ 配下 18 件。(c) gh pr view 2986: MERGED、files 50 件中 amadeus/spaces/ 配下 37 件。先例・本 intent とも record 同梱で着地している。判断: 選択肢2(内部1)。禁止の趣旨は無関係スコープの混入防止であり、自 intent の record は同一 Bolt に帰属し record→PR の追跡性を高める。team.md 自身が '工程記録はチェックポイントコミットで本線へ流す' と定めており、Bolt ブランチ経由の流入と矛盾しない。選択肢3(内部2)は record を head checkout 外へ出す CLI 再設計を要し、writeSelfReport / attestation receipt が record と head の結合に依存する検証面の作り直しコストが大きい一方、実害の実証がない。選択肢1(内部3)は team.md § ノルムの保守が矛盾の解消(整理案の裁定)を求めており、既知として放置する選択は既決ノルムに反する。",
+      "submittedAt": "2026-08-14T00:00:00Z",
+      "receivedAt": "2026-08-13T22:40:26Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-260813-RECORD-BUNDLING-NORM",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 2,
+      "reservation": "team.md 35行目と同一趣旨の文言が project.md 12行目 (cid:units-generation:c1) にも存在する(『複数ユニット・工程記録・無関係リファクタを単一 PR に束ねない』)。team.md だけを是正すると矛盾が project.md へ移るだけなので、同一 PR で両方を是正することを条件とする。",
+      "rationale": "独立実測: (1) CLI 前提 — pr-convergence-cli.ts:976-982 が verifyCreatePrerequisites に cwd として options.record を渡し、pr-convergence-git-runner.ts:130-133 が checked-out branch == --head を、142-144 が foreignDirtyPaths による clean tracked worktree(exempt は当該 unit の self output のみ)を要求する。さらに create は writeSelfReport で <record>/construction/<unit>/code-generation/pr-convergence-report.md を書き、resolveIntentReference(pr-convergence-presentation.ts:56-)が record 隣接の intents.json を読む。したがって record が head checkout 内の head ブランチ上にあることは CLI の構造的前提であり、配布ビューの主張 (a) は成立する。(2) 先例 — gh pr view/diff 実測で PR #2920 は MERGED(2026-08-12)で amadeus/ 配下 18 ファイル + 他 8 ファイル、PR #2986 は MERGED(2026-08-13)で amadeus/ 配下 37 ファイル + 他 13 ファイル。主張 (b)(c) も成立する。判断: 当該ノルムの目的はレビュー困難を招くスコープ膨張の防止であり、自 intent の record checkpoint はその Bolt 自身のトレーサビリティ成果物でスコープ膨張ではない。team.md 同文の後段『工程記録(amadeus/)はチェックポイントコミットで本線へ流す』も別 PR を要求しておらず、Bolt PR 内の record コミットで満たされる。internalNo 2(CLI 是正)は attestation が record・head・report を束ねる identity binding の再設計を要し、便益の実証がないまま大規模改修を招くため P5(最小・surgical)に反する。internalNo 3(現状維持)は team.md § ノルムの保守 が矛盾の棚卸しと裁定を求めており、既知の矛盾を放置して次 intent に個別判断を強いる点で劣後する。よって internalNo 1 を選ぶ。ノルム変更は origin/main 起点の単独ブランチ PR + 独立レビュー + 人間承認マージで行う点も選択肢記載どおり支持する。",
+      "submittedAt": "2026-08-14T00:00:00Z",
+      "receivedAt": "2026-08-13T22:40:36Z"
+    }
+  ],
+  "late": []
+}
