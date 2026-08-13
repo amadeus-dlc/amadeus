@@ -230,7 +230,7 @@ intent が扱うリポジトリの集合を `intents.json` の行に記録しま
 
 ### `/amadeus --doctor` — ヘルスチェック
 
-この実装のすべての前提条件、設定、ステージグラフの整合性が揃っていることを検証します。完全にパスすると 0、いずれかが失敗すると 1 で終了します。どちらの場合もフルレポートが stdout に書き出されるため、オーケストレーターはどちらの場合も表示します。`--doctor` は**読み取り専用**です。intent がまだない新しいシェル(`audit/` シャードがない)では何もファイルを作成しないため、最初の intent が生成される前に安全に実行できます。intent が存在すると `HEALTH_CHECKED` 監査行を記録します。自己開発リポジトリでは常時実行するセルフインストール投影チェックが、正本と全管理対象配送ツリーを照合するために `dist/` を再生成することがありますが、追跡ファイルと投影ツリーは書き換えません。
+この実装のすべての前提条件、設定、ステージグラフの整合性が揃っていることを検証します。完全にパスすると 0、いずれかが失敗すると 1 で終了します。どちらの場合もフルレポートが stdout に書き出されるため、オーケストレーターはどちらの場合も表示します。`--doctor` は**読み取り専用**です。intent がまだない新しいシェル(`audit/` シャードがない)では何もファイルを作成しないため、最初の intent が生成される前に安全に実行できます。intent が存在すると `HEALTH_CHECKED` 監査行を記録します。自己開発リポジトリでは常時実行するセルフインストール投影チェックが、正本と全管理対象配送ツリーを照合するために `dist/` を再生成し、gitignore 対象の `amadeus/active-space` ランタイムカーソルが無い場合は作成することがありますが、追跡ファイルと投影ツリーは書き換えません。
 
 **構文:**
 
@@ -264,6 +264,7 @@ intent が扱うリポジトリの集合を `intents.json` の行に記録しま
 
 ```
 ✓ bun installed (required for CLI tools and hooks)
+✓ Self-install projection freshness: N/A (scripts/promote-self.ts is absent)
 ✓ amadeus-audit-logger.ts present
 ✓ amadeus-sync-statusline.ts present
 ✓ amadeus-validate-state.ts present

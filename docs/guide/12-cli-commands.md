@@ -235,7 +235,7 @@ for prerequisites, supported revisions, transformations, and recovery.
 
 ### `/amadeus --doctor` — Health check
 
-Validate that all of this implementation's prerequisites, configuration, and stage-graph integrity are in place. Exits 0 on full pass, 1 on any failure; the full report writes to stdout in both cases so the orchestrator surfaces it either way. `--doctor` is **read-only** — on a fresh shell with no intent yet (no `audit/` shards) it creates no files, so it is safe to run before the first intent is born; once an intent exists it records a `HEALTH_CHECKED` audit row. In the self-development repository, its always-on self-install projection check may regenerate `dist/` while comparing the current canonical source with every managed delivery tree; it never rewrites tracked files or the projection trees.
+Validate that all of this implementation's prerequisites, configuration, and stage-graph integrity are in place. Exits 0 on full pass, 1 on any failure; the full report writes to stdout in both cases so the orchestrator surfaces it either way. `--doctor` is **read-only** — on a fresh shell with no intent yet (no `audit/` shards) it creates no files, so it is safe to run before the first intent is born; once an intent exists it records a `HEALTH_CHECKED` audit row. In the self-development repository, its always-on self-install projection check may regenerate `dist/` while comparing the current canonical source with every managed delivery tree, and creates the gitignored `amadeus/active-space` runtime cursor when it is absent; it never rewrites tracked files or the projection trees.
 
 **Syntax:**
 
@@ -269,6 +269,7 @@ Validate that all of this implementation's prerequisites, configuration, and sta
 
 ```
 ✓ bun installed (required for CLI tools and hooks)
+✓ Self-install projection freshness: N/A (scripts/promote-self.ts is absent)
 ✓ amadeus-audit-logger.ts present
 ✓ amadeus-sync-statusline.ts present
 ✓ amadeus-validate-state.ts present
