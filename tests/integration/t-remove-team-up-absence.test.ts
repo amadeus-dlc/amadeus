@@ -1,6 +1,6 @@
 // t-remove-team-up-absence — launcher sources, recipes, and doctor copy stay gone.
 // covers: FR-1, FR-2, FR-4, FR-5, NFR-1
-// size: small
+// size: medium
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
