@@ -945,14 +945,14 @@ export function codexProjectTrustDoctorCheck(
   options: Pick<DoctorContext, "migrationDoctor" | "codexHomeDir">,
 ): DoctorCheck {
   const projectTrustKey = `[projects."${projectDir}"]`;
-  // Project trust is seeded at team-up runtime (or manually), not by migration
+  // Project trust is seeded by a Codex session (or manually), not by migration
   // — same class as the hook-heartbeat scratch. A fresh migration has none yet,
   // so the check is not inspected under AMADEUS_MIGRATION_DOCTOR (mirrors
   // hookHeartbeatDoctorCheck) to keep the post-migration doctor gate green.
   if (options.migrationDoctor) {
     return {
       pass: true,
-      label: "project trust: not inspected during migration (seeded at team-up runtime)",
+      label: "project trust: not inspected during migration (seeded at Codex session start)",
     };
   }
   const codexConfig = join(options.codexHomeDir, "config.toml");
@@ -961,7 +961,7 @@ export function codexProjectTrustDoctorCheck(
   return {
     pass: projectTrusted,
     label: `project trust: ${projectTrustKey} present in ${codexConfig} (layer 1 — Codex skips all .codex hooks silently without it)`,
-    fix: 're-run `bash <harness-dir>/tools/team-up.sh` (seeds both trust layers) or append the entry manually with `trust_level = "trusted"`',
+    fix: 'append a `[projects."<abs-project-dir>"]` table with `trust_level = "trusted"` to `$CODEX_HOME/config.toml`, or complete one interactive Codex TUI trust prompt',
   };
 }
 

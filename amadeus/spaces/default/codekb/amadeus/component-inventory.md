@@ -1,5 +1,21 @@
 # コンポーネント棚卸し
 
+## team-up 廃止面の構成要素（260813-remove-team-up、現在、observed `97581b3e3`）
+
+**観測 ref**: `97581b3e39187b13413c046e86f820d290a389eb`。述語 P3–P7 は `re-scans/260813-remove-team-up.md`。
+
+| コンポーネント | パス | 本番消費者 |
+|---|---|---|
+| Team Mode ランチャ | `packages/framework/core/tools/team-up.sh` | ユーザー / doctor fix 文言 / 全 harness tools 投影 |
+| Codex safety-wait | `packages/framework/core/tools/team-up-codex-safety-wait.ts` | `team-up.sh:59` のみ |
+| チームメッセージ | `packages/framework/core/tools/team-msg.sh` | 独立。ランチャを呼ばない |
+| doctor trust 修復 | `amadeus-utility.ts:964` | 文字列でランチャを指名 |
+| ユーザーガイド | `docs/guide/20-team-mode.md` 対訳ほか 8 docs | 現行手順として掲載 |
+| 名前付きテスト | `tests/**/*team-up*` 12 files | ランチャ / supervisor |
+| 非名前付きテスト | `t266` / `t267` / `t226` | 起動・clean-env・doctor 文字列 |
+
+`git ls-files | rg -i team-up` = **17**（record 3 + 正本 2 + test 12）。safety-wait リテラルの非 record ヒットは **5 files**。
+
 ## coverage patch gate の構成要素棚卸し（260811-allowlist-semantic-audit、履歴、observed `854692fd7`）
 
 **観測 ref**: すべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（34 commits、ゲート実装は区間内無変更）。正本は `re-scans/260811-allowlist-semantic-audit.md`。
@@ -79,7 +95,7 @@
 
 **`reason` の内容を検査するテストは両ファイルに 0 件。**
 
-## TLA+ receipt 生成・検証コンポーネント（260812-tla-proof-receipt、現在、observed `854692fd7`）
+## TLA+ receipt 生成・検証コンポーネント（260812-tla-proof-receipt、履歴、observed `854692fd7`）
 
 **観測 ref**: 本節の file:line はすべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD）時点。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（距離 34）。正本は `re-scans/260812-tla-proof-receipt.md`。パスはすべて `plugins/formal-model-check/tools/` 配下（テストを除く）。
 

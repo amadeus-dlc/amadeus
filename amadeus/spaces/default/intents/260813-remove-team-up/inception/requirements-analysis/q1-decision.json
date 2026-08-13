@@ -1,0 +1,1 @@
+{"stage":"requirements-analysis","phase":"inception","questionId":"q1-team-msg","selector":"requirements-analysis:team-msg-retention","question":"Keep team-msg.sh after deleting team-up.sh?","optionIds":["keep-team-msg","delete-team-msg","defer-team-msg"],"recommendedOptionId":"keep-team-msg"}

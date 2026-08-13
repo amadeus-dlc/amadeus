@@ -102,18 +102,6 @@
     "reason": "FR-7 production deadline or timestamp-boundary contract must remain wall-clock exact."
   },
   {
-    "path": "tests/integration/t-team-up-run-lifecycle.serial.test.ts",
-    "sink": "timing-constant",
-    "count": 1,
-    "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
-  },
-  {
-    "path": "tests/integration/t-team-up-watcher-arming.test.ts",
-    "sink": "timing-constant",
-    "count": 1,
-    "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
-  },
-  {
     "path": "tests/integration/t162-per-intent-layout-cli.test.ts",
     "sink": "timing-constant",
     "count": 1,

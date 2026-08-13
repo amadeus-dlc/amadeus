@@ -1,5 +1,21 @@
 # API ドキュメント
 
+## team-up.sh CLI と safety-wait 結合（260813-remove-team-up、現在、observed `97581b3e3`）
+
+**観測 ref**: `packages/framework/core/tools/team-up.sh` ヘッダ `:15-21` と Usage `:580`、helper `:59`。
+
+公開面（ドキュメントとヘッダが一致）:
+
+- `bash <harness-dir>/tools/team-up.sh` — 既定 6 engineer
+- `-4` / `--codex` / `-c` / `--kill` / `-i` / `--list-instances` / `--msg agmsg|herdr`
+
+内部結合:
+
+- `SAFETY_WAIT_HELPER` 既定 = `$TOOL_DIR/team-up-codex-safety-wait.ts`（`:59`）
+- 状態ファイル: `current-run` / `active-run` / `status` / `session`（`:1702-1710`、`stack_column` 成功後にのみ書かれる）
+
+doctor 公開面: `amadeus-utility.ts:964` が修復として同一 CLI を指名する。ランチャ削除時はこの文字列が残存 API になる。
+
 ## coverage 免除台帳のデータ契約（260811-allowlist-semantic-audit、履歴、observed `854692fd7`）
 
 **観測 ref**: すべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`。正本は `re-scans/260811-allowlist-semantic-audit.md`。
@@ -44,7 +60,7 @@
 
 `bun tests/coverage-patch-gate.ts --check` が唯一の CI 入口（`.github/workflows/ci.yml` の `Patch coverage gate` ステップ、PR イベント限定）。base ref は環境変数 `AMADEUS_PATCH_BASE_REF` で与える。
 
-## TLA+ receipt API の入力ドメイン（260812-tla-proof-receipt、現在、observed `854692fd7`）
+## TLA+ receipt API の入力ドメイン（260812-tla-proof-receipt、履歴、observed `854692fd7`）
 
 **観測 ref**: 本節の file:line はすべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD）時点。正本は `re-scans/260812-tla-proof-receipt.md`。パスは `plugins/formal-model-check/tools/` 配下。
 

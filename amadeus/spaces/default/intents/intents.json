@@ -1124,5 +1124,12 @@
     "dirName": "260812-tla-proof-receipt",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019ffb66-d1c4-7d3c-9aa7-50e0f6966e57",
+    "slug": "remove-team-up",
+    "dirName": "260813-remove-team-up",
+    "scope": "self-fix",
+    "status": "in-flight"
   }
 ]

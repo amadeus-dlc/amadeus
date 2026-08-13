@@ -63,7 +63,7 @@ tree is **generated** as ignored local output from `packages/framework/core/` + 
    canonical bytes only when the active file is absent. It preserves an
    existing active file byte-for-byte and stops if that file no longer
    satisfies the canonical Amadeus hook contract. In the Amadeus self
-   repository, `./scripts/run-codex.sh` and `.codex/tools/team-up.sh` invoke the
+   repository, `./scripts/run-codex.sh` invokes the
    same activation before launching Codex or applying an agmsg writer.
 
 3. Trust the project. Codex trust is **two layers**, and both must be
@@ -77,8 +77,7 @@ tree is **generated** as ignored local output from `packages/framework/core/` + 
      runs untrusted hooks (the `--dangerously-bypass-hook-trust` flag does not
      run them either).
 
-   `.codex/tools/team-up.sh` seeds both layers automatically for each Codex
-   member.
+   Seed both layers before launching Codex members.
    To seed manually, either run one interactive TUI session and choose "Trust
    all and continue" at the hooks dialog, or pre-seed deterministically:
 

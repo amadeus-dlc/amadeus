@@ -7,20 +7,24 @@ multiple engineers in isolated worktrees. It uses the same workflow and quality
 rules as a solo run; the difference is how responsibilities and coordination
 are distributed.
 
+## Launcher removed
+
+Amadeus no longer ships `team-up.sh`. That launcher is gone from the
+distribution. The former Codex safety-wait helper is gone with it.
+
+Team messaging (`team-msg.sh`) and the election CLI remain. Sessions that need
+the Team Mode contract still use the exact marker
+`AMADEUS_OPERATING_MODE=team`; Amadeus does not provide a launcher that sets it.
+
 ## Overview
 
-The team launcher starts Claude Code or Codex members in one herdr workspace,
-connects their messaging transport, and marks every member session with
-`AMADEUS_OPERATING_MODE=team`. Without that exact marker, Amadeus operates in
-solo mode.
-
-Team Mode is optional. Use it when independent builders, reviewers, or a team
-election are useful; a normal Amadeus workflow does not require it. The launcher
-supports macOS and Linux. Team Mode on Windows is not supported.
+Without `AMADEUS_OPERATING_MODE=team`, Amadeus operates in solo mode. Team Mode
+is optional. Use it when independent builders, reviewers, or a team election
+are useful; a normal Amadeus workflow does not require it.
 
 ## Prerequisites
 
-Install these tools before launching a team:
+External tools that a custom team setup may still need:
 
 | Tool | Verified version | Source and runtime contract |
 |------|------------------|-----------------------------|
@@ -29,65 +33,25 @@ Install these tools before launching a team:
 | [agmsg](https://github.com/j5ik2o/agmsg) | 1.1.6 | Install the skill at `$HOME/.agents/skills/agmsg`; its scripts must be executable. `AGMSG_ROOT` and the documented script overrides may select another installation. |
 
 These are the versions verified for this guide, not an ongoing compatibility
-guarantee. Installing, upgrading, and placing all three tools where the launcher
-can resolve them is the user's responsibility. Amadeus does not bundle them or
-guarantee their installation channels.
-
-Check the installation before creating a team:
+guarantee. Amadeus does not bundle them or guarantee their installation
+channels.
 
 ```text
 $amadeus --doctor
 ```
 
-The health report includes an advisory section without changing the doctor's
-existing pass/fail result:
+## Messaging
 
-```text
-Team Mode prerequisites:
-  herdr: /resolved/path/to/herdr
-  agmsg: /resolved/path/to/send.sh
-```
-
-A missing tool is shown as `not found` followed by its official source and a
-link back to this guide. The launcher performs the same checks before creating
-worktrees or a herdr session, and fails early on unsupported operating systems
-or a missing prerequisite.
-
-## Setup
-
-Run the launcher from an installed harness. `{{HARNESS_DIR}}` means the active
-harness directory, such as `.claude` or `.codex`:
-
-```bash
-# Claude members; six engineers by default
-bash {{HARNESS_DIR}}/tools/team-up.sh
-
-# Codex members
-bash {{HARNESS_DIR}}/tools/team-up.sh --codex
-
-# A smaller team, or an independently named team
-bash {{HARNESS_DIR}}/tools/team-up.sh -4
-bash {{HARNESS_DIR}}/tools/team-up.sh --instance alpha
-```
-
-The launcher sets the team identity and messaging environment for every member.
-Choose a messaging backend only when creating a fresh run; `agmsg` is the
-default and the selection is retained when the run is resumed:
-
-```bash
-bash {{HARNESS_DIR}}/tools/team-up.sh --msg agmsg
-bash {{HARNESS_DIR}}/tools/team-up.sh --msg herdr
-```
-
-Send or inspect a message through the same installed tool directory:
+Send or inspect a message through the installed tool directory:
 
 ```bash
 bash {{HARNESS_DIR}}/tools/team-msg.sh send e1 "Please review the proposal."
 bash {{HARNESS_DIR}}/tools/team-msg.sh read leader
 ```
 
-Roles use `leader`, `e1`, `e2`, and so on. For backend details, delivery
-semantics, and resume behavior, see [Team Messaging Backend](team-messaging.md).
+Set `TEAM_MSG` to `agmsg` (default) or `herdr` for the transport. Roles use
+`leader`, `e1`, `e2`, and so on. For backend details see
+[Team Messaging Backend](team-messaging.md).
 
 ## Running an election
 
@@ -137,9 +101,9 @@ decision.
 
 ## Operating Modes contract
 
-`AMADEUS_OPERATING_MODE=team` is the sole mode marker. The team launcher sets it
-for launched sessions; its absence selects solo mode. A messaging registration,
-member count, or saved session is not evidence that Team Mode is active.
+`AMADEUS_OPERATING_MODE=team` is the sole mode marker. Its absence selects solo
+mode. A messaging registration, member count, or saved session is not evidence
+that Team Mode is active.
 
 Both modes keep the same rule layers, evidence requirements, verification
 standards, and escalation boundaries. Team Mode assigns coordination,
@@ -150,15 +114,3 @@ members or votes.
 This section is a user-facing summary. The team's `memory/team.md` is the
 normative source for operating practices and may specialize them for a
 workspace.
-
-## Platform support
-
-The team launcher supports:
-
-- macOS (`Darwin`)
-- Linux
-
-Windows is outside the Team Mode support boundary. The launcher rejects any
-other operating system before probing herdr or agmsg and before creating team
-state. This restriction applies to the team launcher, not to every standalone
-Amadeus command.

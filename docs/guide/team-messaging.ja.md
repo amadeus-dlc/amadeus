@@ -2,7 +2,7 @@
 
 > 言語: [English](team-messaging.md) | **日本語**
 
-> 対象読者: `{{HARNESS_DIR}}/tools/team-up.sh` でエージェントチームを運用する
+> 対象読者: `{{HARNESS_DIR}}/tools/team-msg.sh` でロール間メッセージを扱う
 > メンテナ。
 
 チームモードでは、leader と engineer は **メッセージングバックエンド** を通じて
@@ -11,22 +11,14 @@
 
 ## バックエンドの選択
 
-**新規** 実行のバックエンドは `--msg` または `TEAM_MSG` 環境変数で選びます
-(フラグが優先)。既定は `agmsg` で、run レコードへ保存されるため、再開した実行
-(`-c`)はそれを引き継ぎます — 再開時に `--msg` は拒否されます。
+バックエンドは `TEAM_MSG` 環境変数で選びます。既定は `agmsg` です。
 
 ```bash
-{{HARNESS_DIR}}/tools/team-up.sh --msg agmsg    # 既定: agmsg ストア + monitor 配送
-{{HARNESS_DIR}}/tools/team-up.sh --msg herdr    # herdr エージェントマルチプレクサ、専用ポーラーなし
-TEAM_MSG=herdr {{HARNESS_DIR}}/tools/team-up.sh # 同じものを環境変数で指定
+export TEAM_MSG=agmsg    # 既定: agmsg ストア + monitor 配送
+export TEAM_MSG=herdr    # herdr エージェントマルチプレクサ、専用ポーラーなし
 ```
 
-未知の値は fail-closed で拒否されます:
-`ERROR: unknown msg backend: <value> (agmsg|herdr)`。
-
-メンバーは `TEAM_MSG` を export した状態で起動されるため、各メンバーの
-`{{HARNESS_DIR}}/tools/team-msg.sh` 呼び出しは、その実行が作成されたときと同じ
-バックエンドを使います。
+未知の値は `team-msg.sh` が fail-closed で拒否します。
 
 ## 送信と読み取り
 
@@ -58,18 +50,14 @@ herdr の素のターンは送信者情報を持たないため、herdr の送�
 
 ## ランタイムの前提条件
 
-ランチャーは、選択されたメッセージングバックエンドに関わらず、チーム状態を作成
-する前にオペレーティングシステム、herdr、agmsg をチェックします。herdr バック
-エンドでもチームセットアップ中は agmsg 統合を使うため、agmsg はオプションでは
-ありません。Codex メンバーは `PATH` から解決した `codex` コマンドを起動します。
-そのインストールとバージョン選択はユーザーの環境が所有します。インストール元、
-検証済みバージョン、パスの上書きについては
+herdr と agmsg は外部ツールのままです。Codex メンバーは `PATH` から解決した
+`codex` コマンドを起動します。そのインストールとバージョン選択はユーザーの
+環境が所有します。インストール元、検証済みバージョン、パスの上書きについては
 [チームモード](20-team-mode.ja.md#prerequisites) を参照してください。
 
 ## 送信の監査ログ
 
-herdr バックエンドでは、`team-up.sh` が `TEAM_MSG_LOG_DIR`(run レコードの
-ディレクトリ)を全メンバーの環境へ結線するため、各 `team-msg.sh send` は
-`<run record>/messages.log` へ 1 行追記します。このファイルが選挙の provenance に
-おける送信側の主要な記録です(agmsg history の herdr 版に当たります)。書き込みに
-失敗しても stderr へ警告するだけで、送信自体は失敗しません。
+herdr バックエンドでは、`TEAM_MSG_LOG_DIR` が設定されているとき、各
+`team-msg.sh send` は `<log dir>/messages.log` へ 1 行追記します。このファイルが
+選挙の provenance における送信側の主要な記録です(agmsg history の herdr 版に
+当たります)。書き込みに失敗しても stderr へ警告するだけで、送信自体は失敗しません。

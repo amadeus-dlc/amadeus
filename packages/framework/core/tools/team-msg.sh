@@ -54,7 +54,7 @@ Backend is selected by TEAM_MSG (agmsg default | herdr).
 EOF
 }
 
-# Map an agmsg role to its herdr agent name (inverse of team-up.sh member_role):
+# Map an agmsg role to its herdr agent name:
 # leader -> leader, eN -> engineer-N. Unknown values pass through unchanged.
 resolve_herdr_target() {
   case "$1" in

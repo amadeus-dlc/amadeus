@@ -1,5 +1,14 @@
 # コード品質評価
 
+## team-up.sh は失敗を exit 0 で隠し、ガイドは現行機能のまま残る（260813-remove-team-up、現在、observed `97581b3e3`）
+
+**観測 ref**: `97581b3e39187b13413c046e86f820d290a389eb`。#2970 サイトは直読。対象テストの再実行は未実施（Issue が main で 16+2 fail を報告、区間内 team-up 差分 0）。
+
+1. **偽成功**: `set -euo pipefail`（`:3`）と空配列 `for mem in "${members[@]}"`（`:1170`）の組み合わせは bash 3.2 で即死する。`handle_exit`（`:1409-1420`）は unbound を非 0 として扱わず `exit 0` しうる。状態書込（`:1702-1710`）は未到達。検証劇場と同型。
+2. **配布と文書の残留**: 利用停止判断と独立に、8 harness 投影と `20-team-mode.md` がランチャを現行手順として残す。削除 PR がソースだけを消すと docs/doctor が死んだコマンドを指す。
+3. **safety-wait の結合**: supervisor 正本の本番消費者はランチャ 1 点。ランチャだけ残して supervisor を残す理由は observed に無い。
+4. **stale path**: core glossary はまだ `scripts/team-up.sh` と書く（実装は `packages/framework/core/tools/`）。
+
 ## coverage 免除台帳の意味論が無検査 — 解決 fail-closed / 意味 fail-open の非対称（260811-allowlist-semantic-audit、履歴、observed `854692fd7`）
 
 **観測 ref**: すべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD）。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（34 commits）。正本は `re-scans/260811-allowlist-semantic-audit.md`。
@@ -42,7 +51,7 @@ Issue #1622 起票時の「約272件」、クロスレビュー時点（2026-07-
 
 全数照合は未実施であり、確定 18 件は**下限**である。`findStaleAllowlistEntries` の実行結果（現行 stale 件数）は LCOV を要するため未測定。転位の双方向の実害（偽赤 / 偽緑の件数）も未定量。詳細は `re-scans/260811-allowlist-semantic-audit.md` § UNMEASURED。
 
-## TLA+ receipt 経路の品質所見（260812-tla-proof-receipt、現在、observed `854692fd7`）
+## TLA+ receipt 経路の品質所見（260812-tla-proof-receipt、履歴、observed `854692fd7`）
 
 **観測 ref**: 本節の file:line はすべて observed = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（= 本 worktree HEAD）時点。差分 base = `ce3c3ccfdb3f93e619a081386a70c8185b84f1db`（距離 34）。正本は `re-scans/260812-tla-proof-receipt.md`。
 

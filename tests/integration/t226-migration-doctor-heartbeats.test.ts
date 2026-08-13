@@ -187,7 +187,8 @@ describe("t226 codex project-trust doctor check", () => {
     expect(result.pass).toBe(false);
     expect(result.label).toContain('project trust: [projects."/abs/project"]');
     expect(result.label).toContain("Codex skips all .codex hooks silently without it");
-    expect(result.fix).toContain("<harness-dir>/tools/team-up.sh");
+    expect(result.fix).toContain("trust_level = \"trusted\"");
+    expect(result.fix).not.toContain("team-up.sh");
   });
 
   test("normal run passes when the project has a [projects] entry", () => {
@@ -211,7 +212,7 @@ describe("t226 codex project-trust doctor check", () => {
       codexHomeDir: root("codex-home-migration"),
     })).toEqual({
       pass: true,
-      label: "project trust: not inspected during migration (seeded at team-up runtime)",
+      label: "project trust: not inspected during migration (seeded at Codex session start)",
     });
   });
 });
