@@ -148,6 +148,19 @@ describe("t151 onboarding skeleton — a new harness gets a complete doc for fre
     expect(rendered).toContain("If either step above created");
     expect(rendered).toContain("task restart (same worktree) is required");
     expect(rendered).toContain("by `bun run build` or by `activate`, it makes no difference");
+    // Issue #2862: restart protects a live AI-DLC workflow that needs the
+    // UserPromptSubmit/HUMAN_TURN hook. A delegated no-intent builder does not
+    // mutate the engine, so ignored build output must not end its assignment.
+    expect(rendered).toContain("start, run, or resume an AI-DLC workflow");
+    expect(rendered).toContain("mutate the engine");
+    expect(rendered).toContain("requires hooks or `HUMAN_TURN` in this task");
+    expect(rendered).toContain("will not invoke or mutate the AI-DLC engine");
+    expect(rendered).toContain("does not require hooks or `HUMAN_TURN` during this task");
+    expect(rendered).toContain("delegated no-intent builder implementing code directly");
+    expect(rendered).toContain("continue only when the assignment");
+    expect(rendered).toContain("ignored disposable generated output");
+    expect(rendered).toContain("do not stage or commit it");
+    expect(rendered).toContain("Tracked or user-owned changes are not disposable");
     // Team-lead ruling (incident: 3 worktrees churned, 25 minutes lost):
     // restart must fork the SAME directory, never open a new worktree.
     expect(rendered).toContain("fork_thread");
