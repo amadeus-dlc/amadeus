@@ -89,6 +89,9 @@
 
    ```bash
    # 第 2 層 — フック trust(そのまま貼り付け可能な形で出力)
+   # このリポジトリの checkout が必要です(`scripts/package.ts`)。
+   # dist/codex のコピーだけでは実行できません。ソース checkout から
+   # シードするか、上記の対話 TUI を使ってください。
    bun scripts/package.ts codex trust --project /abs/path/to/your-project
    ```
 

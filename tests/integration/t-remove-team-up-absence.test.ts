@@ -35,7 +35,7 @@ describe("team-up launcher absence", () => {
     expect(gitLsFiles("packages/framework/core/tools/team-up-codex-safety-wait.ts")).toEqual([]);
     expect(gitLsFiles("packages/framework/core/tools/team-msg.sh")).toEqual([]);
     expect(gitLsFiles("tests/**/*team-up*")).toEqual([
-      "tests/unit/t-remove-team-up-absence.test.ts",
+      "tests/integration/t-remove-team-up-absence.test.ts",
     ]);
     expect(gitLsFiles("tests/**/*team-msg*")).toEqual([]);
   });
@@ -56,7 +56,7 @@ describe("team-up launcher absence", () => {
       join(ROOT, "packages/framework/core/tools/amadeus-utility.ts"),
       "utf8",
     );
-    expect(source).not.toContain("tools/team-up.sh");
+    expect(source).not.toContain("team-up.sh");
     expect(source).toContain('trust_level = "trusted"');
   });
 });

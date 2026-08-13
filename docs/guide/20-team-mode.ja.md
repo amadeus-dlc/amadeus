@@ -13,8 +13,14 @@ Amadeus は `team-up.sh` を同梱しません。配布物からそのランチ�
 `team-msg.sh` も同梱しません。
 
 選挙 CLI は残ります。チームモード契約が必要なセッションは、これまでどおり
-完全一致のマーカー `AMADEUS_OPERATING_MODE=team` を使います。Amadeus はその
-マーカーを設定するランチャも、チームメッセージング CLI も提供しません。
+完全一致のマーカー `AMADEUS_OPERATING_MODE=team` を使います。Amadeus を始める
+前に、そのセッションで設定してください:
+
+```bash
+export AMADEUS_OPERATING_MODE=team
+```
+
+Amadeus はそのマーカーを設定するランチャも、チームメッセージング CLI も提供しません。
 
 ## 概要
 

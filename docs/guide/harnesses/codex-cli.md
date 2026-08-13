@@ -89,6 +89,9 @@ tree is **generated** as ignored local output from `packages/framework/core/` + 
 
    ```bash
    # layer 2 — hook trust (printed ready to paste)
+   # Requires a checkout of this repository (`scripts/package.ts`).
+   # A copy of dist/codex alone cannot run this command; seed layer 2 from
+   # a source checkout, or use the interactive TUI above.
    bun scripts/package.ts codex trust --project /abs/path/to/your-project
    ```
 

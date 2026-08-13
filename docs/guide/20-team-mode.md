@@ -14,8 +14,15 @@ distribution. The former Codex safety-wait helper is gone with it.
 `team-msg.sh` is gone as well.
 
 The election CLI remains. Sessions that need the Team Mode contract still use
-the exact marker `AMADEUS_OPERATING_MODE=team`; Amadeus does not provide a
-launcher that sets it, and it does not ship a team messaging CLI.
+the exact marker `AMADEUS_OPERATING_MODE=team`. Set it in that session before
+starting Amadeus:
+
+```bash
+export AMADEUS_OPERATING_MODE=team
+```
+
+Amadeus does not provide a launcher that sets it, and it does not ship a team
+messaging CLI.
 
 ## Overview
 
