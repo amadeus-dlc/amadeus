@@ -248,17 +248,6 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
-      "function": "completeWorkflowForTarget",
-      "fingerprint": "sha256:dad2087b02664f45043c3d7697af749d3f3d25a6a5c7912ef234f47b9ceabc70",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "This fail-closed CLI guard is reachable only after target resolution but before the Intent record adapter resolves. complete-workflow success and refusal contracts are exercised through t427 integration; the private process-exit boundary is not parent-LCOV visible.",
-    "expiry": "remove when operationRecordDir and error exit handling are injectable in-process"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-state.ts",
-    "selector": {
       "function": "approveUnderLock",
       "fingerprint": "sha256:049b3c1fd35044f2b853b8aba12d7f87754434e0f468a8462c0e16b0623dc0bf",
       "anchorLines": 1,
@@ -2191,17 +2180,6 @@
     },
     "reason": "Mutation-before-reject error() emit in handleSetConstructionIteration for an invalid iteration token (U05). error() is `never` (process.exit); the reject DECISION (parseConstructionIteration returning !ok) is fully covered in-process by tests/unit/t250, and the handler's reject-with-no-mutation contract is exercised by the shipped-subprocess case in tests/integration/t250 (exit code + state byte-identity). Spawn-only error-exit row per spawn-blindspot-two-step (ii).",
     "expiry": "remove if error() gains a test-injectable non-exiting seam"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-state.ts",
-    "selector": {
-      "function": "verifyPreparedWorkflowCompletion",
-      "fingerprint": "sha256:ebbd8b3cabba96ce328968b00d1b7089c1fa13b3b2f499eaea17d56fff668147",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "The prepared verifier's fail-closed matrix is exercised by the named 'prepared completion refuses ...' tests in tests/integration/t265-engine-boundary.integration.test.ts; this line is the I/O-race sibling where a state was read but its Intent disappears before verification.",
-    "expiry": "remove when prepared-completion Intent resolution receives an injectable read port"
   },
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",

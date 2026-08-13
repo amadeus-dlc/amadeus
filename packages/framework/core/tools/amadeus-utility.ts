@@ -15,6 +15,16 @@ import {
   writeFileSync,
 } from "node:fs";
 import type { Stats } from "node:fs";
+import {
+  evaluateLifecycleGuards,
+  formatGuardRefusal,
+  guardAllowed,
+  guardDenied,
+  guardReceipt,
+  type LifecycleGuardAdapter,
+  type LifecycleGuardDecision,
+  type LifecycleGuardVerdict,
+} from "./amadeus-lifecycle-guard.ts";
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -3445,7 +3455,7 @@ type BlockingWorkspaceAdvisory = {
   remedy?: string;
 };
 
-type ClassifiedWorkspaceScan = {
+export type ClassifiedWorkspaceScan = {
   root: string;
   projectType: "Greenfield" | "Brownfield";
   languages: readonly string[];
@@ -4091,16 +4101,36 @@ export function detectWorkspace(projectDir: string): ScanResult {
   };
 }
 
-// Run the fail-closed workspace scan for intent birth: refuse loudly (no
-// mutation) on an inconclusive result, or return the classified snapshot. Kept
-// as its own function so the birth transaction's lock callback stays simple.
-function scanWorkspaceOrRefuse(projectDir: string): ClassifiedWorkspaceScan {
-  const result = inspectWorkspace(projectDir, nodeReadOnlyFs);
+// The fail-closed workspace scan, as the intent-birth checkpoint's second-round
+// policy. It runs INSIDE the birth lock and after the migration probe, because a
+// migrated workspace was MOVED rather than minted and has no scan to pass; the
+// first round (below) judges everything answerable before the lock is taken.
+export type WorkspaceScanGuardContext = { readonly projectDir: string };
+
+function evaluateWorkspaceScan(
+  context: WorkspaceScanGuardContext,
+): LifecycleGuardVerdict<ClassifiedWorkspaceScan> {
+  const result = inspectWorkspace(context.projectDir, nodeReadOnlyFs);
   if (result.kind === "inconclusive") {
-    refuseWithoutAudit(formatInconclusiveRefusal(result.scan));
+    // An inconclusive result (permission failure, unparseable .gitmodules) is
+    // refused loudly and WITHOUT an audit row — no intent was minted, so there
+    // is no ledger to write to (BR-U06-22).
+    return guardDenied({ reason: formatInconclusiveRefusal(result.scan), audit: "none" });
   }
-  return result.scan;
+  return guardAllowed(result.scan);
 }
+
+export const INTENT_BIRTH_WORKSPACE_GUARDS: readonly LifecycleGuardAdapter<
+  WorkspaceScanGuardContext,
+  ClassifiedWorkspaceScan
+>[] = Object.freeze([
+  {
+    id: "intent-birth.workspace-scan",
+    checkpoint: "intent-birth",
+    order: 10,
+    evaluate: evaluateWorkspaceScan,
+  },
+]);
 
 // Human-readable refusal for an inconclusive birth (no mutation performed).
 function formatInconclusiveRefusal(scan: InconclusiveWorkspaceScan): string {
@@ -4356,13 +4386,99 @@ export function resolveBirthAutonomyDeclaration(
   return { kind: "reported", message: `Intent autonomy: ${mode}\n` };
 }
 
-// The birth handler's two effectful edges, kept out of its body so the handler's
-// own branching does not grow. Both guards sit on one line: their conditions are
-// evaluated on every birth, which keeps the process-terminating arms measurable.
-function birthAutonomyOrDie(flags: Record<string, string>): BirthAutonomyMode | null {
-  const declared = classifyBirthAutonomyFlag(flags);
-  if (declared.kind === "invalid") die(declared.message);
-  return declared.kind === "mode" ? declared.mode : null;
+// The intent-birth checkpoint's first round: everything answerable before the
+// birth lock is taken. Two of these policies resolve a value the pipeline needs
+// afterwards (the declared autonomy mode, the repo set the intent touches), so
+// they hand it back as a receipt rather than leaving the handler to recompute it.
+export type IntentBirthGuardContext = {
+  readonly projectDir: string;
+  readonly flags: Record<string, string>;
+  readonly slugSource: string;
+};
+
+export type IntentBirthGuardReceipt =
+  | { readonly kind: "autonomy"; readonly mode: BirthAutonomyMode | null }
+  | { readonly kind: "repos"; readonly repos: readonly string[] };
+
+function evaluateBirthAutonomy(
+  context: IntentBirthGuardContext,
+): LifecycleGuardVerdict<IntentBirthGuardReceipt> {
+  // Judged alongside --depth/--test-strategy so a bad mode name refuses before
+  // the birth transaction opens and nothing is minted.
+  const declared = classifyBirthAutonomyFlag(context.flags);
+  if (declared.kind === "invalid") return guardDenied({ reason: declared.message });
+  return guardAllowed({
+    kind: "autonomy",
+    mode: declared.kind === "mode" ? declared.mode : null,
+  });
+}
+
+function evaluateReservedIntentName(
+  context: IntentBirthGuardContext,
+): LifecycleGuardVerdict<IntentBirthGuardReceipt> {
+  if (isReservedHelpRecordName(context.slugSource, 24)) {
+    // Reserved-namespace refusals must precede every workflow/audit mutation,
+    // so they take the unaudited channel.
+    return guardDenied({
+      reason: `Reserved intent name "${context.slugSource}" cannot be created.`,
+      recovery: "Choose a non-help intent name.",
+      audit: "none",
+    });
+  }
+  return guardAllowed();
+}
+
+function evaluateBirthRepoSet(
+  context: IntentBirthGuardContext,
+): LifecycleGuardVerdict<IntentBirthGuardReceipt> {
+  // Resolve the repo set the intent touches (P7 multi-repo): an explicit
+  // `--repos a,b` wins; absent it, sibling auto-discovery scans the workspace
+  // root's immediate children for a `.git`. An empty result (legacy single-repo /
+  // fresh greenfield) records no repos row — the lone repo is inferred on the
+  // construction path. Judged up front so a bad name fails before any mutation.
+  try {
+    return guardAllowed({
+      kind: "repos",
+      repos: resolveBirthRepoSet(context.projectDir, context.flags.repos),
+    });
+  } catch (e) {
+    return guardDenied({ reason: errorMessage(e) });
+  }
+}
+
+export const INTENT_BIRTH_GUARDS: readonly LifecycleGuardAdapter<
+  IntentBirthGuardContext,
+  IntentBirthGuardReceipt
+>[] = Object.freeze([
+  {
+    id: "intent-birth.autonomy-declaration",
+    checkpoint: "intent-birth",
+    order: 10,
+    evaluate: evaluateBirthAutonomy,
+  },
+  {
+    id: "intent-birth.reserved-name",
+    checkpoint: "intent-birth",
+    order: 20,
+    evaluate: evaluateReservedIntentName,
+  },
+  {
+    id: "intent-birth.repo-set",
+    checkpoint: "intent-birth",
+    order: 30,
+    evaluate: evaluateBirthRepoSet,
+  },
+]);
+
+// Refuse a birth the Lifecycle Guard Runtime blocked. The audit disposition
+// picks the channel: `die()` deliberately emits ERROR_LOGGED, while the
+// pre-mutation refusals use the same loud non-zero CLI shape without touching
+// the audit ledger.
+function refuseIntentBirth<P>(decision: LifecycleGuardDecision<P>): void {
+  if (decision.kind === "allowed") return;
+  const message = formatGuardRefusal(decision.refusal);
+  if (decision.refusal.audit === "none") refuseWithoutAudit(message);
+  die(message);
 }
 
 function reportBirthAutonomyDeclaration(
@@ -4405,30 +4521,23 @@ export function handleIntentBirth(projectDir: string, flags: Record<string, stri
     die(`Unknown test strategy: "${testStrategyOverride}". Valid: minimal, standard, comprehensive.`);
   }
 
-  // Validated here, alongside --depth/--test-strategy, so a bad mode name dies
-  // before the birth transaction opens and nothing is minted.
-  const autonomy = birthAutonomyOrDie(flags);
-
   const description = flags.arguments?.trim();
   const label = flags.label?.trim();
   const slugSource = label || description || scope;
-  if (isReservedHelpRecordName(slugSource, 24)) {
-    refuseWithoutAudit(
-      `Reserved intent name "${slugSource}" cannot be created. Choose a non-help intent name.`,
-    );
-  }
 
-  // Resolve the repo set the intent touches (P7 multi-repo): an explicit
-  // `--repos a,b` wins; absent it, sibling auto-discovery scans the workspace
-  // root's immediate children for a `.git`. An empty result (legacy single-repo /
-  // fresh greenfield) records no repos row — the lone repo is inferred on the
-  // construction path. Validated up front so a bad name fails before any mutation.
-  let repos: string[];
-  try {
-    repos = resolveBirthRepoSet(projectDir, flags.repos);
-  } catch (e) {
-    die(errorMessage(e));
-  }
+  // The intent-birth checkpoint, first round. Every policy here runs BEFORE the
+  // birth transaction opens, so a refusal mints nothing and writes nothing.
+  const birthDecision = evaluateLifecycleGuards<IntentBirthGuardContext, IntentBirthGuardReceipt>({
+    checkpoint: "intent-birth",
+    targetRevision: `intent:${slugSource}`,
+    adapters: INTENT_BIRTH_GUARDS,
+    context: { projectDir, flags, slugSource },
+  });
+  refuseIntentBirth(birthDecision);
+  const autonomyReceipt = guardReceipt(birthDecision, "intent-birth.autonomy-declaration");
+  const autonomy = autonomyReceipt.kind === "autonomy" ? autonomyReceipt.mode : null;
+  const reposReceipt = guardReceipt(birthDecision, "intent-birth.repo-set");
+  const repos = reposReceipt.kind === "repos" ? [...reposReceipt.repos] : [];
 
   // A migrated workspace short-circuits the birth pipeline below; its state was
   // MOVED, not created, so there is no new declaration to apply afterwards.
@@ -4467,13 +4576,19 @@ export function handleIntentBirth(projectDir: string, flags: Record<string, stri
       return;
     }
 
-    // (1.5) FAIL-CLOSED WORKSPACE SCAN. Run the read-only inspection BEFORE any
-    // mutation (mint, audit, state). An `inconclusive` result (permission
-    // failure, unparseable .gitmodules) refuses loudly — no intent is minted,
-    // nothing is written (BR-U06-22). Only a `classified` scan proceeds into the
-    // birth pipeline, and its exact strings/observations are threaded to
-    // handleIntentBirthStateBuild so the scan is projected once.
-    const classifiedScan = scanWorkspaceOrRefuse(projectDir);
+    // (1.5) FAIL-CLOSED WORKSPACE SCAN. The intent-birth checkpoint's second
+    // round: a read-only inspection BEFORE any mutation (mint, audit, state).
+    // Only a `classified` scan proceeds into the birth pipeline, and its exact
+    // strings/observations are threaded to handleIntentBirthStateBuild so the
+    // scan is projected once.
+    const scanDecision = evaluateLifecycleGuards<WorkspaceScanGuardContext, ClassifiedWorkspaceScan>({
+      checkpoint: "intent-birth",
+      targetRevision: `intent:${slugSource}`,
+      adapters: INTENT_BIRTH_WORKSPACE_GUARDS,
+      context: { projectDir },
+    });
+    refuseIntentBirth(scanDecision);
+    const classifiedScan = guardReceipt(scanDecision, "intent-birth.workspace-scan");
 
     // (2) MINT THE INTENT. SPIKE (date-prefix): the dir name is `<YYMMDD>-<label>`.
     // TWO seams, by the three-concerns split:

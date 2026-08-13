@@ -1,4 +1,4 @@
-// covers: function:verifyBlockingSensors, function:verifyStageCompletionGuards, function:handleApprove, function:handleAdvance, function:handleFinalize, function:handleCompleteWorkflow
+// covers: function:evaluateBlockingSensorGuard, function:verifyStageCompletionGuards, function:handleApprove, function:handleAdvance, function:handleFinalize, function:handleCompleteWorkflow
 //
 // t511 (integration) — Issue #2671 item (c): the approve-time blocking sensor
 // gate, wired and driven against a real project tree.
@@ -33,8 +33,13 @@ import {
   handleApprove,
   handleCompleteWorkflow,
   handleFinalize,
-  verifyBlockingSensors,
+  STAGE_COMPLETION_GUARDS,
+  type StageCompletionGuardContext,
 } from "../../dist/claude/.claude/tools/amadeus-state.ts";
+import {
+  evaluateLifecycleGuards,
+  formatGuardRefusal,
+} from "../../dist/claude/.claude/tools/amadeus-lifecycle-guard.ts";
 import {
   AMADEUS_SRC,
   cleanupTestProject,
@@ -81,6 +86,23 @@ function captureExit(fn: () => void): { threw: boolean; stderr: string } {
     console.error = origErr;
   }
   return { threw, stderr };
+}
+
+// The blocking-sensor policy, evaluated the way the completion chokepoint does.
+// It returns a verdict now rather than exiting, so a refusal is the blocked
+// decision and its rendered text is what the chokepoint hands to error().
+function blockingSensorVerdict(projectDir: string): { blocked: boolean; message: string } {
+  const decision = evaluateLifecycleGuards<StageCompletionGuardContext>({
+    checkpoint: "stage-completion",
+    targetRevision: `stage:${STAGE}`,
+    adapters: STAGE_COMPLETION_GUARDS.filter(
+      (guard) => guard.id === "stage-completion.blocking-sensors",
+    ),
+    context: { pd: projectDir, stage: { slug: STAGE, name: "Requirements Analysis", phase: "inception" } },
+  });
+  return decision.kind === "blocked"
+    ? { blocked: true, message: formatGuardRefusal(decision.refusal) }
+    : { blocked: false, message: "" };
 }
 
 let proj: string;
@@ -341,8 +363,7 @@ describe("t511 — enforcement cutoff and guard unit (#2671 c)", () => {
     seedArtifacts();
     useGraphWithBlockingSensor();
     seedSensorAudit([FIRED, FAILED]);
-    const r = captureExit(() => verifyBlockingSensors(proj, { slug: STAGE, name: "Requirements Analysis" }));
-    expect(r.threw).toBe(false);
+    expect(blockingSensorVerdict(proj).blocked).toBe(false);
   });
 
   test("an intent born on/after the cutoff is blocked by the same trail", () => {
@@ -350,16 +371,15 @@ describe("t511 — enforcement cutoff and guard unit (#2671 c)", () => {
     seedArtifacts();
     useGraphWithBlockingSensor();
     seedSensorAudit([FIRED, FAILED]);
-    const r = captureExit(() => verifyBlockingSensors(proj, { slug: STAGE, name: "Requirements Analysis" }));
-    expect(r.threw).toBe(true);
-    expect(r.stderr).toContain("unresolved verdict");
+    const r = blockingSensorVerdict(proj);
+    expect(r.blocked).toBe(true);
+    expect(r.message).toContain("unresolved verdict");
   });
 
   test("a stage with no blocking sensor returns before reading the audit", () => {
     redateRecord(POST_CUTOFF);
     seedSensorAudit([FIRED, FAILED]);
-    const r = captureExit(() => verifyBlockingSensors(proj, { slug: STAGE, name: "Requirements Analysis" }));
-    expect(r.threw).toBe(false);
+    expect(blockingSensorVerdict(proj).blocked).toBe(false);
   });
 
   test("a record dir with no date prefix is outside enforcement", () => {
@@ -368,11 +388,10 @@ describe("t511 — enforcement cutoff and guard unit (#2671 c)", () => {
     seedArtifacts();
     useGraphWithBlockingSensor();
     seedSensorAudit([FIRED, FAILED]);
-    const r = captureExit(() => verifyBlockingSensors(proj, { slug: STAGE, name: "Requirements Analysis" }));
-    expect(r.threw).toBe(false);
+    expect(blockingSensorVerdict(proj).blocked).toBe(false);
   });
 
-  // verifyBlockingSensors' currentDigest reads the real output file off disk
+  // The blocking-sensor policy's currentDigest reads the real output file off disk
   // (evaluateBlockingSensors' pure decision table, exercised in the unit
   // spec, is handed a fake digest fn instead). A vanished output makes that
   // readFileSync throw, which the real callback swallows into a "missing"
@@ -384,11 +403,11 @@ describe("t511 — enforcement cutoff and guard unit (#2671 c)", () => {
     useGraphWithBlockingSensor();
     seedSensorAudit([FIRED, PASSED]);
     rmSync(join(recordDir(), `${STAGE}-output.md`));
-    const r = captureExit(() => verifyBlockingSensors(proj, { slug: STAGE, name: "Requirements Analysis" }));
-    expect(r.threw).toBe(true);
-    expect(r.stderr).toContain(SENSOR);
-    expect(r.stderr).toContain("passed different bytes");
-    expect(r.stderr).toContain("Re-fire it against the current artifact");
+    const r = blockingSensorVerdict(proj);
+    expect(r.blocked).toBe(true);
+    expect(r.message).toContain(SENSOR);
+    expect(r.message).toContain("passed different bytes");
+    expect(r.message).toContain("Re-fire it against the current artifact");
   });
 });
 
