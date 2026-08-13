@@ -395,8 +395,9 @@ describe("declared advisory hold symmetry across next and report", () => {
     chooseAtCheckpoint(projectDir, "run-now");
 
     const guarded = guardAdvisoryChoices(projectDir, stage, [DECLARED_ADVISORY], hostRoot);
-    expect(guarded.kind).toBe("hold");
-    if (guarded.kind === "hold") {
+    // Still held, under the settled `handoff` verdict (#2967).
+    expect(guarded.kind).toBe("handoff");
+    if (guarded.kind === "handoff") {
       expect(guarded.advisories[0]?.result ?? "").toContain("no-hold");
     }
 

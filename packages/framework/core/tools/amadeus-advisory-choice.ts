@@ -151,8 +151,21 @@ export type AdvisoryChoiceDirectiveItem = {
 
 export type AdvisoryChoiceGuardResult =
   | { kind: "allow" }
+  // Unanswered. The choice question is still open, so this is what becomes a
+  // ladder offer and then, failing that, a question for the human.
   | {
       kind: "hold";
+      stage: string;
+      advisories: AdvisoryChoiceDirectiveItem[];
+    }
+  // Answered `run-now`, and still held (#2967). The receipt settles the QUESTION;
+  // it releases nothing, because only the declaring plugin's evaluator returning
+  // no-hold does that (BR-U2-05). Collapsing this into `hold` is what let the
+  // engine re-offer a decided advisory to the ladder and, when single-spend
+  // refused the duplicate receipt, re-ask the human. The destination each
+  // advisory named is on its `handoff_stage`.
+  | {
+      kind: "handoff";
       stage: string;
       advisories: AdvisoryChoiceDirectiveItem[];
     };
@@ -704,7 +717,7 @@ function resolveRunRequiredHold(
     return { kind: "allow" };
   }
   return {
-    kind: "hold",
+    kind: "handoff",
     stage,
     advisories: directiveItems,
   };

@@ -200,8 +200,10 @@ describe("advisory auto-resolution: authorized (FR-ADV-1)", () => {
     // The choice itself is settled, but the plugin still raises the advisory.
     // The host therefore keeps the hold without inventing a plugin command.
     const after = guardAdvisoryChoices(projectDir, STAGE, [advisory]);
-    expect(after.kind).toBe("hold");
-    if (after.kind !== "hold") return;
+    // The hold stands under the settled `handoff` verdict (#2967): a decided
+    // advisory is never re-offered to the ladder or re-asked of the human.
+    expect(after.kind).toBe("handoff");
+    if (after.kind !== "handoff") return;
     expect(after.advisories[0]?.result).toContain("plugin's own evaluator");
   });
 

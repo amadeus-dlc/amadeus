@@ -453,7 +453,7 @@ describe("protected advisory choice persistence", () => {
     expect(recordAdvisoryChoiceViaPrompt(projectDir, "1", humanTurn)).toBe(false);
     expect(recordAdvisoryChoiceViaPrompt(projectDir, "1", plantHumanTurn(projectDir))).toBe(false);
     const rerun = guardAdvisoryChoices(projectDir, identity.checkpoint, [advisory]);
-    expect(rerun.kind).toBe("hold");
+    expect(rerun.kind).toBe("handoff");
     if (rerun.kind === "hold") {
       expect(rerun.advisories[0]?.result).toContain("plugin's own evaluator");
     }
@@ -705,7 +705,7 @@ describe("protected advisory choice persistence", () => {
     });
     expect(evaluatorCalls).toBe(1);
     expect(reportHold).toContain("plugin's own evaluator");
-    expect(guardAdvisoryChoices(projectDir, identity.checkpoint, [advisory], hostRoot).kind).toBe("hold");
+    expect(guardAdvisoryChoices(projectDir, identity.checkpoint, [advisory], hostRoot).kind).toBe("handoff");
     expect(existsSync(storePath(projectDir))).toBe(true);
   });
 });

@@ -87,6 +87,7 @@ import { fileURLToPath } from "node:url";
 import {
   type AskDirective,
   type AwaitAdvisoryChoiceDirective,
+  type ExecuteAdvisoryHandoffDirective,
   type AwaitCompletionDirective,
   type DepthLevel,
   type Directive,
@@ -835,6 +836,28 @@ function applyPendingAdvisoryGuard(directive: Directive): Directive {
     pluginHostRoot(),
   );
   if (guard.kind === "allow") return directive;
+  // #2967 FR-ADV-1/2/7. A hold that already carries its `run-now` answer is
+  // SETTLED as a question, whichever route answered it, so it never reaches the
+  // ladder and never reaches the human. It becomes work instead: the named
+  // handoff stages, for the conductor to open before re-running `next`. Placing
+  // this ahead of the ladder is the fix — re-offering it there produced the same
+  // decision, single-spend refused the duplicate receipt, and the refusal fell
+  // through to a question the human had already answered.
+  if (guard.kind === "handoff") {
+    const handoffDirective: ExecuteAdvisoryHandoffDirective = {
+      kind: "execute-advisory-handoff",
+      stage: guard.stage,
+      handoff_stages: [
+        ...new Set(
+          guard.advisories.flatMap((advisory) =>
+            advisory.handoff_stage === undefined ? [] : [advisory.handoff_stage]
+          ),
+        ),
+      ],
+      advisories: guard.advisories,
+    };
+    return handoffDirective;
+  }
   // #2253 FR-ADV-1/2. A hold is offered to the autonomy ladder before it is
   // turned into a question for the human. There are exactly TWO ways out: the
   // ladder decided `run-now` and the receipt was accepted, in which case the
