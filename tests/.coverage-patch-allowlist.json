@@ -4987,17 +4987,6 @@
   {
     "file": "packages/framework/core/tools/amadeus-election-store.ts",
     "selector": {
-      "function": "readTallyHistory",
-      "fingerprint": "sha256:0fdc645be6bd3a5774587760e50ce2109d69b1c25db085c91bcaae38765ffcf2",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "readTallyHistory current-read failure after an empty verified history requires the current file to appear between verifyHistory and readCurrent; t549 covers missing and corrupt current paths.",
-    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-election-store.ts",
-    "selector": {
       "function": "commitTally",
       "fingerprint": "sha256:2fdd8eecc875ccfbd5c57e32edf9ae71e2b0cb09cbd5f8287e8e6ef7290e2747",
       "anchorLines": 1,
