@@ -21,21 +21,28 @@
 
 import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   VALID_KINDS,
   validateDirective,
 } from "../../packages/framework/core/tools/amadeus-directive.ts";
 import {
+  applyProductionAutonomyMode,
+  readProductionAutonomyProjection,
+} from "../../packages/framework/core/tools/amadeus-intent-autonomy-production.ts";
+import {
   handleNext,
   handleReport,
 } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
+import { mintHumanPresence } from "../../packages/framework/core/tools/amadeus-presence-reservation.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import {
   cleanupTestProject,
   createTestProject,
   FIXTURES_DIR,
   resetAidlcEnv,
+  seededStateFile,
   seedStateFile,
 } from "../harness/fixtures.ts";
 
@@ -53,6 +60,11 @@ const STOCK_GRAPH = join(
   "stage-graph.json",
 );
 const MID_IDEATION = join(FIXTURES_DIR, "state-mid-ideation.md");
+// The autonomy declaration projects `Construction Autonomy Mode` back into
+// state, and the strict field writer refuses to insert a field the file does
+// not already carry — so the semi-autonomy fixture starts from a state that
+// declares it.
+const CONSTRUCTION = join(FIXTURES_DIR, "state-construction.md");
 
 let proj = "";
 let logs: string[] = [];
@@ -61,6 +73,14 @@ const realErr = console.error;
 const realStderrWrite = process.stderr.write.bind(process.stderr);
 
 beforeEach(() => {
+  // dist/ is a gitignored build output, so a fresh worktree has no stock graph
+  // and every graph-reaching case here dies on an ENOENT that names a path
+  // rather than the missing build. Fail on the precondition instead.
+  if (!existsSync(STOCK_GRAPH)) {
+    throw new Error(
+      `stock stage graph missing at ${STOCK_GRAPH} — run \`bun run build\` to generate dist/ before this test`,
+    );
+  }
   resetAidlcEnv();
   process.env.AMADEUS_STAGE_GRAPH = STOCK_GRAPH;
   process.env.AMADEUS_SKIP_ARTIFACT_GUARD = "1";
@@ -97,6 +117,32 @@ function freshProject(): string {
   return p;
 }
 
+/**
+ * A fixture project whose Intent runs a Quality Repair loop — the `semi` side of
+ * `runsQualityRepair`. The mode is declared through the production human-command
+ * write path (a real HUMAN_TURN, then the autonomy transaction) rather than by
+ * hand-writing the projection, so what the report handler reads back is what
+ * production would have written.
+ */
+function semiAutonomyProject(): string {
+  const p = createTestProject();
+  seedStateFile(p, CONSTRUCTION);
+  // The OTel bootstrap pins one workspace per process; each fixture project is a
+  // new workspace, so release the previous pin before minting into this one.
+  resetOtelPerProject();
+  mintHumanPresence({
+    projectDir: p,
+    capability: { kind: "unavailable", reason: "in-process test driver" },
+  });
+  const applied = applyProductionAutonomyMode({
+    projectDir: p,
+    stateContent: readFileSync(seededStateFile(p), "utf-8"),
+    mode: "semi",
+  });
+  if (!applied.ok) throw new Error(`semi declaration failed: ${applied.error}`);
+  return p;
+}
+
 describe("t528 the `committed` directive is part of the frozen contract", () => {
   test("`committed` is a valid kind carrying a reason", () => {
     expect(VALID_KINDS as readonly string[]).toContain("committed");
@@ -120,13 +166,31 @@ describe("t528 the `committed` directive is part of the frozen contract", () => 
 });
 
 describe("t528 report's commit ack is non-terminal", () => {
-  test("a failed result remains a typed error directive", () => {
-    handleReport(["--stage", "code-generation", "--result", "failed"], undefined);
+  // The two halves of the `runsQualityRepair` branch. Passing the project dir
+  // explicitly is what keeps them apart: with `undefined`, resolveProjectDir
+  // falls back to CLAUDE_PROJECT_DIR / the nearest cwd ancestor marker, so the
+  // branch is decided by whatever Intent the developer's own workspace happens
+  // to carry rather than by the fixture under test (#2981).
+  test("a failed result remains a typed error directive without a repair loop", () => {
+    proj = freshProject();
+
+    handleReport(["--stage", "code-generation", "--result", "failed"], proj);
 
     const directive = lastDirective();
     expect(directive.kind).toBe("error");
     expect(String(directive.message)).toContain('Unknown --result "failed"');
-  });
+  }, scaleTestTime(30000));
+
+  test("a failed result under a repair loop asks for the typed failure", () => {
+    proj = semiAutonomyProject();
+    expect(readProductionAutonomyProjection(proj)?.mode).toBe("semi");
+
+    handleReport(["--stage", "code-generation", "--result", "failed"], proj);
+
+    const directive = lastDirective();
+    expect(directive.kind).toBe("error");
+    expect(String(directive.message)).toContain("requires --failure");
+  }, scaleTestTime(30000));
 
   test("a gated approve acks with `committed`, never the terminal `done`", () => {
     proj = freshProject();
