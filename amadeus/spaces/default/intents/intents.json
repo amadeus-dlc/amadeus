@@ -1035,10 +1035,10 @@
     "status": "complete"
   },
   {
-    "uuid": "019fe504-4400-7358-b05a-e1b4bc09d2ab",
-    "slug": "stage-attribution",
-    "dirName": "260809-stage-attribution",
-    "scope": "self-feature",
+    "uuid": "019fe8bb-cdc5-743f-ba13-53cc2f579805",
+    "slug": "report-done-kind-split",
+    "dirName": "260809-report-done-kind-split",
+    "scope": "self-fix",
     "status": "in-flight"
   },
   {
@@ -1049,24 +1049,17 @@
     "status": "complete"
   },
   {
-    "uuid": "019fe8bb-cdc5-743f-ba13-53cc2f579805",
-    "slug": "report-done-kind-split",
-    "dirName": "260809-report-done-kind-split",
-    "scope": "self-fix",
+    "uuid": "019fe504-4400-7358-b05a-e1b4bc09d2ab",
+    "slug": "stage-attribution",
+    "dirName": "260809-stage-attribution",
+    "scope": "self-feature",
     "status": "in-flight"
   },
   {
-    "uuid": "019fe910-38cc-7f1f-b5a5-2031459ca539",
-    "slug": "tla-applicability-wiring",
-    "dirName": "260810-tla-applicability-wiring",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fea00-cb6c-78ca-9875-b4eebc8ed2ad",
-    "slug": "plugin-harness-dir-token",
-    "dirName": "260810-plugin-harness-dir-token",
-    "scope": "self-fix",
+    "uuid": "019feacc-4b02-78ab-86d8-1425caeb18da",
+    "slug": "control-byte-gate",
+    "dirName": "260810-control-byte-gate",
+    "scope": "self-feature",
     "status": "complete"
   },
   {
@@ -1074,6 +1067,13 @@
     "slug": "grilling-frontier-resync",
     "dirName": "260810-grilling-frontier-resync",
     "scope": "self-feature",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fea00-cb6c-78ca-9875-b4eebc8ed2ad",
+    "slug": "plugin-harness-dir-token",
+    "dirName": "260810-plugin-harness-dir-token",
+    "scope": "self-fix",
     "status": "complete"
   },
   {
@@ -1091,16 +1091,16 @@
     "status": "complete"
   },
   {
-    "uuid": "019feacc-4b02-78ab-86d8-1425caeb18da",
-    "slug": "control-byte-gate",
-    "dirName": "260810-control-byte-gate",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
     "uuid": "019fec0c-9e96-7df8-b0e6-daa3682b857b",
     "slug": "test-time-factor",
     "dirName": "260810-test-time-factor",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fe910-38cc-7f1f-b5a5-2031459ca539",
+    "slug": "tla-applicability-wiring",
+    "dirName": "260810-tla-applicability-wiring",
     "scope": "self-fix",
     "status": "complete"
   },
@@ -1126,13 +1126,6 @@
     "status": "complete"
   },
   {
-    "uuid": "019ffb66-d1c4-7d3c-9aa7-50e0f6966e57",
-    "slug": "remove-team-up",
-    "dirName": "260813-remove-team-up",
-    "scope": "self-fix",
-    "status": "in-flight"
-  },
-  {
     "uuid": "019ffb1a-d46b-7016-938d-5de854a84362",
     "slug": "advisory-requestion-fix",
     "dirName": "260813-advisory-requestion-fix",
@@ -1147,11 +1140,11 @@
     "status": "complete"
   },
   {
-    "uuid": "019ffda5-8b96-7498-a17d-f1766ea1ffd7",
-    "slug": "t528-ambient-isolation",
-    "dirName": "260814-t528-ambient-isolation",
+    "uuid": "019ffb66-d1c4-7d3c-9aa7-50e0f6966e57",
+    "slug": "remove-team-up",
+    "dirName": "260813-remove-team-up",
     "scope": "self-fix",
-    "status": "complete"
+    "status": "in-flight"
   },
   {
     "uuid": "019ffe33-9663-73f3-bcc6-70bd6fde1987",
@@ -1161,9 +1154,30 @@
     "status": "complete"
   },
   {
-    "uuid": "019ffda5-bc87-754d-92b6-ff1b7a50d9a4",
-    "slug": "t245-origin-fixture",
-    "dirName": "260814-t245-origin-fixture",
+    "uuid": "019fff1b-302d-7b27-8475-61ca61752ca8",
+    "slug": "autonomy-stop-fixes",
+    "dirName": "260814-autonomy-stop-fixes",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019fff14-98a2-725c-9b20-99add2639251",
+    "slug": "copytree-guard-boundary",
+    "dirName": "260814-copytree-guard-boundary",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019ffee6-ed59-7748-85cb-7f578201362a",
+    "slug": "coverage-quick-norm",
+    "dirName": "260814-coverage-quick-norm",
+    "scope": "self-document",
+    "status": "in-flight"
+  },
+  {
+    "uuid": "019fff1a-ba9f-7173-abec-40c9e7a6d004",
+    "slug": "failopen-error-paths",
+    "dirName": "260814-failopen-error-paths",
     "scope": "self-fix",
     "status": "complete"
   },
@@ -1175,6 +1189,27 @@
     "status": "complete"
   },
   {
+    "uuid": "019fff1a-bae8-77b2-99a4-5f9e19d75d17",
+    "slug": "plugins-rename-drift",
+    "dirName": "260814-plugins-rename-drift",
+    "scope": "self-feature",
+    "status": "in-flight"
+  },
+  {
+    "uuid": "019ffda5-bc87-754d-92b6-ff1b7a50d9a4",
+    "slug": "t245-origin-fixture",
+    "dirName": "260814-t245-origin-fixture",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019ffda5-8b96-7498-a17d-f1766ea1ffd7",
+    "slug": "t528-ambient-isolation",
+    "dirName": "260814-t528-ambient-isolation",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
     "uuid": "019ffea5-c321-70cd-a824-ecd9f9240a60",
     "slug": "t99-copytree-race",
     "dirName": "260814-t99-copytree-race",
@@ -1182,10 +1217,10 @@
     "status": "complete"
   },
   {
-    "uuid": "019ffee6-ed59-7748-85cb-7f578201362a",
-    "slug": "coverage-quick-norm",
-    "dirName": "260814-coverage-quick-norm",
-    "scope": "self-document",
+    "uuid": "019fff1a-becf-72aa-ae9f-6c87f8323fbc",
+    "slug": "unit-failure-autoelectio",
+    "dirName": "260814-unit-failure-autoelectio",
+    "scope": "self-fix",
     "status": "in-flight"
   }
 ]
