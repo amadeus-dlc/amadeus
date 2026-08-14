@@ -1620,6 +1620,12 @@
     "status": "recorded"
   },
   {
+    "electionId": "E-260814-ASF-RE-S13",
+    "dirName": "260814-e-260814-asf-re-s13",
+    "createdAt": "2026-08-14T07:22:50Z",
+    "status": "recorded"
+  },
+  {
     "electionId": "E-260814-CGB-RE-S13",
     "dirName": "260814-e-260814-cgb-re-s13",
     "createdAt": "2026-08-14T07:21:56Z",

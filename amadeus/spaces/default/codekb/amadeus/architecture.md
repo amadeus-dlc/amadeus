@@ -1,6 +1,72 @@
 # アーキテクチャ
 
-## coverage-patch-quick は advisory 近似であり CI gate の代替ではない（260814-coverage-quick-norm、現在、observed `d7ffaa544`）
+## 停止境界のアーキテクチャ: park ガードと `error` directive の受け方（260814-autonomy-stop-fixes、現在、observed `cd64486a6`）
+
+**観測 ref**: observed = `cd64486a68c6a1144db50fbe3fde8273f5e18455`（`git rev-parse HEAD` = `git rev-parse origin/main`）。差分 base = `d7ffaa5442266508d8e67babc3e0b947fb4c1637`（HEAD の祖先で距離 **4**）。焦点領域は base..observed で**全面無変更**。検索述語と全数列挙は `re-scans/260814-autonomy-stop-fixes.md` を正本とし、本節は構造だけを転記する。
+
+### A-1. park 拒否は 1 点のみで、二層防御は実在しない
+
+`packages/framework/core/tools/amadeus-state.ts:1579` `handlePark` のガード（`:1583-1587`）が唯一の拒否点で、判定入力は `Construction Autonomy Mode` **のみ**。人間 turn の有無も park 要求の起点（人間 / hook / スクリプト）も参照しない。
+
+直上コメント（`:1565-1578`）は逐語 `defence-in-depth beside the Stop hook's identical guard` と述べるが、observed の Stop hook に park ガードは**存在しない**（`git grep -n "Construction Autonomy Mode" -- packages/framework/core/hooks/` = 0 hit / exit 1）。hook は逆に `amadeus-stop.ts:947-949` で `parked` を**全モード終端 allow** し、`:943-946` が逐語 `A parked directive is terminal for the current turn in every mode.` / `The Intent grant remains a separate projection and is not revoked by this allow.` と宣言する。hook 側の autonomy ガードは park ではなく tier-3 会話カーブアウト（`:518-540`）と tier-2 系（`:976-981`, `:994-999`）に掛かっている。
+
+### A-2. 「autonomous な run は park しない」は observed では既に成り立っていない
+
+park 経路は 3 系統に分かれ、`handlePark` を通るのは 1 系統だけである。
+
+| 経路 | 位置 | ガード通過 |
+| --- | --- | --- |
+| generic park（`orchestrate park` → `spawnState(["park"])`） | `amadeus-orchestrate.ts:6499-6506` / `:6566-6582` | **通る**（非 0 exit を `errorDirective` として逐語中継、`:6573`） |
+| Abort 後の Construction park | `amadeus-orchestrate.ts:4050-4052` | 通らない（directive を直接 emit） |
+| REPAIR_STALLED park | `amadeus-orchestrate.ts:5944-5969` | 通らない。**full grant を保持したまま park する第一級経路** |
+
+再送とクリアは Branch 2.5（`:3223-3257`、`Parked At Stage === Current Stage` のときだけ再送）と Branch 2.6（`:3261-3277`、`--resume` で明示クリア）が担う。**park→`--resume` 再開の機構は既存であり、未固定なのは grant の保持・失効方針だけ。**
+
+### A-3. ガードの判定入力は「認可の正本ではない」と明文化されたフィールド
+
+`stage-protocol.md:126` 逐語: `The canonical authorization is the Intent audit. `Construction Autonomy Mode` is only an internal scheduling projection; legacy values never authorize a gate.`（同旨 `packages/framework/core/memory/org.md:44`）。書込点は `amadeus-intent-autonomy-production.ts:713` の派生投影（`full → autonomous` / それ以外 → `gated`）。
+
+一方で `amadeus-orchestrate.ts:6171-6182` は、`report` が前進のみ・generic park が autonomous 下で拒否されるため typed failure に admission 経路がない、と設計制約として明記している。**park ガードの緩和は、この経路の前提を同時に検査する必要がある。**
+
+### A-4. 「fresh な人間 turn」を判定する既成部品は揃っている
+
+`packages/framework/core/tools/amadeus-intent-autonomy-production.ts` に provenance 機構が既にある。
+
+| 機構 | 位置 | 役割 |
+| --- | --- | --- |
+| `latestHumanTurnId` | `:320-344` | `humanActedSinceGate` が偽なら null。真なら全 shard の `HUMAN_TURN` 最新を digest 化 |
+| `AutonomyProvenanceScope` | `:346-362` | `intent` / `launch-chain` の判別ユニオン。`launch-chain` は参照 turn の識別子を**型に含む**（名指しのない launch-chain を表現不能にする） |
+| `launchChainHumanTurnId` | `:452-478` | 実在 / 未消費 / record 誕生時刻以前 / fingerprint 一致の 4 条件で解決 |
+| `resolveDeclarationProvenance` | `:486-500` | `launch-chain` × `full` は `PROVENANCE_SCOPE_FORBIDDEN`、turn 不在は `PROVENANCE_REQUIRED` |
+| `freshHumanRetryTurn` | `:1163-1185` | REPAIR_STALLED 以後の `HUMAN_TURN` だけを fresh と認める**先例** |
+
+「使い回し・古い turn を拒否する」要求は `freshHumanRetryTurn` と同型（基準時刻より後の turn だけを採る）で実装可能。**基準時刻をどこに置くかが設計裁定事項。**
+
+### A-5. `error` directive の受け方は core に正本を持たない開放集合
+
+engine 側の `error` は汎用の fail-closed 表現で、`amadeus-orchestrate.ts` 内 **98 箇所**が `errorDirective` を呼ぶ。成果物欠落による report 拒否は degrade-unit 経路（`:4270-4293`）の 3 分岐すべてがこれを返す。
+
+受け手側の契約（「message を逐語出力して停止、recover しない」）は**8 ハーネス表層に手書きで散在し、core に正本がない**（`git grep -rn "Print \`directive.message\` verbatim" -- packages/framework/core/` = 0 hit）。observed の分岐は 3 系統:
+
+| 系統 | 面 | 文言 |
+| --- | --- | --- |
+| 完全形（5） | claude `:59` / codex `:57` / kimi `:59` / kiro `:55` / kiro-ide `:55` | `Print \`directive.message\` verbatim and STOP. Do not recover, retry, or smooth it over — the message is the user-facing error.` |
+| 短縮形（2） | cursor `commands/amadeus.md:67` / opencode `commands/amadeus.md:67` | `Print \`directive.message\` verbatim and STOP. Do not recover or smooth it over.`（`retry` と「message は user-facing error」が欠落） |
+| 散文・逐語出力の指示なし（1） | pi `skills/amadeus/SKILL.md:68-71` | 停止集合の列挙のみ |
+
+**文言でこの受け方を強化する修正は、この 8 面すべてを同一変更で同期する必要がある。**
+
+### A-6. remote write の承認境界は参照されるだけで定義がない
+
+`plugins/pr-convergence/stages/pr-convergence.md` は remote write の人間承認をステージ契約として明文化する（`:78-80` `Commit and push under the workspace's approval boundary for remote writes.` / `:378-382` `**Ask before writing to the remote.** ... never merge: merging is a separate human decision and no convergence verdict authorises it.` / `:363`）。
+
+しかし「approval boundary」の**定義は存在しない**（全域述語で 5 hit、うち定義 0 件）。`stage-protocol.md` 側の `existing approval boundary`（`:313`, `:380`, `:399`, `:415`）は「新しいゲートを作らず既存の承認境界へ回せ」の意で、**ステージゲートを指す別概念**であり、両者の関係も未定義。
+
+一方 `docs/reference/24-intent-autonomy.md:79-84` は、grant が決して認可できない 5 分類（`new-permission` / `irreversible` / `scope-out` / `norm-waiver` / `quality-waiver`）を定め、逐語 `Autonomy therefore cannot widen its own permissions, waive quality, or take an irreversible action, regardless of mode.` と結ぶ（対訳 `.ja.md:76`）。→ **remote write を一律 grant 認可にする解はこの分類と正面衝突する。**
+
+矛盾しない経路は `decide-question` 梯子（`amadeus-bolt.ts:1019-1035`、五段は `24-intent-autonomy.md:92-113`、手順の正本は `stage-protocol.md:135`（full）/ `:137`（semi））で、`human-required` のときだけ人間へ回る。`stage-protocol.md:139-141` の無条件 halt は **Bolt の code-generation 失敗のみ**を対象とし（`:141` 逐語 `This is the one case where \`autonomous\` mode stops to consult.`）、remote write は対象外。
+
+## coverage-patch-quick は advisory 近似であり CI gate の代替ではない（260814-coverage-quick-norm、履歴、observed `d7ffaa544` — 260814-autonomy-stop-fixes 時点でも構造は有効）
 
 **観測 ref**: observed = `d7ffaa5442266508d8e67babc3e0b947fb4c1637`（`git rev-parse HEAD`）。差分 base = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`。詳細と検索述語は `re-scans/260814-coverage-quick-norm.md` を正本とする。
 
