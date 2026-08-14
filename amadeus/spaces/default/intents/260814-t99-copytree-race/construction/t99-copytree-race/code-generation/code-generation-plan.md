@@ -20,3 +20,18 @@
 
 - degraded input の明記: units-generation / functional-design 等は self-fix scope により SKIP — 本 plan は requirements.md と captured intent から直接スコープした。
 - 実装は本 intent 専用 worktree(branch `fix-3003-t99-copytree`、origin/main 起点)で行う。
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-14T05:46:22Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+FR-1〜FR-7・NFR-1〜3 の全項目に code-summary の検証実測が対応し、diff は対象2ファイルに閉じ、後方互換シム・無申告フォールバックの混入なし。申告済み逸脱1件は理由と受け入れ基準への非影響が明記されており妥当。
+
+### Findings
+
+- FOLLOW-UP | amadeus/spaces/default/intents/260814-t99-copytree-race/construction/t99-copytree-race/code-generation/code-summary.md: NFR-1 の isRetryableCopyError 分類・エラーメッセージ既存 assert 不変の直接実測記載がない — 次回検証段(build-and-test)で明示すること
+- NIT | amadeus/spaces/default/intents/260814-t99-copytree-race/construction/t99-copytree-race/code-generation/code-summary.md: FR-3 の用語(ファイル集合差 vs 全 entry 名)の requirements 側更新が望ましい

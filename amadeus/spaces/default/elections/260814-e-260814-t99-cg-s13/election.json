@@ -1,0 +1,22 @@
+{
+  "electionId": "E-260814-T99-CG-S13",
+  "kind": "s13-learning-selection",
+  "question": "§13 学習選定(code-generation, intent 260814-t99-copytree-race): 候補1件 — c1(Deviation)「FR-3 の差分走査を stat なしの全 entry 名集合差へ変更(racing walk 回避と patch-coverage の allowlist 禁止が理由。申告済み・code-summary に記録)」。これは本 intent 固有の実装判断であり、レビュアー READY で妥当性確認済み。一般化すべき横断知見(例:『失敗診断の走査に stat を足さない』)へ昇格させるほどの再現性・適用範囲は現時点で1事例のみ。採用0件を提案する。可とするか。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "採用0件で可",
+      "description": "1事例の実装判断。記録は code-summary・diary・レビュー verdict に残存"
+    },
+    {
+      "internalNo": 2,
+      "label": "候補を採用すべき",
+      "description": "横断的新規性がある(heading を rationale に明記)"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}
