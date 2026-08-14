@@ -106,9 +106,9 @@ Per unit: [TBD]
 - **Current Stage**: pr-convergence
 - **Next Stage**: formal-model-check
 - **Status**: Running
-- **Intent Autonomy Mode**: semi
-- **Intent Grant**: none
-- **Construction Autonomy Mode**: gated
+- **Intent Autonomy Mode**: full
+- **Intent Grant**: intent-grant-46ba36f62d420400df6c9835d1fd2bff
+- **Construction Autonomy Mode**: autonomous
 - **Last Updated**: 2026-08-14T10:18:59Z
 
 ## Session Resume Point

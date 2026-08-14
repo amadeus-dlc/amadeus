@@ -2,11 +2,11 @@
 
 - kind: created
 - pull request: amadeus-dlc/amadeus#3036
-- generated at: 2026-08-14T10:09:04Z
+- generated at: 2026-08-14T11:49:13Z
 - converged: false
 ## CLI Attestation
 
-- attestation id: prca:baad653c50cf93bf07a8eee8cc337ebc3c54f078cd26f383200ab9f9f02812d7
+- attestation id: prca:d976714f5299a74e7a7aec2fe197aa99e871ea39545fc3b3b0379f52621f5fae
 - intent: election-multiq
 - intent uuid: 019ffa02-2d39-71f4-bd0c-e8dbe87244fa
 - record: amadeus/spaces/default/intents/260813-election-multiq/
@@ -14,7 +14,7 @@
 - unit: election-distribution-and-verification
 - repository: amadeus-dlc/amadeus
 - pr: 3036
-- local head: a5b9e8434c50b35be71a918ddc1a14810fc571ad
-- remote head: a5b9e8434c50b35be71a918ddc1a14810fc571ad
-- pr head: a5b9e8434c50b35be71a918ddc1a14810fc571ad
-- content digest: sha256:9086d3527d8130ee886cf180aec82635e644b07b0bd2c1ca762d78c387b8d3bd
+- local head: 07fe94a94c2a64b2f611524648d091283cec3baa
+- remote head: 07fe94a94c2a64b2f611524648d091283cec3baa
+- pr head: 07fe94a94c2a64b2f611524648d091283cec3baa
+- content digest: sha256:80743abdcad980653f63cfaa3b24665dbf6cea0b7c511acdc25a8b206e054619
