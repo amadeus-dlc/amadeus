@@ -6198,7 +6198,9 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
   // A stage-owned referee that failed closed (issue #2912). `report` commits
   // forward transitions only and the generic manual park is refused under an
   // autonomous Construction run, so without this route a typed failure has no
-  // admission path and `next` re-issues the same run-stage forever. Under semi
+  // admission path and `next` re-issues the same run-stage forever. (#3016
+  // narrowed that refusal to a genuinely UNATTENDED run — one with no unconsumed
+  // HUMAN_TURN — which is exactly the case this route answers.) Under semi
   // or full the failure belongs to Quality Repair: it becomes an unresolved
   // obligation, bounded repair owns the recovery, and a nonproductive loop parks
   // as REPAIR_STALLED with the grant intact. Under `none` there is no repair
