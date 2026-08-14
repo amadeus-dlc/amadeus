@@ -1,0 +1,52 @@
+{
+  "schema": "amadeus.model-check-manifest.v1",
+  "runId": "9a7f7db2-8334-442c-afb6-121c1a53dcbf",
+  "outcome": "NOT_DETECTED",
+  "exitCode": 0,
+  "startedAt": "2026-08-14T07:49:50.738Z",
+  "finishedAt": "2026-08-14T07:50:01.217Z",
+  "expectedArtifacts": [
+    "env-receipt.json",
+    "tlc-stdout.bin",
+    "tlc-stderr.bin",
+    "completion-marker.json"
+  ],
+  "artifacts": [
+    {
+      "path": "env-receipt.json",
+      "sha256": "2a4ccd292411d8ffbc92f355a2050cccff16abb77a8a143cac173ffd4595d79a",
+      "bytes": 1421
+    },
+    {
+      "path": "tlc-stdout.bin",
+      "sha256": "ab86084d0e258aef0d397272cb21f75aaf0b70cb26f116add666477e3611916c",
+      "bytes": 3603
+    },
+    {
+      "path": "tlc-stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "completion-marker.json",
+      "sha256": "397f89344922094aa26f15ce99e03d733c88967564265dd796555aa48bb55d61",
+      "bytes": 74
+    }
+  ],
+  "partial": false,
+  "errorCode": null,
+  "errorDetail": null,
+  "advisory": {
+    "target": "formal-model-check:spec-change",
+    "specIdentity": "418efdb232dd7ece3489048ca5527a81bc4d11ad73919b070f9bdc1c31a48578",
+    "instance": "37f9362c-59ad-4b9e-b8c5-e78be7c1ace1"
+  },
+  "sourceProvenance": {
+    "modelPath": "amadeus/spaces/default/specs/tla/MirrorLifecycle.tla",
+    "cfgPath": "amadeus/spaces/default/specs/tla/MirrorLifecycle.cfg",
+    "moduleIdentity": "57ed76c6896a44a92f7a6db8048804fd17e5c5adbafd78eab6a7812faa0399d3",
+    "cfgIdentity": "e1f6f75f3b4761b9b056ae4830c9e7bc3999349e46ea4d998da79a68cbc3cb42",
+    "moduleSha256": "6729c83131c43a3393d36bb4da7a9d01a3bf7172b32f09c51d7289111410880e",
+    "cfgSha256": "1d4e0dea907e0b0b11256fdc383fa4eb9d5876877694334ad16ed1f13044b35e"
+  }
+}

@@ -14,3 +14,4 @@
 
 ## Open questions
 <!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->
+- 2026-08-14T07:59:00Z — §13 候補 c1/c2 は今回 persist しない(c1 は一回限りの順序是正、c2 は既存 cid:requirements-analysis:c5)。ゲートで採用指示があれば再 persist する。

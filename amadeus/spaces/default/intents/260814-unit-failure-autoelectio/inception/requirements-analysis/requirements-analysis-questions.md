@@ -12,6 +12,6 @@ C. engine は無変更とし、conductor 手順(SKILL.md/conductor.md)のみで 
 D. engine が election CLI をプロセス内 import で直接 open し、open 済み election への追従だけを conductor に指示する
 X. Other (please specify)
 
-[Answer]: A
+[Answer]: A — AUTO_DECIDED auto-decision-285d7a74a6a8940f8aa19ee6ddbaded5。承認: 2026-08-14T07:28:59Z
 
 **裁定根拠(semi 梯子 AUTO_DECIDED `auto-decision-285d7a74a6a8940f8aa19ee6ddbaded5`、decider=agent-recommendation、solo-election result 不在の loud degradation `native-solo-election-result-unavailable` を記録済み)**: A を採用。protocol branch 1 は「prompt を提示しない」を規定しており、`ask` の契約(human answer のための停止 — codex SKILL.md:65)と両立しない B は意味論が濁る。C は完了条件 6(engine directive kind の述語テスト)を構造的に満たせず、t369 型の検証劇場(テキストのみ緑)を再生産する。D は election 指令ループ(配布・投票・tally)が conductor 所有である以上 open だけ engine に移しても責務が分断され、subagent spawn 不能な engine では完遂できない。A は CLI envelope を最終判別子とする reviewer-2 精緻化(c)とも一致する。
