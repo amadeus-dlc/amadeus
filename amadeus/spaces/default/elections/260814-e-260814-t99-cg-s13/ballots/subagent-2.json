@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-260814-T99-CG-S13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "一次資料を独立に確認した: construction/code-generation/memory.md の Deviations 節(2026-08-14T05:44:21Z、FR-3 の差分走査を stat なしの全 entry 名集合差へ変更)と construction/t99-copytree-race/code-generation/code-summary.md の Key decisions / 逸脱 節(同一逸脱、理由は racing walk 回避と NFR-2 の allowlist 追加禁止、行ラベルを entries only in ... として count との粒度差を明示、と記載)。両資料の記述は完全に整合しており、この逸脱は本 intent(260814-t99-copytree-race)の FR-3 実装における1回限りの技術判断であり、一般原則の発見ではない — 理由が『racing walk の有害性』『NFR-2 の allowlist 禁止』という本 intent 固有の制約条件の組み合わせに強く紐づいており、他 intent へ機械的に転用できる形の一般則(例: 『失敗診断の走査に stat を足さない』)としては定式化されていない。事例数も1件のみで再現性・適用範囲の検証ができない。team.md の学習は蒸留済み本文と未蒸留の具象学習を混在させない原則であり、本件は Learnings Inbox へ具象のまま追記するほどの一般化価値もなく、記録は code-summary.md・memory.md・レビュー verdict に残存していれば十分と判断する。よって候補一覧(c1のみ)を提示したうえでの『採用0件』提案に同意し、choiceInternalNo=1(採用0件で可)を支持する。",
+  "submittedAt": "2026-08-14T05:50:00Z",
+  "receivedAt": "2026-08-14T05:47:14Z"
+}

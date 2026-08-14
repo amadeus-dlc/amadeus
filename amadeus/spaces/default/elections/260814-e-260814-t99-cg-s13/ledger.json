@@ -1,0 +1,29 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-260814-T99-CG-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "一次資料を独立に確認した: construction/code-generation/memory.md の Deviations 節(2026-08-14T05:44:21Z、FR-3 の差分走査を stat なしの全 entry 名集合差へ変更)と construction/t99-copytree-race/code-generation/code-summary.md の Key decisions / 逸脱 節(同一逸脱、理由は racing walk 回避と NFR-2 の allowlist 追加禁止、行ラベルを entries only in ... として count との粒度差を明示、と記載)。両資料の記述は完全に整合しており、この逸脱は本 intent(260814-t99-copytree-race)の FR-3 実装における1回限りの技術判断であり、一般原則の発見ではない — 理由が『racing walk の有害性』『NFR-2 の allowlist 禁止』という本 intent 固有の制約条件の組み合わせに強く紐づいており、他 intent へ機械的に転用できる形の一般則(例: 『失敗診断の走査に stat を足さない』)としては定式化されていない。事例数も1件のみで再現性・適用範囲の検証ができない。team.md の学習は蒸留済み本文と未蒸留の具象学習を混在させない原則であり、本件は Learnings Inbox へ具象のまま追記するほどの一般化価値もなく、記録は code-summary.md・memory.md・レビュー verdict に残存していれば十分と判断する。よって候補一覧(c1のみ)を提示したうえでの『採用0件』提案に同意し、choiceInternalNo=1(採用0件で可)を支持する。",
+      "submittedAt": "2026-08-14T05:50:00Z",
+      "receivedAt": "2026-08-14T05:47:14Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-260814-T99-CG-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "採用0件で可。一次資料を独立に確認した。(1) code-generation/memory.md の Deviations 節: 『FR-3 の差分走査を stat なしの全 entry 名集合差へ変更(申告済み逸脱。racing walk 回避と NFR-2 の allowlist 禁止が理由。code-summary に記録)』。(2) code-summary.md の Key decisions / 逸脱 節: 『plan からの逸脱1件(申告): FR-3 の差分走査を「ファイルのみ(stat 併用)」から「全 entry 名(stat なし)」へ変更。理由: 診断に必要なのは名前で、失敗中の path への二周目 racing walk は有害、stat の catch は決定的に駆動できず allowlist 追加(NFR-2 禁止)を要する。行ラベルを entries only in ... として count(ファイル数)との粒度差を明示』。両資料は一致し、逸脱は申告済みでレビュアー READY 済みと確認できる。(3) この逸脱は本 intent(260814-t99-copytree-race)固有の技術判断であり、根拠は当該 FR-3 の差分走査実装と NFR-2 の allowlist 禁止という局所制約に紐づく。一般化して他 intent・他プロジェクトへ適用できる横断的な知見(例:『失敗診断の走査に stat を足さない』という汎用原則)としての再現性は、他事例での類似判断の蓄積が無く現時点で1事例のみであり、team.md/project.md の Learnings Inbox に昇格させるほどの一般性はまだ確認できない。(4) 記録は code-summary.md の Key decisions 節、memory.md の Deviations 節、レビュー verdict に既に残存しており追跡可能性は確保されている。以上より提案どおり採用0件を可とする。",
+      "submittedAt": "2026-08-14T05:44:21Z",
+      "receivedAt": "2026-08-14T05:47:21Z"
+    }
+  ],
+  "late": []
+}
