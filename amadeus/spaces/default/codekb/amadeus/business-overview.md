@@ -35,11 +35,40 @@ Issue を解決したと判断できる最小条件は次のとおりである�
 - 非 self-* scope の一律必須化
 - GitHub 以外の SCM provider 対応
 - pr-convergence loop 全体の再設計
-
-## 無人実行の前提が崩れる面（260813-advisory-requestion-fix、現在、observed `c0f9edf27`）
+## 無人実行の前提が崩れる面（260813-advisory-requestion-fix、履歴、observed `c0f9edf27`）
 
 [Issue #2967](https://github.com/amadeus-dlc/amadeus/issues/2967) は、semi / full の autonomy を有効にしたユーザーが得られるはずの価値 —「裁定済みの事項で人間を止めない」— が advisory 経路で成立しない状態である。ladder が run-now を裁定して receipt を記録しても、次の `next` で同じ advisory が hold として再評価され、single-spend guard により再記録が拒否されるため、human 向けの再質問が発行される。人間が run-now を選び直しても受理されず、同じ問いが繰り返し提示される。
 
 業務影響は 2 つある。(1) 無人実行の連続性が失われ、autonomy 設定の意味が advisory 経路でのみ無効化される。(2) 提示された選択肢がどれも状態を前進させないため、ユーザーから見て「答えても進まない」不整合な対話になる。
 
 なお本欠陥は仕様変更ではなく仕様への回復であり、intent scope は `self-fix` である。修正方針（`recordAdvisoryChoice` の戻り値の型付け、run-now の解除経路の再設計、8/8 ハーネスの skill 散文同期、欠陥挙動を固定している 4 テストの扱い）の選定は requirements-analysis / application-design の所掌であり、本 RE の範囲外とする。
+## Issue #2813 多問選挙の断面（履歴、observed `c0f9edf2782`）
+
+[Issue #2813](https://github.com/amadeus-dlc/amadeus/issues/2813) は、1つの stage で複数の明確化質問を扱う際に、問ごとの choice・Gradients of Agreement（GoA）・留保を第一級データとして保持し、一部の問だけが成立／保留となる結果を機械判定可能にする self-feature である。利用者は選挙を運転する conductor、独立に投票する voter、後日裁定を監査する人間である。
+
+現行実装は `Election.question: string` と、voter ごとに1組だけの `choiceInternalNo` / `goa` / `reservation` を持つ。したがって複数問を1つの question prose と3択へ束ねる暫定運用では、異なる問に異論を持つ2票が同じ「一部別案」を選ぶと、問ごとの合意が無くても選挙全体が `established` になり得る。`tally.json` は単一 winner または単一 hold reason、`record.md` は集約 GoA 1行と自由記述の留保を残すだけで、結果を問へ帰属させる構造を持たない。
+
+完了条件は次の4点である。
+
+1. 複数質問の choice・GoA・留保を question ID へ帰属させ、`tally.json` と `record.md` から機械的に再導出できる。
+2. 同一選挙で established と hold が混在でき、再審議は hold 問だけを対象とし、成立済み結果を不変に保つ。
+3. 既存の単問定義・append-only 選挙ストアを旧 schema として読み、新規 write は新 canonical schema に統一する。
+4. model、store、CLI directive、record、skill、migration、`FormalElection` と model-map identity、回帰テストを同じ cardinality へ揃える。
+
+ノルムの鮮度として、旧 bundled workaround `E-SRA-RAS13` / `election-cli-canonical` の長文は commit `bd567fd1b78bbde8a524b2cc767bd176dfbfe95f` で削除済みである。現行 `team.md` には `cid:requirements-analysis:always-elect` の「1選挙1質問」が残り、実装着地後に多問契約へ更新する必要がある。
+
+## Issue #2985 multi-Unit Bolt の PR 証跡断面（現在、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
+
+[Issue #2985](https://github.com/amadeus-dlc/amadeus/issues/2985) は、Delivery Planning が複数 Unit を1つの Bolt に束ねられる一方、Construction の実行・PR convergence・完了証跡が「1 Unit = 1実行単位 = 1 PR identity」を前提とするため、code-generation が正規証跡を作れず停止する self-fix である。
+
+期待される取引は「Delivery Bolt に属する複数 Unit を1つの PR で届け、その同一 PR の収束証跡により各 Unit の完了を判定する」ことだが、現行 runtime は Delivery Planning の Bolt 編成を実行入力にせず、unit dependency DAG の topological batch を実行形へ投影する。PR title/body、CLI option、report attestation、sensor、state completion は単一 Unit を所有者として扱い、Delivery Bolt → `units[]` → 1 PR → 各 Unit evidence の合成境界がない。
+
+### 正常経路と停止条件
+
+- 1 Unit / 1 Bolt / 1 PR では、Unit worktree から CLI が report・attestation・audit receipt・blocking sensor PASS を同じ Unit path に結び付けられる。この証跡は統合側へ carry-forward できる。
+- 複数 Unit / 1 Delivery Bolt / 1 PR では、PR identity を Unit A に結び付けると Unit B が provenance mismatch になる。Unit ごとに別 PR を作ると one-Bolt-one-PR と複数 Unit fold 禁止の契約に反する。
+- state completion は Unit ごとの report と sensor verdict を要求するため、片方の Unit の証跡だけでは完了できない。
+
+### 未決の修復方向
+
+Reverse Engineering では、(A) Bolt identity が `units[]` を所有し1つの PR evidence を各 Unit 完了へ正規投影する、(B) Delivery Planning・runtime・PR convergence を 1 Unit = 1 Bolt = 1 PR に統一する、の2案を記録するだけで決定しない。後続 requirements で one-Bolt-one-PR、既存単一 Unit 正常経路、fail-closed completion を同時に満たす条件として選択する。

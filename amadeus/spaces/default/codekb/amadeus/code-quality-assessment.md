@@ -3199,3 +3199,60 @@ round-trip プロパティはメタモルフィックで独立オラクル不要
 ### 投影・ゲートの品質コスト
 
 core/tools を触るため coverage patch ゲートの母集団に入る。CLI spawn 経由でしか通らない行は lcov に載らないため（`cid:requirements-analysis:bun-coverage-spawn-blindspot`）、in-process seam の設計を実装時点で行う。加えて `dist:check` / `promote:self:check`（7 ハーネス — 5 で止めると kiro / kiro-ide が DIFFERS）、`t258-boundary-guard`（出荷 core/tools は `scripts/` 非参照 — コメント文字列にも `scripts/<file>` を書かない、`cid:code-generation:c1-1569-shipped-comment-vocab`）が連動する。
+
+## Issue #2813 品質評価（履歴、observed `c0f9edf2782`）
+
+### 強み
+
+- model は filesystem/network/clock から分離された純粋層で、tally と resolution を単体・PBTで検査できる。
+- store は single-writer、tmp + rename、append-only ledger/history、blind pending lane、legacy direct-path fallback を持つ。
+- transport は over-informed payload を型で防ぎ、agmsg と subagent を同じ port に閉じ込める。
+- record は GoA line を実 parser で往復し、票数・留保数・timeline を別ソースと照合する。
+- 選挙関連の既存テストは直接対象だけで21ファイルあり、example/unit/integration/PBT/e2e を持つ。
+
+### 残存リスクと技術的負債
+
+1. **単問 cardinality の横断固定**: definition、ballot、resolution、state、tally、record、formal model が同時に単問であり、partial migration は fail-open になりやすい。
+2. **raw tally read**: `readTally` は `JSON.parse` 結果を domain shape として返し、typed validation がない。
+3. **弱い同値判定**: verify は `JSON.stringify(recomputed) === JSON.stringify(stored)` を使い、canonical ordering/schema evolution を明示しない。
+4. **責務集中**: CLI 853行、store 719行、model 550行、migration 580行。global state と per-question result を同じ条件分岐へ足すと複雑性が増幅する。
+5. **global state と voter-only resolution**: 現在の key cardinality 自体が mixed result と held-only rerun を表現不能にする。
+6. **norm drift**: bundled workaround は削除済みだが `team.md` の「1選挙1質問」は現行実装に合致して残る。実装と同時に更新しないと新挙動を禁止する規範になる。
+
+### 欠落している回帰クラス
+
+- 複数 question parse、question ID 重複拒否、question 別 choices。
+- voter×question response、amend/ref、receipt-order resolution。
+- 全問 established、mixed established/hold、複数 hold reason。
+- held-only rerun と established result 不変量。
+- legacy single-question read → new canonical、new write/read round-trip。
+- question 別 ruling、GoA、reservation、record completeness。
+- CLI mixed directive/status、question-keyed hold resolution。
+- migration fidelity と FormalElection の mixed/held-only invariant。
+
+### 品質ゲート
+
+PR CI は build、typecheck、Biome lint、complexity ratchet、control-byte、no-silent-drop、unchecked-cast、distribution、plugin conformance、smoke/unit/integration、isolated reproducible build、source-only/graph、coverage を含む。project line coverage は絶対 90.00%以上かつ merge-base からの低下最大 0.02 percentage points。`test:ci` は smoke + unit + integration で、e2e、performance、formal verification の全経路を自動的には包含しないため、選挙 walking-skeleton と FormalElection は別途明示実行が必要である。
+
+本 reverse-engineering ではテスト、build、coverage、TLC を実行していない。したがって現行 HEAD の pass/fail、coverage、state-space 規模、性能は未測定であり、コードと設定の静的観測だけを品質評価へ使った。
+
+## Issue #2985 品質評価（現在、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
+
+### 実測テスト
+
+Developer scan は `t448` CLI、`t450` sensor、`t534` mandatory lifecycle、`t541` resume、`t532` provenance、`t534` attestation の6 filesを実行し、**187 pass / 0 fail / 552 expect、Bun 1.3.13** を得た。これは単一 Unit の CLI、provenance、attestation、sensor、mandatory lifecycle、resume の現行挙動を支持する。
+
+repository test files は実測 **1119**（unit 422 / integration 568 / e2e 100）、関連22。Architect synthesis では test、build、lint、typecheck を実行しておらず、focused 6 files 以外を green と評価しない。
+
+### 欠落回帰と品質リスク
+
+2 Unit / 1 Delivery Bolt / 1 PR を正規 create → report → sensor → completion まで完走するテストはない。旧 Intent の5 report を sensor へ直接評価した結果はいずれも `pass:false`、`findings_count:5`（kind、Pull Request、Generated at、Converged、Attestation）だった。これは停止症状の観測であり、構造的不能の単独証明ではない。構造的根拠は単数型、provenance mismatch、per-unit completion guard の組合せにある。
+
+- 用語 debt: Delivery Bolt、runtime batch、execution Bolt が同じ「Bolt」を異なる cardinality で使う。
+- 巨大ファイル: `amadeus-state.ts` と `amadeus-orchestrate.ts` は blast radius が大きいが、今回の一般リファクタは対象外。
+- fail-closed 保全: sensor / state guard を弱める修正は copy / tamper / replay / stale head 防御を退行させる。
+- test gap: 共有 PR evidence の per-unit projection、または複数 Unit Bolt の計画時拒否のどちらも未固定。
+
+### 非重複
+
+#2473 は head binding、#2791 は provenance enforcement、#2358 は gate 再発行、#2359 は review 復旧、#2836 は gate:false reviewer、#2976 は solo election を扱う。#2989 は本 Intent mirror である。open implementation PR は観測されていない。Issue #2985 の Reviewer A / B comments は訂正後 CONFIRMED である。
