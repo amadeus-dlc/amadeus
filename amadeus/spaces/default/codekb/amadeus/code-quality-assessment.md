@@ -1,6 +1,50 @@
 # コード品質評価
 
-## ライフサイクルガードの品質所見 — fail 方向の衝突と迂回路（260813-lifecycle-guard-runtime、現在、observed `89532174c`）
+## 検証面の縮小と、患部を覆う coverage 免除の指紋制約（260814-fmc-macos-provider、現在、observed `5f6b5bf97`）
+
+**観測 ref**: observed = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`、差分 base = `89532174c30ef9cc7ff29496cd6916586fdda00a`（9 commits）。正本は `re-scans/260814-fmc-macos-provider.md`。
+
+### 免除台帳と e2e の縮小（base..observed、`git diff --numstat 89532174c..HEAD`）
+
+| 面 | 増減 | 由来 |
+|---|---|---|
+| `tests/.coverage-patch-allowlist.json` | **−22 行**（追加 0）。observed のエントリ数 **430**（`bun -e` で JSON を読み `length` を出力） | team-up 撤去に伴う免除の消滅 |
+| `tests/.test-time-factor-allowlist.json` | **−12 行**（追加 0） | 同上 |
+| `tests/e2e/` | **−869 行** = `t-team-up-codex-safety-wait-live.serial.test.ts` −222 / `t-team-up-member-readiness.serial.test.ts` −204 / `t267-clean-env-team-mode.serial.cli.test.ts` −443 | 同上 |
+
+いずれも**免除・検証の一方的な緩和ではなく、対象コードの消滅に伴う縮小**である。追加行がゼロであることが、免除が増えていないことの機械的な裏づけになる。反対方向として `t2771-*` 4 ファイル（unit 240 / checkpoints 728 / census 155 / regression 164 行）が新設され、Runtime のバイパス不能性はソース直読の census で固定された。
+
+### 本 intent の焦点発見 — 患部行が coverage 免除の指紋に覆われている
+
+`tests/.coverage-patch-allowlist.json:1469-1477` に `plugins/formal-model-check/tools/tlc-spawn-planner.ts` の意味的セレクタが 1 件ある。
+
+```json
+"selector": {
+  "function": "<module>",
+  "fingerprint": "sha256:05d28d0a8b61d6c33dd0cd1386fdf459b759a9c7917d31e8615c7023a2b75c70",
+  "anchorLines": 58,
+  "targetLines": "1-58"
+}
+```
+
+この指紋を observed の実ファイルへ照合したところ、**anchor は 128 行目、免除範囲は 128-185 行**だった（照合コマンド: `bun -e` で当該ファイルを読み `s = 1..N` の 58 行窓 `sha256(lines.join("\n"))` を上記値と比較。一致は **1 件のみ** = `[128]`。Developer scan の実測を Architect が独立再実行して確認済み）。
+
+128-185 は `NodePlannerEnvironmentPort` の constructor から `inspectDarwin` の戻り値構築までで、**JDK 検証の正規表現（`:152`）とエラーメッセージ（`:161-165`）を丸ごと含む**。すなわち #2361 の患部そのものである。
+
+品質面の含意は 2 つある。
+
+1. **患部を 1 行でも編集すると指紋が不一致になり、`coverage-patch-gate` が `source fingerprint for … resolved 0 times (expected exactly one)` で throw する**（指紋計算は `tests/coverage-patch-gate.ts:323-325`、一意解決要求は `resolveSemanticSelector` `:430-455`）。したがって**免除エントリの指紋再計算を同一変更に含める必要がある**。`tests/.coverage-patch-allowlist.json` は codekb の 8 body artifact ではなくテスト面の同期対象である。
+2. 免除の `reason` は「実 Darwin 上の live probe であり、CI 外の real-toolchain probe でしか実行されない」と述べる。これは observed でも妥当だが、**フォールバックを入れると当該範囲に「Docker へ倒す判断」という CI で実行可能な分岐が入りうる**。その場合は免除を縮めるのが正しい対応であり、指紋を張り直して同じ範囲を温存すると、新設した分岐が無検査のまま免除下に入る（`cid:code-generation:c-measure-not-prose` の適用対象）。
+
+### 患部を守るテストは主張より弱い
+
+`tests/unit/t-formal-verif-tlc-spawn-planner.test.ts:186-187` は auto × darwin / auto × linux について **`.ok === true` しか検査していない**。どの planner クラスが返るかを assert していないため、**auto/darwin が Docker planner を返すよう変えてもこのテストは緑のまま通る**。テスト名（`selects auto provider by platform`、`:178`）が実体より強い主張をしている状態であり、退行検出を担っていない。同ファイル `:153` の not-run receipt テストも `docker` / `sandbox-exec` しか渡さず、`auto` を渡す case が無いため `:68` の変更を検出しない。
+
+一方 `:188` の `PROVIDER_PLATFORM`（明示 `sandbox-exec` × 非 darwin の拒否）は真に固定されており、これは維持すべき契約である。
+
+**落ちる実証の所在**が本 intent の主要な検証リスクである。JDK ピン緩和を実環境で実証できる唯一の面は `tests/integration/t-formal-verif-run-model-check-real.integration.test.ts` だが、`REAL_TLC_AVAILABLE = AMADEUS_RUN_REAL_TLC === "1" && process.platform === "darwin" && JAVA_HOME !== undefined`（`:30-32`）により **CI 既定では skip** される。どこで赤を実測するかは build-and-test の設計事項である。
+
+## ライフサイクルガードの品質所見 — fail 方向の衝突と迂回路（260813-lifecycle-guard-runtime、履歴、observed `89532174c`。**#2986 着地前の断面**。Q-2 が挙げる「判定語彙 5 系統」は Runtime 導入で 4 checkpoint 分が `LifecycleGuardVerdict` へ統一された。**Q-1 の fail 方向衝突は未解消** — verdict 消費側が `stage-completion.blocking-sensors` adapter（`amadeus-state.ts:341-346`）へ移っただけで、生成側 `amadeus-sensor.ts:19-31` の分岐 e/f は observed `5f6b5bf97` でも fail-open のまま(逐語再確認済み)）
 
 **観測 ref**: すべて observed = `89532174c30ef9cc7ff29496cd6916586fdda00a`（= 本 worktree HEAD）。差分 base = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（35 commits / 233 files）。全数列挙は `re-scans/260813-lifecycle-guard-runtime.md` を正本とする。
 

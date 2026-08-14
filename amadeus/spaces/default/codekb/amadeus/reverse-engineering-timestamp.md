@@ -1,6 +1,23 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260813-lifecycle-guard-runtime）
+## 実行メタデータ（現在: 260814-fmc-macos-provider）
+
+- Date: `2026-08-14`
+- Base commit: `89532174c30ef9cc7ff29496cd6916586fdda00a`（`reverse-engineering-timestamp.md` + `re-scans/*.md` の全 observed のうち **HEAD の祖先で距離最小**。`git merge-base --is-ancestor 89532174c HEAD` = **exit 0**、`git rev-list --count 89532174c..HEAD` = **9 commits**。`cid:reverse-engineering:rescan-base-ancestry`）
+- Observed commit: `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`（= 本 worktree HEAD = `origin/main`、`git rev-parse HEAD`。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、depth `Minimal`、build `bun`
+- Focus: [Issue #2361](https://github.com/amadeus-dlc/amadeus/issues/2361)（ミラー [#2995](https://github.com/amadeus-dlc/amadeus/issues/2995)）— formal-model-check の macOS 既定 provider（`auto` → `sandbox-exec` 固定）が不通になり、JDK ピンが patch 完全一致で脆い
+- Scan mode: **xrev differential scan**（`cid:reverse-engineering:c1-xrev-scan-mode` / `c1-xrev-single-issue`）— run `xrev-260814-2361`、target-sha `52f1f1b2575ea35bd23b761697b2d17a5e9a7ac3`、クロスレビュー 2 名とも **CONFIRMED_WITH_REFINEMENTS**。currency 成立（`52f1f1b25..HEAD` の変更は `amadeus/spaces/default/elections/` 配下 1 件のみで、被引用パス集合との交差ゼロ）。表現形式の移行検査（`cid:reverse-engineering:c5-xrev-currency-schema-migration`）も該当なし
+- Focus 領域の差分: `git diff --name-only 89532174c..HEAD -- plugins/formal-model-check tests/unit/t-formal-verif-tlc-spawn-planner.test.ts mise.toml` が**空出力**。患部は base..observed で無変更であり、全主張を observed 断面の実読で採取した
+- 中核知見: **xrev 6 事実のうち 2 件を訂正**した。(1) 事実5「実装が文書契約に違反」は誤り — 矛盾は文書内部（`README:60-62` の「major 26」対 `:74-79` の patch 完全一致宣言）にあり、後者と `mise.toml:3-5` が **patch 固定を deliberate な再現性契約(NFR-1)として明示宣言**している。したがって JDK ピン緩和は bug fix ではなく仕様変更の可能性が高い。(2) 事実6「修正時にテスト更新必須」も誤り — `t-formal-verif-tlc-spawn-planner.test.ts:186-187` は `.ok` しか検査せず、**auto/darwin が Docker planner を返すよう変えても緑のまま通る**（退行を検出しない）。加えて **JDK ピンは二重ではなく 6 面**（A データ正本 `tlc-toolchain.ts:90-92` / B manifest 一致要求 `:754-756` / **C 型リテラル `:709-710`** / D planner probe `tlc-spawn-planner.ts:152` / E snapshot 経路 `fs-tlc-toolchain.ts:1331` / F receipt expected `tlc-spawn-planner.ts:50`）。構造面では **`selectTlcSpawnPlanner`（`:520-539`）が同期かつ可用性検査ゼロ**であり、Darwin/Docker いずれの可用性も `snapshotEnvironment`（`fs-tlc-toolchain.ts:1831`）まで判明しない — フォールバックの自然な合流点は選択時ではなく snapshot 失敗直後。`provider === "auto"` は repo 全体で **2 箇所のみ**（`:526` 選択 / `:68` receipt plan）で同期必須。**未把握制約の発見**: coverage 免除の意味的セレクタ（`tests/.coverage-patch-allowlist.json:1469-1477`）の指紋が患部そのもの（`tlc-spawn-planner.ts:128-185`、JDK regex と診断文言を含む）を覆っており、1 行でも編集すると指紋不一致でゲートが throw する
+- Verification: git 状態変更・GitHub 書込・`bun run build`・engine/state 操作は**すべてゼロ**。書き込みは `codekb/amadeus/` 配下のみ
+- Updated artifacts: `architecture.md`（新現在節 — Lifecycle Guard Runtime の着地、registry 5 本、team-up 撤去、患部の provider 選択構造）/ `component-inventory.md`（新現在節 — core/tools の増減 1 追加 3 削除、adapter registry、患部 9 コンポーネント）/ `code-structure.md`（新現在節 — ファイル増減と e2e −869）/ `api-documentation.md`（新現在節 — `docs/reference/26-lifecycle-guard-runtime{,.ja}.md` 新設、Runtime 公開型、census 述語、患部の公開契約）/ `business-overview.md`（新現在節 — 運用形態のソロ一本化、#2361 の 2 主張の性格差）/ `code-quality-assessment.md`（新現在節 — 免除台帳 −22 / test-time-factor −12 / e2e −869、指紋制約、テストの弱さ、落ちる実証の所在）。直前の現在節 4 面は本文保持のまま履歴へ降格し、**#2986 着地前の断面である旨を見出しに明記**した（`cid:reverse-engineering:c3-relabel`）
+- 履歴節の訂正（`cid:reverse-engineering:c1`）: `code-structure.md` の `260813-remove-team-up` 節（team-up 4 パスを現在時制で列挙）と、`architecture.md` / `component-inventory.md` / `code-quality-assessment.md` / `api-documentation.md` の `260813-lifecycle-guard-runtime` 節（「Guard Runtime は存在しない」を現在時制で宣言）に履歴ラベルを付与し、observed `5f6b5bf97` での解決状況を見出しに併記した
+- Reviewed-and-unchanged artifacts（**沈黙のスキップではなく、レビュー済みで無変更**）: `dependencies.md`（`package.json` / `bun.lock` / `mise.toml` いずれも base..observed で無変更。依存エッジの追加削除なし）/ `technology-stack.md`（bun / TypeScript / Biome / fast-check・TLC / JDK のピンいずれも不変）。**この 2 面は本 intent の節を持たないため、後続ステージがここから本 intent の事実を引いてはならない**（`cid:requirements-analysis:c4-consume-header-is-not-citable-content`）
+- Per-intent record: `re-scans/260814-fmc-macos-provider.md`（述語 A〜P、患部機構の 6 面 JDK ピン・auto 分岐 2 箇所・可用性判定の段構造、xrev 事実5・6 の訂正、指紋制約、requirements-analysis への申し送りの正本）
+- 適用範囲外（明示）: フォールバックの挿入方式（async 化 / `preparePlanned` 内再試行 / 同期 probe）、JDK ピン緩和の可否とその面（A〜F のどこまで）、落ちる実証の取得先 — **裁定はすべて requirements-analysis / application-design / build-and-test の所掌**
+
+## 実行メタデータ（履歴: 260813-lifecycle-guard-runtime）
 
 - Date: `2026-08-14`
 - Base commit: `854692fd7a11b124236b0427fe3d59e2fe6bf785`（`reverse-engineering-timestamp.md` + `re-scans/*.md` の全 observed のうち **HEAD の祖先で距離最小**。`git merge-base --is-ancestor 854692fd7 HEAD` = **exit 0**、`git rev-list --count 854692fd7..HEAD` = **35 commits / 233 files**（`+24099 / −9421`）。`cid:reverse-engineering:rescan-base-ancestry`）

@@ -1,6 +1,64 @@
 # アーキテクチャ
 
-## ライフサイクル進行ガードの集約構造と分散（260813-lifecycle-guard-runtime、現在、observed `89532174c`）
+## Lifecycle Guard Runtime の着地と formal-model-check の provider 選択構造（260814-fmc-macos-provider、現在、observed `5f6b5bf97`）
+
+**観測 ref**: すべて observed = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`（= 本 worktree HEAD = `origin/main`、`git rev-parse HEAD`）。差分 base = `89532174c30ef9cc7ff29496cd6916586fdda00a`（`git merge-base --is-ancestor 89532174c HEAD` = exit 0、`git rev-list --count 89532174c..HEAD` = **9**）。検索述語と患部の全数列挙は `re-scans/260814-fmc-macos-provider.md` を正本とし、本節は構造だけを転記する。
+
+### Lifecycle Guard Runtime は着地した（直前節の「不在」は base 断面の記録）
+
+直下の 260813-lifecycle-guard-runtime 節は observed `89532174c`（**実装前**の断面）で「Guard Runtime は存在しない」を実測した記録である。base..observed の `0fbbec42b`（#2986）がこれを実装し、observed `5f6b5bf97` では `packages/framework/core/tools/amadeus-lifecycle-guard.ts`（**236 行**、`wc -l`）が 4 つの authoritative checkpoint を共通型で扱う。
+
+`LifecycleCheckpoint`（`:42-46`）は `"intent-birth" | "stage-completion" | "phase-transition" | "workflow-completion"` の 4 値。checkpoint はハンドラの identity ではなく**コミット経路の identity** であることを宣言コメント（`:39-41`）が明示する — 逐語: `four CLI handlers complete a stage and five cross a phase boundary, and all of them evaluate the same checkpoint.`
+
+判定は `LifecycleGuardVerdict`（`:74-78`）の 4 値 — `allowed`(receipt 付き可) / `denied` / `unknown` / `not-applicable` — に統一され、`evaluateLifecycleGuards`（`:208`）が **最初の blocking verdict で停止**して `LifecycleGuardDecision`（`:96-111`、`allowed` / `blocked` の判別ユニオン）を返す。`unknown` は `denied` と同じく blocking である（時間予算の失効を持つ adapter は `unknown` を報告して同じ規則でブロックする、`:25-28`）。
+
+**登録面は module-level の frozen 配列で、登録 API を持たない**（`:36-38` 逐語: `there is no registration API, so a project cannot remove a system-invariant guard`）。observed の registry は 5 本:
+
+| registry | 位置 | adapter id（order 昇順） |
+| --- | --- | --- |
+| `INTENT_BIRTH_WORKSPACE_GUARDS` | `amadeus-utility.ts:4123` | `intent-birth.workspace-scan`(10) |
+| `STAGE_COMPLETION_GUARDS` | `amadeus-state.ts:329` | `stage-completion.artifacts`(10) / `stage-completion.unit-review`(20) / `stage-completion.blocking-sensors`(30) |
+| `PHASE_TRANSITION_GUARDS` | `amadeus-state.ts:353` | `phase-transition.phase-check-artifact`(10) |
+| `WORKFLOW_COMPLETION_PREPARATION_GUARDS` | `amadeus-state.ts:369` | `workflow-completion.prepared`(10) / `workflow-completion.mandatory-plugin-stages`(20) |
+| `WORKFLOW_COMPLETION_AUTHORIZATION_GUARDS` | `amadeus-state.ts:387` | `workflow-completion.record-resolution`(10) / `workflow-completion.goal-receipt`(20) |
+
+Workflow 完了だけが **2 ラウンド**に分かれる。context の構築が 2 段（state 文書のみで判じる準備段 → completion instance と Intent record を解決した後の認可段）であるためで、移行前のハンドラの報告順を保存する意図が宣言コメント（`amadeus-state.ts:362-367`）に明示されている。
+
+拒否の合流点は `refuseBlockedTransition`（`amadeus-state.ts:405-412`）1 箇所で、`error(formatGuardRefusal(decision.refusal))` により **`writeStateFile` の前に exit** する。これが「メモリ上の content 反転が半端な遷移ではなく破棄可能」であることの構造的根拠である（同 `:402-404` のコメント）。receipt を持つ checkpoint は `guardReceipt(decision, policyId)`（`amadeus-lifecycle-guard.ts:153`）で取り出す — 例は workflow-completion の `GoalReconciliationReceipt`（`amadeus-state.ts:3249`）と intent-birth の `ClassifiedWorkspaceScan`。
+
+呼出側は `evaluateLifecycleGuards` の 4 箇所（`amadeus-state.ts:582` phase-transition / `:2738` stage-completion / `:3208` workflow 準備段 / `:3232` workflow 認可段）と `amadeus-utility.ts` の intent-birth 面。**hook 層（`amadeus-subagent-model-guard.ts`）は Runtime の外に残る**（`git grep -l "amadeus-lifecycle-guard"` の 8 ヒットに hooks 配下は含まれない）。直前節が「単一 Runtime を名乗るなら hook 層の扱いが主要論点」と記した点は、observed でも未決のままである。
+
+内部契約の詳細は `docs/reference/26-lifecycle-guard-runtime.md`（222 行）/ `.ja.md`（214 行）が正本。
+
+### チームモードのランチャ面は撤去された
+
+`8b6089275`（#2975）が `packages/framework/core/tools/team-up.sh` / `team-up-codex-safety-wait.ts` / `team-msg.sh` を削除した。observed で `git ls-files | grep -iE "team-up|team-msg"` が返す tracked ファイルのうち**現行コード面は `tests/integration/t-remove-team-up-absence.test.ts`（不在を固定する回帰テスト）1 件のみ**で、残りは intent record と re-scan の履歴である。`docs/guide/20-team-mode{,.ja}.md` と `docs/guide/team-messaging{,.ja}.md` は残存するが大幅に縮小した（`git diff --numstat 89532174c..HEAD -- docs`: team-mode `+30 −77` / `.ja` `+49 −96`、team-messaging `+13 −67` / `.ja` `+12 −66`）。8 harness への `coreDirs.tools` 無条件投影という配布構造そのものは不変で、投影元から 3 ファイルが消えただけである。
+
+### 本 intent の焦点 — formal-model-check の provider 選択は「可用性を見ない同期選択」である
+
+[Issue #2361](https://github.com/amadeus-dlc/amadeus/issues/2361)（ミラー [#2995](https://github.com/amadeus-dlc/amadeus/issues/2995)）の患部領域は base..observed で**変更ゼロ**（`git diff --name-only 89532174c..HEAD -- plugins/formal-model-check tests/unit/t-formal-verif-tlc-spawn-planner.test.ts mise.toml` が空出力）。以下は observed 断面の構造である。
+
+`selectTlcSpawnPlanner`（`plugins/formal-model-check/tools/tlc-spawn-planner.ts:520-539`）は **同期関数で、可用性判定を一切持たない**。`provider === "auto"` は `platform === "darwin" ? "sandbox-exec" : "docker"` を選び、あとは planner のコンストラクタを返すだけである（`:533` / `:537`）。JDK 検出・`sandbox-exec` バイナリ・docker CLI の実在は、いずれも後段の `snapshotEnvironment` まで判明しない。
+
+```text
+run-model-check-execution.ts:225  selectTlcSpawnPlanner   ← 同期・可用性検査ゼロ
+   ↓
+run-model-check-execution.ts:238  toolchain.preparePlanned({…, planner})
+   ↓
+fs-tlc-toolchain.ts:1831          await planner.snapshotEnvironment(…)
+   ↓
+tlc-spawn-planner.ts:131-191      NodePlannerEnvironmentPort.inspectDarwin
+     :132 platform 不一致 / :134 JAVA_HOME 不在 / :150-166 JDK version 不一致
+     / :167-168 sandbox-exec 不在 / :177-179 network-deny 未 deny → throw
+   ↓ catch（:316-321）→ ENVIRONMENT_UNAVAILABLE
+fs-tlc-toolchain.ts:1838          if (!environmentSnapshot.ok) return environmentSnapshot;
+```
+
+Docker 側も対称で、可用性は `DockerTlcSpawnPlanner.snapshotEnvironment`（`:415`）→ `inspectDocker`（`:193`）→ `docker image inspect`（`:261`）まで判明しない（**デーモン起動の独立検査は存在せず**、image inspect の失敗としてのみ観測される）。
+
+構造上の帰結は 2 点である。(1) **フォールバックを差し込める自然な合流点は「選択時」ではなく `snapshotEnvironment` 失敗の直後**であり、選択時に倒すなら `selectTlcSpawnPlanner` の async 化(= referee 経路 `tla-referee-toolchain.ts:224` への signature 波及)が要る。(2) `provider === "auto"` の分岐は repo 全体で **2 箇所のみ**（`:526` の選択と `:68` の `createNotRunPlannerReceipt` 内 receipt plan 選択）で、**片方だけ変えると receipt が実際に走った planner と異なる inspection plan を名乗る**。env-receipt スキーマ（`amadeus.env-receipt.v1`、`run-model-check-domain.ts:93-98`）自体は provider 中立なので、フォールバックのための schema 変更は不要である。
+
+## ライフサイクル進行ガードの集約構造と分散（260813-lifecycle-guard-runtime、履歴、observed `89532174c`。**本節は #2986 着地前の断面**であり、Runtime の不在はこの断面の事実。着地後の構造は上の 260814 節を参照）
 
 **観測 ref**: すべて observed = `89532174c30ef9cc7ff29496cd6916586fdda00a`（= 本 worktree HEAD = `origin/main`）。差分 base = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（`git merge-base --is-ancestor` exit 0、`git rev-list --count` = 35 commits / 233 files）。全数列挙・検索述語 P1〜P13・G1〜G40 の棚卸しは `re-scans/260813-lifecycle-guard-runtime.md` を正本とする。本節はそこから**構造だけ**を転記する。
 

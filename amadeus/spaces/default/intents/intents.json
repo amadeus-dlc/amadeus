@@ -1145,5 +1145,12 @@
     "dirName": "260813-lifecycle-guard-runtime",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019ffda6-2636-755d-8e85-1f83b1719c6a",
+    "slug": "fmc-macos-provider",
+    "dirName": "260814-fmc-macos-provider",
+    "scope": "self-fix",
+    "status": "in-flight"
   }
 ]

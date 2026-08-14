@@ -1,6 +1,23 @@
 # コード構造
 
-## Focus Area: team-up ランチャ廃止（260813-remove-team-up、現在、observed `97581b3e3`）
+## core/tools のファイル増減（260814-fmc-macos-provider、現在、observed `5f6b5bf97`）
+
+**観測 ref**: observed = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`、差分 base = `89532174c30ef9cc7ff29496cd6916586fdda00a`（9 commits）。
+
+`packages/framework/core/tools/` の構成は base..observed で次のとおり変化した。モジュール移動はない。
+
+| 変化 | パス | 由来 |
+|---|---|---|
+| 追加 | `packages/framework/core/tools/amadeus-lifecycle-guard.ts`（236 行） | `0fbbec42b` / #2986 |
+| 削除 | `packages/framework/core/tools/team-up.sh` | `8b6089275` / #2975 |
+| 削除 | `packages/framework/core/tools/team-up-codex-safety-wait.ts` | 同上 |
+| 削除 | `packages/framework/core/tools/team-msg.sh` | 同上 |
+
+削除に伴い e2e の 3 ファイルも消えた（`git diff --numstat 89532174c..HEAD -- tests/e2e`: `t-team-up-codex-safety-wait-live.serial.test.ts` −222 / `t-team-up-member-readiness.serial.test.ts` −204 / `t267-clean-env-team-mode.serial.cli.test.ts` −443、計 **−869**）。文書面は `docs/reference/26-lifecycle-guard-runtime.md`（+222）と `.ja.md`（+214）が新設され、`docs/guide/20-team-mode{,.ja}.md` と `docs/guide/team-messaging{,.ja}.md` は縮小した。8 harness への `coreDirs.tools` 投影という構造自体は不変で、投影元の集合が入れ替わっただけである。
+
+本 intent の患部（[Issue #2361](https://github.com/amadeus-dlc/amadeus/issues/2361) / ミラー [#2995](https://github.com/amadeus-dlc/amadeus/issues/2995)）はモジュール配置ではなく `plugins/formal-model-check/tools/` 内の既存関係にあり、当該領域は base..observed で**無変更**である（`git diff --name-only 89532174c..HEAD -- plugins/formal-model-check tests/unit/t-formal-verif-tlc-spawn-planner.test.ts mise.toml` が空出力）。`tlc-spawn-planner` の実体は tracked 2 ファイルのみ（正本 + unit test、`git ls-files | grep "tlc-spawn-planner"`）で、**dist 投影も複製もない**。
+
+## Focus Area: team-up ランチャ廃止（260813-remove-team-up、履歴、observed `97581b3e3`。**この表が挙げる 4 パスは撤去前の断面**であり、observed `5f6b5bf97` にはいずれも存在しない）
 
 | ファイル | 分類 |
 |---|---|
@@ -66,7 +83,7 @@
 
 既存の core/plugin 非依存方向を守るには、core が plugin-specific Markdown schema を直接 import するのではなく、plugin が発行した汎用 receipt を core の既存 audit/artifact contract で検証する形が最も境界整合的である。これは設計候補であり、最終決定は後続 stage の所掌とする。
 
-## 差分リフレッシュで観測した構造変化（260813-advisory-requestion-fix、現在、observed `c0f9edf27`）
+## 差分リフレッシュで観測した構造変化（260813-advisory-requestion-fix、履歴、observed `c0f9edf27`）
 
 **観測 ref**: base `854692fd7a11b124236b0427fe3d59e2fe6bf785` → observed `c0f9edf27828def6fa3dbbbc4101d753b398e025`（33 コミット / 224 ファイル、`git log --oneline 854692fd7..c0f9edf27 | wc -l` / `git diff --name-only 854692fd7..c0f9edf27 | wc -l`。総行数 +23703 / −9416、`git diff --stat … | tail -1`）。
 
