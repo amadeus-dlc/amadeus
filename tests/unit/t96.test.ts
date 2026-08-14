@@ -184,7 +184,7 @@ describe("t96 fragment-fork source-absent", () => {
     expect(readFileSync(wtFrag, "utf-8")).toContain('"stages": []');
   });
 
-  test("reads execution projection from the explicitly targeted intent", () => {
+  test("reads execution and delivery projections from the explicitly targeted intent", () => {
     projDir = makeProject("cart", null);
     const targetRecord = wtRecordDir(projDir, "cart");
     const intentsDir = join(
@@ -247,18 +247,31 @@ describe("t96 fragment-fork source-absent", () => {
       })}\n`,
       "utf-8",
     );
+    const targetPlanning = join(targetRecord, "inception", "delivery-planning");
+    const otherPlanning = join(otherRecord, "inception", "delivery-planning");
+    mkdirSync(targetPlanning, { recursive: true });
+    mkdirSync(otherPlanning, { recursive: true });
+    writeFileSync(
+      join(targetPlanning, "bolt-plan.md"),
+      "## Bolt target\n\n- **Units:** `target-unit`\n",
+    );
+    writeFileSync(
+      join(otherPlanning, "bolt-plan.md"),
+      "## Bolt other\n\n- **Units:** `other-unit`\n",
+    );
     writeFileSync(join(intentsDir, "active-intent"), "other-intent\n", "utf-8");
 
     const result = runRuntime(projDir, "fragment-fork", "--slug", "cart");
 
     expect(result.rc).toBe(0);
-    expect(
-      JSON.parse(readFileSync(wtFragmentPath(projDir, "cart"), "utf-8"))
-        .execution_observability,
-    ).toEqual({
+    const fragment = JSON.parse(readFileSync(wtFragmentPath(projDir, "cart"), "utf-8"));
+    expect(fragment.execution_observability).toEqual({
       root_operation_id: "target-root",
       event_set_digest: "target-digest",
     });
+    expect(fragment.delivery_bolts?.bolts).toEqual([
+      { bolt: "target", units: ["target-unit"] },
+    ]);
   });
 });
 

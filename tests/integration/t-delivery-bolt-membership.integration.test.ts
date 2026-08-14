@@ -1,7 +1,7 @@
 // covers: file:packages/framework/core/tools/amadeus-runtime.ts
 
-import { describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { afterEach, describe, expect, test } from "bun:test";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -37,9 +37,15 @@ const PLAN = `# Bolt Plan
 - **Units:** U3 \`unit-c\`
 `;
 
+const roots: string[] = [];
+afterEach(() => {
+  while (roots.length > 0) rmSync(roots.pop()!, { recursive: true, force: true });
+});
+
 describe("Delivery Bolt runtime membership projection", () => {
   test("projects only a completed Delivery Planning artifact", () => {
     const project = mkdtempSync(join(tmpdir(), "amadeus-delivery-bolts-"));
+    roots.push(project);
     const record = join(project, "amadeus", "spaces", "default", "intents", "delivery-deadbeef");
     const planning = join(record, "inception", "delivery-planning");
     mkdirSync(planning, { recursive: true });
@@ -65,6 +71,7 @@ describe("Delivery Bolt runtime membership projection", () => {
 
   test("projects one unambiguous incremental Unit when Delivery Planning is SKIP", () => {
     const project = mkdtempSync(join(tmpdir(), "amadeus-delivery-bolts-singleton-"));
+    roots.push(project);
     const intents = join(project, "amadeus", "spaces", "default", "intents");
     const recordName = "260813-bolt-pr-attestation";
     const record = join(intents, recordName);
@@ -125,14 +132,22 @@ describe("Delivery Bolt runtime membership projection", () => {
     expect(projectEngineSingletonDeliveryBolt(project, state, new Set())).toEqual({ kind: "absent" });
   });
 
-  test("rejects malformed approved plans through projection and both runtime compile paths", () => {
+  test("handles missing plans compatibly and rejects unreadable or malformed plans", () => {
     const malformed = "## Bolt invalid/slug\n\n- **Units:** `unit-a`\n";
-    const seed = (withAudit: boolean): { project: string; record: string } => {
+    const seed = (
+      mode: "missing" | "unreadable" | "malformed",
+      withAudit: boolean,
+    ): { project: string; record: string } => {
       const project = mkdtempSync(join(tmpdir(), "amadeus-delivery-invalid-"));
+      roots.push(project);
       const record = join(project, "amadeus", "spaces", "default", "intents", "invalid-deadbeef");
       const planning = join(record, "inception", "delivery-planning");
       mkdirSync(planning, { recursive: true });
-      writeFileSync(join(planning, "bolt-plan.md"), malformed);
+      if (mode === "unreadable") {
+        mkdirSync(join(planning, "bolt-plan.md"));
+      } else if (mode === "malformed") {
+        writeFileSync(join(planning, "bolt-plan.md"), malformed);
+      }
       writeFileSync(join(record, "amadeus-state.md"), [
         "- **Scope**: feature",
         "- [S] units-generation — SKIP",
@@ -158,14 +173,36 @@ describe("Delivery Bolt runtime membership projection", () => {
       return { project, record };
     };
 
-    const direct = seed(false);
+    const missing = seed("missing", false);
     expect(computeDeliveryBoltProjectionOutcome(
-      direct.project,
-      readFileSync(join(direct.record, "amadeus-state.md"), "utf-8"),
-    )).toEqual({ kind: "invalid", detail: "every Delivery Bolt must have a non-empty slug" });
-    expect(() => compileRuntime({ projectDir: direct.project })).toThrow("Delivery Bolt authority is malformed");
+      missing.project,
+      readFileSync(join(missing.record, "amadeus-state.md"), "utf-8"),
+    )).toEqual({ kind: "absent" });
+    const missingGraphPath = join(missing.record, "runtime-graph.json");
+    writeFileSync(missingGraphPath, "stale\n");
+    expect(compileRuntime({ projectDir: missing.project })).toEqual({ written: missingGraphPath });
+    const missingGraph = JSON.parse(readFileSync(missingGraphPath, "utf-8"));
+    expect(missingGraph.delivery_bolts).toBeUndefined();
 
-    const audited = seed(true);
+    const invalidCases = [
+      ["unreadable", "approved inception/delivery-planning/bolt-plan.md is unreadable"],
+      ["malformed", "every Delivery Bolt must have a non-empty slug"],
+    ] as const;
+    for (const [mode, detail] of invalidCases) {
+      const direct = seed(mode, false);
+      expect(computeDeliveryBoltProjectionOutcome(
+        direct.project,
+        readFileSync(join(direct.record, "amadeus-state.md"), "utf-8"),
+      )).toEqual({ kind: "invalid", detail });
+      const graphPath = join(direct.record, "runtime-graph.json");
+      writeFileSync(graphPath, "stale\n");
+      expect(() => compileRuntime({ projectDir: direct.project })).toThrow(
+        `Delivery Bolt authority is malformed (${detail})`,
+      );
+      expect(existsSync(graphPath)).toBe(false);
+    }
+
+    const audited = seed("malformed", true);
     writeFileSync(join(audited.record, "runtime-graph.json"), "stale\n");
     expect(() => compileRuntime({ projectDir: audited.project })).toThrow("approved delivery-planning/bolt-plan.md is malformed");
     expect(existsSync(join(audited.record, "runtime-graph.json"))).toBe(false);
@@ -173,6 +210,7 @@ describe("Delivery Bolt runtime membership projection", () => {
 
   test("full runtime compile carries a valid approved Delivery Bolt projection", () => {
     const project = mkdtempSync(join(tmpdir(), "amadeus-delivery-valid-"));
+    roots.push(project);
     const record = join(project, "amadeus", "spaces", "default", "intents", "valid-deadbeef");
     mkdirSync(join(record, "inception", "delivery-planning"), { recursive: true });
     mkdirSync(join(record, "audit"), { recursive: true });
@@ -201,6 +239,7 @@ describe("Delivery Bolt runtime membership projection", () => {
 
   test("authority resolver rejects unreadable, non-object, missing, unknown, and mismatched projections", () => {
     const record = mkdtempSync(join(tmpdir(), "amadeus-delivery-resolver-"));
+    roots.push(record);
     const graphPath = join(record, "runtime-graph.json");
     writeFileSync(graphPath, "not-json\n");
     expect(resolveDeliveryBoltMembership(record, "delivery")).toMatchObject({ ok: false, code: "INVALID" });

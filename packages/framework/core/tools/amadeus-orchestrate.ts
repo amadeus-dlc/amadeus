@@ -5608,11 +5608,12 @@ type DeliveryEvidenceOwners =
 function engineSingletonEvidenceOwners(
   pd: string,
   projection: Record<string, unknown>,
+  stateContent: string,
   intent?: string,
 ): DeliveryEvidenceOwners {
   const expected = projectEngineSingletonDeliveryBolt(
     pd,
-    readStateFile(pd, intent),
+    stateContent,
     new Set(loadGraph().map((stage) => stage.slug)),
     intent,
   );
@@ -5636,16 +5637,18 @@ function approvedPlanEvidenceOwners(
   if (!projected.ok) {
     return { ok: false, message: `DELIVERY_EVIDENCE_CARRIER_INVALID: ${projected.message}.` };
   }
+  if (projection === null || typeof projection !== "object" || Array.isArray(projection)) {
+    return { ok: false, message: "DELIVERY_EVIDENCE_CARRIER_INVALID: Delivery Bolt projection is empty or malformed." };
+  }
+  const fields = projection as Record<string, unknown>;
   if (
-    projection === null || typeof projection !== "object" || Array.isArray(projection) ||
-    (projection as Record<string, unknown>).source !== DELIVERY_BOLT_PLAN_SOURCE ||
-    !Array.isArray((projection as Record<string, unknown>).bolts) ||
-    (projection as Record<string, unknown>).bolts === undefined ||
-    ((projection as Record<string, unknown>).bolts as unknown[]).length === 0
+    fields.source !== DELIVERY_BOLT_PLAN_SOURCE ||
+    !Array.isArray(fields.bolts) ||
+    fields.bolts.length === 0
   ) {
     return { ok: false, message: "DELIVERY_EVIDENCE_CARRIER_INVALID: Delivery Bolt projection is empty or malformed." };
   }
-  const actualDigest = (projection as Record<string, unknown>).sourceDigest;
+  const actualDigest = fields.sourceDigest;
   if (actualDigest !== projected.projection.sourceDigest) {
     return { ok: false, message: "DELIVERY_EVIDENCE_CARRIER_STALE: Delivery Bolt source digest does not match the current plan." };
   }
@@ -5657,6 +5660,7 @@ function approvedPlanEvidenceOwners(
 
 function deliveryEvidenceOwners(
   pd: string,
+  stateContent: string,
   intent?: string,
 ): DeliveryEvidenceOwners {
   let graph: unknown;
@@ -5685,7 +5689,12 @@ function deliveryEvidenceOwners(
     projection !== null && typeof projection === "object" && !Array.isArray(projection) &&
     (projection as Record<string, unknown>).authority === "engine-singleton"
   ) {
-    return engineSingletonEvidenceOwners(pd, projection as Record<string, unknown>, intent);
+    return engineSingletonEvidenceOwners(
+      pd,
+      projection as Record<string, unknown>,
+      stateContent,
+      intent,
+    );
   }
   return approvedPlanEvidenceOwners(projection, planPath);
 }
@@ -5693,6 +5702,7 @@ function deliveryEvidenceOwners(
 export function deliveryEvidenceCoverageRefusal(
   pd: string,
   node: GraphStage,
+  stateContent: string,
   intent?: string,
 ): string | null {
   if (
@@ -5701,14 +5711,13 @@ export function deliveryEvidenceCoverageRefusal(
   ) {
     return null;
   }
-  const stateContent = readStateFile(pd, intent);
   const recordPrefix = relativeRecordDir(pd, intent);
   const dagUnits = orderedUnits(pd, intent);
   const executionUnits = dagUnits.length > 0
     ? dagUnits
     : unitDirsUnderConstruction(pd, recordPrefix);
   if (executionUnits.length === 0) return null;
-  const owners = deliveryEvidenceOwners(pd, intent);
+  const owners = deliveryEvidenceOwners(pd, stateContent, intent);
   if (!owners.ok) {
     if (owners.reason === "projection-absent") {
       const pick = nextUncoveredUnit(
@@ -5810,7 +5819,7 @@ function gatedApproveRefusal(
   // gates, and only a gated stage has an approve to guard.
   if (node.phase === "initialization" || checkboxState === "completed") return null;
   return (
-    deliveryEvidenceCoverageRefusal(pd, node, intent) ??
+    deliveryEvidenceCoverageRefusal(pd, node, stateContent, intent) ??
     perUnitCoverageRefusal(pd, node, slug, stateContent, intent) ??
     swarmReconciliationRefusal(pd, node, scope, intent)
   );

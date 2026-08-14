@@ -28,15 +28,19 @@ import { spawnSync } from "node:child_process";
 import { basename, dirname } from "node:path";
 import { requireFlagValue } from "./sensor-flags.ts";
 import {
+  ATTESTATION_HEADING,
   attestationId,
   auditCarriesAttestation,
   isSelfRecord,
+  OWNER_PROJECTION_HEADING,
   parseAttestation,
   parseOwnerProjection,
+  REPORT_BASENAME,
   type ReportAttestation,
   recordRootForReport,
   renderAttestation,
   renderOwnerProjection,
+  reportPathFor,
   reportPayload,
   reportPayloadDigest,
 } from "./pr-convergence-attestation.ts";
@@ -61,8 +65,7 @@ export interface ReportFormatResult {
   findings: ReportFormatFinding[];
 }
 
-/** The basename the code-generation produces entry resolves to (FR-2b). */
-export const REPORT_BASENAME = "pr-convergence-report.md";
+export { REPORT_BASENAME };
 
 function verdict(reason: string, findings: ReportFormatFinding[]): ReportFormatResult {
   return { pass: findings.length === 0, findings_count: findings.length, reason, findings };
@@ -156,13 +159,13 @@ function checkOwnerProjection(
   ownerUnit: string,
   findings: ReportFormatFinding[],
 ): void {
-  const start = body.indexOf("## Owner Projection");
+  const start = body.indexOf(OWNER_PROJECTION_HEADING);
   if (receipt.memberUnits === undefined) {
     if (start !== -1) findings.push({ field: "owner projection", reason: "single-Unit reports must keep legacy bytes" });
     return;
   }
   const projection = parseOwnerProjection(body);
-  const end = body.indexOf("## CLI Attestation");
+  const end = body.indexOf(ATTESTATION_HEADING);
   if (
     projection === null || start === -1 || end <= start ||
     body.slice(start, end) !== renderOwnerProjection(projection)
@@ -170,7 +173,7 @@ function checkOwnerProjection(
     findings.push({ field: "owner projection", reason: "missing, malformed, or non-canonical" });
     return;
   }
-  const expectedPath = `${receipt.record}construction/${ownerUnit}/code-generation/${REPORT_BASENAME}`;
+  const expectedPath = reportPathFor(receipt.record, ownerUnit);
   if (!ownerProjectionMatches(projection, receipt, receipt.memberUnits, ownerUnit, expectedPath)) {
     findings.push({ field: "owner projection", reason: "does not bind the attestation tuple and owner path" });
   }
@@ -199,7 +202,7 @@ function checkCanonicalAttestation(
   if (body.startsWith("\uFEFF") || body.includes("\r") || !body.endsWith("\n") || body.endsWith("\n\n")) {
     findings.push({ field: "canonical bytes", reason: "report must be BOM-free LF text with exactly one trailing newline" });
   }
-  const start = body.indexOf("## CLI Attestation");
+  const start = body.indexOf(ATTESTATION_HEADING);
   if (start === -1 || body.slice(start) !== renderAttestation(receipt)) {
     findings.push({ field: "attestation", reason: "does not use the canonical field order" });
   }
@@ -247,9 +250,9 @@ function checkAttestationMembers(
   receipt: ReportAttestation,
   findings: ReportFormatFinding[],
 ): void {
-  if (receipt.memberUnits === undefined) return;
-  const members = canonicalUnitSlugs(receipt.memberUnits);
-  if (!members.ok || !receipt.memberUnits.includes(unit)) {
+  const effectiveMembers = receipt.memberUnits ?? [receipt.unit];
+  const members = canonicalUnitSlugs(effectiveMembers);
+  if (!members.ok || !effectiveMembers.includes(unit)) {
     findings.push({ field: "member units", reason: "not canonical or does not contain the report owner" });
     return;
   }

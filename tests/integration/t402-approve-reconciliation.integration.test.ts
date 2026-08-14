@@ -20,12 +20,12 @@ import {
   cleanupTestProject,
   createTestProject,
   resetAidlcEnv,
+  seedDeliveryBoltPlan,
   seededAuditShard,
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
 import { handleReport } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
-import { projectDeliveryBoltPlan } from "../../packages/framework/core/tools/amadeus-delivery-bolts.ts";
 import {
   boltDagGenerationOf,
   GUARD_EXIT_MARKER,
@@ -123,21 +123,13 @@ function seedDag(proj: string, batches: string[][]): void {
       .map((unit) => `  - name: ${unit.name}\n    depends_on: [${unit.depends_on.join(", ")}]`)
       .join("\n")}\n\`\`\`\n`,
   );
-  const planDir = join(seededRecordDir(proj), "inception", "delivery-planning");
-  mkdirSync(planDir, { recursive: true });
-  const plan = `## Bolt delivery\n\n- **Units:** ${batches
-    .flat()
-    .map((unit) => `\`${unit}\``)
-    .join(", ")}\n`;
-  writeFileSync(join(planDir, "bolt-plan.md"), plan);
-  const projected = projectDeliveryBoltPlan(plan);
-  if (!projected.ok) throw new Error(projected.message);
+  const deliveryProjection = seedDeliveryBoltPlan(seededRecordDir(proj), batches.flat());
   writeFileSync(
     join(seededRecordDir(proj), "runtime-graph.json"),
     JSON.stringify(
       {
         bolt_dag: { units: batches.flat().map((name) => ({ name, depends_on: [] })), batches },
-        delivery_bolts: projected.projection,
+        delivery_bolts: deliveryProjection,
       },
       null,
       2,
@@ -232,6 +224,14 @@ function runReport(proj: string, args: string[]): Directive {
 const APPROVE = ["--stage", "code-generation", "--result", "approved"];
 
 describe("t402 approve-time reconciliation (FR-2)", () => {
+  test("the shared Delivery Bolt fixture rejects an empty Unit set", () => {
+    const proj = createTestProject();
+    tempDirs.push(proj);
+    expect(() => seedDeliveryBoltPlan(seededRecordDir(proj), [])).toThrow(
+      "Delivery Bolt delivery must contain at least one valid Unit slug",
+    );
+  });
+
   test("a: a parallel batch with no SWARM evidence is refused (AC-2a)", () => {
     const proj = seedCoveredRun([["alpha", "beta"]]);
     const directive = runReport(proj, APPROVE);

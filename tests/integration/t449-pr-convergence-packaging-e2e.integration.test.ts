@@ -78,6 +78,17 @@ import {
 } from "../harness/fixtures.ts";
 import { projectDeliveryBoltPlan } from "../../packages/framework/core/tools/amadeus-delivery-bolts.ts";
 
+function deliveryRefusal(
+  project: string,
+  node: Parameters<typeof deliveryEvidenceCoverageRefusal>[1],
+): string | null {
+  return deliveryEvidenceCoverageRefusal(
+    project,
+    node,
+    readFileSync(seededStateFile(project), "utf-8"),
+  );
+}
+
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const CORE_ROOT = join(REPO_ROOT, "packages", "framework", "core");
 const PLUGIN_SRC = join(REPO_ROOT, "plugins", "pr-convergence");
@@ -238,7 +249,7 @@ function writeUnitArtifacts(proj: string, unit: string, names: readonly string[]
 function seedDeliveryCarrier(
   proj: string,
   units: readonly string[],
-  mode: "valid" | "empty" | "stale" | "mismatch" = "valid",
+  mode: "valid" | "empty" | "nonobject" | "stale" | "mismatch" = "valid",
 ): void {
   const record = seededRecordDir(proj);
   const planDir = join(record, "inception", "delivery-planning");
@@ -249,7 +260,9 @@ function seedDeliveryCarrier(
   if (!projected.ok) throw new Error(projected.message);
   const graphPath = join(record, "runtime-graph.json");
   const graph = JSON.parse(readFileSync(graphPath, "utf-8")) as Record<string, unknown>;
-  graph.delivery_bolts = mode === "empty"
+  graph.delivery_bolts = mode === "nonobject"
+    ? null
+    : mode === "empty"
     ? { ...projected.projection, bolts: [] }
     : mode === "mismatch"
       ? { ...projected.projection, bolts: [{ bolt: "delivery", units: [...units, "foreign"] }] }
@@ -447,7 +460,7 @@ describe("t449 the guard consumes the overlay (NFR-1 falling evidence)", () => {
     writeUnitArtifacts(proj, "alpha", [...STOCK_PRODUCES, SEAM_ENTRY]);
     writeUnitArtifacts(proj, "beta", [...STOCK_PRODUCES, SEAM_ENTRY]);
 
-    expect(deliveryEvidenceCoverageRefusal(proj, codeGeneration!)).toBeNull();
+    expect(deliveryRefusal(proj, codeGeneration!)).toBeNull();
     const directive = runReport(proj);
     expect(String(directive.message ?? "")).not.toContain("DELIVERY_EVIDENCE_INCOMPLETE");
   });
@@ -461,11 +474,17 @@ describe("t449 the guard consumes the overlay (NFR-1 falling evidence)", () => {
     writeUnitArtifacts(proj, "alpha", [...STOCK_PRODUCES, SEAM_ENTRY]);
     writeUnitArtifacts(proj, "beta", [...STOCK_PRODUCES, SEAM_ENTRY]);
 
-    expect(deliveryEvidenceCoverageRefusal(proj, codeGeneration!))
+    expect(deliveryRefusal(proj, codeGeneration!))
       .toContain("DELIVERY_EVIDENCE_CARRIER_MISSING");
   });
 
-  for (const mode of ["empty", "stale", "mismatch"] as const) {
+  const carrierCases = [
+    ["empty", "INVALID"],
+    ["nonobject", "INVALID"],
+    ["stale", "STALE"],
+    ["mismatch", "MISMATCH"],
+  ] as const;
+  for (const [mode, expectedCode] of carrierCases) {
     test(`code-generation completion rejects a ${mode} Delivery Bolt carrier`, () => {
       expect(handlePluginCli(["compose", "--project-root", host], deps())).toBe(0);
       const codeGeneration = compileFromHost().stages.find((stage) => stage.slug === "code-generation");
@@ -476,8 +495,8 @@ describe("t449 the guard consumes the overlay (NFR-1 falling evidence)", () => {
       writeUnitArtifacts(proj, "alpha", [...STOCK_PRODUCES, SEAM_ENTRY]);
       writeUnitArtifacts(proj, "beta", [...STOCK_PRODUCES, SEAM_ENTRY]);
 
-      expect(deliveryEvidenceCoverageRefusal(proj, codeGeneration!))
-        .toMatch(/^DELIVERY_EVIDENCE_CARRIER_(?:INVALID|STALE|MISMATCH):/);
+      expect(deliveryRefusal(proj, codeGeneration!))
+        .toStartWith(`DELIVERY_EVIDENCE_CARRIER_${expectedCode}:`);
     });
   }
 
@@ -488,7 +507,7 @@ describe("t449 the guard consumes the overlay (NFR-1 falling evidence)", () => {
     pinCompiledGraph();
     const proj = seedProject([["alpha"]], "self-fix");
     writeUnitArtifacts(proj, "alpha", [...STOCK_PRODUCES, SEAM_ENTRY]);
-    expect(deliveryEvidenceCoverageRefusal(proj, codeGeneration!))
+    expect(deliveryRefusal(proj, codeGeneration!))
       .toContain("DELIVERY_EVIDENCE_CARRIER_MISSING");
   });
 
@@ -500,13 +519,14 @@ describe("t449 the guard consumes the overlay (NFR-1 falling evidence)", () => {
     const proj = seedProject([["alpha"]], "self-fix");
     seedDeliveryCarrier(proj, ["alpha"]);
     writeUnitArtifacts(proj, "alpha", [...STOCK_PRODUCES, SEAM_ENTRY]);
-    expect(deliveryEvidenceCoverageRefusal(proj, codeGeneration!)).toBeNull();
+    expect(deliveryRefusal(proj, codeGeneration!)).toBeNull();
   });
 
   test("full autonomy resumes a covered 2U/1B delivery without a human PR choice", () => {
     expect(handlePluginCli(["compose", "--project-root", host], deps())).toBe(0);
     pinCompiledGraph();
     const proj = seedProject([["alpha", "beta"]], "self-fix");
+    seedDeliveryCarrier(proj, ["alpha", "beta"]);
     writeUnitArtifacts(proj, "alpha", [...STOCK_PRODUCES, SEAM_ENTRY]);
     writeUnitArtifacts(proj, "beta", [...STOCK_PRODUCES, SEAM_ENTRY]);
 

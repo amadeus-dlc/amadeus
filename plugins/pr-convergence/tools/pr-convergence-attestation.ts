@@ -7,6 +7,12 @@ export const SELF_SCOPES = new Set(["self-document", "self-feature", "self-fix",
 export const ATTESTATION_EVENT = "ARTIFACT_ATTESTED";
 export const ATTESTATION_HEADING = "## CLI Attestation";
 export const OWNER_PROJECTION_HEADING = "## Owner Projection";
+export const REPORT_BASENAME = "pr-convergence-report.md";
+
+/** Canonical owner report path shared by the writer and its sensor. */
+export function reportPathFor(recordRoot: string, unit: string): string {
+  return join(recordRoot, "construction", unit, "code-generation", REPORT_BASENAME);
+}
 
 export interface OwnerProjection {
   readonly intent: string;
@@ -99,7 +105,25 @@ export function renderOwnerProjection(value: OwnerProjection): string {
   ].join("\n");
 }
 
-function field(body: string, label: string): string | null {
+type ProjectionLabel =
+  | "attestation id"
+  | "bolt"
+  | "content digest"
+  | "head"
+  | "intent"
+  | "intent uuid"
+  | "local head"
+  | "member units"
+  | "owner unit"
+  | "pr"
+  | "pr head"
+  | "record"
+  | "remote head"
+  | "report path"
+  | "repository"
+  | "unit";
+
+function field(body: string, label: ProjectionLabel): string | null {
   return body.match(new RegExp(`^- ${label}:[ \\t]*(.*)$`, "m"))?.[1]?.trim() ?? null;
 }
 

@@ -80,7 +80,9 @@ import {
   attestationId,
   isSelfRecord,
   parseAttestation,
+  REPORT_BASENAME,
   type ReportAttestation,
+  reportPathFor,
   renderAttestation,
   renderOwnerProjection,
   reportPayload,
@@ -142,12 +144,7 @@ export type ConvergenceReport =
       readonly attestation?: ReportAttestation;
     };
 
-export const REPORT_BASENAME = "pr-convergence-report.md";
-
-/** FR-2b: the path the code-generation artifact guard resolves. */
-export function reportPathFor(recordRoot: string, unit: string): string {
-  return join(recordRoot, "construction", unit, "code-generation", REPORT_BASENAME);
-}
+export { REPORT_BASENAME, reportPathFor };
 
 /**
  * The only way a report comes into existence (BR-U2-7). Hand-writing this file
@@ -859,7 +856,7 @@ async function writeSelfReportProjection(
         bolt: work.bolt,
         memberUnits: work.units,
         ownerUnit: work.unit,
-        reportPath: `${work.record}construction/${work.unit}/code-generation/${REPORT_BASENAME}`,
+        reportPath: reportPathFor(work.record, work.unit),
         repo: report.prRef.repo,
         pr: report.prRef.number,
         head: heads.localHead,

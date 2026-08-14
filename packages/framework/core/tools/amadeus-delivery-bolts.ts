@@ -194,20 +194,19 @@ export function parseDeliveryBoltPlan(body: string): DeliveryBoltPlanResult {
   if (bolts.length === 0) {
     return { ok: false, message: "the Delivery Plan contains no Delivery Bolt headings" };
   }
-  bolts.sort((left, right) => left.bolt.localeCompare(right.bolt));
+  bolts.sort((left, right) => (left.bolt < right.bolt ? -1 : left.bolt > right.bolt ? 1 : 0));
   return { ok: true, bolts };
 }
 
 export function projectDeliveryBoltPlan(body: string): DeliveryBoltProjectionResult {
   const parsed = parseDeliveryBoltPlan(body);
   if (!parsed.ok) return parsed;
-  const digest = createHash("sha256").update(body).digest("hex");
   return {
     ok: true,
     projection: {
       authority: "approved-plan",
       source: DELIVERY_BOLT_PLAN_SOURCE,
-      sourceDigest: `sha256:${digest}`,
+      sourceDigest: digest(body),
       bolts: parsed.bolts,
     },
   };

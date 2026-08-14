@@ -25,6 +25,7 @@ import {
   createTestProject,
   DEFAULT_INTENT_UUID,
   resetAidlcEnv,
+  seedDeliveryBoltPlan,
   seededAuditShard,
   seededRecordDir,
   seededStateFile,
@@ -32,7 +33,6 @@ import {
 import { handleReport } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import { armPresenceReservation } from "../../packages/framework/core/tools/amadeus-presence-reservation.ts";
 import { boltDagGenerationOf } from "../../packages/framework/core/tools/amadeus-lib.ts";
-import { projectDeliveryBoltPlan } from "../../packages/framework/core/tools/amadeus-delivery-bolts.ts";
 
 process.env.AMADEUS_STAGE_GRAPH ??= join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 process.env.AMADEUS_SKIP_ARTIFACT_GUARD ??= "1";
@@ -134,18 +134,16 @@ function seedDag(proj: string, batches: string[][]): void {
       .map((unit) => `  - name: ${unit.name}\n    depends_on: [${unit.depends_on.join(", ")}]`)
       .join("\n")}\n\`\`\`\n`,
   );
-  const plan = `## Bolt delivery\n\n- **Units:** ${units.map((unit) => `\`${unit.name}\``).join(", ")}\n`;
-  const projected = projectDeliveryBoltPlan(plan);
-  if (!projected.ok) throw new Error(projected.message);
-  const planningDir = join(seededRecordDir(proj), "inception", "delivery-planning");
-  mkdirSync(planningDir, { recursive: true });
-  writeFileSync(join(planningDir, "bolt-plan.md"), plan);
+  const deliveryProjection = seedDeliveryBoltPlan(
+    seededRecordDir(proj),
+    units.map((unit) => unit.name),
+  );
   writeFileSync(
     join(seededRecordDir(proj), "runtime-graph.json"),
     JSON.stringify(
       {
         bolt_dag: { units: batches.flat().map((name) => ({ name, depends_on: [] })), batches },
-        delivery_bolts: projected.projection,
+        delivery_bolts: deliveryProjection,
       },
       null,
       2,

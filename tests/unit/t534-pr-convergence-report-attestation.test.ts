@@ -54,6 +54,9 @@ describe("t534 report attestation", () => {
     expect(parseAttestation(renderAttestation(receipt))).toEqual(receipt);
     expect(attestationId({ ...unsigned, unit: "unit-a" })).not.toBe(receipt.id);
     expect(attestationId({ ...unsigned, memberUnits: ["unit-a"] })).not.toBe(receipt.id);
+    const body = renderAttestation(receipt);
+    expect(parseAttestation(body.replace("unit-a,unit-b", "unit-b,unit-a"))).toBeNull();
+    expect(parseAttestation(body.replace("unit-a,unit-b", "unit-a,unit-a"))).toBeNull();
   });
 
   test("a one-byte payload change changes the digest", () => {

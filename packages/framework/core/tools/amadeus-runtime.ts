@@ -154,13 +154,30 @@ type DeliveryBoltProjectionOutcome =
 export function computeDeliveryBoltProjectionOutcome(
   projectDir: string,
   stateContent: string | null,
+  intent?: string,
+  space?: string,
 ): DeliveryBoltProjectionOutcome {
   const deliveryStage = stateContent
     ? parseCheckboxes(stateContent).find((candidate) => candidate.slug === "delivery-planning")
     : undefined;
-  const path = join(dirname(stateFilePath(projectDir)), DELIVERY_BOLT_PLAN_SOURCE);
-  if (deliveryStage?.state === "completed" && existsSync(path)) {
-    const projected = projectDeliveryBoltPlan(readFileSync(path, "utf-8"));
+  const path = join(
+    dirname(stateFilePath(projectDir, intent, space)),
+    DELIVERY_BOLT_PLAN_SOURCE,
+  );
+  if (deliveryStage?.state === "completed") {
+    if (!existsSync(path)) {
+      return { kind: "absent" };
+    }
+    let body: string;
+    try {
+      body = readFileSync(path, "utf-8");
+    } catch {
+      return {
+        kind: "invalid",
+        detail: `approved ${DELIVERY_BOLT_PLAN_SOURCE} is unreadable`,
+      };
+    }
+    const projected = projectDeliveryBoltPlan(body);
     return projected.ok
       ? { kind: "projection", projection: projected.projection }
       : { kind: "invalid", detail: projected.message };
@@ -171,6 +188,8 @@ export function computeDeliveryBoltProjectionOutcome(
     projectDir,
     stateContent,
     new Set(loadStageGraph().map((stage) => stage.slug)),
+    intent,
+    space,
   );
 }
 
@@ -1005,8 +1024,14 @@ function writeEmptyGraph(
   if (executionProjection !== undefined) {
     graph.execution_observability = executionProjection;
   }
-  const deliveryOutcome = computeDeliveryBoltProjectionOutcome(projectDir, stateContent);
+  const deliveryOutcome = computeDeliveryBoltProjectionOutcome(
+    projectDir,
+    stateContent,
+    intent,
+    space,
+  );
   if (deliveryOutcome.kind === "invalid") {
+    rmSync(runtimeGraphPath(projectDir, intent, space), { force: true });
     throw new Error(
       `runtime-compile: Delivery Bolt authority is malformed (${deliveryOutcome.detail})`,
     );

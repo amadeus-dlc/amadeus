@@ -15,7 +15,7 @@ import {
 } from "../../packages/framework/core/tools/amadeus-delivery-bolts.ts";
 import { compile as compileRuntime } from "../../packages/framework/core/tools/amadeus-runtime.ts";
 import { deliveryEvidenceCoverageRefusal } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
-import { loadStageGraph } from "../../packages/framework/core/tools/amadeus-lib.ts";
+import { loadGraph } from "../../packages/framework/core/tools/amadeus-graph.ts";
 
 process.env.AMADEUS_STAGE_GRAPH ??= join(
   import.meta.dir, "..", "..", "dist", "claude", ".claude", "tools", "data", "stage-graph.json",
@@ -226,15 +226,25 @@ describe("t534 multi-Unit Bolt delivery lifecycle", () => {
     expect(mismatchedStatus.stderr).toContain("DELIVERY_BOLT_AUTHORITY_MISMATCH");
     const reportArgs = ["report", "--repo", "amadeus-dlc/amadeus", "--pr", "2838", "--unit", "pr-gate", "--record", f.record];
     expect((await runCli(reportArgs, seams(f.record, f.sha, calls, false, provenance))).exitCode).toBe(0);
-    expect(evaluateReportFormat(reportPathFor(f.record, "pr-gate"), "pr-convergence").pass).toBe(true);
+    const reportPath = reportPathFor(f.record, "pr-gate");
+    expect(evaluateReportFormat(reportPath, "pr-convergence").pass).toBe(true);
+    const sensorGraphPath = join(f.record, "runtime-graph.json");
+    const sensorGraph = readFileSync(sensorGraphPath, "utf-8");
+    const mismatchedGraph = JSON.parse(sensorGraph);
+    mismatchedGraph.delivery_bolts.bolts[0].units = ["foreign"];
+    writeFileSync(sensorGraphPath, JSON.stringify(mismatchedGraph));
+    expect(evaluateReportFormat(reportPath, "pr-convergence").findings).toContainEqual({
+      field: "member units",
+      reason: "does not match the approved Delivery Bolt projection",
+    });
+    writeFileSync(sensorGraphPath, sensorGraph);
 
-    const codeGeneration = loadStageGraph().find((stage) => stage.slug === "code-generation");
+    const codeGeneration = loadGraph().find((stage) => stage.slug === "code-generation");
     if (codeGeneration === undefined) throw new Error("code-generation stage must exist");
     expect(deliveryEvidenceCoverageRefusal(f.root, {
       ...codeGeneration,
-      for_each: "unit-of-work",
       produces: ["pr-convergence-report"],
-    } as never)).toBeNull();
+    }, readFileSync(join(f.record, "amadeus-state.md"), "utf-8"))).toBeNull();
 
     const graphPath = join(f.record, "runtime-graph.json");
     const statePath = join(f.record, "amadeus-state.md");
@@ -243,16 +253,14 @@ describe("t534 multi-Unit Bolt delivery lifecycle", () => {
     setEngineProjectionField(f, "sourceDigest", `sha256:${"0".repeat(64)}`);
     expect(deliveryEvidenceCoverageRefusal(f.root, {
       ...codeGeneration,
-      for_each: "unit-of-work",
       produces: ["pr-convergence-report"],
-    } as never)).toContain("DELIVERY_EVIDENCE_CARRIER_MISMATCH");
+    }, state)).toContain("DELIVERY_EVIDENCE_CARRIER_MISMATCH");
     writeFileSync(graphPath, graph);
     writeFileSync(statePath, state.replace("delivery-planning — SKIP", "delivery-planning — EXECUTE"));
     expect(deliveryEvidenceCoverageRefusal(f.root, {
       ...codeGeneration,
-      for_each: "unit-of-work",
       produces: ["pr-convergence-report"],
-    } as never)).toContain("DELIVERY_EVIDENCE_CARRIER_STALE");
+    }, readFileSync(statePath, "utf-8"))).toContain("DELIVERY_EVIDENCE_CARRIER_STALE");
   });
 
   test("engine singleton ignores construction directories owned by stages outside the runtime audit rows", async () => {
@@ -339,40 +347,59 @@ describe("t534 multi-Unit Bolt delivery lifecycle", () => {
     writeFileSync(join(intents, "runtime-graph.json"), JSON.stringify({
       delivery_bolts: { authority: "approved-plan" },
     }));
-    const codeGeneration = loadStageGraph().find((stage) => stage.slug === "code-generation");
+    const codeGeneration = loadGraph().find((stage) => stage.slug === "code-generation");
     if (codeGeneration === undefined) throw new Error("code-generation stage must exist");
     expect(deliveryEvidenceCoverageRefusal(root, {
       ...codeGeneration,
-      for_each: "unit-of-work",
       produces: ["pr-convergence-report"],
-    } as never)).toContain("no Intent record resolves");
+    }, readFileSync(join(intents, "amadeus-state.md"), "utf-8")))
+      .toContain("no Intent record resolves");
   });
 
   test("completion reports missing and malformed approved carrier sources and graphs", () => {
     const f = fixture("self-fix");
+    const statePath = join(f.record, "amadeus-state.md");
+    const stateContent = readFileSync(statePath, "utf-8");
     mkdirSync(join(f.record, "construction", "cli"), { recursive: true });
-    const codeGeneration = loadStageGraph().find((stage) => stage.slug === "code-generation");
+    const codeGeneration = loadGraph().find((stage) => stage.slug === "code-generation");
     if (codeGeneration === undefined) throw new Error("code-generation stage must exist");
     const node = {
       ...codeGeneration,
-      for_each: "unit-of-work",
       produces: ["pr-convergence-report"],
-    } as never;
+    };
     const graphPath = join(f.record, "runtime-graph.json");
     const planPath = join(f.record, "inception", "delivery-planning", "bolt-plan.md");
 
     writeDeliveryPlan(f.record, "## Bolt delivery\n\n- **Units:** `cli`\n");
     rmSync(planPath);
-    expect(deliveryEvidenceCoverageRefusal(f.root, node)).toContain("projected Delivery Bolt source is missing");
+    expect(deliveryEvidenceCoverageRefusal(
+      f.root,
+      node,
+      stateContent,
+    )).toContain("projected Delivery Bolt source is missing");
 
     writeDeliveryPlan(f.record, "## Bolt delivery\n\n- **Units:** `cli`\n");
     writeFileSync(planPath, "## Bolt invalid/slug\n\n- **Units:** `cli`\n");
-    expect(deliveryEvidenceCoverageRefusal(f.root, node)).toContain("every Delivery Bolt must have a non-empty slug");
+    expect(deliveryEvidenceCoverageRefusal(
+      f.root,
+      node,
+      stateContent,
+    )).toContain("every Delivery Bolt must have a non-empty slug");
 
     writeFileSync(graphPath, "not-json\n");
-    expect(deliveryEvidenceCoverageRefusal(f.root, node)).toContain("missing or unreadable");
+    expect(deliveryEvidenceCoverageRefusal(
+      f.root,
+      node,
+      stateContent,
+    )).toContain("missing or unreadable");
     writeFileSync(graphPath, "[]\n");
-    expect(deliveryEvidenceCoverageRefusal(f.root, node)).toContain("is not an object");
+    expect(deliveryEvidenceCoverageRefusal(
+      f.root,
+      node,
+      stateContent,
+    )).toContain("is not an object");
+    rmSync(statePath);
+    expect(() => deliveryEvidenceCoverageRefusal(f.root, node, stateContent)).not.toThrow();
   });
 
   test("validates approved Delivery Bolt membership for a singleton", async () => {

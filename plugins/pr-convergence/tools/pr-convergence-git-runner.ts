@@ -83,14 +83,14 @@ function isSelfOutput(path: string, self: SelfOutputPaths): boolean {
  * and a prefix that cannot be resolved exempts nothing — the check stays
  * closed rather than guessing which paths are ours.
  */
-function foreignDirtyPaths(git: GitSpawn, cwd: string, units: string | readonly string[] | null): readonly string[] {
+function foreignDirtyPaths(git: GitSpawn, cwd: string, units: readonly string[] | null): readonly string[] {
   const status = run(git, cwd, ["status", "--porcelain", "--untracked-files=no"]);
   if (status.code !== 0) return ["<git status failed>"];
   const lines = status.stdout.split("\n").filter((line) => line.trim() !== "");
   if (lines.length === 0 || units === null) return lines.map(statusPath);
   const prefix = run(git, cwd, ["rev-parse", "--show-prefix"]);
   if (prefix.code !== 0) return lines.map(statusPath);
-  const self = selfOutputPaths(prefix.stdout.trim(), typeof units === "string" ? [units] : units);
+  const self = selfOutputPaths(prefix.stdout.trim(), units);
   return lines.map(statusPath).filter((path) => !isSelfOutput(path, self));
 }
 
@@ -117,9 +117,9 @@ export function verifyCreatePrerequisites(
   head: string,
   requestedBase: string | null,
   git: GitSpawn = nodeGitSpawn,
-  // The unit whose report this delivery owns. Omitted (an unlinked caller), no
-  // path is exempt from the clean-worktree check.
-  unit: string | readonly string[] | null = null,
+  // The member Units whose reports this delivery owns. Omitted (an unlinked
+  // caller), no path is exempt from the clean-worktree check.
+  units: readonly string[] | null = null,
 ): GitPrerequisite {
   const top = run(git, cwd, ["rev-parse", "--show-toplevel"]);
   if (top.code !== 0) return { ok: false, message: "not a git worktree; run create from a committed checkout" };
@@ -139,7 +139,7 @@ export function verifyCreatePrerequisites(
   if (changed.code !== 0 || changed.stdout.trim() === "") {
     return { ok: false, message: "HEAD contains no target changes; commit the implementation first" };
   }
-  if (foreignDirtyPaths(git, cwd, unit).length > 0) {
+  if (foreignDirtyPaths(git, cwd, units).length > 0) {
     return { ok: false, message: "tracked worktree is dirty; commit or restore tracked changes before create" };
   }
   const remoteHead = remoteBranchSha(git, cwd, head);
@@ -167,7 +167,7 @@ export function verifyCurrentPrerequisites(
   cwd: string,
   expected: ExpectedPrHead,
   git: GitSpawn = nodeGitSpawn,
-  unit: string | readonly string[] | null = null,
+  units: readonly string[] | null = null,
 ): GitPrerequisite {
   const branch = run(git, cwd, ["branch", "--show-current"]);
   const head = branch.stdout.trim();
@@ -178,7 +178,7 @@ export function verifyCurrentPrerequisites(
   const local = run(git, cwd, ["rev-parse", "HEAD"]);
   const localHead = local.stdout.trim();
   if (local.code !== 0 || !/^[0-9a-f]{40,64}$/i.test(localHead)) return { ok: false, message: "cannot resolve local HEAD" };
-  if (foreignDirtyPaths(git, cwd, unit).length > 0) {
+  if (foreignDirtyPaths(git, cwd, units).length > 0) {
     return { ok: false, message: "tracked worktree is dirty; commit or restore it" };
   }
   const remoteHead = remoteBranchSha(git, cwd, head);

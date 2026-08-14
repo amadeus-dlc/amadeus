@@ -91,7 +91,13 @@ describe("presentation provenance tokens", () => {
       unit: "unit-a",
       units: ["unit-a", "unit-b", "unit-c"],
     });
-    expect(verdict.ok).toBe(false);
+    expect(verdict).toEqual({
+      ok: false,
+      violations: [
+        { kind: "title-unit-mismatch", expected: "unit-a+unit-b+unit-c", actual: "unit-a+unit-b" },
+        { kind: "unit-mismatch", expected: "unit-a,unit-b,unit-c", actual: "unit-a,unit-b" },
+      ],
+    });
   });
 });
 
