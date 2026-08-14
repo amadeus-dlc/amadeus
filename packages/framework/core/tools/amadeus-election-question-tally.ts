@@ -75,7 +75,10 @@ function responseKey(voter: string, questionId: string): string {
   return `${voter.length}:${voter}${questionId}`;
 }
 
-export function resolveResponses(ballots: readonly BallotV2[]): readonly ResolvedResponse[] {
+export function resolveResponses(
+  definition: CanonicalElectionDefinition,
+  ballots: readonly BallotV2[],
+): readonly ResolvedResponse[] {
   const resolved = new Map<string, ResolvedResponse>();
   for (const ballot of ballots) {
     for (const response of ballot.responses) {
@@ -92,7 +95,20 @@ export function resolveResponses(ballots: readonly BallotV2[]): readonly Resolve
       }
     }
   }
-  return [...resolved.values()];
+  const voterOrder = new Map(definition.voters.map((voter, index) => [voter, index]));
+  const questionOrder = new Map(
+    definition.questions.map((question, index) => [question.questionId, index]),
+  );
+  return [...resolved.values()].sort((left, right) => {
+    const voterDifference =
+      (voterOrder.get(left.voter) ?? Number.MAX_SAFE_INTEGER) -
+      (voterOrder.get(right.voter) ?? Number.MAX_SAFE_INTEGER);
+    if (voterDifference !== 0) return voterDifference;
+    return (
+      (questionOrder.get(left.response.questionId) ?? Number.MAX_SAFE_INTEGER) -
+      (questionOrder.get(right.response.questionId) ?? Number.MAX_SAFE_INTEGER)
+    );
+  });
 }
 
 function resolvedFrom(

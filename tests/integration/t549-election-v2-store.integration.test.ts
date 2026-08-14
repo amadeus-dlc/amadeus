@@ -176,6 +176,12 @@ describe("t549 election v2 store", () => {
     const first = ballot("alice");
 
     expect(ElectionV2Store.appendPending(root, DEFINITION.electionId, first).ok).toBe(true);
+    const pendingPath = join(electionDir(), "pending", "alice.json");
+    expect(JSON.parse(readFileSync(pendingPath, "utf8"))).toMatchObject({
+      schemaVersion: 2,
+      electionId: DEFINITION.electionId,
+      voter: "alice",
+    });
     const retry = ElectionV2Store.appendPending(root, DEFINITION.electionId, first);
     expect(retry).toMatchObject({ ok: true, value: { idempotent: true } });
     const conflict = ElectionV2Store.appendPending(root, DEFINITION.electionId, {
@@ -183,6 +189,20 @@ describe("t549 election v2 store", () => {
       responses: first.responses.map((response) => ({ ...response, choiceInternalNo: 2 })),
     });
     expect(conflict).toMatchObject({ ok: false, error: "duplicate" });
+    const mismatched = JSON.parse(readFileSync(pendingPath, "utf8"));
+    mismatched.electionId = "OTHER";
+    writeFileSync(pendingPath, JSON.stringify(mismatched, null, 2));
+    expect(ElectionV2Store.appendPending(root, DEFINITION.electionId, ballot("bob"))).toMatchObject({
+      ok: false,
+      error: "corrupt",
+    });
+    mismatched.electionId = DEFINITION.electionId;
+    mismatched.voter = "bob";
+    writeFileSync(pendingPath, JSON.stringify(mismatched, null, 2));
+    expect(ElectionV2Store.appendPending(root, DEFINITION.electionId, ballot("bob"))).toMatchObject({
+      ok: false,
+      error: "corrupt",
+    });
     expect(readFileSync(ledgerPath, "utf8")).toBe(ledgerBefore);
     expect(readFileSync(electionPath, "utf8")).toBe(electionBefore);
   });

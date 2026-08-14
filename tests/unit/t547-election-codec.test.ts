@@ -92,6 +92,14 @@ describe("t547 canonical election codec", () => {
         error: { category: "invalid-value", path: "$.questions[0].questionId" },
       });
     }
+    expect(ElectionDefinitionCodec.decode({ ...legacyDefinition, question: "" })).toMatchObject({
+      ok: false,
+      error: { category: "invalid-value", path: "$.question" },
+    });
+    expect(ElectionDefinitionCodec.decode({ ...legacyDefinition, question: "  " })).toMatchObject({
+      ok: true,
+      value: { questions: [{ questionId: LEGACY_QUESTION_ID, text: "  " }] },
+    });
     expect(
       ElectionDefinitionCodec.decode({
         ...v2Definition,

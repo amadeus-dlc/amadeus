@@ -20,11 +20,11 @@
       "entries": [
         {
           "implPath": "packages/framework/core/tools/amadeus-election-codec.ts",
-          "sha256": "c0006dbd81d0e94b1d28903bb2c0e9899a01333f7492e47d9e8f13d2b2ee6b3e"
+          "sha256": "455e5a69547cbf0687767703faa3cf447bb5973d28b6e62b33128f2efda2e828"
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election-record.ts",
-          "sha256": "b776d2f74527fe0583b9b94b3548d79255902860ffb119413dc259d56c7dda90"
+          "sha256": "1e0a37e469ff63126a93000fe3630182e500860ab249cc4ed5427a78ae189b7c"
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election-transport.ts",
@@ -32,11 +32,11 @@
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election-v2-cli.ts",
-          "sha256": "875c135700570e1effde81f2185fceccd6374cccfb63ba11b7637befb57f5437"
+          "sha256": "078aa2f5821b0e89d61775ec9455b73c662137e3bcd6993a911ea466c6e7010e"
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election-v2-store.ts",
-          "sha256": "51dc028830676251dc30010a89c5760b5fa66cf10e047e61c40a2db8c7e3a1a0"
+          "sha256": "6def228510e3f87a080e98433b39ab5ba02da64fc87a5c48ff299df65f8209e8"
         }
       ],
       "vocabulary": {

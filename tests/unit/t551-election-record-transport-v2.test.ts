@@ -181,6 +181,86 @@ describe("U4 multi-question record", () => {
     );
     expect(result.error.filter((finding) => finding.questionId === "q-a").length).toBeGreaterThan(0);
   });
+
+  test("renders the latest reservation by receipt time rather than ballot array order", () => {
+    const original = ballots[0]!;
+    const latestAmend: CanonicalBallot = {
+      ...original,
+      kind: "amend",
+      ref: {
+        electionId: original.electionId,
+        voter: original.voter,
+        submittedAt: original.submittedAt,
+      },
+      responses: [
+        {
+          questionId: "q-a",
+          choiceInternalNo: 1,
+          goa: 3,
+          reservation: "Latest reservation",
+          rationale: null,
+        },
+      ],
+      submittedAt: "2026-08-13T10:00:04Z",
+      receivedAt: "2026-08-13T10:00:05Z",
+    };
+    const record = renderElectionRecord({
+      definition,
+      tally,
+      lifecycle: "partial",
+      materializedBallots: [latestAmend, ...ballots],
+      lateResponses: [],
+      history: [tally],
+      timeline,
+    });
+
+    expect(record).toContain(
+      "Reservation alice [amend:2026-08-13T10:00:04Z] GoA 3: Latest reservation",
+    );
+    expect(record).not.toContain("GoA 2: A reservation");
+  });
+
+  test("verifier rejects a current hold that cannot be independently reproduced", () => {
+    const forgedTally: CanonicalTally = {
+      ...tally,
+      results: tally.results.map((result) =>
+        result.questionId === "q-a"
+          ? {
+              questionId: "q-a",
+              kind: "hold" as const,
+              reason: "quorum-short" as const,
+              counts: { favor: 2, against: 0, abstain: 0, discuss: 0 },
+            }
+          : result,
+      ),
+    };
+    const record = renderElectionRecord({
+      definition,
+      tally: forgedTally,
+      lifecycle: "partial",
+      materializedBallots: ballots,
+      lateResponses: [],
+      history: [forgedTally],
+      timeline,
+    });
+    const result = verifyElectionRecord({
+      definition,
+      ledgerBallots: ballots,
+      materializedBallots: ballots,
+      history: [forgedTally],
+      currentTally: forgedTally,
+      lifecycle: "partial",
+      lateResponses: [],
+      timeline,
+      record,
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("expected findings");
+    expect(result.error).toContainEqual(
+      expect.objectContaining({ kind: "result-mismatch", questionId: "q-a" }),
+    );
+  });
 });
 
 describe("U4 delivery booking", () => {

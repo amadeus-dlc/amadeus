@@ -75,7 +75,7 @@ describe("t550 election per-question tally properties", () => {
         fc.integer({ min: 1, max: 2 }),
         fc.integer({ min: 1, max: 2 }),
         (voter, questionId, beforeChoice, afterChoice) => {
-          const resolved = resolveResponses([
+          const resolved = resolveResponses(definition, [
             ballot(voter, undefined, [response(questionId, beforeChoice, 1)]),
             ballot(voter, "2026-08-13T00:00:01Z", [response(questionId, beforeChoice, 1)]),
             ballot(voter, "2026-08-13T00:00:01Z", [response(questionId, afterChoice, 1)]),
@@ -107,7 +107,7 @@ describe("t550 election per-question tally properties", () => {
           );
           const together = tallyQuestions(
             definition,
-            resolveResponses(ballots),
+            resolveResponses(definition, ballots),
             ["q-a", "q-b"],
             null,
           );

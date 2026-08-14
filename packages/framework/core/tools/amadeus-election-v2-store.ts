@@ -236,7 +236,9 @@ function encodeElection(
 ): ElectionV2StoreResult<string> {
   const encoded = ElectionDefinitionCodec.encode(definition);
   if (!encoded.ok) return err(codecError(encoded.error.category));
-  return ok(JSON.stringify({ ...(JSON.parse(encoded.value) as object), state }, null, 2));
+  const raw = JSON.parse(encoded.value) as unknown;
+  if (!isRecord(raw)) return err("corrupt");
+  return ok(JSON.stringify({ ...raw, state }, null, 2));
 }
 
 function ballotContext(ballot: CanonicalBallot): { targetQuestionIds: string[] } {
@@ -296,7 +298,13 @@ function readPendingVoter(
   if (!existsSync(path)) return ok([]);
   const read = readJson(path);
   if (!read.ok) return read;
-  if (!isRecord(read.value.raw) || read.value.raw.schemaVersion !== 2 || !Array.isArray(read.value.raw.events)) {
+  if (
+    !isRecord(read.value.raw) ||
+    read.value.raw.schemaVersion !== 2 ||
+    read.value.raw.electionId !== definition.electionId ||
+    read.value.raw.voter !== voter ||
+    !Array.isArray(read.value.raw.events)
+  ) {
     return err("corrupt");
   }
   const events: PendingEvent[] = [];
@@ -856,9 +864,14 @@ export const ElectionV2Store = {
     }
     const file = {
       schemaVersion: 2,
+      electionId,
+      voter: ballot.voter,
       events: [
         ...voterPending.value,
-        { arrivalSequence, ballot: JSON.parse(encoded.value) as CanonicalBallot },
+        {
+          arrivalSequence,
+          ballot: JSON.parse(encoded.value) as unknown,
+        },
       ],
     };
     const write = writeStoreFile(

@@ -370,7 +370,7 @@ export function tallyElectionV2(
   if (!refreshed.ok) return storeError(directive.electionId, refreshed.error);
   const draft = tallyQuestions(
     refreshed.value.definition,
-    resolveResponses(refreshed.value.ledger),
+    resolveResponses(refreshed.value.definition, refreshed.value.ledger),
     directive.targetQuestionIds,
     checked.value.currentTally,
   );
@@ -475,7 +475,9 @@ export function reportElectionV2(
   const expectedCurrentRun = directive.kind === "tally-ready"
     ? directive.candidateRunId
     : directive.expectedRunId;
-  const currentTargets = current?.targetQuestionIds ?? directive.targetQuestionIds;
+  const observedTargets = directive.kind === "tally-ready"
+    ? current?.targetQuestionIds ?? directive.targetQuestionIds
+    : currentTargets(read.value);
   let currentPreserved: string | null = null;
   if (current !== null) {
     if (directive.kind === "tally-ready") currentPreserved = current.preservedResultDigest;
@@ -491,7 +493,7 @@ export function reportElectionV2(
   if (
     !states.includes(read.value.state) ||
     (expectedCurrentRun !== null && current?.runId !== expectedCurrentRun) ||
-    !sameIds(currentTargets, directive.targetQuestionIds) ||
+    !sameIds(observedTargets, directive.targetQuestionIds) ||
     currentPreserved !== expectedPreserved
   ) {
     return cliError("stale-directive", directive.electionId, "request a current directive and retry", {

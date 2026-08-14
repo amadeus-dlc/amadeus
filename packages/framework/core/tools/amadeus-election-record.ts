@@ -30,6 +30,10 @@ import {
   type CanonicalTally,
   TallyV2Codec,
 } from "./amadeus-election-codec.ts";
+import {
+  resolveResponses,
+  tallyQuestions,
+} from "./amadeus-election-question-tally.ts";
 
 // --- GoaLineCode -----------------------------------------------------------
 
@@ -452,13 +456,9 @@ function questionReservations(
   ballots: readonly CanonicalBallot[],
   questionId: string,
 ): string[] {
-  const byVoter = new Map(ballots.map((ballot) => [ballot.voter, ballot]));
-  return definition.voters.flatMap((voter) => {
-    const ballot = byVoter.get(voter);
-    const response = ballot?.responses.find((candidate) => candidate.questionId === questionId);
+  return resolveResponses(definition, ballots).flatMap(({ voter, ballot, response }) => {
     if (
-      ballot === undefined ||
-      response === undefined ||
+      response.questionId !== questionId ||
       !RECORD_RESERVATION_GOA.has(response.goa) ||
       response.reservation === null
     ) {
@@ -804,7 +804,56 @@ function verifyCurrentResults(
   input: ElectionRecordVerificationInput,
   expectedIds: readonly string[],
 ): ElectionRecordFinding[] {
-  return expectedIds.flatMap((questionId) => verifyQuestionCounts(input, questionId));
+  return [
+    ...expectedIds.flatMap((questionId) => verifyQuestionCounts(input, questionId)),
+    ...verifyRecomputedTally(input, expectedIds),
+  ];
+}
+
+function verifyRecomputedTally(
+  input: ElectionRecordVerificationInput,
+  expectedIds: readonly string[],
+): ElectionRecordFinding[] {
+  const previous = input.history.length > 1 ? input.history.at(-2) ?? null : null;
+  const recomputed = tallyQuestions(
+    input.definition,
+    resolveResponses(input.definition, input.materializedBallots),
+    input.currentTally.targetQuestionIds,
+    previous,
+  );
+  if (!recomputed.ok) {
+    return [{
+      kind: "result-mismatch",
+      expected: "reproducible current tally",
+      actual: recomputed.error.category,
+    }];
+  }
+  const expectedById = new Map(
+    recomputed.value.results.map((result) => [result.questionId, result]),
+  );
+  const actualById = new Map(
+    input.currentTally.results.map((result) => [result.questionId, result]),
+  );
+  const findings = expectedIds.flatMap((questionId): ElectionRecordFinding[] => {
+    const expected = expectedById.get(questionId);
+    const actual = actualById.get(questionId);
+    return JSON.stringify(expected) === JSON.stringify(actual)
+      ? []
+      : [{
+          kind: "result-mismatch",
+          questionId,
+          expected: JSON.stringify(expected ?? "missing"),
+          actual: JSON.stringify(actual ?? "missing"),
+        }];
+  });
+  if (input.lifecycle !== recomputed.value.lifecycle) {
+    findings.push({
+      kind: "result-mismatch",
+      expected: recomputed.value.lifecycle,
+      actual: input.lifecycle,
+    });
+  }
+  return findings;
 }
 
 function verifyHistorySources(input: ElectionRecordVerificationInput): ElectionRecordFinding[] {

@@ -61,7 +61,7 @@ const favorB1 = { questionId: "q-b", choiceInternalNo: 1, goa: 1, reservation: n
 
 describe("t549 election per-question tally", () => {
   test("resolves by voter and question on receipt time, with append-later ties and legacy rows first", () => {
-    const resolved = resolveResponses([
+    const resolved = resolveResponses(definition, [
       ballot("alice", undefined, [favorA1, favorB1]),
       ballot("alice", "2026-08-13T00:00:01Z", [
         { ...favorA1, choiceInternalNo: 2 },
@@ -82,8 +82,22 @@ describe("t549 election per-question tally", () => {
     ]);
   });
 
+  test("normalizes resolved responses to definition voter and question order", () => {
+    const resolved = resolveResponses(definition, [
+      ballot("bob", "2026-08-13T00:00:02Z", [favorB1, favorA1]),
+      ballot("alice", "2026-08-13T00:00:01Z", [favorB1, favorA1]),
+    ]);
+
+    expect(resolved.map(({ voter, response }) => [voter, response.questionId])).toEqual([
+      ["alice", "q-a"],
+      ["alice", "q-b"],
+      ["bob", "q-a"],
+      ["bob", "q-b"],
+    ]);
+  });
+
   test("isolates same internalNo across questions and assembles mixed established and hold results", () => {
-    const resolved = resolveResponses([
+    const resolved = resolveResponses(definition, [
       ballot("alice", "2026-08-13T00:00:01Z", [favorA1, favorB1]),
       ballot("bob", "2026-08-13T00:00:02Z", [
         favorA1,
@@ -106,7 +120,7 @@ describe("t549 election per-question tally", () => {
   test("preserves established questions on a hold-only rerun without mutating the prior tally", () => {
     const first = tallyQuestions(
       definition,
-      resolveResponses([
+      resolveResponses(definition, [
         ballot("alice", "2026-08-13T00:00:01Z", [favorA1, favorB1]),
         ballot("bob", "2026-08-13T00:00:02Z", [favorA1, { ...favorB1, choiceInternalNo: 2 }]),
       ]),
@@ -125,7 +139,7 @@ describe("t549 election per-question tally", () => {
     const snapshot = JSON.stringify(prior);
     const rerun = tallyQuestions(
       definition,
-      resolveResponses([
+      resolveResponses(definition, [
         ballot("alice", "2026-08-13T00:02:01Z", [favorB1]),
         ballot("bob", "2026-08-13T00:02:02Z", [favorB1]),
       ]),
@@ -162,7 +176,7 @@ describe("t549 election per-question tally", () => {
 
   test("calculates early eligibility independently per question", () => {
     const threeVoters = { ...definition, voters: ["alice", "bob", "cara"] };
-    const resolved = resolveResponses([
+    const resolved = resolveResponses(threeVoters, [
       ballot("alice", "2026-08-13T00:00:01Z", [favorA1, favorB1]),
       ballot("bob", "2026-08-13T00:00:02Z", [favorA1, { ...favorB1, goa: 8 }]),
     ]);
@@ -183,7 +197,7 @@ describe("t549 election per-question tally", () => {
           { ...favorA1, goa: goas[index] as number },
         ]),
       );
-      const result = tallyQuestions(election, resolveResponses(responses), ["q-a"], null);
+      const result = tallyQuestions(election, resolveResponses(election, responses), ["q-a"], null);
       if (!result.ok) throw new Error(result.error.category);
       return result.value.results[0];
     };
@@ -211,7 +225,7 @@ describe("t549 election per-question tally", () => {
     };
     const result = tallyQuestions(
       election,
-      resolveResponses([
+      resolveResponses(election, [
         ballot("alice", "2026-08-13T00:00:01Z", [{ ...favorA1, choiceInternalNo: 2, goa: 4 }]),
         ballot("bob", "2026-08-13T00:00:02Z", [favorA1]),
         ballot("cara", "2026-08-13T00:00:03Z", [favorA1]),
@@ -255,7 +269,7 @@ describe("t549 election per-question tally", () => {
 
     const established = tallyQuestions(
       definition,
-      resolveResponses([
+      resolveResponses(definition, [
         ballot("alice", "2026-08-13T00:00:01Z", [favorA1, favorB1]),
         ballot("bob", "2026-08-13T00:00:02Z", [favorA1, favorB1]),
       ]),
@@ -276,7 +290,9 @@ describe("t549 election per-question tally", () => {
       error: { category: "target-preserved-overlap", questionId: "q-a" },
     });
 
-    const invalid = resolveResponses([ballot("mallory", "2026-08-13T00:00:01Z", [favorA1])]);
+    const invalid = resolveResponses(definition, [
+      ballot("mallory", "2026-08-13T00:00:01Z", [favorA1]),
+    ]);
     expect(tallyQuestions(definition, invalid, ["q-a", "q-b"], null)).toMatchObject({
       ok: false,
       error: { category: "response-coverage" },

@@ -252,6 +252,7 @@ function decodeLegacyDefinition(
   if (!nonBlank(raw.electionId)) return failure("invalid-value", "$.electionId", "nonblank string");
   if (typeof raw.kind !== "string") return failure("shape", "$.kind", "string");
   if (typeof raw.question !== "string") return failure("shape", "$.question", "string");
+  if (raw.question.length === 0) return failure("invalid-value", "$.question", "nonempty string");
   const choices = parseChoices(raw.choices, "$.choices");
   if (!choices.ok) return choices;
   const voters = parseVoters(raw.voters, "$.voters");
