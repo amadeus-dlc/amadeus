@@ -53,6 +53,7 @@
 
 - ノルムは定期的に論理矛盾を監査し、大量追加の直後・intent 完了の節目で矛盾・重複・失効を棚卸しして整理案を裁定にかける。迷う場合(矛盾か意図的例外か不明、統合で意味が変わりうる、暫定と恒久の境界が曖昧)は無理に決めずユーザーへエスカレーションする。ノルム変更は溜めず、persist のたび origin/main 起点の単独ブランチで PR を作り独立レビューを経てマージする(マージは人間承認) <!-- cid:requirements-analysis:norm-consistency-review -->
 
+- 実装 Bolt の検証順序は remote-first を原則とする — 実装がコミットされたら最優先で branch を push して PR を作成し、blocking 検証(フルスイート・coverage・conformance 等)はリモート CI を正とする。ローカルは typecheck / lint / targeted テスト / coverage-patch-quick advisory までとし、ローカルフルスイートの完走を push・PR 作成の前提条件や builder の完了条件にしない(ローカルで全部通してから push する順序自体が誤り)。ユーザー直接裁定(2026-08-14、同種失敗の再発への是正) (learned 2026-08-14) <!-- cid:code-generation:c2 -->
 ## Issue 運用
 
 - 起票経路は相互排他の2つ。(A) **Issue-first**: Issue Form から起票し、種別は `bug` / `enhancement` / `documentation` / `question` から必ず1つ。(B) **intent-first**: intent record を正本に engine がミラー Issue を生成し、record → Issue の一方向同期で概要・リンク・状態だけを共有する。経路・種別・優先度(P0〜P3)・bug の重大度(S1〜S4)・補助ラベルは独立の軸とし、起票時に種別1つと優先度1つ(bug は重大度も)を付ける <!-- cid:requirements-analysis:issue-taxonomy -->
