@@ -18,3 +18,10 @@ requirements-analysis checkpoint の spec-change advisory(advisory_instance `65d
 ## 補記(CI ランナーの先行試行)
 
 最初に `run-model-check-ci.ts run --root <worktree>` を試行し、18 runs 完走後に `ARTIFACT_VERIFY_FAILURE`(detail: `runtime receipt is incomplete`)で exit 2 となった。これは runtime receipt が GitHub Actions 環境変数(RUNNER_OS 等)を要求する CI 専用契約のためで、ローカル実行の正規経路はステージ本文 Step 2 の `run-model-check.ts` 個別実行である。試行時に worktree 直下へ生成された `acceptance.json` / `verification.json` は削除済み。
+
+
+## 本 workflow 経路の判定(2026-08-14 追記): NOT_APPLICABLE
+
+ステージ本文 Step 1 に従い、直前の適用性評価(`construction/tla-authoring/applicability-assessment.md`、ladder AUTO_DECIDED `auto-decision-173aa51b403b39786d9bfc14ca115d8a`)が terminal route(not-applicable)を記録しているため、本 workflow 経路では TLC を起動せず `NOT_APPLICABLE` を記録する。
+
+上節の advisory 由来の実測(登録3モデル NOT_DETECTED ×3、既定 provider auto → sandbox-exec)は本判定の代替ではなく、独立に存在するエビデンスである。
