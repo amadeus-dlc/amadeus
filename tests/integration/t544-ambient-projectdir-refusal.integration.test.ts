@@ -31,6 +31,7 @@ import {
   handleFailureRuling,
   handleNext,
   handleReport,
+  runEngineMain,
 } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import {
   AMADEUS_SRC,
@@ -164,6 +165,38 @@ describe("t544 in-process entrances refuse an unnamed project (#3004, env rung)"
     // Pollution first: this is the defect itself, so the pre-fix red names it.
     expect(auditShardsOf(ambient)).toEqual([]);
     expectRefusal(directives);
+  });
+});
+
+describe("t544 the CLI names its project before dispatch (#3004, main() side)", () => {
+  // The refusal is exclusive to in-process callers: main() resolves argv's
+  // project dir before dispatch, so the same handlers keep serving the CLI.
+  // Driven through runEngineMain (the t214 T5 idiom) so the dispatch lines
+  // register in this process's lcov rather than a spawned child's.
+  test("`report` dispatches with the argv project and keeps its typed error", () => {
+    const proj = newSeededProject();
+    process.argv = [
+      "bun", "amadeus-orchestrate.ts",
+      "report", "--project-dir", proj, "--result", "__not_a_verdict__",
+    ];
+
+    const directives = capture(() => runEngineMain());
+
+    expect(directives).toHaveLength(1);
+    expect(directives[0]?.kind).toBe("error");
+    expect(directives[0]?.message ?? "").toContain('Unknown --result "__not_a_verdict__"');
+    // The named project — not an ambient one — received the ERROR_LOGGED row.
+    expect(auditShardsOf(proj)).toHaveLength(1);
+  });
+
+  test("`park` dispatches with the argv project and parks that workflow", () => {
+    const proj = newSeededProject();
+    process.argv = ["bun", "amadeus-orchestrate.ts", "park", "--project-dir", proj];
+
+    const directives = capture(() => runEngineMain());
+
+    expect(directives).toHaveLength(1);
+    expect(directives[0]?.kind).toBe("parked");
   });
 });
 
