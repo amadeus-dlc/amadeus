@@ -44,7 +44,7 @@ import {
 	type SensorFile,
 	templateEligibleArtifacts,
 } from "./amadeus-graph.ts";
-import { resolveAmadeusConfig } from "./amadeus-config.ts";
+import { type AmadeusConfigOutcome, resolveAmadeusConfig } from "./amadeus-config.ts";
 import {
 	codekbDir,
 	errorMessage,
@@ -318,8 +318,14 @@ export function resolvePluginSettingsForSensor(
 // configuration is already fatal everywhere else it is read; a sensor that
 // silently fired on defaults instead would hide the very misconfiguration the
 // resolution is meant to catch.
-function pluginSettingsOverrides(projectDir: string): PluginSettingsOverrides {
-	const outcome = resolveAmadeusConfig(projectDir);
+//
+// The resolver is a parameter so both arms are drivable in-process: the real
+// one reads the workspace, a test passes a resolved or invalid outcome directly.
+export function pluginSettingsOverrides(
+	projectDir: string,
+	resolveConfig: (dir: string) => AmadeusConfigOutcome = resolveAmadeusConfig,
+): PluginSettingsOverrides {
+	const outcome = resolveConfig(projectDir);
 	if (outcome.kind === "invalid") {
 		const detail = outcome.issues
 			.map((issue) => `${issue.key} in ${issue.path} (expected ${issue.expected})`)
@@ -332,7 +338,7 @@ function pluginSettingsOverrides(projectDir: string): PluginSettingsOverrides {
 // A resolution failure aborts the sensor as a FINDING rather than a crash: the
 // SENSOR_FIRED row already exists, so the run must close with a terminal row,
 // and the operator needs the offending key named in the detail file.
-function settingsFailureOutcome(
+export function settingsFailureOutcome(
 	ctx: FireContext,
 	resolved: SettingsResolution | null,
 ): FireOutcome | null {
