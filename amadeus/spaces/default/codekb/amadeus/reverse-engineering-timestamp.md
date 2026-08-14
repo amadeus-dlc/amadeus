@@ -1,18 +1,18 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260814-copytree-guard-boundary）
+## 実行メタデータ（現在: 260814-coverage-quick-norm）
 
 - Date: `2026-08-14`
-- Base commit: `5b12d96e99cbf46711acd3dc2b8c103be1b0f801`（`reverse-engineering-timestamp.md` + `re-scans/*.md` の全 observed のうち **HEAD の祖先で距離最小**。`git merge-base --is-ancestor 5b12d96e9 HEAD` = **exit 0**、`git rev-list --count 5b12d96e9..HEAD` = **3 commits**。`cid:reverse-engineering:rescan-base-ancestry`）
-- Observed commit: `f60b3f4c868f3b7608a06f08393b8e2f10287fad`（= 本 worktree HEAD、`git rev-parse HEAD`。`origin/main` 系譜上のコミットであることを `git merge-base HEAD origin/main` = 同一 SHA で確認。ローカル `origin/main` は本 scan 時点で **2 commits 先行**（`fb1939dfd` metrics snapshot / `cd64486a6` docs(norms)）だが、`git diff --name-only f60b3f4c8..cd64486a6 -- tests/harness/fixtures.ts tests/harness/tui-fixtures.ts` が**空出力**であり患部非交差。`cid:reverse-engineering:c2-observed-mainline-commit`）
-- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、depth `Minimal`、build `bun`
-- Focus: [Issue #3014](https://github.com/amadeus-dlc/amadeus/issues/3014) — `copyTreeWithRetry` のガード適用境界が非対称であり、同一関数内の姉妹面が素 `cpSync` のまま残る。スコープは (a) 適用範囲拡大 / (b) dest-fresh 契約の明文化 / (c) `CopyTreeOps.exists` 未消費と診断のシーム迂回
-- Scan mode: **xrev differential scan**（`cid:reverse-engineering:c1-xrev-scan-mode` / `c1-xrev-single-issue`）— run `xrev-260814-3014`、クロスレビュー 2 名とも **CONFIRMED_WITH_REFINEMENTS**、収束 `ESTABLISHED_WITH_REFINEMENTS`。**currency 根拠(実測)**: observed(`f60b3f4c8`)は **xrev が凍結した SHA と同一**であり、review 断面と observed 断面が一致するため currency 劣化は構造的に発生しない。表現形式の移行検査（`cid:reverse-engineering:c5-xrev-currency-schema-migration`）: 両断面が同一である以上、間に移行 PR が挟まる余地が無く c5 の不成立条件に**該当しない**
-- Focus 領域の差分: 患部 `tests/harness/fixtures.ts` は base..observed で **+83 行**（`git diff --stat 5b12d96e9..f60b3f4c8 -- tests/harness/fixtures.ts`。内訳 = #3015 の +63 行が患部そのもの、#2999 の +20 行が患部上流）、`tests/harness/tui-fixtures.ts` は**無変更**（`git diff --name-only 5b12d96e9..f60b3f4c8 -- tests/harness/tui-fixtures.ts` が空出力）。行シフトがあるため全座標を observed 断面で再取得した
-- 中核知見: ガードの**適用原理がコード上に存在しない**ことが本質。dest-fresh 契約は `fixtures.ts:638-645` のコメントにのみ存在し、型にも assert にも現れないため違反を機械検出できない。その帰結として、本 intent の Developer scan が「適用候補 6 サイト全て dest-fresh 充足」と報告した中に**違反 1 件**（`fixtures.ts:867` — dest `<proj>/amadeus` は `createTestProject`→`seedWorkspaceShell:221` が事前作成しており、ガード適用は seed 済みの clone-id / cursor / intents registry を消す）が含まれていた。pred-a2 の 8 サイトのうち実質適用可能は **5 サイト**（`tui-fixtures.ts:170/172/177/179/188`）、単一ファイル 2 面（`:171/:178`）は `countFilesRecursive:795` の `readdirSync` が `try` 外にあることによる **ENOTDIR 非リトライ**で構造的に適用不可。スコープ (c) は c1（`exists` 除去 = 削除 6 行 / assert 変更 0 / 振る舞い不変）と c2（readdir ポート新設 = 既存テスト `:323-368` の明文前提を反転し、`safeReaddir` の coverage 免除 expiry `remove when reportCopyTreeFailure takes an injectable readdir port` に到達）に分かれ、**独立に実施可能**
-- Verification: git 状態変更・GitHub 書込・`bun run build`・engine/state 操作は**すべてゼロ**。書き込みは `codekb/amadeus/` 配下のみ。dest-fresh の実測 scratch は repo 外で実行（`cid:code-generation:c2-env-isolation-seam-inventory`）
-- Updated artifacts: `code-quality-assessment.md`（新現在節 — Q-1〜Q-8）/ `reverse-engineering-timestamp.md`（本節）/ `re-scans/260814-copytree-guard-boundary.md`（新規）。直前の現在節（`260814-t99-copytree-race`）は本文保持のまま履歴へ降格し、`260814-t528-ambient-isolation` に残っていた現在時制マーカーも履歴ラベルへ更新（`cid:reverse-engineering:c1` / `c3-relabel`）
-- 差分リージョンの非交差判定: base..observed の 3 commits のうち #2999（`d7ffaa544`、100 files / +4896 / −111）は `tests/harness/fixtures.ts` に触れるが、hunk は `@@ -49,6 +49,10 @@`（import 追加）と `@@ -158,6 +162,22 @@`（`seedDeliveryBoltPlan` 新設）の 2 箇所のみで患部レンジの**上流**。反証確認: `git diff d7ffaa544~1..d7ffaa544 -- tests/harness/fixtures.ts | grep -cE '^\+.*(cpSync|copyTreeWithRetry|CopyTreeOps)'` = **0**（exit 1）。焦点非交差のため codekb の焦点節では扱わず、判断根拠を `re-scans/260814-copytree-guard-boundary.md` §7 に記録した
+- Base commit: `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`（直前 timestamp の observed。`git merge-base --is-ancestor 5f6b5bf97 HEAD` = **exit 0**、`git rev-list --count 5f6b5bf97..HEAD` = **10**）
+- Observed commit: `d7ffaa5442266508d8e67babc3e0b947fb4c1637`（= 本 worktree HEAD = `origin/main`、`git rev-parse HEAD`）
+- Scope: `self-document`、Brownfield、単一 repo `amadeus`、depth `Standard`、build `bun`
+- Focus: coverage-patch-quick を pre-push 内側ループの標準とする運用ノルム（Inbox 追記）。ツーリングは PR #2965 / Issue #2933 で着地済み
+- Scan mode: 通常の差分リフレッシュ（xrev 不採用 — 再実装 Issue ではない）
+- 中核知見: quick は `EXIT_ADVISORY=0` の近似。CI 正本は `coverage:ci -- -P 4`。job 94095568607 で入力生成 11 分 03 秒 / 判定 3 秒。single-owner と数値転記規律との矛盾なし。Inbox に当該ノルムは未存在（`git grep` 0 行 / exit 1）
+- Verification: git 状態変更・GitHub 書込・engine 操作・coverage 実行はすべてゼロ
+- Updated artifacts: `architecture.md`（新現在節）。直前の現在節は履歴へ降格
+- Reviewed-and-unchanged artifacts: `business-overview.md` / `code-structure.md` / `api-documentation.md` / `component-inventory.md` / `technology-stack.md` / `dependencies.md` / `code-quality-assessment.md` — 本 intent の節を持たないため後続はここから本 intent の事実を引かない
+- Per-intent record: `re-scans/260814-coverage-quick-norm.md`
 
 ## 実行メタデータ（履歴: 260814-t99-copytree-race）
 

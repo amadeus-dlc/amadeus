@@ -1154,6 +1154,13 @@
     "status": "complete"
   },
   {
+    "uuid": "019ffe33-9663-73f3-bcc6-70bd6fde1987",
+    "slug": "ambient-error-sink",
+    "dirName": "260814-ambient-error-sink",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
     "uuid": "019ffda5-bc87-754d-92b6-ff1b7a50d9a4",
     "slug": "t245-origin-fixture",
     "dirName": "260814-t245-origin-fixture",
@@ -1173,6 +1180,13 @@
     "dirName": "260814-t99-copytree-race",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019ffee6-ed59-7748-85cb-7f578201362a",
+    "slug": "coverage-quick-norm",
+    "dirName": "260814-coverage-quick-norm",
+    "scope": "self-document",
+    "status": "in-flight"
   },
   {
     "uuid": "019fff14-98a2-725c-9b20-99add2639251",
