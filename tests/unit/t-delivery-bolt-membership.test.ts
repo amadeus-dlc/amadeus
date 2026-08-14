@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   parseDeliveryBoltPlan,
+  projectDeliveryBoltPlan,
   type DeliveryBoltProjection,
 } from "../../packages/framework/core/tools/amadeus-delivery-bolts.ts";
 
@@ -32,6 +33,15 @@ describe("Delivery Bolt membership projection", () => {
     expect(parseDeliveryBoltPlan("## Bolt B1\n\n- **Units:** `unit-a`, `unit-a`\n").ok).toBe(false);
     expect(parseDeliveryBoltPlan("## Bolt B1\n\n- **Units:** `unit-a`\n\n## Bolt B2\n\n- **Units:** `unit-a`\n").ok).toBe(false);
     expect(parseDeliveryBoltPlan("## Bolt B1\n\n- **Units:** none\n").ok).toBe(false);
+    expect(parseDeliveryBoltPlan("## Bolt invalid/slug\n\n- **Units:** `unit-a`\n")).toEqual({
+      ok: false,
+      message: "every Delivery Bolt must have a non-empty slug",
+    });
+    expect(parseDeliveryBoltPlan("# Delivery Plan\n")).toEqual({
+      ok: false,
+      message: "the Delivery Plan contains no Delivery Bolt headings",
+    });
+    expect(projectDeliveryBoltPlan("# Delivery Plan\n").ok).toBe(false);
   });
 
   test("projection type carries the approved source digest used by resume", () => {

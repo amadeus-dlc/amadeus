@@ -65,11 +65,15 @@ function writeEngineSingletonCarrier(f: ReturnType<typeof fixture>): void {
   }
 }
 
-function engineCreateArgs(f: ReturnType<typeof fixture>, units = "pr-gate"): string[] {
+function engineCreateArgs(
+  f: ReturnType<typeof fixture>,
+  units = "pr-gate",
+  bolt = "pr-gate",
+): string[] {
   return [
     "create", "--repo", "amadeus-dlc/amadeus", "--head", "feature/2838", "--base", "main",
     "--title", "fix: singleton", "--body-file", f.body, "--record", f.record,
-    "--bolt", "pr-gate", "--unit", "pr-gate",
+    "--bolt", bolt, "--unit", "pr-gate",
     ...(units === "pr-gate" ? [] : ["--units", units]),
   ];
 }
@@ -210,6 +214,16 @@ describe("t534 multi-Unit Bolt delivery lifecycle", () => {
     };
     const statusArgs = ["status", "--repo", "amadeus-dlc/amadeus", "--pr", "2838", "--unit", "pr-gate", "--record", f.record];
     expect((await runCli(statusArgs, seams(f.record, f.sha, calls, false, provenance))).exitCode).toBe(0);
+    const mismatchedProvenance = {
+      title: "[pr-gate/pr-gate/foreign+pr-gate] fix: singleton",
+      body: provenance.body.replace("- Unit: `pr-gate`", "- Unit: `foreign,pr-gate`"),
+    };
+    const mismatchedStatus = await runCli(
+      [...statusArgs, "--units", "foreign,pr-gate"],
+      seams(f.record, f.sha, calls, false, mismatchedProvenance),
+    );
+    expect(mismatchedStatus.exitCode).toBe(3);
+    expect(mismatchedStatus.stderr).toContain("DELIVERY_BOLT_AUTHORITY_MISMATCH");
     const reportArgs = ["report", "--repo", "amadeus-dlc/amadeus", "--pr", "2838", "--unit", "pr-gate", "--record", f.record];
     expect((await runCli(reportArgs, seams(f.record, f.sha, calls, false, provenance))).exitCode).toBe(0);
     expect(evaluateReportFormat(reportPathFor(f.record, "pr-gate"), "pr-convergence").pass).toBe(true);
@@ -221,6 +235,24 @@ describe("t534 multi-Unit Bolt delivery lifecycle", () => {
       for_each: "unit-of-work",
       produces: ["pr-convergence-report"],
     } as never)).toBeNull();
+
+    const graphPath = join(f.record, "runtime-graph.json");
+    const statePath = join(f.record, "amadeus-state.md");
+    const graph = readFileSync(graphPath, "utf-8");
+    const state = readFileSync(statePath, "utf-8");
+    setEngineProjectionField(f, "sourceDigest", `sha256:${"0".repeat(64)}`);
+    expect(deliveryEvidenceCoverageRefusal(f.root, {
+      ...codeGeneration,
+      for_each: "unit-of-work",
+      produces: ["pr-convergence-report"],
+    } as never)).toContain("DELIVERY_EVIDENCE_CARRIER_MISMATCH");
+    writeFileSync(graphPath, graph);
+    writeFileSync(statePath, state.replace("delivery-planning — SKIP", "delivery-planning — EXECUTE"));
+    expect(deliveryEvidenceCoverageRefusal(f.root, {
+      ...codeGeneration,
+      for_each: "unit-of-work",
+      produces: ["pr-convergence-report"],
+    } as never)).toContain("DELIVERY_EVIDENCE_CARRIER_STALE");
   });
 
   test("engine singleton ignores construction directories owned by stages outside the runtime audit rows", async () => {
@@ -254,6 +286,7 @@ describe("t534 multi-Unit Bolt delivery lifecycle", () => {
         ["unit", "foreign"],
         ["scope", "self-refactor"],
         ["deliveryPlanning", "EXECUTE"],
+        ["bolts", [{ bolt: "pr-gate", units: ["foreign"] }]],
       ] as const).map(([field, value]) =>
         (f: ReturnType<typeof fixture>) => setEngineProjectionField(f, field, value)
       ),
@@ -288,6 +321,58 @@ describe("t534 multi-Unit Bolt delivery lifecycle", () => {
       seams(requested.record, requested.sha, requestedCalls),
     )).exitCode).toBe(2);
     expect(requestedCalls).toEqual([]);
+
+    const foreignBolt = fixture("self-fix"); const foreignBoltCalls: string[][] = [];
+    writeEngineSingletonCarrier(foreignBolt);
+    expect((await runCli(
+      engineCreateArgs(foreignBolt, "pr-gate", "other"),
+      seams(foreignBolt.record, foreignBolt.sha, foreignBoltCalls),
+    )).exitCode).toBe(2);
+    expect(foreignBoltCalls).toEqual([]);
+  });
+
+  test("completion rejects a runtime carrier when no Intent record resolves", () => {
+    const root = mkdtempSync(join(tmpdir(), "t534-no-intent-")); roots.push(root);
+    const intents = join(root, "amadeus", "spaces", "default", "intents");
+    mkdirSync(join(intents, "construction", "orphan-unit"), { recursive: true });
+    writeFileSync(join(intents, "amadeus-state.md"), "- **Scope**: self-fix\n");
+    writeFileSync(join(intents, "runtime-graph.json"), JSON.stringify({
+      delivery_bolts: { authority: "approved-plan" },
+    }));
+    const codeGeneration = loadStageGraph().find((stage) => stage.slug === "code-generation");
+    if (codeGeneration === undefined) throw new Error("code-generation stage must exist");
+    expect(deliveryEvidenceCoverageRefusal(root, {
+      ...codeGeneration,
+      for_each: "unit-of-work",
+      produces: ["pr-convergence-report"],
+    } as never)).toContain("no Intent record resolves");
+  });
+
+  test("completion reports missing and malformed approved carrier sources and graphs", () => {
+    const f = fixture("self-fix");
+    mkdirSync(join(f.record, "construction", "cli"), { recursive: true });
+    const codeGeneration = loadStageGraph().find((stage) => stage.slug === "code-generation");
+    if (codeGeneration === undefined) throw new Error("code-generation stage must exist");
+    const node = {
+      ...codeGeneration,
+      for_each: "unit-of-work",
+      produces: ["pr-convergence-report"],
+    } as never;
+    const graphPath = join(f.record, "runtime-graph.json");
+    const planPath = join(f.record, "inception", "delivery-planning", "bolt-plan.md");
+
+    writeDeliveryPlan(f.record, "## Bolt delivery\n\n- **Units:** `cli`\n");
+    rmSync(planPath);
+    expect(deliveryEvidenceCoverageRefusal(f.root, node)).toContain("projected Delivery Bolt source is missing");
+
+    writeDeliveryPlan(f.record, "## Bolt delivery\n\n- **Units:** `cli`\n");
+    writeFileSync(planPath, "## Bolt invalid/slug\n\n- **Units:** `cli`\n");
+    expect(deliveryEvidenceCoverageRefusal(f.root, node)).toContain("every Delivery Bolt must have a non-empty slug");
+
+    writeFileSync(graphPath, "not-json\n");
+    expect(deliveryEvidenceCoverageRefusal(f.root, node)).toContain("missing or unreadable");
+    writeFileSync(graphPath, "[]\n");
+    expect(deliveryEvidenceCoverageRefusal(f.root, node)).toContain("is not an object");
   });
 
   test("validates approved Delivery Bolt membership for a singleton", async () => {
@@ -404,6 +489,21 @@ describe("t534 multi-Unit Bolt delivery lifecycle", () => {
       .toContain("owner projection");
     writeFileSync(b, readFileSync(a, "utf-8"));
     expect(evaluateReportFormat(b, "pr-convergence")).toMatchObject({ pass: false });
+
+    writeFileSync(b, originalB.replace("## Owner Projection", "## Broken Owner Projection"));
+    expect(evaluateReportFormat(b, "pr-convergence").findings.map((finding) => finding.field))
+      .toContain("owner projection");
+    writeFileSync(b, `${originalB}\n`);
+    const nonCanonical = evaluateReportFormat(b, "pr-convergence").findings.map((finding) => finding.field);
+    expect(nonCanonical).toContain("canonical bytes");
+    expect(nonCanonical).toContain("attestation");
+    writeFileSync(b, originalB.replaceAll("- member units: unit-a,unit-b", "- member units: unit-a"));
+    expect(evaluateReportFormat(b, "pr-convergence").findings.map((finding) => finding.field))
+      .toContain("member units");
+    writeFileSync(b, originalB);
+    writeDeliveryPlan(f.record, "## Bolt delivery\n\n- **Units:** `unit-a`, `unit-c`\n");
+    expect(evaluateReportFormat(b, "pr-convergence").findings.map((finding) => finding.field))
+      .toContain("member units");
   });
 
   test("rejects partial, duplicate, and foreign owner membership before GitHub access", async () => {
