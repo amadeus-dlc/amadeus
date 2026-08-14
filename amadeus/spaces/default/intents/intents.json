@@ -1187,5 +1187,12 @@
     "dirName": "260814-coverage-quick-norm",
     "scope": "self-document",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019fff1b-302d-7b27-8475-61ca61752ca8",
+    "slug": "autonomy-stop-fixes",
+    "dirName": "260814-autonomy-stop-fixes",
+    "scope": "self-fix",
+    "status": "in-flight"
   }
 ]
