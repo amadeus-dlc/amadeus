@@ -1,23 +1,52 @@
 # コード構造
 
-## core/tools のファイル増減（260814-fmc-macos-provider、現在、observed `5f6b5bf97`）
+## Focus Area: undefined 形の回帰テストが要求するシーム（260814-ambient-error-sink、現在、observed `6e94189de`）
 
-**観測 ref**: observed = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`、差分 base = `89532174c30ef9cc7ff29496cd6916586fdda00a`（9 commits）。
+対象: [Issue #3004](https://github.com/amadeus-dlc/amadeus/issues/3004)。測定 ref = observed `6e94189dec9e8e2bd0aaeb53bcff7cf9cba27440`。本節は**落ちる実証を成立させるために必要なテスト構造**を記録する（テストの設計自体は build-and-test / code-generation の所掌）。
 
-`packages/framework/core/tools/` の構成は base..observed で次のとおり変化した。モジュール移動はない。
+### 層の制約 — 新設回帰テストは `tests/integration/` 配下
 
-| 変化 | パス | 由来 |
+`tests/unit/` は filesystem を触る medium test を許さない。`tests/integration/t481-resolve-project-dir-worktree-marker.test.ts:4-9` が逐語で理由を宣言している:
+
+> `Placed under tests/integration/ (not tests/unit/) because it builds a real on-disk worktree layout and switches cwd — a filesystem touch classifies the test as size "medium", which the layer×size purity gate forbids in tests/unit/.`
+
+本 Issue の回帰テストは fixture プロジェクトと監査シャードを実ディスク上に作るため、**integration 層が唯一の置き場**である。
+
+### 系統 A: env 段（ラダー rung 2）の undefined 形 — chdir 不要、`t258` の直系の双子
+
+必要な fixture 要素はすべて既存にある。
+
+| 要素 | 出所 | 役割 |
 |---|---|---|
-| 追加 | `packages/framework/core/tools/amadeus-lifecycle-guard.ts`（236 行） | `0fbbec42b` / #2986 |
-| 削除 | `packages/framework/core/tools/team-up.sh` | `8b6089275` / #2975 |
-| 削除 | `packages/framework/core/tools/team-up-codex-safety-wait.ts` | 同上 |
-| 削除 | `packages/framework/core/tools/team-msg.sh` | 同上 |
+| `resetOtelPerProject()` | `tests/harness/otel-reset.ts` | dist と core の**両グラフ**をリセット（冒頭 `:11-15` が「BOTH SURFACES」の根拠を宣言）。beforeEach / afterEach で |
+| argv 中和 | `t258:56 process.argv = ["bun", "amadeus-orchestrate.ts", "report"];` | これがないと bun テストランナーの引数を argv 段が拾いうる。`t258:53-55` の理由コメント逐語: `the bug's whole point is that an in-process driver has none` |
+| `createTestProject()` × 2 | `tests/harness/fixtures.ts` | ambient 役と、汚染されてはならない側 |
+| `seedStateFile(p, "state-init-active.md")` | 同上 | `amadeus-orchestrate.ts:958` の `existsSync(stateFilePath(pd))` ガードを通すため必須 |
+| `seededAuditDir` / `auditShardsOf` | `t258:77-81` | shard 件数の観測 |
+| `console.log` 抑制 | `t258:87-95`（`driveReportError`） | directive 出力の握り潰し |
 
-削除に伴い e2e の 3 ファイルも消えた（`git diff --numstat 89532174c..HEAD -- tests/e2e`: `t-team-up-codex-safety-wait-live.serial.test.ts` −222 / `t-team-up-member-readiness.serial.test.ts` −204 / `t267-clean-env-team-mode.serial.cli.test.ts` −443、計 **−869**）。文書面は `docs/reference/26-lifecycle-guard-runtime.md`（+222）と `.ja.md`（+214）が新設され、`docs/guide/20-team-mode{,.ja}.md` と `docs/guide/team-messaging{,.ja}.md` は縮小した。8 harness への `coreDirs.tools` 投影という構造自体は不変で、投影元の集合が入れ替わっただけである。
+形: `CLAUDE_PROJECT_DIR = ambient` を張り `handleReport(["--result","__not_a_verdict__"], undefined)` を駆動 → **修正前は `ambient` に shard 1 件（落ちる実証）**、修正後は `auditShardsOf(ambient)` が空かつ拒否 directive が出る。
 
-本 intent の患部（[Issue #2361](https://github.com/amadeus-dlc/amadeus/issues/2361) / ミラー [#2995](https://github.com/amadeus-dlc/amadeus/issues/2995)）はモジュール配置ではなく `plugins/formal-model-check/tools/` 内の既存関係にあり、当該領域は base..observed で**無変更**である（`git diff --name-only 89532174c..HEAD -- plugins/formal-model-check tests/unit/t-formal-verif-tlc-spawn-planner.test.ts mise.toml` が空出力）。`tlc-spawn-planner` の実体は tracked 2 ファイルのみ（正本 + unit test、`git ls-files | grep "tlc-spawn-planner"`）で、**dist 投影も複製もない**。
+### 系統 B: marker 段（ラダー rung 3）の undefined 形 — chdir 必須
 
-## Focus Area: テスト基盤の `dist/` 依存と env 伝播（260814-t528-ambient-isolation、現在、observed `5f6b5bf97`）
+`hasWorkspaceMarker`（`packages/framework/core/tools/amadeus-lib.ts:303-306`、逐語）:
+
+```ts
+function hasWorkspaceMarker(dir: string): boolean {
+  if (!isDir(join(dir, "amadeus"))) return false;
+  return KNOWN_HARNESS_DIRS.some((h) => isDir(join(dir, h, "tools")));
+}
+```
+
+**`createTestProject()` は harness marker を作らない**（`seedWorkspaceShell` は `amadeus/` 配下しか作らず `.claude/tools` を作らない）。marker 段を踏ませるには `<root>/amadeus/` と `<root>/.claude/tools/` の**両方**が要る。既存 idiom は `t481:43-54` の `makeWorktreeFixture`（`mkdirSync(join(mainDir,"amadeus"))` + `mkdirSync(join(mainDir,".claude","tools"))`、`realpathSync` で macOS の `/var → /private/var` を吸収）と、`process.chdir` の save / restore（`t481:60-73`）。
+
+`process.chdir` を使うテストは **4 ファイル**（述語 `grep -rl "process.chdir" tests/`、Architect 実測）: `tests/integration/t230-hook-project-dir-opencode-cursor-marker.test.ts` / `t268-election-default-project-dir.integration.test.ts` / `t481-resolve-project-dir-worktree-marker.test.ts` / `t487-stage-stats.integration.test.ts`。（Developer scan は「7 ファイル」と記すが、同一述語の再実測では 4 ファイル。件数は本再実測を正とする。）
+
+### 系統 C: テスト自身の安全性 — 実 record 汚染の遮断
+
+`t258` が示すとおり、最低条件は **(1) `CLAUDE_PROJECT_DIR` を fixture へ固定 / (2) argv 中和 / (3) OTel リセット** の 3 点セット。系統 B では cwd も fixture へ移すため、`afterEach` 側に `process.chdir(originalCwd)` を置いて**失敗時にも必ず通る配置**にすること（`t481:68-73` の形）。この 3 点セットを欠いたまま undefined 形を駆動すると、テスト自身が本 Issue の欠陥を踏んで実 record へ書き込む。
+
+## Focus Area: テスト基盤の `dist/` 依存と env 伝播（260814-t528-ambient-isolation、履歴、observed `5f6b5bf97`）
 
 対象: [Issue #2981](https://github.com/amadeus-dlc/amadeus/issues/2981)。測定 ref = observed `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`。本 intent の患部はモジュール配置の変化ではなく**テストハーネスが依存する外部前提の構造**にある。
 
@@ -75,7 +104,7 @@ tests/harness/fixtures.ts
 
 `createTestProject()`（`fixtures.ts:125-137`）は `TMPDIR` 配下に `amadeus-test-` prefix で `mkdtempSync` → `realpathSync` で正規化（macOS の `/tmp` → `/private/tmp` を吸収）→ `seedWorkspaceShell` で workspace shell を植える。`.claude/` や `dist` の memory ツリーはコピーせず、それは `setupIntegrationProject`（`:765`）の役割である。後片付けは `cleanupTestProject`（`:406-408`）→ `removeTreeWithRetry`（`:574`〜）で、事後条件（パスが消えたこと）により成功を判定する再試行付き削除。
 
-## Focus Area: team-up ランチャ廃止（260813-remove-team-up、履歴、observed `97581b3e3`。**この表が挙げる 4 パスは撤去前の断面**であり、observed `5f6b5bf97` にはいずれも存在しない）
+## Focus Area: team-up ランチャ廃止（260813-remove-team-up、履歴、observed `97581b3e3`）
 
 | ファイル | 分類 |
 |---|---|
