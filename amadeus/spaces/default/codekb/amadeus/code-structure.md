@@ -169,7 +169,6 @@ tests/harness/fixtures.ts
 6. scope/harness/compose/drop/resume/completion を横断する integration tests を追加する。
 
 既存の core/plugin 非依存方向を守るには、core が plugin-specific Markdown schema を直接 import するのではなく、plugin が発行した汎用 receipt を core の既存 audit/artifact contract で検証する形が最も境界整合的である。これは設計候補であり、最終決定は後続 stage の所掌とする。
-
 ## 差分リフレッシュで観測した構造変化（260813-advisory-requestion-fix、履歴、observed `c0f9edf27`）
 
 **観測 ref**: base `854692fd7a11b124236b0427fe3d59e2fe6bf785` → observed `c0f9edf27828def6fa3dbbbc4101d753b398e025`（33 コミット / 224 ファイル、`git log --oneline 854692fd7..c0f9edf27 | wc -l` / `git diff --name-only 854692fd7..c0f9edf27 | wc -l`。総行数 +23703 / −9416、`git diff --stat … | tail -1`）。
@@ -184,3 +183,68 @@ tests/harness/fixtures.ts
 | ノルム蒸留 | `amadeus/spaces/default/memory/team.md` / `project.md` | 原理原則への縮約（#2919）と pin テスト同期（#2922） |
 
 本 intent の患部（[Issue #2967](https://github.com/amadeus-dlc/amadeus/issues/2967)）はモジュール配置ではなく既存 3 ファイル（`amadeus-advisory-choice.ts` / `amadeus-orchestrate.ts` / `amadeus-directive.ts`）間の関係にあり、`amadeus-advisory-choice.ts` は本区間で**無変更**である（`git diff --name-only 854692fd7..c0f9edf27 -- packages/framework/core/tools/amadeus-advisory-choice.ts` が空出力）。
+## Issue #2813 の患部配置（履歴、observed `c0f9edf2782`）
+
+| パス | 現在の責務 | 多問化で変わる面 |
+|---|---|---|
+| `packages/framework/core/tools/amadeus-election-model.ts` | `Election` / `Ballot` / distribution / resolution / tally の純粋モデル | stable question ID、question 別 choices/response/tally、mixed result、established preservation |
+| `packages/framework/core/tools/amadeus-election-store.ts` | election/ledger/pending/tally/registry の filesystem 永続化 | legacy/new decoder、canonical write、voter file の response 配列、global status と問結果の分離 |
+| `packages/framework/core/tools/amadeus-election-record.ts` | ruling、GoA line、留保、timeline の deterministic render/verify | question 別 ruling/GoA/reservation、順序、完全性検証 |
+| `packages/framework/core/tools/amadeus-election-transport.ts` | agmsg/subagent の通知 port | per-voter view の複数問化。通知 API 自体は原則維持可能 |
+| `packages/framework/core/tools/amadeus-election.ts` | 9 verb、directive loop、hold resolution、render/verify | held question IDs、held-only rerun、mixed output、typed tally parse |
+| `packages/framework/core/skills/amadeus-election/SKILL.md` | CLI 指令の薄い転送手順 | definition/ballot vocabulary と複数 hold 問の転送手順 |
+| `scripts/amadeus-election-migrate.ts` | 旧 direct-path 選挙の承認付き directory/registry migration | schema 一括変換ではなく dual-read fidelity の検証面 |
+| `amadeus/spaces/default/specs/tla/FormalElection.{tla,cfg}` | 単問の票受付・集計・hold を有限状態探索 | question 一意性、voter×question 解決、mixed、held-only transition、不変な established result |
+| `amadeus/spaces/default/specs/tla/model-map.json` | spec/cfg と5実装面の identity binding | spec と実装変更後の identity 同期 |
+| `tests/helpers/arbitraries/election.ts` | 単問 Election/ElectionFile の妥当・不正 arbitrary | 複数問、ID 一意性、legacy/new round-trip arbitrary |
+
+テスト面は、選挙に直接関係する既存21ファイル（unit 7、integration 13、e2e 1）に分散する。中心は model/record/transport/choice-resolution/PBT、store/loop/executor/skill/tie/registry/resolver/migration/pending/receipt、walking-skeleton である。形式モデルの completeness/model-map テストはこの21件とは別に広い formal-model-check suite と結合する。
+
+実装順の依存は `canonical model + legacy decoder` → `question tally + mixed/preservation` → `store/CLI/directive/record/skill/transport` → `migration/TLA/model-map/norm` → `build/test/CI` である。generated `dist/` と self-install surface は編集元にせず、正本変更後に build で同期する。
+
+## Issue #2985 の患部配置（現在、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
+
+| パス | 責務 | #2985 との関係 |
+|---|---|---|
+| `plugins/pr-convergence/plugin.json` | `code-generation` への report / sensor overlay | 全 Unit に同じ artifact 種別を要求する入口 |
+| `plugins/pr-convergence/stages/pr-convergence.md` | one-Bolt-one-PR の運用契約 | 複数 Unit fold を明示的に禁止 |
+| `plugins/pr-convergence/tools/pr-convergence-cli.ts` | create/status/report/override lifecycle | `unit`、`DeliveryWork`、PR identity が単数 |
+| `plugins/pr-convergence/tools/pr-convergence-provenance.ts` | title/body の検査 | Bolt / Unit が各1件。既存 PR の不一致を拒否 |
+| `plugins/pr-convergence/tools/pr-convergence-attestation.ts` | report digest と delivery identity | Bolt / Unit / PR / heads / digest が各1件 |
+| `plugins/pr-convergence/tools/pr-convergence-git-runner.ts` | checkout と local/remote head 検証 | Unit worktree の current head を拘束 |
+| `plugins/pr-convergence/tools/pr-convergence-gh-runner.ts` | PR head/title/body/check/review 取得 | 1 PR summary を返す |
+| `plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts` | blocking report 検査 | owner path Unit と attestation Unit を一致させる |
+| `packages/framework/core/tools/amadeus-runtime.ts` | unit dependency DAG compile | Delivery Bolt ではなく topological batch を生成 |
+| `packages/framework/core/tools/amadeus-orchestrate.ts` | per-unit coverage と batch dispatch | Unit artifact を実行済み ledger とする |
+| `packages/framework/core/tools/amadeus-state.ts` | artifact / sensor completion guard | 全 Unit path の evidence を検査 |
+
+新規 package やファイル移動は観測されない。欠陥は既存モジュール間で `Delivery Bolt → units[] → one PR identity → per-unit evidence` を表す型・永続化・投影が欠けている関係上の seam である。`amadeus-state.ts` と `amadeus-orchestrate.ts` は巨大なホットスポットだが、今回の RE はリファクタをスコープに含めない。
+
+## 260814-unit-failure-autoelectio (2026-08-14, observed `cd64486a6`) — Issue #2976 の変更面
+
+### 患部ファイルと責務
+
+| パス | 本 intent での役割 | 主要位置（HEAD 断面） |
+|---|---|---|
+| `packages/framework/core/tools/amadeus-orchestrate.ts` | 無条件 ask の発生源。修正の主着地面 | `:4027` `emitConstructionFailureIfPresent` / `:4069-4075` await-unit-ruling 分岐 / `:1042-1044` `askDirective` / `:241` config import / `:632`（3 引数）`:3940`（1 引数）config 呼出 / `:3694` `:3737` 呼び出し元 / `:6161-6169` report 受け口 / `:6507` `handleFailureRuling` / `:6973` サブコマンド動線 / `:3922-3936` `canonicalConstructionFailurePending` |
+| `packages/framework/core/tools/amadeus-election.ts` | `--trigger auto` の受け口。config を読む唯一の実装 | `:443-463` `handleTriggeredOpen` / `:459` `soloElection.trigger.mode` 読取 / `:402-434` `handleOpen` / `:413-414` `GoaLineCode.parse` / `:137` `next` / `:186` `handleReport` / `:483` 付近 `handleNotify` / `:805` ディスパッチ / `:66` usage |
+| `packages/framework/core/tools/amadeus-election-model.ts` | election definition のスキーマ | `:100-116` `Election.parse` / `:76-97` choices 検証 / `:107-108` voters 検証 |
+| `packages/framework/core/tools/amadeus-config.ts` | `solo-election.trigger.mode` の宣言と解決 | `:94` 型宣言 / `:563-574` スキーマ定義 / `:771-775` 解決 |
+| `packages/framework/core/amadeus-common/protocols/stage-protocol.md` | halt-and-ask 契約と solo auto-election hook | `:139` `**Halt-and-ask on failure**` / `:141` 無条件 halt の逐語 / `:143-147` solo/parallel/retry/skip/abort / `:149` hook 見出し / `:151` branch 1 / `:152` branch 2 / `:156-166` question fenced block |
+| `packages/framework/core/skills/amadeus-election/SKILL.md` | voters 規約（`subagent-1` / `subagent-2`） | `:28` |
+
+### テスト面の位置
+
+| パス | 射程 |
+|---|---|
+| `tests/unit/t211-swarm-batch-progress.test.ts` | `:326-333` ask 文言の固定（`Retry, Skip, or Abort`）/ `:395` error 側の同文言 / `:239-280` `seedFailedSwarmUnit` |
+| `tests/integration/t369-protocol-autosolo-hook.test.ts` | `:88-92` `findMissingHookMarker` / `:96` `:106` `:114` `:124` `:134` の 5 件 + `:178` `:197` `:211` の fixture 系 3 件 |
+| `tests/integration/t236-election-loop.integration.test.ts` | `:71-135` `open --trigger auto` の 4 段階 CLI 契約 / `:117-` invalid config |
+
+### 投影の連鎖（修正時に同期が要る面）
+
+`stage-protocol.md` を触る修正は、t369 が `packages/framework/core/amadeus-common/`・`dist/<harness>/amadeus-common/`・self-install ツリーの各 `stage-protocol.md` / `conductor.md` を走査するため、`bun run build` による全ハーネス投影の再生成を同一変更に含めないと赤になる。`packages/framework/core/tools/` 側のみを触る修正では、同じ理由から dist 再生成が必要になる（`project.md` § Mandated の正本・配布物・self-install 同期則）。
+
+### base..observed で構造は動いていない
+
+base `d7ffaa544` → observed `cd64486a6` の 4 コミットは `packages/` を 1 行も変更していない。したがって上表の構造は前回スキャン断面から不変であり、クロスレビュー target-sha `52f1f1b25` 以後に患部 4 ファイルへ触れたのは `d7ffaa544`（Bolt PR attestation、`amadeus-orchestrate.ts` のみ 167 insertions / 8 deletions）の 1 件だけである。分岐構造は保たれ、行番号のみ移動した（クロスレビュー時の `:4063-4068` → HEAD `:4069-4075`）。

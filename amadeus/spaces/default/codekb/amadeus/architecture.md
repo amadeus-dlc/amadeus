@@ -1,6 +1,48 @@
 # アーキテクチャ
 
-## 停止境界のアーキテクチャ: park ガードと `error` directive の受け方（260814-autonomy-stop-fixes、現在、observed `cd64486a6`）
+## park の provenance 境界: 拒否点・受理材料・承認境界の切り分け（260814-park-provenance、現在、observed `1d08374cd`）
+
+**観測 ref**: observed = `1d08374cd7e4ef89637b4a8000bab3fcf1a0f780`（`origin/main`、PR #3037 着地）。差分 base = `cd64486a68c6a1144db50fbe3fde8273f5e18455`（observed の祖先で距離 **6**）。本 worktree HEAD は observed を merge した conductor tree で、非 `amadeus/` ツリーは observed とバイト等価（`git diff --stat 1d08374cd HEAD -- ':!amadeus/'` 空 / exit 0）。検索述語と全数列挙は `re-scans/260814-park-provenance.md` を正本とし、本節は構造だけを転記する。
+
+### B-1. 患部の構造は base から不変、隣接面だけが動いた
+
+`amadeus-state.ts` / `amadeus-stop.ts` / `amadeus-bolt.ts` / `amadeus-intent-autonomy-production.ts` / `t17` / `t122` は base..observed で無変更。動いたのは `amadeus-orchestrate.ts`（#3011、+57/-8）と規範面（#3037）。したがって直前節（下の 260814-autonomy-stop-fixes 節）の **state / hook 側の構造記述はそのまま有効**で、orchestrate 側の行ピンだけが drift している（対応表は re-scan §3）。
+
+### B-2. 「停止」語彙は3機構に分裂し、`Parked` マーカーを書くのは1経路だけ
+
+- `Parked` / `Parked At Stage` を書くのは `amadeus-state.ts:1579` `handlePark` **のみ**（engine の `amadeus-orchestrate.ts:6597` は `spawnState(pd, ["park"])` への委譲）。
+- `parkedDirective` は `amadeus-orchestrate.ts` に全数 **7 hit**（定義 `:1100` + park verb 自身の成功発行 `:6618` + 他 5 経路 `:3108` `:3279` `:4076` `:5995` `:6591`）。他 5 経路は `handlePark` を通らず autonomy を問わず発行され、`Parked` マーカーも `WORKFLOW_PARKED` も残さない。
+- Intent autonomy の suspended projection（`REPAIR_STALLED` / `NORM_CONFLICT`）はさらに別機構。
+
+→ 「autonomous な run は park できない」という不変量は observed では**成立していない**。禁じられているのは `Parked` マーカーを伴う明示 park verb だけである。
+
+### B-3. hook の案内と tool の拒否が同一断面で矛盾する
+
+`amadeus-stop.ts:806` `continuationReason()` は `:823` で `amadeus-orchestrate.ts park` を「クリーンな一時停止」として案内し、呼出は `:1047` の唯一のブロック経路のみ（autonomy 条件なし）。その park を `amadeus-state.ts:1583-1587` が拒否する。加えて `amadeus-state.ts:1573` の「Stop hook の同一ガード」というコメントは反証済み（hooks に `Construction Autonomy Mode` 0 hit / exit 1、`amadeus-stop.ts:947` は `parked` を全モード allow）。
+
+### B-4. PR #3037 は #3016 の劣化を「固定」した
+
+`stage-protocol.md:1041` §11b（`:1047` 逐語 `Print \`directive.message\` verbatim and STOP. … do not invent a new question or a new gate`）が 8 ハーネス表層へ同期済み（全域 9 hit = core 1 + harness 8）。park 拒否は `kind:error`（`amadeus-orchestrate.ts:6604`）で返るため、conductor は**回避策の自動適用を禁じられ**、逐語出力して停止するほかない。
+
+§11c（`:1057`、正本 `docs/reference/24-intent-autonomy.md:122`）の承認境界は `a push, opening a PR, replying to or resolving a review thread, and filing an Issue` を対象とする remote write 限定であり、ローカル state 書込である park には**直接適用されない**。ただし「grant が認可できない 5 分類」（`24-intent-autonomy.md:137`）は park 設計にも及ぶ — park の受理根拠を grant に置いてはならない。
+
+### B-5. 受理材料は既存だが、fail-open / fail-closed で層が割れている
+
+| 部品 | 位置 | 空 ledger | consume-once |
+| --- | --- | --- | --- |
+| `humanActedSinceGate` | `amadeus-lib.ts:3858` | **fail OPEN**（active scope） | 暗黙 |
+| `outstandingHumanTurns` | `amadeus-lib.ts:3904` | fail CLOSED | 未消費のみ列挙 |
+| `selectLifecycleHumanTurn` | `amadeus-lib.ts:2954` | fail CLOSED（throw） | **有**（`Human Turn Timestamp` を消費印に使う） |
+| `humanTurnGroundsTakeover` | `amadeus-state.ts:5067` | fail CLOSED | 位置比較 |
+| `latestHumanTurnAfter` | `amadeus-goal.ts:100` | `null` | 呼出側が audit へ刻む |
+
+`handlePark` は active record 専用（`--intent` / `--space` を取らない）ため、`humanActedSinceGate` を使うと必ず fail-open 側に落ちる。**受理述語の選択がそのまま完了条件1（unattended は依然拒否）の成否を決める。**
+
+### B-6. `Construction Autonomy Mode` は依然として認可の正本ではない
+
+`stage-protocol.md:126` / `packages/framework/core/memory/org.md:44` の規範は変わらず、書込点は `amadeus-intent-autonomy-production.ts:713` の派生投影。かつ `amadeus-lib.ts:5167` の `isAutonomousMode` は「既存 open-coded サイトの寄せは tracked follow-up」と明記しており（`:5160-5164`）、`amadeus-state.ts:1583` はその未寄せサイトの1つ（全域 `=== "autonomous"` は 6 hit）。
+
+## 停止境界のアーキテクチャ: park ガードと `error` directive の受け方（260814-autonomy-stop-fixes、履歴、observed `cd64486a6` — 260814-park-provenance 時点でも state / hook 側の構造は有効、orchestrate 側の行ピンのみ drift）
 
 **観測 ref**: observed = `cd64486a68c6a1144db50fbe3fde8273f5e18455`（`git rev-parse HEAD` = `git rev-parse origin/main`）。差分 base = `d7ffaa5442266508d8e67babc3e0b947fb4c1637`（HEAD の祖先で距離 **4**）。焦点領域は base..observed で**全面無変更**。検索述語と全数列挙は `re-scans/260814-autonomy-stop-fixes.md` を正本とし、本節は構造だけを転記する。
 
@@ -134,7 +176,7 @@ Docker 側も対称で、可用性は `DockerTlcSpawnPlanner.snapshotEnvironment
 
 構造上の帰結は 2 点である。(1) **フォールバックを差し込める自然な合流点は「選択時」ではなく `snapshotEnvironment` 失敗の直後**であり、選択時に倒すなら `selectTlcSpawnPlanner` の async 化(= referee 経路 `tla-referee-toolchain.ts:224` への signature 波及)が要る。(2) `provider === "auto"` の分岐は repo 全体で **2 箇所のみ**（`:526` の選択と `:68` の `createNotRunPlannerReceipt` 内 receipt plan 選択）で、**片方だけ変えると receipt が実際に走った planner と異なる inspection plan を名乗る**。env-receipt スキーマ（`amadeus.env-receipt.v1`、`run-model-check-domain.ts:93-98`）自体は provider 中立なので、フォールバックのための schema 変更は不要である。
 
-## projectDir 解決の段構造と in-process 呼出における ambient 逸出（260814-t528-ambient-isolation、現在、observed `5f6b5bf97`）
+## projectDir 解決の段構造と in-process 呼出における ambient 逸出（260814-t528-ambient-isolation、履歴、observed `5f6b5bf97`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`）。observed `1d08374cd` では PR #3011 が `amadeus-orchestrate.ts:3046` `refuseAmbientProjectDir` を導入し `:3060`（`handleNext` 経由）/ `:6037`（`handleReport`）/ `:6536`（`handleFailureRuling`）の **3 箇所**へ配線済み（述語 `git grep -n "refuseAmbientProjectDir" -- packages/framework/core/tools/amadeus-orchestrate.ts` → 4 hit = 定義 1 + 呼出 3、exit 0）。本節が列挙する他の面が #3011 で閉じたか否かは本 intent では未検証であり、本節の file:line はその節が宣言する observed `5f6b5bf97` 時点の値として保存する）
 
 対象: [Issue #2981](https://github.com/amadeus-dlc/amadeus/issues/2981)。測定 ref = observed `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`。file:line はすべて observed 断面で verbatim 実読して採取した。
 
@@ -4943,3 +4985,218 @@ round-trip（`write → read` で同値）はメタモルフィックで独立�
 ### 配置と投影の含意
 
 対象コーデック群（`amadeus-mirror-state-codec.ts` / `amadeus-election-model.ts` / `amadeus-election-store.ts` / `amadeus-journal.ts` / `amadeus-audit.ts` / `amadeus-state.ts`）はすべて `packages/framework/core/tools/` にあり、全ハーネス manifest の `coreDirs` が `{ src: "tools", dst: "tools" }`（`packages/framework/harness/claude/manifest.ts:53`、observed 実測。レビュー記載 `:52` から +1 シフト）で投影する。したがってコア側の一本化・fail-closed 化は自動的に (a) dist 7 ハーネス全ての再生成 (b) `dist:check` / `promote:self:check` (c) coverage patch ゲートの母集団入り（spawn 盲点があるため in-process seam 設計を実装時点で行う） (d) `t258-boundary-guard`（出荷 core/tools は `scripts/` 非参照）を引き込む。テスト側は dist へ投影されない（`find dist -type d -name tests` / `find dist -name "*.test.ts"` ともに 0 件）。
+
+## Issue #2813 多問選挙アーキテクチャ（履歴、observed `c0f9edf2782`）
+
+### 現行スタイルと境界
+
+選挙機構は、1プロセスで完結する layered modular CLI である。純粋ドメイン層 `amadeus-election-model.ts`、filesystem adapter `amadeus-election-store.ts`、記録 renderer/verifier、輸送 port、CLI state machine に分離され、長時間稼働サービス・database・remote API は持たない。`packages/framework/core/` が正本で、build が各 harness へ投影する。
+
+単問性は1箇所の表示制約ではなく、次の同一 cardinality が境界を横断している。
+
+- Definition: 選挙あたり `question` 1件、共有 `choices` 1集合。
+- Ballot: voter あたり有効票1件、票あたり choice / GoA / reservation 各1件。
+- Resolution: `resolveBallots` の key は voter のみ。
+- State/tally: 選挙あたり state 1件、単一 established winner または単一 hold reason。
+- Persistence/record: voter ごとの materialized ballot 1ファイル、集約 GoA 1行、ruling 1件。
+- Formal model: `accepted[voter]`、`Choices`、`tally.kind/winner/reason` が選挙全体で1組。
+
+### Interaction Diagrams
+
+現行の business transaction は次のとおりである。
+
+```mermaid
+sequenceDiagram
+    actor Author as 選挙定義者
+    participant CLI as election CLI
+    participant Model as Election Model
+    participant Store as File Store
+    participant Voter as Voter
+    participant Record as Record Renderer
+    Author->>CLI: open(definition: question + choices + voters)
+    CLI->>Model: Election.parse
+    CLI->>Store: election.json / per-voter view を保存
+    CLI-->>Voter: viewPath を通知
+    Voter->>CLI: vote(choice, GoA, reservation)
+    CLI->>Model: Ballot.parse
+    CLI->>Store: pending voter ballot を追記
+    CLI->>Model: tally(election, ballots)
+    Model-->>CLI: established 1件 または hold 1件
+    CLI->>Store: tally.json と ballots/voter.json を固定
+    CLI->>Record: ruling / reservations / GoA を描画・検証
+    Record->>Store: record.md
+```
+
+Issue #2813 が要求する状態遷移の境界は次である。これは観測済み要件の写像であり、具体 schema の最終決定ではない。
+
+```mermaid
+flowchart LR
+    D[Definition: questions with stable IDs] --> V[Blind view per voter]
+    V --> R[Responses keyed by voter and question]
+    R --> T[Per-question tally]
+    T --> E[Established question results]
+    T --> H[Held question results]
+    H --> U[Re-discuss or amend held questions only]
+    U --> T
+    E --> P[Preserved immutable results]
+    P --> M[Mixed election result]
+    T --> M
+```
+
+### 変更時に守る設計不変量
+
+1. question ID は選挙内で一意・安定で、definition、ballot、tally、reservation、record、hold resolution を同じ ID で結ぶ。
+2. `voter × question` が resolution の最小 key であり、amend と receipt ordering は同じ question 内でだけ先行票を置換する。
+3. 選挙全体 state と問ごとの result を分離する。global `hold` だけでは mixed result を表せない。
+4. 再集計は未決問だけを評価し、成立済み問の result bytes または正規化値を不変に保つ。
+5. 旧単問 schema は read adapter で新 canonical model へ持ち上げ、新規 write と内部演算は単一の新 model に収斂させる。append-only 履歴の一括破壊移行は避ける。
+6. transport は voter ごとに view path を配送する port のまま維持できる。view 自体を複数問化すれば、問ごとの個別通知は不要である。
+7. TLA+ と TypeScript の対応は model-map の5実装面 identity で拘束されるため、形式モデルと identity 更新を実装から分離しない。
+
+### 結合ホットスポットと設計判断の保留
+
+最大の結合点は、CLI 853行と store 719行が global state、raw tally read、hold policy、filesystem materialization を同時に担う箇所である。model/store/CLI を一括で配列化すると責務混合が増えるため、canonical schema・legacy decoder、per-question tally、state/directive adapter の順に境界を保って変更する必要がある。
+
+「`questions[]` を1選挙へ直接持たせる」か「子選挙を親 ID 配下で束ねる」かは後続設計の判断事項である。ただし、現行 store と transport を最小変更にし、1 voter file に response 配列を持てる前者は観測された構造との適合度が高い。これは RE 時点の候補評価であり ADR 決定ではない。
+
+## Issue #2985 Bolt / Unit / PR 証跡アーキテクチャ（現在、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
+
+### 現行スタイルと責務境界
+
+Amadeus は Bun 上の短命 TypeScript CLI 群からなるモジュラーモノリスである。今回の取引は計画、実行、証跡、完了判定の4境界を横断する。
+
+| 境界 | 観測された正本 | 現行 cardinality |
+|---|---|---|
+| 計画 | `delivery-planning/bolt-plan.md` | Delivery Bolt は1個以上の Unit を束ねられる |
+| 実行 | `runtime-graph.json` の `bolt_dag.batches` | unit dependency DAG の topological level。Delivery Bolt ID を保持しない |
+| PR identity | CLI / title / `## Amadeus Work` / attestation | `bolt: string` と `unit: string` が1件ずつ |
+| 完了 | per-unit artifact coverage + blocking sensor guard | 全 Unit path ごとの evidence |
+
+runtime compile は `unit-of-work-dependency.md` から `units` と `batches` を構築し、`batches` を prior batch で依存が満たされた Unit 集合と定義する（`packages/framework/core/tools/amadeus-runtime.ts:112-121`, `:333-404`）。orchestrator はこれを flatten し、Unit ごとの artifact を coverage ledger として走査する（`packages/framework/core/tools/amadeus-orchestrate.ts:4206-4231`, `:4295-4325`）。Delivery Planning の `bolt-plan.md` を runtime topology へ取り込む seam は観測されない。
+
+plugin overlay は `code-generation` へ report と blocking sensor を追加する（`plugins/pr-convergence/plugin.json:9-19`）。CLI は `ConvergenceOptions.unit`、create の `{ record, bolt, unit }`、`DeliveryWork.bolt/unit` を単数で保持する（`plugins/pr-convergence/tools/pr-convergence-cli.ts:368-393`, `:535-541`）。provenance と attestation も単数契約である（`plugins/pr-convergence/tools/pr-convergence-provenance.ts:8-14`, `plugins/pr-convergence/tools/pr-convergence-attestation.ts:9-22`）。
+
+### Interaction Diagrams
+
+#### 正常経路: 1 Unit / 1 Bolt / 1 PR
+
+```mermaid
+sequenceDiagram
+    participant U as Unit worktree
+    participant CLI as PR convergence CLI
+    participant GH as GitHub PR
+    participant R as Unit report
+    participant S as Blocking sensor
+    participant C as State completion
+    U->>CLI: create(record, bolt, unit)
+    CLI->>CLI: checkout と local/remote head を検証
+    CLI->>GH: PR を作成または同一 head PR を再利用
+    GH-->>CLI: PR number と PR head
+    CLI->>R: Unit path に report と attestation を生成
+    CLI->>S: report を評価
+    S-->>C: Unit path の PASS と audit receipt
+    C-->>U: Unit evidence を完了条件へ採用
+```
+
+Text fallback: Unit worktree の同一 checkout から CLI が `record + bolt + unit` を受け取り、local/remote/PR head を一致させる。CLI は1 PR の identity を title/body と attestation に固定し、Unit path の report を生成する。sensor が path Unit、attestation Unit、PR、3 heads、current checkout、audit receipt を照合し、state completion がその Unit evidence を採用する。
+
+#### 破綻経路: 複数 Unit / 1 Delivery Bolt / 1 PR
+
+```mermaid
+flowchart TD
+    DP["Delivery Bolt: units A と B"] --> RT["Runtime: Unit DAG batches"]
+    RT --> A["Unit A execution"]
+    RT --> B["Unit B execution"]
+    A --> PR["One PR identity"]
+    B --> PR
+    PR --> PA["Provenance: bolt と unit A"]
+    PA --> SA["A の report と sensor は成立可能"]
+    PA --> MB["B は unit mismatch"]
+    MB --> CB["B の evidence 不足"]
+    CB --> STOP["Stage completion が停止"]
+```
+
+Text fallback: Delivery Bolt が Unit A と B を所有しても runtime は各 Unit を別 execution owner として扱う。1つの PR に Unit A identity を載せると A の report は成立し得るが、B の provenance、attestation、path ownership が一致しない。B 用に別 PR を作ると one-Bolt-one-PR と複数 Unit fold 禁止へ反し、全 Unit evidence を要求する完了判定が停止する。
+
+### Missing composition seam と設計保留
+
+欠落しているのは Delivery Bolt identity を実行時の第一級データとして保持し、その `units[]` と1つの PR identity／head tuple／attestation／audit receipt を結び、各 Unit completion へ正規投影する seam である。state は全 Unit の produce path を列挙し（`packages/framework/core/tools/amadeus-state.ts:3747-3778`）、sensor は report owner Unit、attestation Unit、PR、3 heads、current checkout、audit receipt を照合する（`plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts:145-180`）。この fail-closed 性を緩めずに共有 evidence の所有権を追加する候補Aと、計画 cardinality を単数へ統一する候補Bを requirements へ引き継ぎ、RE では決定しない。
+
+## 260814-unit-failure-autoelectio (2026-08-14, observed `cd64486a6`) — failure-ruling seam と solo auto-election hook の責務境界断裂
+
+対象は GitHub Issue #2976。`solo-election.trigger.mode = auto` の設定下でも Unit 失敗が人間向け Retry/Skip/Abort の ask で停止する。本節は差分リフレッシュ（base `d7ffaa5442266508d8e67babc3e0b947fb4c1637` → observed `cd64486a68c6a1144db50fbe3fde8273f5e18455`）で取り直した患部の構造断面である。
+
+### 構造: 三層のうち engine 層だけが hook を知らない
+
+failure ruling は 3 つの層をまたぐ。
+
+| 層 | 実体 | solo auto-election hook の認識 |
+|---|---|---|
+| engine（directive 生成） | `packages/framework/core/tools/amadeus-orchestrate.ts` | **なし**（下記の不在実測） |
+| conductor（手続き規範） | `packages/framework/core/amadeus-common/protocols/stage-protocol.md:149-152` | あり（branch 1 / branch 2 を規定） |
+| election CLI（裁定機構） | `packages/framework/core/tools/amadeus-election.ts:443-463` `handleTriggeredOpen` | あり（config を読んで auto/manual を分岐） |
+
+`emitConstructionFailureIfPresent`（`amadeus-orchestrate.ts:4027` に定義）は `transition.kind === "await-unit-ruling"` に到達すると **config 値・autonomy mode に依らず無条件で** `askDirective` を emit する。HEAD 断面の該当分岐は `:4069-4075`、逐語:
+
+```ts
+  if (transition.kind === "await-unit-ruling") {
+    const siblingSummary = transition.siblings.map((entry) => `${entry.unit}:${entry.outcome}`).join(", ") || "none";
+    emit(askDirective(
+      `Unit "${transition.target.unit}" failed during ${stageSlug} (attempt ${transition.target.attempt}, batch ${transition.target.batch}; siblings: ${siblingSummary}). Choose exactly one: Retry, Skip, or Abort. The answer is committed through the ordinary ask report path.`,
+    ));
+    return true;
+  }
+```
+
+この分岐に至る前段は `constructionSuspended` の parked 分岐（`:4056-4062`）と runtime population スコープの絞り込み（`:4064-4068`、`failureOutsideRuntimePopulation` は `:4018-4025`）のみで、条件に config も autonomy mode も入らない。`askDirective` の定義は `:1042-1044`（`return { kind: "ask", question }`）。呼び出し元は `next` の両経路 2 箇所、`:3694`（in-flight ステージ再入）と `:3737`（次ステージへの前進）。
+
+いっぽう stage-protocol は同じ局面について、`:141` 逐語で「Halting is unconditional; who rules on the halt is decided by the solo auto-election hook below, **which names the one branch that does not present the prompt**.」と述べ、`:151` の branch 1（solo mode かつ階層 config が `auto`）で「the blocker goes to an election **INSTEAD OF** the prompt below」「the prompt below is not presented」と規定する。branch 2（team mode / config 不在 or manual / CLI が `{"opened":null,"reason":"solo-election-manual-trigger-required"}` を返した場合）でのみ prompt を提示する。
+
+**齟齬の核心**: protocol の branch 1 は conductor の手続きとしてのみ書かれており、engine 側に対応する抑止が存在しない。conductor が `next` を回した時点で ask directive が必ず降ってくるため、branch 1 は engine 断面で実現不能である。
+
+### 不在の実測（engine が solo-election を知らない）
+
+述語を分割して実行した結果（`git grep`、不一致は exit 1・エラーは exit 2）:
+
+| 述語 | コマンド | 結果 |
+|---|---|---|
+| A2 | `git grep -inE "(^\|[^s])election" -- packages/framework/core/tools/amadeus-orchestrate.ts` | 出力 0 行、**exit 1** |
+| B | `git grep -n "solo-election" -- packages/framework/core/tools/amadeus-orchestrate.ts` | 出力 0 行、**exit 1** |
+| C | `git grep -n "soloElection" -- packages/` | **exit 0**、5 ファイル 7 行 |
+
+C の全ヒットは `amadeus-config.ts:94`（型宣言）、`:772`（resolvedConfig 構築）、`amadeus-election.ts:459`（唯一の読取）、`amadeus-intent-autonomy-production.ts:834,910` と `amadeus-intent-autonomy.ts:802,956`（`soloElectionAvailable` — decide-question 梯子の capability フラグであり別機構）。語境界なしの `git grep -in "election"` は exit 0 で 11 行返すが、すべて `selection` / `IntentSelectionSnapshot` の部分一致で election ドメインの参照はゼロ。
+
+### 能力は既にある — 欠けているのは前例だけ
+
+engine は階層 config を読む能力と fail-closed の作法を既に持つ。
+
+- import: `amadeus-orchestrate.ts:241` `import { resolveAmadeusConfig } from "./amadeus-config.ts";`
+- 3 引数（intent + space を含む完全な階層解決）: `:632` `const resolved = resolveAmadeusConfig(projectDir, intent, space);` — mirror boundary で使用、invalid は `errorDirective` で fail-closed（`:633-643`）
+- 1 引数: `:3940`（`emitConfiguredSwarm`、swarm concurrency 用）、invalid は `Invalid swarm configuration:` の errorDirective（`:3941-3944`）
+
+`solo-election.trigger.mode` は `amadeus-config.ts:563-574` で `layers: ALL_LAYERS`・`defaultValue: "manual"`・legacy key `auto-solo-election` として宣言されており、project / space / intent の 3 層で解決される。したがって「engine が `soloElection.trigger.mode` を読む前例」だけが欠けている。
+
+なお呼び分けは揃っていない（`:632` は 3 引数、`:3940` と `handleTriggeredOpen` は 1 引数）。intent レイヤの設定を効かせるなら 3 引数が必要であり、これは設計判断事項として functional-design へ送る。
+
+### 裁定結果の commit 経路は answer の出所を問わない
+
+- `report --user-input retry|skip|abort` の受け口: `amadeus-orchestrate.ts:6161-6169`。条件は `flags.result === undefined && (answer === "retry"|"skip"|"abort") && canonicalConstructionFailurePending(...)` で `handleFailureRuling(args, projectDir)` へ委譲
+- `canonicalConstructionFailurePending`: `:3922-3936`（state の `Current Stage` + audit 射影が `await-unit-ruling` かを判定）
+- `handleFailureRuling`: `:6507` に `export function`。`--user-input` を retry/skip/abort に限定（`:6521`）、solo バッチ識別子 `solo:<n>` を検証（`:6522-6524`）、retry は `amadeus-bolt.ts start`（solo）/ `pool.retryFailedUnit` + `preparedSwarmRetryDirective`、skip は `BOLT_COMPLETED` 追記（solo）/ `pool.skipFailedUnit`、abort は `amadeus-bolt.ts abort` + `parkedDirective`
+- サブコマンド直接動線: `:6973` にも `handleFailureRuling(subArgs, projectDir)`
+
+この経路は answer が人間由来か election 裁定由来かを区別しない。**したがって修正の最小着地面は ask の抑止側だけで足り、commit 側に新規経路は不要**である。
+
+### 設計選択点（本 intent が決めるべきこと）
+
+1. engine は election を open **できない**（`amadeus-election.ts` を import していない、A2 exit 1）。engine が出せるのは directive のみであるため、(a) ask を出さず conductor に election を回させる新種 directive を出すか、(b) 既存 ask に auto である旨のメタを載せるか、という engine/conductor 責務境界の選択が発生する
+2. `resolveAmadeusConfig` を 1 引数で呼ぶか 3 引数で呼ぶか（intent レイヤの有効性に直結）
+3. protocol 文言を触る修正は t369 が全ハーネス投影（`dist/<harness>/`・self-install ツリー）を走査するため、`bun run build` による再生成を同一変更に含める必要がある
+
+### 検証の空白（本欠陥が緑のまま生存できた構造的理由）
+
+テスト棚卸しの 3 群の交差は空である。詳細は `component-inventory.md` の本 intent 節に置く。要点のみ: `--trigger` を検証するテスト群（5 ファイル）と unit failure ruling を検証するテスト群（`await-unit-ruling` / `resolve-failure` / `Retry, Skip, or Abort` の 3 述語）に重なるファイルは 1 件もなく、「auto 設定下で unit failure がどう扱われるか」を engine 断面で検証しているテストは 0 件である。`tests/integration/t369-protocol-autosolo-hook.test.ts` は protocol 文言の存在のみを検査し、engine 挙動を一切拘束しない。
+
+### base..observed の差分が患部に与えた影響
+
+区間 4 コミット（`cd64486a6` / `fb1939dfd` / `f60b3f4c8` / `da0acecdd`）、`89 files changed, 3129 insertions(+), 4 deletions(-)`。着地面は `amadeus/spaces/default/`・`metrics/`・`tests/harness/fixtures.ts`・`tests/integration/t-fixtures-copy-tree-retry.integration.test.ts`・`amadeus/spaces/default/memory/project.md` のみで、**`packages/` 配下の変更は 0 件**。本節の患部にこの区間は一切触れていない。
