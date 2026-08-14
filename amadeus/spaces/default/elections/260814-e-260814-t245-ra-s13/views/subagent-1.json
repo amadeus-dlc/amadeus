@@ -1,0 +1,19 @@
+{
+  "electionId": "E-260814-T245-RA-S13",
+  "voter": "subagent-1",
+  "question": "§13 学習選定(requirements-analysis, intent 260814-t245-origin-fixture): memory.md の候補は3件 — c1「修正方式は再質問せず方針1で確定」(既存 cid:requirements-analysis:c5 の適用)、c2「fixture corpus は実 checkout corpus を seed」(本 intent 固有の decide-question 裁定であり audit + questions file に記録済み)、c3「timeout 契約維持」(可逆な既定採用)。いずれも本 intent 固有の一回性判断または既決ノルムの執行であり、プロジェクト横断で一般化すべき新規知見を含まないため、採用0件を提案する。この提案を可とするか。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "候補を採用すべき",
+      "description": "いずれかの候補に横断的な新規性がある(どの候補をどの heading へ入れるかを ballot rationale に明記すること)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "採用0件で可",
+      "description": "3候補とも intent 固有の一回性判断(記録は audit・questions file・phase-check に残存)または既決 cid の執行であり、project.md へ昇格すべき一般知見なし"
+    }
+  ]
+}

@@ -1,6 +1,8 @@
 # コード構造
 
-## Focus Area: team-up ランチャ廃止（260813-remove-team-up、現在、observed `97581b3e3`）
+## Focus Area: team-up ランチャ廃止（260813-remove-team-up、履歴、observed `97581b3e3`）
+
+> **後続 intent による訂正（260814-t245-origin-fixture、observed `5f6b5bf97`）**: 本節が列挙する正本パス（`packages/framework/core/tools/team-up.sh` / `team-up-codex-safety-wait.ts` および対応する tests / docs）は、`8b6089275`（[#2975](https://github.com/amadeus-dlc/amadeus/pull/2975)）で**削除済み**である。observed `5f6b5bf97` における `git ls-files | grep -i team-up` の出力は intent record と `re-scans/260813-remove-team-up.md` のみで、正本パスの hit は 0。本節の表と「区間 `854692fd7..HEAD` でこれらのパスに差分は無い」という記述は observed `97581b3e3` 時点の断面として読むこと（`cid:reverse-engineering:c1`）。
 
 | ファイル | 分類 |
 |---|---|

@@ -1,6 +1,22 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260813-lifecycle-guard-runtime）
+## 実行メタデータ（現在: 260814-t245-origin-fixture）
+
+- Date: `2026-08-14`
+- Base commit: `89532174c30ef9cc7ff29496cd6916586fdda00a`（`reverse-engineering-timestamp.md` + `re-scans/*.md` の全 observed のうち **HEAD の祖先で距離最小**。`git merge-base --is-ancestor 89532174c HEAD` = **exit 0**、`git rev-list --count 89532174c..HEAD` = **9 commits / 183 files**（`+8710 / −8521`）。次点候補は `97581b3e3` = 10、`c0f9edf27` = 11。`cid:reverse-engineering:rescan-base-ancestry`）
+- Observed commit: `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`（= 本 worktree HEAD、`git rev-parse HEAD` と `git rev-parse origin/main` が一致。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、depth `Minimal`、build `bun`
+- Scope of analysis: [Issue #2971](https://github.com/amadeus-dlc/amadeus/issues/2971)（bug）— t245 leader-sync テストが `origin` リモートの実在を前提とし、リモートなしクローンで構造的に赤くなる。**テスト面の環境前提に焦点を絞った差分リフレッシュ**として実施し、あわせて `base..observed` 差分全域（183 files）を棚卸しした
+- Scan mode: **xrev differential scan**（`cid:reverse-engineering:c1-xrev-scan-mode` / `c1-xrev-single-issue`）— run `xrev-260814-2971`、target-sha `52f1f1b25`、2 名成立（`CONFIRMED` / `CONFIRMED_WITH_REFINEMENTS`）。verdict を Developer scan の一次入力とし、Architect が observed 断面の verbatim 実読で二重化
+- 行番号引用の currency（**実測の記録であり免除の主張ではない**）: `git diff --name-only 52f1f1b25..HEAD` は `amadeus/spaces/default/elections/elections.json` の **1 件のみ**（rc=0）で、被引用パス 4 件（`tests/integration/t245-amadeus-leader-sync.integration.test.ts` / `scripts/amadeus-leader-sync.ts` / `tests/run-tests.ts` / `tests/.test-time-factor-allowlist.json`）との交差は**空**（`cid:reverse-engineering:E-XBB-RE-S13-c2`）。**表現形式の移行検査**（`cid:reverse-engineering:c5-xrev-currency-schema-migration`）: 当該 1 件は選挙ストア索引への 1 エントリ追記であり、患部のスキーマ・セレクタ形式を変える移行ではない → c5 の構造的不成立条件に非該当
+- 中核知見: 患部は**プロダクトではなくテストの環境前提**である。`t245:208-226` が `process.cwd()` に対し `git fetch origin "+refs/heads/main:refs/remotes/origin/main"`（`:213-215`）と `git worktree add --detach <scratch> origin/main`（`:216`）を無条件実行し、`gitStdout`（`:78-83`）の無条件 `expect(result.kind).toBe("ok")` が環境失敗を仕様違反と同一視する。プロダクト側の `spawnCommand`（`scripts/amadeus-leader-sync.ts:344-361`）は exit 128 を `kind:"error"` へ正しく変換している。実 `origin` を参照する自動テストは**このテスト 1 件のみ**（`git grep -n 'refs/heads/main:refs/remotes/origin/main' -- tests scripts packages plugins` = 2 hit、うち 1 件は本番ツール `:567`）。同ファイル `:106-133` が bare origin fixture の正解形を既に実装しており、逸脱はこの 1 件だけ。t245 は `tests/integration/` 直下で `--ci`（`tests/run-tests.ts:125` = smoke + unit + integration）の**必須集合に含まれる**ため、`origin` 未設定環境では必須 CI が構造的に赤くなる。`tests/.test-time-factor-allowlist.json` に t245 のエントリは無い（`grep -c t245` = 0）。**トレードオフが実在する** — 現行テストの価値は実 corpus 全数掃引（`elections/` 配下 **4150 ファイル / 8,015,636 bytes**、`git ls-tree -r --long HEAD`）だが、判定器（`resolveOwnedSet` `:164` / `checkExclusions` `:214` / `selfCheck` `:234` / `analyzeOwnedContents` `:249`）が要求する最小 corpus は 1 件以上にすぎず、合成シェイプは `t245:175-206` が既に被覆済み
+- Verification: git 状態変更・GitHub 書込・`bun run build`・engine/state 操作は**すべてゼロ**。書き込みは `codekb/amadeus/` 配下のみ
+- Updated artifacts: `code-quality-assessment.md`（新現在節「テストの環境前提欠陥」— Q-A 外部状態依存 / Q-B 無条件 assert による赤の同一視 / Q-C 同一ファイル内の正解形からの逸脱 / Q-D 環境非依存と検出力のトレードオフ / CI プロファイルへの影響）。直前の現在節（`260813-lifecycle-guard-runtime`）は本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）。`code-structure.md`（`260813-remove-team-up` 節を履歴へラベル変更し、正本パスが `8b6089275` / #2975 で削除済みである旨を observed 実測付きで注記 — `cid:reverse-engineering:c1`）
+- Reviewed-and-unchanged artifacts（**沈黙のスキップではなく、レビュー済みで無変更**）: `architecture.md`（患部はテストの環境前提であり構成要素間の関係に変化なし）/ `component-inventory.md`（team-up 記述は既に履歴節の内側にあり本 intent の焦点面と交差しない）/ `api-documentation.md`（`scripts/amadeus-leader-sync.ts` の公開契約は `base..observed` で無変更）/ `dependencies.md` / `technology-stack.md`（依存・ランタイムの変化なし）/ `business-overview.md`。**この 6 面は本 intent の節を持たないため、後続ステージがここから本 intent の事実を引いてはならない**（`cid:requirements-analysis:c4-consume-header-is-not-citable-content`）
+- Per-intent record: `re-scans/260814-t245-origin-fixture.md`（base / observed 選定根拠、currency 判定、述語 P0〜P10、Developer scan 所見 F1〜F6、差分区間の主要テーマ、修正方式 A / B のトレードオフ表と論点 3 点、未実測 3 件の正本）
+- 適用範囲外（明示）: 修正方式の選定（A = fetch 除去し HEAD 掃引へ / B = bare origin fixture 化）、`scaleTestTime(120_000)` の去就、実 corpus 掃引を CI 必須集合に残すか別 tier へ移すか、同型の環境前提を持つ他テストの探索範囲 — **裁定はすべて requirements-analysis / application-design の所掌**
+
+## 実行メタデータ（履歴: 260813-lifecycle-guard-runtime）
 
 - Date: `2026-08-14`
 - Base commit: `854692fd7a11b124236b0427fe3d59e2fe6bf785`（`reverse-engineering-timestamp.md` + `re-scans/*.md` の全 observed のうち **HEAD の祖先で距離最小**。`git merge-base --is-ancestor 854692fd7 HEAD` = **exit 0**、`git rev-list --count 854692fd7..HEAD` = **35 commits / 233 files**（`+24099 / −9421`）。`cid:reverse-engineering:rescan-base-ancestry`）

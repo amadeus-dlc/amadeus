@@ -1,0 +1,19 @@
+{
+  "electionId": "E-260814-T245-RE-S13",
+  "voter": "subagent-2",
+  "question": "§13 学習選定(reverse-engineering, intent 260814-t245-origin-fixture): memory.md の候補は2件 — c1「xrev differential scan mode を採用」(既存 cid:reverse-engineering:c1-xrev-scan-mode / c5-xrev-currency-schema-migration の判定手順の機械的適用)、c2「base=89532174c を祖先距離最小で選定」(既存 cid:reverse-engineering:rescan-base-ancestry の機械的適用)。いずれも既決ノルムの執行であり新規学習ではないため、採用0件を提案する。この提案(採用0件、c1/c2 とも非採用)を可とするか。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "採用0件で可",
+      "description": "c1/c2 はいずれも既存 cid の判定手順をそのまま適用した記録であり、一般化・機械化すべき新規知見を含まない。memory.md 上の記録は stage の恒久記録として残る"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "候補を採用すべき",
+      "description": "c1 または c2 に既存 cid が覆っていない新規性がある(どの候補をどの heading へ入れるかを ballot rationale に明記すること)"
+    }
+  ]
+}

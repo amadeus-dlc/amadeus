@@ -1145,5 +1145,12 @@
     "dirName": "260813-lifecycle-guard-runtime",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019ffda5-bc87-754d-92b6-ff1b7a50d9a4",
+    "slug": "t245-origin-fixture",
+    "dirName": "260814-t245-origin-fixture",
+    "scope": "self-fix",
+    "status": "in-flight"
   }
 ]

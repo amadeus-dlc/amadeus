@@ -1,6 +1,37 @@
 # コード品質評価
 
-## ライフサイクルガードの品質所見 — fail 方向の衝突と迂回路（260813-lifecycle-guard-runtime、現在、observed `89532174c`）
+## テストの環境前提欠陥 — 実 `origin` を要求する唯一の自動テスト（260814-t245-origin-fixture、現在、observed `5f6b5bf97`）
+
+**観測 ref**: すべて observed = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`（= 本 worktree HEAD = `origin/main`）。差分 base = `89532174c30ef9cc7ff29496cd6916586fdda00a`（9 commits / 183 files、`+8710 / −8521`）。全数列挙と述語は `re-scans/260814-t245-origin-fixture.md` を正本とする。対象は [Issue #2971](https://github.com/amadeus-dlc/amadeus/issues/2971)（クロスレビュー `xrev-260814-2971` 2 名成立）。
+
+### Q-A: テストが実行環境の外部状態（`origin` リモート）に依存している
+
+`tests/integration/t245-amadeus-leader-sync.integration.test.ts:208-226` の `sweeps every origin/main election file through real selfCheck and exclusions` は、`process.cwd()` を `projectDir` として
+
+- `:213-215` `git fetch origin "+refs/heads/main:refs/remotes/origin/main"`
+- `:216` `git worktree add --detach <scratch>/worktree origin/main`
+
+を**無条件**に実行する。`mkdtempSync`（`:210`）が作るのは worktree の置き場だけで、リポジトリ本体は実クローンである。したがって `origin` を持たないクローン（アーカイブ展開、`git init` 済みの検証用ツリー、リモート未設定の CI ランナー）では**テスト内容と無関係に構造的に赤くなる**。
+
+同種の実 `origin` 参照は他に存在しない。述語 `git grep -n 'refs/heads/main:refs/remotes/origin/main' -- tests scripts packages plugins` の hit は **2 件**で、うち 1 件は本番ツール（`scripts/amadeus-leader-sync.ts:567`）、テストは t245 の 1 件のみである。
+
+### Q-B: ヘルパの無条件 assert が環境失敗を仕様違反と同一視する
+
+`:78-83` の `gitStdout` は `spawnGit` の結果を `expect(result.kind).toBe("ok")` で無条件検査し、skip / guard 分岐を持たない。ファイル内の全 git 実行がこのヘルパを通るため、**「環境が要件を満たさない」と「プロダクトが契約に違反した」が同じ赤に潰れる**。scratch 実測では `git fetch origin …` が exit 128 / `fatal: 'origin' does not appear to be a git repository` を返し、`spawnCommand`（`scripts/amadeus-leader-sync.ts:344-361`）は正しく `kind: "error"` へ変換している — すなわち**プロダクト側の欠陥ではない**。
+
+### Q-C: 同一ファイル内に正解形が既にあり、逸脱しているのはこの 1 件だけ
+
+`:106-133` の `prepare materializes origin/main in a single-branch shallow clone` は、bare remote / source / clone の 3 ディレクトリを `mkdtempSync` で作り、`git init --bare` → seed commit → `remote add origin <bare>` → `push` → `clone --depth 1 --single-branch` まで自己完結で構築し、`afterEach` の `rmSync(roots)` で一括破棄する。t207 / t433 / t222 / t-codex-hooks-migration も同じ自己完結様式である。**fixture 化されていないのは t245 のこの 1 テストだけ**であり、様式の不統一という形で負債が可視化している。
+
+### Q-D: 環境依存を除くと検出力が下がる（トレードオフが実在する）
+
+このテストの実際の価値は実 corpus の全数掃引にある — observed の `elections/` 配下は **4150 ファイル / 8,015,636 bytes**（`git ls-tree -r --long HEAD -- amadeus/spaces/default/elections`）。一方 `resolveOwnedSet` → `checkExclusions` → `selfCheck` → `analyzeOwnedContents`（`scripts/amadeus-leader-sync.ts:164` / `:214` / `:234` / `:249`）が要求する**最小 corpus は 1 件以上**にすぎず、合成シェイプの観点は `:175-206` が既に覆っている。したがって単純な fixture 化は「環境非依存」と引き換えに**全数掃引という唯一の差別化価値を失う**。両立させる形（HEAD 断面での掃引継続など）を含め、方式選定は requirements/design の裁定事項として `re-scans/260814-t245-origin-fixture.md` へ申し送った。
+
+### CI プロファイルへの影響
+
+`tests/run-tests.ts:125`（`--ci            smoke + unit + integration`）のとおり、`tests/integration/` 直下の t245 は **PR blocking の必須集合に含まれる**。すなわち本欠陥は「ローカルで不便」ではなく、`origin` 未設定の環境では必須 CI が通らないクラスの欠陥である。あわせて `tests/.test-time-factor-allowlist.json` に t245 のエントリは無く（`grep -c t245` = 0）、`:226` の `scaleTestTime(120_000)` は免除ではなく通常適用の timeout である — 実 corpus + 実 worktree I/O という現行の重さがその根拠であるため、掃引対象を変える修正では timeout 値も同じ変更で見直す必要がある。
+
+## ライフサイクルガードの品質所見 — fail 方向の衝突と迂回路（260813-lifecycle-guard-runtime、履歴、observed `89532174c`）
 
 **観測 ref**: すべて observed = `89532174c30ef9cc7ff29496cd6916586fdda00a`（= 本 worktree HEAD）。差分 base = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（35 commits / 233 files）。全数列挙は `re-scans/260813-lifecycle-guard-runtime.md` を正本とする。
 
