@@ -2108,9 +2108,9 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:e2e751e8b189779d59f4ba0ec42e6e6eeb0bdd48124566aeaee48e4406d26614",
-      "anchorLines": 43,
-      "targetLines": "1-43"
+      "fingerprint": "sha256:b571772e48a7993ca8f1be5ab2ee2e7c06dfb6e9f2dac7ec99a8cee859deac76",
+      "anchorLines": 58,
+      "targetLines": "1-58"
     },
     "reason": "The guarded unpark adapter is covered as shipped subprocess journeys by t259, including success, rejection, mutation, and idempotence; spawned CLI lines are not parent-LCOV resident.",
     "expiry": "remove when guarded unpark and process-exit boundaries are injectable in-process"

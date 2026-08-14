@@ -1,4 +1,4 @@
-// covers: subcommand:amadeus-orchestrate:park, subcommand:amadeus-state:park
+// covers: subcommand:amadeus-state:park, subcommand:amadeus-state:unpark, file:packages/framework/core/tools/amadeus-orchestrate.ts
 // size: medium
 //
 // Issue #3016 — `amadeus-state.ts park` refused EVERY park under
@@ -60,13 +60,23 @@ afterEach(() => {
   resetAidlcEnv();
 });
 
-function run(tool: string, args: string[]) {
-  return spawnSync(process.execPath, [tool, ...args, "--project-dir", proj], {
+// Each spawn names its tool path at the call site (rather than taking it as a
+// parameter) so the mechanism classifier can resolve argv[0] statically and
+// credit this file as a `cli` driver of both tools.
+function runState(args: string[]) {
+  return spawnSync(process.execPath, [STATE_TOOL, ...args, "--project-dir", proj], {
     encoding: "utf-8",
     // The park guard deliberately does NOT honour
     // AMADEUS_SKIP_HUMAN_PRESENCE_GUARD (it would hand every scripted run the
     // bypass the guard exists to deny), but the suite runner injects it into
     // every test env — strip it so the spawned tools see a production env.
+    env: stripPresenceBypass(process.env),
+  });
+}
+
+function runEngine(args: string[]) {
+  return spawnSync(process.execPath, [ORCHESTRATE_TOOL, ...args, "--project-dir", proj], {
+    encoding: "utf-8",
     env: stripPresenceBypass(process.env),
   });
 }
@@ -143,7 +153,7 @@ describe("t3016 park under production `full` autonomy", () => {
     expect(grantBefore.length).toBeGreaterThan(0);
     expect(grantBefore).not.toBe("none");
 
-    const park = run(STATE_TOOL, ["park"]);
+    const park = runState(["park"]);
     expect(park.stderr).toBe("");
     expect(park.status).toBe(0);
     expect(stateText()).toContain("- **Parked**:");
@@ -153,7 +163,7 @@ describe("t3016 park under production `full` autonomy", () => {
     // clears the marker (`--resume`'s Branch 2.6 names exactly this unpark).
     expect(field("Intent Autonomy Mode")).toBe(modeBefore);
     expect(field("Intent Grant")).toBe(grantBefore);
-    const unpark = run(STATE_TOOL, ["unpark"]);
+    const unpark = runState(["unpark"]);
     expect(unpark.status).toBe(0);
     expect(stateText()).not.toContain("- **Parked**:");
     expect(field("Intent Autonomy Mode")).toBe(modeBefore);
@@ -163,9 +173,9 @@ describe("t3016 park under production `full` autonomy", () => {
 
   test("the park consumes the turn - the same turn cannot park twice", () => {
     fullAutonomyProject();
-    expect(run(STATE_TOOL, ["park"]).status).toBe(0);
-    expect(run(STATE_TOOL, ["unpark"]).status).toBe(0);
-    const second = run(STATE_TOOL, ["park"]);
+    expect(runState(["park"]).status).toBe(0);
+    expect(runState(["unpark"]).status).toBe(0);
+    const second = runState(["park"]);
     expect(second.status).not.toBe(0);
     expect(second.stderr.toLowerCase()).toContain("human_turn");
     expect(stateText()).not.toContain("- **Parked**:");
@@ -173,7 +183,7 @@ describe("t3016 park under production `full` autonomy", () => {
     // A NEW human turn re-opens it: the guard tracks presence, not a one-shot
     // permission the record burns for good.
     mintTurn();
-    expect(run(STATE_TOOL, ["park"]).status).toBe(0);
+    expect(runState(["park"]).status).toBe(0);
     expect(stateText()).toContain("- **Parked**:");
   });
 });
@@ -181,7 +191,7 @@ describe("t3016 park under production `full` autonomy", () => {
 describe("t3016 the engine passes the park verdict through", () => {
   test("engine park emits `parked` when a human turn is outstanding", () => {
     fullAutonomyProject();
-    const res = run(ORCHESTRATE_TOOL, ["park"]);
+    const res = runEngine(["park"]);
     expect(res.status).toBe(0);
     const directive = directiveOf(res.stdout);
     expect(directive.kind).toBe("parked");
@@ -193,10 +203,10 @@ describe("t3016 the engine passes the park verdict through", () => {
     fullAutonomyProject();
     // Spend the declaration's turn, then clear the marker: the record is back
     // to a running autonomous workflow with nobody at the keyboard.
-    expect(run(STATE_TOOL, ["park"]).status).toBe(0);
-    expect(run(STATE_TOOL, ["unpark"]).status).toBe(0);
+    expect(runState(["park"]).status).toBe(0);
+    expect(runState(["unpark"]).status).toBe(0);
 
-    const res = run(ORCHESTRATE_TOOL, ["park"]);
+    const res = runEngine(["park"]);
     expect(res.status).toBe(0); // the engine reports refusals as a directive
     const directive = directiveOf(res.stdout);
     expect(directive.kind).toBe("error");

@@ -6841,6 +6841,10 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
+          "file": "tests/integration/t3016-park-provenance.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t17.test.ts",
           "mechanism": "cli"
         }
@@ -7026,6 +7030,10 @@
       "coveredBy": [
         {
           "file": "tests/integration/t259-guard-integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t3016-park-provenance.integration.test.ts",
           "mechanism": "cli"
         },
         {
