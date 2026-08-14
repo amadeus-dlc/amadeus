@@ -1208,5 +1208,12 @@
     "dirName": "260814-unit-failure-autoelectio",
     "scope": "self-fix",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019fff1a-ba9f-7173-abec-40c9e7a6d004",
+    "slug": "failopen-error-paths",
+    "dirName": "260814-failopen-error-paths",
+    "scope": "self-fix",
+    "status": "in-flight"
   }
 ]
