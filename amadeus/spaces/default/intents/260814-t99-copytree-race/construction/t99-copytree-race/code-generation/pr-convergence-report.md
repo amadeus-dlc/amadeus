@@ -1,12 +1,28 @@
 # PR Convergence Report
 
-- kind: created
+- kind: converged
 - pull request: amadeus-dlc/amadeus#3015
-- generated at: 2026-08-14T05:44:53Z
-- converged: false
+- generated at: 2026-08-14T06:12:48Z
+- converged: true
+- merge state: CLEAN
+- mergeable resolution: resolved
+
+## Violating threads
+
+- replied-unresolved: 0
+- ignored: 0
+
+## Ledger
+
+- resolved: 0
+- outdated: 0
+- replied-unresolved: 0
+- ignored: 0
+- human-only (out of scope): 0
+- terminalized: 0
 ## CLI Attestation
 
-- attestation id: prca:24890d5729f99fff321fd0e40f354c1db93553f328510400a30880bd5480c377
+- attestation id: prca:a99c65fc6c52e68b651b93f0cd300ded5888120f88fad10e49b41136633015da
 - intent: t99-copytree-race
 - intent uuid: 019ffea5-c321-70cd-a824-ecd9f9240a60
 - record: amadeus/spaces/default/intents/260814-t99-copytree-race/
@@ -14,7 +30,7 @@
 - unit: t99-copytree-race
 - repository: amadeus-dlc/amadeus
 - pr: 3015
-- local head: dc6d5fed693a83bbffb0a4fb28f3848e883a9737
-- remote head: dc6d5fed693a83bbffb0a4fb28f3848e883a9737
-- pr head: dc6d5fed693a83bbffb0a4fb28f3848e883a9737
-- content digest: sha256:6626468882660b52a56158d32911e9e121db2d4fe962448a584da7dd1629c67b
+- local head: c74e260af567af9423999fcc3d1fd4137f47ff75
+- remote head: c74e260af567af9423999fcc3d1fd4137f47ff75
+- pr head: c74e260af567af9423999fcc3d1fd4137f47ff75
+- content digest: sha256:277bacb28aa0b55f5f313c068cdc0a788120988f0f82823eb164a084a6961bc1
