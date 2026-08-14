@@ -1,19 +1,20 @@
-# PR Convergence Report — rename-github-pr-convergence
+# PR Convergence Report
 
-## 判定
+- kind: created
+- pull request: amadeus-dlc/amadeus#3051
+- generated at: 2026-08-14T13:26:39Z
+- converged: false
+## CLI Attestation
 
-- kind: `not-applicable-yet`
-- converged: `false`
-- pull request: `https://github.com/amadeus-dlc/amadeus/pull/3051`
-- observed at: `2026-08-14T13:25:00Z`
-
-PR #3051 は作成済み。初回は origin/main の前進により CONFLICTING(CI 未発火)→ 競合解決コミット `430eaadba` を push し、必須 check が再実行中。三面(base 競合 / レビュースレッド / 必須 check)の収束は未確定。この N/A は PASS の代用ではなく観測事実である。
-
-## 現在の検証面
-
-- builder ローカル: typecheck / lint / build(追跡不変)/ source-only すべて exit 0、対象テスト 418 pass / 0 fail
-- 落ちる実証 1 セット成立(scope-bindings 誤名注入 → EXECUTE 行 0 で赤 → revert 残渣ゼロ)
-- referee: `amadeus-swarm.ts check rename-github-pr-convergence` → converged / tampered=false
-- リモート CI(blocking の正): 競合解決後の head で再実行中
-
-PR Convergence は pr-convergence ステージで実行する。マージはユーザーの事前承認(CI green 条件付き、2026-08-14 本セッション)に基づき、#2996 → #2997 の順でスカッシュマージする。
+- attestation id: prca:63bfe5aaa79977750ea855aa4e0c3528669c7230027b77b94c69c2bb1cb300ce
+- intent: plugins-rename-drift
+- intent uuid: 019fff1a-bae8-77b2-99a4-5f9e19d75d17
+- record: amadeus/spaces/default/intents/260814-plugins-rename-drift/
+- bolt: b1-rename
+- unit: rename-github-pr-convergence
+- repository: amadeus-dlc/amadeus
+- pr: 3051
+- local head: 18ffeff03bfc329cdf710133b30b7e3d6aa0bc62
+- remote head: 18ffeff03bfc329cdf710133b30b7e3d6aa0bc62
+- pr head: 18ffeff03bfc329cdf710133b30b7e3d6aa0bc62
+- content digest: sha256:bcd0cff62060da331d6a92ee944b045c0755135121c6652016b9a348372ab16c
