@@ -1001,10 +1001,8 @@ export const ElectionStore = {
     if (!history.ok) return history;
     const current = readCurrent(loaded.value.resolved.dir, loaded.value.definition);
     if (!current.ok) return current;
-    if (history.value.length > 0) {
-      const verified = verifyHistory(loaded.value.resolved.dir, loaded.value.definition);
-      if (!verified.ok) return verified;
-    }
+    const verified = verifyHistory(loaded.value.resolved.dir, loaded.value.definition);
+    if (!verified.ok) return verified;
     const timeline = readTimeline(join(loaded.value.resolved.dir, "timeline.json"));
     if (!timeline.ok || !validTimeline(timeline.value)) return err("corrupt");
     return ok({
@@ -1068,14 +1066,23 @@ export const ElectionStore = {
     } catch {
       return err("io-error");
     }
+    // Re-encode previously stored events so every persisted ballot keeps the
+    // codec's canonical serialization instead of a decoded object's key order.
+    const events: { arrivalSequence: number; ballot: unknown }[] = [];
+    for (const event of voterPending.value) {
+      const reencoded = encodeBallot(event.ballot, loaded.value.definition);
+      if (!reencoded.ok) return reencoded;
+      events.push({
+        arrivalSequence: event.arrivalSequence,
+        ballot: JSON.parse(reencoded.value) as unknown,
+      });
+    }
+    events.push({ arrivalSequence, ballot: JSON.parse(encoded.value) as unknown });
     const file = {
       schemaVersion: 2,
       electionId,
       voter: ballot.voter,
-      events: [
-        ...voterPending.value,
-        { arrivalSequence, ballot: JSON.parse(encoded.value) as unknown },
-      ],
+      events,
     };
     const write = writeStoreFile(
       pendingPath(loaded.value.resolved.dir, ballot.voter),
@@ -1125,9 +1132,9 @@ export const ElectionStore = {
     if (!loaded.ok) return loaded;
     const history = verifyHistory(loaded.value.resolved.dir, loaded.value.definition);
     if (!history.ok) return history;
-    if (history.value.length > 0) return ok(history.value.map((entry) => entry.tally));
-    const current = readCurrent(loaded.value.resolved.dir, loaded.value.definition);
-    return current.ok ? ok(current.value === null ? [] : [current.value.tally]) : current;
+    // A verified empty history implies a null current tally, so the map covers
+    // both shapes without re-reading the current file.
+    return ok(history.value.map((entry) => entry.tally));
   },
 
   establishedResultsDigest(

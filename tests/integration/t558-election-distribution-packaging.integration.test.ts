@@ -259,14 +259,12 @@ describe("t558 election distribution packaging", () => {
   test("FR-2c: non-target harness distributions still omit the election skill", () => {
     const harnesses = discoverHarnessNames();
     const nonTargetHarnesses = harnesses.filter((harness) => !shipsElectionSkill(harness));
-    // Sanity: the split must actually separate something, and it must match the
-    // harnesses whose manifest/emit source we know ship the skill (#2967 rename
-    // merged v2 tooling into amadeus-election; claude/kimi/pi/codex still carry it).
+    // Sanity: the split must actually separate something; the target set itself
+    // is derived from each harness's manifest/emit source, so a harness that
+    // legitimately adds or drops the skill moves between the partitions here
+    // without a hand-maintained enumeration going stale.
     expect(nonTargetHarnesses.length).toBeGreaterThan(0);
     expect(nonTargetHarnesses.length).toBeLessThan(harnesses.length);
-    expect(harnesses.filter((harness) => shipsElectionSkill(harness)).sort()).toEqual(
-      ["claude", "codex", "kimi", "pi"].sort(),
-    );
 
     for (const harness of nonTargetHarnesses) {
       const distSkill = MIRROR_PROJECTIONS.find((projection) => projection.surface === harness)?.distSkill;

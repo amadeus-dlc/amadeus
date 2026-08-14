@@ -44,7 +44,7 @@ bun {{HARNESS_DIR}}/tools/amadeus-election.ts next --election <id>
 2. `kind` が `done` ならループを終了する(→ 終了節)。
 3. `kind` が `hold` なら、まず人間委譲節へ移る(再投票ラウンドを回すかどうかは人間が決める)。
 4. `kind` が `collect-wait` なら、`pending` に列挙された投票者からの票を待つ。票が届いたら `vote --election <id> --file <ballot.json>` で受理し、ループ先頭へ戻る。受理が exit 1 なら error を投票者へそのまま返す。再実行中は `targetQuestionIds` に列挙された question だけを `responses[]` に含める。
-5. それ以外は、指令の `verb` フィールドが名指しするサブコマンドを `--election <id>` 付きで実行する。指令に `schemaVersion: 2` があるときは、stdout の指令 JSON をファイルへ保存し、名指し verb と続く `report` の両方に `--file <そのファイル>` を付ける（指令を再構築しない）。それ以外は `report --election <id> --result <指令の report フィールド>` を実行する。いずれかが exit 0 以外なら停止して人間へ提示する。
+5. それ以外は、stdout の指令 JSON をファイルへ保存し、指令の `verb` フィールドが名指しするサブコマンドと続く `report` の両方を `--election <id> --file <そのファイル>` 付きで実行する（指令を再構築しない）。いずれかが exit 0 以外なら停止して人間へ提示する。
 
 人間が再投票を選んだ場合、`hold` 指令も他の指令と同じ転送に従う。これは mixed result のあと hold-only rerun を配る指令であり、`held` から対象をスキルが選ばない。
 

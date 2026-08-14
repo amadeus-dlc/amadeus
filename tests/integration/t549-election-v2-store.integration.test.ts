@@ -488,4 +488,50 @@ describe("t549 election v2 store", () => {
       error: "history-mismatch",
     });
   });
+
+  test("readSnapshot fail-closes when the current tally has no history", () => {
+    state("collecting");
+    const committed = ElectionStore.commitTally(
+      root,
+      DEFINITION.electionId,
+      tally("run-1", ["q1", "q2"], [established("q1"), established("q2")], null),
+      { expectedState: "collecting", nextState: "tallied" },
+    );
+    expect(committed.ok).toBe(true);
+    rmSync(join(electionDir(), "tallies"), { recursive: true, force: true });
+    expect(ElectionStore.verify(root, DEFINITION.electionId)).toMatchObject({
+      ok: false,
+      error: "history-mismatch",
+    });
+    expect(ElectionStore.readSnapshot(root, DEFINITION.electionId)).toMatchObject({
+      ok: false,
+      error: "history-mismatch",
+    });
+  });
+
+  test("appendPending keeps previously stored ballots in canonical encoded form", () => {
+    state("collecting");
+    expect(ElectionStore.appendPending(root, DEFINITION.electionId, ballot("alice")).ok).toBe(true);
+    const amend: CanonicalBallot = {
+      ...ballot("alice", 2),
+      kind: "amend",
+      ref: {
+        electionId: DEFINITION.electionId,
+        voter: "alice",
+        submittedAt: ballot("alice").submittedAt,
+      },
+      submittedAt: "2026-08-13T10:05:00Z",
+    };
+    expect(ElectionStore.appendPending(root, DEFINITION.electionId, amend).ok).toBe(true);
+    const file = JSON.parse(
+      readFileSync(join(electionDir(), "pending", "alice.json"), "utf8"),
+    ) as { events: { ballot: Record<string, unknown> }[] };
+    expect(file.events).toHaveLength(2);
+    // Every stored event must carry the codec's canonical serialization, which
+    // always leads with schemaVersion then kind; a decoded object re-serialized
+    // with JSON.stringify would lead with kind instead.
+    for (const event of file.events) {
+      expect(Object.keys(event.ballot).slice(0, 2)).toEqual(["schemaVersion", "kind"]);
+    }
+  });
 });

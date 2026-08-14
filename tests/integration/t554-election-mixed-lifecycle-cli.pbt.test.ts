@@ -1,4 +1,4 @@
-// covers: function:nextElection
+// covers: file:packages/framework/core/tools/amadeus-election.ts
 // size: medium
 import { describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";

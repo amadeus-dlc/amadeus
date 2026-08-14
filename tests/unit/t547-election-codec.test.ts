@@ -1,4 +1,4 @@
-// covers: object:ElectionDefinitionCodec, object:BallotCodec, object:TallyCodec
+// covers: file:packages/framework/core/tools/amadeus-election-codec.ts
 // size: small
 import { describe, expect, test } from "bun:test";
 import {
