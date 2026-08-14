@@ -53,7 +53,8 @@ Read the pull request's mergeability before looking at anything else:
 
 ```
 bun {{HARNESS_DIR}}/plugins/pr-convergence/tools/pr-convergence-cli.ts status \
-  --repo <owner/repo> --pr <number> --unit <unit> --record <record-root>
+  --repo <owner/repo> --pr <number> --unit <owner-unit> \
+  [--units <unit-a,unit-b>] --record <record-root>
 ```
 
 While the merge state is not clean, **do not** work review threads or chase
@@ -99,9 +100,11 @@ and `override` remain fully fail-closed.
 
 ### (1) Create the pull request
 
-Create the pull request for this Bolt if it does not exist yet. One Bolt, one
-pull request: do not fold several units, workflow-record commits, or unrelated
-refactors into it. Record the number — every later step needs it.
+Create the pull request for this Bolt if it does not exist yet. One Delivery
+Bolt has one pull request. Every Unit assigned to that Bolt in the approved
+`delivery-planning/bolt-plan.md` may share it; Units from another Bolt or
+Intent, workflow-record commits, and unrelated refactors may not be folded
+into it. Record the number — every later step needs it.
 
 Write the authored body to a machine-local file, then create the pull request
 through the plugin CLI:
@@ -114,7 +117,8 @@ bun {{HARNESS_DIR}}/plugins/pr-convergence/tools/pr-convergence-cli.ts create \
   --body-file <authored-body.md> \
   --record <record-root> \
   --bolt <bolt-name> \
-  --unit <unit-name> \
+  --unit <owner-unit> \
+  [--units <unit-a,unit-b>] \
   [--base <base-branch>]
 ```
 
@@ -146,9 +150,28 @@ undifferentiated refusal: it earns no diagnosis it could steer.
 
 Pass `--record`, `--bolt`, and `--unit` together when the pull request is linked
 to an Amadeus Intent. The CLI resolves the record against the adjacent
-`intents.json`, prefixes the title as `[<intent>/<bolt>/<unit>] <change summary>`,
+`intents.json`, prefixes a single-Unit title as
+`[<intent>/<bolt>/<unit>] <change summary>`,
 and appends one canonical `## Amadeus Work` section containing the Intent, Bolt,
 and Unit names, the repository-relative record path (`dirName`), and the UUID.
+A multi-Unit Bolt additionally passes every approved member with `--units`.
+The CLI sorts that set, requires the same membership in the approved
+`runtime-graph.json.delivery_bolts` projection, and verifies the projection
+against the SHA-256 of the completed Delivery Planning `bolt-plan.md`. DAG
+batches are never treated as Delivery Bolt identity. It renders the title member
+segment with `+` and the body Unit value with `,`, then writes a distinct
+owner-bound report, attestation, audit receipt, and sensor verdict for every
+member. Multi-Unit report payloads carry a canonical `## Owner Projection`
+section binding the shared Intent/Bolt/member-set/PR/head tuple to that owner
+Unit and its repository-relative report path; each owner therefore has a
+different payload digest. Reversing the input order still resumes the same
+delivery identity.
+A missing or stale projection, partial/duplicate set, or owner outside the set
+is rejected before GitHub is accessed. Omit `--units` for the byte-compatible
+single-Unit report form. Singleton and multi-Unit deliveries use the same
+authority contract: both the approved Delivery Plan and its current runtime
+projection are mandatory. Their simultaneous absence is never treated as a
+legacy marker because it is indistinguishable from carrier deletion.
 A missing, malformed, or ambiguous identity refuses before touching GitHub. For
 a pull request that is not linked to an Intent, omit all three flags; the title
 and authored body are passed unchanged. Do not hand-copy workflow identity into
@@ -249,7 +272,8 @@ When `status` exits 0, write the report:
 
 ```
 bun {{HARNESS_DIR}}/plugins/pr-convergence/tools/pr-convergence-cli.ts report \
-  --repo <owner/repo> --pr <number> --unit <unit> --record <record-root>
+  --repo <owner/repo> --pr <number> --unit <owner-unit> \
+  [--units <unit-a,unit-b>] --record <record-root>
 ```
 
 `report` re-evaluates before it writes and refuses to write anything when the
@@ -294,7 +318,8 @@ recorded, never assumed:
 
 ```
 bun {{HARNESS_DIR}}/plugins/pr-convergence/tools/pr-convergence-cli.ts override \
-  --repo <owner/repo> --pr <number> --unit <unit> --record <record-root> \
+  --repo <owner/repo> --pr <number> --unit <owner-unit> \
+  [--units <unit-a,unit-b>] --record <record-root> \
   --reason "<why the human ruled forward>"
 ```
 

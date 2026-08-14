@@ -24,6 +24,7 @@
 
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
 import { appendAuditEntryViaEvents } from "../otel/migration-adapter.ts";
 import {
@@ -58,6 +59,13 @@ import {
   writeFileAtomic,
 } from "./amadeus-lib.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
+import {
+  DELIVERY_BOLT_PLAN_SOURCE,
+  type DeliveryBoltProjection,
+  isEngineSingletonDeliveryBoltState,
+  projectEngineSingletonDeliveryBolt,
+  projectDeliveryBoltPlan,
+} from "./amadeus-delivery-bolts.ts";
 
 // --- Schema (must match docs/reference/13-runtime-graph.md exactly) ---
 
@@ -130,10 +138,59 @@ interface RuntimeGraph {
   // Mutually exclusive with bolt_dag: set only when the compile legitimately had
   // no DAG to project (see computeBoltDagOutcome).
   bolt_dag_absence?: BoltDagAbsence;
+  delivery_bolts?: DeliveryBoltProjection;
   execution_observability?: {
     root_operation_id: string;
     event_set_digest: string;
   };
+}
+
+type DeliveryBoltProjectionOutcome =
+  | { readonly kind: "projection"; readonly projection: DeliveryBoltProjection }
+  | { readonly kind: "absent" }
+  | { readonly kind: "invalid"; readonly detail: string };
+
+/** Project approved-plan or the engine's narrowly resolved incremental singleton authority. */
+export function computeDeliveryBoltProjectionOutcome(
+  projectDir: string,
+  stateContent: string | null,
+  intent?: string,
+  space?: string,
+): DeliveryBoltProjectionOutcome {
+  const deliveryStage = stateContent
+    ? parseCheckboxes(stateContent).find((candidate) => candidate.slug === "delivery-planning")
+    : undefined;
+  const path = join(
+    dirname(stateFilePath(projectDir, intent, space)),
+    DELIVERY_BOLT_PLAN_SOURCE,
+  );
+  if (deliveryStage?.state === "completed") {
+    if (!existsSync(path)) {
+      return { kind: "absent" };
+    }
+    let body: string;
+    try {
+      body = readFileSync(path, "utf-8");
+    } catch {
+      return {
+        kind: "invalid",
+        detail: `approved ${DELIVERY_BOLT_PLAN_SOURCE} is unreadable`,
+      };
+    }
+    const projected = projectDeliveryBoltPlan(body);
+    return projected.ok
+      ? { kind: "projection", projection: projected.projection }
+      : { kind: "invalid", detail: projected.message };
+  }
+
+  if (!isEngineSingletonDeliveryBoltState(stateContent)) return { kind: "absent" };
+  return projectEngineSingletonDeliveryBolt(
+    projectDir,
+    stateContent,
+    new Set(loadStageGraph().map((stage) => stage.slug)),
+    intent,
+    space,
+  );
 }
 
 function executionProjectionCursor(
@@ -896,6 +953,17 @@ export function compile(opts: CompileOptions): { skipped?: string; written?: str
     graph.bolt_dag_absence = outcome.absence;
   }
 
+  const deliveryOutcome = computeDeliveryBoltProjectionOutcome(projectDir, stateContent);
+  if (deliveryOutcome.kind === "invalid") {
+    rmSync(runtimeGraphPath(projectDir), { force: true });
+    throw new Error(
+      `runtime-compile: approved delivery-planning/bolt-plan.md is malformed (${deliveryOutcome.detail}); refusing to write a runtime graph without trustworthy Delivery Bolt membership`,
+    );
+  }
+  if (deliveryOutcome.kind === "projection") {
+    graph.delivery_bolts = deliveryOutcome.projection;
+  }
+
   // Audit-first inside ONE locked section: emit MEMORY_EMPTY rows first,
   // then write the artefact. Re-emit suppression: re-read audit inside the
   // lock and skip any (slug) that already has a MEMORY_EMPTY row whose
@@ -955,6 +1023,21 @@ function writeEmptyGraph(
   const executionProjection = executionProjectionCursor(projectDir, intent, space);
   if (executionProjection !== undefined) {
     graph.execution_observability = executionProjection;
+  }
+  const deliveryOutcome = computeDeliveryBoltProjectionOutcome(
+    projectDir,
+    stateContent,
+    intent,
+    space,
+  );
+  if (deliveryOutcome.kind === "invalid") {
+    rmSync(runtimeGraphPath(projectDir, intent, space), { force: true });
+    throw new Error(
+      `runtime-compile: Delivery Bolt authority is malformed (${deliveryOutcome.detail})`,
+    );
+  }
+  if (deliveryOutcome.kind === "projection") {
+    graph.delivery_bolts = deliveryOutcome.projection;
   }
   const writer = () => {
     writeFileAtomic(runtimeGraphPath(projectDir, intent, space), `${JSON.stringify(graph, null, 2)}\n`);

@@ -35,6 +35,17 @@ function record(humanTurn = false): string {
   const root = mkdtempSync(join(tmpdir(), "t533-pr-provenance-"));
   roots.push(root);
   mkdirSync(join(root, "audit"), { recursive: true });
+  const plan = `## Bolt convergence-enforcement\n\n- **Units:** \`${UNIT}\`\n`;
+  mkdirSync(join(root, "inception", "delivery-planning"), { recursive: true });
+  writeFileSync(join(root, "inception", "delivery-planning", "bolt-plan.md"), plan);
+  writeFileSync(join(root, "runtime-graph.json"), `${JSON.stringify({
+    delivery_bolts: {
+      authority: "approved-plan",
+      source: "inception/delivery-planning/bolt-plan.md",
+      sourceDigest: `sha256:${createHash("sha256").update(plan).digest("hex")}`,
+      bolts: [{ bolt: "convergence-enforcement", units: [UNIT] }],
+    },
+  }, null, 2)}\n`);
   const rows = humanTurn
     ? [
         JSON.stringify({

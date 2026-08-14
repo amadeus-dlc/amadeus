@@ -2,6 +2,68 @@
   "schemaVersion": 2,
   "models": [
     {
+      "name": "BoltPrAttestationGate",
+      "model": {
+        "path": "amadeus/spaces/default/specs/tla/BoltPrAttestationGate.tla",
+        "identity": "6585fdc943cf8a86facb2dbbd65470bcd94f4a5be9120bb4fa0b05640c2d34ed"
+      },
+      "cfg": {
+        "path": "amadeus/spaces/default/specs/tla/BoltPrAttestationGate.cfg",
+        "identity": "e040b0f0443f182274ef4c17afc261c059224e449ee7676677675ee275d0a1fd"
+      },
+      "entries": [
+        {
+          "implPath": "packages/framework/core/tools/amadeus-orchestrate.ts",
+          "sha256": "b34eb985f74f59b6cdb84e8af7ba41ae907fd8f34d737d1aa900b68c66dd80f6"
+        },
+        {
+          "implPath": "packages/framework/core/tools/amadeus-state.ts",
+          "sha256": "cb3c7e63181a1def5d62ab121d92d75a2f3e9f9e21fc877f869011074f8d2b6c"
+        }
+      ],
+      "vocabulary": {
+        "namedInvariants": [
+          "TypeOK",
+          "EvidenceCurrentHead",
+          "SensorRequiresAttestation",
+          "AttestationRequiresCompleteBolt",
+          "SensorRequiresCompleteBolt",
+          "OwnerEvidenceIsolated",
+          "AutonomyDecisionSafe",
+          "ReceiptIdempotent",
+          "ReceiptBoundCurrentReport",
+          "CodeGenerationGuarded",
+          "WorkflowGuarded"
+        ],
+        "traceStateVariables": [
+          "workflowDone",
+          "artifactsComplete",
+          "verdict",
+          "codeGenerationDone",
+          "sensorPassed",
+          "reportHead",
+          "head",
+          "attested",
+          "reportUnits",
+          "evidencedUnits",
+          "membershipValid",
+          "tupleConsistent",
+          "ownerEvidenceDistinct",
+          "candidateCount",
+          "authorityDecision",
+          "humanQuestion",
+          "receiptIssued",
+          "receiptCount",
+          "reportIdentity",
+          "receiptHead",
+          "receiptIdentity"
+        ]
+      },
+      "evidenceBundle": {
+        "digest": "sha256:cebe2897bff3d3fed905e298b83c90023bb9eba56ce7b24f614e0301a58a2efb"
+      }
+    },
+    {
       "name": "FormalElection",
       "model": {
         "path": "amadeus/spaces/default/specs/tla/FormalElection.tla",
@@ -114,7 +176,7 @@
       "entries": [
         {
           "implPath": "packages/framework/core/tools/amadeus-orchestrate.ts",
-          "sha256": "569f90e300ec9f7cb818b02073a36321a4fa66d3c9d56b223fb4f125f30e5504"
+          "sha256": "b34eb985f74f59b6cdb84e8af7ba41ae907fd8f34d737d1aa900b68c66dd80f6"
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-state.ts",

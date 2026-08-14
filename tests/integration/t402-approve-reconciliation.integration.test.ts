@@ -20,6 +20,7 @@ import {
   cleanupTestProject,
   createTestProject,
   resetAidlcEnv,
+  seedDeliveryBoltPlan,
   seededAuditShard,
   seededRecordDir,
   seededStateFile,
@@ -122,10 +123,14 @@ function seedDag(proj: string, batches: string[][]): void {
       .map((unit) => `  - name: ${unit.name}\n    depends_on: [${unit.depends_on.join(", ")}]`)
       .join("\n")}\n\`\`\`\n`,
   );
+  const deliveryProjection = seedDeliveryBoltPlan(seededRecordDir(proj), batches.flat());
   writeFileSync(
     join(seededRecordDir(proj), "runtime-graph.json"),
     JSON.stringify(
-      { bolt_dag: { units: batches.flat().map((name) => ({ name, depends_on: [] })), batches } },
+      {
+        bolt_dag: { units: batches.flat().map((name) => ({ name, depends_on: [] })), batches },
+        delivery_bolts: deliveryProjection,
+      },
       null,
       2,
     ),
@@ -219,6 +224,14 @@ function runReport(proj: string, args: string[]): Directive {
 const APPROVE = ["--stage", "code-generation", "--result", "approved"];
 
 describe("t402 approve-time reconciliation (FR-2)", () => {
+  test("the shared Delivery Bolt fixture rejects an empty Unit set", () => {
+    const proj = createTestProject();
+    tempDirs.push(proj);
+    expect(() => seedDeliveryBoltPlan(seededRecordDir(proj), [])).toThrow(
+      "Delivery Bolt delivery must contain at least one valid Unit slug",
+    );
+  });
+
   test("a: a parallel batch with no SWARM evidence is refused (AC-2a)", () => {
     const proj = seedCoveredRun([["alpha", "beta"]]);
     const directive = runReport(proj, APPROVE);
