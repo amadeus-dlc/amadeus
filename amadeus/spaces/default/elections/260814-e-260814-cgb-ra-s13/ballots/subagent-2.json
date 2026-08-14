@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-260814-CGB-RA-S13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "一次資料を独立に確認した。requirements-analysis/memory.md の Deviations 節は『iteration 1 の FR-4 で TDD 免除を主張し reviewer BLOCKER で差し戻し(テスト困難は免除理由にならない)。FR-4 を seam 経由 red-green 全面適用へ是正 — 免除逸脱は撤回』と記録し、requirements.md の Review — Iteration 1 は BLOCKER として『FR-4 の TDD 免除は cid:code-generation:tdd-default-with-narrow-exceptions の4免除のいずれにも該当せず、無申告の逸脱。seam 経由の falling-proof(経路検証)は実現可能であり、テスト追加か免除の裁定エスカレーションが必要』と明記、Iteration 2 は『FR-4 は TDD 免除を撤回し seam ベースの失敗テスト先行 + エラーパス伝播 1 ケース以上として全面適用へ』是正され Verdict: READY で着地している。team.md 該当行(cid:code-generation:tdd-default-with-narrow-exceptions)を grep で直読すると『変更が小さい・急ぎ・テストが難しい・既存 seam がないことも理由にしない』と既に明文化されており、本件の逸脱理由(テスト困難)はこの既存4免除除外リストにそのまま該当する。つまり本件は既存ノルムが§12aレビューで正しく機能し、無申告逸脱を捕捉・是正させた成功事例であり、ノルムの欠落・矛盾・新規原則の発見は認められない。record(requirements.md Review 節・memory.md Deviations)にすでに経緯が残存しており、Learnings Inbox への具象追記や本文昇格を要する横断的新規性はない。よって候補 c1 は不採用とし、採用0件の提案(displayNo 2 / internalNo 1)を支持する。",
+  "submittedAt": "2026-08-14T00:00:00Z",
+  "receivedAt": "2026-08-14T07:30:22Z"
+}
