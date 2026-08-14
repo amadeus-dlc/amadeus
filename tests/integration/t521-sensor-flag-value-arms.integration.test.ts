@@ -1,4 +1,4 @@
-// covers: file:packages/framework/core/tools/amadeus-sensor-depth-budget.ts, file:packages/framework/core/tools/amadeus-sensor-question-budget.ts, file:packages/framework/core/tools/amadeus-sensor-nfr-budget.ts, file:packages/framework/core/tools/amadeus-sensor-scope-sizing.ts, file:packages/framework/core/tools/amadeus-sensor-answer-evidence.ts, file:packages/framework/core/tools/amadeus-sensor-required-sections.ts, file:plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts
+// covers: file:packages/framework/core/tools/amadeus-sensor-depth-budget.ts, file:packages/framework/core/tools/amadeus-sensor-question-budget.ts, file:packages/framework/core/tools/amadeus-sensor-nfr-budget.ts, file:packages/framework/core/tools/amadeus-sensor-scope-sizing.ts, file:packages/framework/core/tools/amadeus-sensor-answer-evidence.ts, file:packages/framework/core/tools/amadeus-sensor-required-sections.ts, file:plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts
 // size: medium
 //
 // t521 — #2741: every per-sensor CLI rejects a malformed flag VALUE loudly, on
@@ -32,7 +32,7 @@ import {
 import {
   fail as prConvergenceFail,
   main as prConvergenceMain,
-} from "../../plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts";
+} from "../../plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts";
 import {
   fail as questionBudgetFail,
   main as questionBudgetMain,
@@ -206,7 +206,7 @@ for (const sensor of CASES) {
 // ---------------------------------------------------------------------------
 
 const TOOLS = join(import.meta.dir, "..", "..", "packages", "framework", "core", "tools");
-const PR_CONVERGENCE_TOOLS = join(import.meta.dir, "..", "..", "plugins", "pr-convergence", "tools");
+const PR_CONVERGENCE_TOOLS = join(import.meta.dir, "..", "..", "plugins", "github-pr-convergence", "tools");
 
 describe("t521 the strict read has a single definition", () => {
   // Which files legitimately carry the wording: the canonical helper, and the

@@ -5,7 +5,7 @@ import {
   type ProvenanceInput,
   type ProvenanceViolation,
   renderProvenanceRemediation,
-} from "../../plugins/pr-convergence/tools/pr-convergence-provenance.ts";
+} from "../../plugins/github-pr-convergence/tools/pr-convergence-provenance.ts";
 import {
   AMADEUS_WORK_FIELD_LABELS,
   AMADEUS_WORK_HEADING,
@@ -13,7 +13,7 @@ import {
   canonicalUnitSlugs,
   renderPullRequestBody,
   renderPullRequestTitle,
-} from "../../plugins/pr-convergence/tools/pr-convergence-presentation.ts";
+} from "../../plugins/github-pr-convergence/tools/pr-convergence-presentation.ts";
 
 const RECORD = "amadeus/spaces/default/intents/intent-a-00000001/";
 const UUID = "00000000-0000-0000-0000-000000000001";

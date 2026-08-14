@@ -49,7 +49,7 @@ import {
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const CORE_ROOT = join(REPO_ROOT, "packages", "framework", "core");
 const STAGES_ROOT = join(CORE_ROOT, "amadeus-common", "stages");
-const PLUGIN = "pr-convergence";
+const PLUGIN = "github-pr-convergence";
 const SEAM_ENTRY = "pr-convergence-report";
 const STAGE_REL = "amadeus-common/stages/construction/code-generation.md";
 

@@ -1,6 +1,6 @@
 # pr-convergence GraphQL fixtures
 
-U2 (`convergence-toolchain`) の契約正本。`plugins/pr-convergence/tools/` の
+U2 (`convergence-toolchain`) の契約正本。`plugins/github-pr-convergence/tools/` の
 台帳生成器・分類器・収束述語が消費する GraphQL 応答様式と、bot コメントの
 severity 語彙・終端参照語彙をここで固定する。
 

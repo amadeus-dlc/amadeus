@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { GhRunner } from "../../plugins/pr-convergence/tools/pr-convergence-gh-runner.ts";
-import { parsePrRef } from "../../plugins/pr-convergence/tools/pr-convergence-gh-runner.ts";
+import type { GhRunner } from "../../plugins/github-pr-convergence/tools/pr-convergence-gh-runner.ts";
+import { parsePrRef } from "../../plugins/github-pr-convergence/tools/pr-convergence-gh-runner.ts";
 import {
   extractTerminalRefs,
   fetchAllReviewThreads,
@@ -11,8 +11,8 @@ import {
   ReviewThread,
   Severity,
   ThreadLedger,
-} from "../../plugins/pr-convergence/tools/pr-convergence-ledger.ts";
-import { classifyThread } from "../../plugins/pr-convergence/tools/pr-convergence-predicate.ts";
+} from "../../plugins/github-pr-convergence/tools/pr-convergence-ledger.ts";
+import { classifyThread } from "../../plugins/github-pr-convergence/tools/pr-convergence-predicate.ts";
 
 // U2 convergence-toolchain (C4 ledger). Integration layer: reads the measured
 // GraphQL fixtures from the real filesystem. Fixture provenance and the
@@ -63,7 +63,7 @@ describe("isBotAuthor — BR-U2-3", () => {
 
   test("the ledger source contains no static bot-login allow-list", () => {
     const source = readFileSync(
-      join(import.meta.dir, "..", "..", "plugins", "pr-convergence", "tools", "pr-convergence-ledger.ts"),
+      join(import.meta.dir, "..", "..", "plugins", "github-pr-convergence", "tools", "pr-convergence-ledger.ts"),
       "utf-8",
     );
     // Bot names may appear in prose, but never inside a string literal that

@@ -1,7 +1,7 @@
 ---
 id: pr-convergence-report-format
 kind: deterministic
-command: bun {{HARNESS_DIR}}/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts
+command: bun {{HARNESS_DIR}}/plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts
 default_severity: blocking
 description: Flags a pr-convergence-report.md whose required fields the plugin CLI would have written are missing, blank, or self-contradictory
 category: governance

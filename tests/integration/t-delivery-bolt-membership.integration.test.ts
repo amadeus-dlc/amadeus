@@ -12,7 +12,7 @@ import {
   projectDeliveryBoltPlan,
   projectEngineSingletonDeliveryBolt,
 } from "../../packages/framework/core/tools/amadeus-delivery-bolts.ts";
-import { resolveDeliveryBoltMembership } from "../../plugins/pr-convergence/tools/pr-convergence-presentation.ts";
+import { resolveDeliveryBoltMembership } from "../../plugins/github-pr-convergence/tools/pr-convergence-presentation.ts";
 
 process.env.AMADEUS_STAGE_GRAPH ??= join(
   import.meta.dir,

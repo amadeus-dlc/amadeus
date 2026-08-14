@@ -1,4 +1,4 @@
-// covers: file:plugins/pr-convergence/tools/pr-convergence-attestation.ts, file:plugins/pr-convergence/tools/pr-convergence-git-runner.ts
+// covers: file:plugins/github-pr-convergence/tools/pr-convergence-attestation.ts, file:plugins/github-pr-convergence/tools/pr-convergence-git-runner.ts
 import { describe, expect, test } from "bun:test";
 import {
   attestationId,
@@ -6,11 +6,11 @@ import {
   renderAttestation,
   reportPayloadDigest,
   type ReportAttestation,
-} from "../../plugins/pr-convergence/tools/pr-convergence-attestation.ts";
+} from "../../plugins/github-pr-convergence/tools/pr-convergence-attestation.ts";
 import {
   type GitSpawn,
   verifyCreatePrerequisites,
-} from "../../plugins/pr-convergence/tools/pr-convergence-git-runner.ts";
+} from "../../plugins/github-pr-convergence/tools/pr-convergence-git-runner.ts";
 import { requiredPluginStagesForScope } from "../../packages/framework/core/tools/amadeus-config.ts";
 
 const SHA = "a".repeat(40);
@@ -111,7 +111,7 @@ describe("t534 self create git prerequisites", () => {
 describe("t534 mandatory plugin stage binding", () => {
   test("requires a bound stage only for the configured scopes", () => {
     const bindings = {
-      "pr-convergence": {
+      "github-pr-convergence": {
         "pr-convergence": ["self-document", "self-feature", "self-fix", "self-refactor"],
       },
     };

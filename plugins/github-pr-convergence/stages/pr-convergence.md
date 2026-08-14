@@ -52,7 +52,7 @@ handed back to a human.
 Read the pull request's mergeability before looking at anything else:
 
 ```
-bun {{HARNESS_DIR}}/plugins/pr-convergence/tools/pr-convergence-cli.ts status \
+bun {{HARNESS_DIR}}/plugins/github-pr-convergence/tools/pr-convergence-cli.ts status \
   --repo <owner/repo> --pr <number> --unit <owner-unit> \
   [--units <unit-a,unit-b>] --record <record-root>
 ```
@@ -110,7 +110,7 @@ Write the authored body to a machine-local file, then create the pull request
 through the plugin CLI:
 
 ```
-bun {{HARNESS_DIR}}/plugins/pr-convergence/tools/pr-convergence-cli.ts create \
+bun {{HARNESS_DIR}}/plugins/github-pr-convergence/tools/pr-convergence-cli.ts create \
   --repo <owner/repo> \
   --head <bolt-branch> \
   --title "<change summary>" \
@@ -271,7 +271,7 @@ all proceed in parallel with CI, never behind it.
 When `status` exits 0, write the report:
 
 ```
-bun {{HARNESS_DIR}}/plugins/pr-convergence/tools/pr-convergence-cli.ts report \
+bun {{HARNESS_DIR}}/plugins/github-pr-convergence/tools/pr-convergence-cli.ts report \
   --repo <owner/repo> --pr <number> --unit <owner-unit> \
   [--units <unit-a,unit-b>] --record <record-root>
 ```
@@ -295,7 +295,7 @@ commit happens after the verdict; every other tracked modification still
 refuses.
 
 The packaged checker resource is
-`{{HARNESS_DIR}}/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts`;
+`{{HARNESS_DIR}}/plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts`;
 the CLI reaches it through the host sensor dispatcher so attestation and latest
 verdict bookkeeping cannot be bypassed.
 
@@ -317,7 +317,7 @@ A human may instead rule the Bolt forward without convergence. That ruling is
 recorded, never assumed:
 
 ```
-bun {{HARNESS_DIR}}/plugins/pr-convergence/tools/pr-convergence-cli.ts override \
+bun {{HARNESS_DIR}}/plugins/github-pr-convergence/tools/pr-convergence-cli.ts override \
   --repo <owner/repo> --pr <number> --unit <owner-unit> \
   [--units <unit-a,unit-b>] --record <record-root> \
   --reason "<why the human ruled forward>"

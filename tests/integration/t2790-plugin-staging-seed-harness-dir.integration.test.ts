@@ -24,7 +24,7 @@ import {
 import { foreignHarnessDirs, harnessDirOf } from "../helpers/harness-dir-fixture.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
-const COMPOSED_STAGE = join("plugins", "pr-convergence", "stages", "pr-convergence.md");
+const COMPOSED_STAGE = join("plugins", "github-pr-convergence", "stages", "pr-convergence.md");
 const COMPOSED_FORMAL_STAGE = join("plugins", "formal-model-check", "stages", "formal-model-check.md");
 const COMPOSED_TLA_STAGE = join("plugins", "formal-model-check", "stages", "tla-authoring.md");
 const ROOT_RELATIVE_PLUGIN_PATH_RE =
@@ -50,7 +50,7 @@ function dogfoodWorkspace(harness: string): string {
   mkdirSync(join(workspace, "amadeus"), { recursive: true });
   writeFileSync(
     join(workspace, "amadeus", "config.json"),
-    `${JSON.stringify({ plugin: { activation: { names: ["pr-convergence", "formal-model-check"] } } }, null, 2)}\n`,
+    `${JSON.stringify({ plugin: { activation: { names: ["github-pr-convergence", "formal-model-check"] } } }, null, 2)}\n`,
   );
   return workspace;
 }
@@ -81,11 +81,11 @@ function compose(workspace: string, harnessDir: string): void {
 
 describe("#2790 plugin staging seed resolves the harness dir", () => {
   test("stagingHarnessDirOf matches only a harness tree's staging landing path", () => {
-    expect(stagingHarnessDirOf(join("/p", ".codex", PLUGIN_SOURCE_DIR_NAME, "pr-convergence"))).toBe(".codex");
+    expect(stagingHarnessDirOf(join("/p", ".codex", PLUGIN_SOURCE_DIR_NAME, "github-pr-convergence"))).toBe(".codex");
     expect(stagingHarnessDirOf(join("/p", ".kimi-code", PLUGIN_SOURCE_DIR_NAME, "x"))).toBe(".kimi-code");
     // The authoring tree stays harness-neutral: `install --force` writing back to
     // plugins/<name> must never bake a harness dir into the source of truth.
-    expect(stagingHarnessDirOf(join("/p", "plugins", "pr-convergence"))).toBeNull();
+    expect(stagingHarnessDirOf(join("/p", "plugins", "github-pr-convergence"))).toBeNull();
     expect(stagingHarnessDirOf(join("/p", "notaharness", PLUGIN_SOURCE_DIR_NAME, "x"))).toBeNull();
   });
 
@@ -129,7 +129,7 @@ describe("#2790 plugin staging seed resolves the harness dir", () => {
     expect(existsSync(composed), `composed stage missing at ${harnessDir}/${COMPOSED_STAGE}`).toBe(true);
     const text = readFileSync(composed, "utf-8");
     expect(
-      text.split(`${harnessDir}/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts`).length -
+      text.split(`${harnessDir}/plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts`).length -
         1,
     ).toBe(1);
     expect(text.includes("{{HARNESS_DIR}}"), "raw token survived the seed").toBe(false);
@@ -150,7 +150,7 @@ describe("#2790 plugin staging seed resolves the harness dir", () => {
       );
     }
 
-    const prCli = `${harnessDir}/plugins/pr-convergence/tools/pr-convergence-cli.ts`;
+    const prCli = `${harnessDir}/plugins/github-pr-convergence/tools/pr-convergence-cli.ts`;
     for (const subcommand of ["status", "create", "report", "override"]) {
       expect(text).toContain(`bun ${prCli} ${subcommand}`);
     }
