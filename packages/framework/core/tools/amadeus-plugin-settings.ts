@@ -68,6 +68,53 @@ export function parseSettingsDeclaration(
   return out;
 }
 
+// The manifest's known top-level keys. `advisories` belongs to a separate
+// parser and is listed here so an existing manifest carrying it is not read as
+// a misspelling — the check below is deliberately narrow (ADR-3): it exists to
+// stop `settings` from being typo'd into silence, not to close the manifest.
+const KNOWN_MANIFEST_KEYS: ReadonlySet<string> = new Set([
+  "name",
+  "stages",
+  "seams",
+  "fragments",
+  "tools",
+  "sensors",
+  "advisories",
+  "settings",
+]);
+
+const SETTINGS_NEAR_MISS_DISTANCE = 2;
+
+// A misspelled `settings` would otherwise compose cleanly with the whole
+// declaration dropped — the plugin then runs on defaults and the author has no
+// signal. Any unknown top-level key within edit distance 2 of "settings" is an
+// error instead.
+export function collectSettingsMisspellings(
+  raw: Readonly<Record<string, unknown>>,
+  errors: string[],
+): void {
+  for (const key of Object.keys(raw)) {
+    if (KNOWN_MANIFEST_KEYS.has(key)) continue;
+    if (editDistance(key.toLowerCase(), "settings") > SETTINGS_NEAR_MISS_DISTANCE) continue;
+    errors.push(`unknown manifest key "${key}" — did you mean "settings"?`);
+  }
+}
+
+// Levenshtein distance, iterative single-row. Inputs are manifest key names, so
+// the quadratic cost is bounded by a handful of short strings.
+function editDistance(a: string, b: string): number {
+  let previous = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i += 1) {
+    const current = [i, ...new Array<number>(b.length).fill(0)];
+    for (let j = 1; j <= b.length; j += 1) {
+      const substitution = previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1);
+      current[j] = Math.min(current[j - 1] + 1, previous[j] + 1, substitution);
+    }
+    previous = current;
+  }
+  return previous[b.length];
+}
+
 // Judge a key NAME against the shared lexicon. Returns the violation text so
 // the declaration and override sides word the same rejection the same way.
 export function settingsKeyViolation(key: string): string | null {

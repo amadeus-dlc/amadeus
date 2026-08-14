@@ -49,6 +49,7 @@ import { dirname, join, posix, sep } from "node:path";
 // reader used for the trusted plugin stage index.
 import { parseStageFrontmatter as parseStageFrontmatterFields } from "./amadeus-lib.ts";
 import {
+  collectSettingsMisspellings,
   parseSettingsDeclaration,
   type PluginSettingsDeclaration,
 } from "./amadeus-plugin-settings.ts";
@@ -357,6 +358,7 @@ export function parsePluginManifest(
   const tools = parseTools(name, raw.tools, readStage, errors);
   const sensors = parseSensors(raw.sensors, readStage, errors);
   const settings = parseSettingsDeclaration(raw.settings, errors);
+  collectSettingsMisspellings(raw, errors);
   if (errors.length > 0) return { manifest: null, errors: errors.sort() };
   return { manifest: { name, stages, seams, fragments, tools, sensors, settings }, errors: [] };
 }
