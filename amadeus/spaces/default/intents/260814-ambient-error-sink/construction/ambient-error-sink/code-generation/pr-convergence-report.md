@@ -1,12 +1,28 @@
 # PR Convergence Report
 
-- kind: created
+- kind: converged
 - pull request: amadeus-dlc/amadeus#3011
-- generated at: 2026-08-14T03:52:02Z
-- converged: false
+- generated at: 2026-08-14T05:48:33Z
+- converged: true
+- merge state: CLEAN
+- mergeable resolution: resolved
+
+## Violating threads
+
+- replied-unresolved: 0
+- ignored: 0
+
+## Ledger
+
+- resolved: 0
+- outdated: 0
+- replied-unresolved: 0
+- ignored: 0
+- human-only (out of scope): 0
+- terminalized: 0
 ## CLI Attestation
 
-- attestation id: prca:d714e4bb10576cdd8b48faa2f8641c6c82ababbc6ff9cb612ebe8d864e1877ba
+- attestation id: prca:8d2892ba88e9af9044513b048f46aac51374a70e5b1ed88019e06dbbec530702
 - intent: ambient-error-sink
 - intent uuid: 019ffe33-9663-73f3-bcc6-70bd6fde1987
 - record: amadeus/spaces/default/intents/260814-ambient-error-sink/
@@ -14,7 +30,7 @@
 - unit: ambient-error-sink
 - repository: amadeus-dlc/amadeus
 - pr: 3011
-- local head: a6e7dbee698dbb986285bc4665c65d5a78b94e5e
-- remote head: a6e7dbee698dbb986285bc4665c65d5a78b94e5e
-- pr head: a6e7dbee698dbb986285bc4665c65d5a78b94e5e
-- content digest: sha256:d31db0977e49da41ff7917ca5390d56df00d8cbd75b9999f49e1ecb39ab91db3
+- local head: 653a24aa148457f31efa88b877884bb3a1f72d7a
+- remote head: 653a24aa148457f31efa88b877884bb3a1f72d7a
+- pr head: 653a24aa148457f31efa88b877884bb3a1f72d7a
+- content digest: sha256:81b04a768d8f51d3e8ad6686b5847468f0c1be1cbbcf3d9564f8a2f355dec65e
