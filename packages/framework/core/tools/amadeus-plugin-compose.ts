@@ -16,7 +16,9 @@
 // ledger/evidence closure is U12; the byte projection into dist/ is U09
 // (the plugin-projection module). `when` evaluation, agents/scopes/memory/
 // knowledge composition, marketplace, lockfiles and managed settings are OUT OF
-// SCOPE — this file never touches them.
+// SCOPE — this file never touches them. "Managed settings" here means the
+// harness's own settings.json management, NOT the plugin's `settings` schema
+// declaration (#2997), which this file DOES parse — see parseSettingsDeclaration.
 //
 // OWNERSHIP (E-USSU10FD1). A plugin never owns a shared file whole. It records
 // its own canonical contribution (seam entries / fragment text), the
@@ -46,6 +48,10 @@ import { dirname, join, posix, sep } from "node:path";
 // (the seam bridge below), while the lib function is the schema-facing field
 // reader used for the trusted plugin stage index.
 import { parseStageFrontmatter as parseStageFrontmatterFields } from "./amadeus-lib.ts";
+import {
+  parseSettingsDeclaration,
+  type PluginSettingsDeclaration,
+} from "./amadeus-plugin-settings.ts";
 import { validateStageFrontmatter } from "./amadeus-stage-schema.ts";
 
 // Read-only filesystem seam so discovery is drivable by a fake in tests. Method
@@ -120,6 +126,9 @@ export type PluginManifest = {
   fragments: readonly FragmentSplice[];
   tools: readonly ToolCopy[];
   sensors?: readonly SensorCopy[];
+  // OPTIONAL (#2997). Absent means the plugin takes no settings, which is what
+  // the sensor dispatcher reads as "spawn without --settings-json".
+  settings?: PluginSettingsDeclaration;
 };
 
 // A discovered plugin. `manifest` is null when the manifest is malformed;
@@ -347,8 +356,9 @@ export function parsePluginManifest(
   const fragments = parseFragments(raw.fragments, errors);
   const tools = parseTools(name, raw.tools, readStage, errors);
   const sensors = parseSensors(raw.sensors, readStage, errors);
+  const settings = parseSettingsDeclaration(raw.settings, errors);
   if (errors.length > 0) return { manifest: null, errors: errors.sort() };
-  return { manifest: { name, stages, seams, fragments, tools, sensors }, errors: [] };
+  return { manifest: { name, stages, seams, fragments, tools, sensors, settings }, errors: [] };
 }
 
 // The directory a declared tool must live under, inside the plugin bundle. A
