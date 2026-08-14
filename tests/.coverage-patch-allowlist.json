@@ -4919,7 +4919,7 @@
     "file": "packages/framework/core/tools/amadeus-election-store.ts",
     "selector": {
       "function": "storeCreate",
-      "fingerprint": "sha256:79bb33682d3b139fbe3f95e52c690b79b28b3023102ba05ee2f3b33a9850ac94",
+      "fingerprint": "sha256:1f30a920ce60e749dd1cd930bf8fde5eb1735ec9de3f53d6a71d323153112db1",
       "anchorLines": 1,
       "targetLines": "1"
     },
