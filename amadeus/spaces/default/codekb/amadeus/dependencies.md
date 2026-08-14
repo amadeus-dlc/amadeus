@@ -56,7 +56,7 @@ pr-convergence-report.md
 
 attestation を追加すると、report schema、CLI writer、sensor/validator、audit contract、state completion guard、tests の同時変更が必要になる。scope binding 自体は独立しており、非 self-* opt-in contract を変更する必要はない。
 
-## 差分リフレッシュでの依存変化（260813-advisory-requestion-fix、現在、observed `c0f9edf27`）
+## 差分リフレッシュでの依存変化（260813-advisory-requestion-fix、履歴、observed `c0f9edf27`）
 
 **観測 ref**: base `854692fd7a11b124236b0427fe3d59e2fe6bf785` → observed `c0f9edf27828def6fa3dbbbc4101d753b398e025`。
 
