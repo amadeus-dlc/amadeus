@@ -115,6 +115,27 @@ principal と actor・grant id・degraded capability の有無・review state �
 これは Intent autonomy トランザクション内で `AUTO_DECIDED` として emit され、
 トランザクションは atomic に commit されます。
 
+## remote write の承認境界
+
+remote write とは、他の人と共有する面を変える操作です。push、PR の作成、
+レビュースレッドへの返信・resolve、Issue の起票がこれにあたります。各ステージは
+これらを長らく「ワークスペースの承認境界」へ委ねてきましたが、その境界はどこにも
+書かれていませんでした。この節がその境界の定義です。
+
+境界は常設の権限でも、ワークスペースの好みでもありません。`none` では他の質問と
+同じく人間に尋ねます。`semi` / `full` では、人間へ直接尋ねることも、グラントを
+根拠に実行することもしません。他のステージ質問とまったく同じように occurrence を
+`decide-question` へ通します。裁定は梯子が行い、根拠とともに `AUTO_DECIDED` として
+記録され、`human-required` が返った場合にのみ人間へ回ります。
+
+梯子を経由してもグラントの認可範囲は広がりません。グラントが決して認可できない
+5分類はそのまま適用されるため、occurrence が `irreversible` や `new-permission` と
+分類する remote write は、裁定されるのではなく `human-required` として返ります。
+
+merge はこの経路には乗りません。merge は常に人間専権であり、その PR について
+人間に尋ねたうえで下す別個の判断です。収束 verdict もグラントも梯子の裁定も、
+merge を認可しません。
+
 ## auto decision をレビューする
 
 auto decision は不変です。レビュー面(`amadeus-autonomy-review.ts` と、その本番

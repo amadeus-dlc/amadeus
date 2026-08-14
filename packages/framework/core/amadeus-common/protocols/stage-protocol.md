@@ -1054,6 +1054,26 @@ never sees the error that was actually raised. There is no autonomy mode in
 which this is allowed: an Intent grant authorizes decisions the engine routes to
 it, never decisions the conductor invents.
 
+## 11c. Approval boundary for remote writes
+
+A remote write changes a surface other people share: a push, opening a PR,
+replying to or resolving a review thread, and filing an Issue. Stages defer
+these to "the workspace's approval boundary"; the boundary is defined in
+`docs/reference/24-intent-autonomy.md`, and this is how a stage reaches it.
+
+Under `none`, ask the human. Under `semi` and `full`, do **not** put the remote
+write to the human directly, and do not take it on the strength of the grant
+either: put the occurrence through `amadeus-bolt decide-question` exactly as
+for any other stage question, take `decided.effect.optionId` as the answer, and
+send it to a person only when the result is `human-required`. The ruling and its
+basis are recorded in the audit as `AUTO_DECIDED`.
+
+Routing through the ladder never widens a grant. A remote write the occurrence
+classifies as one of the five effects a grant can never authorize returns
+`human-required` rather than being decided. A merge is not on this route at all:
+the merge question goes to a human on that specific PR, every time, and no
+verdict, grant, or ruling authorizes it.
+
 ## 12. Phase Boundary Verification
 
 > See `stage-protocol-governance.md` §13 — load at phase transitions to run traceability verification. Capturing corrections as durable rules is the §13 Learnings Ritual below, not a separate guardrail flow.

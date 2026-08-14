@@ -119,6 +119,28 @@ and its fingerprint, the principal and actor, the grant id, any degraded
 capability, and a review state. It is emitted as `AUTO_DECIDED` inside the
 Intent autonomy transaction, which commits atomically.
 
+## Approval boundary for remote writes
+
+A remote write is an action that changes a surface other people share: a push,
+opening a PR, replying to or resolving a review thread, and filing an Issue.
+Stages have long deferred these to "the workspace's approval boundary" without
+that boundary being written down anywhere. This section is it.
+
+The boundary is not a standing permission and not a workspace preference. Under
+`none` the human is asked, like any other question. Under `semi` and `full` the
+conductor neither asks the human directly nor acts on the strength of the grant:
+it puts the occurrence through `decide-question`, exactly as it would any other
+stage question. The ladder rules it, the ruling is recorded as `AUTO_DECIDED`
+with its basis, and only a `human-required` result reaches a person.
+
+Routing through the ladder does not widen what a grant may authorize. The five
+classifications a grant can never authorize still apply, so a remote write whose
+occurrence classifies as `irreversible` or `new-permission` comes back
+`human-required` instead of being decided.
+
+Merging is never one of these. A merge is a separate human decision, asked about
+that specific PR; no convergence verdict, grant, or ladder ruling authorizes it.
+
 ## Reviewing an auto decision
 
 Auto decisions are immutable. The review surface

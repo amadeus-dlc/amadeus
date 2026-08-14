@@ -103,6 +103,46 @@ function canonicalReceipt(): string {
   return (line ?? "").trim();
 }
 
+const AUTONOMY_EN = join(REPO_ROOT, "docs", "reference", "24-intent-autonomy.md");
+const AUTONOMY_JA = join(REPO_ROOT, "docs", "reference", "24-intent-autonomy.ja.md");
+const PR_CONVERGENCE = join(REPO_ROOT, "plugins", "pr-convergence", "stages", "pr-convergence.md");
+
+/** Extract one `## `-level section body by heading substring. Returns "" when
+ *  the heading is absent, so a missing section reds rather than passing on an
+ *  empty haystack. */
+function section(body: string, headingFragment: string): string {
+  const lines = body.split("\n");
+  const start = lines.findIndex(
+    (line) => line.startsWith("## ") && line.includes(headingFragment),
+  );
+  if (start < 0) return "";
+  const rest = lines.slice(start + 1).findIndex((line) => line.startsWith("## "));
+  return lines.slice(start, rest < 0 ? undefined : start + 1 + rest).join("\n");
+}
+
+// The remote writes the boundary governs, and the route it names. Every one of
+// these was referenced by the pr-convergence stage as "the workspace's approval
+// boundary" while no document defined what that boundary was (#2974).
+const BOUNDARY_EN_TOKENS = [
+  "push",
+  "opening a PR",
+  "replying to or resolving a review thread",
+  "filing an Issue",
+  "decide-question",
+  "human-required",
+  "Merging is never",
+] as const;
+
+const BOUNDARY_JA_TOKENS = [
+  "push",
+  "PR の作成",
+  "レビュースレッドへの返信・resolve",
+  "Issue の起票",
+  "decide-question",
+  "human-required",
+  "merge は常に人間専権",
+] as const;
+
 describe("t2974 error-directive receipt clause", () => {
   test("the conductor-surface set is derived and non-empty (no vacuous pass)", () => {
     const malformed = HARNESSES.filter((harness) => entryPointsOf(harness).length !== 1);
@@ -124,5 +164,44 @@ describe("t2974 error-directive receipt clause", () => {
       (surface) => !flatten(read(surface.path)).includes(canonical),
     ).map((surface) => surface.label);
     expect(drifted).toEqual([]);
+  });
+});
+
+describe("t2974 approval boundary for remote writes", () => {
+  test("the autonomy reference defines the boundary, in both languages", () => {
+    const en = section(read(AUTONOMY_EN), "Approval boundary");
+    const ja = section(read(AUTONOMY_JA), "承認境界");
+    const missing: string[] = [];
+    if (en === "") missing.push("en: section absent");
+    if (ja === "") missing.push("ja: section absent");
+    for (const token of BOUNDARY_EN_TOKENS) {
+      if (en !== "" && !en.includes(token)) missing.push(`en missing: ${token}`);
+    }
+    for (const token of BOUNDARY_JA_TOKENS) {
+      if (ja !== "" && !ja.includes(token)) missing.push(`ja missing: ${token}`);
+    }
+    expect(missing).toEqual([]);
+  });
+
+  test("the protocol routes a remote-write decision through the ladder", () => {
+    // FR-BND-2: under semi/full the conductor must not put the remote-write
+    // question to the human directly — decide-question is the route, and only a
+    // human-required result reaches a person.
+    const body = read(STAGE_PROTOCOL);
+    const scope = section(body, "Approval boundary");
+    const missing = ["remote write", "decide-question", "human-required", "merge"].filter(
+      (token) => !scope.includes(token),
+    );
+    expect(scope).not.toBe("");
+    expect(missing).toEqual([]);
+  });
+
+  test("the pr-convergence Guardrail points at the ladder and keeps merge human-only", () => {
+    const guardrail = section(read(PR_CONVERGENCE), "Guardrail");
+    expect(guardrail).not.toBe("");
+    // The revised route.
+    expect(guardrail).toContain("decide-question");
+    // The invariant the revision must NOT break (cid:requirements-analysis:no-ai-merge).
+    expect(guardrail).toContain("never merge");
   });
 });
