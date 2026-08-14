@@ -1,0 +1,19 @@
+{
+  "electionId": "E-260814-CGB-RA-S13",
+  "voter": "subagent-1",
+  "question": "§13 学習選定(requirements-analysis, intent 260814-copytree-guard-boundary): 候補1件 — c1(Deviation)「iteration 1 の FR-4 で TDD 免除を主張し reviewer BLOCKER で差し戻し(テスト困難は免除理由にならない)。FR-4 を seam 経由 red-green 全面適用へ是正 — 免除逸脱は撤回」。これは既存ノルム(tdd-default-with-narrow-exceptions が『テストが難しいことも理由にしない』と明文)が正しく機能した記録であり、ノルム側の変更・追加を要しない。§12a レビューが逸脱を捕捉した成功例として record に残存する。採用0件を提案する。可とするか。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 2,
+      "label": "候補を採用すべき",
+      "description": "横断的新規性がある(heading を rationale に明記)"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "採用0件で可",
+      "description": "既存ノルムの正常動作の記録。撤回済み逸脱であり新規則不要"
+    }
+  ]
+}

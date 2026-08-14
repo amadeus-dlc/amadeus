@@ -1187,5 +1187,12 @@
     "dirName": "260814-coverage-quick-norm",
     "scope": "self-document",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019fff14-98a2-725c-9b20-99add2639251",
+    "slug": "copytree-guard-boundary",
+    "dirName": "260814-copytree-guard-boundary",
+    "scope": "self-fix",
+    "status": "complete"
   }
 ]

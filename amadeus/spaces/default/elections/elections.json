@@ -1618,5 +1618,17 @@
     "dirName": "260814-e-260814-t99-cg-s13",
     "createdAt": "2026-08-14T05:46:35Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-260814-CGB-RE-S13",
+    "dirName": "260814-e-260814-cgb-re-s13",
+    "createdAt": "2026-08-14T07:21:56Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-260814-CGB-RA-S13",
+    "dirName": "260814-e-260814-cgb-ra-s13",
+    "createdAt": "2026-08-14T07:29:14Z",
+    "status": "recorded"
   }
 ]

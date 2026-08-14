@@ -26,10 +26,6 @@ function opsRecorder(overrides: Partial<CopyTreeOps>): CopyTreeOps & { calls: st
       calls.push(`copy:${src}->${dest}`);
       overrides.copy?.(src, dest);
     },
-    exists(path: string) {
-      calls.push(`exists:${path}`);
-      return overrides.exists ? overrides.exists(path) : true;
-    },
     sleep(ms: number) {
       calls.push(`sleep:${ms}`);
       overrides.sleep?.(ms);
