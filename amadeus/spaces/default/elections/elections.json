@@ -1576,5 +1576,23 @@
     "dirName": "260813-e-260813-record-bundling",
     "createdAt": "2026-08-13T22:38:29Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-260814-T245-RE-S13",
+    "dirName": "260814-e-260814-t245-re-s13",
+    "createdAt": "2026-08-14T00:36:59Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-260814-T245-RA-S13",
+    "dirName": "260814-e-260814-t245-ra-s13",
+    "createdAt": "2026-08-14T00:58:07Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-260814-T245-CG-S13",
+    "dirName": "260814-e-260814-t245-cg-s13",
+    "createdAt": "2026-08-14T01:47:57Z",
+    "status": "recorded"
   }
 ]

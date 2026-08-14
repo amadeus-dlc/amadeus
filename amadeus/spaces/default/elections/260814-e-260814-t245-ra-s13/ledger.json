@@ -1,0 +1,29 @@
+{
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-260814-T245-RA-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "採用0件で可。一次資料を独立に確認した。(1) intent 260814-t245-origin-fixture/inception/requirements-analysis/memory.md の候補は3件。c1『修正方式は再質問せず方針1で確定』は project.md:19 の cid:requirements-analysis:c5(『Issue と承認済み成果物にある決定を再質問しない』)の機械的適用そのものであり、requirements-analysis-questions.md 冒頭『既決事項(再質問しない — cid:requirements-analysis:c5)』の記載も自認している。既存 cid の execution であり新規知見ではない。(2) c2『fixture corpus は実 checkout corpus を seed』は、requirements-analysis-questions.md Q1 に記録された本 intent 固有の decide-question 裁定(decisionId auto-decision-a46d6575749f1926444467d0f278cc90、rung agent-recommendation、full-autonomy ladder、2026-08-14)であり、その corpus 選定理由(現行テストの実 corpus 全数掃引検出力を fixture 化後も保持するため)は本 intent の具体的なテスト構成に紐づく一回性の選択で、他プロジェクトへ一般化できる判定手順を含まない。記録は audit と questions file に既に残っている。(3) c3『timeout 契約維持』は同じ questions file の『質問化しなかった残余論点』節に『可逆・低リスク』な既定採用として明記済みで、判断ですらなく現状維持の追認。いずれも team.md P1(既決ルールの機械的執行は判断ではなく執行として選挙不要)の趣旨、および §13 学習が要求する『一般化・機械化すべき新規知見』の性質を満たさない。以上より3候補とも project.md へ昇格すべき一般知見はなく、提案どおり採用0件を可とする。",
+      "submittedAt": "2026-08-14T00:00:00Z",
+      "receivedAt": "2026-08-14T00:59:00Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-260814-T245-RA-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "候補ごとに独立に一次資料(memory.md、requirements-analysis-questions.md、project.md の cid:requirements-analysis:c5)を突き合わせた。c1『修正方式は再質問せず方針1で確定』は memory.md 自身が『cid:requirements-analysis:c5 の再質問禁止を適用』と明記しており、project.md:19 に既存する同 cid(『Issue と承認済み成果物にある決定を再質問しない』)の機械的執行そのものである。新しい一般化可能な知見を含まず、既決ノルムの単純適用は§13学習の対象にならない。c2『fixture corpus は実 checkout corpus を seed』は questions-file の Q1 に auto-decision-a46d6575749f1926444467d0f278cc90(decide-question ladder、agent-recommendation rung)として裁定過程・根拠(実corpus全数掃引 4150ファイル/8,015,636 bytes、掃引検出力保持の理由)まで完全に記録済みであり、audit と questions file が一次記録として十分機能している。これは本 intent(fixture化するテスト対象)固有の一回性判断であり、他プロジェクト・他ステージへ転用可能な一般規則(例: 『fixture corpus は常に実 corpus を seed すべき』という無条件命題)には拡張できない — 対象データの性質次第で最小合成が適切な場面もあり得るため、この選択を項目化すると狭すぎる/文脈依存の規則を project.md に持ち込むことになる。c3『timeout 契約維持』は現状維持(変更なし)の可逆な既定選択であり、そもそも決定と呼べるほどの分岐点がない。3候補のいずれも、team.md/project.md の既存 learnings inbox エントリが持つような『機構名+file:line+再現手順+一般化された適用条件』の形を満たさず、単なる一回性の実行ログである。よって配布ビューが提示する『3候補とも intent 固有の一回性判断または既決 cid の執行であり、project.md へ昇格すべき一般知見なし』という評価に同意し、採用0件を支持する。",
+      "submittedAt": "2026-08-14T01:10:00Z",
+      "receivedAt": "2026-08-14T00:59:40Z"
+    }
+  ],
+  "late": []
+}
