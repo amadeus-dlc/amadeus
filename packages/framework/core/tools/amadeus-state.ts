@@ -1944,17 +1944,13 @@ interface TerminalSensorVerdict {
 const SENSOR_NOTE_UNREADABLE = "script-error: note-unreadable";
 
 function sensorAuditNote(block: string): string | null {
-  try {
-    const record = parseJournalLine(block.trim());
-    if (isJournalEntryV2(record)) {
-      const note = record.attributes.Note;
-      if (note === undefined || note === null) return null;
-      return typeof note === "string" ? note.trim() : SENSOR_NOTE_UNREADABLE;
-    }
-    return auditBlockField(block, "Note");
-  } catch {
-    return SENSOR_NOTE_UNREADABLE;
+  const record = parseJournalLine(block.trim());
+  if (isJournalEntryV2(record)) {
+    const note = record.attributes.Note;
+    if (note === undefined || note === null) return null;
+    return typeof note === "string" ? note.trim() : SENSOR_NOTE_UNREADABLE;
   }
+  return auditBlockField(block, "Note");
 }
 
 function isScriptErrorNote(note: string | null): boolean {
@@ -2005,8 +2001,7 @@ export function evaluateBlockingSensors(
     const latestOutputPassed = latest?.event === "SENSOR_PASSED"
       && latest.receiptMatches
       && !isScriptErrorNote(latest.note)
-      && (
-        currentDigest === undefined || (
+      && (currentDigest === undefined || (
           latest.outputDigest !== null && latestDigest === latest.outputDigest
         )
       );
