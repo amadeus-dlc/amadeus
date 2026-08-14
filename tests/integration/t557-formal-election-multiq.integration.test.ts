@@ -1,3 +1,4 @@
+// covers: file:plugins/formal-model-check/tools/amadeus-sensor-model-completeness.ts
 // size: medium
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";

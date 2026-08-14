@@ -148,7 +148,7 @@ When a Bolt's code-generation returns failure, **always halt regardless of auton
 
 **Solo auto-election hook — which branch rules the halt.** Invalid layered config fails closed with an engine `error` before branch selection; neither an election nor a human prompt is emitted until the config is corrected. For a valid resolution, exactly one of these two branches runs, and the first one that applies wins:
 
-1. **Solo mode AND the layered config (`amadeus/config.json` → space → intent) resolves `solo-election.trigger.mode` to `auto`** — the engine emits `execute-failure-election` (not `ask`). The conductor opens an election INSTEAD OF presenting the prompt below: write a definition JSON carrying `electionId`, `kind`, `question`, `choices` (one per `directive.choices` — Retry / Skip / Abort) and `voters`, then run `bun {{HARNESS_DIR}}/tools/amadeus-election.ts open --trigger auto --file <definition.json>`. `--file` is REQUIRED: without it the CLI exits 2 on usage and no trigger is evaluated. Drive the election to a ruling and commit it through the ordinary ask report path (`report --user-input retry|skip|abort`). Do not present the prompt on this branch.
+1. **Solo mode AND the layered config (`amadeus/config.json` → space → intent) resolves `solo-election.trigger.mode` to `auto`** — the engine emits `execute-failure-election` (not `ask`). The conductor opens an election INSTEAD OF presenting the prompt below: write a definition JSON carrying `schemaVersion: 2`, `electionId`, `kind`, `voters` and a one-element `questions[]` (its `choices` one per `directive.choices` — Retry / Skip / Abort), then run `bun {{HARNESS_DIR}}/tools/amadeus-election.ts open --trigger auto --file <definition.json>`. `--file` is REQUIRED: without it the CLI exits 2 on usage and no trigger is evaluated. Drive the election to a ruling and commit it through the ordinary ask report path (`report --user-input retry|skip|abort`). Do not present the prompt on this branch.
 2. **Every other valid-config case** — team mode, config absent or `manual`, the CLI answering `{"opened":null,"reason":"solo-election-manual-trigger-required"}` (which writes nothing), or a non-converged election (hold / split / interrupt / CLI error) — present the halt-and-ask prompt below exactly as written. This is the default branch.
 
 The orchestrator runs `bun {{HARNESS_DIR}}/tools/amadeus-worktree.ts info --slug <slug>` to obtain the worktree `<path>` and `<branch_name>` deterministically before composing the halt-and-ask question. See `SKILL.md` § "Halt-and-ask failure handling" for the full tool-call sequence and the `worktree-info-schema.md` knowledge file for the JSON contract.
@@ -1225,9 +1225,10 @@ Trigger after Step N-1 (completion message rendered) and before Step N (approval
    (`amadeus/config.json` → space → intent) resolves
    `solo-election.trigger.mode` to `auto`,
    do not settle the kept set alone — put the selection (including a zero-candidate
-   proposal) to an election. Write a definition JSON carrying `electionId`, `kind`,
-   `question`, `choices` (one per candidate, or the single "0 件で可" choice for a
-   zero-candidate proposal) and `voters`, then run
+   proposal) to an election. Write a definition JSON carrying `schemaVersion: 2`,
+   `electionId`, `kind`, `voters` and a one-element `questions[]` (its `choices`
+   one per candidate, or the single "0 件で可" choice for a zero-candidate
+   proposal), then run
    `bun {{HARNESS_DIR}}/tools/amadeus-election.ts open --trigger auto --file <definition.json>`.
    `--file` is REQUIRED: without it the CLI exits 2 on usage and no trigger is
    evaluated. If the CLI answers `{"opened":null,"reason":"solo-election-manual-trigger-required"}`,

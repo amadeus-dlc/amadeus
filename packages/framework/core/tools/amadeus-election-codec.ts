@@ -4,7 +4,6 @@ import type { HoldReason, VoterKind } from "./amadeus-election-model.ts";
 export type ElectionCodecErrorCategory =
   | "shape"
   | "unsupported-version"
-  | "ambiguous-schema"
   | "unknown-field"
   | "duplicate-id"
   | "missing-reference"
@@ -110,8 +109,6 @@ export interface BallotDecodeContext {
   readonly targetQuestionIds: readonly string[];
   readonly establishedQuestionIds?: readonly string[];
 }
-
-export const LEGACY_QUESTION_ID = "legacy-question";
 
 const HOLD_REASONS: ReadonlySet<string> = new Set<HoldReason>([
   "tie",
@@ -222,9 +219,6 @@ function parseQuestion(raw: unknown, path: string): ElectionCodecResult<Canonica
   if (!nonBlank(raw.questionId)) {
     return failure("invalid-value", `${path}.questionId`, "nonblank string");
   }
-  if (raw.questionId === LEGACY_QUESTION_ID) {
-    return failure("invalid-value", `${path}.questionId`, "non-reserved question id");
-  }
   if (!nonBlank(raw.text)) return failure("invalid-value", `${path}.text`, "nonblank string");
   const choices = parseChoices(raw.choices, `${path}.choices`);
   return choices.ok
@@ -243,35 +237,9 @@ function parseVoters(raw: unknown, path: string): ElectionCodecResult<readonly s
     : failure("duplicate-id", path, `unique voter ids; duplicated ${repeated}`);
 }
 
-function decodeLegacyDefinition(
+function decodeDefinition(
   raw: Record<string, unknown>,
 ): ElectionCodecResult<CanonicalElectionDefinition> {
-  if ("questions" in raw) return failure("ambiguous-schema", "$", "legacy scalar fields only");
-  const extra = unknownField(raw, ["electionId", "kind", "question", "choices", "voters"], "$");
-  if (extra !== null) return extra;
-  if (!nonBlank(raw.electionId)) return failure("invalid-value", "$.electionId", "nonblank string");
-  if (typeof raw.kind !== "string") return failure("shape", "$.kind", "string");
-  if (typeof raw.question !== "string") return failure("shape", "$.question", "string");
-  if (raw.question.length === 0) return failure("invalid-value", "$.question", "nonempty string");
-  const choices = parseChoices(raw.choices, "$.choices");
-  if (!choices.ok) return choices;
-  const voters = parseVoters(raw.voters, "$.voters");
-  if (!voters.ok) return voters;
-  return success({
-    schemaVersion: 2,
-    electionId: raw.electionId,
-    kind: raw.kind,
-    questions: [{ questionId: LEGACY_QUESTION_ID, text: raw.question, choices: choices.value }],
-    voters: voters.value,
-  });
-}
-
-function decodeV2Definition(
-  raw: Record<string, unknown>,
-): ElectionCodecResult<CanonicalElectionDefinition> {
-  if ("question" in raw || "choices" in raw) {
-    return failure("ambiguous-schema", "$", "v2 questions field without legacy scalar fields");
-  }
   const extra = unknownField(raw, ["schemaVersion", "electionId", "kind", "questions", "voters"], "$");
   if (extra !== null) return extra;
   if (!nonBlank(raw.electionId)) return failure("invalid-value", "$.electionId", "nonblank string");
@@ -300,22 +268,19 @@ function decodeV2Definition(
   });
 }
 
-function classifyVersion(
-  raw: Record<string, unknown>,
-): ElectionCodecResult<"legacy" | "v2"> {
-  if (!("schemaVersion" in raw)) return success("legacy");
-  if (raw.schemaVersion !== 2) {
-    return failure("unsupported-version", "$.schemaVersion", "exact integer 2");
-  }
-  return success("v2");
+// The canonical wire format is schemaVersion 2 and nothing else: an absent or
+// different stamp is rejected loudly, never decoded under another shape.
+function requireCanonicalVersion(raw: Record<string, unknown>): ElectionCodecResult<void> {
+  return raw.schemaVersion === 2
+    ? success(undefined)
+    : failure("unsupported-version", "$.schemaVersion", "exact integer 2");
 }
 
 export const ElectionDefinitionCodec = {
   decode(raw: unknown): ElectionCodecResult<CanonicalElectionDefinition> {
     if (!isRecord(raw)) return failure("shape", "$", "election definition object");
-    const version = classifyVersion(raw);
-    if (!version.ok) return version;
-    return version.value === "v2" ? decodeV2Definition(raw) : decodeLegacyDefinition(raw);
+    const version = requireCanonicalVersion(raw);
+    return version.ok ? decodeDefinition(raw) : version;
   },
 
   encode(value: CanonicalElectionDefinition): ElectionCodecResult<string> {
@@ -328,22 +293,7 @@ export const ElectionDefinitionCodec = {
 function validateCanonicalDefinition(
   value: CanonicalElectionDefinition,
 ): ElectionCodecResult<CanonicalElectionDefinition> {
-  // A reserved id is valid only in the one-question canonical value produced
-  // by legacy normalization. Authored v2 input is rejected by decodeV2Definition.
-  if (
-    value.questions.length === 1 &&
-    value.questions[0]?.questionId === LEGACY_QUESTION_ID
-  ) {
-    const legacy = {
-      electionId: value.electionId,
-      kind: value.kind,
-      question: value.questions[0].text,
-      choices: value.questions[0].choices,
-      voters: value.voters,
-    };
-    return decodeLegacyDefinition(legacy);
-  }
-  return decodeV2Definition(value as unknown as Record<string, unknown>);
+  return decodeDefinition(value as unknown as Record<string, unknown>);
 }
 
 function canonicalDefinitionWire(value: CanonicalElectionDefinition): unknown {
@@ -555,14 +505,11 @@ function validateBallotEnvelope(
   return success(undefined);
 }
 
-function decodeV2Ballot(
+function decodeBallot(
   raw: Record<string, unknown>,
   definition: CanonicalElectionDefinition,
   context: BallotDecodeContext,
 ): ElectionCodecResult<CanonicalBallot> {
-  if ("choiceInternalNo" in raw || "goa" in raw || "reservation" in raw || "rationale" in raw) {
-    return failure("ambiguous-schema", "$", "v2 responses without legacy scalar response fields");
-  }
   const allowed = [
     "schemaVersion",
     "kind",
@@ -594,53 +541,15 @@ function decodeV2Ballot(
   return buildBallot(raw, definition, context, responses);
 }
 
-function decodeLegacyBallot(
-  raw: Record<string, unknown>,
-  definition: CanonicalElectionDefinition,
-  context: BallotDecodeContext,
-): ElectionCodecResult<CanonicalBallot> {
-  if ("responses" in raw) return failure("ambiguous-schema", "$", "legacy scalar response fields only");
-  const allowed = [
-    "kind",
-    "ref",
-    "electionId",
-    "voter",
-    "voterKind",
-    "choiceInternalNo",
-    "goa",
-    "reservation",
-    "rationale",
-    "submittedAt",
-    "receivedAt",
-  ];
-  const extra = unknownField(raw, allowed, "$");
-  if (extra !== null) return extra;
-  const response = parseResponse(
-    {
-      questionId: LEGACY_QUESTION_ID,
-      choiceInternalNo: raw.choiceInternalNo,
-      goa: raw.goa,
-      reservation: raw.reservation ?? null,
-      rationale: raw.rationale ?? null,
-    },
-    "$.responses[0]",
-  );
-  if (!response.ok) return response;
-  return buildBallot(raw, definition, context, [response.value]);
-}
-
-export const BallotV2Codec = {
+export const BallotCodec = {
   decode(
     raw: unknown,
     definition: CanonicalElectionDefinition,
     context: BallotDecodeContext,
   ): ElectionCodecResult<CanonicalBallot> {
     if (!isRecord(raw)) return failure("shape", "$", "ballot object");
-    const version = classifyVersion(raw);
-    if (!version.ok) return version;
-    return version.value === "v2"
-      ? decodeV2Ballot(raw, definition, context)
-      : decodeLegacyBallot(raw, definition, context);
+    const version = requireCanonicalVersion(raw);
+    return version.ok ? decodeBallot(raw, definition, context) : version;
   },
 
   encode(
@@ -648,11 +557,7 @@ export const BallotV2Codec = {
     definition: CanonicalElectionDefinition,
     context: BallotDecodeContext,
   ): ElectionCodecResult<string> {
-    const checked = decodeV2Ballot(
-      value as unknown as Record<string, unknown>,
-      definition,
-      context,
-    );
+    const checked = decodeBallot(value as unknown as Record<string, unknown>, definition, context);
     if (!checked.ok) return checked;
     const order = new Map(definition.questions.map((question, index) => [question.questionId, index]));
     const responses = [...checked.value.responses].sort(
@@ -854,11 +759,10 @@ function validateTallyCoverage(
   return success(tally);
 }
 
-function decodeV2Tally(
+function decodeTally(
   raw: Record<string, unknown>,
   definition: CanonicalElectionDefinition,
 ): ElectionCodecResult<CanonicalTally> {
-  if ("result" in raw) return failure("ambiguous-schema", "$", "v2 results without legacy scalar result");
   const extra = unknownField(
     raw,
     ["schemaVersion", "runId", "targetQuestionIds", "results", "preservedResultDigest", "talliedAt"],
@@ -898,63 +802,21 @@ function decodeV2Tally(
   );
 }
 
-function legacyResultPayload(raw: Record<string, unknown>): Record<string, unknown> {
-  return { result: raw.result, talliedAt: raw.talliedAt };
-}
-
-function decodeLegacyTally(
-  raw: Record<string, unknown>,
-  definition: CanonicalElectionDefinition,
-): ElectionCodecResult<CanonicalTally> {
-  if ("results" in raw || "runId" in raw || "targetQuestionIds" in raw) {
-    return failure("ambiguous-schema", "$", "legacy scalar result fields only");
-  }
-  const extra = unknownField(raw, ["result", "talliedAt", "ballots", "resolutions"], "$");
-  if (extra !== null) return extra;
-  if (!validTimestamp(raw.talliedAt)) {
-    return failure("invalid-value", "$.talliedAt", "second-precision UTC timestamp");
-  }
-  if (!isRecord(raw.result)) return failure("shape", "$.result", "legacy scalar result object");
-  const question = definition.questions.find((candidate) => candidate.questionId === LEGACY_QUESTION_ID);
-  if (question === undefined || definition.questions.length !== 1) {
-    return failure("missing-reference", "$.result", "legacy single-question definition");
-  }
-  const parsed = parseQuestionResult(
-    { questionId: LEGACY_QUESTION_ID, ...raw.result },
-    "$.results[0]",
-    questionMap(definition),
-  );
-  if (!parsed.ok) return parsed;
-  const runDigest = canonicalContractValueDigest("election-legacy-tally", legacyResultPayload(raw));
-  if (!runDigest.ok) return failure("invalid-value", "$.result", "canonical legacy tally payload");
-  return success({
-    schemaVersion: 2,
-    runId: `legacy-${runDigest.value.slice("sha256:".length, "sha256:".length + 32)}`,
-    targetQuestionIds: [LEGACY_QUESTION_ID],
-    results: [parsed.value],
-    preservedResultDigest: null,
-    talliedAt: raw.talliedAt,
-  });
-}
-
-export const TallyV2Codec = {
+export const TallyCodec = {
   decode(
     raw: unknown,
     definition: CanonicalElectionDefinition,
   ): ElectionCodecResult<CanonicalTally> {
     if (!isRecord(raw)) return failure("shape", "$", "tally object");
-    const version = classifyVersion(raw);
-    if (!version.ok) return version;
-    return version.value === "v2"
-      ? decodeV2Tally(raw, definition)
-      : decodeLegacyTally(raw, definition);
+    const version = requireCanonicalVersion(raw);
+    return version.ok ? decodeTally(raw, definition) : version;
   },
 
   encode(
     value: CanonicalTally,
     definition: CanonicalElectionDefinition,
   ): ElectionCodecResult<string> {
-    const checked = decodeV2Tally(value as unknown as Record<string, unknown>, definition);
+    const checked = decodeTally(value as unknown as Record<string, unknown>, definition);
     if (!checked.ok) return checked;
     const order = new Map(definition.questions.map((question, index) => [question.questionId, index]));
     const questions = questionMap(definition);
@@ -980,7 +842,7 @@ export const TallyV2Codec = {
     value: CanonicalTally,
     definition: CanonicalElectionDefinition,
   ): ElectionCodecResult<string> {
-    const checked = decodeV2Tally(value as unknown as Record<string, unknown>, definition);
+    const checked = decodeTally(value as unknown as Record<string, unknown>, definition);
     if (!checked.ok) return checked;
     const byId = new Map(checked.value.results.map((result) => [result.questionId, result]));
     const payload = definition.questions.flatMap((question) => {

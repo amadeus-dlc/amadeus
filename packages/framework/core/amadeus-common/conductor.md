@@ -100,8 +100,9 @@ vs *within* a stage (you loop on your own). Inside one stage you still own:
      to the user for a ruling.
   2. Otherwise, in solo mode, when the layered config (`amadeus/config.json`
      → space → intent) resolves `solo-election.trigger.mode` to `auto`, put the
-     deviation to an election: write a definition JSON carrying `electionId`,
-     `kind`, `question`, `choices` (one per way forward) and `voters`, then run
+     deviation to an election: write a definition JSON carrying `schemaVersion: 2`,
+     `electionId`, `kind`, `voters` and a one-element `questions[]` (its `choices`
+     one per way forward), then run
      `bun {{HARNESS_DIR}}/tools/amadeus-election.ts open --trigger auto --file <definition.json>`
      — `--file` is REQUIRED (without it the CLI exits 2 on usage and no trigger
      is evaluated). On `{"opened":null,"reason":"solo-election-manual-trigger-required"}`

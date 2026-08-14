@@ -1357,23 +1357,22 @@ export function checkPhaseProgressConsistency(projectDir: string): DoctorCheck {
 // to investigate. It is ALWAYS advisory (pass:true; ruling E-SRCAD3): it never
 // flips doctor to exit 1, so an in-migration or drifted workspace still passes.
 //
-// ADR-6: this check is SELF-CONTAINED — the shipped framework MUST NOT import
-// from scripts/ (the election store). The 4-field row validator and the
-// exact-match dirName predicate are therefore duplicated here; the parity test
-// t261 pins the local predicate against scripts' electionDirMatches so the
-// duplication cannot silently drift.
+// ADR-6: this check is SELF-CONTAINED — it MUST NOT import the election store.
+// The 4-field row validator and the exact-match dirName predicate are therefore
+// duplicated here; the parity test t261 pins the local predicate against the
+// store's electionDirMatches so the duplication cannot silently drift.
 // ---------------------------------------------------------------------------
 
 // The seven known election states — duplicated from amadeus-election-store's
-// VALID_STATES per ADR-6 (self-contained, no scripts/ import).
+// ELECTION_STATES per ADR-6 (self-contained, no scripts/ import).
 const ELECTION_REGISTRY_STATES: ReadonlySet<string> = new Set([
   "draft",
   "open",
   "collecting",
+  "partial",
   "tallied",
   "rendered",
   "recorded",
-  "hold",
 ]);
 
 interface ElectionsRegistryRow {
@@ -1399,7 +1398,7 @@ export function isElectionsRegistryRow(v: unknown): v is ElectionsRegistryRow {
 }
 
 // Exact-equality bind: does this row's dirName match the physical directory
-// name? Duplicated from scripts' electionDirMatches per ADR-6; t261 pins parity.
+// name? Duplicated from the store's electionDirMatches per ADR-6; t261 pins parity.
 export function electionRowMatchesDir(row: ElectionsRegistryRow, dirName: string): boolean {
   return row.dirName === dirName;
 }

@@ -1,21 +1,23 @@
-// amadeus-election-store.ts — U2 election-store: file I/O layer for the
-// election TS foundation (intent 260718-election-ts-foundation; completed in
-// Bolt 3 io-record-transport: late-ballot lane via classifyLate, amend
-// coexistence, reexamRequired persistence). Layout (functional-design):
+// amadeus-election-store.ts — the single election store: registry, path
+// primitives, and canonical multi-question persistence. Domain decisions stay
+// with the caller; this module owns durable ordering and consistency.
 //
 //   amadeus/spaces/<space>/elections/
-//     elections.json  U1 registry: one row per created-after-U1 election
-//     <electionId>/
-//       election.json   definition + explicit state field (source of truth)
-//       pending/        per-voter accepted ballots before tally (gitignored)
-//       ledger.json     accepted-ballot append list (filled at tally)
-//       ballots/        materialized at tally time (blind lift)
-//       tally.json      tally result + fixed ballot set
-//       timeline.json   event append list (each entry only from an executed op)
+//     elections.json  registry: one row per election (id, dirName, createdAt, status)
+//     <YYMMDD>-<slug>/
+//       election.json   definition (schemaVersion 2) + explicit state field
+//       pending/        per-voter ballots before integration (gitignored)
+//       ledger.json     integrated ballot list
+//       ballots/        materialized latest ballot per voter
+//       tally.json      current tally run
+//       tallies/        one file per tally run, named <runId>.json
+//       timeline.json   append-only tally event list
+//       views/          per-voter blind distribution views
 //
 // Single writer (conductor) by decision D-09 — no locking; torn writes are
-// prevented by tmp+rename (writeStoreFile). Parse failures of existing files
-// reject with "corrupt" (fail-closed load; never silently re-initialize).
+// prevented by tmp+rename (writeStoreFile). Every read is fail-closed: a file
+// that does not decode as the canonical schema is rejected, never re-parsed
+// under an older shape and never silently re-initialized.
 
 import {
   existsSync,
@@ -28,28 +30,116 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import {
-  type Ballot,
-  classifyLate,
-  lateReexamRequired,
-  Election,
-  type ElectionState,
-  err,
-  type LateBallot,
-  ok,
-  type Result,
-  type TallyResult,
-  type TimelineEvent,
-} from "./amadeus-election-model";
+  BallotCodec,
+  type CanonicalBallot,
+  type CanonicalElectionDefinition,
+  type CanonicalTally,
+  ElectionDefinitionCodec,
+  TallyCodec,
+} from "./amadeus-election-codec.ts";
 
-export type StoreError =
-  | "exists"
-  | "duplicate"
-  | "not-found"
-  | "io-error"
+export type ElectionState =
+  | "draft"
+  | "open"
+  | "collecting"
+  | "partial"
+  | "tallied"
+  | "rendered"
+  | "recorded";
+
+export type ElectionStoreError =
+  | "missing"
   | "corrupt"
-  | "unknown-ref";
+  | "unsupported"
+  | "io-error"
+  | "duplicate"
+  | "run-conflict"
+  | "state-conflict"
+  | "history-mismatch"
+  | "tally-order-conflict"
+  | "registry-mismatch";
 
-export type { TimelineEvent } from "./amadeus-election-model";
+export type ElectionStoreResult<T> =
+  | { readonly ok: true; readonly value: T }
+  | { readonly ok: false; readonly error: ElectionStoreError };
+
+export type TallyDurableStep = "history" | "current" | "state" | "registry" | "timeline";
+
+export type TallyCommitResult =
+  | {
+      readonly ok: true;
+      readonly value: { readonly repaired: boolean; readonly durable: readonly TallyDurableStep[] };
+    }
+  | {
+      readonly ok: false;
+      readonly error: ElectionStoreError;
+      readonly durable: readonly TallyDurableStep[];
+    };
+
+interface ResolvedElection {
+  readonly dir: string;
+  readonly registryEntry?: ElectionRegistryEntry;
+}
+
+interface LoadedElection {
+  readonly definition: CanonicalElectionDefinition;
+  readonly state: ElectionState;
+  readonly resolved: ResolvedElection;
+}
+
+interface PendingEvent {
+  readonly arrivalSequence: number;
+  readonly ballot: CanonicalBallot;
+}
+
+interface TallyEntry {
+  readonly tally: CanonicalTally;
+  readonly bytes: string;
+}
+
+export type ElectionTimelineEvent = {
+  readonly schemaVersion: 2;
+  readonly kind: "tallied";
+  readonly runId: string;
+  readonly at: string;
+};
+
+export interface ElectionSnapshot {
+  readonly definition: CanonicalElectionDefinition;
+  readonly state: ElectionState;
+  readonly pending: readonly CanonicalBallot[];
+  readonly ledger: readonly CanonicalBallot[];
+  readonly materialized: readonly CanonicalBallot[];
+  readonly currentTally: CanonicalTally | null;
+  readonly history: readonly CanonicalTally[];
+  readonly timeline: readonly ElectionTimelineEvent[];
+}
+
+const ELECTION_STATES: ReadonlySet<string> = new Set<ElectionState>([
+  "draft",
+  "open",
+  "collecting",
+  "partial",
+  "tallied",
+  "rendered",
+  "recorded",
+]);
+
+function ok<T>(value: T): ElectionStoreResult<T> {
+  return { ok: true, value };
+}
+
+function err(error: ElectionStoreError): ElectionStoreResult<never> {
+  return { ok: false, error };
+}
+
+function failed(error: ElectionStoreError, durable: TallyDurableStep[]): TallyCommitResult {
+  return { ok: false, error, durable };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
 
 export function electionsRoot(projectDir: string, space = "default"): string {
   return join(projectDir, "amadeus", "spaces", space, "elections");
@@ -57,7 +147,7 @@ export function electionsRoot(projectDir: string, space = "default"): string {
 
 // Atomic write: same-directory tmp then rename (project idiom — writeFileAtomic
 // class). All store writes funnel through this single path.
-export function writeStoreFile(path: string, data: string): Result<void, "io-error"> {
+export function writeStoreFile(path: string, data: string): ElectionStoreResult<void> {
   try {
     const tmp = `${path}.tmp`;
     writeFileSync(tmp, data);
@@ -68,189 +158,52 @@ export function writeStoreFile(path: string, data: string): Result<void, "io-err
   }
 }
 
-function readJson<T>(path: string): Result<T, StoreError> {
-  if (!existsSync(path)) return err("not-found");
-  let text: string;
+function readText(path: string): ElectionStoreResult<string> {
+  if (!existsSync(path)) return err("missing");
   try {
-    text = readFileSync(path, "utf8");
+    return ok(readFileSync(path, "utf8"));
   } catch {
     return err("io-error");
   }
+}
+
+function readJson(path: string): ElectionStoreResult<{ text: string; raw: unknown }> {
+  const text = readText(path);
+  if (!text.ok) return text;
   try {
-    return ok(JSON.parse(text) as T);
+    return ok({ text: text.value, raw: JSON.parse(text.value) as unknown });
   } catch {
     return err("corrupt");
   }
 }
 
-type ElectionFile = Election & { state: ElectionState };
-type LedgerFile = { ballots: Ballot[]; late: LateBallot[] };
-
-// #1980: reading election.json used to cast straight to ElectionFile, so a file
-// whose JSON parses but whose definition is invalid (the #1459 shapes) came back
-// as a well-formed Election. Both read sites (Store.load, Store.setState) go
-// through this composer instead. It adds NO validation of its own — the
-// definition is checked by Election.parse (the single definition validator) and
-// the state by VALID_STATES (the single state vocabulary) — and maps every
-// rejection onto the existing "corrupt" error, adding no new StoreError value.
-function parseElectionFile(raw: unknown): Result<ElectionFile, StoreError> {
-  const election = Election.parse(raw);
-  if (!election.ok) return err("corrupt");
-  // Election.parse has already proved raw is a non-null object; the state field
-  // is storage-only, so it is read here and checked against VALID_STATES — the
-  // same vocabulary the registry rows are checked against.
-  const state = (raw as Record<string, unknown>).state;
-  if (typeof state !== "string" || !VALID_STATES.has(state)) return err("corrupt");
-  return ok({ ...election.value, state: state as ElectionState });
+function codecError(category: string): ElectionStoreError {
+  return category === "unsupported-version" ? "unsupported" : "corrupt";
 }
 
-// Older Bolt 1 ledgers lack the late lane; reading fills it in-memory only
-// (the file gains the field on the next append — no silent rewrite on load).
-function withLateLane(ledger: Partial<LedgerFile>): LedgerFile {
-  return { ballots: ledger.ballots ?? [], late: ledger.late ?? [] };
+function parseState(value: unknown): ElectionState | null {
+  return typeof value === "string" && ELECTION_STATES.has(value) ? (value as ElectionState) : null;
+}
+
+function safeFileId(value: string): boolean {
+  return value.length > 0 && value !== "." && value !== ".." && !/[\\/\0]/.test(value);
+}
+
+function transitionMatches(
+  value: ElectionState | null,
+  expected: ElectionState,
+  next: ElectionState,
+): boolean {
+  return value !== null && [expected, next].includes(value);
 }
 
 // ---------------------------------------------------------------------------
-// Pending ballot lane (Issue #1773 — blind independence on disk)
+// Elections registry
 //
-// ledger.json is a SHARED, git-tracked file. Writing an accepted ballot there
-// while the election is still collecting hands every not-yet-voted voter two
-// read channels onto a peer's choice/GoA/reservation/rationale: the harness's
-// file-change notification and `git status` / `git diff`. So a ballot accepted
-// before tally is written to pending/<voter>.json (a gitignored directory) and
-// ledger.json stays empty until tally integrates the whole set at once.
-//
-// The pending entry carries the arrival sequence, so integration reproduces the
-// exact append order the single ledger file used to hold — deterministic and
-// independent of directory-listing order.
-// ---------------------------------------------------------------------------
-
-type PendingEntry = { seq: number; ballot: Ballot };
-type PendingFile = { entries: PendingEntry[] };
-
-export function pendingDir(electionDir: string): string {
-  return join(electionDir, "pending");
-}
-
-function pendingPath(electionDir: string, voter: string): string {
-  return join(pendingDir(electionDir), `${voter}.json`);
-}
-
-// A row must carry the two fields every consumer reads (the arrival seq and a
-// ballot with a voter); anything else is a corrupt file, not a runtime throw.
-function isPendingEntry(v: unknown): v is PendingEntry {
-  if (typeof v !== "object" || v === null) return false;
-  const row = v as { seq?: unknown; ballot?: unknown };
-  if (typeof row.seq !== "number" || !Number.isFinite(row.seq)) return false;
-  if (typeof row.ballot !== "object" || row.ballot === null) return false;
-  return typeof (row.ballot as { voter?: unknown }).voter === "string";
-}
-
-function parsePendingRows(rows: unknown): Result<PendingEntry[], StoreError> {
-  if (!Array.isArray(rows) || !rows.every(isPendingEntry)) return err("corrupt");
-  return ok(rows);
-}
-
-// Read every per-voter file, flattened into arrival order. A missing directory
-// is the normal empty case; a corrupt file is loud (fail-closed, same policy as
-// every other store read).
-function readPending(electionDir: string): Result<PendingEntry[], StoreError> {
-  const dir = pendingDir(electionDir);
-  if (!existsSync(dir)) return ok([]);
-  let names: string[];
-  try {
-    names = readdirSync(dir).filter((n) => n.endsWith(".json"));
-  } catch {
-    return err("io-error");
-  }
-  const entries: PendingEntry[] = [];
-  for (const name of names.sort()) {
-    const read = readJson<Partial<PendingFile>>(join(dir, name));
-    if (!read.ok) return read;
-    const rows = parsePendingRows(read.value.entries);
-    if (!rows.ok) return rows;
-    entries.push(...rows.value);
-  }
-  // seq is the arrival axis; the voter tiebreak keeps the order total even if a
-  // hand-edited file repeats a seq.
-  return ok(entries.sort((a, b) => a.seq - b.seq || a.ballot.voter.localeCompare(b.ballot.voter)));
-}
-
-function appendPending(
-  electionDir: string,
-  ballot: Ballot,
-  seq: number,
-): Result<void, StoreError> {
-  try {
-    mkdirSync(pendingDir(electionDir), { recursive: true });
-  } catch {
-    return err("io-error");
-  }
-  const path = pendingPath(electionDir, ballot.voter);
-  let entries: PendingEntry[] = [];
-  if (existsSync(path)) {
-    const read = readJson<Partial<PendingFile>>(path);
-    if (!read.ok) return read;
-    const rows = parsePendingRows(read.value.entries);
-    if (!rows.ok) return rows;
-    entries = rows.value;
-  }
-  const file: PendingFile = { entries: [...entries, { seq, ballot }] };
-  return writeStoreFile(path, JSON.stringify(file, null, 2));
-}
-
-// Identity of an accepted ballot across the two lanes: one voter has at most
-// one original plus amends, and each amend carries its own submission instant,
-// so (voter, kind, submittedAt) is unique among accepted ballots.
-function ballotKey(ballot: Ballot): string {
-  return JSON.stringify([ballot.voter, ballot.kind, ballot.submittedAt]);
-}
-
-// Which pending ballots are not on the ledger yet. The write and the drain are
-// two file operations and the drain can fail on its own, so integration is
-// defined by CONTENT rather than by the drain having succeeded: a pending row
-// already present on the ledger is never added again, which keeps the merged
-// read (Store.ledger) and a retried integrate free of double counting even
-// when the pending directory survives a failed drain.
-function pendingNotOnLedger(pending: PendingEntry[], ledger: LedgerFile): Ballot[] {
-  const known = new Set(ledger.ballots.map(ballotKey));
-  return pending.filter((e) => !known.has(ballotKey(e.ballot))).map((e) => e.ballot);
-}
-
-// Move the whole pending set onto ledger.json and drain the directory. Called
-// at the tally transition (Store.materialize) and idempotent: re-running it
-// adds nothing and simply retries the drain.
-function integratePending(electionDir: string): Result<void, StoreError> {
-  const pending = readPending(electionDir);
-  if (!pending.ok) return pending;
-  if (pending.value.length === 0) return ok(undefined);
-  const ledgerPath = join(electionDir, "ledger.json");
-  const read = readJson<Partial<LedgerFile>>(ledgerPath);
-  if (!read.ok) return read;
-  const ledger = withLateLane(read.value);
-  const missing = pendingNotOnLedger(pending.value, ledger);
-  if (missing.length > 0) {
-    const next: LedgerFile = { ballots: [...ledger.ballots, ...missing], late: ledger.late };
-    const w = writeStoreFile(ledgerPath, JSON.stringify(next, null, 2));
-    if (!w.ok) return w;
-  }
-  try {
-    rmSync(pendingDir(electionDir), { recursive: true, force: true });
-  } catch {
-    return err("io-error");
-  }
-  return ok(undefined);
-}
-
-// ---------------------------------------------------------------------------
-// Elections registry (U1 space-record-catalog, Bolt B1)
-//
-// A single elections.json at the elections root mirrors every election created
-// after U1 adoption: one row per election recording its canonical id, the
-// current physical directory name, the creation instant, and the last-synced
-// state. U2 resolves readers through this index and creates new elections in a
-// date-prefixed physical directory. Pre-U2 direct-name directories remain
-// reachable only through the loud migration-window branch below.
+// A single elections.json at the elections root indexes every election: one row
+// per election recording its canonical id, the physical directory name, the
+// creation instant, and the last-synced state. Every reader resolves through
+// this index — an election absent from the registry is not reachable.
 // ---------------------------------------------------------------------------
 
 export type ElectionRegistryEntry = {
@@ -269,36 +222,24 @@ export type RegistryRead =
   | { kind: "absent" }
   | { kind: "corrupt"; detail: string };
 
-const VALID_STATES: ReadonlySet<string> = new Set<ElectionState>([
-  "draft",
-  "open",
-  "collecting",
-  "partial",
-  "tallied",
-  "rendered",
-  "recorded",
-  "hold",
-]);
-
 // A row passes iff all four required fields are present with the right primitive
-// types AND status is a known ElectionState. Unknown EXTRA fields are ignored
-// (forward-compat); a missing/mistyped required field or unknown status is a
-// row-level failure that makes the whole read corrupt (fail-closed). Exported
-// as the pure (no-fs) row validator so U2's resolver can bind rows with the same
-// check readElectionsRegistry applies.
+// types, the two identity fields are safe single path segments, and status is a
+// known ElectionState. Unknown extra fields are ignored; a missing, mistyped,
+// unsafe or unknown-status field is a row-level failure that makes the whole
+// read corrupt (fail-closed). Path safety is enforced HERE, at the one load
+// path, so no consumer can join an unvalidated dirName onto the elections root.
 export function isElectionRegistryEntry(v: unknown): v is ElectionRegistryEntry {
-  if (typeof v !== "object" || v === null) return false;
-  const r = v as Record<string, unknown>;
-  if (typeof r.electionId !== "string" || r.electionId.length === 0) return false;
-  if (typeof r.dirName !== "string" || r.dirName.length === 0) return false;
-  if (typeof r.createdAt !== "string" || r.createdAt.length === 0) return false;
-  if (typeof r.status !== "string" || !VALID_STATES.has(r.status)) return false;
+  if (!isRecord(v)) return false;
+  if (typeof v.electionId !== "string" || !safeFileId(v.electionId)) return false;
+  if (typeof v.dirName !== "string" || !safeFileId(v.dirName)) return false;
+  if (typeof v.createdAt !== "string" || v.createdAt.length === 0) return false;
+  if (typeof v.status !== "string" || !ELECTION_STATES.has(v.status)) return false;
   return true;
 }
 
 // Read the registry, never silently reinitializing: a missing file is `absent`
-// (a legitimate pre-adoption / pre-migration state), any parse failure or a row
-// failing the 4-field check is `corrupt` (the caller decides loudness).
+// (no election has been created yet), any parse failure or a row failing the
+// row check is `corrupt` (the caller decides loudness).
 export function readElectionsRegistry(root: string): RegistryRead {
   const path = electionsRegistryPath(root);
   if (!existsSync(path)) return { kind: "absent" };
@@ -332,32 +273,19 @@ export function readElectionsRegistry(root: string): RegistryRead {
   return { kind: "ok", entries };
 }
 
-export type ResolvedElectionDir =
-  | { kind: "registry"; dir: string }
-  | { kind: "legacy-unmigrated"; dir: string };
-
-const LEGACY_PATH_NOTICE = "unmigrated election";
-
-// Resolve every election read through the registry. The only fallback is the
-// declared migration window: an exact legacy electionId directory that still
-// exists. It is deliberately loud and typed so migration completion can remove
-// this branch mechanically.
-export function resolveElectionDir(root: string, electionId: string): ResolvedElectionDir {
+// Physical directory of an election, resolved through the registry. Throws when
+// the election has no row — there is no other path to an election directory.
+export function resolveElectionDir(root: string, electionId: string): string {
   const registry = readElectionsRegistry(root);
   if (registry.kind === "corrupt") {
     throw new Error(`elections registry corrupt: ${registry.detail}`);
   }
-  if (registry.kind === "ok") {
-    const byId = new Map(registry.entries.map((entry) => [entry.electionId, entry]));
-    const entry = byId.get(electionId);
-    if (entry !== undefined) return { kind: "registry", dir: join(root, entry.dirName) };
-  }
-  const legacyDir = join(root, electionId);
-  if (existsSync(legacyDir)) {
-    console.error(`${LEGACY_PATH_NOTICE} ${electionId} — legacy path(移行前)`);
-    return { kind: "legacy-unmigrated", dir: legacyDir };
-  }
-  throw new Error(`election not in registry: ${electionId}`);
+  const entry =
+    registry.kind === "ok"
+      ? registry.entries.find((row) => row.electionId === electionId)
+      : undefined;
+  if (entry === undefined) throw new Error(`election not in registry: ${electionId}`);
+  return join(root, entry.dirName);
 }
 
 // Append a new row. absent -> start a fresh []; corrupt -> loud error (never
@@ -366,7 +294,7 @@ export function resolveElectionDir(root: string, electionId: string): ResolvedEl
 export function appendElectionToRegistry(
   root: string,
   entry: ElectionRegistryEntry,
-): Result<void, StoreError> {
+): ElectionStoreResult<void> {
   const read = readElectionsRegistry(root);
   if (read.kind === "corrupt") return err("corrupt");
   const entries = read.kind === "ok" ? read.entries : [];
@@ -374,35 +302,26 @@ export function appendElectionToRegistry(
   return writeStoreFile(electionsRegistryPath(root), JSON.stringify([...entries, entry], null, 2));
 }
 
-// Sync a row's status. row missing -> loud error (a created-after-U1 election
-// MUST carry a row); corrupt -> loud error; absent file -> loud not-found (the
-// absent-is-a-no-op policy is the CALLER's concern — see Store.setState — so
-// this function is only reached once a registry exists).
+// Sync a row's status. row missing -> loud error (every election MUST carry a
+// row); corrupt -> loud error; absent file -> loud missing.
 export function updateElectionStatus(
   root: string,
   electionId: string,
   status: ElectionState,
-): Result<void, StoreError> {
+): ElectionStoreResult<void> {
   const read = readElectionsRegistry(root);
   if (read.kind === "corrupt") return err("corrupt");
-  if (read.kind === "absent") return err("not-found");
+  if (read.kind === "absent") return err("missing");
   const idx = read.entries.findIndex((e) => e.electionId === electionId);
-  if (idx < 0) return err("not-found");
+  if (idx < 0) return err("missing");
   const next = read.entries.map((e, i) => (i === idx ? { ...e, status } : e));
   return writeStoreFile(electionsRegistryPath(root), JSON.stringify(next, null, 2));
 }
 
 // Exact-equality bind: does this registry entry's dirName match the given
-// physical directory name? (U2 resolver uses this to bind a row to its dir.)
+// physical directory name?
 export function electionDirMatches(entry: ElectionRegistryEntry, dirName: string): boolean {
   return entry.dirName === dirName;
-}
-
-// Second-precision UTC ISO for the registry createdAt (`YYYY-MM-DDThh:mm:ssZ`) —
-// minted locally so the store stays self-contained (matches the transport's
-// normalizeAt shape without coupling to that module).
-function nowUtcSecondsIso(): string {
-  return new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
 }
 
 // Compact UTC date stamp YYMMDD from an ISO instant. Ported pure from
@@ -452,11 +371,6 @@ export function uuidv7ToUtcIso(uuid: string): string | null {
 // election, disambiguating collisions with a `-2`, `-3`, … counter over the
 // caller-supplied set of existing names. LOUD throw after 1000 exhausted names
 // (a runaway collision is a defect, never silently masked).
-//
-// NOT CONSUMED BY create IN THIS BOLT (ruling E-SRCB1CG): create still names
-// directories by electionId. Consumers are U3 (migration: rename legacy
-// electionId dirs to this form) and the post-U2 create switch. Implemented and
-// fully tested here so U2/U3 inherit a proven minting function.
 export function mintElectionDirName(
   electionId: string,
   createdAtIso: string,
@@ -473,248 +387,839 @@ export function mintElectionDirName(
   );
 }
 
-export const Store = {
-  create(root: string, election: Election): Result<void, StoreError> {
-    // Order contract (ruling E-SRCB1CG): the registry row is appended BEFORE the
-    // election directory is created. The root must exist first so elections.json
-    // can land; the physical dir is created only after the row commits, so a
-    // registry failure (duplicate/corrupt) aborts create with no dir side-effect.
-    try {
-      mkdirSync(root, { recursive: true });
-    } catch {
-      return err("io-error");
+// ---------------------------------------------------------------------------
+// Canonical election persistence
+// ---------------------------------------------------------------------------
+
+function resolve(root: string, electionId: string): ElectionStoreResult<ResolvedElection> {
+  if (!safeFileId(electionId)) return err("corrupt");
+  const registry = readElectionsRegistry(root);
+  if (registry.kind === "corrupt") return err("corrupt");
+  if (registry.kind === "absent") return err("missing");
+  const entry = registry.entries.find((row) => row.electionId === electionId);
+  if (entry === undefined) return err("missing");
+  return ok({ dir: join(root, entry.dirName), registryEntry: entry });
+}
+
+function decodeElection(
+  resolved: ResolvedElection,
+  checkRegistry = true,
+): ElectionStoreResult<LoadedElection> {
+  const read = readJson(join(resolved.dir, "election.json"));
+  if (!read.ok) return read;
+  if (!isRecord(read.value.raw)) return err("corrupt");
+  const state = parseState(read.value.raw.state);
+  if (state === null) return err("corrupt");
+  const { state: _state, ...definitionRaw } = read.value.raw;
+  const decoded = ElectionDefinitionCodec.decode(definitionRaw);
+  if (!decoded.ok) return err(codecError(decoded.error.category));
+  if (
+    checkRegistry &&
+    resolved.registryEntry !== undefined &&
+    parseState(resolved.registryEntry.status) !== state
+  ) {
+    return err("registry-mismatch");
+  }
+  return ok({ definition: decoded.value, state, resolved });
+}
+
+function load(
+  root: string,
+  electionId: string,
+  checkRegistry = true,
+): ElectionStoreResult<LoadedElection> {
+  const resolved = resolve(root, electionId);
+  return resolved.ok ? decodeElection(resolved.value, checkRegistry) : resolved;
+}
+
+function encodeElection(
+  definition: CanonicalElectionDefinition,
+  state: ElectionState,
+): ElectionStoreResult<string> {
+  const encoded = ElectionDefinitionCodec.encode(definition);
+  if (!encoded.ok) return err(codecError(encoded.error.category));
+  const raw = JSON.parse(encoded.value) as unknown;
+  if (!isRecord(raw)) return err("corrupt");
+  return ok(JSON.stringify({ ...raw, state }, null, 2));
+}
+
+function ballotContext(ballot: CanonicalBallot): { targetQuestionIds: string[] } {
+  return { targetQuestionIds: ballot.responses.map((response) => response.questionId) };
+}
+
+function encodeBallot(
+  ballot: CanonicalBallot,
+  definition: CanonicalElectionDefinition,
+): ElectionStoreResult<string> {
+  const encoded = BallotCodec.encode(ballot, definition, ballotContext(ballot));
+  return encoded.ok ? ok(encoded.value) : err(codecError(encoded.error.category));
+}
+
+function decodeBallot(
+  raw: unknown,
+  definition: CanonicalElectionDefinition,
+): ElectionStoreResult<CanonicalBallot> {
+  if (!isRecord(raw)) return err("corrupt");
+  if (!Array.isArray(raw.responses)) return err("corrupt");
+  const ids = raw.responses.flatMap((response) =>
+    isRecord(response) && typeof response.questionId === "string" ? [response.questionId] : [],
+  );
+  const decoded = BallotCodec.decode(raw, definition, { targetQuestionIds: ids });
+  return decoded.ok ? ok(decoded.value) : err(codecError(decoded.error.category));
+}
+
+function identity(ballot: CanonicalBallot): string {
+  return JSON.stringify([ballot.voter, ballot.kind, ballot.submittedAt]);
+}
+
+function idempotentBallot(
+  existing: CanonicalBallot | undefined,
+  ballotBytes: string,
+  definition: CanonicalElectionDefinition,
+  arrivalSequence: number,
+): ElectionStoreResult<{ idempotent: boolean; arrivalSequence: number }> | null {
+  if (existing === undefined) return null;
+  const encoded = encodeBallot(existing, definition);
+  if (!encoded.ok) return encoded;
+  return encoded.value === ballotBytes
+    ? ok({ idempotent: true, arrivalSequence })
+    : err("duplicate");
+}
+
+function pendingPath(dir: string, voter: string): string {
+  return join(dir, "pending", `${voter}.json`);
+}
+
+function readPendingVoter(
+  dir: string,
+  voter: string,
+  definition: CanonicalElectionDefinition,
+): ElectionStoreResult<PendingEvent[]> {
+  const path = pendingPath(dir, voter);
+  if (!existsSync(path)) return ok([]);
+  const read = readJson(path);
+  if (!read.ok) return read;
+  if (
+    !isRecord(read.value.raw) ||
+    read.value.raw.schemaVersion !== 2 ||
+    read.value.raw.electionId !== definition.electionId ||
+    read.value.raw.voter !== voter ||
+    !Array.isArray(read.value.raw.events)
+  ) {
+    return err("corrupt");
+  }
+  const events: PendingEvent[] = [];
+  for (const event of read.value.raw.events) {
+    if (
+      !isRecord(event) ||
+      !Number.isInteger(event.arrivalSequence) ||
+      (event.arrivalSequence as number) < 0
+    ) {
+      return err("corrupt");
     }
-    const createdAt = nowUtcSecondsIso();
-    let existingDirNames: Set<string>;
-    try {
-      existingDirNames = new Set(
-        readdirSync(root, { withFileTypes: true })
-          .filter((entry) => entry.isDirectory())
-          .map((entry) => entry.name),
+    const ballot = decodeBallot(event.ballot, definition);
+    if (!ballot.ok || ballot.value.voter !== voter) return err("corrupt");
+    events.push({ arrivalSequence: event.arrivalSequence as number, ballot: ballot.value });
+  }
+  return ok(events);
+}
+
+function readAllPending(
+  dir: string,
+  definition: CanonicalElectionDefinition,
+): ElectionStoreResult<PendingEvent[]> {
+  const pendingDir = join(dir, "pending");
+  if (!existsSync(pendingDir)) return ok([]);
+  let names: string[];
+  try {
+    names = readdirSync(pendingDir).filter((name) => name.endsWith(".json")).sort();
+  } catch {
+    return err("io-error");
+  }
+  const events: PendingEvent[] = [];
+  for (const name of names) {
+    const rows = readPendingVoter(dir, name.slice(0, -5), definition);
+    if (!rows.ok) return rows;
+    events.push(...rows.value);
+  }
+  if (new Set(events.map((event) => event.arrivalSequence)).size !== events.length) {
+    return err("corrupt");
+  }
+  return ok(events.sort((left, right) => left.arrivalSequence - right.arrivalSequence));
+}
+
+function readLedger(
+  dir: string,
+  definition: CanonicalElectionDefinition,
+): ElectionStoreResult<CanonicalBallot[]> {
+  const read = readJson(join(dir, "ledger.json"));
+  if (!read.ok) return read;
+  if (!isRecord(read.value.raw) || !Array.isArray(read.value.raw.ballots)) return err("corrupt");
+  if (read.value.raw.schemaVersion !== 2) return err("unsupported");
+  const ballots: CanonicalBallot[] = [];
+  for (const raw of read.value.raw.ballots) {
+    const decoded = decodeBallot(raw, definition);
+    if (!decoded.ok) return decoded;
+    ballots.push(decoded.value);
+  }
+  return ok(ballots);
+}
+
+function ledgerBytes(ballots: readonly CanonicalBallot[]): string {
+  return JSON.stringify({ schemaVersion: 2, ballots }, null, 2);
+}
+
+function materialize(
+  dir: string,
+  voters: readonly string[],
+  ballots: readonly CanonicalBallot[],
+  definition: CanonicalElectionDefinition,
+): ElectionStoreResult<void> {
+  try {
+    mkdirSync(join(dir, "ballots"), { recursive: true });
+  } catch {
+    return err("io-error");
+  }
+  for (const voter of voters) {
+    const latest = ballots
+      .filter((ballot) => ballot.voter === voter)
+      .reduce<CanonicalBallot | undefined>(
+        (best, candidate) =>
+          best === undefined || (candidate.receivedAt ?? "") >= (best.receivedAt ?? "")
+            ? candidate
+            : best,
+        undefined,
       );
-    } catch {
+    if (latest === undefined) continue;
+    const encoded = encodeBallot(latest, definition);
+    if (!encoded.ok) return encoded;
+    if (!writeStoreFile(join(dir, "ballots", `${voter}.json`), encoded.value).ok) {
       return err("io-error");
     }
-    const dirName = mintElectionDirName(election.electionId, createdAt, existingDirNames);
-    const dir = join(root, dirName);
-    if (existsSync(join(dir, "election.json"))) return err("exists");
-    const appended = appendElectionToRegistry(root, {
-      electionId: election.electionId,
+  }
+  return ok(undefined);
+}
+
+function readMaterialized(
+  dir: string,
+  voters: readonly string[],
+  definition: CanonicalElectionDefinition,
+): ElectionStoreResult<CanonicalBallot[]> {
+  const ballots: CanonicalBallot[] = [];
+  for (const voter of voters) {
+    const path = join(dir, "ballots", `${voter}.json`);
+    if (!existsSync(path)) continue;
+    const read = readJson(path);
+    if (!read.ok) return read;
+    const ballot = decodeBallot(read.value.raw, definition);
+    if (!ballot.ok || ballot.value.voter !== voter) return err("corrupt");
+    ballots.push(ballot.value);
+  }
+  return ok(ballots);
+}
+
+function consumePending(dir: string, voters: readonly string[]): ElectionStoreResult<void> {
+  try {
+    for (const voter of voters) rmSync(pendingPath(dir, voter), { force: true });
+    const pendingDir = join(dir, "pending");
+    if (existsSync(pendingDir) && readdirSync(pendingDir).length === 0) {
+      rmSync(pendingDir, { recursive: true });
+    }
+    return ok(undefined);
+  } catch {
+    return err("io-error");
+  }
+}
+
+function mergePendingEvents(
+  ledger: readonly CanonicalBallot[],
+  selected: readonly PendingEvent[],
+  definition: CanonicalElectionDefinition,
+): ElectionStoreResult<CanonicalBallot[]> {
+  const known = new Map(ledger.map((ballot) => [identity(ballot), ballot]));
+  const next = [...ledger];
+  for (const event of selected) {
+    const prior = known.get(identity(event.ballot));
+    if (prior === undefined) {
+      known.set(identity(event.ballot), event.ballot);
+      next.push(event.ballot);
+      continue;
+    }
+    const left = encodeBallot(prior, definition);
+    const right = encodeBallot(event.ballot, definition);
+    if (!left.ok || !right.ok) return err("corrupt");
+    if (left.value !== right.value) return err("duplicate");
+  }
+  return ok(next);
+}
+
+function decodeTally(
+  raw: unknown,
+  definition: CanonicalElectionDefinition,
+): ElectionStoreResult<CanonicalTally> {
+  const decoded = TallyCodec.decode(raw, definition);
+  return decoded.ok ? ok(decoded.value) : err(codecError(decoded.error.category));
+}
+
+function encodeTally(
+  tally: CanonicalTally,
+  definition: CanonicalElectionDefinition,
+): ElectionStoreResult<string> {
+  const encoded = TallyCodec.encode(tally, definition);
+  return encoded.ok ? ok(encoded.value) : err(codecError(encoded.error.category));
+}
+
+function readCurrent(
+  dir: string,
+  definition: CanonicalElectionDefinition,
+): ElectionStoreResult<TallyEntry | null> {
+  const path = join(dir, "tally.json");
+  if (!existsSync(path)) return ok(null);
+  const read = readJson(path);
+  if (!read.ok) return read;
+  const decoded = decodeTally(read.value.raw, definition);
+  return decoded.ok ? ok({ tally: decoded.value, bytes: read.value.text }) : decoded;
+}
+
+function readHistory(
+  dir: string,
+  definition: CanonicalElectionDefinition,
+): ElectionStoreResult<TallyEntry[]> {
+  const historyDir = join(dir, "tallies");
+  if (!existsSync(historyDir)) return ok([]);
+  let names: string[];
+  try {
+    names = readdirSync(historyDir).filter((name) => name.endsWith(".json")).sort();
+  } catch {
+    return err("io-error");
+  }
+  const history: TallyEntry[] = [];
+  for (const name of names) {
+    const read = readJson(join(historyDir, name));
+    if (!read.ok) return read;
+    const tally = decodeTally(read.value.raw, definition);
+    if (!tally.ok || name !== `${tally.value.runId}.json`) return err("corrupt");
+    history.push({ tally: tally.value, bytes: read.value.text });
+  }
+  history.sort(
+    (left, right) =>
+      left.tally.talliedAt.localeCompare(right.tally.talliedAt) ||
+      left.tally.runId.localeCompare(right.tally.runId),
+  );
+  return ok(history);
+}
+
+function sameValue(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function verifyPreservation(
+  prior: CanonicalTally,
+  next: CanonicalTally,
+  definition: CanonicalElectionDefinition,
+): ElectionStoreResult<void> {
+  const targets = new Set(next.targetQuestionIds);
+  const priorResults = new Map(prior.results.map((result) => [result.questionId, result]));
+  for (const result of next.results) {
+    if (!targets.has(result.questionId) && !sameValue(result, priorResults.get(result.questionId))) {
+      return err("history-mismatch");
+    }
+  }
+  if (targets.size === definition.questions.length) {
+    return next.preservedResultDigest === null ? ok(undefined) : err("history-mismatch");
+  }
+  const digest = TallyCodec.establishedResultsDigest(prior, definition);
+  return digest.ok && digest.value === next.preservedResultDigest
+    ? ok(undefined)
+    : err("history-mismatch");
+}
+
+function verifyPreservationChain(
+  history: readonly TallyEntry[],
+  definition: CanonicalElectionDefinition,
+): ElectionStoreResult<void> {
+  for (let index = 1; index < history.length; index++) {
+    const checked = verifyPreservation(history[index - 1]!.tally, history[index]!.tally, definition);
+    if (!checked.ok) return checked;
+  }
+  return ok(undefined);
+}
+
+function verifyHistory(
+  dir: string,
+  definition: CanonicalElectionDefinition,
+): ElectionStoreResult<TallyEntry[]> {
+  const history = readHistory(dir, definition);
+  if (!history.ok) return history;
+  const current = readCurrent(dir, definition);
+  if (!current.ok) return current;
+  if (history.value.length === 0) {
+    return current.value === null ? ok([]) : err("history-mismatch");
+  }
+  if (current.value === null || history.value.at(-1)?.bytes !== current.value.bytes) {
+    return err("history-mismatch");
+  }
+  const preserved = verifyPreservationChain(history.value, definition);
+  return preserved.ok ? history : preserved;
+}
+
+function readCommitBaseline(
+  dir: string,
+  definition: CanonicalElectionDefinition,
+  tally: CanonicalTally,
+  bytes: string,
+): ElectionStoreResult<{ history: TallyEntry[]; current: TallyEntry | null }> {
+  const history = readHistory(dir, definition);
+  if (!history.ok) return history;
+  const current = readCurrent(dir, definition);
+  if (!current.ok) return current;
+  if (history.value.length === 0) {
+    return current.value === null
+      ? ok({ history: [], current: null })
+      : err("history-mismatch");
+  }
+  const last = history.value.at(-1) as TallyEntry;
+  if (last.bytes === current.value?.bytes) {
+    const verified = verifyHistory(dir, definition);
+    return verified.ok ? ok({ history: verified.value, current: current.value }) : verified;
+  }
+  const partial = verifyPartialHistoryBaseline(history.value, current.value, tally, bytes, definition);
+  return partial.ok ? ok({ history: history.value, current: current.value }) : partial;
+}
+
+function verifyPartialHistoryBaseline(
+  history: readonly TallyEntry[],
+  current: TallyEntry | null,
+  tally: CanonicalTally,
+  bytes: string,
+  definition: CanonicalElectionDefinition,
+): ElectionStoreResult<void> {
+  const last = history.at(-1) as TallyEntry;
+  if (last.tally.runId !== tally.runId) return err("history-mismatch");
+  if (last.bytes !== bytes) return err("run-conflict");
+  const previous = history.at(-2);
+  if (previous?.bytes !== undefined && previous.bytes !== current?.bytes) {
+    return err("history-mismatch");
+  }
+  const prefix = verifyPreservationChain(history.slice(0, -1), definition);
+  if (!prefix.ok) return prefix;
+  if (current !== null) {
+    const checked = verifyPreservation(current.tally, tally, definition);
+    if (!checked.ok) return checked;
+  }
+  return ok(undefined);
+}
+
+// History is ordered by (talliedAt, runId) and verification requires its tail to
+// be the current tally, so a fresh run must sort strictly after every stored one.
+function verifyTallyOrder(
+  history: readonly TallyEntry[],
+  tally: CanonicalTally,
+): ElectionStoreResult<void> {
+  const last = history.at(-1);
+  if (last === undefined) return ok(undefined);
+  const order =
+    last.tally.talliedAt.localeCompare(tally.talliedAt) ||
+    last.tally.runId.localeCompare(tally.runId);
+  return order < 0 ? ok(undefined) : err("tally-order-conflict");
+}
+
+function verifyNewRun(
+  history: readonly TallyEntry[],
+  current: TallyEntry | null,
+  tally: CanonicalTally,
+  definition: CanonicalElectionDefinition,
+): ElectionStoreResult<void> {
+  if (history.some((entry) => entry.tally.runId === tally.runId)) return ok(undefined);
+  const ordered = verifyTallyOrder(history, tally);
+  if (!ordered.ok) return ordered;
+  return current === null ? ok(undefined) : verifyPreservation(current.tally, tally, definition);
+}
+
+function createOnly(path: string, bytes: string): ElectionStoreResult<"created" | "same"> {
+  if (existsSync(path)) {
+    const existing = readText(path);
+    if (!existing.ok) return existing;
+    return existing.value === bytes ? ok("same") : err("run-conflict");
+  }
+  try {
+    const tmp = `${path}.tmp`;
+    writeFileSync(tmp, bytes, { flag: "wx" });
+    renameSync(tmp, path);
+    return ok("created");
+  } catch {
+    rmSync(`${path}.tmp`, { force: true });
+    return err("io-error");
+  }
+}
+
+function readTimeline(path: string): ElectionStoreResult<unknown[]> {
+  const read = readJson(path);
+  if (!read.ok) return read;
+  return Array.isArray(read.value.raw) ? ok(read.value.raw) : err("corrupt");
+}
+
+function isTimelineEvent(value: unknown): value is ElectionTimelineEvent {
+  return (
+    isRecord(value) &&
+    value.schemaVersion === 2 &&
+    value.kind === "tallied" &&
+    typeof value.runId === "string" &&
+    typeof value.at === "string"
+  );
+}
+
+function validTimeline(events: readonly unknown[]): events is readonly ElectionTimelineEvent[] {
+  return events.every(isTimelineEvent);
+}
+
+function appendTimeline(path: string, tally: CanonicalTally): ElectionStoreResult<"appended" | "same"> {
+  const timeline = readTimeline(path);
+  if (!timeline.ok) return timeline;
+  const events: readonly unknown[] = timeline.value;
+  if (!validTimeline(events)) return err("corrupt");
+  const event: ElectionTimelineEvent = {
+    schemaVersion: 2,
+    kind: "tallied",
+    runId: tally.runId,
+    at: tally.talliedAt,
+  };
+  const matching = events.filter((candidate) => candidate.runId === tally.runId);
+  if (matching.length > 1) return err("corrupt");
+  if (matching.length === 1) {
+    return sameValue(matching[0], event) ? ok("same") : err("run-conflict");
+  }
+  const write = writeStoreFile(path, JSON.stringify([...events, event], null, 2));
+  return write.ok ? ok("appended") : err("io-error");
+}
+
+function writeCommitState(
+  root: string,
+  loaded: LoadedElection,
+  expected: ElectionState,
+  next: ElectionState,
+  durable: TallyDurableStep[],
+): TallyCommitResult | null {
+  const registryState = parseState(loaded.resolved.registryEntry?.status);
+  if (![expected, next].includes(loaded.state)) return failed("state-conflict", durable);
+  if (
+    loaded.resolved.registryEntry !== undefined &&
+    !transitionMatches(registryState, expected, next)
+  ) {
+    return failed("registry-mismatch", durable);
+  }
+  if (loaded.state === expected) {
+    const encoded = encodeElection(loaded.definition, next);
+    if (!encoded.ok) return failed(encoded.error, durable);
+    if (!writeStoreFile(join(loaded.resolved.dir, "election.json"), encoded.value).ok) {
+      return failed("io-error", durable);
+    }
+  }
+  durable.push("state");
+  if (loaded.resolved.registryEntry === undefined) {
+    durable.push("registry");
+    return null;
+  }
+  if (registryState === expected) {
+    const update = updateElectionStatus(root, loaded.definition.electionId, next);
+    if (!update.ok) return failed(update.error === "corrupt" ? "corrupt" : "io-error", durable);
+  }
+  durable.push("registry");
+  return null;
+}
+
+function writeCurrentTally(
+  path: string,
+  bytes: string,
+  current: TallyEntry | null,
+): ElectionStoreResult<boolean> {
+  const same = current?.bytes === bytes;
+  if (same) return ok(true);
+  return writeStoreFile(path, bytes).ok ? ok(false) : err("io-error");
+}
+
+function storeCreate(
+  root: string,
+  definition: CanonicalElectionDefinition,
+): ElectionStoreResult<void> {
+  const encoded = encodeElection(definition, "draft");
+  if (!encoded.ok) return encoded;
+  if (!safeFileId(definition.electionId) || definition.voters.some((voter) => !safeFileId(voter))) {
+    return err("corrupt");
+  }
+  try {
+    mkdirSync(root, { recursive: true });
+    const createdAt = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+    const dirName = mintElectionDirName(definition.electionId, createdAt, new Set(readdirSync(root)));
+    const registry = appendElectionToRegistry(root, {
+      electionId: definition.electionId,
       dirName,
       createdAt,
       status: "draft",
     });
-    if (!appended.ok) return appended;
-    try {
-      mkdirSync(dir, { recursive: true });
-    } catch {
+    if (!registry.ok) return err(registry.error);
+    const dir = join(root, dirName);
+    mkdirSync(dir, { recursive: true });
+    if (!writeStoreFile(join(dir, "election.json"), encoded.value).ok) return err("io-error");
+    if (!writeStoreFile(join(dir, "ledger.json"), ledgerBytes([])).ok) return err("io-error");
+    return writeStoreFile(join(dir, "timeline.json"), "[]").ok ? ok(undefined) : err("io-error");
+  } catch {
+    return err("io-error");
+  }
+}
+
+export const ElectionStore = {
+  create: storeCreate,
+
+  load(
+    root: string,
+    electionId: string,
+  ): ElectionStoreResult<{
+    definition: CanonicalElectionDefinition;
+    state: ElectionState;
+  }> {
+    const loaded = load(root, electionId);
+    return loaded.ok
+      ? ok({ definition: loaded.value.definition, state: loaded.value.state })
+      : loaded;
+  },
+
+  readSnapshot(root: string, electionId: string): ElectionStoreResult<ElectionSnapshot> {
+    const loaded = load(root, electionId);
+    if (!loaded.ok) return loaded;
+    const pending = readAllPending(loaded.value.resolved.dir, loaded.value.definition);
+    if (!pending.ok) return pending;
+    const ledger = readLedger(loaded.value.resolved.dir, loaded.value.definition);
+    if (!ledger.ok) return ledger;
+    const materialized = readMaterialized(
+      loaded.value.resolved.dir,
+      loaded.value.definition.voters,
+      loaded.value.definition,
+    );
+    if (!materialized.ok) return materialized;
+    const history = readHistory(loaded.value.resolved.dir, loaded.value.definition);
+    if (!history.ok) return history;
+    const current = readCurrent(loaded.value.resolved.dir, loaded.value.definition);
+    if (!current.ok) return current;
+    if (history.value.length > 0) {
+      const verified = verifyHistory(loaded.value.resolved.dir, loaded.value.definition);
+      if (!verified.ok) return verified;
+    }
+    const timeline = readTimeline(join(loaded.value.resolved.dir, "timeline.json"));
+    if (!timeline.ok || !validTimeline(timeline.value)) return err("corrupt");
+    return ok({
+      definition: loaded.value.definition,
+      state: loaded.value.state,
+      pending: pending.value.map((event) => event.ballot),
+      ledger: ledger.value,
+      materialized: materialized.value,
+      currentTally: current.value?.tally ?? null,
+      history: history.value.map((entry) => entry.tally),
+      timeline: timeline.value,
+    });
+  },
+
+  setState(root: string, electionId: string, state: ElectionState): ElectionStoreResult<void> {
+    const loaded = load(root, electionId);
+    if (!loaded.ok) return loaded;
+    const encoded = encodeElection(loaded.value.definition, state);
+    if (!encoded.ok) return encoded;
+    if (!writeStoreFile(join(loaded.value.resolved.dir, "election.json"), encoded.value).ok) {
       return err("io-error");
     }
-    const file: ElectionFile = { ...election, state: "draft" };
-    const w1 = writeStoreFile(join(dir, "election.json"), JSON.stringify(file, null, 2));
-    if (!w1.ok) return w1;
-    const ledger: LedgerFile = { ballots: [], late: [] };
-    const w2 = writeStoreFile(join(dir, "ledger.json"), JSON.stringify(ledger, null, 2));
-    if (!w2.ok) return w2;
-    return writeStoreFile(join(dir, "timeline.json"), JSON.stringify([], null, 2));
-  },
-
-  load(root: string, electionId: string): Result<{ election: Election; state: ElectionState }, StoreError> {
-    const raw = readJson<unknown>(
-      join(resolveElectionDir(root, electionId).dir, "election.json"),
-    );
-    if (!raw.ok) return raw;
-    const read = parseElectionFile(raw.value);
-    if (!read.ok) return read;
-    const { state, ...election } = read.value;
-    return ok({ election, state });
-  },
-
-  setState(root: string, electionId: string, state: ElectionState): Result<void, StoreError> {
-    const resolved = resolveElectionDir(root, electionId);
-    const path = join(resolved.dir, "election.json");
-    const raw = readJson<unknown>(path);
-    if (!raw.ok) return raw;
-    const read = parseElectionFile(raw.value);
-    if (!read.ok) return read;
-    const w = writeStoreFile(path, JSON.stringify({ ...read.value, state }, null, 2));
-    if (!w.ok) return w;
-    // Loud registry sync (ruling E-SRCB1CG): once election.json is written,
-    // mirror the status to the registry row. A typed legacy resolution skips
-    // registry sync during the declared migration window; registry-backed
-    // elections must always keep their row in sync.
-    if (resolved.kind === "legacy-unmigrated") return ok(undefined);
+    if (loaded.value.resolved.registryEntry === undefined) return ok(undefined);
     return updateElectionStatus(root, electionId, state);
   },
 
-  // The accepted-ballot view every reader (status, tally, verify) sees: the
-  // integrated ledger file plus whatever is still pending, in arrival order.
-  // Splitting the STORAGE (#1773) must not split the semantics.
-  ledger(root: string, electionId: string): Result<LedgerFile, StoreError> {
-    const dir = resolveElectionDir(root, electionId).dir;
-    const read = readJson<Partial<LedgerFile>>(join(dir, "ledger.json"));
-    if (!read.ok) return read;
-    const ledger = withLateLane(read.value);
-    const pending = readPending(dir);
+  appendPending(
+    root: string,
+    electionId: string,
+    ballot: CanonicalBallot,
+  ): ElectionStoreResult<{ idempotent: boolean; arrivalSequence: number }> {
+    if (!safeFileId(ballot.voter)) return err("corrupt");
+    const loaded = load(root, electionId);
+    if (!loaded.ok) return loaded;
+    const encoded = encodeBallot(ballot, loaded.value.definition);
+    if (!encoded.ok) return encoded;
+    const pending = readAllPending(loaded.value.resolved.dir, loaded.value.definition);
     if (!pending.ok) return pending;
-    // Pending rows already integrated (a drain that failed after the ledger
-    // write left them behind) are not counted twice.
-    return ok({
-      ballots: [...ledger.ballots, ...pendingNotOnLedger(pending.value, ledger)],
-      late: ledger.late,
-    });
-  },
-
-  // Duplicate rejection applies for the whole election lifetime (FR-3b) —
-  // checked first on every path, late lane included, before the state branch.
-  // Amend ballots coexist with their original (ADR-5: the original is never
-  // overwritten; both stay on the ledger, correction trail intact).
-  // Both timeline write points (the pre-tally ballot row and the late row) are
-  // stamped with `receivedAt` on `at` as well (Issue #1946): the self-reported
-  // submittedAt stays on the ballot body as informational provenance and is
-  // never an axis. The ballot itself already carries the same stamp, minted by
-  // the CLI at acceptance.
-  appendBallot(
-    root: string,
-    electionId: string,
-    ballot: Ballot,
-    receivedAt: string,
-  ): Result<void, StoreError> {
-    const dir = resolveElectionDir(root, electionId).dir;
-    const ledgerPath = join(dir, "ledger.json");
-    // Read the merged view (integrated + pending) so duplicate and amend-ref
-    // checks see every accepted ballot regardless of which lane holds it.
-    const read = Store.ledger(root, electionId);
-    if (!read.ok) return read;
-    const ledger = read.value;
-    const accepted = [...ledger.ballots, ...ledger.late.map((l) => l.ballot)];
-    const dup = accepted.some(
-      (b) => b.voter === ballot.voter && b.kind !== "amend" && ballot.kind !== "amend",
+    const sameIdentity = pending.value.find((event) => identity(event.ballot) === identity(ballot));
+    const pendingRetry = idempotentBallot(
+      sameIdentity?.ballot,
+      encoded.value,
+      loaded.value.definition,
+      sameIdentity?.arrivalSequence ?? -1,
     );
-    if (dup) return err("duplicate");
-    // BR-3 fail-closed: an amend must reference an existing accepted ballot from
-    // the same voter (original or a prior amend) matching electionId/voter/
-    // submittedAt. Checked here in the read phase — before any write — so an
-    // unknown ref fails with no partial write (R-1 atomicity).
-    if (ballot.kind === "amend") {
-      const found = accepted.some(
-        (b) =>
-          b.voter === ballot.ref.voter &&
-          b.electionId === ballot.ref.electionId &&
-          b.submittedAt === ballot.ref.submittedAt,
-      );
-      if (!found) return err("unknown-ref");
-    }
-    const loaded = Store.load(root, electionId);
-    if (!loaded.ok) return loaded;
-    const state = loaded.value.state;
-    if (state === "tallied" || state === "rendered" || state === "recorded" || state === "hold") {
-      // Late lane (FR-3d): classify against the fixed tally time; a late GoA 8
-      // persists reexamRequired for the human reexamination trail.
-      const t = readJson<{ talliedAt: string }>(join(dir, "tally.json"));
-      if (!t.ok) return t;
-      // Reached only after tally, so receivedAt (minted now) is at/after
-      // talliedAt. classifyLate returns non-null whenever receivedAt strictly
-      // exceeds talliedAt; the fallback covers the same-second boundary
-      // (receivedAt === talliedAt → null) where the ballot still missed the
-      // fixed set and must land late anyway. The reexam rule is single-sourced
-      // in the model (PR #1233 review minor 2).
-      const late = classifyLate(t.value.talliedAt, receivedAt, ballot) ?? {
-        ballot,
-        late: true as const,
-        reexamRequired: lateReexamRequired(ballot),
-      };
-      // Past tally the fixed set already lives in ledger.json; integrate first
-      // so a late write never has to carry pending rows (and never drops them).
-      const integrated = integratePending(dir);
-      if (!integrated.ok) return integrated;
-      const onDisk = readJson<Partial<LedgerFile>>(ledgerPath);
-      if (!onDisk.ok) return onDisk;
-      const fixed = withLateLane(onDisk.value);
-      const next: LedgerFile = { ballots: fixed.ballots, late: [...fixed.late, late] };
-      const w = writeStoreFile(ledgerPath, JSON.stringify(next, null, 2));
-      if (!w.ok) return w;
-      return Store.appendTimeline(root, electionId, {
-        kind: "late",
-        at: receivedAt,
-        receivedAt,
-        detail: `late ballot recorded: ${ballot.voter}${late.reexamRequired ? " (reexam required)" : ""}`,
-        voter: ballot.voter,
-      });
-    }
-    // Before tally the body goes to the gitignored pending lane, never to the
-    // shared ledger file (#1773). seq is the arrival index across all voters.
-    const w = appendPending(dir, ballot, ledger.ballots.length);
-    if (!w.ok) return w;
-    return Store.appendTimeline(root, electionId, {
-      kind: "ballot",
-      at: receivedAt,
-      receivedAt,
-      detail: `ballot ${ballot.kind === "amend" ? "amendment" : "accepted"}: ${ballot.voter}`,
-      voter: ballot.voter,
-    });
-  },
-
-  // Only called from an executed operation's result (design invariant — the
-  // CLI never books an event that did not happen).
-  appendTimeline(root: string, electionId: string, event: TimelineEvent): Result<void, StoreError> {
-    const path = join(resolveElectionDir(root, electionId).dir, "timeline.json");
-    const read = readJson<TimelineEvent[]>(path);
-    if (!read.ok) return read;
-    return writeStoreFile(path, JSON.stringify([...read.value, event], null, 2));
-  },
-
-  status(
-    root: string,
-    electionId: string,
-  ): Result<{ voted: string[]; pending: string[]; state: ElectionState }, StoreError> {
-    const loaded = Store.load(root, electionId);
-    if (!loaded.ok) return loaded;
-    const ledger = Store.ledger(root, electionId);
+    if (pendingRetry !== null) return pendingRetry;
+    const ledger = readLedger(loaded.value.resolved.dir, loaded.value.definition);
     if (!ledger.ok) return ledger;
-    const voted = [...new Set(ledger.value.ballots.map((b) => b.voter))];
-    const pending = loaded.value.election.voters.filter((v) => !voted.includes(v));
-    return ok({ voted, pending, state: loaded.value.state });
-  },
-
-  // Materialize the full ballot set at tally time (blind lift) and fix the
-  // tallied ballot set alongside the result.
-  materialize(
-    root: string,
-    electionId: string,
-    result: TallyResult,
-    talliedAt: string,
-  ): Result<void, StoreError> {
-    const dir = resolveElectionDir(root, electionId).dir;
-    // Tally is the transition where blindness ends: fold the pending lane into
-    // ledger.json (deterministic arrival order) before fixing the ballot set.
-    const integrated = integratePending(dir);
-    if (!integrated.ok) return integrated;
-    const ledger = Store.ledger(root, electionId);
-    if (!ledger.ok) return ledger;
+    const integrated = ledger.value.find((candidate) => identity(candidate) === identity(ballot));
+    const ledgerRetry = idempotentBallot(integrated, encoded.value, loaded.value.definition, -1);
+    if (ledgerRetry !== null) return ledgerRetry;
+    const voterPending = readPendingVoter(
+      loaded.value.resolved.dir,
+      ballot.voter,
+      loaded.value.definition,
+    );
+    if (!voterPending.ok) return voterPending;
+    const arrivalSequence = Math.max(-1, ...pending.value.map((event) => event.arrivalSequence)) + 1;
     try {
-      mkdirSync(join(dir, "ballots"), { recursive: true });
+      mkdirSync(join(loaded.value.resolved.dir, "pending"), { recursive: true });
     } catch {
       return err("io-error");
     }
-    for (const b of ledger.value.ballots) {
-      const w = writeStoreFile(
-        join(dir, "ballots", `${b.voter}.json`),
-        JSON.stringify(b, null, 2),
-      );
-      if (!w.ok) return w;
-    }
-    // Carry forward any hold-resolution history from a prior tally (a reopen
-    // re-tallies, but the human rulings already given must survive — FR-4b).
-    const prior = readJson<{ resolutions?: unknown[] }>(join(dir, "tally.json"));
-    const resolutions = prior.ok ? (prior.value.resolutions ?? []) : [];
-    // The `tallied` timeline row is NOT booked here (#2125 FR-2a): tally fixes
-    // the ballot set, but the audit row belongs to the state-machine commit,
-    // which happens in report --result tallied. Booking it here let a bare
-    // tally append `tallied` from any state.
-    return writeStoreFile(
-      join(dir, "tally.json"),
-      JSON.stringify({ result, talliedAt, ballots: ledger.value.ballots, resolutions }, null, 2),
+    const file = {
+      schemaVersion: 2,
+      electionId,
+      voter: ballot.voter,
+      events: [
+        ...voterPending.value,
+        { arrivalSequence, ballot: JSON.parse(encoded.value) as unknown },
+      ],
+    };
+    const write = writeStoreFile(
+      pendingPath(loaded.value.resolved.dir, ballot.voter),
+      JSON.stringify(file, null, 2),
     );
+    return write.ok ? ok({ idempotent: false, arrivalSequence }) : err("io-error");
+  },
+
+  integratePending(
+    root: string,
+    electionId: string,
+    targetVoters: readonly string[],
+  ): ElectionStoreResult<{ integrated: number }> {
+    const loaded = load(root, electionId);
+    if (!loaded.ok) return loaded;
+    if (new Set(targetVoters).size !== targetVoters.length) return err("duplicate");
+    if (targetVoters.some((voter) => !safeFileId(voter))) return err("corrupt");
+    if (targetVoters.some((voter) => !loaded.value.definition.voters.includes(voter))) {
+      return err("corrupt");
+    }
+    const pending = readAllPending(loaded.value.resolved.dir, loaded.value.definition);
+    if (!pending.ok) return pending;
+    const selected = pending.value.filter((event) => targetVoters.includes(event.ballot.voter));
+    const ledger = readLedger(loaded.value.resolved.dir, loaded.value.definition);
+    if (!ledger.ok) return ledger;
+    const merged = mergePendingEvents(ledger.value, selected, loaded.value.definition);
+    if (!merged.ok) return merged;
+    if (!writeStoreFile(join(loaded.value.resolved.dir, "ledger.json"), ledgerBytes(merged.value)).ok) {
+      return err("io-error");
+    }
+    const files = materialize(
+      loaded.value.resolved.dir,
+      targetVoters,
+      merged.value,
+      loaded.value.definition,
+    );
+    if (!files.ok) return files;
+    const consumed = consumePending(loaded.value.resolved.dir, targetVoters);
+    return consumed.ok ? ok({ integrated: selected.length }) : consumed;
+  },
+
+  readTallyHistory(
+    root: string,
+    electionId: string,
+  ): ElectionStoreResult<readonly CanonicalTally[]> {
+    const loaded = load(root, electionId);
+    if (!loaded.ok) return loaded;
+    const history = verifyHistory(loaded.value.resolved.dir, loaded.value.definition);
+    if (!history.ok) return history;
+    if (history.value.length > 0) return ok(history.value.map((entry) => entry.tally));
+    const current = readCurrent(loaded.value.resolved.dir, loaded.value.definition);
+    return current.ok ? ok(current.value === null ? [] : [current.value.tally]) : current;
+  },
+
+  establishedResultsDigest(
+    root: string,
+    electionId: string,
+    tally: CanonicalTally,
+  ): ElectionStoreResult<string> {
+    const loaded = load(root, electionId);
+    if (!loaded.ok) return loaded;
+    const digest = TallyCodec.establishedResultsDigest(tally, loaded.value.definition);
+    return digest.ok ? ok(digest.value) : err(codecError(digest.error.category));
+  },
+
+  commitTally(
+    root: string,
+    electionId: string,
+    tally: CanonicalTally,
+    transition: { expectedState: ElectionState; nextState: ElectionState },
+  ): TallyCommitResult {
+    const durable: TallyDurableStep[] = [];
+    if (!safeFileId(tally.runId)) return failed("corrupt", durable);
+    const loaded = load(root, electionId, false);
+    if (!loaded.ok) return failed(loaded.error, durable);
+    const encoded = encodeTally(tally, loaded.value.definition);
+    if (!encoded.ok) return failed(encoded.error, durable);
+    const baseline = readCommitBaseline(
+      loaded.value.resolved.dir,
+      loaded.value.definition,
+      tally,
+      encoded.value,
+    );
+    if (!baseline.ok) return failed(baseline.error, durable);
+    const freshRun = verifyNewRun(
+      baseline.value.history,
+      baseline.value.current,
+      tally,
+      loaded.value.definition,
+    );
+    if (!freshRun.ok) return failed(freshRun.error, durable);
+    const historyDir = join(loaded.value.resolved.dir, "tallies");
+    try {
+      mkdirSync(historyDir, { recursive: true });
+    } catch {
+      return failed("io-error", durable);
+    }
+    const historyWrite = createOnly(join(historyDir, `${tally.runId}.json`), encoded.value);
+    if (!historyWrite.ok) return failed(historyWrite.error, durable);
+    durable.push("history");
+    const currentWrite = writeCurrentTally(
+      join(loaded.value.resolved.dir, "tally.json"),
+      encoded.value,
+      baseline.value.current,
+    );
+    if (!currentWrite.ok) return failed(currentWrite.error, durable);
+    const currentSame = currentWrite.value;
+    durable.push("current");
+    const fresh = load(root, electionId, false);
+    if (!fresh.ok) return failed(fresh.error, durable);
+    const stateWrite = writeCommitState(
+      root,
+      fresh.value,
+      transition.expectedState,
+      transition.nextState,
+      durable,
+    );
+    if (stateWrite !== null) return stateWrite;
+    const timeline = appendTimeline(join(loaded.value.resolved.dir, "timeline.json"), tally);
+    if (!timeline.ok) return failed(timeline.error, durable);
+    durable.push("timeline");
+    return {
+      ok: true,
+      value: {
+        repaired: historyWrite.value === "same" || currentSame || timeline.value === "same",
+        durable,
+      },
+    };
+  },
+
+  verify(root: string, electionId: string): ElectionStoreResult<void> {
+    const loaded = load(root, electionId);
+    if (!loaded.ok) return loaded;
+    const ledger = readLedger(loaded.value.resolved.dir, loaded.value.definition);
+    if (!ledger.ok) return ledger;
+    const pending = readAllPending(loaded.value.resolved.dir, loaded.value.definition);
+    if (!pending.ok) return pending;
+    const history = verifyHistory(loaded.value.resolved.dir, loaded.value.definition);
+    if (!history.ok) return history;
+    const timeline = readTimeline(join(loaded.value.resolved.dir, "timeline.json"));
+    if (!timeline.ok) return timeline;
+    const events: readonly unknown[] = timeline.value;
+    if (!validTimeline(events)) return err("corrupt");
+    const runIds = events.map((event) => event.runId);
+    return new Set(runIds).size === runIds.length ? ok(undefined) : err("corrupt");
   },
 };

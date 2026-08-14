@@ -113,7 +113,8 @@ state-transition tools directly.
 - `execute-failure-election`: Construction Unit failure under
   `solo-election.trigger.mode=auto`. This is work, not a question: do NOT
   present Retry/Skip/Abort. Write a definition JSON carrying `electionId`,
-  `kind`, `question`, `choices` (one per `directive.choices`) and `voters`,
+  `kind`, `voters` and a one-element `questions[]` (its `choices` one per
+  `directive.choices`), plus `schemaVersion: 2`,
   then run
   `bun .pi/tools/amadeus-election.ts open --trigger auto --file <definition.json>`.
   `--file` is REQUIRED. Drive the election to a ruling, then commit it through

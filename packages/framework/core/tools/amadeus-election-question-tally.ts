@@ -5,11 +5,10 @@ import {
   type CanonicalGoaCounts,
   type CanonicalQuestionResult,
   type CanonicalTally,
-  TallyV2Codec,
+  TallyCodec,
 } from "./amadeus-election-codec.ts";
 import type { HoldReason } from "./amadeus-election-model.ts";
 
-export type BallotV2 = CanonicalBallot;
 export type QuestionId = string;
 
 export interface ResolvedResponse {
@@ -77,7 +76,7 @@ function responseKey(voter: string, questionId: string): string {
 
 export function resolveResponses(
   definition: CanonicalElectionDefinition,
-  ballots: readonly BallotV2[],
+  ballots: readonly CanonicalBallot[],
 ): readonly ResolvedResponse[] {
   const resolved = new Map<string, ResolvedResponse>();
   for (const ballot of ballots) {
@@ -112,7 +111,7 @@ export function resolveResponses(
 }
 
 function resolvedFrom(
-  ballot: BallotV2,
+  ballot: CanonicalBallot,
   response: CanonicalBallotResponse,
   receivedAt: string | undefined = ballot.receivedAt,
 ): ResolvedResponse {
@@ -128,7 +127,7 @@ function resolvedFrom(
 export function classifyLateResponses(
   boundaries: ReadonlyMap<QuestionId, string>,
   receivedAt: string,
-  ballot: BallotV2,
+  ballot: CanonicalBallot,
 ): LateResponseClassification {
   const onTime: ResolvedResponse[] = [];
   const late: LateResponse[] = [];
@@ -260,7 +259,7 @@ function preservedResults(
   previous: CanonicalTally | null,
 ): TallyPolicyResult<readonly CanonicalQuestionResult[]> {
   if (previous === null) return ok([]);
-  const digest = TallyV2Codec.establishedResultsDigest(previous, definition);
+  const digest = TallyCodec.establishedResultsDigest(previous, definition);
   if (!digest.ok) return fail("tally-invariant", { expected: "valid prior canonical tally" });
   if (previous.preservedResultDigest !== null && previous.preservedResultDigest !== digest.value) {
     return fail("preservation-mismatch", {
@@ -376,7 +375,7 @@ export function tallyQuestions(
     preservedResultDigest: null,
     talliedAt: "1970-01-01T00:00:00Z",
   };
-  const digest = TallyV2Codec.establishedResultsDigest(draftTally, definition);
+  const digest = TallyCodec.establishedResultsDigest(draftTally, definition);
   if (!digest.ok) return fail("tally-invariant", { expected: "canonical tally result" });
   return ok({
     targetResults,

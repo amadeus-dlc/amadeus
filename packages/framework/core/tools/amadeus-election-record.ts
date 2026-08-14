@@ -1,326 +1,37 @@
-// U3 election-record (Bolt 3) — pure render/verify functions for the election
-// tool. Turns an accepted ballot set into the persist-draft surfaces (GoA line,
-// timeline line, ruling text) and machine-checks those surfaces against the
-// ballots (reservation-count / ballot-count / freq / timeline-order). No fs, no
-// clock — every function is total or returns a discriminated-union Result
-// (functional-domain-modeling-ts). The CLI wiring (U5 render/verify verbs) is
-// out of scope here (functional-design frontend-components N/A).
-//
-// The GoA line is byte-compatible with the real parseGoaLine
-// (packages/framework/core/tools/amadeus-norm-metrics.ts): renderGoaLine
-// carries the whole mapping burden so parseGoaLine's canonical schema never
-// changes. Codes are constrained to parseGoaLine's own multi-segment accept
-// domain at construction, fail-closed.
+// amadeus-election-record.ts — pure render/verify functions for the election
+// record. Turns a canonical tally and its ballot set into the record.md surface
+// and machine-checks that surface back against the stored facts (section
+// identity, response coverage, recomputed counts, history and timeline
+// sources). No fs, no clock — every function is total or returns a
+// discriminated-union Result (functional-domain-modeling-ts).
 
-import {
-  type Ballot,
-  type Election,
-  err,
-  type Goa,
-  ok,
-  type Result,
-  type TallyResult,
-  type TimelineEvent,
-} from "./amadeus-election-model";
 import {
   type CanonicalBallot,
   type CanonicalElectionChoice,
   type CanonicalElectionDefinition,
   type CanonicalQuestionResult,
   type CanonicalTally,
-  TallyV2Codec,
+  TallyCodec,
 } from "./amadeus-election-codec.ts";
-import {
-  resolveResponses,
-  tallyQuestions,
-} from "./amadeus-election-question-tally.ts";
-
-// --- GoaLineCode -----------------------------------------------------------
-
-// Natural multi-segment codes are accepted; compressed single-segment legacy
-// values remain accepted for stored-record compatibility.
-export type GoaLineCode = string & { readonly __brand: "GoaLineCode" };
-
-const GOA_LINE_CODE_RE = /^E-[A-Z0-9]+(?:-[A-Z0-9]+)*$/;
-
-export const GoaLineCode = {
-  parse(raw: unknown): Result<GoaLineCode, "goa-code-invalid"> {
-    if (typeof raw !== "string" || !GOA_LINE_CODE_RE.test(raw)) return err("goa-code-invalid");
-    return ok(raw as GoaLineCode);
-  },
-};
-
-// --- GoaFreq ---------------------------------------------------------------
-
-// The 8-bin (GoA 1..8) frequency distribution, recomputed from the accepted
-// vote set. Fixed length 8; never persisted (domain-entities invariant — no
-// document-shaped field). Index i holds the count of GoA (i+1).
-export type GoaFreq = readonly [number, number, number, number, number, number, number, number];
-
-export const GoaFreq = {
-  fromVotes(votes: Goa[]): GoaFreq {
-    const bins: [number, number, number, number, number, number, number, number] = [0, 0, 0, 0, 0, 0, 0, 0];
-    for (const g of votes) bins[g - 1]++;
-    return bins;
-  },
-};
-
-// --- timeline & verify types (domain-entities declared columns) -------------
-
-// Canonical TimelineEvent now lives in the U1 model (Bolt 3 declared
-// reconciliation — U2 persists, U3 renders, both depend only on U1).
-export type { TimelineEvent } from "./amadeus-election-model";
-
-export type VerifyFinding = {
-  kind: "reservation-count" | "ballot-count" | "freq-mismatch" | "timeline-order" | "kind-order";
-  expected: string | number;
-  actual: string | number;
-};
-
-// --- kind-order (state-machine legality) check class (#2125 FR-3) ----------
-
-// Caller-supplied context for the kind-order class: which election is being
-// verified (for the FR-3d ledger exemption) and the hold resolutions recorded
-// in tally.json (a `resumedTo: "collecting"` resolution is a lawful reopen and
-// grants one reopen of the collection segment — FR-3b). Kept structural so
-// verifySelf stays pure: no fs, no clock, no store types.
-export type KindOrderContext = {
-  readonly electionId: string;
-  readonly resolutions: ReadonlyArray<{ readonly resumedTo?: string }>;
-};
-
-// FR-3d: known-broken records that predate the #2125 guards. These timelines
-// are faithful records of real operation sequences and are never rewritten
-// (C-1), so verify exempts them from the kind-order class by name. Mechanical
-// rescan at implementation ref (segment model with reopen budget) over
-// amadeus/spaces/default/elections/*/timeline.json; 260803-e-esg-res13 is this
-// intent's own §13 election, broken by an out-of-band tally while the intent
-// was in flight.
-const KIND_ORDER_LEDGER: ReadonlySet<string> = new Set([
-  "E-CCCRA",
-  "E-TCRRA1",
-  "260724-e-hpugs13",
-  "260724-e-tlau2",
-  "260730-e-obb2-cgs13",
-  "260801-e-cpg-u2abs",
-  "260801-e-omsb4-dev",
-  "260803-e-esg-res13",
-  "260803-e-pi-nfrd-s13",
-  "260803-e-rrp-fmcs13",
-  "260803-e-sia-cgs13",
-]);
-
-// All findings are enumerated — verifySelf never stops at the first (FR-6b).
-export type VerifyResult = Result<void, VerifyFinding[]>;
-
-// --- render ----------------------------------------------------------------
-
-// `GoA[<code>]: 1x<n> 2x<n> ... 8x<n>` — all 8 bins always emitted (0 included,
-// never elided) so parseGoaLine round-trips byte-for-byte (BR-R1).
-export function renderGoaLine(code: GoaLineCode, freq: GoaFreq): string {
-  const bins = freq.map((n, i) => `${i + 1}x${n}`).join(" ");
-  return `GoA[${code}]: ${bins}`;
-}
-
-// `配信 <t> → <voter> <t> → … → 開票 <t> → 後着 <voter> <t>` — one line, in the
-// given event order (persist-vote-timeline-field shape).
-export function renderTimeline(events: TimelineEvent[]): string {
-  return events.map(timelineSegment).join(" → ");
-}
-
-function timelineSegment(e: TimelineEvent): string {
-  switch (e.kind) {
-    case "distributed":
-      return `配信 ${e.at}`;
-    case "ballot": {
-      // Co-display the receipt time only when it diverges from the claimed time
-      // (delay visualization, Issue #1262) — a same-instant receipt adds no
-      // signal. Scoped to the ballot row per the E-BRARA1 e3 reservation (no
-      // blanket receivedAt expansion across the other event renderers).
-      const base = `${e.voter ?? "?"} ${e.at}`;
-      return e.receivedAt !== undefined && e.receivedAt !== e.at
-        ? `${base}(受理 ${e.receivedAt})`
-        : base;
-    }
-    case "tallied":
-      return `開票 ${e.at}`;
-    case "late":
-      return `後着 ${e.voter ?? "?"} ${e.at}`;
-  }
-}
-
-// GoA values that require a reservation sentence (gradients-of-agreement 2/3/6).
-const RESERVATION_GOA = new Set<number>([2, 3, 6]);
-// Machine marker for a transcribed reservation line, both emitted by
-// renderPersistDraft and counted by verifyReservations (one contract, two ends).
-const RESERVATION_LINE_RE = /^- 留保\(/;
-
-// The ruling line for an automatically-tallied result: an established result
-// names the winning choice and its vote count, followed by the per-choice
-// breakdown line (Issue #1261 — the ruling must reflect choiceInternalNo, not a
-// choice-blind adopted/rejected). A hold names its typed reason. A human ruling
-// over a hold is rendered separately (see renderPersistDraft's rulingOverride).
-function rulingText(result: TallyResult): string {
-  if (result.kind === "established") {
-    const winnerCount =
-      result.choiceCounts.find((c) => c.internalNo === result.winner.internalNo)?.count ?? 0;
-    const breakdown = result.choiceCounts
-      .map((c) => `choice${c.internalNo}=${c.count}票`)
-      .join(" ");
-    return `裁定: ${result.winner.label}(choice ${result.winner.internalNo}: ${winnerCount}票)\n内訳: ${breakdown}`;
-  }
-  return `裁定: 保留(${result.reason})`;
-}
-
-function reservationLines(ballots: Ballot[]): string[] {
-  const lines: string[] = [];
-  for (const b of ballots) {
-    if (RESERVATION_GOA.has(b.goa)) {
-      lines.push(`- 留保(${b.voter}, GoA${b.goa}): ${b.reservation ?? ""}`);
-    }
-  }
-  return lines;
-}
-
-// Persist-draft skeleton: ruling + full reservation transcription (BR-R6, one
-// line per GoA 2/3/6 ballot — citation-reservation-preservation) + timeline
-// line + GoA line. Total over validated inputs; deterministic (BR-R5).
-// `rulingOverride`, when supplied, replaces the derived ruling line verbatim.
-// It carries a human hold-resolution ruling (裁定: 採用 / 裁定: 不採用), which is
-// choice-blind and therefore not expressible as a tally winner — the caller
-// computes it from the resolution and passes it in (Issue #1261 ruling A).
-export function renderPersistDraft(
-  code: GoaLineCode,
-  _election: Election,
-  result: TallyResult,
-  ballots: Ballot[],
-  timeline: TimelineEvent[],
-  rulingOverride?: string,
-): string {
-  const freq = GoaFreq.fromVotes(ballots.map((b) => b.goa));
-  return [
-    rulingOverride ?? rulingText(result),
-    ...reservationLines(ballots),
-    `票タイムライン: ${renderTimeline(timeline)}`,
-    renderGoaLine(code, freq),
-  ].join("\n");
-}
-
-// --- verify ----------------------------------------------------------------
-
-// Reservation transcription count check (BR-R3, FR-6a): the number of ballots
-// that require a reservation (GoA 2/3/6) must equal the number of transcribed
-// reservation lines in `document`. Mismatch is a fail-closed reject.
-export function verifyReservations(ballots: Ballot[], document: string): Result<void, VerifyFinding> {
-  const required = ballots.filter((b) => RESERVATION_GOA.has(b.goa)).length;
-  let transcribed = 0;
-  for (const line of document.split("\n")) {
-    if (RESERVATION_LINE_RE.test(line.trim())) transcribed++;
-  }
-  if (required !== transcribed) {
-    return err({ kind: "reservation-count", expected: required, actual: transcribed });
-  }
-  return ok(undefined);
-}
-
-// The two ballot counts, each read from a SEPARATE file: `ledger` from
-// ledger.json (the append lane), `materialized` from tally.json (the frozen set
-// the record was rendered from). Naming them keeps the two sources apart at the
-// call site (Issue #1457: two positional numbers taken from one array made this
-// check `x === x`).
-export type BallotCounts = { readonly ledger: number; readonly materialized: number };
-
-// Self-check of a generated record against its own ballots (BR-R4, FR-6b) —
-// three classes, all findings enumerated: ballot count (ledger vs materialized),
-// GoA frequency (stored vs recomputed), timeline monotonicity (ISO strings sort
-// chronologically). Every class compares one value the caller read off disk
-// against one this function derives, never a value against itself (no
-// verification-theatre self-reference).
-export function verifySelf(
-  counts: BallotCounts,
-  ballots: Ballot[],
-  storedFreq: GoaFreq,
-  timeline: TimelineEvent[],
-  kindOrder?: KindOrderContext,
-): VerifyResult {
-  const findings: VerifyFinding[] = [];
-  if (counts.ledger !== counts.materialized) {
-    findings.push({ kind: "ballot-count", expected: counts.ledger, actual: counts.materialized });
-  }
-  const recomputed = GoaFreq.fromVotes(ballots.map((b) => b.goa));
-  if (!freqEqual(recomputed, storedFreq)) {
-    findings.push({ kind: "freq-mismatch", expected: storedFreq.join(","), actual: recomputed.join(",") });
-  }
-  for (let i = 1; i < timeline.length; i++) {
-    // Monotonicity is checked on the RECEIPT axis (Issue #1262): an agmsg-relayed
-    // ballot can be accepted out of submittedAt order (relay delay), so the
-    // claimed `at` is legitimately non-monotonic while the receipt order (the
-    // append order) is monotonic. `receivedAt ?? at` is the single read fork —
-    // every ballot/late event minted after the fix carries receivedAt; a pre-fix
-    // in-flight record (opened before the fix) has none and is checked on the
-    // legacy `at` axis. That fallback exists only for records already open at the
-    // migration: no election is ever re-verified after the fix lands, so a new
-    // election always has receivedAt on every timeline event.
-    const prev = timeline[i - 1].receivedAt ?? timeline[i - 1].at;
-    const cur = timeline[i].receivedAt ?? timeline[i].at;
-    if (cur < prev) findings.push({ kind: "timeline-order", expected: prev, actual: cur });
-  }
-  // kind-order (#2125 FR-3): state-machine legality of the event SEQUENCE,
-  // judged by position only — `at`/`receivedAt` never enter (orthogonal to
-  // timeline-order, which owns the clock axis). A `tallied` closes the
-  // collection segment; any later ballot / distributed / tallied is lawful
-  // only against the reopen budget: one credit per `resumedTo: "collecting"`
-  // hold resolution, and one credit reopens the whole segment until the next
-  // tallied closes it again (FR-3b). Ledgered pre-guard records are exempt by
-  // name (FR-3d).
-  if (kindOrder !== undefined && !KIND_ORDER_LEDGER.has(kindOrder.electionId)) {
-    let credits = kindOrder.resolutions.filter((r) => r.resumedTo === "collecting").length;
-    let closed = false;
-    for (const [i, e] of timeline.entries()) {
-      if (!closed) {
-        if (e.kind === "tallied") closed = true;
-        continue;
-      }
-      if (e.kind === "ballot" || e.kind === "distributed" || e.kind === "tallied") {
-        if (credits > 0) {
-          credits--;
-          closed = e.kind === "tallied";
-        } else {
-          findings.push({
-            kind: "kind-order",
-            expected: "no ballot/distributed/tallied after tallied without a collecting reopen",
-            actual: `${e.kind}#${i}`,
-          });
-        }
-      }
-    }
-  }
-  return findings.length === 0 ? ok(undefined) : err(findings);
-}
-
-function freqEqual(a: GoaFreq, b: GoaFreq): boolean {
-  for (let i = 0; i < 8; i++) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
-}
+import { err, ok, type Result } from "./amadeus-election-model.ts";
+import { resolveResponses, tallyQuestions } from "./amadeus-election-question-tally.ts";
 
 // --- canonical multi-question record surface ------------------------------
 
-export interface DistributionChoiceV2 extends CanonicalElectionChoice {
+export interface DistributionChoice extends CanonicalElectionChoice {
   readonly displayNo: number;
 }
 
-export interface DistributionQuestionV2 {
+export interface DistributionQuestion {
   readonly questionId: string;
   readonly text: string;
-  readonly ordered: readonly DistributionChoiceV2[];
+  readonly ordered: readonly DistributionChoice[];
 }
 
-export interface DistributionViewV2 {
+export interface DistributionView {
   readonly electionId: string;
   readonly voter: string;
-  readonly questions: readonly DistributionQuestionV2[];
+  readonly questions: readonly DistributionQuestion[];
 }
 
 function viewSeed(input: string): number {
@@ -348,7 +59,7 @@ function shuffledChoices(
   voter: string,
   questionId: string,
   choices: readonly CanonicalElectionChoice[],
-): readonly DistributionChoiceV2[] {
+): readonly DistributionChoice[] {
   const random = viewRandom(viewSeed(`${electionId}:${voter}:${questionId}`));
   const ordered = [...choices];
   for (let index = ordered.length - 1; index > 0; index--) {
@@ -363,7 +74,7 @@ function shuffledChoices(
 export function buildDistributionView(
   election: CanonicalElectionDefinition,
   voter: string,
-): DistributionViewV2 {
+): DistributionView {
   return {
     electionId: election.electionId,
     voter,
@@ -387,14 +98,12 @@ export interface ElectionRecordLateResponse {
   readonly reason: string;
 }
 
+// The one event the store books: a tally run entering the record's timeline.
 export interface ElectionRecordTimelineEvent {
-  readonly schemaVersion?: 2;
-  readonly kind: string;
-  readonly runId?: string;
-  readonly questionIds?: readonly string[];
+  readonly schemaVersion: 2;
+  readonly kind: "tallied";
+  readonly runId: string;
   readonly at: string;
-  readonly receivedAt?: string;
-  readonly voter?: string;
 }
 
 export type ElectionRecordLifecycle = "partial" | "tallied";
@@ -519,13 +228,7 @@ function questionSection(input: ElectionRecordInput, questionId: string): string
 }
 
 function timelineLines(events: readonly ElectionRecordTimelineEvent[]): string[] {
-  return events.map((event) => {
-    const run = event.runId === undefined ? "" : ` run=${event.runId}`;
-    const questions = event.questionIds === undefined ? "" : ` questions=${event.questionIds.join(",")}`;
-    const voter = event.voter === undefined ? "" : ` voter=${event.voter}`;
-    const receipt = event.receivedAt === undefined ? "" : ` received=${event.receivedAt}`;
-    return `- ${event.kind} at=${event.at}${receipt}${run}${questions}${voter}`;
-  });
+  return events.map((event) => `- ${event.kind} at=${event.at} run=${event.runId}`);
 }
 
 function recordSummary(input: ElectionRecordInput): string {
@@ -577,8 +280,8 @@ function sameCanonicalTally(
   right: CanonicalTally,
   definition: CanonicalElectionDefinition,
 ): boolean {
-  const leftBytes = TallyV2Codec.encode(left, definition);
-  const rightBytes = TallyV2Codec.encode(right, definition);
+  const leftBytes = TallyCodec.encode(left, definition);
+  const rightBytes = TallyCodec.encode(right, definition);
   return leftBytes.ok && rightBytes.ok && leftBytes.value === rightBytes.value;
 }
 
@@ -662,7 +365,7 @@ function verifyRenderedContent(
     definition: input.definition,
     tally: input.currentTally,
     lifecycle: input.lifecycle,
-    materializedBallots: input.materializedBallots,
+    materializedBallots: input.ledgerBallots,
     lateResponses: input.lateResponses,
     history: input.history,
     timeline: input.timeline,
@@ -687,15 +390,16 @@ function verifyRenderedContent(
   return findings;
 }
 
-function verifyResponseCoverage(
-  input: ElectionRecordVerificationInput,
-  expectedIds: readonly string[],
-): ElectionRecordFinding[] {
+// The ledger holds every accepted ballot; the materialized store holds each
+// voter's latest ballot only, which covers exactly the questions of the current
+// run. The two must agree on those questions — a divergence means the
+// materialized copy is stale, tampered with, or was never written.
+function verifyResponseCoverage(input: ElectionRecordVerificationInput): ElectionRecordFinding[] {
   const findings: ElectionRecordFinding[] = [];
   const ledger = latestResponses(input.ledgerBallots);
   const materialized = latestResponses(input.materializedBallots);
   for (const voter of input.definition.voters) {
-    for (const questionId of expectedIds) {
+    for (const questionId of input.currentTally.targetQuestionIds) {
       const key = responseKey(voter, questionId);
       if (ledger.get(key) !== materialized.get(key)) {
         findings.push({
@@ -745,7 +449,7 @@ function verifyQuestionCounts(
   if (result === undefined) {
     return [{ kind: "result-mismatch", questionId, expected: "question result", actual: "missing" }];
   }
-  const responses = responsesForQuestion(input.materializedBallots, questionId);
+  const responses = responsesForQuestion(input.ledgerBallots, questionId);
   const actualGoa = recomputedGoa(responses);
   const storedGoa = result.kind === "established" ? result.goa : result.counts;
   const findings: ElectionRecordFinding[] = [];
@@ -817,7 +521,7 @@ function verifyRecomputedTally(
   const previous = input.history.length > 1 ? input.history.at(-2) ?? null : null;
   const recomputed = tallyQuestions(
     input.definition,
-    resolveResponses(input.definition, input.materializedBallots),
+    resolveResponses(input.definition, input.ledgerBallots),
     input.currentTally.targetQuestionIds,
     previous,
   );
@@ -894,7 +598,7 @@ function verifyHistoryTransition(
       });
     }
   }
-  const digest = TallyV2Codec.establishedResultsDigest(previous, definition);
+  const digest = TallyCodec.establishedResultsDigest(previous, definition);
   if (!digest.ok || digest.value !== current.preservedResultDigest) {
     findings.push({
       kind: "digest-mismatch",
@@ -905,17 +609,12 @@ function verifyHistoryTransition(
   return findings;
 }
 
-function verifyTimelineSources(
-  input: ElectionRecordVerificationInput,
-  expectedIds: readonly string[],
-): ElectionRecordFinding[] {
+function verifyTimelineSources(input: ElectionRecordVerificationInput): ElectionRecordFinding[] {
   const findings: ElectionRecordFinding[] = [];
   const knownRuns = new Set(input.history.map((entry) => entry.runId));
-  const knownQuestions = new Set(expectedIds);
   for (let index = 0; index < input.timeline.length; index++) {
     const event = input.timeline[index] as ElectionRecordTimelineEvent;
-    const previous = input.timeline[index - 1];
-    findings.push(...verifyTimelineEvent(event, previous, knownRuns, knownQuestions));
+    findings.push(...verifyTimelineEvent(event, input.timeline[index - 1], knownRuns));
   }
   return findings;
 }
@@ -924,26 +623,13 @@ function verifyTimelineEvent(
   event: ElectionRecordTimelineEvent,
   previous: ElectionRecordTimelineEvent | undefined,
   knownRuns: ReadonlySet<string>,
-  knownQuestions: ReadonlySet<string>,
 ): ElectionRecordFinding[] {
   const findings: ElectionRecordFinding[] = [];
-  const axis = event.receivedAt ?? event.at;
-  const previousAxis = previous === undefined ? axis : previous.receivedAt ?? previous.at;
-  if (axis < previousAxis) {
-    findings.push({ kind: "timeline-order", expected: previousAxis, actual: axis });
+  if (previous !== undefined && event.at < previous.at) {
+    findings.push({ kind: "timeline-order", expected: previous.at, actual: event.at });
   }
-  if (event.runId !== undefined && !knownRuns.has(event.runId)) {
+  if (!knownRuns.has(event.runId)) {
     findings.push({ kind: "history-mismatch", expected: "history runId", actual: event.runId });
-  }
-  for (const questionId of event.questionIds ?? []) {
-    if (!knownQuestions.has(questionId)) {
-      findings.push({
-        kind: "result-mismatch",
-        questionId,
-        expected: "definition question id",
-        actual: "unknown",
-      });
-    }
   }
   return findings;
 }
@@ -956,10 +642,10 @@ export function verifyElectionRecord(
   const findings = [
     ...verifySectionIdentity(input, sections, expectedIds),
     ...verifyRenderedContent(input, sections, expectedIds),
-    ...verifyResponseCoverage(input, expectedIds),
+    ...verifyResponseCoverage(input),
     ...verifyCurrentResults(input, expectedIds),
     ...verifyHistorySources(input),
-    ...verifyTimelineSources(input, expectedIds),
+    ...verifyTimelineSources(input),
   ];
   return findings.length === 0 ? ok(undefined) : err(findings);
 }
