@@ -167,16 +167,24 @@ export function setupTuiProject(opts: TuiProjectOptions = {}): string {
   //    Also copy the sibling amadeus/ memory shell so the resolver finds the rule
   //    layers (the engine tree under .claude/.kiro does NOT include it).
   if (opts.harness === "kiro") {
-    cpSync(KIRO_SRC, join(proj, ".kiro"), { recursive: true });
+    copyTreeWithRetry(KIRO_SRC, join(proj, ".kiro"));
+    // AGENTS.md is a SINGLE FILE, not a tree, so it stays a bare cpSync:
+    // copyTreeWithRetry verifies its copy with countFilesRecursive, which
+    // readdirSyncs its argument — against a non-directory that throws ENOTDIR,
+    // a non-retryable code, so routing a single file through the guard would
+    // fail closed on every call. The guard's contract is tree copies only.
     cpSync(join(KIRO_SRC, "..", "AGENTS.md"), join(proj, "AGENTS.md"));
-    if (existsSync(KIRO_MEMORY_SRC)) cpSync(KIRO_MEMORY_SRC, join(proj, "amadeus"), { recursive: true });
+    // existsSync stays as the precondition: an absent memory tree in the dist
+    // shell is a normal case (nothing to seed), distinct from a copy that fails.
+    if (existsSync(KIRO_MEMORY_SRC)) copyTreeWithRetry(KIRO_MEMORY_SRC, join(proj, "amadeus"));
   } else if (opts.harness === "kiro-ide") {
     // The Kiro IDE install shape — same .kiro + AGENTS.md + amadeus/ as Kiro CLI,
     // but from dist/kiro-ide/ so the .kiro.hook files the IDE reads (mint + block)
     // ride along (dist/kiro/.kiro/hooks ships none).
-    cpSync(KIRO_IDE_SRC, join(proj, ".kiro"), { recursive: true });
+    copyTreeWithRetry(KIRO_IDE_SRC, join(proj, ".kiro"));
+    // Single file — see the ENOTDIR attribution on the kiro branch above.
     cpSync(join(KIRO_IDE_SRC, "..", "AGENTS.md"), join(proj, "AGENTS.md"));
-    if (existsSync(KIRO_IDE_MEMORY_SRC)) cpSync(KIRO_IDE_MEMORY_SRC, join(proj, "amadeus"), { recursive: true });
+    if (existsSync(KIRO_IDE_MEMORY_SRC)) copyTreeWithRetry(KIRO_IDE_MEMORY_SRC, join(proj, "amadeus"));
   } else {
     copyTreeWithRetry(AMADEUS_SRC, join(proj, ".claude"));
     const claudeMdExample = join(proj, ".claude", "CLAUDE.md.example");
@@ -185,7 +193,7 @@ export function setupTuiProject(opts: TuiProjectOptions = {}): string {
     const settingsExample = join(proj, ".claude", "settings.json.example");
     const settings = join(proj, ".claude", "settings.json");
     if (!existsSync(settings) && existsSync(settingsExample)) cpSync(settingsExample, settings);
-    if (existsSync(CLAUDE_MEMORY_SRC)) cpSync(CLAUDE_MEMORY_SRC, join(proj, "amadeus"), { recursive: true });
+    if (existsSync(CLAUDE_MEMORY_SRC)) copyTreeWithRetry(CLAUDE_MEMORY_SRC, join(proj, "amadeus"));
   }
 
   // 2. Seed the per-intent workspace shell (default record + cursors), then write
