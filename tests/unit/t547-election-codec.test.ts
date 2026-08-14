@@ -615,4 +615,26 @@ describe("t547 canonical election codec", () => {
       error: { category: "unsupported-version", path: "$.schemaVersion" },
     });
   });
+
+  test("rejects a ballot whose kind is outside the canonical vocabulary", () => {
+    const definition = ElectionDefinitionCodec.decode(multiQuestionDefinition);
+    if (!definition.ok) throw new Error("definition must decode");
+    expect(BallotCodec.decode({
+      schemaVersion: 2,
+      kind: "draft",
+      electionId: definition.value.electionId,
+      voter: definition.value.voters[0],
+      voterKind: "member",
+      responses: definition.value.questions.map((question) => ({
+        questionId: question.questionId,
+        choiceInternalNo: 1,
+        goa: 1,
+        reservation: null,
+        rationale: null,
+      })),
+      submittedAt: "2026-08-13T00:00:00Z",
+    }, definition.value, {
+      targetQuestionIds: definition.value.questions.map((question) => question.questionId),
+    })).toMatchObject({ ok: false, error: { category: "shape", path: "$.kind" } });
+  });
 });

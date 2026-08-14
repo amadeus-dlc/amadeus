@@ -455,10 +455,9 @@ function buildBallot(
   context: BallotDecodeContext,
   responses: readonly CanonicalBallotResponse[],
 ): ElectionCodecResult<CanonicalBallot> {
-  const kind = raw.kind === undefined ? "original" : raw.kind;
-  if (kind !== "original" && kind !== "amend") {
-    return failure("invalid-value", "$.kind", '"original" or "amend"');
-  }
+  // decodeBallot already rejected any kind outside the vocabulary, so the
+  // narrowing here cannot invent a value the validator did not accept.
+  const kind = raw.kind === "amend" ? "amend" : "original";
   const envelope = validateBallotEnvelope(raw, definition);
   if (!envelope.ok) return envelope;
   const validated = validateResponses(responses, definition, kind, context);

@@ -4826,6 +4826,17 @@
     "expiry": "remove when the CLI gains a store injection seam or the patch gate excludes fail-closed store-fault arms"
   },
   {
+    "file": "packages/framework/core/tools/amadeus-election.ts",
+    "selector": {
+      "function": "notifyElection",
+      "fingerprint": "sha256:61ac3959d07ab757193559d860e84f9e9a0d052c073b65f76e97eb35008080ae",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "setState failure after every delivery already succeeded requires a TOCTOU store fault between the transport writes and the state write inside one CLI invocation; the CLI imports the store directly with no injection seam. t553/t555/t559 cover the delivered and transport-failure arms. Measured uncovered by CI lcov (job 94801467619, DA:0 at the storeError arm).",
+    "expiry": "remove when the CLI gains a store injection seam or the patch gate excludes fail-closed store-fault arms"
+  },
+  {
     "file": "packages/framework/core/tools/amadeus-election-store.ts",
     "selector": {
       "function": "consumePending",

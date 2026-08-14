@@ -1,7 +1,7 @@
 // covers: function:main, function:nextElection, function:openElection, function:reportElection, function:statusElection, function:voteElection
 // size: medium
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -315,5 +315,22 @@ describe("t559 election v2 CLI in-process", () => {
       state: "open",
     });
   });
-});
 
+  test("a stored non-canonical schema surfaces as a decode failure", () => {
+    const dir = project();
+    const definitionPath = join(dir, "definition.json");
+    writeFileSync(definitionPath, JSON.stringify(definition));
+    expect(run(["open", "--file", definitionPath, "--project", dir]).code).toBe(0);
+    const electionsDir = join(dir, "amadeus", "spaces", "default", "elections");
+    const registry = JSON.parse(readFileSync(join(electionsDir, "elections.json"), "utf8")) as {
+      electionId: string;
+      dirName: string;
+    }[];
+    const dirName = registry.find((entry) => entry.electionId === definition.electionId)?.dirName;
+    if (dirName === undefined) throw new Error("registry entry must exist");
+    const electionPath = join(electionsDir, dirName, "election.json");
+    const stored = JSON.parse(readFileSync(electionPath, "utf8")) as Record<string, unknown>;
+    writeFileSync(electionPath, JSON.stringify({ ...stored, schemaVersion: 1 }, null, 2));
+    expectFailure(run(["next", "--election", definition.electionId, "--project", dir]), "decode");
+  });
+});

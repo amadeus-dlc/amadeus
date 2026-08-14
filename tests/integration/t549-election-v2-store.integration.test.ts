@@ -534,4 +534,29 @@ describe("t549 election v2 store", () => {
       expect(Object.keys(event.ballot).slice(0, 2)).toEqual(["schemaVersion", "kind"]);
     }
   });
+
+  test("readAllPending fail-closes on duplicate arrival sequences across voters", () => {
+    state("collecting");
+    expect(ElectionStore.appendPending(root, DEFINITION.electionId, ballot("alice")).ok).toBe(true);
+    // Forge bob's pending file reusing alice's arrival sequence: two CLI runs
+    // that raced the global counter (#3046). The next global pending read must
+    // refuse the store instead of silently picking a winner.
+    const alicePending = JSON.parse(
+      readFileSync(join(electionDir(), "pending", "alice.json"), "utf8"),
+    ) as { events: { arrivalSequence: number; ballot: Record<string, unknown> }[] };
+    const forged = {
+      schemaVersion: 2,
+      electionId: DEFINITION.electionId,
+      voter: "bob",
+      events: alicePending.events.map((event) => ({
+        arrivalSequence: event.arrivalSequence,
+        ballot: { ...event.ballot, voter: "bob" },
+      })),
+    };
+    writeFileSync(join(electionDir(), "pending", "bob.json"), JSON.stringify(forged, null, 2));
+    expect(ElectionStore.appendPending(root, DEFINITION.electionId, ballot("bob", 2))).toMatchObject({
+      ok: false,
+      error: "corrupt",
+    });
+  });
 });

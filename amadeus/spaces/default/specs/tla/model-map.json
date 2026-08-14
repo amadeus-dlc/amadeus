@@ -82,7 +82,7 @@
       "entries": [
         {
           "implPath": "packages/framework/core/tools/amadeus-election-codec.ts",
-          "sha256": "d93dc067d384536c76622c3ac841f17cef87f147f69ac1a56dfa5c1022de458e"
+          "sha256": "6b4ea9cbbfe1401de41cb1b0063ececb3064ff87fd1efcdd62d4a578632ed52b"
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election-record.ts",
