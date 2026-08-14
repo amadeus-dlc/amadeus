@@ -1147,6 +1147,13 @@
     "status": "complete"
   },
   {
+    "uuid": "019ffda5-8b96-7498-a17d-f1766ea1ffd7",
+    "slug": "t528-ambient-isolation",
+    "dirName": "260814-t528-ambient-isolation",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
     "uuid": "019ffda5-bc87-754d-92b6-ff1b7a50d9a4",
     "slug": "t245-origin-fixture",
     "dirName": "260814-t245-origin-fixture",

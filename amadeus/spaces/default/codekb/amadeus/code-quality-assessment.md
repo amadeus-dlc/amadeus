@@ -1,35 +1,67 @@
 # コード品質評価
 
-## テストの環境前提欠陥 — 実 `origin` を要求する唯一の自動テスト（260814-t245-origin-fixture、現在、observed `5f6b5bf97`）
+## テスト実行文脈への依存 — 失敗集合が入れ替わる二重機序（260814-t528-ambient-isolation、現在、observed `5f6b5bf97`）
 
-**観測 ref**: すべて observed = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`（= 本 worktree HEAD = `origin/main`）。差分 base = `89532174c30ef9cc7ff29496cd6916586fdda00a`（9 commits / 183 files、`+8710 / −8521`）。全数列挙と述語は `re-scans/260814-t245-origin-fixture.md` を正本とする。対象は [Issue #2971](https://github.com/amadeus-dlc/amadeus/issues/2971)（クロスレビュー `xrev-260814-2971` 2 名成立）。
+対象: [Issue #2981](https://github.com/amadeus-dlc/amadeus/issues/2981)（`tests/integration/t528-report-ack-kind.integration.test.ts` の失敗集合が実行文脈で入れ替わる）。測定 ref = observed `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`（`git rev-parse HEAD` = `git rev-parse origin/main`）。一次証拠は Developer scan（run `xrev-260814-2981`、target-sha `52f1f1b2575ea35bd23b761697b2d17a5e9a7ac3`）で、下記の file:line は Architect が observed 断面で `sed` により verbatim 再照合した。
 
-### Q-A: テストが実行環境の外部状態（`origin` リモート）に依存している
+### 中核所見 — 「入れ替わり」は単一欠陥ではなく独立2機序の重ね合わせ
 
-`tests/integration/t245-amadeus-leader-sync.integration.test.ts:208-226` の `sweeps every origin/main election file through real selfCheck and exclusions` は、`process.cwd()` を `projectDir` として
+| 機序 | 患部 | 落ちるテスト | 発火条件 |
+|---|---|---|---|
+| A（xrev 確定 + 本 RE で再現） | `t528:124` が `handleReport(…, undefined)` を渡し、`resolveProjectDir(undefined)` が実環境へ ambient 解決する | test #3「a failed result remains a typed error directive」のみ | ambient 解決先の active intent の autonomy projection が `semi` / `full` |
+| B（Developer scan で新規特定） | `STOCK_GRAPH` が gitignore 対象の `dist/` を指す | test #4「a gated approve acks…」と #5「the idempotent stale re-report acks…」の**ちょうど2件** | `dist/claude/.claude/tools/data/stage-graph.json` が不在（＝新規 worktree で `bun run build` 未実行） |
 
-- `:213-215` `git fetch origin "+refs/heads/main:refs/remotes/origin/main"`
-- `:216` `git worktree add --detach <scratch>/worktree origin/main`
+両者は独立に発火する。「本線ツリーでは #3 が落ち、隔離 worktree では #4/#5 が落ちる」という集合の入れ替わりはこの重ね合わせの帰結であり、片方だけを直しても現象は残る。
 
-を**無条件**に実行する。`mkdtempSync`（`:210`）が作るのは worktree の置き場だけで、リポジトリ本体は実クローンである。したがって `origin` を持たないクローン（アーカイブ展開、`git init` 済みの検証用ツリー、リモート未設定の CI ランナー）では**テスト内容と無関係に構造的に赤くなる**。
+### 品質所見 Q-1: production コードが ambient 解決へ落ちる面をテストが露出させている
 
-同種の実 `origin` 参照は他に存在しない。述語 `git grep -n 'refs/heads/main:refs/remotes/origin/main' -- tests scripts packages plugins` の hit は **2 件**で、うち 1 件は本番ツール（`scripts/amadeus-leader-sync.ts:567`）、テストは t245 の 1 件のみである。
+`handleReport` の failed-result 分岐（`packages/framework/core/tools/amadeus-orchestrate.ts:6020-6023`、verbatim `const failureAdmissionDir = resolveProjectDir(projectDir);` / `if (flags.result === "failed" && runsQualityRepair(failureAdmissionDir)) {`）は、`FORWARD_RESULTS` 検査（同 `:6039-6045`、`Unknown --result "failed"` の発行元）**より上**にある。`runsQualityRepair`（`:5780-5783`）は `readProductionAutonomyProjection(projectDir)?.mode` が `semi` / `full` のとき true を返すため、**ambient 解決先の実 record の autonomy 設定が、テストの期待メッセージの到達可否を決める**。本 worktree での読取専用プローブ実測では `resolveProjectDir(undefined)` = 本 worktree、`mode = "full"`、`runsQualityRepair = true` であり、#3 は必ず落ちる。
 
-### Q-B: ヘルパの無条件 assert が環境失敗を仕様違反と同一視する
+`resolveProjectDir`（`packages/framework/core/tools/amadeus-lib.ts:232-269`）の段順は `:234` explicit → `:241` `CLAUDE_PROJECT_DIR` → `:250-251` cwd 祖先の workspace marker → `:256-258` script path → `:262-266` known harness dir → `:269` cwd。**rung 3 が cwd 祖先の marker を拾うため、`CLAUDE_PROJECT_DIR` を消しても同じ実 record に着地する**（プローブは env を delete した状態で実測した）。`resetAidlcEnv`（`tests/harness/fixtures.ts:103-105`）が `AMADEUS_DEFAULT_SCOPE` しか削除していない点は事実だが、env 削除だけではこの機序は閉じない。
 
-`:78-83` の `gitStdout` は `spawnGit` の結果を `expect(result.kind).toBe("ok")` で無条件検査し、skip / guard 分岐を持たない。ファイル内の全 git 実行がこのヘルパを通るため、**「環境が要件を満たさない」と「プロダクトが契約に違反した」が同じ赤に潰れる**。scratch 実測では `git fetch origin …` が exit 128 / `fatal: 'origin' does not appear to be a git repository` を返し、`spawnCommand`（`scripts/amadeus-leader-sync.ts:344-361`）は正しく `kind: "error"` へ変換している — すなわち**プロダクト側の欠陥ではない**。
+### 品質所見 Q-2: ambient 解決が実 record の監査シャードを汚染する（#2981 本文の未記載側面）
 
-### Q-C: 同一ファイル内に正解形が既にあり、逸脱しているのはこの 1 件だけ
+`#3` が出す error directive は `emit()` の集約点（`amadeus-orchestrate.ts:802-804`、verbatim `if (directive.kind === "error" && recordError) {` / `recordEngineError(directive.message, _handlerProjectDir);`）を通る。`_handlerProjectDir` には `handleReport` 冒頭（`:5851`）で `undefined` が入る。`recordEngineError`（`:941-968`）は `projectDir === undefined` のとき `process.argv` の `--project-dir` を探し、無ければ `resolveProjectDir(undefined)` = ambient へ落ちる。唯一のガードは `:958` の `if (!existsSync(stateFilePath(pd))) return;` だが、in-process テストでは ambient 解決先が実 intent record であり **このパスは実在する**（プローブ実測: `…/intents/260814-t528-ambient-isolation/amadeus-state.md` exists = true）。したがって `emitErrorAuditRow`（`:962`）が実 record の監査シャードへ `ERROR_LOGGED` 行を書く。
 
-`:106-133` の `prepare materializes origin/main in a single-branch shallow clone` は、bare remote / source / clone の 3 ディレクトリを `mkdtempSync` で作り、`git init --bare` → seed commit → `remote add origin <bare>` → `push` → `clone --depth 1 --single-branch` まで自己完結で構築し、`afterEach` の `rmSync(roots)` で一括破棄する。t207 / t433 / t222 / t-codex-hooks-migration も同じ自己完結様式である。**fixture 化されていないのは t245 のこの 1 テストだけ**であり、様式の不統一という形で負債が可視化している。
+汚染範囲は監査シャード1行に限定される — `admitProductionStageFailure`（`:5840`）へは `--failure` 未指定ガードで到達しないため state 本体への書込は起きない（この限定は実行ではなく制御フローの実読による）。
 
-### Q-D: 環境依存を除くと検出力が下がる（トレードオフが実在する）
+**回帰テストのギャップ**: 既存の `tests/integration/t258-engine-error-ambient-shard-pollution.test.ts`（Issue #1389）は `handleReport(["--result", "__not_a_verdict__"], target)`（`:91`、ヘルパ `driveReportError` は `:87` 宣言）と **explicit target を渡す形しか固定していない**。`projectDir === undefined` の形は未被覆であり、Q-2 の経路は現行スイートのどのテストでも守られていない。
 
-このテストの実際の価値は実 corpus の全数掃引にある — observed の `elections/` 配下は **4150 ファイル / 8,015,636 bytes**（`git ls-tree -r --long HEAD -- amadeus/spaces/default/elections`）。一方 `resolveOwnedSet` → `checkExclusions` → `selfCheck` → `analyzeOwnedContents`（`scripts/amadeus-leader-sync.ts:164` / `:214` / `:234` / `:249`）が要求する**最小 corpus は 1 件以上**にすぎず、合成シェイプの観点は `:175-206` が既に覆っている。したがって単純な fixture 化は「環境非依存」と引き換えに**全数掃引という唯一の差別化価値を失う**。両立させる形（HEAD 断面での掃引継続など）を含め、方式選定は requirements/design の裁定事項として `re-scans/260814-t245-origin-fixture.md` へ申し送った。
+### 品質所見 Q-3: テスト基盤の `dist/` 依存は t528 固有ではなく横断クラス
 
-### CI プロファイルへの影響
+`t528:46-54` の `STOCK_GRAPH` は `<REPO_ROOT>/dist/claude/.claude/tools/data/stage-graph.json` を指し、`beforeEach`（`:65`）で `AMADEUS_STAGE_GRAPH` に設定される。`dist/` は gitignore 対象（実測 `git check-ignore -v dist` → `/Users/j5ik2o/.config/git/ignore:31:dist/`、exit 0）。不在時は `loadStageGraph()`（`amadeus-lib.ts:6954-6967`）が `Stage graph not readable at ${p}: …` を throw する。
 
-`tests/run-tests.ts:125`（`--ci            smoke + unit + integration`）のとおり、`tests/integration/` 直下の t245 は **PR blocking の必須集合に含まれる**。すなわち本欠陥は「ローカルで不便」ではなく、`origin` 未設定の環境では必須 CI が通らないクラスの欠陥である。あわせて `tests/.test-time-factor-allowlist.json` に t245 のエントリは無く（`grep -c t245` = 0）、`:226` の `scaleTestTime(120_000)` は免除ではなく通常適用の timeout である — 実 corpus + 実 worktree I/O という現行の重さがその根拠であるため、掃引対象を変える修正では timeout 値も同じ変更で見直す必要がある。
+同じ前提を共有する面は他に `AMADEUS_SRC = <REPO_ROOT>/dist/claude/.claude`（`fixtures.ts:59`）と `AMADEUS_MEMORY_SRC = <REPO_ROOT>/dist/claude/amadeus`（`:93`）があり、`setupIntegrationProject`（`:765-861`）を使う全テストが同クラスに属する。
+
+**クラス規模の実測**（測定 ref = observed、検索述語を再実行可能な形で記録）:
+
+| 述語 | 結果 |
+|---|---|
+| `git grep -ln '"stage-graph.json"' -- 'tests/**/*.test.ts' \| xargs git grep -ln '"dist"'` | 45 files |
+| `git grep -ln "AMADEUS_SRC\|AMADEUS_MEMORY_SRC" -- 'tests/**/*.test.ts'` | 182 files |
+| `git grep -ln "setupIntegrationProject" -- 'tests/**/*.test.ts'` | 84 files |
+| 上記3述語の和集合（`sort -u \| wc -l`） | **278 files** |
+| 母数 `git ls-files 'tests/**/*.test.ts' \| wc -l` | 1102 files |
+
+すなわち **テストファイルの約 25%（278/1102）が「新規 worktree で `bun run build` 未実行なら赤」という同一クラスを共有する**。t528 だけを直しても同種の不安定は残る。project.md の既存則 `cid:code-generation:solo-bolt-worktree-required`（「source-only 境界下の新規 worktree は依存インストールと `bun run build` を移設の定型手順に含める」）が運用面ではこれを覆っているが、前提が破れたときの失敗メッセージは `Stage graph not readable at …` であり、原因(`bun run build` 未実行)を名指さない。
+
+### なぜ #6 だけ緑のままか（構造的説明）
+
+`handleNext` の Branch 0（`amadeus-orchestrate.ts:3118-3120`、verbatim `// Branch 0 — turn-scoped no-op-next guard, before any state inspection` / `if (emitReadonlyLatchDone(projectDir, flags, migration)) return;`）は状態検査より前に read-only latch を処理する。`emitReadonlyLatchDone`（`:3089-3102`）→ `freshReadonlyLatchLabel`（`:3037-3062`）はファイル2枚を読むだけでグラフに触れない。#4/#5 は `nodeForSlug(slug)`（`:2846-2848` → `loadGraph()`）に到達し、#3 は `FORWARD_RESULTS` 検査で `nodeForSlug` 手前に返る。**graph 不在で落ちるのは #4/#5 のみ**という観測は、この制御フローから構造的に説明される。
+
+### 落ちる実証（機序 B）
+
+repo 外 scratch のプローブで #4/#5/#6 の本体を再現し `AMADEUS_STAGE_GRAPH` だけを振った（`CLAUDE_PROJECT_DIR` は scratch へ固定し実 record への書込を構造的に遮断）。baseline（実在 graph）は 3 件とも PASS、treatment（不在パス）は #4/#5 が `Stage graph not readable at …: ENOENT` で FAIL、#6 は PASS。**報告された失敗集合とちょうど一致する。**
+
+### 未検証として明示
+
+- **H1**: xrev の C5/C2 が観測された隔離 worktree で `bun run build` が未実行だったこと。§機序 B の再現と整合するが、当該 worktree は現存せず `dist/` の実在状態は未観測。**未検証**。
+- **H2**: `pluginHostRoot()`（`amadeus-orchestrate.ts:1801-1809`、`AMADEUS_PLUGINS_HOST_ROOT ?? dirname(TOOLS_DIR)`）が projectDir を取らず常に実 repo の `packages/framework/core` を指すため、`advisoryReportHoldReason` 経由で #4/#5 を保留させうる。本 worktree の baseline は緑で**現時点では発火していない**。**未検証**。
+- テスト並行実行（既定 `DEFAULT_PARALLEL = Math.min(availableParallelism(), 4)`、`tests/run-tests.ts:54`）の #2981 への寄与。t528 は自前 mkdtemp を使うため干渉面が見当たらないが、負荷起因の `cpSync` / `rmSync` 不安定（`fixtures.ts:602-617` の `copyTreeWithRetry` 宣言コメントが #2397 / t99 / #1565 を名指す）は別系統として存在する。**未検証**。
+
+### 適用範囲外（明示）
+
+修正方式の選定 — テスト側を explicit projectDir へ直すか production 側の `_handlerProjectDir` / `recordEngineError` の ambient 段を fail-closed にするか、`dist/` 前提を loud fail 化するか — はいずれも requirements-analysis / application-design の所掌である。
 
 ## ライフサイクルガードの品質所見 — fail 方向の衝突と迂回路（260813-lifecycle-guard-runtime、履歴、observed `89532174c`）
 

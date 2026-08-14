@@ -36,7 +36,7 @@ Issue を解決したと判断できる最小条件は次のとおりである�
 - GitHub 以外の SCM provider 対応
 - pr-convergence loop 全体の再設計
 
-## 無人実行の前提が崩れる面（260813-advisory-requestion-fix、現在、observed `c0f9edf27`）
+## 無人実行の前提が崩れる面（260813-advisory-requestion-fix、履歴、observed `c0f9edf27`）
 
 [Issue #2967](https://github.com/amadeus-dlc/amadeus/issues/2967) は、semi / full の autonomy を有効にしたユーザーが得られるはずの価値 —「裁定済みの事項で人間を止めない」— が advisory 経路で成立しない状態である。ladder が run-now を裁定して receipt を記録しても、次の `next` で同じ advisory が hold として再評価され、single-spend guard により再記録が拒否されるため、human 向けの再質問が発行される。人間が run-now を選び直しても受理されず、同じ問いが繰り返し提示される。
 

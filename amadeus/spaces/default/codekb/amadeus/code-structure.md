@@ -1,8 +1,64 @@
 # コード構造
 
-## Focus Area: team-up ランチャ廃止（260813-remove-team-up、履歴、observed `97581b3e3`）
+## Focus Area: テスト基盤の `dist/` 依存と env 伝播（260814-t528-ambient-isolation、現在、observed `5f6b5bf97`）
 
-> **後続 intent による訂正（260814-t245-origin-fixture、observed `5f6b5bf97`）**: 本節が列挙する正本パス（`packages/framework/core/tools/team-up.sh` / `team-up-codex-safety-wait.ts` および対応する tests / docs）は、`8b6089275`（[#2975](https://github.com/amadeus-dlc/amadeus/pull/2975)）で**削除済み**である。observed `5f6b5bf97` における `git ls-files | grep -i team-up` の出力は intent record と `re-scans/260813-remove-team-up.md` のみで、正本パスの hit は 0。本節の表と「区間 `854692fd7..HEAD` でこれらのパスに差分は無い」という記述は observed `97581b3e3` 時点の断面として読むこと（`cid:reverse-engineering:c1`）。
+対象: [Issue #2981](https://github.com/amadeus-dlc/amadeus/issues/2981)。測定 ref = observed `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`。本 intent の患部はモジュール配置の変化ではなく**テストハーネスが依存する外部前提の構造**にある。
+
+### 患部ファイルと役割
+
+| ファイル | 分類 | 本 intent での役割 |
+|---|---|---|
+| `tests/integration/t528-report-ack-kind.integration.test.ts` | 患部テスト（6 テスト） | `:124` が `handleReport(…, undefined)`、`:46-54` が `STOCK_GRAPH` を `dist/` へ向ける |
+| `tests/harness/fixtures.ts` | テストハーネス正本 | `AMADEUS_SRC`（`:59`）/ `AMADEUS_MEMORY_SRC`（`:93`）が `dist/` 依存、`resetAidlcEnv`（`:103-105`）の清掃範囲 |
+| `tests/run-tests.ts` | 実体ランナー | `:645-650` が子プロセス env を構成し開発者シェルの変数を伝播 |
+| `tests/run-tests.sh` | 16 行の薄いラッパ | `exec bun "$SCRIPT_DIR/run-tests.ts" "$@"` するのみ |
+| `packages/framework/core/tools/amadeus-lib.ts` | 解決ラダー正本 | `resolveProjectDir`（`:232-269`）/ `loadStageGraph`（`:6954-6967`）/ `stageGraphPath`（`:6923-6924`） |
+| `packages/framework/core/tools/amadeus-orchestrate.ts` | ハンドラ正本 | `handleReport`（`:5848-6338`）/ `recordEngineError`（`:941-968`） |
+
+区間 `89532174c..HEAD` でこれらのうち差分があるのは `amadeus-orchestrate.ts` のみ（+30 / −6、単一コミット `86feb2ee5` #2980）で、**患部行の変更は 0 件**（`git diff … | grep -c "^[+-].*\(resolveProjectDir\|runsQualityRepair\|failureAdmission\|handleStageFailureReport\)"` = 0）。モジュール移動・新規ファイルはない。
+
+### テストハーネスの外部前提（3 層）
+
+```
+tests/run-tests.sh  ──exec──▶  tests/run-tests.ts
+                                   │
+                                   ├─ 子プロセス env（:645-650）
+                                   │    { ...process.env, AMADEUS_TEST_NAME,
+                                   │      AMADEUS_SKIP_ARTIFACT_GUARD: "1",
+                                   │      AMADEUS_SKIP_HUMAN_PRESENCE_GUARD: "1" }
+                                   │    → 開発者シェルの CLAUDE_PROJECT_DIR がそのまま全テストへ伝播
+                                   │
+                                   └─ runFilesPartitioned（:817、runTier :811）
+                                        → integration tier はファイル単位で並行実行
+                                          （.serial. を含むファイル名のみ直列。t528 は並行帯）
+                                   
+tests/harness/fixtures.ts
+   ├─ 追跡ファイル依存: FIXTURES_DIR = <REPO_ROOT>/tests/fixtures（:94）── worktree 隔離に強い
+   └─ dist/ 依存:       AMADEUS_SRC        = <REPO_ROOT>/dist/claude/.claude（:59）
+                        AMADEUS_MEMORY_SRC = <REPO_ROOT>/dist/claude/amadeus（:93）
+                        （各テストの STOCK_GRAPH も同じ dist/ ツリーを指す）
+                        ── gitignore 対象のため新規 worktree では bun run build が前提
+```
+
+テキストフォールバック: `run-tests.sh` は `run-tests.ts` を exec するだけの薄いラッパ。`run-tests.ts` は (a) 子プロセス env を `process.env` の spread で構成するため開発者シェルの変数が全テストへ伝播し、(b) integration tier をファイル単位で並行実行する。`fixtures.ts` の依存は 2 系統に分かれ、`FIXTURES_DIR` は追跡ファイルなので worktree 隔離の影響を受けないが、`AMADEUS_SRC` / `AMADEUS_MEMORY_SRC` と各テストの `STOCK_GRAPH` は gitignore 対象の `dist/` を指すため `bun run build` の実行を前提とする。
+
+### `dist/` 依存クラスの規模（実測、測定 ref = observed）
+
+| 述語（再実行可能） | 結果 |
+|---|---|
+| `git grep -ln '"stage-graph.json"' -- 'tests/**/*.test.ts' \| xargs git grep -ln '"dist"'` | 45 files |
+| `git grep -ln "AMADEUS_SRC\|AMADEUS_MEMORY_SRC" -- 'tests/**/*.test.ts'` | 182 files |
+| `git grep -ln "setupIntegrationProject" -- 'tests/**/*.test.ts'` | 84 files |
+| 和集合 | **278 files** |
+| 母数 `git ls-files 'tests/**/*.test.ts' \| wc -l` | 1102 files |
+
+**テストファイルの約 25% が同一の外部前提（`dist/` の実在）を共有する。** t528 はこのクラスの 1 例にすぎない。`git check-ignore -v dist` → `/Users/j5ik2o/.config/git/ignore:31:dist/`（exit 0）。
+
+### fixture のライフサイクル（構造）
+
+`createTestProject()`（`fixtures.ts:125-137`）は `TMPDIR` 配下に `amadeus-test-` prefix で `mkdtempSync` → `realpathSync` で正規化（macOS の `/tmp` → `/private/tmp` を吸収）→ `seedWorkspaceShell` で workspace shell を植える。`.claude/` や `dist` の memory ツリーはコピーせず、それは `setupIntegrationProject`（`:765`）の役割である。後片付けは `cleanupTestProject`（`:406-408`）→ `removeTreeWithRetry`（`:574`〜）で、事後条件（パスが消えたこと）により成功を判定する再試行付き削除。
+
+## Focus Area: team-up ランチャ廃止（260813-remove-team-up、履歴、observed `97581b3e3`）
 
 | ファイル | 分類 |
 |---|---|
@@ -68,7 +124,7 @@
 
 既存の core/plugin 非依存方向を守るには、core が plugin-specific Markdown schema を直接 import するのではなく、plugin が発行した汎用 receipt を core の既存 audit/artifact contract で検証する形が最も境界整合的である。これは設計候補であり、最終決定は後続 stage の所掌とする。
 
-## 差分リフレッシュで観測した構造変化（260813-advisory-requestion-fix、現在、observed `c0f9edf27`）
+## 差分リフレッシュで観測した構造変化（260813-advisory-requestion-fix、履歴、observed `c0f9edf27`）
 
 **観測 ref**: base `854692fd7a11b124236b0427fe3d59e2fe6bf785` → observed `c0f9edf27828def6fa3dbbbc4101d753b398e025`（33 コミット / 224 ファイル、`git log --oneline 854692fd7..c0f9edf27 | wc -l` / `git diff --name-only 854692fd7..c0f9edf27 | wc -l`。総行数 +23703 / −9416、`git diff --stat … | tail -1`）。
 
