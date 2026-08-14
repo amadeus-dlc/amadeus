@@ -1,6 +1,6 @@
 # コンポーネント棚卸し
 
-## ライフサイクル進行ガードの構成要素棚卸し（260813-lifecycle-guard-runtime、現在、observed `89532174c`）
+## ライフサイクル進行ガードの構成要素棚卸し（260813-lifecycle-guard-runtime、履歴、observed `89532174c`）
 
 **観測 ref**: すべて observed = `89532174c30ef9cc7ff29496cd6916586fdda00a`。差分 base = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（35 commits / 233 files、うち `packages/framework/core/tools` は 9 files / +680 −105）。**G 番号付きの全数棚卸し（G1〜G40）と検索述語 P1〜P13 は `re-scans/260813-lifecycle-guard-runtime.md` を正本とする**。本節は checkpoint 群ごとの component だけを掲げる。
 

@@ -1,6 +1,60 @@
 # アーキテクチャ
 
-## ライフサイクル進行ガードの集約構造と分散（260813-lifecycle-guard-runtime、現在、observed `89532174c`）
+## projectDir 解決の段構造と in-process 呼出における ambient 逸出（260814-t528-ambient-isolation、現在、observed `5f6b5bf97`）
+
+対象: [Issue #2981](https://github.com/amadeus-dlc/amadeus/issues/2981)。測定 ref = observed `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`。file:line はすべて observed 断面で verbatim 実読して採取した。
+
+### 解決ラダー（`packages/framework/core/tools/amadeus-lib.ts:232-269`）
+
+`resolveProjectDir(explicitDir?: string): string` は 6 段の open-set ラダーである。
+
+| 段 | 位置 | 述語 | 設計意図（宣言コメントより） |
+|---|---|---|---|
+| 1 | `:234` | `if (explicitDir) return explicitDir;` | 明示引数が最優先 |
+| 2 | `:241` | `if (process.env.CLAUDE_PROJECT_DIR) return process.env.CLAUDE_PROJECT_DIR;` | 「cwd とは別の workspace を指すテスト fixture / ツールがこれに依存する」ため marker 段より**上**に置くことが `:236-240` で明示されている |
+| 3 | `:250-251` | `const markerDir = findWorkspaceMarkerAncestor(process.cwd()); if (markerDir) return markerDir;` | worktree セッションで段 4 が本線 checkout を指してしまう問題（#2352 / #641）への対処 |
+| 4 | `:256-258` | script path から `<harness>/tools` を剥がす | open-set。任意の harness dir 名に対応 |
+| 5 | `:262-266` | cwd 直下に既知 harness dir | dev repo 向け |
+| 6 | `:269` | `return cwd;` | フォールバック |
+
+**アーキテクチャ上の含意**: 段 2〜6 はいずれも「呼出側が何も渡さなくても必ず何かを返す」設計であり、`undefined` は**エラーではなく ambient 解決の要求**として扱われる。CLI プロセスの entry point ではこれが正しい（引数省略時に開発者の意図する workspace を拾う）。しかし **in-process にハンドラを直接呼ぶテストドライバでは、同じ `undefined` が「テスト用プロジェクトではなく開発者の実 workspace」を意味してしまう**。段 3 の存在により、`CLAUDE_PROJECT_DIR` を削除しても cwd 祖先の workspace marker で実 record に着地するため、env 清掃では閉じない。
+
+### 2つの ambient 逸出点
+
+`handleReport` は先頭（`amadeus-orchestrate.ts:5851`）で `_handlerProjectDir = projectDir;` を実行する。宣言コメント（`:5849-5850`）は逐語で `Record the project this handler operates on so emit()'s ERROR_LOGGED lands here, not the ambient CLAUDE_PROJECT_DIR, under in-process drivers (#1389).` と述べ、**この代入自体が ambient 逸出の防止機構であることを明言している**。しかし代入されるのは正規化前の `projectDir` そのものであり、呼出側が `undefined` を渡した場合はガードが素通りする。
+
+| 逸出点 | 位置 | 帰結 |
+|---|---|---|
+| E1: 制御フロー分岐 | `amadeus-orchestrate.ts:6020-6023` — `const failureAdmissionDir = resolveProjectDir(projectDir);` の直後に `if (flags.result === "failed" && runsQualityRepair(failureAdmissionDir))` | ambient 解決先の実 record の autonomy projection（`runsQualityRepair`、`:5780-5783`）が**どの分岐へ入るかを決める**。この分岐は `FORWARD_RESULTS` 検査（`:6039-6045`）より上にあるため、`Unknown --result "failed"` へ到達するか否かが実環境の設定に依存する |
+| E2: 副作用の着地先 | `amadeus-orchestrate.ts:802-804` の `emit()` 集約点 → `recordEngineError(directive.message, _handlerProjectDir)` → `recordEngineError`（`:941-968`）が `projectDir === undefined` のとき `process.argv` の `--project-dir` を探し、無ければ `resolveProjectDir(undefined)` へ落ちる | 唯一のガードは `:958` の `if (!existsSync(stateFilePath(pd))) return;` のみ。in-process テストでは ambient 先が実 intent record でありこのパスは実在するため、`emitErrorAuditRow`（`:962`）が**実 record の監査シャードへ `ERROR_LOGGED` 行を書く** |
+
+E2 の汚染は監査シャード1行に限定される。`admitProductionStageFailure`（`:5840`）へは `--failure` 未指定ガード（`:5834-5839`）で到達せず state 本体は書かれない（制御フローの実読による判定であり、実行による確認ではない）。
+
+**設計上の要点**: E1 と E2 は同じ根（`undefined` を ambient 要求として解釈する）から出るが、**閉包点が異なる**。E1 はハンドラの引数契約（呼出側が explicit を渡す、または `handleReport` が `undefined` を拒否する）で閉じる。E2 は `_handlerProjectDir` を `resolveProjectDir` 適用後の値で埋めるか、`recordEngineError` の ambient 段を fail-closed にするかで閉じる。**テスト側の呼出だけを直しても E2 の経路は production コードに残る。**
+
+### explicit projectDir 経路上に残る ambient 依存の全数
+
+`handleReport` 本体（`:5848-6338`、終端 `}` は `awk 'NR>=5848 && /^}/{print NR; exit}'` で実測）の直接 `process.env` 参照は 1 箇所のみ（`:5863` `resolveOperatingMode(process.env.AMADEUS_OPERATING_MODE)`）。呼出先経由の ambient 依存は以下。
+
+| 面 | 位置 | 性質 |
+|---|---|---|
+| `AMADEUS_STAGE_GRAPH` | `amadeus-lib.ts:6924` / `amadeus-graph.ts:231` | explicit projectDir を渡しても効く。テストが `dist/` を指すため worktree 隔離で破れる（本 intent の機序 B） |
+| `pluginHostRoot()` | `amadeus-orchestrate.ts:1801-1809`（`process.env.AMADEUS_PLUGINS_HOST_ROOT ?? dirname(TOOLS_DIR)`） | **projectDir を引数に取らない**。常に実 repo の `packages/framework/core` を指し、`advisoryReportHoldReason(pd, slug, pluginHostRoot())` で消費される。テストプロジェクトの plugin 構成ではなく実 repo の構成が効く |
+| `detectHarnessType()` | `amadeus-harness.ts:123-133` | `report` では kimi caller 判定にのみ使用 |
+| `refuseUnauthorizedKimiCaller` | `amadeus-orchestrate.ts:2969-2976`（`authorizeMainConductor(resolveProjectDir(projectDir))`） | explicit を渡す呼出では ambient に落ちない |
+| 子プロセス spawn の env | `amadeus-orchestrate.ts:5094` `env: process.env` | ただし `cmd`（`:5093`）が `"--project-dir", projectDir` を明示付与し段 1 が勝つため、子プロセスの解決先は汚染されない |
+
+**`pluginHostRoot()` が projectDir を取らない点は、テスト隔離の観点では未閉のシームである**（本 worktree では発火していないが、plugin 構成の異なる worktree では別の不安定要因になりうる。**未検証**）。
+
+### 差分区間での患部の安定性
+
+`git diff --stat 89532174c..HEAD` は本節が引く 5 ファイルのうち `amadeus-orchestrate.ts` のみ変更（+30 / −6、単一コミット `86feb2ee5` #2980 の `applyPendingAdvisoryGuard` 周辺）。`git diff 89532174c..HEAD -- packages/framework/core/tools/amadeus-orchestrate.ts | grep -c "^[+-].*\(resolveProjectDir\|runsQualityRepair\|failureAdmission\|handleStageFailureReport\)"` = **0**（rc=1、空一致）。**患部行は差分ベース以降まったく変更されていない。**
+
+### 適用範囲外（明示）
+
+E1 / E2 の閉包方式の選定、`undefined` を引数契約から排除するか実行時に拒否するか、`pluginHostRoot()` に projectDir を通すか否かは requirements-analysis / application-design の所掌である。
+
+## ライフサイクル進行ガードの集約構造と分散（260813-lifecycle-guard-runtime、履歴、observed `89532174c`）
 
 **観測 ref**: すべて observed = `89532174c30ef9cc7ff29496cd6916586fdda00a`（= 本 worktree HEAD = `origin/main`）。差分 base = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（`git merge-base --is-ancestor` exit 0、`git rev-list --count` = 35 commits / 233 files）。全数列挙・検索述語 P1〜P13・G1〜G40 の棚卸しは `re-scans/260813-lifecycle-guard-runtime.md` を正本とする。本節はそこから**構造だけ**を転記する。
 
