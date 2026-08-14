@@ -4875,7 +4875,7 @@
     "file": "packages/framework/core/tools/amadeus-election-store.ts",
     "selector": {
       "function": "appendTimeline",
-      "fingerprint": "sha256:eaf74f2fa153eeffe5ebae3d45395525491184ff581871bfddd3285f9952d983",
+      "fingerprint": "sha256:8e72fef9da7c3fa7d4f1bc32c22c9ea6dfcf34595802834c7e1542202ba27bdc",
       "anchorLines": 1,
       "targetLines": "1"
     },
