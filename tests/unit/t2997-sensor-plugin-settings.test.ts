@@ -44,7 +44,7 @@ const DECLARING_PLUGIN = { name: "git-drift", settings: DECLARATION };
 
 describe("t2997 sensor settings resolution", () => {
   test("a sensor whose plugin declares no settings resolves to nothing", () => {
-    const resolved = resolvePluginSettingsForSensor("git-drift", HOST, {}, host({ name: "git-drift" }));
+    const resolved = resolvePluginSettingsForSensor("git-drift", HOST, () => ({}), host({ name: "git-drift" }));
     expect(resolved).toBeNull();
   });
 
@@ -52,14 +52,14 @@ describe("t2997 sensor settings resolution", () => {
     const resolved = resolvePluginSettingsForSensor(
       "required-sections",
       HOST,
-      {},
+      () => ({}),
       host(DECLARING_PLUGIN),
     );
     expect(resolved).toBeNull();
   });
 
   test("declared defaults resolve when the config carries no overrides", () => {
-    const resolved = resolvePluginSettingsForSensor("git-drift", HOST, {}, host(DECLARING_PLUGIN));
+    const resolved = resolvePluginSettingsForSensor("git-drift", HOST, () => ({}), host(DECLARING_PLUGIN));
     expect(resolved).toEqual({
       ok: true,
       settings: { "fetch-throttle-seconds": 600, mode: "fast" },
@@ -70,7 +70,7 @@ describe("t2997 sensor settings resolution", () => {
     const resolved = resolvePluginSettingsForSensor(
       "git-drift",
       HOST,
-      { "git-drift": { mode: "thorough" }, other: { mode: "nonsense" } },
+      () => ({ "git-drift": { mode: "thorough" }, other: { mode: "nonsense" } }),
       host(DECLARING_PLUGIN),
     );
     expect(resolved).toEqual({
@@ -83,7 +83,7 @@ describe("t2997 sensor settings resolution", () => {
     const resolved = resolvePluginSettingsForSensor(
       "git-drift",
       HOST,
-      { "git-drift": { unknown: 1 } },
+      () => ({ "git-drift": { unknown: 1 } }),
       host(DECLARING_PLUGIN),
     );
     expect(resolved?.ok).toBe(false);

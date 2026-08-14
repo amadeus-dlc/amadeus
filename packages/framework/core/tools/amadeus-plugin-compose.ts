@@ -48,6 +48,7 @@ import { dirname, join, posix, sep } from "node:path";
 // (the seam bridge below), while the lib function is the schema-facing field
 // reader used for the trusted plugin stage index.
 import { parseStageFrontmatter as parseStageFrontmatterFields } from "./amadeus-lib.ts";
+import { PLUGIN_MANIFEST } from "./amadeus-plugin-runtime.ts";
 import {
   collectSettingsMisspellings,
   parseSettingsDeclaration,
@@ -299,8 +300,9 @@ export type PluginDiagnostic = {
 // Discovery (internal C4 helper)
 // ---------------------------------------------------------------------------
 
-// The projected-bundle manifest filename (matches PLUGIN_MANIFEST in U09).
-export const PLUGIN_MANIFEST = "plugin.json";
+// The projected-bundle manifest filename. Re-exported from the runtime leaf so
+// discovery here and the staged-manifest read there cannot drift apart.
+export { PLUGIN_MANIFEST };
 
 // Discover plugins under `sourceRoot` (a projected bundle root, e.g.
 // dist/plugins/). Each <name>/ dir yields one descriptor: its plugin.json is
