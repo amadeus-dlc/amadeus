@@ -109,6 +109,23 @@ function projectionDigest(): string {
   return hash.digest("hex");
 }
 
+/**
+ * Probe the checkout's own self-install projection. The final case below drives
+ * the live `promote-self --check` and therefore only holds while the projection
+ * is in sync; a local `bun run build` or a plugin compose can leave it dirty
+ * (#3034), which is a property of the working tree, not of doctor's contract.
+ */
+function liveSelfInstallCheck(): { clean: boolean; report: string } {
+  const result = spawnSync("bun", [join(REPO_ROOT, "scripts", "promote-self.ts"), "--check"], {
+    cwd: REPO_ROOT,
+    encoding: "utf-8",
+  });
+  return {
+    clean: result.status === 0,
+    report: `${result.stdout ?? ""}${result.stderr ?? ""}`.trim(),
+  };
+}
+
 function trackedStatus(): string {
   const result = spawnSync("git", ["status", "--porcelain", "--untracked-files=no"], {
     cwd: REPO_ROOT,
@@ -200,6 +217,17 @@ describe("doctor self-install projection freshness", () => {
   });
 
   test("should detect an older projected tool generation and leave repository surfaces unchanged", () => {
+    const live = liveSelfInstallCheck();
+    if (!live.clean) {
+      console.warn(
+        [
+          "[t2851] skipped: this checkout's self-install projection is not clean,",
+          "so the live promote-self --check baseline cannot be established.",
+          live.report,
+        ].join("\n"),
+      );
+      return;
+    }
     const projectDir = healthyProject();
     writePromoteSelfFixture(projectDir, repositoryCheckFixture());
     for (const root of PROJECTED_ROOTS) {
