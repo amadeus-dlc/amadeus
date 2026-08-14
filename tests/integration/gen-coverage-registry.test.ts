@@ -20,8 +20,8 @@
 //      the structured parser count equals the independent dispatch-site count.
 //
 // The injection tests use the AMADEUS_COVERAGE_* env-var seams to redirect the
-// source root + committed-baseline paths at a temp tree — the real shipped
-// source and the real tests/.coverage-registry.json are NEVER mutated.
+// source root, claim discovery, and committed-baseline paths at fixtures or a
+// temp tree — the real shipped source and committed registry are NEVER mutated.
 
 import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
@@ -58,11 +58,12 @@ import {
   UNIT_CLASSES,
 } from "../gen-coverage-registry.ts";
 
-// This test lives in tests/unit/; the generator tool + repo root are one level up.
+// This test lives in tests/integration/; the generator tool + repo root are one level up.
 const __FILE_DIR = dirname(fileURLToPath(import.meta.url));
 const TESTS_DIR = join(__FILE_DIR, "..");
 const REPO_ROOT = join(__FILE_DIR, "..", "..");
 const TOOL = join(TESTS_DIR, "gen-coverage-registry.ts");
+const CLAIMS_FIXTURE_DIR = join(TESTS_DIR, "fixtures", "coverage-registry");
 const liveRegistry = buildRegistry();
 
 // ---------------------------------------------------------------------------
@@ -215,21 +216,15 @@ describe("guarantee-principle gate (mechanism >= minMechanism)", () => {
 //    This is the PROVE-THE-RATCHET assignment requirement, done in-test
 //    against a TEMP COPY of the source — the real source is untouched.
 // ---------------------------------------------------------------------------
-// Each test in here copies three shipped subtrees and then spawns the generator
-// twice over them, so it costs tens of seconds of real work — on CI, where the
-// runner is several times slower than a laptop, the two heaviest have measured
-// 26.1s and 30.5s against the suite's 30s default. That is a budget with no
-// headroom, and it went red on two unrelated PRs (#2618 at 30514ms, #2646 at
-// 30006ms — six milliseconds over) before anyone read the diff. The work is not
-// pathological, the ceiling was simply set below it; these get one sized to what
-// they actually do. Issue #2397.
+// Each test in here copies three shipped source subtrees and then spawns the
+// generator against a small claim fixture. Keeping claim discovery bounded
+// avoids repeatedly classifying the full committed test corpus.
 const FRESHNESS_DIFF_TIMEOUT_MS = 120_000;
 
 describe("--check freshness diff (the ratchet mechanism)", () => {
-  // Build a self-contained temp tree: copy the shipped source subtree we
-  // enumerate from, plus a copy of the current tests dir for claim discovery,
-  // and committed baselines generated FROM that temp tree (so the clean run is
-  // green before injection).
+  // Build a self-contained temp tree with the shipped source subtrees we
+  // enumerate and committed baselines generated FROM that tree. Claim discovery
+  // uses the small committed fixture so AST classification stays cheap.
   function buildTempTree(): {
     root: string;
     srcRoot: string;
@@ -274,13 +269,13 @@ describe("--check freshness diff (the ratchet mechanism)", () => {
   }
 
   function genInto(t: ReturnType<typeof buildTempTree>) {
-    // Generate baselines from the temp tree (claims still read from the REAL
-    // tests dir so the registry has the same claim set as production).
+    // Generate baselines from the temp tree and the small claim fixture.
     return spawnSync(process.execPath, [TOOL], {
       encoding: "utf-8",
       env: {
         ...process.env,
         AMADEUS_COVERAGE_SRC_ROOT: t.srcRoot,
+        AMADEUS_COVERAGE_TESTS_DIR: CLAIMS_FIXTURE_DIR,
         AMADEUS_COVERAGE_REGISTRY: t.registry,
         AMADEUS_COVERAGE_RATCHET: t.ratchet,
       },
@@ -293,6 +288,7 @@ describe("--check freshness diff (the ratchet mechanism)", () => {
       env: {
         ...process.env,
         AMADEUS_COVERAGE_SRC_ROOT: t.srcRoot,
+        AMADEUS_COVERAGE_TESTS_DIR: CLAIMS_FIXTURE_DIR,
         AMADEUS_COVERAGE_REGISTRY: t.registry,
         AMADEUS_COVERAGE_RATCHET: t.ratchet,
       },
@@ -385,8 +381,8 @@ describe("ratchet anti-regression (covered count cannot silently drop)", () => {
   test("a committed ratchet with a HIGHER baseline than reality fails --check", () => {
     const root = mkdtempSync(join(tmpdir(), "cov-ratchet-"));
     try {
-      // Reuse the real source via the default root (no SRC override) but point
-      // the committed baselines at temp files we control.
+      // Reuse the real source via the default root (no SRC override), scan the
+      // small claim fixture, and point committed baselines at temp files.
       const registry = join(root, ".coverage-registry.json");
       const ratchet = join(root, ".coverage-ratchet.json");
 
@@ -395,6 +391,7 @@ describe("ratchet anti-regression (covered count cannot silently drop)", () => {
         encoding: "utf-8",
         env: {
           ...process.env,
+          AMADEUS_COVERAGE_TESTS_DIR: CLAIMS_FIXTURE_DIR,
           AMADEUS_COVERAGE_REGISTRY: registry,
           AMADEUS_COVERAGE_RATCHET: ratchet,
         },
@@ -413,6 +410,7 @@ describe("ratchet anti-regression (covered count cannot silently drop)", () => {
         encoding: "utf-8",
         env: {
           ...process.env,
+          AMADEUS_COVERAGE_TESTS_DIR: CLAIMS_FIXTURE_DIR,
           AMADEUS_COVERAGE_REGISTRY: registry,
           AMADEUS_COVERAGE_RATCHET: ratchet,
         },
@@ -538,7 +536,11 @@ describe("ratchet parsing (parse, don't validate — malformed input is a diagno
       writeFileSync(ratchet, "<<<<<<< HEAD conflict garbage\n");
       const chk = spawnSync(process.execPath, [TOOL, "--check"], {
         encoding: "utf-8",
-        env: { ...process.env, AMADEUS_COVERAGE_RATCHET: ratchet },
+        env: {
+          ...process.env,
+          AMADEUS_COVERAGE_TESTS_DIR: CLAIMS_FIXTURE_DIR,
+          AMADEUS_COVERAGE_RATCHET: ratchet,
+        },
       });
       expect(chk.status).toBe(1);
       expect(chk.stderr).toContain("RATCHET FAILED [MALFORMED]");
@@ -667,33 +669,5 @@ describe("determinism", () => {
       "subcommand",
       "render-surface",
     ]);
-  });
-});
-
-// THE LIVE RATCHET — runs `--check` against the REAL committed registry (no
-// env seam). Every other --check test above drives a synthetic temp tree; this
-// one gates the actual tests/.coverage-registry.json + .coverage-ratchet.json
-// on disk, so a clean checkout whose committed registry has drifted from the
-// real source (e.g. a new subcommand/event/scope landed without regenerating)
-// FAILS the suite. Without this, the ratchet's "cannot silently rot" promise is
-// unenforced — the committed artifact can drift while the suite stays green.
-describe("committed coverage registry is fresh (the live CI ratchet)", () => {
-  test("`gen-coverage-registry.ts --check` exits 0 against the real committed files", () => {
-    const chk = spawnSync(process.execPath, [TOOL, "--check"], {
-      encoding: "utf-8",
-      cwd: REPO_ROOT,
-      // NO AMADEUS_COVERAGE_* overrides — this checks the genuine on-disk registry.
-    });
-    if (chk.status !== 0) {
-      // Surface the drift diff so the failure is self-explaining: the fix is
-      // `bun tests/gen-coverage-registry.ts` to regenerate + commit the files.
-      throw new Error(
-        "committed coverage registry is STALE — run `bun tests/gen-coverage-registry.ts` " +
-          "to regenerate tests/.coverage-registry.json + .coverage-ratchet.json.\n" +
-          (chk.stdout || "") +
-          (chk.stderr || ""),
-      );
-    }
-    expect(chk.status).toBe(0);
   });
 });

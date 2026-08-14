@@ -15,6 +15,7 @@ const BASELINE_SHA = readFileSync(
 // strips (the formal job block, the workflow_dispatch line, the empty-base
 // branch), so every sanctioned edit elsewhere in the file re-baselines the
 // fixture. Recorded re-baselines:
+//   - Issue #3049: add the blocking coverage-registry job and ci-success dependency;
 //   - 260725-mirror-review-fixes: the Mirror CI job (rebase integration);
 //   - 260729-otel-upstream U7: the lint job's callsite-guard step, placed in
 //     the lint job per the E-U7CG-Q1 ruling (guard lives in tests/, CI runs it
