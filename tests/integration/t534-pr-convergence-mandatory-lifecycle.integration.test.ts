@@ -9,7 +9,10 @@ import { parseAttestation } from "../../plugins/pr-convergence/tools/pr-converge
 import { reportPathFor, runCli, type CliSeams } from "../../plugins/pr-convergence/tools/pr-convergence-cli.ts";
 import type { GhSpawn } from "../../plugins/pr-convergence/tools/pr-convergence-gh-runner.ts";
 import type { GitSpawn } from "../../plugins/pr-convergence/tools/pr-convergence-git-runner.ts";
-import { projectDeliveryBoltPlan } from "../../packages/framework/core/tools/amadeus-delivery-bolts.ts";
+import {
+  projectDeliveryBoltPlan,
+  projectEngineSingletonDeliveryBolt,
+} from "../../packages/framework/core/tools/amadeus-delivery-bolts.ts";
 import { compile as compileRuntime } from "../../packages/framework/core/tools/amadeus-runtime.ts";
 import { deliveryEvidenceCoverageRefusal } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import { loadStageGraph } from "../../packages/framework/core/tools/amadeus-lib.ts";
@@ -218,6 +221,30 @@ describe("t534 multi-Unit Bolt delivery lifecycle", () => {
       for_each: "unit-of-work",
       produces: ["pr-convergence-report"],
     } as never)).toBeNull();
+  });
+
+  test("engine singleton ignores construction directories owned by stages outside the runtime audit rows", async () => {
+    const f = fixture("self-fix"); const calls: string[][] = [];
+    writeEngineSingletonCarrier(f);
+    const statePath = join(f.record, "amadeus-state.md");
+    const state = readFileSync(statePath, "utf-8").replace(
+      "- [-] code-generation — EXECUTE",
+      "- [-] code-generation — EXECUTE\n- [x] formal-model-check — EXECUTE",
+    );
+    writeFileSync(statePath, state);
+    mkdirSync(join(f.record, "construction", "formal-model-check", "check-proof"), { recursive: true });
+    const projected = projectEngineSingletonDeliveryBolt(
+      f.root,
+      state,
+      new Set(["formal-model-check"]),
+    );
+    if (projected.kind !== "projection") throw new Error("formal stage directory must not become a Unit");
+    const graphPath = join(f.record, "runtime-graph.json");
+    const graph = JSON.parse(readFileSync(graphPath, "utf-8"));
+    graph.delivery_bolts = projected.projection;
+    writeFileSync(graphPath, `${JSON.stringify(graph, null, 2)}\n`);
+
+    expect((await runCli(engineCreateArgs(f), seams(f.record, f.sha, calls))).exitCode).toBe(0);
   });
 
   test("engine singleton authority rejects projection, state, cardinality, plan, and requested-Unit drift", async () => {

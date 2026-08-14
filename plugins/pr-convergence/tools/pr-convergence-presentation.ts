@@ -104,21 +104,19 @@ function readEngineSingletonSource(recordRoot: string): EngineSingletonSourceRea
   return { ok: true, state, scope };
 }
 
-function runtimeStageSlugs(graph: Record<string, unknown>): ReadonlySet<string> {
-  if (!Array.isArray(graph.stages)) return new Set<string>();
-  return new Set(graph.stages.flatMap((stage) => {
-    if (typeof stage !== "object" || stage === null || Array.isArray(stage)) return [];
-    const slug = (stage as Record<string, unknown>).stage_slug;
-    return typeof slug === "string" ? [slug] : [];
-  }));
+function stateStageSlugs(state: string): ReadonlySet<string> {
+  return new Set(Array.from(
+    state.matchAll(/^- \[[ xSR?-]\] ([A-Za-z0-9._-]+)\s*—\s*(?:EXECUTE|SKIP)\b/gm),
+    (match) => match[1] as string,
+  ));
 }
 
 function engineSingletonUnit(
   recordRoot: string,
-  graph: Record<string, unknown>,
+  state: string,
 ): { readonly ok: true; readonly unit: string } | { readonly ok: false; readonly result: DeliveryBoltMembershipResult } {
   const construction = join(recordRoot, "construction");
-  const stages = runtimeStageSlugs(graph);
+  const stages = stateStageSlugs(state);
   const units = existsSync(construction)
     ? readdirSync(construction, { withFileTypes: true })
       .filter((entry) => entry.isDirectory() && !stages.has(entry.name))
@@ -156,7 +154,6 @@ function engineSingletonProjectionMismatch(
 
 function engineSingletonMembership(
   recordRoot: string,
-  graph: Record<string, unknown>,
   fields: Record<string, unknown>,
   bolt: string,
 ): DeliveryBoltMembershipResult {
@@ -164,7 +161,7 @@ function engineSingletonMembership(
   if (!source.ok) return source.result;
   const intent = resolveIntentReference(recordRoot);
   if (!intent.ok) return { ok: false, code: "INVALID", message: intent.message };
-  const resolvedUnit = engineSingletonUnit(recordRoot, graph);
+  const resolvedUnit = engineSingletonUnit(recordRoot, source.state);
   if (!resolvedUnit.ok) return resolvedUnit.result;
   const unit = resolvedUnit.unit;
   const identity = {
@@ -264,7 +261,7 @@ export function resolveDeliveryBoltMembership(
   }
   const fields = projection as Record<string, unknown>;
   if (fields.authority === "engine-singleton") {
-    return engineSingletonMembership(recordRoot, graph as Record<string, unknown>, fields, bolt);
+    return engineSingletonMembership(recordRoot, fields, bolt);
   }
   if (fields.authority !== "approved-plan") {
     return { ok: false, code: "INVALID", message: "Delivery Bolt projection has no recognized authority discriminator" };
