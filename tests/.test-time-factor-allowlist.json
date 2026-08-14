@@ -228,7 +228,7 @@
     "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
   },
   {
-    "path": "tests/unit/gen-coverage-registry.test.ts",
+    "path": "tests/integration/gen-coverage-registry.test.ts",
     "sink": "timing-constant",
     "count": 1,
     "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."

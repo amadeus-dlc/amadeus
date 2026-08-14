@@ -337,6 +337,12 @@ describe("t07 audit-logger PostToolUse hook (mechanism cli — spawned hook + st
       join(AMADEUS_SRC, "tools", "amadeus-config.ts"),
       join(proj, ".claude", "tools", "amadeus-config.ts"),
     );
+    // The config reader parses plugin.settings through the shared settings
+    // lexicon (#2997), so that leaf is part of the same module graph.
+    copyFileSync(
+      join(AMADEUS_SRC, "tools", "amadeus-plugin-settings.ts"),
+      join(proj, ".claude", "tools", "amadeus-plugin-settings.ts"),
+    );
     copyFileSync(
       join(AMADEUS_SRC, "tools", "amadeus-contained-file.ts"),
       join(proj, ".claude", "tools", "amadeus-contained-file.ts"),

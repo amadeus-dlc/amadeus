@@ -12,7 +12,18 @@ afterEach(() => {
 });
 
 function git(cwd: string, ...args: string[]) {
-  const result = Bun.spawnSync({ cmd: ["git", ...args], cwd, stderr: "pipe", stdout: "pipe" });
+  let result = Bun.spawnSync({ cmd: ["git", ...args], cwd, stderr: "pipe", stdout: "pipe" });
+  const stderr = result.stderr.toString();
+  if (
+    result.exitCode !== 0 &&
+    args[0] === "worktree" &&
+    args[1] === "add" &&
+    stderr.includes("/locked' for writing: No such file or directory")
+  ) {
+    // `git worktree add` removes its incomplete metadata on exit, so retry the
+    // narrow prune race once without masking any other fixture setup failure.
+    result = Bun.spawnSync({ cmd: ["git", ...args], cwd, stderr: "pipe", stdout: "pipe" });
+  }
   expect(result.exitCode, result.stderr.toString()).toBe(0);
   return result.stdout.toString().trim();
 }

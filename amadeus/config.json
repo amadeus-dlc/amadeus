@@ -39,6 +39,7 @@
       "names": [
         "coverage-patch-quick",
         "formal-model-check",
+        "git-drift",
         "pr-convergence"
       ]
     },

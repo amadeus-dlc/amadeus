@@ -557,10 +557,11 @@ function resolveProjectRoot(cmd: PluginCliCommand): string {
 }
 
 // The dot-dir under a host/project root where a user stages a plugin bundle's
-// `<name>/` content before composing. Exported so the packager's INSTALL.md
-// generator points users at the SAME directory the CLI scans here — the install
-// instruction and discovery must not drift (#1569).
-export const PLUGIN_SOURCE_DIR_NAME = ".amadeus-plugin-src";
+// `<name>/` content before composing. Defined in the runtime leaf and re-exported
+// here so the packager's INSTALL.md generator points users at the SAME directory
+// the CLI scans — the install instruction and discovery must not drift (#1569).
+import { PLUGIN_SOURCE_DIR_NAME } from "./amadeus-plugin-runtime.ts";
+export { PLUGIN_SOURCE_DIR_NAME };
 
 // The install/discovery staging root: where a user drops a plugin bundle's
 // `<name>/` content before composing. A `.amadeus-plugin-` dot-dir so it stays

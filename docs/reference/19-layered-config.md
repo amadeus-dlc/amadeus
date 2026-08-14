@@ -57,6 +57,7 @@ writes.
 | `swarm.unit.concurrency.limit` | integer `1..4`; `4` | Project, Space, Intent |
 | `plugin.activation.names` | sorted unique plugin-name array; `[]` | Project only |
 | `plugin.scope-bindings` | plugin-to-stage-to-unique-scope-array map; `{}` | Project only |
+| `plugin.settings` | plugin-to-setting-key map of string, number or boolean values; `{}` | Project, Space, Intent |
 | `subagent.dispatch.enforced-models` | non-empty unique model-name array; `["opus","sonnet"]` | Project, Space, Intent |
 
 Unknown paths and legacy flat keys are errors. Legacy-key diagnostics identify

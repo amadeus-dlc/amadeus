@@ -343,7 +343,7 @@ function boundaryInput(
             github: { issue: { creation: { mode: "prompt" } } },
           },
           swarm: { unit: { concurrency: { limit: 4 } } },
-          plugin: { activation: { names: [] }, scopeBindings: {} },
+          plugin: { activation: { names: [] }, scopeBindings: {}, settings: {} },
           subagent: { dispatch: { enforcedModels: ["opus", "sonnet"] } },
         },
         sources: [],
