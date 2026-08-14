@@ -1045,20 +1045,6 @@ function askDirective(question: string): AskDirective {
   return { kind: "ask", question };
 }
 
-function executeFailureElectionDirective(input: {
-  stage: string;
-  unit: string;
-  attempt: string;
-  batch: string;
-  siblings: string;
-}): ExecuteFailureElectionDirective {
-  return {
-    kind: "execute-failure-election",
-    ...input,
-    choices: [...FAILURE_ELECTION_CHOICES],
-  };
-}
-
 function selectIntentDirective(
   question: string,
   snapshot: IntentSelectionSnapshot,
@@ -4073,28 +4059,23 @@ function constructionFailureRulingDirective(
   siblings: string,
 ): Directive {
   const config = resolveAmadeusConfig(projectDir);
-  if (config.kind === "invalid") {
-    return errorDirective(
-      `Invalid solo-election configuration: ${config.issues.map(swarmConfigIssue).join(" | ")}`,
-    );
-  }
+  if (config.kind === "invalid") return errorDirective(`Invalid solo-election configuration: ${config.issues.map(swarmConfigIssue).join(" | ")}`);
   if (config.config.soloElection.trigger.mode !== "auto") {
     return askDirective(
       `Unit "${target.unit}" failed during ${stage} (attempt ${target.attempt}, batch ${target.batch}; siblings: ${siblings}). Choose exactly one: Retry, Skip, or Abort. The answer is committed through the ordinary ask report path.`,
     );
   }
-  if (!target.attempt || !target.batch) {
-    return errorDirective(
-      "Construction Unit failure is missing attempt or batch identity; waiting fail-closed.",
-    );
-  }
-  return executeFailureElectionDirective({
+  if (!target.attempt || !target.batch) return errorDirective("Construction Unit failure is missing attempt or batch identity; waiting fail-closed.");
+  const directive: ExecuteFailureElectionDirective = {
+    kind: "execute-failure-election",
     stage,
     unit: target.unit,
     attempt: target.attempt,
     batch: target.batch,
     siblings,
-  });
+    choices: [...FAILURE_ELECTION_CHOICES],
+  };
+  return directive;
 }
 
 function emitConstructionFailureIfPresent(

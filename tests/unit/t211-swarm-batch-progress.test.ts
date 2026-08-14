@@ -132,6 +132,9 @@ function autonomousCodegenState(current: "code-generation" | "infrastructure-des
 - **Lifecycle Phase**: CONSTRUCTION
 - **Current Stage**: ${current}
 - **Status**: Running
+
+## Runtime State
+- **Mirror Initial Create Receipt**: completed
 `;
 }
 
@@ -807,7 +810,7 @@ describe("t211 #2976 solo auto-election on Unit failure", () => {
     expect(directive.kind).not.toBe("ask");
     expect(directive).toMatchObject({
       kind: "error",
-      message: expect.stringMatching(/solo-election|expected manual \| auto/),
+      message: expect.stringContaining("Invalid solo-election configuration"),
     });
   });
 
