@@ -8,10 +8,12 @@
 
 ## Deviations
 <!-- example: 2026-05-29T10:14:32Z — skipped the optional caching layer the stage prose suggested; the dataset is small enough that it adds risk -->
+- 2026-08-14T10:41:00Z — CI acceptance runnerのローカル実行結果をstage verdictに採用しなかった; TLC 24 runは全件NOT_DETECTEDだがGitHub runtime環境変数が空でreceipt検証がfail-closedしたため、正準のexplicit model成果物とplugin activation no-holdを採用した。
 - 2026-08-14T07:51:00Z — `--single` のため Current Stage は requirements-analysis のまま。`amadeus-learnings.ts surface --slug formal-model-check` は slug mismatch で exit 1 となり、§13 persist は実行できない。学習候補の採用可否はゲートで人間が判断する。
 
 ## Tradeoffs
 <!-- example: 2026-05-29T10:14:32Z — picked TDD over BDD this run; the team is unit-first and the domain is well-understood -->
+- 2026-08-14T10:41:00Z — 集約receiptを手編集せず環境不適合を記録した; 証跡を見かけ上greenにするより、モデル探索結果とCI runtime契約を分離して保持する方を選んだ。
 - 2026-08-14T07:41:00Z — ローカルでは `run-model-check-ci.ts` ではなく `run-model-check.ts` を使った。同日の先行 run では CI ランナーが GitHub Actions 環境変数不足で ARTIFACT_VERIFY_FAILURE(exit 2)になることが分かっており、ステージ本文 Step 2 のローカル CLI が正規契約である。
 
 ## Open questions

@@ -15,4 +15,8 @@ requirements-analysis checkpoint の spec-change advisory(advisory_instance `37f
 - 実行日: 2026-08-14 / 測定 ref: worktree HEAD(実行時点)
 - 各モデルの `--out` に `completion-marker.json` / `env-receipt.json` / `manifest.json` / `tlc-stdout.bin` / `tlc-stderr.bin` を記録
 - FormalElection は frozen-receipt 正規化経路(5,818,173 generated / 704,329 distinct / queue 0)、他3モデルは verified-source 経路(完了マーカーあり)
-- verdict は `plugin-activation.ts record .cursor` で記録済み(exit 0)
+- verdict は `plugin-activation.ts record .codex` で現在のCodex hostへ記録済み(exit 0)。続く `plugin-activation.ts advisory .codex build-and-test` は `no-hold`。
+
+## 追加診断
+
+ローカルでCI acceptance runnerも実行し、登録4モデルを各6回探索して全24 runが `NOT_DETECTED` となった。ただしGitHub Actions専用runtime receiptの `RUNNER_OS` / `GITHUB_RUN_ID` / `GITHUB_SHA` がローカルでは空のため、集約artifact検証は意図どおり `CI_ARTIFACTS_INVALID` でfail-closedした。この集約エラーはモデル反例ではなく、CI専用runnerをローカルで使用した環境不適合としてstage verdictから分離する。
