@@ -23,7 +23,13 @@
 | 対象テスト単独時間 | 5.93s(< scaleTestTime(120_000))(NFR-1) | `bun test ... -t "sweeps every origin/main election file"` |
 | typecheck | exit 0 | `bun run typecheck` |
 | lint | exit 0(警告は既存分のみ、対象ファイルへの診断 0) | `bun run lint` |
-| フルスイート | 実行中(background)— 結果は build-and-test へ | `bash tests/run-tests.sh --ci` |
+| FR-1 機械検証 | `git grep -n "process.cwd()" -- tests/integration/t245-amadeus-leader-sync.integration.test.ts` → exit 1(0 hit)。実 origin 参照(fetch/worktree の cwd 対象)は diff で除去済み | 本 worktree(head e926f9140) |
+| FR-6 機械検証 | `grep -cE "test\.skip\|describe\.skip\|\.skipIf" <対象ファイル>` → 0。環境検知分岐(`process.env` 参照)は対象テスト内 0 hit | 同上 |
+| フルスイート(リモート CI = 正) | PR #3001 head e926f9140 の必須 CI 全 green(Tests / Coverage Report / CI Success 含む、`gh pr checks 3001` 転記、run 31760527210) | クリーン checkout(GitHub Actions) |
+| フルスイート(ローカル run 1、本 worktree) | RESULT: FAIL — 実失敗 1 件 = t528-report-ack-kind。帰属実測: 本セッションの active-intent cursor + 進行中 Bolt 状態を test が cwd 経由で読む汚染(同一変更を含む cursor なしクローンで 6/6 緑)。本変更(t245)非起因 | `bash tests/run-tests.sh --ci`(並行セッション負荷あり) |
+| フルスイート(ローカル run 2、origin なしクリーンクローン) | RESULT: FAIL — 実失敗 1 件 = t99-learnings-gate-flow(dist コピー中のファイル数レース、copyTreeWithRetry の transient)。単独再実行 17/17 緑、run 1 では緑 = flake。t528 は本 run で 6/6 緑、t245 は 24/24 緑 | 同コマンド @ noorigin-clone |
+
+ローカル 2 run の失敗はいずれも環境起因(セッション状態汚染 / transient copy race)で、失敗集合が run 間で交差せず、単独再実行で全て緑。クリーン checkout の CI(必須ゲート)は green — FR-8 の合否判定はこの CI green を正とする(project.md Testing Posture「既存の無関係な失敗は Issue に記録してスコープを膨張させない」および帰属切り分け規律 `cid:build-and-test:c1-ablation-before-artifact-repro` による)。t528 の cwd 状態依存は Amadeus 所有の潜在欠陥として §14 経路の起票候補に記録。
 
 ## Key decisions / 逸脱
 

@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-260814-T245-CG-S13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "一次資料を独立に突き合わせた。memory.md の Interpretations 唯一のエントリ c1『本 intent 専用 worktree(branch fix-2971-t245-origin、origin/main 起点)を Bolt worktree として使用』は、project.md:13 に既存する cid:code-generation:solo-bolt-worktree-required『ソロ運用でも Bolt 実装は最初から git worktree 分離で行い、本線ツリーのブランチ切替で実装しない』の趣旨(本線ツリー非汚染)を、本 intent の実行環境(Orca が既に専用 worktree を払い出す構成)に当てはめただけの一回性の適用判断であり、既存ノルムの新規解釈や矛盾の発見ではない。既存則が定めた条件をそのまま満たすことを確認した執行ログであって、他プロジェクト・他ステージへ転用可能な一般化(例: 『Orca 環境では worktree 払い出し確認をもって足りる』という無条件の追加規則)を要する内容を含まない。Open questions の t528(cwd 依存の偽赤)・t99(copy race による flake)は memory.md 自身が明記するとおり parked であり §14 Issue 起票候補として別経路(§13 学習選定の対象外)に置かれている。よって配布ビューが提示する『c1 は環境固有の一回性解釈であり既存 cid の変更を要しない』という評価に同意し、採用0件を支持する。",
+  "submittedAt": "2026-08-14T02:00:00Z",
+  "receivedAt": "2026-08-14T01:48:43Z"
+}
