@@ -325,6 +325,14 @@ function projectedUnits(proj: string) {
   return projected.projection;
 }
 
+function auditAttributes(proj: string): Array<Record<string, unknown>> {
+  return readAllAuditShards(proj)
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .map((line) => JSON.parse(line) as { attributes?: Record<string, unknown> })
+    .flatMap((row) => row.attributes === undefined ? [] : [row.attributes]);
+}
+
 describe("t211 tryEmitSwarm excludes completed batches (#841)", () => {
   test("next asks for a ruling when the failed Unit has canonical closure evidence", () => {
     const { proj } = seedFailedSwarmUnit();
@@ -819,9 +827,30 @@ describe("t211 #2976 solo auto-election on Unit failure", () => {
     ["Skip", "committed"],
     ["Abort", "parked"],
   ] as const)("auto-election %s ruling commits through the existing report path", (ruling, kind) => {
-    const { proj } = seedFailedSoloUnit();
+    const { proj, attempt } = seedFailedSoloUnit();
     writeSoloElectionMode(proj, "auto");
     expect(runNext(proj).kind).toBe("execute-failure-election");
     expect(runFailureRuling(proj, ruling)).toMatchObject({ kind });
+    const audit = auditAttributes(proj);
+    expect(audit).toContainEqual(expect.objectContaining({
+      Event: "BOLT_FAILED",
+      "Attempt Id": attempt,
+    }));
+    if (ruling === "Retry") {
+      expect(audit.filter((row) => row.Event === "BOLT_STARTED")).toHaveLength(2);
+    } else if (ruling === "Skip") {
+      expect(audit).toContainEqual(expect.objectContaining({
+        Event: "BOLT_COMPLETED",
+        "Attempt Id": attempt,
+        Outcome: "cancelled",
+        Reason: "skipped",
+      }));
+    } else {
+      expect(audit).toContainEqual(expect.objectContaining({
+        Event: "BOLT_FAILED",
+        "Attempt Id": attempt,
+        Reason: "aborted",
+      }));
+    }
   });
 });

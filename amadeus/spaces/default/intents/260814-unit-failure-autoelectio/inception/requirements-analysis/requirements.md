@@ -14,7 +14,7 @@ canonical Unit failure の halt と品質ゲートを維持する。失敗を成
 
 ### FR-2: engine が auto 分岐を持つ
 
-`emitConstructionFailureIfPresent` の `await-unit-ruling` 分岐(HEAD `amadeus-orchestrate.ts:4069-4075`)で階層 config の `solo-election.trigger.mode` を解決し、`auto` のとき ordinary `ask` を emit しない。`manual`・不在・invalid のときは現行の `ask` を不変で返す。config 解決は election CLI `handleTriggeredOpen`(`amadeus-election.ts:443-463`)と同一の解決値(project→space→intent の3層)を用い、両者の判定が divergence しないこと。
+`emitConstructionFailureIfPresent` の `await-unit-ruling` 分岐(HEAD `amadeus-orchestrate.ts:4069-4075`)で階層 config の `solo-election.trigger.mode` を解決し、`auto` のとき ordinary `ask` を emit しない。`manual`・不在のときは現行の `ask` を不変で返し、invalid は NFR-2 どおり判別可能な `errorDirective` で fail-closed に停止する。config 解決は election CLI `handleTriggeredOpen`(`amadeus-election.ts:443-463`)と同一の解決値(project→space→intent の3層)を用い、両者の判定が divergence しないこと。
 
 ### FR-3: election 委任 directive の新設
 
