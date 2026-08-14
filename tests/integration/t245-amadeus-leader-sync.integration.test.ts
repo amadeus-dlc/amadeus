@@ -6,7 +6,7 @@
 
 import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, mock, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import * as realOs from "node:os";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -36,6 +36,10 @@ import {
 } from "../../scripts/amadeus-leader-sync";
 
 const roots: string[] = [];
+// Repository root resolved from this file, never from the process working directory:
+// the corpus seed must not depend on where the runner was launched.
+const REPO_ROOT = join(import.meta.dir, "..", "..");
+const ELECTIONS_RELATIVE = "amadeus/spaces/default/elections";
 const CLONE = "abc123";
 const SHARD = shardBasename(realOs.hostname(), CLONE);
 const ELECTION = "amadeus/spaces/default/elections/E-NEW/definition.json";
@@ -93,6 +97,23 @@ function createFlowGitHandler(args: string[]): CommandResult {
   if (args[0] === "show" && args[1] === `origin/main:${AUDIT}`) return ok("old audit\n");
   if (args[0] === "ls-files") return ok("");
   return ok();
+}
+
+// Counts regular files the same way the production walker does: symlinks and
+// directories are not files, so the seed count is comparable to electionPaths.
+function countRegularFiles(root: string): number {
+  let total = 0;
+  const pending = [root];
+  while (pending.length > 0) {
+    const current = pending.pop();
+    if (current === undefined) break;
+    for (const entry of readdirSync(current, { withFileTypes: true })) {
+      const path = join(current, entry.name);
+      if (entry.isDirectory()) pending.push(path);
+      else if (entry.isFile()) total++;
+    }
+  }
+  return total;
 }
 
 function seedCreateWorktree(args: string[]): void {
@@ -206,24 +227,38 @@ describe("t245 real filesystem ownership and transient corpus", () => {
   });
 
   test("sweeps every origin/main election file through real selfCheck and exclusions", () => {
-    const projectDir = process.cwd();
+    // origin/main here is the fixture remote built below, never the checkout's own remote:
+    // the sweep must not fetch, create worktrees in, or otherwise touch the host repository.
+    const remote = mkdtempSync(join(tmpdir(), "leader-sync-origin-corpus-remote-"));
+    const source = mkdtempSync(join(tmpdir(), "leader-sync-origin-corpus-source-"));
     const scratch = mkdtempSync(join(tmpdir(), "leader-sync-origin-corpus-"));
-    roots.push(scratch);
+    roots.push(remote, source, scratch);
+    gitStdout(["init", "--bare"], remote);
+    gitStdout(["init", "-b", "main"], source);
+    gitStdout(["config", "user.email", "t245@example.com"], source);
+    gitStdout(["config", "user.name", "t245"], source);
+    // Seed the real elections corpus of this checkout so the sweep stays a full-corpus sweep.
+    const corpus = join(REPO_ROOT, ELECTIONS_RELATIVE);
+    const seededFiles = countRegularFiles(corpus);
+    expect(seededFiles).toBeGreaterThan(0);
+    cpSync(corpus, join(source, ELECTIONS_RELATIVE), { recursive: true });
+    gitStdout(["add", "-f", "--", "amadeus"], source);
+    gitStdout(["commit", "-m", "seed elections corpus"], source);
+    gitStdout(["remote", "add", "origin", remote], source);
+    gitStdout(["push", "origin", "main"], source);
+    gitStdout(["fetch", "origin", "+refs/heads/main:refs/remotes/origin/main"], source);
     const root = join(scratch, "worktree");
-    gitStdout([
-      "fetch", "origin", "+refs/heads/main:refs/remotes/origin/main",
-    ], projectDir);
-    gitStdout(["worktree", "add", "--detach", root, "origin/main"], projectDir);
+    gitStdout(["worktree", "add", "--detach", root, "origin/main"], source);
     try {
       const owned = resolveOwnedSet(root, SHARD);
-      expect(owned.electionPaths.length).toBeGreaterThan(0);
+      expect(owned.electionPaths.length).toBe(seededFiles);
       const diffs = owned.electionPaths.map((path) => ({ status: "A" as const, path }));
       expect(checkExclusions(diffs, owned)).toEqual([]);
       expect(reportPassed(selfCheck(root, diffs, owned, new Map()))).toBe(true);
     } finally {
-      gitStdout(["worktree", "remove", "--force", root], projectDir);
+      gitStdout(["worktree", "remove", "--force", root], source);
     }
-  }, scaleTestTime(120_000)); // full origin/main corpus plus real Git worktree I/O can exceed Bun's 30s default on CI
+  }, scaleTestTime(120_000)); // seeding the fixture corpus plus real Git worktree I/O can exceed Bun's 30s default on CI
 });
 
 describe("t245 E-PM10A falling proofs", () => {
