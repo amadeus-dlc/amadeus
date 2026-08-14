@@ -1145,5 +1145,12 @@
     "dirName": "260813-lifecycle-guard-runtime",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019ffa02-2d39-71f4-bd0c-e8dbe87244fa",
+    "slug": "election-multiq",
+    "dirName": "260813-election-multiq",
+    "scope": "self-feature",
+    "status": "in-flight"
   }
 ]
