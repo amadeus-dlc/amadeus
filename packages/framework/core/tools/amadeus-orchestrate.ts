@@ -5599,7 +5599,11 @@ function perUnitCoverageRefusal(
 // but the stage itself cannot complete until every owner projection exists.
 type DeliveryEvidenceOwners =
   | { readonly ok: true; readonly units: readonly string[] }
-  | { readonly ok: false; readonly message: string };
+  | {
+    readonly ok: false;
+    readonly message: string;
+    readonly reason?: "projection-absent";
+  };
 
 function engineSingletonEvidenceOwners(
   pd: string,
@@ -5671,7 +5675,11 @@ function deliveryEvidenceOwners(
   }
   const planPath = join(pd, ...recordPrefix.split("/"), DELIVERY_BOLT_PLAN_SOURCE);
   if (projection === undefined) {
-    return { ok: false, message: "DELIVERY_EVIDENCE_CARRIER_MISSING: approved Delivery Bolt membership is absent." };
+    return {
+      ok: false,
+      message: "DELIVERY_EVIDENCE_CARRIER_MISSING: approved Delivery Bolt membership is absent.",
+      reason: "projection-absent",
+    };
   }
   if (
     projection !== null && typeof projection === "object" && !Array.isArray(projection) &&
@@ -5693,9 +5701,30 @@ export function deliveryEvidenceCoverageRefusal(
   ) {
     return null;
   }
-  const owners = deliveryEvidenceOwners(pd, intent);
-  if (!owners.ok) return owners.message;
+  const stateContent = readStateFile(pd, intent);
   const recordPrefix = relativeRecordDir(pd, intent);
+  const dagUnits = orderedUnits(pd, intent);
+  const executionUnits = dagUnits.length > 0
+    ? dagUnits
+    : unitDirsUnderConstruction(pd, recordPrefix);
+  if (executionUnits.length === 0) return null;
+  const owners = deliveryEvidenceOwners(pd, intent);
+  if (!owners.ok) {
+    if (owners.reason === "projection-absent") {
+      const pick = nextUncoveredUnit(
+        pd,
+        node,
+        executionUnits,
+        recordPrefix,
+        codekbCtxFor(pd),
+        readUnitKinds(pd, intent),
+      );
+      const isSwarmDriven =
+        node.mode === SWARM_MODE && readAutonomyMode(stateContent) !== null;
+      if (pick !== null && isSwarmDriven) return null;
+    }
+    return owners.message;
+  }
   const units = [...owners.units];
   const pick = nextUncoveredUnit(
     pd,

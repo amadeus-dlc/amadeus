@@ -25,6 +25,7 @@ import {
   seededStateFile,
 } from "../harness/fixtures.ts";
 import { handleReport } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
+import { projectDeliveryBoltPlan } from "../../packages/framework/core/tools/amadeus-delivery-bolts.ts";
 import {
   boltDagGenerationOf,
   GUARD_EXIT_MARKER,
@@ -122,10 +123,22 @@ function seedDag(proj: string, batches: string[][]): void {
       .map((unit) => `  - name: ${unit.name}\n    depends_on: [${unit.depends_on.join(", ")}]`)
       .join("\n")}\n\`\`\`\n`,
   );
+  const planDir = join(seededRecordDir(proj), "inception", "delivery-planning");
+  mkdirSync(planDir, { recursive: true });
+  const plan = `## Bolt delivery\n\n- **Units:** ${batches
+    .flat()
+    .map((unit) => `\`${unit}\``)
+    .join(", ")}\n`;
+  writeFileSync(join(planDir, "bolt-plan.md"), plan);
+  const projected = projectDeliveryBoltPlan(plan);
+  if (!projected.ok) throw new Error(projected.message);
   writeFileSync(
     join(seededRecordDir(proj), "runtime-graph.json"),
     JSON.stringify(
-      { bolt_dag: { units: batches.flat().map((name) => ({ name, depends_on: [] })), batches } },
+      {
+        bolt_dag: { units: batches.flat().map((name) => ({ name, depends_on: [] })), batches },
+        delivery_bolts: projected.projection,
+      },
       null,
       2,
     ),
