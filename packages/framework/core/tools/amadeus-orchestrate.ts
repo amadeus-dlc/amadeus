@@ -91,6 +91,8 @@ import {
   type Directive,
   type ErrorDirective,
   type ExecuteAdvisoryHandoffDirective,
+  type ExecuteFailureElectionDirective,
+  FAILURE_ELECTION_CHOICES,
   GATE_UNRESOLVED,
   type GateValue,
   type InvokeSwarmDirective,
@@ -1041,6 +1043,20 @@ function toolErrorMessage(run: ToolRun): string {
 
 function askDirective(question: string): AskDirective {
   return { kind: "ask", question };
+}
+
+function executeFailureElectionDirective(input: {
+  stage: string;
+  unit: string;
+  attempt: string;
+  batch: string;
+  siblings: string;
+}): ExecuteFailureElectionDirective {
+  return {
+    kind: "execute-failure-election",
+    ...input,
+    choices: [...FAILURE_ELECTION_CHOICES],
+  };
 }
 
 function selectIntentDirective(
@@ -4024,6 +4040,37 @@ function failureOutsideRuntimePopulation(
   return index >= batches.length || !batches[index].includes(entry.unit);
 }
 
+function constructionFailureRulingDirective(
+  projectDir: string,
+  stage: string,
+  target: { unit: string; attempt?: string; batch?: string },
+  siblings: string,
+): Directive {
+  const config = resolveAmadeusConfig(projectDir);
+  if (config.kind === "invalid") {
+    return errorDirective(
+      `Invalid solo-election configuration: ${config.issues.map(swarmConfigIssue).join(" | ")}`,
+    );
+  }
+  if (config.config.soloElection.trigger.mode !== "auto") {
+    return askDirective(
+      `Unit "${target.unit}" failed during ${stage} (attempt ${target.attempt}, batch ${target.batch}; siblings: ${siblings}). Choose exactly one: Retry, Skip, or Abort. The answer is committed through the ordinary ask report path.`,
+    );
+  }
+  if (!target.attempt || !target.batch) {
+    return errorDirective(
+      "Construction Unit failure is missing attempt or batch identity; waiting fail-closed.",
+    );
+  }
+  return executeFailureElectionDirective({
+    stage,
+    unit: target.unit,
+    attempt: target.attempt,
+    batch: target.batch,
+    siblings,
+  });
+}
+
 function emitConstructionFailureIfPresent(
   projectDir: string,
   stageSlug: string,
@@ -4068,8 +4115,11 @@ function emitConstructionFailureIfPresent(
   );
   if (transition.kind === "await-unit-ruling") {
     const siblingSummary = transition.siblings.map((entry) => `${entry.unit}:${entry.outcome}`).join(", ") || "none";
-    emit(askDirective(
-      `Unit "${transition.target.unit}" failed during ${stageSlug} (attempt ${transition.target.attempt}, batch ${transition.target.batch}; siblings: ${siblingSummary}). Choose exactly one: Retry, Skip, or Abort. The answer is committed through the ordinary ask report path.`,
+    emit(constructionFailureRulingDirective(
+      projectDir,
+      stageSlug,
+      transition.target,
+      siblingSummary,
     ));
     return true;
   }

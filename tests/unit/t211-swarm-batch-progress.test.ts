@@ -738,3 +738,87 @@ describe("t211 Intent-scoped autonomy preserves batch fanout", () => {
     expect(directive.kind).not.toBe("error");
   });
 });
+
+function writeSoloElectionMode(proj: string, mode: string): void {
+  mkdirSync(join(proj, "amadeus"), { recursive: true });
+  writeFileSync(
+    join(proj, "amadeus", "config.json"),
+    `${JSON.stringify({ "solo-election": { trigger: { mode } } }, null, 2)}\n`,
+  );
+}
+
+function writeIntentSoloElectionMode(proj: string, mode: string): void {
+  const space = activeSpace(proj);
+  const intent = activeIntent(proj, space);
+  expect(intent).not.toBeNull();
+  const intentDir = join(proj, "amadeus", "spaces", space, "intents", intent!);
+  mkdirSync(intentDir, { recursive: true });
+  writeFileSync(
+    join(intentDir, "config.json"),
+    `${JSON.stringify({ "solo-election": { trigger: { mode } } }, null, 2)}\n`,
+  );
+}
+
+describe("t211 #2976 solo auto-election on Unit failure", () => {
+  test("auto config emits execute-failure-election instead of ask", () => {
+    const { proj, attempt, batch } = seedFailedSoloUnit();
+    writeSoloElectionMode(proj, "auto");
+    const directive = runNext(proj);
+    expect(directive.kind).not.toBe("ask");
+    expect(directive).toMatchObject({
+      kind: "execute-failure-election",
+      stage: "code-generation",
+      unit: "alpha",
+      attempt,
+      batch,
+      choices: ["Retry", "Skip", "Abort"],
+    });
+  });
+
+  test("manual config keeps the ordinary ask", () => {
+    const { proj } = seedFailedSoloUnit();
+    writeSoloElectionMode(proj, "manual");
+    expect(runNext(proj)).toMatchObject({
+      kind: "ask",
+      question: expect.stringContaining("Retry, Skip, or Abort"),
+    });
+  });
+
+  test("absent config keeps the ordinary ask", () => {
+    const { proj } = seedFailedSoloUnit();
+    expect(runNext(proj)).toMatchObject({
+      kind: "ask",
+      question: expect.stringContaining("Retry, Skip, or Abort"),
+    });
+  });
+
+  test("intent config overrides the project layer through the active cursor", () => {
+    const { proj } = seedFailedSoloUnit();
+    writeSoloElectionMode(proj, "manual");
+    writeIntentSoloElectionMode(proj, "auto");
+    expect(runNext(proj).kind).toBe("execute-failure-election");
+  });
+
+  test("invalid auto-election config fails closed instead of asking", () => {
+    const { proj } = seedFailedSoloUnit();
+    writeSoloElectionMode(proj, "true");
+    const directive = runNext(proj);
+    expect(directive.kind).toBe("error");
+    expect(directive.kind).not.toBe("ask");
+    expect(directive).toMatchObject({
+      kind: "error",
+      message: expect.stringMatching(/solo-election|expected manual \| auto/),
+    });
+  });
+
+  test.each([
+    ["Retry", "committed"],
+    ["Skip", "committed"],
+    ["Abort", "parked"],
+  ] as const)("auto-election %s ruling commits through the existing report path", (ruling, kind) => {
+    const { proj } = seedFailedSoloUnit();
+    writeSoloElectionMode(proj, "auto");
+    expect(runNext(proj).kind).toBe("execute-failure-election");
+    expect(runFailureRuling(proj, ruling)).toMatchObject({ kind });
+  });
+});
