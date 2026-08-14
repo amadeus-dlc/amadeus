@@ -1,0 +1,17 @@
+<!-- INVARIANT: examples are single-line HTML comments so a fresh template parses to total=0 (MEMORY_EMPTY). Do NOT un-comment or split across lines. t100 guards this. -->
+> This file is maintained by the orchestrator during stage execution. Add observations at the gate ritual, not by editing here directly.
+
+## Interpretations
+- 2026-08-14T05:20:00Z — 本 workflow 経路は tla-authoring の terminal route(not-applicable)を消費し NOT_APPLICABLE を記録(Step 1 の規定)。advisory handoff の single-stage run(NOT_DETECTED ×3)とは別の判定として書き分けた
+- 2026-08-14T07:10:00Z — explicit single-stage run(先行 applicability outcome なし)のため、ステージ本文 Step 1 の規定どおり登録全モデル(model-map.json の3件)を検査対象とした
+<!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
+
+## Deviations
+- 2026-08-14T07:10:00Z — 最初に run-model-check-ci.ts run を試行したが runtime receipt が CI 環境変数を要求し ARTIFACT_VERIFY_FAILURE(exit 2)。ローカルの正規経路はステージ本文 Step 2 の run-model-check.ts 個別実行と判断して切り替え、3モデルとも NOT_DETECTED を得た。誤生成物(acceptance.json / verification.json)は削除済み
+<!-- example: 2026-05-29T10:14:32Z — skipped the optional caching layer the stage prose suggested; the dataset is small enough that it adds risk -->
+
+## Tradeoffs
+<!-- example: 2026-05-29T10:14:32Z — picked TDD over BDD this run; the team is unit-first and the domain is well-understood -->
+
+## Open questions
+<!-- example: 2026-05-29T10:14:32Z — confirm the retention window with compliance before the next stage hardens the schema -->

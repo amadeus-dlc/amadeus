@@ -12,6 +12,7 @@ import {
   type EnvReceipt,
   type ModelCheckOutcome,
   type RunModelCheckInput,
+  type TlcSpawnPlanner,
 } from "./run-model-check-domain.ts";
 import {
   publishModelCheckArtifacts,
@@ -95,6 +96,7 @@ function receiptFromError(
   input: RunModelCheckInput,
   workspace: ArtifactWorkspace,
   dependencies: ReservedModelCheckDependencies,
+  planner?: TlcSpawnPlanner,
 ): EnvReceipt {
   const receipt = (error as TlcToolchainError & { readonly environmentReceipt?: EnvReceipt })
     .environmentReceipt;
@@ -103,6 +105,7 @@ function receiptFromError(
     dependencies.platform,
     workspace.runId,
     "code" in error ? error.code : error.kind,
+    planner?.identity,
   );
 }
 
@@ -180,6 +183,7 @@ function publishToolchainFailure(
   workspace: ArtifactWorkspace,
   startedAt: string,
   dependencies: ReservedModelCheckDependencies,
+  planner?: TlcSpawnPlanner,
 ): RunModelCheckResult {
   const outcome = toolchainErrorOutcome(error);
   return publish(
@@ -187,7 +191,7 @@ function publishToolchainFailure(
     source,
     workspace,
     outcome,
-    receiptFromError(error, input, workspace, dependencies),
+    receiptFromError(error, input, workspace, dependencies, planner),
     new Uint8Array(),
     new TextEncoder().encode(`${outcome.code}\n`),
     startedAt,
@@ -202,6 +206,9 @@ export async function executeReservedModelCheck(
   startedAt: string,
   dependencies: ReservedModelCheckDependencies,
 ): Promise<RunModelCheckResult> {
+  // Held outside the try so an unexpected throw still publishes the plan of the
+  // provider that was actually selected.
+  let selected: TlcSpawnPlanner | undefined;
   try {
     const cache = prepareModelCheckCache(workspace, dependencies.filesystem);
     if (!cache.ok) {
@@ -235,6 +242,7 @@ export async function executeReservedModelCheck(
     if (!planner.ok) {
       return publishToolchainFailure(planner.error, input, source, workspace, startedAt, dependencies);
     }
+    selected = planner.value;
     const prepared = await toolchain.preparePlanned({
       artifact: acquired.value,
       modelReceipt: source.modelReceipt,
@@ -248,11 +256,11 @@ export async function executeReservedModelCheck(
       planner: planner.value,
     });
     if (!prepared.ok) {
-      return publishToolchainFailure(prepared.error, input, source, workspace, startedAt, dependencies);
+      return publishToolchainFailure(prepared.error, input, source, workspace, startedAt, dependencies, planner.value);
     }
     const executed = await toolchain.runPlanned(prepared.value);
     if (!executed.ok) {
-      return publishToolchainFailure(executed.error, input, source, workspace, startedAt, dependencies);
+      return publishToolchainFailure(executed.error, input, source, workspace, startedAt, dependencies, planner.value);
     }
     return publish(
       input,
@@ -272,7 +280,7 @@ export async function executeReservedModelCheck(
       source,
       workspace,
       outcome,
-      createNotRunPlannerReceipt(input.provider, dependencies.platform, workspace.runId, outcome.code),
+      createNotRunPlannerReceipt(input.provider, dependencies.platform, workspace.runId, outcome.code, selected?.identity),
       new Uint8Array(),
       new TextEncoder().encode(`${outcome.code}\n`),
       startedAt,

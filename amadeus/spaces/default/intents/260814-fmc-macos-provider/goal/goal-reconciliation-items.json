@@ -1,0 +1,33 @@
+[
+  {
+    "id": "goal-statement",
+    "verdict": "ACHIEVED",
+    "evidence": [
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260814-fmc-macos-provider/construction/fmc-macos-provider/code-generation/code-summary.md",
+        "digest": "8abf4477531fe6ad5dd822f658fc047577b9c739a59624f5f2bb0ff30f04b4c7"
+      },
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260814-fmc-macos-provider/construction/build-and-test/build-test-results.md",
+        "digest": "4a9e12266c1aa4ad7512539bf07a572cffe79a7c77544687f8ca1058f095435c"
+      },
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260814-fmc-macos-provider/construction/fmc-macos-provider/code-generation/pr-convergence-report.md",
+        "digest": "06a18c162fb68666e390a5699c45ad93f8c62165a303d92c9f06c021b8c7b8bb"
+      },
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260814-fmc-macos-provider/inception/requirements-analysis/requirements.md",
+        "digest": "766a328f3aca01a8c6c9d0a8cc1e5dc76e03ac7aab3f8ed68f88e6d12520f20b"
+      },
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260814-fmc-macos-provider/construction/formal-model-check/formal-model-check-result.md",
+        "digest": "16b18035439786a8847808423a6141b8c97b0768151086c4986761796f27dc10"
+      }
+    ]
+  }
+]

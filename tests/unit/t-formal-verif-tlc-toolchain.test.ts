@@ -13,6 +13,7 @@ import {
   FIXED_TLC_ARTIFACT_DESCRIPTOR_IDENTITY,
   FIXED_TLC_PROFILE,
   FIXED_TLC_PROFILE_IDENTITY,
+  acceptsFixedJdkVersionOutput,
   createJdkDistributionManifest,
   createJdkSnapshotIdentity,
   createSandboxProbeReceipt,
@@ -20,6 +21,7 @@ import {
   validateFixedJdkRunProfile,
   validateFixedTlcArtifactDescriptor,
   validateFixedTlcProfile,
+  type JdkMajor26Version,
   type TlcExecutionPort,
   type TlcToolchainFacade,
 } from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
@@ -135,6 +137,47 @@ describe("formal verification TLC toolchain domain", () => {
       entries: entries.filter(({ path }) => path !== "lib/modules"),
     });
     expect(incomplete.ok).toBe(false);
+  });
+
+  // #2361: the run profile contracts the JDK major, not one patch release, so a
+  // Temurin patch bump on the developer machine must not read as a foreign JDK.
+  test("binds the JDK distribution to major 26 rather than one patch release", () => {
+    const entries = [
+      { kind: "FILE" as const, path: "bin/java", target: null, byteLength: 10, sha256: hash("a") },
+      { kind: "FILE" as const, path: "conf/security/java.security", target: null, byteLength: 20, sha256: hash("b") },
+      { kind: "FILE" as const, path: "lib/libjava.dylib", target: null, byteLength: 30, sha256: hash("c") },
+      { kind: "FILE" as const, path: "lib/modules", target: null, byteLength: 40, sha256: hash("d") },
+    ];
+    const manifest = (version: string) => createJdkDistributionManifest({
+      vendor: "OpenJDK",
+      version: version as JdkMajor26Version,
+      javaExecutablePath: "bin/java",
+      javaExecutableSha256: hash("a"),
+      entries,
+    });
+    expect(FIXED_JDK_RUN_PROFILE.version).toBe("26");
+    for (const accepted of ["26", "26.0.1", "26.0.2", "26.1.0"]) {
+      expect(manifest(accepted).ok).toBe(true);
+    }
+    for (const rejected of ["25.0.1", "27.0.0", "260.1", "26a", ""]) {
+      expect(manifest(rejected)).toMatchObject({ ok: false, error: { kind: "JdkDistributionError" } });
+    }
+  });
+
+  // #2361: both the planner probe and the toolchain re-check read the same
+  // `java -version` output, so the acceptance rule lives in one predicate.
+  test("accepts any OpenJDK major 26 version output and no neighbouring major", () => {
+    const output = (version: string) =>
+      `openjdk version "${version}" 2026-01-20\nOpenJDK Runtime Environment Temurin-${version}+8\n`;
+    for (const accepted of ["26", "26.0.1", "26.0.2", "26.1.3"]) {
+      expect(acceptsFixedJdkVersionOutput(output(accepted))).toBe(true);
+    }
+    for (const rejected of ["25.0.1", "27.0.0", "260.1", "2.6"]) {
+      expect(acceptsFixedJdkVersionOutput(output(rejected))).toBe(false);
+    }
+    expect(acceptsFixedJdkVersionOutput('openjdk version "26.0.1+8"\nOpenJDK Runtime Environment\n')).toBe(true);
+    expect(acceptsFixedJdkVersionOutput('openjdk version "26.0.1"\nOracle Runtime Environment\n')).toBe(false);
+    expect(acceptsFixedJdkVersionOutput("")).toBe(false);
   });
 
   test("mints a sandbox receipt only when all three fixed network probes are denied", () => {

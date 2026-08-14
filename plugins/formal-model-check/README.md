@@ -73,12 +73,15 @@ a zero-plugin build.
 
 ## Local execution requirements
 
-The planner verifies the JDK by **exact patch version** — it accepts only
-`openjdk version "26.0.1…"` from `$JAVA_HOME/bin/java`. That strictness is
-deliberate: the model-check receipt is a reproducibility contract (NFR-1), and a
-different JDK is a different toolchain identity.
+The planner verifies the JDK by **major version** — it accepts any
+`openjdk version "26.…"` from `$JAVA_HOME/bin/java` and rejects every other
+major. The model-check receipt stays a reproducibility contract (NFR-1) because
+each run records the exact build it used: the receipt binds the `java -version`
+output and the executable checksum, so a patch release is visible in the
+evidence without being a precondition of running at all.
 
-This repository pins it in `mise.toml`:
+This repository still pins one build in `mise.toml`, as the way it supplies a
+JDK rather than as the contract:
 
 ```toml
 [tools]
@@ -86,8 +89,8 @@ java = "temurin-26.0.1+8"
 ```
 
 Run `mise trust` once after cloning. With the pin active, `bun` inside the
-repository resolves `JAVA_HOME` to 26.0.1 and `run-model-check` works with no
-prefix.
+repository resolves `JAVA_HOME` to a major 26 JDK and `run-model-check` works
+with no prefix.
 
 **Why a repo-level pin rather than an exported variable.** When a machine's
 global mise activates a different JDK, `bun` resolved through a mise shim
@@ -102,23 +105,32 @@ expectation, and the observation:
 
 ```
 run-model-check: HARNESS_ERROR (ENVIRONMENT_UNAVAILABLE) — Darwin environment
-inspection failed: Error: OpenJDK 26.0.1 verification failed: expected `openjdk
-version "26.0.1…"` from JAVA_HOME=/…/temurin-26.0.2+10, observed `openjdk
-version "26.0.2" 2026-07-21` (see {{HARNESS_DIR}}/plugins/formal-model-check/README.md § Local
+inspection failed: Error: OpenJDK major 26 verification failed: expected
+`openjdk version "26.…"` from JAVA_HOME=/…/temurin-25.0.2+9, observed `openjdk
+version "25.0.2" 2025-10-21` (see {{HARNESS_DIR}}/plugins/formal-model-check/README.md § Local
 execution requirements)
 ```
 
 The same string is carried on the JSON line as `errorDetail`.
 
-**Fallback.** Without the repo pin (or outside the repository), force the
-toolchain explicitly:
+**Supplying a JDK without the repo pin.** Outside the repository (or with the
+pin inactive), name a major 26 build explicitly:
 
 ```
 mise x java@temurin-26.0.1+8 -- bun {{HARNESS_DIR}}/plugins/formal-model-check/tools/run-model-check.ts …
 ```
 
-Local execution also needs `sandbox-exec` (macOS built-in). CI uses the Docker
-provider instead and does not read `JAVA_HOME`.
+**Provider fallback.** `--provider auto` on macOS tries `sandbox-exec` first and
+falls back to the Docker provider when the host cannot supply the sandbox-exec
+environment — a missing or non-26 `JAVA_HOME`, or a sandbox probe that does not
+deny the network. The published `env-receipt.json` always describes the provider
+that actually ran. When neither provider is usable the run fails closed with
+`ENVIRONMENT_UNAVAILABLE` (exit 2) and the detail names both refusals. An
+explicit `--provider sandbox-exec` or `--provider docker` never falls back: it
+is a request for that one isolation mode and fails loudly instead.
+
+Local `sandbox-exec` execution needs the macOS built-in of the same name. CI
+uses the Docker provider and does not read `JAVA_HOME`.
 
 ## Working with models
 

@@ -1,5 +1,22 @@
 # コード構造
 
+## core/tools のファイル増減（260814-fmc-macos-provider、現在、observed `5f6b5bf97`）
+
+**観測 ref**: observed = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`、差分 base = `89532174c30ef9cc7ff29496cd6916586fdda00a`（9 commits）。
+
+`packages/framework/core/tools/` の構成は base..observed で次のとおり変化した。モジュール移動はない。
+
+| 変化 | パス | 由来 |
+|---|---|---|
+| 追加 | `packages/framework/core/tools/amadeus-lifecycle-guard.ts`（236 行） | `0fbbec42b` / #2986 |
+| 削除 | `packages/framework/core/tools/team-up.sh` | `8b6089275` / #2975 |
+| 削除 | `packages/framework/core/tools/team-up-codex-safety-wait.ts` | 同上 |
+| 削除 | `packages/framework/core/tools/team-msg.sh` | 同上 |
+
+削除に伴い e2e の 3 ファイルも消えた（`git diff --numstat 89532174c..HEAD -- tests/e2e`: `t-team-up-codex-safety-wait-live.serial.test.ts` −222 / `t-team-up-member-readiness.serial.test.ts` −204 / `t267-clean-env-team-mode.serial.cli.test.ts` −443、計 **−869**）。文書面は `docs/reference/26-lifecycle-guard-runtime.md`（+222）と `.ja.md`（+214）が新設され、`docs/guide/20-team-mode{,.ja}.md` と `docs/guide/team-messaging{,.ja}.md` は縮小した。8 harness への `coreDirs.tools` 投影という構造自体は不変で、投影元の集合が入れ替わっただけである。
+
+本 intent の患部（[Issue #2361](https://github.com/amadeus-dlc/amadeus/issues/2361) / ミラー [#2995](https://github.com/amadeus-dlc/amadeus/issues/2995)）はモジュール配置ではなく `plugins/formal-model-check/tools/` 内の既存関係にあり、当該領域は base..observed で**無変更**である（`git diff --name-only 89532174c..HEAD -- plugins/formal-model-check tests/unit/t-formal-verif-tlc-spawn-planner.test.ts mise.toml` が空出力）。`tlc-spawn-planner` の実体は tracked 2 ファイルのみ（正本 + unit test、`git ls-files | grep "tlc-spawn-planner"`）で、**dist 投影も複製もない**。
+
 ## Focus Area: テスト基盤の `dist/` 依存と env 伝播（260814-t528-ambient-isolation、現在、observed `5f6b5bf97`）
 
 対象: [Issue #2981](https://github.com/amadeus-dlc/amadeus/issues/2981)。測定 ref = observed `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`。本 intent の患部はモジュール配置の変化ではなく**テストハーネスが依存する外部前提の構造**にある。
@@ -58,7 +75,7 @@ tests/harness/fixtures.ts
 
 `createTestProject()`（`fixtures.ts:125-137`）は `TMPDIR` 配下に `amadeus-test-` prefix で `mkdtempSync` → `realpathSync` で正規化（macOS の `/tmp` → `/private/tmp` を吸収）→ `seedWorkspaceShell` で workspace shell を植える。`.claude/` や `dist` の memory ツリーはコピーせず、それは `setupIntegrationProject`（`:765`）の役割である。後片付けは `cleanupTestProject`（`:406-408`）→ `removeTreeWithRetry`（`:574`〜）で、事後条件（パスが消えたこと）により成功を判定する再試行付き削除。
 
-## Focus Area: team-up ランチャ廃止（260813-remove-team-up、履歴、observed `97581b3e3`）
+## Focus Area: team-up ランチャ廃止（260813-remove-team-up、履歴、observed `97581b3e3`。**この表が挙げる 4 パスは撤去前の断面**であり、observed `5f6b5bf97` にはいずれも存在しない）
 
 | ファイル | 分類 |
 |---|---|

@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-260814-CG-TDD-SUBSTITUTE",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 2,
+  "goa": 2,
+  "reservation": "FR-2 の厳密再実施が生む赤は、実施済みの describeFailure 除去注入が示した赤とほぼ同一であり、検出力の証拠はほとんど増えない。それでも再実施を課すのは、team.md が「実装後の落ちる実証は TDD 実施とみなさない」「エラーパスも適用対象」と名指しで定めており、これを受理すると「happy path の最小実装が必然的に含んだ」という理由付けが任意のエラーパスに転用可能な一般的抜け道になるため。再実施は composed error を最小形へ戻す1箇所の revert で足り、コストは小さい。",
+  "rationale": "FR-3(挙動不変の保存要件)と FR-7 の該当部(既存挙動の assert 強化)は team.md Testing Posture が列挙する適用外(2)振る舞い不変のリファクタリングに該当し、characterization test が正規の手当てとして明記されている。したがって厳密再実施は不要で、選択肢1(3面すべて再実施)は norm 自身の免除節に反する過剰適用。一方 FR-2 は新規のエラーパス挙動であり、4つの適用外のいずれにも該当しない。tlc-spawn-planner.ts:552-560 を実読した限り、FR-1 の最小実装として構造上強制されるのは snapshotEnvironment の両系統失敗時に何かを返すことだけで、真に最小なら `return fallback`(docker のエラーをそのまま伝播)で足りる。ENVIRONMENT_UNAVAILABLE への差し替えと describeFailure による両理由連結(:554-558)は FR-2 固有の増分であり、FR-1 スライスが必然的に含んだものではなく over-implementation。よって「FR-1 の帰結」という受理理由は事実に支えられていない。team.md は「変更が小さい・テストが難しいことも理由にしない」「迷えば TDD に倒す」と定めるため、FR-2 のみ revert→Red 実測→再実装を要求し、他2面は受理する選択肢3(internalNo 2)が norm 適合かつ最小コスト。",
+  "submittedAt": "2026-08-14T00:00:00Z",
+  "receivedAt": "2026-08-14T02:51:07Z"
+}
