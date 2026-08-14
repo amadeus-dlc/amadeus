@@ -116,6 +116,11 @@ function makeProject(): string {
     join(SRC_TOOLS, "amadeus-runtime.ts"),
     join(proj, ".claude", "tools", "amadeus-runtime.ts"),
   );
+  // amadeus-runtime.ts projects the Delivery Bolt authority through this module.
+  copyFileSync(
+    join(SRC_TOOLS, "amadeus-delivery-bolts.ts"),
+    join(proj, ".claude", "tools", "amadeus-delivery-bolts.ts"),
+  );
   copyFileSync(
     join(SRC_TOOLS, "amadeus-lib.ts"),
     join(proj, ".claude", "tools", "amadeus-lib.ts"),

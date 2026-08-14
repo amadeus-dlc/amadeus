@@ -32,13 +32,14 @@ import {
 import { handleReport } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import { armPresenceReservation } from "../../packages/framework/core/tools/amadeus-presence-reservation.ts";
 import { boltDagGenerationOf } from "../../packages/framework/core/tools/amadeus-lib.ts";
+import { projectDeliveryBoltPlan } from "../../packages/framework/core/tools/amadeus-delivery-bolts.ts";
 
 process.env.AMADEUS_STAGE_GRAPH ??= join(AMADEUS_SRC, "tools", "data", "stage-graph.json");
 process.env.AMADEUS_SKIP_ARTIFACT_GUARD ??= "1";
 process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD ??= "1";
 resetAidlcEnv();
 
-const CG_PRODUCES = ["code-generation-plan", "code-summary"];
+const CG_PRODUCES = ["code-generation-plan", "code-summary", "pr-convergence-report"];
 const SESSION_ID = "trusted-carrier-session";
 const ROUTE_ID = "12345678-1234-4abc-8def-1234567890ab";
 
@@ -133,10 +134,19 @@ function seedDag(proj: string, batches: string[][]): void {
       .map((unit) => `  - name: ${unit.name}\n    depends_on: [${unit.depends_on.join(", ")}]`)
       .join("\n")}\n\`\`\`\n`,
   );
+  const plan = `## Bolt delivery\n\n- **Units:** ${units.map((unit) => `\`${unit.name}\``).join(", ")}\n`;
+  const projected = projectDeliveryBoltPlan(plan);
+  if (!projected.ok) throw new Error(projected.message);
+  const planningDir = join(seededRecordDir(proj), "inception", "delivery-planning");
+  mkdirSync(planningDir, { recursive: true });
+  writeFileSync(join(planningDir, "bolt-plan.md"), plan);
   writeFileSync(
     join(seededRecordDir(proj), "runtime-graph.json"),
     JSON.stringify(
-      { bolt_dag: { units: batches.flat().map((name) => ({ name, depends_on: [] })), batches } },
+      {
+        bolt_dag: { units: batches.flat().map((name) => ({ name, depends_on: [] })), batches },
+        delivery_bolts: projected.projection,
+      },
       null,
       2,
     ),

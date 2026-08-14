@@ -12,6 +12,7 @@ import {
   runCli,
 } from "../../plugins/pr-convergence/tools/pr-convergence-cli.ts";
 import type { GitSpawn } from "../../plugins/pr-convergence/tools/pr-convergence-git-runner.ts";
+import { projectDeliveryBoltPlan } from "../../packages/framework/core/tools/amadeus-delivery-bolts.ts";
 
 const FIXTURES = join(import.meta.dir, "..", "fixtures", "pr-convergence");
 
@@ -38,6 +39,20 @@ interface Fixture {
   readonly bodyFile: string;
 }
 
+function seedDeliveryAuthority(record: string, unit: string): void {
+  const plan = `## Bolt delivery\n\n- **Units:** \`${unit}\`\n`;
+  const projected = projectDeliveryBoltPlan(plan);
+  if (!projected.ok) throw new Error(projected.message);
+  const planning = join(record, "inception", "delivery-planning");
+  mkdirSync(planning, { recursive: true });
+  writeFileSync(join(planning, "bolt-plan.md"), plan, "utf-8");
+  writeFileSync(
+    join(record, "runtime-graph.json"),
+    `${JSON.stringify({ delivery_bolts: projected.projection }, null, 2)}\n`,
+    "utf-8",
+  );
+}
+
 function makeFixture(): Fixture {
   const root = mkdtempSync(join(tmpdir(), "pr-convergence-epoch-"));
   roots.push(root);
@@ -52,6 +67,7 @@ function makeFixture(): Fixture {
     "utf-8",
   );
   writeFileSync(join(record, "amadeus-state.md"), "- **Scope**: self-fix\n", "utf-8");
+  seedDeliveryAuthority(record, "cli");
   writeFileSync(
     join(record, "audit", "human.jsonl"),
     `${JSON.stringify({
@@ -246,6 +262,7 @@ describe("#2931 — resuming a created epoch on the existing pull request", () =
 
   test("a report copied from another unit is refused without the resume path", async () => {
     const source = makeFixture();
+    seedDeliveryAuthority(source.record, "other-unit");
     const otherUnit = createArgs(source).map((token) => (token === "cli" ? "other-unit" : token));
     const created = await runCli(
       otherUnit,
