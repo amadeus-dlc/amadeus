@@ -135,18 +135,17 @@ describe("t222 CI snapshot publication boundary", () => {
     // The full blocking dependency set: dropping any entry must be as loud as
     // re-introducing a benchmark job.
     //
-    // `control-byte-gate` joined this set for Issue #2814. It runs with no
-    // `needs` and no `if` — a path filter would excuse exactly the changes it
-    // exists to catch — but "CI Success" is this repository's only required
-    // status check, so a job outside this set is advisory however loudly it
-    // fails. Independence governs WHEN the job runs; membership here governs
-    // whether a red run blocks the merge.
+    // `control-byte-gate` joined this set for Issue #2814 and
+    // `coverage-registry` for Issue #3049. "CI Success" is this repository's
+    // only required status check, so a job outside this set is advisory however
+    // loudly it fails. Membership here governs whether a red run blocks merge.
     const ciSuccessNeeds = jobs["ci-success"]?.needs;
     expect(Array.isArray(ciSuccessNeeds)).toBe(true);
     expect(new Set(ciSuccessNeeds as string[])).toEqual(
       new Set([
         "changes",
         "control-byte-gate",
+        "coverage-registry",
         "typecheck",
         "lint",
         "distribution-contract",
@@ -235,7 +234,7 @@ describe("t222 CI snapshot publication boundary", () => {
     const ciSuccessJob = yaml.split("  ci-success:")[1] ?? "";
 
     expect(ciSuccessJob).toContain(
-      "- changes\n      - control-byte-gate\n      - typecheck\n      - lint\n      - distribution-contract\n      - plugin-conformance-e2e\n      - tests\n      - reproducible-build\n      - drift-check\n      - coverage",
+      "- changes\n      - control-byte-gate\n      - coverage-registry\n      - typecheck\n      - lint\n      - distribution-contract\n      - plugin-conformance-e2e\n      - tests\n      - reproducible-build\n      - drift-check\n      - coverage",
     );
     expect(ciSuccessJob).toContain(`require_result "changes" "\${{ needs.changes.result }}"`);
     // Asserted unconditionally, ahead of the `changes`-driven case branches:
@@ -254,6 +253,9 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(ciSuccessJob).toContain("No CI-relevant changes; validation skipped");
     expect(ciSuccessJob).toContain(`require_result "typecheck" "\${{ needs.typecheck.result }}"`);
     expect(ciSuccessJob).toContain(`require_result "lint" "\${{ needs.lint.result }}"`);
+    expect(ciSuccessJob).toContain(
+      `require_result "coverage-registry" "\${{ needs['coverage-registry'].result }}"`,
+    );
     expect(ciSuccessJob).toContain(
       `require_result "distribution-contract" "\${{ needs.distribution-contract.result }}"`,
     );
