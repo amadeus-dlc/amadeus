@@ -81,8 +81,11 @@ describe("t2997 plugin.settings config key", () => {
 
   test("an unknown path under plugin stays an unknown-path error", () => {
     const issues = issuesOf([present("project", { plugin: { setings: {} } })]);
-    expect(issues.some((issue) => issue.actualType.includes("unknown key plugin.setings"))).toBe(
-      true,
-    );
+    expect(
+      issues.some(
+        (issue) =>
+          issue.kind === "invalid-value" && issue.actualType.includes("unknown key plugin.setings"),
+      ),
+    ).toBe(true);
   });
 });
