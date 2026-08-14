@@ -5,11 +5,11 @@
       "name": "BoltPrAttestationGate",
       "model": {
         "path": "amadeus/spaces/default/specs/tla/BoltPrAttestationGate.tla",
-        "identity": "622c00493eb69e0d0e178ac73ac7d54bff0c9d01d262861d74eb33105e7d780c"
+        "identity": "6585fdc943cf8a86facb2dbbd65470bcd94f4a5be9120bb4fa0b05640c2d34ed"
       },
       "cfg": {
         "path": "amadeus/spaces/default/specs/tla/BoltPrAttestationGate.cfg",
-        "identity": "6f98eddf1095ecbe0b1bb2ff6fbf217b7233bcf8db455113f0a075090f8b68fb"
+        "identity": "e040b0f0443f182274ef4c17afc261c059224e449ee7676677675ee275d0a1fd"
       },
       "entries": [
         {
