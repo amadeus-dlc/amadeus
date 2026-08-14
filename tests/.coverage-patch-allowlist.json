@@ -4873,6 +4873,17 @@
     "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
   },
   {
+    "file": "packages/framework/core/tools/amadeus-election-v2-cli.ts",
+    "selector": {
+      "function": "observedReportFacts",
+      "fingerprint": "sha256:00fdbdc2e0b6875651470942cddb242536c1d341cc69895cddaa8cc33956218c",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "establishedResultsDigest failure after a successful snapshot load requires a TOCTOU store fault between two reads inside one CLI invocation; the CLI imports the store directly with no injection seam. t555/t559 cover the ok arm and every decode/transition rejection. Measured uncovered by CI lcov (job 94755342932, DA:0 at the storeError arm).",
+    "expiry": "remove when the CLI gains a store injection seam or the patch gate excludes fail-closed store-fault arms"
+  },
+  {
     "file": "packages/framework/core/tools/amadeus-election-v2-store.ts",
     "selector": {
       "function": "consumePending",
