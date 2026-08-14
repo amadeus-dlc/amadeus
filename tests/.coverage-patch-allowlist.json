@@ -2027,9 +2027,9 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:e2e751e8b189779d59f4ba0ec42e6e6eeb0bdd48124566aeaee48e4406d26614",
-      "anchorLines": 43,
-      "targetLines": "1-43"
+      "fingerprint": "sha256:b571772e48a7993ca8f1be5ab2ee2e7c06dfb6e9f2dac7ec99a8cee859deac76",
+      "anchorLines": 58,
+      "targetLines": "1-58"
     },
     "reason": "The guarded unpark adapter is covered as shipped subprocess journeys by t259, including success, rejection, mutation, and idempotence; spawned CLI lines are not parent-LCOV resident.",
     "expiry": "remove when guarded unpark and process-exit boundaries are injectable in-process"
@@ -4385,7 +4385,7 @@
     "expiry": "remove when amadeus-state's process exit is injectable in-process or Bun attributes spawned CLI lines"
   },
   {
-    "file": "plugins/pr-convergence/tools/pr-convergence-cli.ts",
+    "file": "plugins/github-pr-convergence/tools/pr-convergence-cli.ts",
     "selector": {
       "function": "nodeDecisionEmitter",
       "fingerprint": "sha256:5b0c00d1583bfea20129eaf54aa6ed6f697f99f9e64c5951b318bc5b2d5d15ff",
@@ -4396,7 +4396,7 @@
     "expiry": "remove if a hermetic audit-tool fixture makes the real spawn drivable in CI"
   },
   {
-    "file": "plugins/pr-convergence/tools/pr-convergence-cli.ts",
+    "file": "plugins/github-pr-convergence/tools/pr-convergence-cli.ts",
     "selector": {
       "function": "selfReportLifecycle",
       "fingerprint": "sha256:d9b7a286e90243e67a17979cf5fe1c89a7cda24d5a1d3dded034b42f85945438",
@@ -4407,7 +4407,7 @@
     "expiry": "remove if the lifecycle is ever callable without the currentSelfContext head binding"
   },
   {
-    "file": "plugins/pr-convergence/tools/pr-convergence-cli.ts",
+    "file": "plugins/github-pr-convergence/tools/pr-convergence-cli.ts",
     "selector": {
       "function": "<module>",
       "fingerprint": "sha256:9e100e2a9f31f0af2377daff5cb4d350d3ede750b0458fe2734550cc3e2a51e8",
@@ -4418,7 +4418,7 @@
     "expiry": "remove when the patch gate can attribute spawned-process coverage"
   },
   {
-    "file": "plugins/pr-convergence/tools/pr-convergence-gh-runner.ts",
+    "file": "plugins/github-pr-convergence/tools/pr-convergence-gh-runner.ts",
     "selector": {
       "function": "nodeGhSpawn",
       "fingerprint": "sha256:bfa7b04cbe5fa73cc7477cd32e129fe6caa91eeb6314187adfc1cf5c77f155b1",
@@ -4429,7 +4429,7 @@
     "expiry": "remove if a hermetic gh stub binary makes the real spawn drivable in CI"
   },
   {
-    "file": "plugins/pr-convergence/tools/pr-convergence-ledger.ts",
+    "file": "plugins/github-pr-convergence/tools/pr-convergence-ledger.ts",
     "selector": {
       "function": "isBotAuthor",
       "fingerprint": "sha256:1e243b10516f555fae1eaf42523214579b01d2f0d12ae7fa576eda43dc4ce6a8",

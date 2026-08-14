@@ -5,7 +5,9 @@ import { basename, dirname, isAbsolute, join } from "node:path";
 import { appendLifecycleAuditEntryUnlocked, escapeAuditValue } from "./amadeus-audit.ts";
 import type { AwaitCompletionDirective } from "./amadeus-directive.ts";
 import {
+  isJournalEntryV2,
   JOURNAL_SCHEMA_VERSION,
+  parseJournalLine,
   serializeJournalEntry,
   splitJournalLines,
 } from "./amadeus-journal.ts";
@@ -39,6 +41,7 @@ import {
   humanPresenceGuardDisabled,
   isAutonomousMode,
   isoTimestamp,
+  outstandingHumanTurns,
   KNOWN_CODEKB_STAGES,
   loadScopeMapping,
   listIntents,
@@ -1567,23 +1570,38 @@ function handleSetSkeletonStance(args: string[]): void {
 // completed workflow (nothing to park). Emits WORKFLOW_PARKED - a recorded
 // state event, audit-first under the lock.
 //
-// AUTONOMY GUARD (issue #365, salvaged from the suspend branch): an unattended
-// autonomous Construction run must never park, so the tool refuses `park`
-// outright under `Construction Autonomy Mode: autonomous`. This is
-// defence-in-depth beside the Stop hook's identical guard: the hook protects
-// the unattended turn-end path, this tool refusal protects a direct/scripted
+// AUTONOMY GUARD (issue #365, salvaged from the suspend branch; reshaped by
+// #3016): what an autonomous Construction run must never do is park ITSELF -
+// an unattended run has no human to resume it and must keep moving. The guard
+// therefore refuses `park` under `Construction Autonomy Mode: autonomous` only
+// when the run really is unattended, and a real human turn is what proves it is
+// not: park is accepted when the active record's presence ledger still holds an
+// UNCONSUMED `HUMAN_TURN`, and the accepted park consumes it (WORKFLOW_PARKED
+// is a presence resolution), so one turn licenses exactly one park.
+//
+// The predicate is `outstandingHumanTurns`, which fails CLOSED on an absent
+// ledger; `humanActedSinceGate` is deliberately NOT used (it fails OPEN for the
+// active scope, which is the only scope park runs in, so an unattended run with
+// no ledger would park). The `AMADEUS_SKIP_HUMAN_PRESENCE_GUARD` off-switch is
+// not honoured here either: it would hand every scripted run the bypass this
+// guard exists to deny.
+//
+// This tool is the ONLY layer that enforces it - the Stop hook allows an
+// emitted `parked` directive in every mode (amadeus-stop.ts's `parked` branch),
+// so there is no hook-side twin. The refusal protects a direct/scripted
 // `amadeus-state.ts park` invocation in an autonomous run. (#365's suspend
-// mechanism had no first-class tool verb a swarm could call, so it could guard
-// hook-side only; park's `amadeus-state.ts park` is directly invocable, so the
-// tool refusal closes a path #365 did not have.)
+// mechanism had no first-class tool verb a swarm could call; park's
+// `amadeus-state.ts park` is directly invocable, so the tool refusal closes a
+// path #365 did not have.)
 function handlePark(_args: string[]): void {
   const pd = resolveProjectDir(projectDir);
   withAuditLock(pd, () => {
     let content = readStateFile(pd);
-    if (getField(content, "Construction Autonomy Mode")?.trim() === "autonomous") {
+    if (isAutonomousMode(content) && outstandingHumanTurns(pd).length === 0) {
       error(
-        "Refusing to park: Construction Autonomy Mode is autonomous. An unattended " +
-          "autonomous run has no human to resume it and must keep moving - do not park it.",
+        "Refusing to park: Construction Autonomy Mode is autonomous and no unconsumed " +
+          "HUMAN_TURN is on record. An unattended autonomous run has no human to resume " +
+          "it and must keep moving - do not park it. Park again from a human turn.",
       );
     }
     const status = getField(content, "Status");
@@ -1860,7 +1878,8 @@ export const ARTIFACT_ATTESTED_EVENT = "ARTIFACT_ATTESTED";
 export type BlockingSensorFinding =
   | { kind: "never-fired"; sensorId: string }
   | { kind: "unresolved"; sensorId: string; outputPath: string; terminal: string | null }
-  | { kind: "stale"; sensorId: string; outputPath: string };
+  | { kind: "stale"; sensorId: string; outputPath: string }
+  | { kind: "script-error"; sensorId: string; outputPath: string; note: string };
 
 type SensorAuditRow = {
   event: string;
@@ -1868,6 +1887,7 @@ type SensorAuditRow = {
   sensorId: string;
   outputPath: string;
   outputDigest: string | null;
+  note: string | null;
 };
 
 type TimedSensorRow = { ts: string; row: SensorAuditRow };
@@ -1902,7 +1922,11 @@ function sensorRowsForStage(
       const outputPath = auditBlockField(block, "Output path") ?? "";
       const outputDigest = auditBlockField(block, "Output digest");
       const fireId = auditBlockField(block, "Fire id") ?? "";
-      collected.push({ ts: timestamp, row: { event, fireId, sensorId, outputPath, outputDigest } });
+      const note = sensorAuditNote(block);
+      collected.push({
+        ts: timestamp,
+        row: { event, fireId, sensorId, outputPath, outputDigest, note },
+      });
     }
   }
   collected.sort(compareSensorRowTime);
@@ -1914,7 +1938,7 @@ function sensorRowsForStage(
 // Decide whether a stage's blocking sensors permit completion. Returns the first
 // finding that refuses, or null when every blocking sensor is settled clean.
 //
-// Two refusal shapes, both fail-closed:
+// Four refusal shapes, all fail-closed:
 //   never-fired — the sensor produced no SENSOR_FIRED for this stage at all.
 //     "It never ran" is not evidence that it would pass. A sensor whose
 //     `matches` glob excludes every artifact this stage wrote is NOT this case
@@ -1923,10 +1947,30 @@ function sensorRowsForStage(
 //     about — while a sensor that never applied to anything is refused.
 //   unresolved — some fired output's latest terminal is not SENSOR_PASSED
 //     (a FAILED, a budget override, or no terminal at all).
+//   stale — the current artifact bytes differ from the terminal receipt.
+//   script-error — SENSOR_PASSED carries a script-error diagnostic, or the
+//     Note field exists in a shape this reader cannot safely interpret.
 interface TerminalSensorVerdict {
   readonly event: string;
   readonly outputDigest: string | null;
   readonly receiptMatches: boolean;
+  readonly note: string | null;
+}
+
+const SENSOR_NOTE_UNREADABLE = "script-error: note-unreadable";
+
+function sensorAuditNote(block: string): string | null {
+  const record = parseJournalLine(block.trim());
+  if (isJournalEntryV2(record)) {
+    const note = record.attributes.Note;
+    if (note === undefined || note === null) return null;
+    return typeof note === "string" ? note.trim() : SENSOR_NOTE_UNREADABLE;
+  }
+  return auditBlockField(block, "Note");
+}
+
+function isScriptErrorNote(note: string | null): boolean {
+  return note?.startsWith("script-error:") === true;
 }
 
 export function evaluateBlockingSensors(
@@ -1964,18 +2008,29 @@ export function evaluateBlockingSensors(
         event: row.event,
         outputDigest: row.outputDigest,
         receiptMatches,
+        note: row.note,
       });
     }
     if (firedOutputs.length === 0) return { kind: "never-fired", sensorId };
     const latest = latestTerminal.get(latestOutputPath) ?? null;
     const latestDigest = currentDigest?.(latestOutputPath);
-    const latestOutputPassed = latest?.event === "SENSOR_PASSED" && latest.receiptMatches && (
-      currentDigest === undefined || (
-        latest.outputDigest !== null && latestDigest === latest.outputDigest
-      )
-    );
+    const latestOutputPassed = latest?.event === "SENSOR_PASSED"
+      && latest.receiptMatches
+      && !isScriptErrorNote(latest.note)
+      && (currentDigest === undefined || (
+          latest.outputDigest !== null && latestDigest === latest.outputDigest
+        )
+      );
     for (const outputPath of firedOutputs) {
       const terminal = latestTerminal.get(outputPath) ?? null;
+      if (isScriptErrorNote(terminal?.note ?? null)) {
+        return {
+          kind: "script-error",
+          sensorId,
+          outputPath,
+          note: terminal?.note ?? SENSOR_NOTE_UNREADABLE,
+        };
+      }
       if (terminal?.event !== "SENSOR_PASSED" || !terminal.receiptMatches) {
         return { kind: "unresolved", sensorId, outputPath, terminal: terminal?.event ?? null };
       }
@@ -2017,9 +2072,10 @@ function blockingSensorIdsForStage(slug: string): string[] {
 // removed, while WHICH sensors it judges comes from the project's own sensor
 // manifests through the compiled graph's sensors_applicable rows. A project that
 // registers no blocking sensor is resolved not-applicable and sees no change.
-// The sensor's own PASSED/FAILED truth table (amadeus-sensor.ts) is the policy
-// content of an individual guard and is left exactly as it was — the Runtime's
-// fail-closed rule governs aggregation, not what a sensor decides.
+// The sensor's own PASSED/FAILED truth table (amadeus-sensor.ts) is left
+// unchanged. This guard additionally consumes a SENSOR_PASSED Note that
+// starts with `script-error:` as not-pass, so a crashed blocking sensor
+// cannot complete a stage.
 function evaluateBlockingSensorGuard(
   context: StageCompletionGuardContext,
 ): LifecycleGuardVerdict {
@@ -2058,6 +2114,14 @@ function evaluateBlockingSensorGuard(
         `Refusing to complete "${stage.slug}": the blocking sensor "${finding.sensorId}" ` +
         `passed different bytes at ${finding.outputPath}.`,
       recovery: "Re-fire it against the current artifact.",
+    });
+  }
+  if (finding.kind === "script-error") {
+    return guardDenied({
+      reason:
+        `Refusing to complete "${stage.slug}": the blocking sensor "${finding.sensorId}" ` +
+        `has a script-error verdict (${finding.note}) on ${finding.outputPath}.`,
+      recovery: BLOCKING_SENSOR_REMEDY,
     });
   }
   const terminal = finding.terminal ?? "no terminal row";

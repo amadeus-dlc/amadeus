@@ -66,6 +66,17 @@ jump は phase-transition のみを評価し stage-completion を評価しない
 | `stageFailureDirective` ★ | `amadeus-orchestrate.ts:5779`（export） | 上記結果を directive へ射影する出口 | `:5816` |
 | `commitProductionStageGateDecision` | `amadeus-intent-autonomy-production.ts:794`（export） | `{ readonly kind: "not-authorized"; readonly reason: string } \| ...` | stage gate 梯子 |
 
+> **引用の訂正（2026-08-14、intent `260814-failopen-error-paths`、observed `cd64486a68c6a1144db50fbe3fde8273f5e18455`）**: 上表と下の off-switch 表が引く `verifyBlockingSensors`（`amadeus-state.ts:1835`）は observed `89532174c` 断面の記録であり、**現行断面に当該シンボルの定義も呼出も存在しない**（#2986 の Lifecycle Guard Runtime 移行で置換。`git grep -n "verifyBlockingSensors" -- packages/` は exit 0 / **1 hit** だが、それは `amadeus-sensor-schema.ts:21` の**散文コメント内の stale な言及**であり定義・呼出ではない — この 1 件は未是正で残っている）。現行の対応面（`git grep -n` 実測、observed `cd64486a6`）:
+>
+> | 旧引用 | 現行 |
+> |---|---|
+> | `verifyBlockingSensors` `amadeus-state.ts:1835`（export） | Guard adapter `evaluateBlockingSensorGuard`（`:2023-2068`、非 export。registry へは `:347` `evaluate: evaluateBlockingSensorGuard,` で結線）。返り値は `void` ではなく `LifecycleGuardVerdict` |
+> | `evaluateBlockingSensors` `amadeus-state.ts:1752`（export） | `evaluateBlockingSensors`（`:1932-1995`、export のまま）。`BlockingSensorFinding` = `"never-fired" \| "unresolved" \| "stale"`（`:1860-1863`） |
+> | `blockingSensorGuardDisabled()` `amadeus-state.ts:1817` | `:1997-1999`。`blockingSensorIdsForStage` は `:2004-2013`。off-switch 名 `AMADEUS_SKIP_BLOCKING_SENSOR_GUARD` と cutoff `BLOCKING_SENSOR_CUTOFF_YYMMDD = 260809`（`:846`）は不変 |
+> | fail-closed 宣言文字列 | `A blocking sensor that never ran is not a pass.` は **`:2052`**（packages/ 内で単一 hit） |
+>
+> 履歴節の本文は当時の記録として保存し、行番号のみをこの注記で現行断面へ対応づける。
+
 ★ **`admitProductionStageFailure` / `stageFailureDirective` は base 以後の新規契約**（`16d94927d` / #2945）。full autonomy の型付き stage failure を Quality Repair / REPAIR_STALLED へ接続する。移行対象に加算される。
 
 ### 判定語彙は 5 系統に分裂している（呼出側契約の非一様性）

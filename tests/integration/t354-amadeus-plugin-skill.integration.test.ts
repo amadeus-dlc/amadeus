@@ -19,6 +19,7 @@ const read = (path: string): string => readFileSync(join(ROOT, path), "utf-8");
 const SKILL_REL = "packages/framework/core/skills/amadeus-plugin/SKILL.md";
 const skill = read(SKILL_REL);
 const cli = read("packages/framework/core/tools/amadeus-plugin.ts");
+const pluginRuntime = read("packages/framework/core/tools/amadeus-plugin-runtime.ts");
 
 // The frontmatter fence, block-scoped the same way the skills-spec guard does.
 function frontmatter(body: string): string {
@@ -70,8 +71,10 @@ describe("t354 skill contract against the live plugin CLI", () => {
   test("the skill gates mutation and never derives a command from prose", () => {
     expect(skill).toContain("Never derive a command from output prose");
     expect(skill).toContain("no automatic execution");
-    // The staging root it names is the CLI's own constant, not a guess.
-    const staging = cli.match(
+    // The staging root it names is the CLI's own constant, not a guess. The CLI
+    // re-exports it from the runtime leaf that defines it (#2997), so the
+    // definition site is where the literal is read from.
+    const staging = pluginRuntime.match(
       /PLUGIN_SOURCE_DIR_NAME = "(?<dir>[^"]+)"/u,
     )?.groups?.dir as string;
     expect(staging).toBeTruthy();

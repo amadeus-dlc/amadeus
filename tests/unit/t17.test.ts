@@ -1219,19 +1219,75 @@ describe("t17 park/unpark", () => {
     expect(countEvent(readAudit(proj), "WORKFLOW_UNPARKED")).toBe(0);
   });
 
-  test("park REFUSES under Construction Autonomy Mode=autonomous", () => {
-    // `set` only replaces an existing bullet (no insert), and the fixture has no
-    // autonomy line, so inject the field directly under ## Runtime State.
+  // `set` only replaces an existing bullet (no insert), and the fixture has no
+  // autonomy line, so inject the field directly under ## Runtime State.
+  function declareAutonomous(): void {
     const path = stateMd(proj);
     const injected = readFileSync(path, "utf-8").replace(
       "## Runtime State",
       "## Runtime State\n- **Construction Autonomy Mode**: autonomous",
     );
     writeFileSync(path, injected, "utf-8");
+  }
+
+  // Append a HUMAN_TURN block to the record's audit shard — the same shard the
+  // spawned tool appends to, so the park it emits is ordered AFTER this turn.
+  // The UserPromptSubmit hook is the only production writer of HUMAN_TURN; a
+  // unit fixture writes the row directly because the presence predicates read
+  // the on-disk ledger, not the writer.
+  function seedHumanTurn(timestamp: string): void {
+    appendFileSync(
+      auditMd(proj),
+      `${JSON.stringify({
+        schemaVersion: 1,
+        // The sample shard ends at seq 3; the journal health probe rejects a
+        // sequence regression, so this row continues the run rather than
+        // jumping ahead of the seq the tool's own append will claim.
+        seq: 4,
+        cloneId: "fixturecloneid01",
+        intentId: "fixture-0f14ce29",
+        timestamp,
+        heading: "Human Turn",
+        event: "HUMAN_TURN",
+        fields: {},
+      })}\n`,
+      "utf-8",
+    );
+  }
+
+  // #3016 — an autonomous run is no longer refused outright. The refusal is
+  // fail-closed on human presence: with no unconsumed HUMAN_TURN in the active
+  // record's ledger, the run is unattended and park stays refused.
+  test("park REFUSES under autonomous mode with no unconsumed HUMAN_TURN", () => {
+    declareAutonomous();
     const r = runState(proj, ["park"]);
     expect(r.rc).not.toBe(0);
     expect(r.combined).toContain("autonomous");
     // State untouched: no Parked marker written.
+    expect(readState(proj)).not.toContain("- **Parked**:");
+  });
+
+  test("park is ACCEPTED under autonomous mode with an unconsumed HUMAN_TURN", () => {
+    declareAutonomous();
+    seedHumanTurn("2026-08-14T09:00:00Z");
+    const r = runState(proj, ["park"]);
+    expect(r.rc).toBe(0);
+    const s = readState(proj);
+    expect(s).toContain("- **Parked**:");
+    expect(s).toContain("- **Parked At Stage**: feasibility");
+    expect(countEvent(readAudit(proj), "WORKFLOW_PARKED")).toBe(1);
+  });
+
+  // FR-3 consume-once: the accepted park is itself the resolution that spends
+  // the turn, so the SAME turn cannot park a second time.
+  test("an accepted park consumes the turn - a second park is refused", () => {
+    declareAutonomous();
+    seedHumanTurn("2026-08-14T09:00:00Z");
+    expect(runState(proj, ["park"]).rc).toBe(0);
+    expect(runState(proj, ["unpark"]).rc).toBe(0);
+    const second = runState(proj, ["park"]);
+    expect(second.rc).not.toBe(0);
+    expect(second.combined).toContain("autonomous");
     expect(readState(proj)).not.toContain("- **Parked**:");
   });
 });

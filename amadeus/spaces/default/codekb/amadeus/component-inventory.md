@@ -69,6 +69,8 @@
 | `verifyBlockingSensors`（G7） | `amadeus-state.ts:1835` | blocking sensor verdict の消費（fail-closed） | built-in + off-switch + policy |
 | `evaluateBlockingSensors` / `blockingSensorIdsForStage`（G8） | `amadeus-state.ts:1752` / `:1824` | `sensors_applicable` からの宣言駆動な適用解決。純関数 | built-in |
 | sensor verdict 真理値表（G9） | `amadeus-sensor.ts:19-31` | 実行結果 → verdict。**異常は PASSED（fail-open）** | built-in |
+
+> **引用の訂正（2026-08-14、intent `260814-failopen-error-paths`、observed `cd64486a68c6a1144db50fbe3fde8273f5e18455`）**: G7 行の `verifyBlockingSensors` / `amadeus-state.ts:1835` と G8 行の `:1752` / `:1824` は observed `89532174c` 断面の記録。**現行断面に `verifyBlockingSensors` の定義も呼出も存在しない**（#2986 の Guard Runtime 移行で置換。`git grep -n "verifyBlockingSensors" -- packages/` は exit 0 / **1 hit** だが、それは `amadeus-sensor-schema.ts:21` の散文コメント内の stale な言及であり定義・呼出ではない）。現行の対応面は Guard adapter `evaluateBlockingSensorGuard`（`amadeus-state.ts:2023-2068`、registry 結線 `:347`）/ decision core `evaluateBlockingSensors`（`:1932-1995`）/ `blockingSensorIdsForStage`（`:2004-2013`）/ off-switch `blockingSensorGuardDisabled`（`:1997-1999`）、fail-closed 宣言文字列は `:2052`。**G9（真理値表の fail-open）は observed `cd64486a6` でも未解消**であり、その全数マップは `code-quality-assessment.md` の 260814-failopen-error-paths 節（Q-1）が正本。履歴節の本文は当時の記録として保存する。
 | unit レビュー未了拒否（G10） | `amadeus-state.ts`（`"Refusing to complete ... unit(s) produced"`） | code-producing stage の unit ゲート | built-in |
 
 ### C3. Phase 境界

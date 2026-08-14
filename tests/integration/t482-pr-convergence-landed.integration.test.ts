@@ -1,5 +1,5 @@
-// covers: file:plugins/pr-convergence/tools/pr-convergence-cli.ts,
-//         file:plugins/pr-convergence/tools/pr-convergence-gh-runner.ts
+// covers: file:plugins/github-pr-convergence/tools/pr-convergence-cli.ts,
+//         file:plugins/github-pr-convergence/tools/pr-convergence-gh-runner.ts
 // size: medium
 //
 // Bolt landed-report (#2401): a merged pull request (state MERGED) is a fact
@@ -28,11 +28,11 @@ import {
   type GhSpawnResult,
   parsePrRef,
   PR_STATE_QUERY,
-} from "../../plugins/pr-convergence/tools/pr-convergence-gh-runner.ts";
+} from "../../plugins/github-pr-convergence/tools/pr-convergence-gh-runner.ts";
 import {
   reportPathFor,
   runCli,
-} from "../../plugins/pr-convergence/tools/pr-convergence-cli.ts";
+} from "../../plugins/github-pr-convergence/tools/pr-convergence-cli.ts";
 
 const ok = (stdout = ""): GhSpawnResult => ({ code: 0, stdout, stderr: "" });
 

@@ -1,6 +1,48 @@
 # アーキテクチャ
 
-## 停止境界のアーキテクチャ: park ガードと `error` directive の受け方（260814-autonomy-stop-fixes、現在、observed `cd64486a6`）
+## park の provenance 境界: 拒否点・受理材料・承認境界の切り分け（260814-park-provenance、現在、observed `1d08374cd`）
+
+**観測 ref**: observed = `1d08374cd7e4ef89637b4a8000bab3fcf1a0f780`（`origin/main`、PR #3037 着地）。差分 base = `cd64486a68c6a1144db50fbe3fde8273f5e18455`（observed の祖先で距離 **6**）。本 worktree HEAD は observed を merge した conductor tree で、非 `amadeus/` ツリーは observed とバイト等価（`git diff --stat 1d08374cd HEAD -- ':!amadeus/'` 空 / exit 0）。検索述語と全数列挙は `re-scans/260814-park-provenance.md` を正本とし、本節は構造だけを転記する。
+
+### B-1. 患部の構造は base から不変、隣接面だけが動いた
+
+`amadeus-state.ts` / `amadeus-stop.ts` / `amadeus-bolt.ts` / `amadeus-intent-autonomy-production.ts` / `t17` / `t122` は base..observed で無変更。動いたのは `amadeus-orchestrate.ts`（#3011、+57/-8）と規範面（#3037）。したがって直前節（下の 260814-autonomy-stop-fixes 節）の **state / hook 側の構造記述はそのまま有効**で、orchestrate 側の行ピンだけが drift している（対応表は re-scan §3）。
+
+### B-2. 「停止」語彙は3機構に分裂し、`Parked` マーカーを書くのは1経路だけ
+
+- `Parked` / `Parked At Stage` を書くのは `amadeus-state.ts:1579` `handlePark` **のみ**（engine の `amadeus-orchestrate.ts:6597` は `spawnState(pd, ["park"])` への委譲）。
+- `parkedDirective` は `amadeus-orchestrate.ts` に全数 **7 hit**（定義 `:1100` + park verb 自身の成功発行 `:6618` + 他 5 経路 `:3108` `:3279` `:4076` `:5995` `:6591`）。他 5 経路は `handlePark` を通らず autonomy を問わず発行され、`Parked` マーカーも `WORKFLOW_PARKED` も残さない。
+- Intent autonomy の suspended projection（`REPAIR_STALLED` / `NORM_CONFLICT`）はさらに別機構。
+
+→ 「autonomous な run は park できない」という不変量は observed では**成立していない**。禁じられているのは `Parked` マーカーを伴う明示 park verb だけである。
+
+### B-3. hook の案内と tool の拒否が同一断面で矛盾する
+
+`amadeus-stop.ts:806` `continuationReason()` は `:823` で `amadeus-orchestrate.ts park` を「クリーンな一時停止」として案内し、呼出は `:1047` の唯一のブロック経路のみ（autonomy 条件なし）。その park を `amadeus-state.ts:1583-1587` が拒否する。加えて `amadeus-state.ts:1573` の「Stop hook の同一ガード」というコメントは反証済み（hooks に `Construction Autonomy Mode` 0 hit / exit 1、`amadeus-stop.ts:947` は `parked` を全モード allow）。
+
+### B-4. PR #3037 は #3016 の劣化を「固定」した
+
+`stage-protocol.md:1041` §11b（`:1047` 逐語 `Print \`directive.message\` verbatim and STOP. … do not invent a new question or a new gate`）が 8 ハーネス表層へ同期済み（全域 9 hit = core 1 + harness 8）。park 拒否は `kind:error`（`amadeus-orchestrate.ts:6604`）で返るため、conductor は**回避策の自動適用を禁じられ**、逐語出力して停止するほかない。
+
+§11c（`:1057`、正本 `docs/reference/24-intent-autonomy.md:122`）の承認境界は `a push, opening a PR, replying to or resolving a review thread, and filing an Issue` を対象とする remote write 限定であり、ローカル state 書込である park には**直接適用されない**。ただし「grant が認可できない 5 分類」（`24-intent-autonomy.md:137`）は park 設計にも及ぶ — park の受理根拠を grant に置いてはならない。
+
+### B-5. 受理材料は既存だが、fail-open / fail-closed で層が割れている
+
+| 部品 | 位置 | 空 ledger | consume-once |
+| --- | --- | --- | --- |
+| `humanActedSinceGate` | `amadeus-lib.ts:3858` | **fail OPEN**（active scope） | 暗黙 |
+| `outstandingHumanTurns` | `amadeus-lib.ts:3904` | fail CLOSED | 未消費のみ列挙 |
+| `selectLifecycleHumanTurn` | `amadeus-lib.ts:2954` | fail CLOSED（throw） | **有**（`Human Turn Timestamp` を消費印に使う） |
+| `humanTurnGroundsTakeover` | `amadeus-state.ts:5067` | fail CLOSED | 位置比較 |
+| `latestHumanTurnAfter` | `amadeus-goal.ts:100` | `null` | 呼出側が audit へ刻む |
+
+`handlePark` は active record 専用（`--intent` / `--space` を取らない）ため、`humanActedSinceGate` を使うと必ず fail-open 側に落ちる。**受理述語の選択がそのまま完了条件1（unattended は依然拒否）の成否を決める。**
+
+### B-6. `Construction Autonomy Mode` は依然として認可の正本ではない
+
+`stage-protocol.md:126` / `packages/framework/core/memory/org.md:44` の規範は変わらず、書込点は `amadeus-intent-autonomy-production.ts:713` の派生投影。かつ `amadeus-lib.ts:5167` の `isAutonomousMode` は「既存 open-coded サイトの寄せは tracked follow-up」と明記しており（`:5160-5164`）、`amadeus-state.ts:1583` はその未寄せサイトの1つ（全域 `=== "autonomous"` は 6 hit）。
+
+## 停止境界のアーキテクチャ: park ガードと `error` directive の受け方（260814-autonomy-stop-fixes、履歴、observed `cd64486a6` — 260814-park-provenance 時点でも state / hook 側の構造は有効、orchestrate 側の行ピンのみ drift）
 
 **観測 ref**: observed = `cd64486a68c6a1144db50fbe3fde8273f5e18455`（`git rev-parse HEAD` = `git rev-parse origin/main`）。差分 base = `d7ffaa5442266508d8e67babc3e0b947fb4c1637`（HEAD の祖先で距離 **4**）。焦点領域は base..observed で**全面無変更**。検索述語と全数列挙は `re-scans/260814-autonomy-stop-fixes.md` を正本とし、本節は構造だけを転記する。
 
@@ -134,7 +176,7 @@ Docker 側も対称で、可用性は `DockerTlcSpawnPlanner.snapshotEnvironment
 
 構造上の帰結は 2 点である。(1) **フォールバックを差し込める自然な合流点は「選択時」ではなく `snapshotEnvironment` 失敗の直後**であり、選択時に倒すなら `selectTlcSpawnPlanner` の async 化(= referee 経路 `tla-referee-toolchain.ts:224` への signature 波及)が要る。(2) `provider === "auto"` の分岐は repo 全体で **2 箇所のみ**（`:526` の選択と `:68` の `createNotRunPlannerReceipt` 内 receipt plan 選択）で、**片方だけ変えると receipt が実際に走った planner と異なる inspection plan を名乗る**。env-receipt スキーマ（`amadeus.env-receipt.v1`、`run-model-check-domain.ts:93-98`）自体は provider 中立なので、フォールバックのための schema 変更は不要である。
 
-## projectDir 解決の段構造と in-process 呼出における ambient 逸出（260814-t528-ambient-isolation、現在、observed `5f6b5bf97`）
+## projectDir 解決の段構造と in-process 呼出における ambient 逸出（260814-t528-ambient-isolation、履歴、observed `5f6b5bf97`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`）。observed `1d08374cd` では PR #3011 が `amadeus-orchestrate.ts:3046` `refuseAmbientProjectDir` を導入し `:3060`（`handleNext` 経由）/ `:6037`（`handleReport`）/ `:6536`（`handleFailureRuling`）の **3 箇所**へ配線済み（述語 `git grep -n "refuseAmbientProjectDir" -- packages/framework/core/tools/amadeus-orchestrate.ts` → 4 hit = 定義 1 + 呼出 3、exit 0）。本節が列挙する他の面が #3011 で閉じたか否かは本 intent では未検証であり、本節の file:line はその節が宣言する observed `5f6b5bf97` 時点の値として保存する）
 
 対象: [Issue #2981](https://github.com/amadeus-dlc/amadeus/issues/2981)。測定 ref = observed `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`。file:line はすべて observed 断面で verbatim 実読して採取した。
 

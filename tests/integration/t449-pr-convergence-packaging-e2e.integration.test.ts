@@ -1,4 +1,4 @@
-// covers: file:plugins/pr-convergence/plugin.json, file:plugins/pr-convergence/stages/pr-convergence.md,
+// covers: file:plugins/github-pr-convergence/plugin.json, file:plugins/github-pr-convergence/stages/pr-convergence.md,
 //         file:packages/framework/core/tools/amadeus-plugin-compose.ts, subcommand:amadeus-orchestrate:next
 // size: medium
 //
@@ -91,8 +91,9 @@ function deliveryRefusal(
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const CORE_ROOT = join(REPO_ROOT, "packages", "framework", "core");
-const PLUGIN_SRC = join(REPO_ROOT, "plugins", "pr-convergence");
-const PLUGIN = "pr-convergence";
+const PLUGIN_SRC = join(REPO_ROOT, "plugins", "github-pr-convergence");
+const PLUGIN = "github-pr-convergence";
+const STAGE_SLUG = "pr-convergence";
 const SEAM_ENTRY = "pr-convergence-report";
 const STAGE_REL = "amadeus-common/stages/construction/code-generation.md";
 const STOCK_PRODUCES = ["code-generation-plan", "code-summary"];
@@ -331,7 +332,7 @@ describe("t449 the real bundle is installable (FR-1a, NFR-4 precondition)", () =
     const parsed = parseStageFrontmatter(readFileSync(join(PLUGIN_SRC, "stages", "pr-convergence.md")));
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
-    expect(parsed.value.slug).toBe(PLUGIN);
+    expect(parsed.value.slug).toBe(STAGE_SLUG);
     expect(parsed.value.seams.sensors).toEqual(["pr-convergence-report-format"]);
     expect(existsSync(join(PLUGIN_SRC, "tools", "amadeus-sensor-pr-convergence-report-format.ts"))).toBe(true);
   });
@@ -343,7 +344,7 @@ describe("t449 the real bundle is installable (FR-1a, NFR-4 precondition)", () =
     const bindings = config.plugin?.["scope-bindings"];
     const selfScopes = ["self-document", "self-feature", "self-fix", "self-refactor"];
 
-    expect(bindings?.[PLUGIN]?.[PLUGIN]).toEqual(selfScopes);
+    expect(bindings?.[PLUGIN]?.[STAGE_SLUG]).toEqual(selfScopes);
     expect(bindings?.["formal-model-check"]?.["formal-model-check"]).toEqual(selfScopes);
   });
 });
@@ -368,7 +369,7 @@ describe("t449 install overlays the guard's produces (FR-2a/2b, ADR-5)", () => {
 
   test("installed: the plugin sensor is owned and bound to both delivery stages", () => {
     expect(handlePluginCli(["compose", "--project-root", host], deps())).toBe(0);
-    const stage = compileFromHost().stages.find((s) => s.slug === PLUGIN);
+    const stage = compileFromHost().stages.find((s) => s.slug === STAGE_SLUG);
     expect(stage).toBeDefined();
     expect(stage?.scopes ?? []).toEqual([]);
     expect(stage?.sensors_applicable?.map((s) => [s.id, s.severity])).toContainEqual([
@@ -547,7 +548,7 @@ describe("t449 uninstall is byte-identical and total (FR-1b)", () => {
     expect(readFileSync(join(host, STAGE_REL)).equals(before)).toBe(true);
     expect(producesOfCodeGeneration()).toEqual(STOCK_PRODUCES);
     expect(existsSync(join(host, "sensors", "amadeus-pr-convergence-report-format.md"))).toBe(false);
-    expect(compileFromHost().stages.some((s) => s.slug === PLUGIN)).toBe(false);
+    expect(compileFromHost().stages.some((s) => s.slug === STAGE_SLUG)).toBe(false);
   });
 
   test("after a drop the guard is back to the stock pair", () => {

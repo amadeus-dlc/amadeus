@@ -44,11 +44,13 @@ import {
 	type SensorFile,
 	templateEligibleArtifacts,
 } from "./amadeus-graph.ts";
+import { type AmadeusConfigOutcome, resolveAmadeusConfig } from "./amadeus-config.ts";
 import {
 	codekbDir,
 	errorMessage,
 	isoTimestamp,
 	isPlainObject,
+	harnessDir,
 	KNOWN_CODEKB_STAGES,
 	parseBoltDag,
 	recordDir,
@@ -58,6 +60,18 @@ import {
 	withAuditLock,
 } from "./amadeus-lib.ts";
 import { attachProcessTraceContext, initProcessObservability } from "./amadeus-observability.ts";
+import {
+	defaultPluginRuntimeFs,
+	pluginOwningSensor,
+	type PluginRuntimeFs,
+	readStagedPluginManifest,
+} from "./amadeus-plugin-runtime.ts";
+import {
+	parseSettingsDeclaration,
+	type PluginSettingsOverrides,
+	resolvePluginSettings,
+	type SettingsResolution,
+} from "./amadeus-plugin-settings.ts";
 import { readRecordDepth } from "./amadeus-sensor-depth-budget.ts";
 
 // --- Constants ---
@@ -253,6 +267,112 @@ export function resolveScriptPath(command: string): string {
 		return pathResolve(harnessRoot, "..", tsToken);
 	}
 	return join(__FILE_DIR, scriptBasename);
+}
+
+// --- Plugin settings (#2997 C4) ---
+//
+// A plugin cannot import core (ADR-6), so the dispatcher resolves its settings
+// and hands them over the process boundary. Ownership comes from the composition
+// record; the DECLARATION comes from the plugin's staged manifest, the only
+// surface that still carries manifest fields after compose.
+//
+// Returns null when there is nothing to hand over — no owning plugin, or an
+// owning plugin that declares no settings. That is an absence, not a fallback:
+// a plugin with no declaration has no settings to be wrong about, and its spawn
+// argv is byte-identical to what it was before this feature existed.
+// Both seams are injected rather than called eagerly so a sensor whose plugin
+// declares nothing never pays for — nor fails on — a configuration read it has
+// no use for.
+export type SensorSettingsDeps = {
+	fs?: PluginRuntimeFs;
+	readOverrides?: (projectDir: string) => PluginSettingsOverrides;
+};
+
+export function resolvePluginSettingsForSensor(
+	sensorId: string,
+	hostRoot: string,
+	projectDir: string,
+	deps: SensorSettingsDeps = {},
+): SettingsResolution | null {
+	const fs = deps.fs ?? defaultPluginRuntimeFs;
+	const plugin = pluginOwningSensor(hostRoot, sensorId, fs);
+	if (plugin === null) return null;
+	const read = readStagedPluginManifest(hostRoot, plugin, fs);
+	if (read.kind === "absent") return null;
+	if (read.kind === "unreadable") {
+		dispatchError(`plugin "${plugin}" manifest is unreadable: ${read.detail}`);
+	}
+	const errors: string[] = [];
+	const declaration = parseSettingsDeclaration(read.raw.settings, errors);
+	if (errors.length > 0) {
+		dispatchError(
+			`plugin "${plugin}" settings declaration is invalid: ${errors.sort().join("; ")}`,
+		);
+	}
+	if (declaration === undefined) return null;
+	const readOverrides = deps.readOverrides ?? pluginSettingsOverrides;
+	return resolvePluginSettings(plugin, declaration, readOverrides(projectDir)[plugin] ?? {});
+}
+
+// The plugin.settings overrides from the layered configuration. An invalid
+// configuration is already fatal everywhere else it is read; a sensor that
+// silently fired on defaults instead would hide the very misconfiguration the
+// resolution is meant to catch.
+//
+// The resolver is a parameter so both arms are drivable in-process: the real
+// one reads the workspace, a test passes a resolved or invalid outcome directly.
+export function pluginSettingsOverrides(
+	projectDir: string,
+	resolveConfig: (dir: string) => AmadeusConfigOutcome = resolveAmadeusConfig,
+): PluginSettingsOverrides {
+	const outcome = resolveConfig(projectDir);
+	if (outcome.kind === "invalid") {
+		const detail = outcome.issues
+			.map((issue) => `${issue.key} in ${issue.path} (expected ${issue.expected})`)
+			.join("; ");
+		dispatchError(`configuration is invalid: ${detail}`);
+	}
+	return outcome.config.plugin.settings;
+}
+
+// A resolution failure aborts the sensor as a FINDING rather than a crash: the
+// SENSOR_FIRED row already exists, so the run must close with a terminal row,
+// and the operator needs the offending key named in the detail file.
+export function settingsFailureOutcome(
+	ctx: FireContext,
+	resolved: SettingsResolution | null,
+): FireOutcome | null {
+	if (resolved === null || resolved.ok) return null;
+	const { code, plugin, key, detail } = resolved.error;
+	return {
+		kind: "failed",
+		durationMs: 0,
+		findingsCount: 1,
+		detailBody: buildDetailBody({
+			sensorId: ctx.sensor.id,
+			stageSlug: ctx.stageSlug,
+			outputPath: ctx.outputPath,
+			fireId: ctx.fireId,
+			timestamp: isoTimestamp(),
+			sensorJson: {
+				pass: false,
+				findings_count: 1,
+				findings: [
+					{
+						code: `plugin-settings:${code}`,
+						message: `plugin "${plugin}" setting "${key}": ${detail}`,
+					},
+				],
+			},
+		}),
+	};
+}
+
+// The argv tail a resolved set contributes: one flag, one JSON value, so the
+// per-sensor script parses settings with the same flag reader it already uses.
+export function pluginSettingsArgs(resolved: SettingsResolution | null): string[] {
+	if (resolved === null || !resolved.ok) return [];
+	return ["--settings-json", JSON.stringify(resolved.settings)];
 }
 
 // --- Fire id ---
@@ -520,6 +640,15 @@ export async function handleFire(args: string[], projectDirArg?: string): Promis
 	}
 	scriptArgs.push(...depthBudgetArgs(id, outputPath, projectDir));
 	scriptArgs.push(...unitKindArgs(id, outputPath, projectDir));
+	// Plugin settings (#2997). Absent for a core sensor and for any plugin that
+	// declares none; a resolution failure becomes the terminal outcome below
+	// instead of a spawn.
+	const settings = resolvePluginSettingsForSensor(
+		id,
+		join(projectDir, harnessDir()),
+		projectDir,
+	);
+	scriptArgs.push(...pluginSettingsArgs(settings));
 	const detailDir = join(sensorsDir(projectDir), stageSlug);
 	const detailPath = join(detailDir, `${id}-${fireId}.md`);
 
@@ -564,7 +693,7 @@ export async function handleFire(args: string[], projectDirArg?: string): Promis
 
 	// --- 5. Spawn (no lock held). Wall-clock measured for branch a. ---
 	const startedAt = Date.now();
-	const outcome = decideOutcomeOrScriptError(ctx, timeoutMs, startedAt, () =>
+	const outcome = outcomeOrSettingsFailure(ctx, settings, timeoutMs, startedAt, () =>
 		observeSpawn(projectDir, `sensor:${ctx.sensor.id}`, () =>
 			spawnSync("bun", [ctx.scriptAbsPath, ...ctx.scriptArgs], {
 				encoding: "utf-8",
@@ -747,6 +876,22 @@ export function scriptErrorOutcome(err: unknown, elapsedMs: number): FireOutcome
 		durationMs: elapsedMs,
 		note: `script-error: spawn-threw: ${errorMessage(err)}`,
 	};
+}
+
+// A settings resolution that failed short-circuits the spawn: the sensor cannot
+// run correctly on settings nobody declared or typed, so the failure IS the
+// outcome and the script is never started.
+function outcomeOrSettingsFailure(
+	ctx: FireContext,
+	settings: SettingsResolution | null,
+	timeoutMs: number,
+	startedAt: number,
+	spawn: () => ReturnType<typeof spawnSync>,
+): FireOutcome {
+	return (
+		settingsFailureOutcome(ctx, settings) ??
+		decideOutcomeOrScriptError(ctx, timeoutMs, startedAt, spawn)
+	);
 }
 
 // decideOutcomeOrScriptError — run the injected spawn and classify its result

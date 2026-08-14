@@ -77,6 +77,61 @@ export function isComposedPluginStage(
   return false;
 }
 
+// The staging root a composed plugin's source bundle stays in — the same
+// directory amadeus-plugin.ts installs into. It is the only place the manifest
+// (and therefore the settings DECLARATION) survives after compose: the
+// composition record carries ownership and digests, not manifest fields.
+// Defined in this leaf module so the CLI, the compose engine and the sensor
+// dispatcher all read one spelling rather than three copies of a path literal.
+export const PLUGIN_SOURCE_DIR_NAME = ".amadeus-plugin-src";
+export const PLUGIN_MANIFEST = "plugin.json";
+
+// Which composed plugin owns a sensor manifest. Sensor ids anchor to the
+// `amadeus-<id>.md` filename (amadeus-graph.ts SENSOR_FILE_REGEX) and a plugin
+// records its sensor contributions as bundle-relative owned paths, so the
+// lookup is an ownedPaths membership test.
+export function pluginOwningSensor(
+  hostRoot: string,
+  sensorId: string,
+  fs: PluginRuntimeFs = defaultPluginRuntimeFs,
+): string | null {
+  const owned = `sensors/amadeus-${sensorId}.md`;
+  for (const [name, record] of readCompositionPlugins(hostRoot, fs)) {
+    if (typeof record !== "object" || record === null || !("ownedPaths" in record)) continue;
+    const paths = record.ownedPaths;
+    if (Array.isArray(paths) && paths.includes(owned)) return name;
+  }
+  return null;
+}
+
+export type PluginManifestRead =
+  | { kind: "absent" }
+  | { kind: "unreadable"; detail: string }
+  | { kind: "read"; raw: Record<string, unknown> };
+
+// Read a composed plugin's staged manifest. Absence is not an error here — a
+// plugin composed from a bundle that was later removed simply has no
+// declaration — but bytes that are present and unparsable are, because guessing
+// past them would resolve settings from a manifest nobody can see.
+export function readStagedPluginManifest(
+  hostRoot: string,
+  plugin: string,
+  fs: PluginRuntimeFs = defaultPluginRuntimeFs,
+): PluginManifestRead {
+  const path = join(hostRoot, PLUGIN_SOURCE_DIR_NAME, plugin, PLUGIN_MANIFEST);
+  if (!fs.existsSync(path)) return { kind: "absent" };
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(fs.readFileSync(path).toString("utf-8"));
+  } catch (err) {
+    return { kind: "unreadable", detail: `${path}: ${String(err)}` };
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return { kind: "unreadable", detail: `${path}: manifest must be a JSON object` };
+  }
+  return { kind: "read", raw: parsed as Record<string, unknown> };
+}
+
 export type AdvisoryLatchFs = {
   existsSync: (path: string) => boolean;
   mkdirSync: (path: string) => void;

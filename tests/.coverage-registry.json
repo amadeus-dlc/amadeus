@@ -1162,6 +1162,10 @@
       "minMechanism": "none",
       "coveredBy": [
         {
+          "file": "tests/integration/t2996-pr-convergence-scope-grid.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/integration/t355-plugin-scope-grid-clobber.integration.test.ts",
           "mechanism": "none"
         },
@@ -1589,6 +1593,10 @@
         {
           "file": "tests/integration/t248-stage-contract-routing.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t2996-pr-convergence-scope-grid.integration.test.ts",
+          "mechanism": "none"
         },
         {
           "file": "tests/integration/t355-plugin-scope-grid-clobber.integration.test.ts",
@@ -6845,6 +6853,10 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
+          "file": "tests/integration/t3016-park-provenance.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t17.test.ts",
           "mechanism": "cli"
         }
@@ -7030,6 +7042,10 @@
       "coveredBy": [
         {
           "file": "tests/integration/t259-guard-integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t3016-park-provenance.integration.test.ts",
           "mechanism": "cli"
         },
         {
