@@ -101,16 +101,20 @@ describe("planned TLC filesystem runtime", () => {
     const cfgPath = join(workspace, "FormalElection.cfg");
     cpSync("amadeus/spaces/default/specs/tla/FormalElection.tla", modelPath);
     cpSync("amadeus/spaces/default/specs/tla/FormalElection.cfg", cfgPath);
+    cpSync(
+      "amadeus/spaces/default/specs/tla/FormalElectionCore.tla",
+      join(workspace, "FormalElectionCore.tla"),
+    );
     const source = loadRunModelCheckSource(modelPath, cfgPath);
     if (!source.ok) throw new Error(JSON.stringify(source.error));
 
     let mode: "drift" | "overflow" | "timeout" | "race" | "complete" | "staged-drift" = "drift";
     let activeModelPath = modelPath;
     let activeScratch = scratch;
-    let activeAuxiliaryModules: readonly string[] = [];
+    let activeAuxiliaryModules: readonly string[] = ["FormalElectionCore"];
     let activeWorkspaceModelPath = modelPath;
     let activeWorkspaceCfgPath = cfgPath;
-    let activeWorkspaceAuxiliaryPaths: readonly string[] = [];
+    let activeWorkspaceAuxiliaryPaths: readonly string[] = [join(workspace, "FormalElectionCore.tla")];
     let stagedModelBytesDuringRace: Uint8Array | undefined;
     let stagedCfgBytesDuringRace: Uint8Array | undefined;
     let stagedAuxiliaryBytesDuringRace: readonly Uint8Array[] = [];

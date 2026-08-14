@@ -3,7 +3,7 @@ id: pr-convergence-report-format
 kind: deterministic
 command: bun {{HARNESS_DIR}}/plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts
 default_severity: blocking
-description: Flags a pr-convergence-report.md whose required fields the plugin CLI would have written are missing, blank, or self-contradictory
+description: Flags a pr-convergence-report.md whose required CLI fields are missing, blank, or self-contradictory; code-generation also accepts a local-evidence report without a CLI kind
 category: governance
 matches: "**/construction/*/code-generation/pr-convergence-report.md"
 input_schema:
@@ -23,8 +23,9 @@ timeout_seconds: 5
 
 Blocking evidence surface for the PR convergence report (FR-4). The
 `code-generation` artifact guard only asks whether `pr-convergence-report.md`
-exists; this sensor asks whether it looks like something the `pr-convergence`
-plugin's CLI produced. It never enforces — a failing verdict is data for the
+exists. At `--stage code-generation` this sensor accepts either a CLI-shaped
+report or a local-evidence report. At `--stage pr-convergence` only the plugin
+CLI shape is accepted. It never enforces — a failing verdict is data for the
 shared completion guard, and the shipped severity is `blocking`.
 
 ## Scope
@@ -49,7 +50,13 @@ digest, attestation, and owner-specific audit receipt.
 
 ## Checked shape
 
-The canonical convergence report kinds are accepted:
+The accepted shapes are:
+
+- **local-evidence** — only when `--stage code-generation`. Unit-local
+  implementation evidence with `## 判定` and `## 実行証拠`, and no CLI
+  `kind` line. This is not PR attestation.
+
+The canonical CLI kinds are accepted:
 
 - **created** — the pull-request identity and a fresh canonical CLI
   attestation for the current local, remote, and PR head.

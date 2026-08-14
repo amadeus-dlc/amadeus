@@ -1,437 +1,242 @@
-// amadeus-election.ts — U5 election-cli: directive-driven next/report loop for
-// the election TS foundation (intent 260718-election-ts-foundation, Bolt 1
-// walking-skeleton). FR-0: the protocol source of truth is this state machine;
-// the caller (AI or the machine executor) only forwards typed directives.
+// amadeus-election.ts — the election CLI: a typed directive loop over the
+// canonical multi-question election store. FR-0: the protocol source of truth is
+// this state machine; the caller (AI or the machine executor) only forwards the
+// directive it was handed and never reconstructs one.
 //
-// Seven states: draft -> open -> collecting -> tallied -> rendered -> recorded
-// (+ hold at any point, reason-typed). `next` is read-only and always exits 0
-// when it can emit a directive (a hold directive is still a successful
-// emission); only `report` commits transitions. stdout carries exactly one
-// directive/result JSON line; stderr carries advisories and errors
-// (stdout-directive-stderr-advisory). Exit codes: 0 ok, 1 fault, 2 usage.
-//
-// Bolt 4 (cli-complete) wires the full loop: blind distribution views at
-// open (U1 shuffleView), transport-backed notify (U4 port — agmsg spawn or
-// subagent directives), the U3 record surface for render/verify (real
-// parseGoaLine round-trip), and reason-typed hold resolution with the
-// per-reason resume table. The machine executor e2e (ADR-6 CI layer) drives
-// this CLI with zero election knowledge.
+// States: draft -> open -> collecting -> (partial | tallied) -> rendered ->
+// recorded. `next` and `status` are read-only; the verbs named by a directive
+// (notify/tally/render/verify) commit the transitions, and `report` acknowledges
+// a committed transition against the current store facts. stdout carries exactly
+// one directive/result JSON line; stderr carries the typed error.
+// Exit codes: 0 ok, 1 fault, 2 usage.
 
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
-import { homedir } from "node:os";
+import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  Ballot,
-  Election,
+  BallotCodec,
+  type CanonicalBallot,
+  type CanonicalElectionDefinition,
+  type CanonicalTally,
+  ElectionDefinitionCodec,
+} from "./amadeus-election-codec.ts";
+import { type AmadeusConfigIssue, resolveAmadeusConfig } from "./amadeus-config.ts";
+import type { HoldReason } from "./amadeus-election-model.ts";
+import { resolveResponses, tallyQuestions } from "./amadeus-election-question-tally.ts";
+import {
+  buildDistributionView,
+  renderElectionRecord,
+  verifyElectionRecord,
+} from "./amadeus-election-record.ts";
+import {
+  type ElectionSnapshot,
   type ElectionState,
-  err,
-  type HoldReason,
-  ok,
-  resolveBallots,
-  type Result,
-  shuffleView,
-  type TallyResult,
-  tally,
-} from "./amadeus-election-model";
-import {
-  type GoaFreq,
-  GoaLineCode,
-  renderPersistDraft,
-  verifyReservations,
-  verifySelf,
-} from "./amadeus-election-record";
-import {
-  createAgmsgTransport,
-  createSubagentTransport,
-  distribute,
-  normalizeAt,
-  reportDelivery,
-} from "./amadeus-election-transport";
-import { resolveProjectDir } from "./amadeus-lib";
-import { parseGoaLine } from "./amadeus-norm-metrics";
-import {
+  ElectionStore,
+  type ElectionStoreError,
   electionsRoot,
   resolveElectionDir,
-  Store,
-  type StoreError,
-  type TimelineEvent,
   writeStoreFile,
-} from "./amadeus-election-store";
-import {
-  type AmadeusConfigIssue,
-  resolveAmadeusConfig,
-} from "./amadeus-config.ts";
+} from "./amadeus-election-store.ts";
+import { createSubagentTransport, distribute, normalizeAt } from "./amadeus-election-transport.ts";
+import { resolveProjectDir } from "./amadeus-lib.ts";
 
 const USAGE =
-  "Usage: bun <harness-dir>/tools/amadeus-election.ts <open|notify|vote|status|tally|render|verify|next|report> --election <id> [--file <path>] [--trigger manual|auto] [--result <r>] [--resolution <r>] [--transport agmsg|subagent] [--team <t>] [--from <name>] [--send-script <path>] [--project <dir>]";
+  "Usage: bun <harness-dir>/tools/amadeus-election.ts <open|next|status|vote|notify|tally|render|verify|report> [--election <id>] [--file <path>] [--trigger manual|auto] [--project <dir>]";
 
-// Every actionable directive names the verb to execute and the report result
-// that commits the transition (FR-0: the caller forwards, never maps). verb
-// and report are null exactly when the next move is external input (ballots
-// arriving), terminal (done), or human judgement (hold).
-type Directive =
-  | { kind: "distribute"; electionId: string; voters: string[]; verb: "notify"; report: "distributed" }
-  | { kind: "collect-wait"; electionId: string; pending: string[]; verb: null; report: null }
-  | { kind: "tally-ready"; electionId: string; verb: "tally"; report: "tallied" }
-  | { kind: "render"; electionId: string; verb: "render"; report: "rendered" }
-  | { kind: "verify"; electionId: string; verb: "verify"; report: "verified" }
-  | { kind: "done"; electionId: string; verb: null; report: null }
-  | { kind: "hold"; electionId: string; reason: string; verb: null; report: null };
+export type ElectionCliErrorCategory =
+  | "decode"
+  | "store"
+  | "config"
+  | "invalid-transition"
+  | "stale-directive"
+  | "coverage"
+  | "preservation"
+  | "verification"
+  | "transport";
 
-type ReportResult = "distributed" | "tallied" | "rendered" | "verified" | "hold-resolved";
-
-// Per-reason resume policy (FD hold-resolved rows). "choice" holds (tie, split)
-// are resolved by naming the winning choice via choice:<internalNo> — the same
-// fail-closed gate for both — while "table" holds accept a fixed resolution
-// vocabulary with explicit resume states.
-type HoldPolicy = { kind: "choice" } | { kind: "table"; table: Record<string, ElectionState> };
-
-const HOLD_RESOLUTIONS: Record<HoldReason, HoldPolicy> = {
-  tie: { kind: "choice" },
-  split: { kind: "choice" },
-  block: { kind: "table", table: { adopted: "tallied", rejected: "tallied", reopen: "collecting" } },
-  "quorum-short": { kind: "table", table: { "resume-collecting": "collecting", "close-rejected": "tallied" } },
-  "discussion-needed": { kind: "table", table: { discussed: "collecting" } },
-};
-
-export function parseChoiceResolution(resolution: string): number | null {
-  const match = /^choice:(0|[1-9][0-9]*)$/.exec(resolution);
-  return match === null ? null : Number(match[1]);
+export interface ElectionCliError {
+  readonly category: ElectionCliErrorCategory;
+  readonly electionId: string;
+  readonly questionId?: string;
+  readonly runId?: string;
+  readonly nextAction: string;
 }
 
-function out(value: unknown): void {
-  console.log(JSON.stringify(value));
+export type ElectionCliResult<T> =
+  | { readonly ok: true; readonly value: T }
+  | { readonly ok: false; readonly error: ElectionCliError };
+
+type ReportResult = "distributed" | "tallied" | "rendered" | "verified" | null;
+type DirectiveVerb = "notify" | "tally" | "render" | "verify" | null;
+
+interface DirectiveBase {
+  readonly electionId: string;
+  readonly schemaVersion: 2;
+  readonly targetQuestionIds: readonly string[];
+  readonly preservedResultDigest: string | null;
+  readonly verb: DirectiveVerb;
+  readonly report: ReportResult;
+  readonly expectedState: ElectionState;
+  readonly expectedRunId: string | null;
 }
 
-function fail(message: string): 1 {
-  console.error(JSON.stringify({ error: message }));
-  return 1;
+export type ElectionDirective =
+  | (DirectiveBase & { readonly kind: "distribute" })
+  | (DirectiveBase & { readonly kind: "collect-wait"; readonly pending: readonly string[] })
+  | (DirectiveBase & { readonly kind: "tally-ready"; readonly candidateRunId: string })
+  | (DirectiveBase & {
+      readonly kind: "hold";
+      readonly held: readonly { readonly questionId: string; readonly reason: HoldReason }[];
+    })
+  | (DirectiveBase & { readonly kind: "render" })
+  | (DirectiveBase & { readonly kind: "verify" })
+  | (DirectiveBase & { readonly kind: "done" });
+
+function ok<T>(value: T): ElectionCliResult<T> {
+  return { ok: true, value };
 }
 
-function storeFail(op: string, e: StoreError): 1 {
-  return fail(`${op}: ${e}`);
-}
-
-export type HoldResolution = {
-  reason: HoldReason;
-  resolution: string;
-  resumedTo: ElectionState;
-  at: string;
-};
-
-function readTally(
-  root: string,
-  electionId: string,
-): { result: TallyResult; ballots: unknown[]; talliedAt?: string; resolutions?: HoldResolution[] } | null {
-  const path = join(resolveElectionDir(root, electionId).dir, "tally.json");
-  if (!existsSync(path)) return null;
-  try {
-    return JSON.parse(readFileSync(path, "utf8"));
-  } catch {
-    return null;
+function storeError(electionId: string, error: ElectionStoreError): ElectionCliResult<never> {
+  // Stored data the schema validator rejects is a decode failure, reported with
+  // the schema it expects — never skipped, never re-parsed under another shape.
+  if (error === "unsupported") {
+    return cliError("decode", electionId, "provide election data with schemaVersion 2");
   }
-}
-
-// --- next (read-only) ------------------------------------------------------
-
-export function handleNext(root: string, electionId: string): number {
-  const loaded = Store.load(root, electionId);
-  if (!loaded.ok) return storeFail("load", loaded.error);
-  const { election, state } = loaded.value;
-  const directive = directiveFor(root, electionId, election.voters, state);
-  if (directive === null) return fail(`no directive for state: ${state}`);
-  out(directive);
-  return 0;
-}
-
-function directiveFor(
-  root: string,
-  electionId: string,
-  voters: string[],
-  state: ElectionState,
-): Directive | null {
-  if (state === "open") {
-    return { kind: "distribute", electionId, voters, verb: "notify", report: "distributed" };
-  }
-  if (state === "collecting") {
-    const status = Store.status(root, electionId);
-    if (!status.ok) return null;
-    if (status.value.pending.length > 0) {
-      return { kind: "collect-wait", electionId, pending: status.value.pending, verb: null, report: null };
-    }
-    return { kind: "tally-ready", electionId, verb: "tally", report: "tallied" };
-  }
-  if (state === "tallied") return { kind: "render", electionId, verb: "render", report: "rendered" };
-  if (state === "rendered") return { kind: "verify", electionId, verb: "verify", report: "verified" };
-  if (state === "recorded") return { kind: "done", electionId, verb: null, report: null };
-  if (state === "hold") {
-    const t = readTally(root, electionId);
-    // Follow-up: replace the raw readTally cast with a typed TallyResult parse
-    // (deliberate deferral — tracked in the Bolt 4 PR notes, not blocking).
-    const reason = t !== null && t.result.kind === "hold" ? t.result.reason : "unknown";
-    return { kind: "hold", electionId, reason, verb: null, report: null };
-  }
-  return null; // draft: open verb has not finished publishing
-}
-
-// --- report (transition commit) --------------------------------------------
-
-const TRANSITIONS: Record<Exclude<ReportResult, "hold-resolved">, { from: ElectionState; to: ElectionState }> = {
-  distributed: { from: "open", to: "collecting" },
-  tallied: { from: "collecting", to: "tallied" },
-  rendered: { from: "tallied", to: "rendered" },
-  verified: { from: "rendered", to: "recorded" },
-};
-
-export function handleReport(
-  root: string,
-  electionId: string,
-  result: string,
-  resolution: string | null = null,
-): number {
-  if (result === "hold-resolved") return handleHoldResolved(root, electionId, resolution);
-  const transition = TRANSITIONS[result as Exclude<ReportResult, "hold-resolved">];
-  if (transition === undefined) return fail(`invalid-transition: unknown result "${result}"`);
-  const loaded = Store.load(root, electionId);
-  if (!loaded.ok) return storeFail("load", loaded.error);
-  if (loaded.value.state !== transition.from) {
-    return reportStateMismatch(root, electionId, result, transition.from, loaded.value.state);
-  }
-  let to = transition.to;
-  let tally: TalliedCommit | null = null;
-  if (result === "tallied") {
-    const resolved = resolveTalliedCommit(root, electionId);
-    if (!resolved.ok) return resolved.error;
-    tally = resolved.value;
-    if (tally.result.kind === "hold") to = "hold";
-  }
-  // Issue #1458: the distributed report is where the subagent transport's
-  // deferred records land. notify only books the outcomes it could observe
-  // (agmsg spawn exits); the default subagent path returns directives, so the
-  // record is minted here — after the conductor reports completion, never
-  // before (the "reported-by-conductor" provenance the transport documents).
-  if (result === "distributed") {
-    const booked = bookReportedDeliveries(root, electionId, loaded.value.election.voters);
-    if (!booked.ok) return storeFail("appendTimeline", booked.error);
-  }
-  const set = Store.setState(root, electionId, to);
-  if (!set.ok) return storeFail("setState", set.error);
-  // #2125 FR-2b: the `tallied` audit row is booked by the transition commit,
-  // not by the tally write. If this append fails after the commit, the repair
-  // path above completes the unit on the next report run.
-  if (tally !== null) {
-    const booked = bookTalliedRow(root, electionId, tally);
-    if (!booked.ok) return booked.error;
-  }
-  out({ committed: result, state: to });
-  return 0;
-}
-
-// Refusal — or repair — for a report whose from-state does not match. #2125
-// recovery: if a prior tallied commit advanced the state but its audit row
-// failed to land (exit 1 after setState), the record is left with state
-// tallied/hold and no `tallied` timeline row. Re-running the report completes
-// that unit instead of refusing — append-only, never a duplicate (the row's
-// presence is what gates the repair).
-function reportStateMismatch(
-  root: string,
-  electionId: string,
-  result: string,
-  requiredFrom: ElectionState,
-  state: ElectionState,
-): number {
-  if (result === "tallied" && (state === "tallied" || state === "hold")) {
-    return repairTalliedRow(root, electionId, state);
-  }
-  return fail(`invalid-transition: ${result} requires state ${requiredFrom}, got ${state}`);
-}
-
-type TalliedCommit = NonNullable<ReturnType<typeof readTally>> & { talliedAt: string };
-
-// Resolve the tallied commit BEFORE the state advances (#2125): tally.json
-// must exist and carry talliedAt, so a malformed tally can never advance the
-// state and then fail the audit append (NFR-1).
-function resolveTalliedCommit(
-  root: string,
-  electionId: string,
-): Result<TalliedCommit, number> {
-  const tally = readTally(root, electionId);
-  if (tally === null) {
-    return err(fail("invalid-transition: tallied reported but tally.json missing"));
-  }
-  // readTally trusts JSON.parse; the commit consumes result.kind and
-  // talliedAt, so both are validated here — a corrupt record must be refused,
-  // not crash past the guard (fail-closed).
-  const kind = (tally as { result?: { kind?: unknown } }).result?.kind;
-  if (kind !== "hold" && kind !== "established") {
-    return err(fail("invalid-transition: tallied reported but tally.json is malformed (result.kind)"));
-  }
-  if (tally.talliedAt === undefined) {
-    return err(fail("invalid-transition: tallied reported but tally.json lacks talliedAt"));
-  }
-  return ok({ ...tally, talliedAt: tally.talliedAt });
-}
-
-// The `tallied` audit row carries tally.json's talliedAt so the late-lane
-// classification axis and the timeline can never diverge (#2125 FR-2b).
-function bookTalliedRow(
-  root: string,
-  electionId: string,
-  tally: TalliedCommit,
-): Result<void, number> {
-  const booked = Store.appendTimeline(root, electionId, {
-    kind: "tallied",
-    at: tally.talliedAt,
-    // receivedAt is the append instant (#1262 receipt axis): verifySelf checks
-    // monotonicity on receivedAt for every post-migration row.
-    receivedAt: normalizeAt(new Date().toISOString()),
-    detail: `tally: ${tally.result.kind}`,
-  });
-  if (!booked.ok) return err(storeFail("appendTimeline", booked.error));
-  return ok(undefined);
-}
-
-// Complete a tallied commit whose audit row is missing (#2125 recovery): the
-// state already reads tallied/hold, tally.json is intact, but the timeline has
-// no `tallied` row — the exact residue of an appendTimeline failure after
-// setState. Only that residue is repairable; a record that already carries the
-// row keeps the plain invalid-transition refusal (no duplication window).
-function repairTalliedRow(
-  root: string,
-  electionId: string,
-  state: "tallied" | "hold",
-): number {
-  const resolved = resolveTalliedCommit(root, electionId);
-  if (!resolved.ok) return resolved.error;
-  // The duplicate guard below needs the real timeline; an unreadable file must
-  // refuse the repair, not read as "no rows yet" and open a duplication window.
-  const timeline = readTimeline(root, electionId);
-  if (!Array.isArray(timeline)) {
-    return fail("invalid-transition: tallied repair refused — timeline.json is missing or unreadable");
-  }
-  const events: TimelineEvent[] = timeline;
-  if (events.some((e) => e.kind === "tallied")) {
-    return fail(`invalid-transition: tallied requires state collecting, got ${state}`);
-  }
-  const booked = bookTalliedRow(root, electionId, resolved.value);
-  if (!booked.ok) return booked.error;
-  out({ committed: "tallied", state, repaired: "tallied-row" });
-  return 0;
-}
-
-// Mint one conductor-reported DeliveryRecord per voter that notify could not
-// book itself, and enter it on the timeline. Voters already carrying a
-// distributed event (an agmsg send that exited 0) are skipped, so a mixed or
-// re-run distribution never double-books.
-function bookReportedDeliveries(
-  root: string,
-  electionId: string,
-  voters: readonly string[],
-): Result<void, StoreError> {
-  const timeline: unknown = readTimeline(root, electionId);
-  const events: TimelineEvent[] = Array.isArray(timeline) ? timeline : [];
-  const alreadyBooked = new Set(events.filter((e) => e.kind === "distributed").map((e) => e.voter));
-  const at = new Date().toISOString();
-  for (const voter of voters) {
-    if (alreadyBooked.has(voter)) continue;
-    const record = reportDelivery(voter, at);
-    const appended = Store.appendTimeline(root, electionId, {
-      kind: "distributed",
-      at: record.at,
-      receivedAt: normalizeAt(new Date().toISOString()),
-      detail: `delivered via ${record.transport}: ${record.voter} (${record.provenance})`,
-      voter: record.voter,
-    });
-    if (!appended.ok) return appended;
-  }
-  return ok(undefined);
-}
-
-// hold-resolved commits the human judgement: the reason (from the fixed tally)
-// selects which resolutions are valid and where the machine resumes.
-function handleHoldResolved(root: string, electionId: string, resolution: string | null): number {
-  if (resolution === null) return fail("invalid-transition: hold-resolved requires --resolution");
-  const loaded = Store.load(root, electionId);
-  if (!loaded.ok) return storeFail("load", loaded.error);
-  if (loaded.value.state !== "hold") {
-    return fail(`invalid-transition: hold-resolved requires state hold, got ${loaded.value.state}`);
-  }
-  const t = readTally(root, electionId);
-  if (t === null || t.result.kind !== "hold") {
-    return fail("invalid-transition: hold state without a hold tally result");
-  }
-  let resumedTo: ElectionState | undefined;
-  let validResolutions: string;
-  const policy = HOLD_RESOLUTIONS[t.result.reason];
-  if (policy.kind === "choice") {
-    const choiceInternalNo = parseChoiceResolution(resolution);
-    validResolutions = loaded.value.election.choices.map((choice) => `choice:${choice.internalNo}`).join("/");
-    if (choiceInternalNo !== null && loaded.value.election.choices.some((choice) => choice.internalNo === choiceInternalNo)) {
-      resumedTo = "tallied";
-    }
-  } else {
-    resumedTo = policy.table[resolution];
-    validResolutions = Object.keys(policy.table).join("/");
-  }
-  if (resumedTo === undefined) {
-    return fail(
-      `invalid-transition: resolution "${resolution}" is not valid for hold reason "${t.result.reason}" (valid: ${validResolutions})`,
-    );
-  }
-  // M1 (FR-4b): the human ruling is DURABLE — appended to tally.json before
-  // the state moves, so render/verify see the resolved ruling, and record.md
-  // can never stay on 保留 after a human has ruled (review #1235 M1).
-  const entry: HoldResolution = {
-    reason: t.result.reason,
-    resolution,
-    resumedTo,
-    at: normalizeAt(new Date().toISOString()),
+  return {
+    ok: false,
+    error: { category: "store", electionId, nextAction: "repair the election store and retry" },
   };
-  const persisted = writeStoreFile(
-    join(resolveElectionDir(root, electionId).dir, "tally.json"),
-    JSON.stringify({ ...t, resolutions: [...(t.resolutions ?? []), entry] }, null, 2),
-  );
-  if (!persisted.ok) return storeFail("tally-resolution", persisted.error);
-  const set = Store.setState(root, electionId, resumedTo);
-  if (!set.ok) return storeFail("setState", set.error);
-  out({ committed: "hold-resolved", resolution, resumedTo });
-  return 0;
 }
 
-// --- verbs -----------------------------------------------------------------
+function cliError(
+  category: ElectionCliErrorCategory,
+  electionId: string,
+  nextAction: string,
+  detail: { questionId?: string; runId?: string } = {},
+): ElectionCliResult<never> {
+  return { ok: false, error: { category, electionId, ...detail, nextAction } };
+}
 
-export function handleOpen(root: string, filePath: string): number {
-  let raw: unknown;
-  try {
-    raw = JSON.parse(readFileSync(filePath, "utf8"));
-  } catch {
-    return fail("open: definition file unreadable or not JSON");
+function currentTargets(snapshot: ElectionSnapshot): readonly string[] {
+  if (snapshot.currentTally === null) {
+    return snapshot.definition.questions.map((question) => question.questionId);
   }
-  const parsed = Election.parse(raw);
-  if (!parsed.ok) return fail(`open: ${parsed.error}`);
-  // The election id doubles as the GoA-line code (Q3=A) — refuse ids the record
-  // layer could not render (fail-closed at the entrance, not at render time).
-  const code = GoaLineCode.parse(parsed.value.electionId);
-  if (!code.ok) return fail(`open: electionId is not a valid GoA-line code (^E-[A-Z0-9]+(-[A-Z0-9]+)*$)`);
-  const created = Store.create(root, parsed.value);
-  if (!created.ok) return storeFail("create", created.error);
-  // Blind per-voter views (FR-1b/1c): deterministic shuffle, written up front
-  // so notify only ever references them by path.
-  const dir = join(resolveElectionDir(root, parsed.value.electionId).dir, "views");
-  try {
-    mkdirSync(dir, { recursive: true });
-  } catch {
-    return fail("open: views directory could not be created");
+  const held = snapshot.currentTally.results.flatMap((result) =>
+    result.kind === "hold" ? [result.questionId] : [],
+  );
+  return held.length === 0 ? snapshot.currentTally.targetQuestionIds : held;
+}
+
+function base(
+  snapshot: ElectionSnapshot,
+  targetQuestionIds: readonly string[],
+  preservedResultDigest: string | null,
+  verb: DirectiveVerb,
+  report: ReportResult,
+): DirectiveBase {
+  return {
+    electionId: snapshot.definition.electionId,
+    schemaVersion: 2,
+    targetQuestionIds,
+    preservedResultDigest,
+    verb,
+    report,
+    expectedState: snapshot.state,
+    expectedRunId: snapshot.currentTally?.runId ?? null,
+  };
+}
+
+function directiveFromSnapshot(
+  root: string,
+  snapshot: ElectionSnapshot,
+): ElectionCliResult<ElectionDirective> {
+  const electionId = snapshot.definition.electionId;
+  const targets = currentTargets(snapshot);
+  let digest: string | null = null;
+  if (snapshot.currentTally !== null) {
+    const computed = ElectionStore.establishedResultsDigest(root, electionId, snapshot.currentTally);
+    if (!computed.ok) return storeError(electionId, computed.error);
+    digest = computed.value;
   }
-  for (const voter of parsed.value.voters) {
-    const view = shuffleView(parsed.value, voter);
-    const w = writeStoreFile(join(dir, `${voter}.json`), JSON.stringify(view, null, 2));
-    if (!w.ok) return storeFail("views", w.error);
+  if (snapshot.state === "open") {
+    return ok({ kind: "distribute", ...base(snapshot, targets, digest, "notify", "distributed") });
   }
-  const set = Store.setState(root, parsed.value.electionId, "open");
-  if (!set.ok) return storeFail("setState", set.error);
-  out({ opened: parsed.value.electionId, views: parsed.value.voters.length });
-  return 0;
+  if (snapshot.state === "collecting") {
+    const voters = new Set(snapshot.pending.map((ballot) => ballot.voter));
+    const pending = snapshot.definition.voters.filter((voter) => !voters.has(voter));
+    return pending.length > 0
+      ? ok({ kind: "collect-wait", ...base(snapshot, targets, digest, null, null), pending })
+      : ok({
+          kind: "tally-ready",
+          ...base(snapshot, targets, digest, "tally", "tallied"),
+          candidateRunId: `run-${snapshot.history.length + 1}`,
+        });
+  }
+  if (snapshot.state === "partial") {
+    const held = snapshot.currentTally?.results.flatMap((result) =>
+      result.kind === "hold" ? [{ questionId: result.questionId, reason: result.reason }] : [],
+    ) ?? [];
+    return ok({ kind: "hold", ...base(snapshot, targets, digest, "notify", "distributed"), held });
+  }
+  if (snapshot.state === "tallied") {
+    return ok({ kind: "render", ...base(snapshot, targets, digest, "render", "rendered") });
+  }
+  if (snapshot.state === "rendered") {
+    return ok({ kind: "verify", ...base(snapshot, targets, digest, "verify", "verified") });
+  }
+  if (snapshot.state === "recorded") {
+    return ok({ kind: "done", ...base(snapshot, targets, digest, null, null) });
+  }
+  return {
+    ok: false,
+    error: { category: "invalid-transition", electionId, nextAction: "open the election first" },
+  };
+}
+
+export function nextElection(root: string, electionId: string): ElectionCliResult<ElectionDirective> {
+  const read = ElectionStore.readSnapshot(root, electionId);
+  return read.ok ? directiveFromSnapshot(root, read.value) : storeError(electionId, read.error);
+}
+
+export interface ElectionStatus {
+  readonly electionId: string;
+  readonly schemaVersion: 2;
+  readonly state: ElectionState;
+  readonly targetQuestionIds: readonly string[];
+  readonly preservedResultDigest: string | null;
+  readonly pending: readonly string[];
+  readonly currentRunId: string | null;
+}
+
+export function statusElection(root: string, electionId: string): ElectionCliResult<ElectionStatus> {
+  const snapshot = ElectionStore.readSnapshot(root, electionId);
+  if (!snapshot.ok) return storeError(electionId, snapshot.error);
+  const directive = directiveFromSnapshot(root, snapshot.value);
+  if (!directive.ok) return directive;
+  return ok({
+    electionId,
+    schemaVersion: 2,
+    state: snapshot.value.state,
+    targetQuestionIds: directive.value.targetQuestionIds,
+    preservedResultDigest: directive.value.preservedResultDigest,
+    pending: directive.value.kind === "collect-wait" ? directive.value.pending : [],
+    currentRunId: snapshot.value.currentTally?.runId ?? null,
+  });
+}
+
+export function openElection(
+  root: string,
+  raw: unknown,
+): ElectionCliResult<{ readonly electionId: string; readonly views: number }> {
+  const decoded = ElectionDefinitionCodec.decode(raw);
+  if (!decoded.ok) return cliError("decode", "unknown", "fix the election definition and retry");
+  const created = ElectionStore.create(root, decoded.value);
+  if (!created.ok) return storeError(decoded.value.electionId, created.error);
+  const views = writeViews(root, decoded.value, decoded.value.questions.map((question) => question.questionId));
+  if (!views.ok) return views;
+  const opened = ElectionStore.setState(root, decoded.value.electionId, "open");
+  return opened.ok
+    ? ok({ electionId: decoded.value.electionId, views: decoded.value.voters.length })
+    : storeError(decoded.value.electionId, opened.error);
 }
 
 function configIssueSummary(issue: AmadeusConfigIssue): string {
@@ -440,241 +245,389 @@ function configIssueSummary(issue: AmadeusConfigIssue): string {
     : `${issue.layer} (${issue.path}): ${issue.key} expected ${issue.expected}, got ${issue.actualType}`;
 }
 
-export function handleTriggeredOpen(
+export type TriggeredOpen =
+  | { readonly electionId: string; readonly views: number }
+  | { readonly opened: null; readonly reason: "solo-election-manual-trigger-required" };
+
+// `--trigger auto` is the opt-in solo auto-election entrance: the election is
+// opened only when the resolved configuration enables automatic triggering, so
+// an auto-fired election in a manual workspace is refused (loudly, exit 0 with a
+// typed reason) instead of being created.
+export function triggeredOpenElection(
   projectDir: string,
   root: string,
-  filePath: string,
+  raw: unknown,
   trigger: string,
-): number {
-  if (trigger === "manual") return handleOpen(root, filePath);
+): ElectionCliResult<TriggeredOpen> {
+  if (trigger === "manual") return openElection(root, raw);
   if (trigger !== "auto") {
-    return fail(`open: unknown trigger "${trigger}"`);
+    return cliError("decode", "unknown", 'use --trigger manual or --trigger auto');
   }
   const resolved = resolveAmadeusConfig(projectDir);
   if (resolved.kind === "invalid") {
-    return fail(
-      `open: invalid configuration: ${resolved.issues.map(configIssueSummary).join(" | ")}`,
+    return cliError(
+      "config",
+      "unknown",
+      `fix the configuration: ${resolved.issues.map(configIssueSummary).join(" | ")}`,
     );
   }
   if (resolved.config.soloElection.trigger.mode !== "auto") {
-    out({ opened: null, reason: "solo-election-manual-trigger-required" });
-    return 0;
+    return ok({ opened: null, reason: "solo-election-manual-trigger-required" });
   }
-  return handleOpen(root, filePath);
+  return openElection(root, raw);
 }
 
-// Transport selection for notify: returns the port or a failure message.
-function buildTransport(
-  kind: string,
-  voters: Set<string>,
-  agmsg: { team: string | null; from: string | null; sendScript: string | null },
-): ReturnType<typeof createSubagentTransport> | string {
-  if (kind === "subagent") return createSubagentTransport({ voters });
-  if (kind !== "agmsg") return `notify: unknown transport "${kind}"`;
-  if (agmsg.team === null || agmsg.from === null) {
-    return "notify: --team and --from are required for --transport agmsg";
-  }
-  return createAgmsgTransport({
-    sendScriptPath:
-      agmsg.sendScript ?? join(homedir(), ".agents", "skills", "agmsg", "scripts", "send.sh"),
-    team: agmsg.team,
-    from: agmsg.from,
-    voters,
-  });
-}
-
-// notify drives the U4 transport port per voter. subagent (default) emits
-// DeliveryDirectives — no spawn, no record (Q1=B); agmsg spawns send.sh and
-// books a timeline entry per ACTUAL delivered outcome only (FR-2b).
-export function handleNotify(
+function writeViews(
   root: string,
-  electionId: string,
-  transportKind: string,
-  agmsg: { team: string | null; from: string | null; sendScript: string | null },
-): number {
-  // FR-1b: `collecting` stays open to notify so the dispatch-ack resend lane
-  // (3 min, max 2 resends) keeps working; the five post-collection states do
-  // not accept a distribution.
-  const loaded = requireState(root, electionId, "notify", ["open", "collecting"]);
-  if (!loaded.ok) return loaded.error;
-  const voters = loaded.value.election.voters;
-  const transport = buildTransport(transportKind, new Set(voters), agmsg);
-  if (typeof transport === "string") return fail(transport);
-  const electionDir = resolveElectionDir(root, electionId).dir;
-  const deliveries = distribute(transport, electionId, voters, (voter) =>
-    join(electionDir, "views", `${voter}.json`),
-  );
-  for (const d of deliveries) {
-    if (d.result.ok && d.result.value.kind === "delivered") {
-      const booked = Store.appendTimeline(root, electionId, {
-        kind: "distributed",
-        at: d.result.value.record.at,
-        receivedAt: normalizeAt(new Date().toISOString()),
-        detail: `delivered via agmsg: ${d.voter}`,
-        voter: d.voter,
-      });
-      if (!booked.ok) return storeFail("appendTimeline", booked.error);
-    }
-  }
-  const failed = deliveries.filter((d) => !d.result.ok);
-  out({
-    deliveries: deliveries.map((d) =>
-      d.result.ok ? d.result.value : { kind: "failed", voter: d.voter, error: d.result.error },
-    ),
-  });
-  return failed.length > 0 ? 1 : 0;
-}
-
-export function handleVote(root: string, electionId: string, filePath: string): number {
-  let raw: unknown;
-  try {
-    raw = JSON.parse(readFileSync(filePath, "utf8"));
-  } catch {
-    return fail("vote: ballot file unreadable or not JSON");
-  }
-  const loaded = Store.load(root, electionId);
-  if (!loaded.ok) return storeFail("load", loaded.error);
-  const parsed = Ballot.parse(raw, loaded.value.election);
-  if (!parsed.ok) return fail(`vote: ${parsed.error}`);
-  // Timestamp precision funnel (PR #1233 review minor 3): every timestamp the
-  // CLI mints or accepts is normalized to seconds-precision ISO-8601 UTC, so
-  // classifyLate's lexicographic compare never mixes precisions.
-  // Mint the receipt time now (Issue #1262): this is when the conductor actually
-  // accepted the ballot, independent of the voter's self-reported submittedAt.
-  // Issue #1946 (ruling Q2=A) stamps it onto the ballot itself, making it the
-  // authoritative ordering axis for resolveBallots — a self-reported instant can
-  // no longer decide which of a voter's ballots counts. The stamp is minted
-  // here, never read off the voter's file: parseBallotShape builds an
-  // allowlisted object, so a `receivedAt` key in the submitted JSON is dropped.
-  const receivedAt = normalizeAt(new Date().toISOString());
-  const ballot = {
-    ...parsed.value,
-    submittedAt: normalizeAt(parsed.value.submittedAt),
-    receivedAt,
+  definition: CanonicalElectionDefinition,
+  targetQuestionIds: readonly string[],
+): ElectionCliResult<void> {
+  const targets = new Set(targetQuestionIds);
+  const targetDefinition = {
+    ...definition,
+    questions: definition.questions.filter((question) => targets.has(question.questionId)),
   };
-  const appended = Store.appendBallot(root, electionId, ballot, receivedAt);
-  if (!appended.ok) return storeFail("appendBallot", appended.error);
-  out({ accepted: parsed.value.voter });
-  return 0;
+  const dir = join(resolveElectionDir(root, definition.electionId), "views");
+  try {
+    mkdirSync(dir, { recursive: true });
+  } catch {
+    return storeError(definition.electionId, "io-error");
+  }
+  for (const voter of definition.voters) {
+    const view = buildDistributionView(targetDefinition, voter);
+    const written = writeStoreFile(join(dir, `${voter}.json`), JSON.stringify(view, null, 2));
+    if (!written.ok) return storeError(definition.electionId, "io-error");
+  }
+  return ok(undefined);
 }
 
-export function handleStatus(root: string, electionId: string): number {
-  const status = Store.status(root, electionId);
-  if (!status.ok) return storeFail("status", status.error);
-  out(status.value);
-  return 0;
-}
-
-// Issue #2125 (FR-1a/FR-1c): the verbs carry their own fail-closed state check.
-// report commits transitions and guards them; the verbs that WRITE the audit
-// surfaces (tally's tally.json, notify's timeline rows) used to run from any
-// state, so a tally out of `tallied` re-fixed the ballot set and a notify out
-// of `recorded` booked a distribution after the record was sealed. The check
-// lives here, in the CLI layer: the store stays a pure persistence surface
-// (FR-1c) and the rejection happens before the first write (NFR-1).
-function requireState(
+export function voteElection(
   root: string,
   electionId: string,
-  verb: string,
-  allowed: readonly ElectionState[],
-): Result<Extract<ReturnType<typeof Store.load>, { ok: true }>["value"], number> {
-  const loaded = Store.load(root, electionId);
-  if (!loaded.ok) return err(storeFail("load", loaded.error));
-  if (!allowed.includes(loaded.value.state)) {
-    return err(
-      fail(`invalid-transition: ${verb} requires state ${allowed.join("/")}, got ${loaded.value.state}`),
-    );
+  raw: unknown,
+  receivedAt: string,
+): ElectionCliResult<{ readonly voter: string; readonly idempotent: boolean }> {
+  const snapshot = ElectionStore.readSnapshot(root, electionId);
+  if (!snapshot.ok) return storeError(electionId, snapshot.error);
+  if (snapshot.value.state !== "collecting") {
+    return cliError("invalid-transition", electionId, "request a current directive and retry");
   }
-  return ok(loaded.value);
-}
-
-export function handleTally(root: string, electionId: string): number {
-  const loaded = requireState(root, electionId, "tally", ["collecting"]);
-  if (!loaded.ok) return loaded.error;
-  const ledger = Store.ledger(root, electionId);
-  if (!ledger.ok) return storeFail("ledger", ledger.error);
-  const result = tally(loaded.value.election, ledger.value.ballots);
-  const materialized = Store.materialize(root, electionId, result, normalizeAt(new Date().toISOString()));
-  if (!materialized.ok) return storeFail("materialize", materialized.error);
-  out({ result });
-  return 0;
-}
-
-// render produces the full U3 record: header, ruling, transcribed
-// reservations, vote timeline, and the byte-compatible GoA line
-// (renderPersistDraft — deterministic, BR-R5).
-export function handleRender(root: string, electionId: string): number {
-  const loaded = Store.load(root, electionId);
-  if (!loaded.ok) return storeFail("load", loaded.error);
-  const t = readTally(root, electionId);
-  if (t === null) return fail("render: tally.json missing or unreadable");
-  const code = GoaLineCode.parse(electionId);
-  if (!code.ok) return fail("render: electionId is not a valid GoA-line code");
-  const timeline = readTimeline(root, electionId);
-  if (timeline === null) return fail("render: timeline.json missing or unreadable");
-  const ballots = t.ballots as Parameters<typeof tally>[1];
-  // BR-4 #3: render the per-voter resolved set so the GoA line reflects each
-  // voter's latest ballot (matching verify's resolved recompute — symmetric).
-  const resolved = resolveBallots(ballots);
-  // A final human ruling over a hold takes precedence in the rendered ruling
-  // line (the stored tally result itself stays untouched — verify's recompute
-  // comparison remains valid); every ruling is also transcribed as a trail.
-  const resolutions = t.resolutions ?? [];
-  const finalRuling = resolutions.filter((r) => r.resumedTo === "tallied").at(-1);
-  let rulingOverride: string | undefined;
-  if (t.result.kind === "hold" && finalRuling !== undefined) {
-    const choiceInternalNo = parseChoiceResolution(finalRuling.resolution);
-    const choice = loaded.value.election.choices.find((candidate) => candidate.internalNo === choiceInternalNo);
-    rulingOverride =
-      choice === undefined
-        ? `裁定: ${finalRuling.resolution === "adopted" ? "採用" : "不採用"}`
-        : `裁定: ${choice.label}(choice ${choice.internalNo} — tie 裁定)`;
+  const targets = currentTargets(snapshot.value);
+  const establishedQuestionIds = snapshot.value.currentTally?.results.flatMap((result) =>
+    result.kind === "established" ? [result.questionId] : [],
+  ) ?? [];
+  const decoded = BallotCodec.decode(raw, snapshot.value.definition, {
+    targetQuestionIds: targets,
+    establishedQuestionIds,
+  });
+  if (!decoded.ok) {
+    const category = decoded.error.category === "coverage-mismatch" ? "coverage" : "decode";
+    return cliError(category, electionId, "submit a ballot for the current target question IDs");
   }
-  const body = renderPersistDraft(
-    code.value,
-    loaded.value.election,
-    t.result,
-    resolved,
-    timeline,
-    rulingOverride,
-  );
-  const trail = resolutions.map(
-    (r) => `- hold 裁定履歴: ${r.reason} → ${r.resolution}(${r.at}、復帰先 ${r.resumedTo})`,
-  );
-  const lines = [
-    `# Election Record — ${electionId}`,
-    "",
-    `- question: ${loaded.value.election.question}`,
-    "",
-    body,
-    ...(trail.length > 0 ? ["", ...trail] : []),
-    "",
-  ];
-  // No timeline entry here: the ledger's four event kinds (distributed/ballot/
-  // tallied/late) do not include rendering (functional-design invariant).
-  const recordPath = join(resolveElectionDir(root, electionId).dir, "record.md");
-  const w = writeStoreFile(recordPath, lines.join("\n"));
-  if (!w.ok) return storeFail("render", w.error);
-  out({ rendered: recordPath });
-  return 0;
+  const ballot: CanonicalBallot = { ...decoded.value, receivedAt };
+  const appended = ElectionStore.appendPending(root, electionId, ballot);
+  return appended.ok
+    ? ok({ voter: ballot.voter, idempotent: appended.value.idempotent })
+    : storeError(electionId, appended.error);
 }
 
-// GoA-line half of verify: locate the line and round-trip it through the REAL
-// parseGoaLine. The parsed bins are the frequency the record actually stores —
-// the independent left-hand side verifySelf compares its recompute against, so
-// the equality lives in verifySelf's freq class alone (Issue #1457: a second
-// copy of that comparison here shadowed the class and left it unreachable).
-function readStoredGoaFreq(document: string): Result<GoaFreq, string> {
-  const goaLine = document.split("\n").find((l) => l.startsWith("GoA["));
-  if (goaLine === undefined) return err("verify: record.md has no GoA line");
-  const parsedLine = parseGoaLine(goaLine);
-  if (!parsedLine.ok) return err(`verify: GoA line does not parse: ${parsedLine.error}`);
-  return ok(parsedLine.votes);
+function sameIds(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length && left.every((value, index) => value === right[index]);
 }
 
-function readTimeline(root: string, electionId: string) {
-  const path = join(resolveElectionDir(root, electionId).dir, "timeline.json");
-  if (!existsSync(path)) return null;
+function checkedDirective(
+  root: string,
+  directive: ElectionDirective,
+): ElectionCliResult<ElectionSnapshot> {
+  const read = ElectionStore.readSnapshot(root, directive.electionId);
+  if (!read.ok) return storeError(directive.electionId, read.error);
+  const current = directiveFromSnapshot(root, read.value);
+  if (!current.ok) return current;
+  if (
+    read.value.state !== directive.expectedState ||
+    read.value.currentTally?.runId !== (directive.expectedRunId ?? undefined) ||
+    !sameIds(current.value.targetQuestionIds, directive.targetQuestionIds) ||
+    current.value.preservedResultDigest !== directive.preservedResultDigest
+  ) {
+    return cliError("stale-directive", directive.electionId, "request a current directive and retry", {
+      runId: directive.expectedRunId ?? undefined,
+    });
+  }
+  return ok(read.value);
+}
+
+export interface TransitionReceipt {
+  readonly result: Exclude<ReportResult, null>;
+  readonly from: ElectionState;
+  readonly to: ElectionState;
+  readonly runId?: string;
+  readonly targetQuestionIds: readonly string[];
+  readonly preservedResultDigest: string | null;
+  readonly repaired: boolean;
+  readonly committedAt: string;
+}
+
+export function notifyElection(
+  root: string,
+  directive: Extract<ElectionDirective, { kind: "distribute" | "hold" }>,
+): ElectionCliResult<TransitionReceipt> {
+  const checked = checkedDirective(root, directive);
+  if (!checked.ok) return checked;
+  const views = writeViews(root, checked.value.definition, directive.targetQuestionIds);
+  if (!views.ok) return views;
+  const electionDir = resolveElectionDir(root, directive.electionId);
+  const deliveries = distribute(
+    createSubagentTransport({ voters: new Set(checked.value.definition.voters) }),
+    directive.electionId,
+    checked.value.definition.voters,
+    (voter) => join(electionDir, "views", `${voter}.json`),
+  );
+  if (deliveries.some((delivery) => !delivery.result.ok)) {
+    return cliError("transport", directive.electionId, "retry delivery for the current target questions");
+  }
+  const moved = ElectionStore.setState(root, directive.electionId, "collecting");
+  return moved.ok
+    ? ok({ result: "distributed", from: directive.expectedState, to: "collecting", targetQuestionIds: directive.targetQuestionIds, preservedResultDigest: directive.preservedResultDigest, repaired: false, committedAt: new Date().toISOString() })
+    : storeError(directive.electionId, moved.error);
+}
+
+// A tally whose store commit already landed but whose receipt never reached the
+// caller is completed, not re-run: the stored run is re-committed idempotently.
+function repairTallyRun(
+  root: string,
+  directive: Extract<ElectionDirective, { kind: "tally-ready" }>,
+  snapshot: ElectionSnapshot,
+  tally: CanonicalTally,
+): ElectionCliResult<TransitionReceipt> {
+  const repaired = ElectionStore.commitTally(root, directive.electionId, tally, {
+    expectedState: "collecting",
+    nextState: snapshot.state,
+  });
+  return repaired.ok
+    ? ok({ result: "tallied", from: "collecting", to: snapshot.state, runId: directive.candidateRunId, targetQuestionIds: directive.targetQuestionIds, preservedResultDigest: directive.preservedResultDigest, repaired: true, committedAt: tally.talliedAt })
+    : storeError(directive.electionId, repaired.error);
+}
+
+function isCommittedRun(
+  directive: Extract<ElectionDirective, { kind: "tally-ready" }>,
+  snapshot: ElectionSnapshot,
+): snapshot is ElectionSnapshot & { currentTally: CanonicalTally } {
+  return (
+    snapshot.currentTally?.runId === directive.candidateRunId &&
+    (snapshot.state === "partial" || snapshot.state === "tallied") &&
+    sameIds(snapshot.currentTally.targetQuestionIds, directive.targetQuestionIds) &&
+    snapshot.currentTally.preservedResultDigest ===
+      (directive.expectedRunId === null ? null : directive.preservedResultDigest)
+  );
+}
+
+export function tallyElection(
+  root: string,
+  directive: Extract<ElectionDirective, { kind: "tally-ready" }>,
+  talliedAt: string,
+): ElectionCliResult<TransitionReceipt> {
+  const retry = ElectionStore.readSnapshot(root, directive.electionId);
+  if (retry.ok && isCommittedRun(directive, retry.value)) {
+    return repairTallyRun(root, directive, retry.value, retry.value.currentTally);
+  }
+  const checked = checkedDirective(root, directive);
+  if (!checked.ok) return checked;
+  const integrated = ElectionStore.integratePending(root, directive.electionId, checked.value.definition.voters);
+  if (!integrated.ok) return storeError(directive.electionId, integrated.error);
+  const refreshed = ElectionStore.readSnapshot(root, directive.electionId);
+  if (!refreshed.ok) return storeError(directive.electionId, refreshed.error);
+  const draft = tallyQuestions(
+    refreshed.value.definition,
+    resolveResponses(refreshed.value.definition, refreshed.value.ledger),
+    directive.targetQuestionIds,
+    checked.value.currentTally,
+  );
+  if (!draft.ok) return cliError("preservation", directive.electionId, "repair tally inputs and retry", { questionId: draft.error.questionId });
+  const tally: CanonicalTally = {
+    schemaVersion: 2,
+    runId: directive.candidateRunId,
+    targetQuestionIds: directive.targetQuestionIds,
+    results: draft.value.results,
+    preservedResultDigest: checked.value.currentTally === null ? null : directive.preservedResultDigest,
+    talliedAt,
+  };
+  const committed = ElectionStore.commitTally(root, directive.electionId, tally, {
+    expectedState: "collecting",
+    nextState: draft.value.lifecycle,
+  });
+  if (!committed.ok) return storeError(directive.electionId, committed.error);
+  return ok({ result: "tallied", from: "collecting", to: draft.value.lifecycle, runId: tally.runId, targetQuestionIds: directive.targetQuestionIds, preservedResultDigest: directive.preservedResultDigest, repaired: committed.value.repaired, committedAt: talliedAt });
+}
+
+export function renderElection(
+  root: string,
+  directive: Extract<ElectionDirective, { kind: "render" }>,
+  committedAt: string,
+): ElectionCliResult<TransitionReceipt> {
+  const checked = checkedDirective(root, directive);
+  if (!checked.ok) return checked;
+  const tally = checked.value.currentTally;
+  if (tally === null) return cliError("store", directive.electionId, "restore the current tally and retry");
+  const record = renderElectionRecord({
+    definition: checked.value.definition,
+    tally,
+    lifecycle: "tallied",
+    materializedBallots: checked.value.ledger,
+    lateResponses: [],
+    history: checked.value.history,
+    timeline: checked.value.timeline,
+  });
+  const path = join(resolveElectionDir(root, directive.electionId), "record.md");
+  if (!writeStoreFile(path, record).ok) return storeError(directive.electionId, "io-error");
+  const moved = ElectionStore.setState(root, directive.electionId, "rendered");
+  return moved.ok
+    ? ok({ result: "rendered", from: "tallied", to: "rendered", runId: tally.runId, targetQuestionIds: directive.targetQuestionIds, preservedResultDigest: directive.preservedResultDigest, repaired: false, committedAt })
+    : storeError(directive.electionId, moved.error);
+}
+
+export function verifyElection(
+  root: string,
+  directive: Extract<ElectionDirective, { kind: "verify" }>,
+  committedAt: string,
+): ElectionCliResult<TransitionReceipt> {
+  const checked = checkedDirective(root, directive);
+  if (!checked.ok) return checked;
+  const tally = checked.value.currentTally;
+  if (tally === null) return cliError("store", directive.electionId, "restore the current tally and retry");
+  const storeVerified = ElectionStore.verify(root, directive.electionId);
+  if (!storeVerified.ok) return storeError(directive.electionId, storeVerified.error);
+  let record: string;
+  try {
+    record = readFileSync(join(resolveElectionDir(root, directive.electionId), "record.md"), "utf8");
+  } catch {
+    return cliError("verification", directive.electionId, "render the election record and retry");
+  }
+  const verified = verifyElectionRecord({
+    definition: checked.value.definition,
+    ledgerBallots: checked.value.ledger,
+    materializedBallots: checked.value.materialized,
+    history: checked.value.history,
+    currentTally: tally,
+    lifecycle: "tallied",
+    lateResponses: [],
+    timeline: checked.value.timeline,
+    record,
+  });
+  if (!verified.ok) return cliError("verification", directive.electionId, "render a canonical record and retry");
+  const moved = ElectionStore.setState(root, directive.electionId, "recorded");
+  return moved.ok
+    ? ok({ result: "verified", from: "rendered", to: "recorded", runId: tally.runId, targetQuestionIds: directive.targetQuestionIds, preservedResultDigest: directive.preservedResultDigest, repaired: false, committedAt })
+    : storeError(directive.electionId, moved.error);
+}
+
+const REPORT_EXPECTED_STATES: Record<Exclude<ReportResult, null>, readonly ElectionState[]> = {
+  distributed: ["collecting"],
+  tallied: ["partial", "tallied"],
+  rendered: ["rendered"],
+  verified: ["recorded"],
+};
+
+interface ObservedReportFacts {
+  readonly targetQuestionIds: readonly string[];
+  readonly preservedResultDigest: string | null;
+}
+
+function observedReportFacts(
+  root: string,
+  directive: ElectionDirective,
+  snapshot: ElectionSnapshot,
+): ElectionCliResult<ObservedReportFacts> {
+  const current = snapshot.currentTally;
+  if (directive.kind === "tally-ready") {
+    return ok({
+      targetQuestionIds: current?.targetQuestionIds ?? directive.targetQuestionIds,
+      preservedResultDigest: current?.preservedResultDigest ?? null,
+    });
+  }
+  const targetQuestionIds = currentTargets(snapshot);
+  if (current === null) return ok({ targetQuestionIds, preservedResultDigest: null });
+  const digest = ElectionStore.establishedResultsDigest(root, directive.electionId, current);
+  return digest.ok
+    ? ok({ targetQuestionIds, preservedResultDigest: digest.value })
+    : storeError(directive.electionId, digest.error);
+}
+
+function matchesReportExpectation(
+  directive: ElectionDirective,
+  report: Exclude<ReportResult, null>,
+  snapshot: ElectionSnapshot,
+  observed: ObservedReportFacts,
+  expectedRunId: string | null,
+): boolean {
+  const expectedPreserved = directive.kind === "tally-ready" && directive.expectedRunId === null
+    ? null
+    : directive.preservedResultDigest;
+  return (
+    REPORT_EXPECTED_STATES[report].includes(snapshot.state) &&
+    (expectedRunId === null || snapshot.currentTally?.runId === expectedRunId) &&
+    sameIds(observed.targetQuestionIds, directive.targetQuestionIds) &&
+    observed.preservedResultDigest === expectedPreserved
+  );
+}
+
+export function reportElection(
+  root: string,
+  directive: ElectionDirective,
+  committedAt: string,
+): ElectionCliResult<TransitionReceipt> {
+  const report = directive.report;
+  if (report === null) {
+    return cliError("invalid-transition", directive.electionId, "execute an actionable directive");
+  }
+  const read = ElectionStore.readSnapshot(root, directive.electionId);
+  if (!read.ok) return storeError(directive.electionId, read.error);
+  const observed = observedReportFacts(root, directive, read.value);
+  if (!observed.ok) return observed;
+  const expectedRunId = directive.kind === "tally-ready" ? directive.candidateRunId : directive.expectedRunId;
+  if (!matchesReportExpectation(directive, report, read.value, observed.value, expectedRunId)) {
+    return cliError("stale-directive", directive.electionId, "request a current directive and retry", {
+      runId: expectedRunId ?? undefined,
+    });
+  }
+  const current = read.value.currentTally;
+  return ok({
+    result: report,
+    from: directive.expectedState,
+    to: read.value.state,
+    ...(current === null ? {} : { runId: current.runId }),
+    targetQuestionIds: directive.targetQuestionIds,
+    preservedResultDigest: directive.preservedResultDigest,
+    repaired: false,
+    committedAt,
+  });
+}
+
+type CliArgs = {
+  verb: string;
+  electionId?: string;
+  file?: string;
+  project?: string;
+  trigger?: string;
+};
+
+function parseCliArgs(argv: readonly string[]): CliArgs | null {
+  const verb = argv[0];
+  if (verb === undefined) return null;
+  const parsed: CliArgs = { verb };
+  for (let index = 1; index < argv.length; index += 2) {
+    const flag = argv[index];
+    const value = argv[index + 1];
+    if (value === undefined) return null;
+    if (flag === "--election") parsed.electionId = value;
+    else if (flag === "--file") parsed.file = value;
+    else if (flag === "--project") parsed.project = value;
+    else if (flag === "--trigger") parsed.trigger = value;
+    else return null;
+  }
+  return parsed;
+}
+
+function readJsonInput(path: string): unknown | null {
   try {
     return JSON.parse(readFileSync(path, "utf8"));
   } catch {
@@ -682,172 +635,170 @@ function readTimeline(root: string, electionId: string) {
   }
 }
 
-// verify is the full render<->verify symmetry check: tally recompute, GoA line
-// round-trip through the REAL parseGoaLine, reservation transcription count,
-// and the verifySelf 3-class sweep (FR-6a/6b). Every self-check class pairs one
-// value read off disk with one recomputed here: ledger.json against tally.json
-// for the counts, record.md's GoA line against the frequency verifySelf derives
-// from the resolved ballots (Issue #1457 — neither side may share a source).
-export function handleVerify(root: string, electionId: string): number {
-  const loaded = Store.load(root, electionId);
-  if (!loaded.ok) return storeFail("load", loaded.error);
-  const t = readTally(root, electionId);
-  if (t === null) return fail("verify: tally.json missing or unreadable");
-  const ballots = t.ballots as Parameters<typeof tally>[1];
-  // BR-4 #2/#5: verify against the per-voter resolved set. tally resolves
-  // internally, so the recompute takes raw ballots; the GoA-line frequency,
-  // reservation transcription, and self-check all consume the resolved set so
-  // an amended voter is counted once (matching render — symmetric).
-  const resolved = resolveBallots(ballots);
-  const recomputed = tally(loaded.value.election, ballots);
-  if (JSON.stringify(recomputed) !== JSON.stringify(t.result)) {
-    return fail("verify: recomputed tally does not match stored result");
+function emit<T>(result: ElectionCliResult<T>): number {
+  if (result.ok) {
+    console.log(JSON.stringify(result.value));
+    return 0;
   }
-  const recordPath = join(resolveElectionDir(root, electionId).dir, "record.md");
-  if (!existsSync(recordPath)) return fail("verify: record.md missing");
-  const document = readFileSync(recordPath, "utf8");
-  const storedFreq = readStoredGoaFreq(document);
-  if (!storedFreq.ok) return fail(storedFreq.error);
-  const reservations = verifyReservations(resolved, document);
-  if (!reservations.ok) {
-    return fail(`verify: reservation transcription mismatch (${JSON.stringify(reservations.error)})`);
-  }
-  const timeline = readTimeline(root, electionId);
-  if (timeline === null) return fail("verify: timeline.json missing or unreadable");
-  const ledger = Store.ledger(root, electionId);
-  if (!ledger.ok) return storeFail("verify", ledger.error);
-  const counts = { ledger: ledger.value.ballots.length, materialized: ballots.length };
-  // #2125 FR-3 wiring: hand verifySelf the kind-order context — the election
-  // id (FR-3d ledger exemption) and tally.json's hold resolutions (a
-  // collecting reopen is the only lawful source of a post-tallied segment).
-  const self = verifySelf(counts, resolved, storedFreq.value, timeline, {
-    electionId,
-    resolutions: t.resolutions ?? [],
-  });
-  if (!self.ok) return fail(`verify: self-check findings ${JSON.stringify(self.error)}`);
-  out({ verified: electionId });
-  return 0;
-}
-
-// --- entry -----------------------------------------------------------------
-
-type ParsedArgs = {
-  verb: string;
-  electionId: string | null;
-  file: string | null;
-  result: string | null;
-  project: string | null;
-  resolution: string | null;
-  transport: string | null;
-  team: string | null;
-  from: string | null;
-  sendScript: string | null;
-  trigger: string | null;
-};
-
-const FLAG_FIELDS: Record<
-  string,
-  "electionId" | "file" | "result" | "project" | "resolution" | "transport" | "team" | "from" | "sendScript" | "trigger"
-> = {
-  "--election": "electionId",
-  "--file": "file",
-  "--result": "result",
-  "--project": "project",
-  "--resolution": "resolution",
-  "--transport": "transport",
-  "--team": "team",
-  "--from": "from",
-  "--send-script": "sendScript",
-  "--trigger": "trigger",
-};
-
-function readFlags(rest: string[]): Partial<ParsedArgs> | null {
-  const flags: Partial<ParsedArgs> = {};
-  for (let i = 0; i < rest.length; i += 2) {
-    const field = FLAG_FIELDS[rest[i] ?? ""];
-    const value = rest[i + 1];
-    if (field === undefined || value === undefined) return null;
-    flags[field] = value;
-  }
-  return flags;
-}
-
-export function parseArgs(argv: string[]): ParsedArgs | { usage: string } {
-  const [verb, ...rest] = argv;
-  if (verb === undefined) return { usage: USAGE };
-  const flags = readFlags(rest);
-  if (flags === null) return { usage: USAGE };
-  return {
-    verb,
-    electionId: null,
-    file: null,
-    result: null,
-    project: null,
-    resolution: null,
-    transport: null,
-    team: null,
-    from: null,
-    sendScript: null,
-    trigger: null,
-    ...flags,
-  };
-}
-
-// Verb dispatch table: every entry is total over ParsedArgs and returns
-// usage(2) itself when a required flag is missing.
-const VERBS: Record<
-  string,
-  (root: string, args: ParsedArgs, projectDir: string) => number
-> = {
-  open: (root, a, projectDir) =>
-    a.file === null
-      ? usageFail()
-      : handleTriggeredOpen(projectDir, root, a.file, a.trigger ?? "manual"),
-  next: (root, a) => (a.electionId === null ? usageFail() : handleNext(root, a.electionId)),
-  report: (root, a) =>
-    a.electionId === null || a.result === null
-      ? usageFail()
-      : handleReport(root, a.electionId, a.result, a.resolution),
-  notify: (root, a) =>
-    a.electionId === null
-      ? usageFail()
-      : handleNotify(root, a.electionId, a.transport ?? "subagent", {
-          team: a.team,
-          from: a.from,
-          sendScript: a.sendScript,
-        }),
-  vote: (root, a) =>
-    a.electionId === null || a.file === null
-      ? usageFail()
-      : handleVote(root, a.electionId, a.file),
-  status: (root, a) => (a.electionId === null ? usageFail() : handleStatus(root, a.electionId)),
-  tally: (root, a) => (a.electionId === null ? usageFail() : handleTally(root, a.electionId)),
-  render: (root, a) => (a.electionId === null ? usageFail() : handleRender(root, a.electionId)),
-  verify: (root, a) => (a.electionId === null ? usageFail() : handleVerify(root, a.electionId)),
-};
-
-export function main(argv: string[], projectDir?: string): number {
-  const args = parseArgs(argv);
-  if ("usage" in args) {
-    console.error(args.usage);
-    return 2;
-  }
-  // --project is the repo-external override (scratch-script-discipline): tests
-  // and experiments point the store at a scratch tree instead of the real one.
-  // Absent both, resolveProjectDir derives the repo root the same way every
-  // other amadeus CLI tool does (Issue #1450: the prior default,
-  // `join(import.meta.dir, "..")`, resolved to <harness-dir> instead of the
-  // repo root because import.meta.dir is this script's OWN directory).
-  const resolvedProjectDir = resolveProjectDir(args.project ?? projectDir);
-  const root = electionsRoot(resolvedProjectDir);
-  const handler = VERBS[args.verb];
-  if (handler === undefined) return usageFail();
-  return handler(root, args, resolvedProjectDir);
+  console.error(JSON.stringify(result.error));
+  return 1;
 }
 
 function usageFail(): 2 {
   console.error(USAGE);
   return 2;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function strings(value: unknown): readonly string[] | null {
+  return Array.isArray(value) && value.every((item) => typeof item === "string") ? value : null;
+}
+
+function isElectionState(value: unknown): value is ElectionState {
+  return typeof value === "string" && ["draft", "open", "collecting", "partial", "tallied", "rendered", "recorded"].includes(value);
+}
+
+function isHoldReason(value: unknown): value is HoldReason {
+  return typeof value === "string" && ["tie", "block", "quorum-short", "discussion-needed", "split"].includes(value);
+}
+
+type DirectiveCommon = Omit<DirectiveBase, "verb" | "report">;
+
+function parseDirectiveCommon(raw: Record<string, unknown>): DirectiveCommon | null {
+  const targets = strings(raw.targetQuestionIds);
+  if (
+    typeof raw.electionId !== "string" ||
+    targets === null ||
+    (raw.preservedResultDigest !== null && typeof raw.preservedResultDigest !== "string") ||
+    !isElectionState(raw.expectedState) ||
+    (raw.expectedRunId !== null && typeof raw.expectedRunId !== "string")
+  ) return null;
+  return {
+    electionId: raw.electionId,
+    schemaVersion: 2,
+    targetQuestionIds: targets,
+    preservedResultDigest: raw.preservedResultDigest,
+    expectedState: raw.expectedState,
+    expectedRunId: raw.expectedRunId,
+  };
+}
+
+// Directive kinds carrying no payload beyond the common fields: each pins one
+// verb/report pair, so parsing is a table lookup plus an equality check.
+type PlainDirectiveKind = "distribute" | "render" | "verify" | "done";
+
+const PLAIN_DIRECTIVE_SHAPES: Record<
+  PlainDirectiveKind,
+  { readonly verb: DirectiveVerb; readonly report: ReportResult }
+> = {
+  distribute: { verb: "notify", report: "distributed" },
+  render: { verb: "render", report: "rendered" },
+  verify: { verb: "verify", report: "verified" },
+  done: { verb: null, report: null },
+};
+
+function isPlainDirectiveKind(value: string): value is PlainDirectiveKind {
+  return Object.hasOwn(PLAIN_DIRECTIVE_SHAPES, value);
+}
+
+function parsePlainDirective(
+  raw: Record<string, unknown>,
+  common: DirectiveCommon,
+): ElectionDirective | null {
+  const kind = raw.kind;
+  if (typeof kind !== "string" || !isPlainDirectiveKind(kind)) return null;
+  const shape = PLAIN_DIRECTIVE_SHAPES[kind];
+  if (raw.verb !== shape.verb || raw.report !== shape.report) return null;
+  return { kind, ...common, verb: shape.verb, report: shape.report };
+}
+
+function parseCollectWaitDirective(
+  raw: Record<string, unknown>,
+  common: DirectiveCommon,
+): ElectionDirective | null {
+  if (raw.kind !== "collect-wait" || raw.verb !== null || raw.report !== null) return null;
+  const pending = strings(raw.pending);
+  return pending === null ? null : { kind: raw.kind, ...common, verb: null, report: null, pending };
+}
+
+function parseTallyReadyDirective(
+  raw: Record<string, unknown>,
+  common: DirectiveCommon,
+): ElectionDirective | null {
+  if (raw.kind !== "tally-ready" || raw.verb !== "tally" || raw.report !== "tallied") return null;
+  if (typeof raw.candidateRunId !== "string") return null;
+  return { kind: raw.kind, ...common, verb: raw.verb, report: raw.report, candidateRunId: raw.candidateRunId };
+}
+
+function parseHoldDirective(
+  raw: Record<string, unknown>,
+  common: DirectiveCommon,
+): ElectionDirective | null {
+  if (raw.kind !== "hold" || raw.verb !== "notify" || raw.report !== "distributed") return null;
+  if (!Array.isArray(raw.held)) return null;
+  const held = raw.held.flatMap((item) => isRecord(item) && typeof item.questionId === "string" && isHoldReason(item.reason) ? [{ questionId: item.questionId, reason: item.reason }] : []);
+  return held.length === raw.held.length ? { kind: raw.kind, ...common, verb: raw.verb, report: raw.report, held } : null;
+}
+
+function parseDirective(raw: unknown): ElectionDirective | null {
+  if (!isRecord(raw) || raw.schemaVersion !== 2 || typeof raw.kind !== "string") return null;
+  const common = parseDirectiveCommon(raw);
+  if (common === null) return null;
+  return parsePlainDirective(raw, common)
+    ?? parseCollectWaitDirective(raw, common)
+    ?? parseTallyReadyDirective(raw, common)
+    ?? parseHoldDirective(raw, common);
+}
+
+// Verbs that need only an election ID; null means "not one of these verbs".
+function runElectionVerb(
+  root: string,
+  verb: string,
+  electionId: string,
+  file: string | undefined,
+): number | null {
+  if (verb === "next") return emit(nextElection(root, electionId));
+  if (verb === "status") return emit(statusElection(root, electionId));
+  if (verb === "vote" && file !== undefined) {
+    const raw = readJsonInput(file);
+    return raw === null ? emit(cliError("decode", electionId, "fix the ballot file and retry")) : emit(voteElection(root, electionId, raw, normalizeAt(new Date().toISOString())));
+  }
+  return null;
+}
+
+function runDirectiveVerb(root: string, verb: string, electionId: string, file: string): number {
+  const directive = parseDirective(readJsonInput(file));
+  if (directive === null || directive.electionId !== electionId) return emit(cliError("decode", electionId, "use the current machine-readable directive"));
+  const now = normalizeAt(new Date().toISOString());
+  if (verb === "notify" && (directive.kind === "distribute" || directive.kind === "hold")) return emit(notifyElection(root, directive));
+  if (verb === "tally" && directive.kind === "tally-ready") return emit(tallyElection(root, directive, now));
+  if (verb === "render" && directive.kind === "render") return emit(renderElection(root, directive, now));
+  if (verb === "verify" && directive.kind === "verify") return emit(verifyElection(root, directive, now));
+  if (verb === "report") return emit(reportElection(root, directive, now));
+  return usageFail();
+}
+
+export function main(argv: readonly string[], projectDir?: string): number {
+  const args = parseCliArgs(argv);
+  if (args === null) return usageFail();
+  // --project is the repo-external override (scratch-script-discipline): tests
+  // and experiments point the store at a scratch tree instead of the real one.
+  const resolvedProjectDir = resolveProjectDir(args.project ?? projectDir);
+  const root = electionsRoot(resolvedProjectDir);
+  if (args.verb === "open") {
+    if (args.file === undefined) return usageFail();
+    const raw = readJsonInput(args.file);
+    if (raw === null) return emit(cliError("decode", "unknown", "fix the input file and retry"));
+    return emit(triggeredOpenElection(resolvedProjectDir, root, raw, args.trigger ?? "manual"));
+  }
+  if (args.electionId === undefined) return usageFail();
+  const handled = runElectionVerb(root, args.verb, args.electionId, args.file);
+  if (handled !== null) return handled;
+  if (args.file === undefined) return usageFail();
+  return runDirectiveVerb(root, args.verb, args.electionId, args.file);
 }
 
 if (import.meta.main) process.exit(main(process.argv.slice(2)));

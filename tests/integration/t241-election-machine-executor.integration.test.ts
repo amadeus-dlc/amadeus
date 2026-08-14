@@ -39,14 +39,17 @@ function makeCli(projectDir: string) {
 }
 
 // The machine executor: forwards directives until done/hold. Knows only the
-// directive envelope (kind/verb/report), never the election protocol.
+// directive envelope (kind/verb/report + the file-carried directive JSON),
+// never the election protocol.
 function runExecutor(
   cli: (args: string[]) => Cli,
+  projectDir: string,
   electionId: string,
   onCollectWait: (pending: string[]) => void,
   guard = 30,
 ): { stoppedAt: string; kinds: string[] } {
   const kinds: string[] = [];
+  const directivePath = join(projectDir, "directive.json");
   for (let i = 0; i < guard; i++) {
     const next = cli(["next", "--election", electionId]);
     if (next.code !== 0) return { stoppedAt: "error", kinds };
@@ -59,14 +62,13 @@ function runExecutor(
       onCollectWait(directive.pending);
       continue;
     }
+    writeFileSync(directivePath, next.stdout);
     if (typeof directive.verb === "string") {
-      const acted = cli([directive.verb, "--election", electionId]);
+      const acted = cli([directive.verb, "--election", electionId, "--file", directivePath]);
       if (acted.code !== 0) return { stoppedAt: `verb-failed:${directive.verb}`, kinds };
     }
-    if (typeof directive.report === "string") {
-      const reported = cli(["report", "--election", electionId, "--result", directive.report]);
-      if (reported.code !== 0) return { stoppedAt: `report-failed:${directive.report}`, kinds };
-    }
+    const reported = cli(["report", "--election", electionId, "--file", directivePath]);
+    if (reported.code !== 0) return { stoppedAt: "report-failed", kinds };
   }
   return { stoppedAt: "guard-exhausted", kinds };
 }
@@ -78,10 +80,16 @@ function setup(electionId: string, goa: number) {
   writeFileSync(
     def,
     JSON.stringify({
+      schemaVersion: 2,
       electionId,
       kind: "zero-confirm",
-      question: "0件でよいか",
-      choices: [{ internalNo: 1, label: "0件で可" }],
+      questions: [
+        {
+          questionId: "q-zero",
+          text: "0件でよいか",
+          choices: [{ internalNo: 1, label: "0件で可" }],
+        },
+      ],
       voters: ["alice"],
     }),
   );
@@ -89,11 +97,14 @@ function setup(electionId: string, goa: number) {
   writeFileSync(
     b1,
     JSON.stringify({
+      schemaVersion: 2,
+      kind: "original",
       electionId,
       voter: "alice",
       voterKind: "member",
-      choiceInternalNo: 1,
-      goa,
+      responses: [
+        { questionId: "q-zero", choiceInternalNo: 1, goa, reservation: null, rationale: null },
+      ],
       submittedAt: "2026-07-19T00:01:00Z",
     }),
   );
@@ -106,7 +117,7 @@ describe("t241 machine executor (ADR-6 CI layer)", () => {
     const cli = makeCli(projectDir);
     try {
       expect(cli(["open", "--file", def]).code).toBe(0);
-      const outcome = runExecutor(cli, "E-EXEC1", () => {
+      const outcome = runExecutor(cli, projectDir, "E-EXEC1", () => {
         expect(cli(["vote", "--election", "E-EXEC1", "--file", b1]).code).toBe(0);
       });
       expect(outcome.stoppedAt).toBe("done");
@@ -123,16 +134,18 @@ describe("t241 machine executor (ADR-6 CI layer)", () => {
     }
   });
 
-  test("stops at hold (human judgement), resumes after hold-resolved, and completes", () => {
+  test("stops at hold for the human and offers no CLI verb that injects a ruling", () => {
     const { projectDir, def, b1 } = setup("E-EXEC2", 8);
     const cli = makeCli(projectDir);
     try {
       expect(cli(["open", "--file", def]).code).toBe(0);
-      const first = runExecutor(cli, "E-EXEC2", () => {
+      const first = runExecutor(cli, projectDir, "E-EXEC2", () => {
         expect(cli(["vote", "--election", "E-EXEC2", "--file", b1]).code).toBe(0);
       });
       // the executor never resolves a hold on its own — it stops for the human
       expect(first.stoppedAt).toBe("hold");
+      // the canonical CLI removed the ruling-injection verb: a human decision
+      // is settled outside the CLI (or via a rerun round), never reported in
       const resolved = cli([
         "report",
         "--election",
@@ -142,11 +155,7 @@ describe("t241 machine executor (ADR-6 CI layer)", () => {
         "--resolution",
         "rejected",
       ]);
-      expect(resolved.code).toBe(0);
-      const second = runExecutor(cli, "E-EXEC2", () => {
-        throw new Error("collect-wait must not reappear after a rejected-resolution hold");
-      });
-      expect(second.stoppedAt).toBe("done");
+      expect(resolved.code).not.toBe(0);
     } finally {
       rmSync(projectDir, { recursive: true, force: true });
     }

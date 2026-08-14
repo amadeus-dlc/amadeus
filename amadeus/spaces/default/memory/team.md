@@ -37,7 +37,7 @@
 ### 意思決定とエスカレーション
 
 - **ユーザーエスカレーションの正準リスト**(全ノルムはこれを参照): (1) 選挙の可否同数 (2) PR マージ判断 (3) 人間の関与が本質の事項(例外承認・外部サービス操作・ノルム整理の迷い・human-presence ゲートの承認) (4) 仕様変更 — 既存の要件・ユーザー可視契約・挙動を変える場合。バグ修正(仕様への回復)は非該当だが、迷えばエスカレーションに倒す <!-- cid:requirements-analysis:escalation-canonical -->
-- 判断を要する事項は選挙にかけ単独で決めない。一次証拠で事実が一意に確定し既決 contract へ機械的に適用するだけなら執行として自律実行してよい。複数の妥当解・価値判断・ownership・証拠競合・設計逸脱は選挙、不可逆な外部操作は正準リスト、迷えば選挙。選挙は amadeus-election CLI の指令ループを正とし1選挙1質問、open 済みは直接編集せず terminal まで実行する。既決の規範は再議しない(例外はノルム矛盾監査) <!-- cid:requirements-analysis:always-elect -->
+- 判断を要する事項は選挙にかけ単独で決めない。一次証拠で事実が一意に確定し既決 contract へ機械的に適用するだけなら執行として自律実行してよい。複数の妥当解・価値判断・ownership・証拠競合・設計逸脱は選挙、不可逆な外部操作は正準リスト、迷えば選挙。選挙は amadeus-election CLI の指令ループを正とし、definition は複数 question を持てる。回答は question 単位、結果は question 単位の established と hold の混在を許し、再実行は hold 中の question だけを対象にする。open 済みは直接編集せず terminal まで実行する。既決の規範は再議しない(例外はノルム矛盾監査) <!-- cid:requirements-analysis:always-elect -->
 - 承認済みの要件・設計から逸脱する必要に気づいたら実装せず停止し裁定を得る(P3)。既存様式への準拠と判断する場合も該当性を単独で決めない。レビュアーは無申告の逸脱を必ず差し戻す <!-- cid:requirements-analysis:implementation-deviation-election -->
 - どの Issue に着手するかはユーザーが決定する。方向性への同意や起票指示を着手承認と見なさない <!-- cid:requirements-analysis:issue-selection-user-decides -->
 

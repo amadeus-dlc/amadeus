@@ -47,6 +47,7 @@ export interface VerifiedTlaSource {
   readonly cfgIdentity: string;
   readonly modelMap: ModelMap;
   readonly executionModel: ModelMapModel;
+  readonly auxIdentities: readonly ModelMapAssetIdentity[];
 }
 
 export interface VerifiedModelSource {
@@ -539,6 +540,7 @@ export function loadVerifiedTlaSourceInternal(
       cfgIdentity: selected.value.cfgIdentity,
       modelMap: sources.value.modelMap,
       executionModel: selected.value.model,
+      auxIdentities: selected.value.auxIdentities,
     },
   };
 }

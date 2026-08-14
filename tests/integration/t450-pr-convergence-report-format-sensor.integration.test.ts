@@ -171,6 +171,101 @@ describe("t450 predicate accepts both canonical shapes (ADR-3)", () => {
     expect(result.pass).toBe(false);
     expect(result.reason).toBe("no-file");
   });
+
+  test("code-generation accepts a local-evidence report without a CLI kind", () => {
+    const body = [
+      "# 収束レポート — example",
+      "",
+      "## 判定",
+      "",
+      "READY（local implementation scope）。",
+      "",
+      "## 実行証拠",
+      "",
+      "| Command | Result |",
+      "",
+    ].join("\n");
+    const result = evaluateReportFormat(reportAt(body), "code-generation");
+    expect(result).toEqual({
+      pass: true,
+      findings_count: 0,
+      reason: "local-evidence",
+      findings: [],
+    });
+  });
+
+  test("pr-convergence still rejects a local-evidence report", () => {
+    const body = "# 収束レポート\n\n## 判定\n\nREADY\n\n## 実行証拠\n\n";
+    const result = evaluateReportFormat(reportAt(body), "pr-convergence");
+    expect(result.pass).toBe(false);
+    expect(result.findings.map((finding) => finding.field)).toContain("kind");
+  });
+
+  test("code-generation still fail-closes a report that is neither local evidence nor CLI-shaped", () => {
+    const result = evaluateReportFormat(reportAt("# notes\n"), "code-generation");
+    expect(result.pass).toBe(false);
+    expect(result.findings.map((finding) => finding.field)).toContain("kind");
+  });
+
+  // isLocalCodeGenerationEvidence requires BOTH headings — a report carrying
+  // only one of the two is not local evidence and falls through to the
+  // CLI-shape parse, which fails closed on the missing `- kind:` field.
+  test("code-generation fail-closes headings that only appear inside a code fence", () => {
+    const body = [
+      "# 収束レポート — forged",
+      "",
+      "```",
+      "## 判定",
+      "## 実行証拠",
+      "```",
+      "",
+    ].join("\n");
+    const result = evaluateReportFormat(reportAt(body), "code-generation");
+    expect(result.pass).toBe(false);
+    expect(result.findings.map((finding) => finding.field)).toContain("kind");
+  });
+
+  test("code-generation fail-closes local-evidence headings with empty sections", () => {
+    const body = [
+      "# 収束レポート — hollow",
+      "",
+      "## 判定",
+      "",
+      "## 実行証拠",
+      "",
+    ].join("\n");
+    const result = evaluateReportFormat(reportAt(body), "code-generation");
+    expect(result.pass).toBe(false);
+    expect(result.findings.map((finding) => finding.field)).toContain("kind");
+  });
+
+  test("code-generation fail-closes a report with only 判定 and no 実行証拠", () => {
+    const body = [
+      "# 収束レポート — example",
+      "",
+      "## 判定",
+      "",
+      "READY（local implementation scope）。",
+      "",
+    ].join("\n");
+    const result = evaluateReportFormat(reportAt(body), "code-generation");
+    expect(result.pass).toBe(false);
+    expect(result.findings.map((finding) => finding.field)).toContain("kind");
+  });
+
+  test("code-generation fail-closes a report with only 実行証拠 and no 判定", () => {
+    const body = [
+      "# 収束レポート — example",
+      "",
+      "## 実行証拠",
+      "",
+      "| Command | Result |",
+      "",
+    ].join("\n");
+    const result = evaluateReportFormat(reportAt(body), "code-generation");
+    expect(result.pass).toBe(false);
+    expect(result.findings.map((finding) => finding.field)).toContain("kind");
+  });
 });
 
 describe("t450 falling evidence — each missing required field goes red", () => {

@@ -1983,3 +1983,36 @@ packaging 入力集合と source-unreferenced ギャップに焦点を絞った 
 - Updated artifacts: 実質更新 3 件 = `architecture.md`（4 境界の seam ペア表、読み側の硬さが 3 層に割れている機序、発行側のみがバリデータを通る非対称、round-trip と fail-closed の書き分けが必須である理由、state テキストフィールド層の fail-open / fail-closed 同居、core/tools 配置による dist 7 面投影の含意）、`code-structure.md`（患部 3 グループの配置、テスト側 10 パスの内訳、静的ガード挿入点と無検査キャスト候補母集団 8 箇所 / 5 ファイル、区間 touch 判定表、行シフト再解決表）、`code-quality-assessment.md`（既存 PBT 被覆分布、`.pbt.` 命名探索の罠、#1459 硬化が読み戻し経路を通らない残存欠陥、PBT 実装規約の現況と揺れ 2 件、静的ガードの品質要件、オラクル相殺リスク、投影・ゲートの品質コスト）。判断 1 行のみ 5 件 = `business-overview.md` / `api-documentation.md` / `component-inventory.md` / `technology-stack.md` / `dependencies.md`。加えて本ファイルと per-intent `re-scans/260802-record-roundtrip-pbt.md`。
 - 現在マーカーの降格: 直前の現在断面 `260802-scope-grid-face-sync`（observed `47574fbab`）を全 8 成果物で履歴へ全文保存のまま降格した（`cid:reverse-engineering:c3-relabel`）。履歴節の file:line は当時の observed 時点を指すため変更していない（`cid:requirements-analysis:historical-section-cite-check-at-observed`）。降格後の各成果物の `、現在、` 出現数は 1 件（`grep -c '、現在、'` 実測、8 成果物すべて）。
 - Per-intent record: `re-scans/260802-record-roundtrip-pbt.md`（scan mode 申告・患部 touch 判定表・引用再確認テーブル・4 境界 seam ペア表・既存 PBT 棚卸し・実対象の線引きを含む）。
+
+## 実行メタデータ（履歴: 260813-election-multiq）
+
+- Date: `2026-08-13`（Asia/Tokyo）
+- Intent: `260813-election-multiq`
+- Repository: `amadeus`（単一 repo）
+- Scope / depth / project type: `self-feature` / Standard / Brownfield
+- Issue: [#2813](https://github.com/amadeus-dlc/amadeus/issues/2813)
+- Base commit: `854692fd7a11b124236b0427fe3d59e2fe6bf785`
+- Observed commit: `c0f9edf27828def6fa3dbbbc4101d753b398e025`
+- Distance: `33 commits`（`git rev-list --count <base>..<observed>`）
+- Focus: election model/store/record/transport/CLI/skill/migration、関連 tests、`FormalElection` / model-map、`team.md` の現行 norm
+- Result: Issue #2813 の本質は未実装。単問 cardinality が全層へ波及し、mixed result、held-only rerun、established preservation、legacy/new dual read の実装が必要。
+- Norm freshness: commit `bd567fd1b78bbde8a524b2cc767bd176dfbfe95f` で旧 bundled `E-SRA-RAS13` / `election-cli-canonical` workaround は削除済み。現在は `team.md` `cid:requirements-analysis:always-elect` の「1選挙1質問」更新が残る。
+- Updated artifacts: shared 9成果物と `re-scans/260813-election-multiq.md`。既存履歴節は削除・再整形せず、最新節を追記。
+- Verification: read-only の git/rg/gh/line-count 計測のみ。テスト、build、coverage、TLC は未実行。
+
+## 実行メタデータ（最新: 260813-bolt-pr-attestation）
+
+- Date: `2026-08-14`（Asia/Tokyo）
+- Intent: `260813-bolt-pr-attestation`
+- Repository: `amadeus`（単一 repo）
+- Scope / depth / project type: `self-fix` / Minimal / Brownfield
+- Issue: [#2985](https://github.com/amadeus-dlc/amadeus/issues/2985)（Intent mirror: [#2989](https://github.com/amadeus-dlc/amadeus/issues/2989)）
+- Base commit: `c0f9edf27828def6fa3dbbbc4101d753b398e025`
+- Observed commit: `0fbbec42bb33d625bdb9d034789c0ff391df1287`（最新 `origin/main` lineage）
+- Issue reproduction checkout: `cd225e6ea1c5834aaa79b3e68030213ba04c9340`（別断面。Observed の代用ではない）
+- Focus: Delivery Planning Bolt cardinality、runtime DAG / worktree、PR provenance、attestation、report sensor、per-unit completion guard の合成境界
+- Result: 複数 Unit を1 Delivery Bolt に束ねられるが、runtime と PR evidence は単一 Unit identity を要求する。`Delivery Bolt -> units[] -> one PR identity -> per-unit evidence` seam が欠落し、one-Bolt-one-PR と per-unit completion が両立しない。
+- Scan mode: 通常の differential refresh。Issue reproduction checkout は停止症状の観測、成果物の主張と file:line は Observed で再解決した。
+- Deviation: dirty worktree へ最新 trunk を merge していない。`git show` / `git diff` による read-only 照合だけを行い、成果物は Observed 断面の主張にした。
+- Focused tests: Developer scan が6 filesを実行し、187 pass / 0 fail / 552 expect（Bun 1.3.13）。Architect synthesis は test / build / lint / typecheck を未実行。
+- Updated artifacts: shared 9成果物と `re-scans/260813-bolt-pr-attestation.md`。直前 #2813 の current marker は本文と当時の行番号を保持したまま履歴へ降格した。

@@ -297,6 +297,36 @@ function checkAttestation(outputPath: string, body: string, findings: ReportForm
   checkAttestationEnvironment(recordRoot, body, receipt, findings);
 }
 
+/** The section body between a real `## <heading>` line (outside code fences)
+ *  and the next heading, or null when the heading never appears as a heading. */
+function markdownSectionContent(body: string, heading: string): string | null {
+  const lines = body.split("\n");
+  let inFence = false;
+  let start = -1;
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index] ?? "";
+    if (/^\s*```/.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+    if (start < 0) {
+      if (line.trimEnd() === heading) start = index + 1;
+      continue;
+    }
+    if (/^#{1,6} /.test(line)) return lines.slice(start, index).join("\n");
+  }
+  return start < 0 ? null : lines.slice(start).join("\n");
+}
+
+function isLocalCodeGenerationEvidence(body: string): boolean {
+  if (field(body, "kind") !== null) return false;
+  const verdictSection = markdownSectionContent(body, "## 判定");
+  const evidenceSection = markdownSectionContent(body, "## 実行証拠");
+  return verdictSection !== null && verdictSection.trim().length > 0
+    && evidenceSection !== null && evidenceSection.trim().length > 0;
+}
+
 /** Pure evaluation core (in-process test seam). Reads the file itself so the
  *  CLI entry stays a thin argv shim. */
 export function evaluateReportFormat(outputPath: string, stage?: string): ReportFormatResult {
@@ -309,17 +339,38 @@ export function evaluateReportFormat(outputPath: string, stage?: string): Report
     return verdict("no-file", [{ field: "report", reason: "missing — blocking evidence must exist" }]);
   }
 
+  if (stage === "code-generation" && isLocalCodeGenerationEvidence(body)) {
+    return verdict("local-evidence", []);
+  }
+
   const findings: ReportFormatFinding[] = [];
   const { kind, converged } = checkCommon(body, findings);
+  applyKindRules(kind, converged, body, findings, stage);
+  checkAttestation(outputPath, body, findings);
+  const reason = kind === "override" || kind === "landed" || kind === "created" ? kind : "converged";
+  return verdict(reason, findings);
+}
+
+function applyKindRules(
+  kind: string | null,
+  converged: string | null,
+  body: string,
+  findings: ReportFormatFinding[],
+  stage?: string,
+): void {
   if (kind === "override") {
     checkOverride(body, findings);
     if (converged === "true") {
       findings.push({ field: "converged", reason: "an override report is converged: false by construction" });
     }
-  } else if (kind === "landed") {
+    return;
+  }
+  if (kind === "landed") {
     checkLanded(body, converged, findings);
     findings.push({ field: "kind", reason: "landed is a merge fact, not convergence evidence" });
-  } else if (kind === "converged" && converged === "false") {
+    return;
+  }
+  if (kind === "converged" && converged === "false") {
     findings.push({ field: "converged", reason: "a converged report is converged: true by construction" });
   } else if (kind === "created" && converged === "true") {
     findings.push({ field: "converged", reason: "a created report is converged: false by construction" });
@@ -327,9 +378,6 @@ export function evaluateReportFormat(outputPath: string, stage?: string): Report
   if (stage === "pr-convergence" && kind === "created") {
     findings.push({ field: "kind", reason: "created proves PR delivery only; final convergence requires converged or override" });
   }
-  checkAttestation(outputPath, body, findings);
-  const reason = kind === "override" || kind === "landed" || kind === "created" ? kind : "converged";
-  return verdict(reason, findings);
 }
 
 interface Flags {

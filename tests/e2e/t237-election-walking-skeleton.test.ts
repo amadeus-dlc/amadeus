@@ -51,10 +51,16 @@ describe("t237 election walking skeleton (e2e)", () => {
       writeFileSync(
         def,
         JSON.stringify({
+          schemaVersion: 2,
           electionId: "E-E2E-1",
           kind: "zero-confirm",
-          question: "0件でよいか",
-          choices: [{ internalNo: 1, label: "0件で可" }],
+          questions: [
+            {
+              questionId: "q-zero",
+              text: "0件でよいか",
+              choices: [{ internalNo: 1, label: "0件で可" }],
+            },
+          ],
           voters: ["alice"],
         }),
       );
@@ -62,11 +68,14 @@ describe("t237 election walking skeleton (e2e)", () => {
       writeFileSync(
         b1,
         JSON.stringify({
+          schemaVersion: 2,
+          kind: "original",
           electionId: "E-E2E-1",
           voter: "alice",
           voterKind: "member",
-          choiceInternalNo: 1,
-          goa: 1,
+          responses: [
+            { questionId: "q-zero", choiceInternalNo: 1, goa: 1, reservation: null, rationale: null },
+          ],
           submittedAt: "2026-07-19T00:01:00Z",
         }),
       );
@@ -89,9 +98,13 @@ describe("t237 election walking skeleton (e2e)", () => {
           continue;
         }
         expect(typeof directive.verb).toBe("string");
-        expect(cli(projectDir, [directive.verb, "--election", "E-E2E-1"]).code).toBe(0);
+        const directivePath = join(projectDir, "directive.json");
+        writeFileSync(directivePath, next.stdout);
         expect(
-          cli(projectDir, ["report", "--election", "E-E2E-1", "--result", directive.report]).code,
+          cli(projectDir, [directive.verb, "--election", "E-E2E-1", "--file", directivePath]).code,
+        ).toBe(0);
+        expect(
+          cli(projectDir, ["report", "--election", "E-E2E-1", "--file", directivePath]).code,
         ).toBe(0);
       }
       expect(seenKinds).toEqual([
@@ -121,45 +134,76 @@ describe("t237 election walking skeleton (e2e)", () => {
       writeFileSync(
         definition,
         JSON.stringify({
+          schemaVersion: 2,
           electionId: "E-FAILURE-HOLD",
           kind: "failure-ruling",
-          question: "Unit alpha の失敗をどう裁定するか",
-          choices: [
-            { internalNo: 1, label: "Retry" },
-            { internalNo: 2, label: "Skip" },
-            { internalNo: 3, label: "Abort" },
+          questions: [
+            {
+              questionId: "q-failure-ruling",
+              text: "Unit alpha の失敗をどう裁定するか",
+              choices: [
+                { internalNo: 1, label: "Retry" },
+                { internalNo: 2, label: "Skip" },
+                { internalNo: 3, label: "Abort" },
+              ],
+            },
           ],
           voters: ["subagent-1", "subagent-2"],
         }),
       );
       expect(cli(projectDir, ["open", "--trigger", "auto", "--file", definition]).code).toBe(0);
-      expect(
-        cli(projectDir, ["report", "--election", "E-FAILURE-HOLD", "--result", "distributed"]).code,
-      ).toBe(0);
 
-      for (const [voter, choiceInternalNo] of [["subagent-1", 1], ["subagent-2", 2]] as const) {
-        const ballot = join(projectDir, `${voter}.json`);
-        writeFileSync(
-          ballot,
-          JSON.stringify({
-            electionId: "E-FAILURE-HOLD",
-            voter,
-            voterKind: "subagent",
-            choiceInternalNo,
-            goa: 1,
-            submittedAt: `2026-08-14T00:0${choiceInternalNo}:00Z`,
-          }),
-        );
-        expect(cli(projectDir, ["vote", "--election", "E-FAILURE-HOLD", "--file", ballot]).code).toBe(0);
+      // Drive the directive loop exactly as issued until the tie hold appears.
+      let sawHold = false;
+      for (let guard = 0; guard < 20; guard++) {
+        const next = cli(projectDir, ["next", "--election", "E-FAILURE-HOLD"]);
+        expect(next.code).toBe(0);
+        const directive = JSON.parse(next.stdout);
+        if (directive.kind === "hold") {
+          expect(directive.held).toEqual([{ questionId: "q-failure-ruling", reason: "tie" }]);
+          sawHold = true;
+          break;
+        }
+        if (directive.kind === "collect-wait") {
+          for (const [voter, choiceInternalNo] of [["subagent-1", 1], ["subagent-2", 2]] as const) {
+            const ballot = join(projectDir, `${voter}.json`);
+            writeFileSync(
+              ballot,
+              JSON.stringify({
+                schemaVersion: 2,
+                kind: "original",
+                electionId: "E-FAILURE-HOLD",
+                voter,
+                voterKind: "subagent",
+                responses: [
+                  {
+                    questionId: "q-failure-ruling",
+                    choiceInternalNo,
+                    goa: 1,
+                    reservation: null,
+                    rationale: null,
+                  },
+                ],
+                submittedAt: `2026-08-14T00:0${choiceInternalNo}:00Z`,
+              }),
+            );
+            expect(
+              cli(projectDir, ["vote", "--election", "E-FAILURE-HOLD", "--file", ballot]).code,
+            ).toBe(0);
+          }
+          continue;
+        }
+        expect(typeof directive.verb).toBe("string");
+        const directivePath = join(projectDir, "failure-directive.json");
+        writeFileSync(directivePath, next.stdout);
+        expect(
+          cli(projectDir, [directive.verb, "--election", "E-FAILURE-HOLD", "--file", directivePath]).code,
+        ).toBe(0);
+        expect(
+          cli(projectDir, ["report", "--election", "E-FAILURE-HOLD", "--file", directivePath]).code,
+        ).toBe(0);
       }
-
-      const tally = cli(projectDir, ["tally", "--election", "E-FAILURE-HOLD"]);
-      expect(tally.code).toBe(0);
-      expect(JSON.parse(tally.stdout).result).toMatchObject({ kind: "hold", reason: "tie" });
-      expect(
-        cli(projectDir, ["report", "--election", "E-FAILURE-HOLD", "--result", "tallied"]).code,
-      ).toBe(0);
-      expect(JSON.parse(cli(projectDir, ["next", "--election", "E-FAILURE-HOLD"]).stdout).kind).toBe("hold");
+      expect(sawHold).toBe(true);
 
       const registry = JSON.parse(
         readFileSync(join(projectDir, "amadeus", "spaces", "default", "elections", "elections.json"), "utf8"),
@@ -177,7 +221,7 @@ describe("t237 election walking skeleton (e2e)", () => {
       const actingContract = readFileSync(CODEX_SKILL, "utf8");
       expect(actingContract).toContain("hold / split / interrupt / CLI error");
       expect(actingContract).toContain("Retry / Skip / Abort");
-      expect(actingContract).toContain("report --user-input retry|skip|abort");
+      expect(actingContract).toContain("`report --user-input` with the ruling (`retry` / `skip` / `abort`)");
     } finally {
       rmSync(projectDir, { recursive: true, force: true });
     }

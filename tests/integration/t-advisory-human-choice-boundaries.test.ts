@@ -29,6 +29,8 @@ import {
   advisoryModelCheckOutputDir,
   verifyAdvisoryModelCheckOutcome,
 } from "../../plugins/formal-model-check/tools/advisory-model-check.ts";
+import { canonicalIdentity } from "../../plugins/formal-model-check/tools/canonical.ts";
+import { FIXED_TLC_VERSION_LINE } from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 import {
   auditFilePath,
   auditShardName,
@@ -104,25 +106,62 @@ function writeEvidence(
   projectDir: string,
   pending: PendingAdvisory,
   outcome: "NOT_DETECTED" | "DETECTED" | "HARNESS_ERROR" = "NOT_DETECTED",
+  cfg: { source: string; constants: readonly string[] } = { source: "SPECIFICATION Spec\n", constants: [] },
 ): EvidenceFixture {
   const modelPath = join(projectDir, "amadeus/spaces/default/specs/tla/FormalElection.tla");
   const cfgPath = join(projectDir, "amadeus/spaces/default/specs/tla/FormalElection.cfg");
   mkdirSync(join(projectDir, "amadeus/spaces/default/specs/tla"), { recursive: true });
   writeFileSync(modelPath, "---- MODULE FormalElection ----\n====\n");
-  writeFileSync(cfgPath, "SPECIFICATION Spec\n");
+  writeFileSync(cfgPath, cfg.source);
 
   const directory = advisoryModelCheckOutputDir(projectDir, pending.identity.advisoryInstance);
   mkdirSync(directory, { recursive: true });
   const runId = "00000000-0000-4000-8000-000000000001";
+  const provenanceBody = {
+    modelPath: "amadeus/spaces/default/specs/tla/FormalElection.tla",
+    cfgPath: "amadeus/spaces/default/specs/tla/FormalElection.cfg",
+    modelIdentity: "registered-model",
+    moduleIdentity: canonicalIdentity(
+      readFileSync(modelPath, "utf8"),
+      "amadeus.formal-verif.tla.module.v1",
+    ).sha256,
+    cfgIdentity: canonicalIdentity(
+      readFileSync(cfgPath, "utf8"),
+      "amadeus.formal-verif.tla.cfg.v1",
+    ).sha256,
+    moduleSha256: sha256(modelPath),
+    cfgSha256: sha256(cfgPath),
+    auxiliaries: [],
+    implementations: [],
+    constants: [...cfg.constants],
+  };
+  const sourceProvenance = {
+    ...provenanceBody,
+    sourceIdentity: canonicalIdentity(
+      provenanceBody,
+      "amadeus.formal-verif.model-check-source.v1",
+    ).sha256,
+  };
   const expectedArtifacts: string[] = [];
   if (outcome === "NOT_DETECTED") {
-    writeJson(join(directory, "completion-marker.json"), { complete: true, runId });
+    writeJson(join(directory, "completion-marker.json"), {
+      complete: true,
+      runId,
+      sourceIdentity: sourceProvenance.sourceIdentity,
+    });
     writeJson(join(directory, "env-receipt.json"), {
       schema: "amadeus.env-receipt.v1",
       runId,
       inspections: [{ id: "network-deny", status: "passed" }],
     });
-    expectedArtifacts.push("completion-marker.json", "env-receipt.json");
+    writeFileSync(join(directory, "tlc-stdout.bin"), "complete");
+    writeFileSync(join(directory, "tlc-stderr.bin"), "");
+    expectedArtifacts.push(
+      "completion-marker.json",
+      "env-receipt.json",
+      "tlc-stdout.bin",
+      "tlc-stderr.bin",
+    );
   } else if (outcome === "DETECTED") {
     writeJson(join(directory, "counterexample.json"), { runId, counterexampleIdentity: "counterexample-1" });
     expectedArtifacts.push("counterexample.json");
@@ -145,14 +184,19 @@ function writeEvidence(
       specIdentity: pending.identity.specIdentity,
       instance: pending.identity.advisoryInstance,
     },
-    sourceProvenance: {
-      modelPath: "amadeus/spaces/default/specs/tla/FormalElection.tla",
-      cfgPath: "amadeus/spaces/default/specs/tla/FormalElection.cfg",
-      moduleIdentity: "registered-module",
-      cfgIdentity: "registered-cfg",
-      moduleSha256: sha256(modelPath),
-      cfgSha256: sha256(cfgPath),
-    },
+    sourceProvenance,
+    verification: outcome === "NOT_DETECTED"
+      ? {
+          toolchainVersion: FIXED_TLC_VERSION_LINE,
+          constants: [...cfg.constants],
+          completionMarker: "Model checking completed. No error has been found.",
+          generatedStates: 3,
+          distinctStates: 2,
+          statesLeftOnQueue: 0,
+          searchDepth: 2,
+          sourceIdentity: sourceProvenance.sourceIdentity,
+        }
+      : null,
     errorCode: outcome === "HARNESS_ERROR" ? "TOOL_FAILED" : null,
     errorDetail: outcome === "HARNESS_ERROR" ? "synthetic failure" : null,
   };
@@ -375,6 +419,66 @@ describe("advisory model-check evidence boundaries", () => {
       writeFileSync(join(evidence.directory, "manifest.json"), "{");
       expect(verifyAdvisoryModelCheckOutcome(root, pending)).toMatchObject({ kind: "invalid" });
     }
+  });
+
+  // A tamperer controls the whole manifest, so re-signing the provenance after
+  // editing it keeps every self-referential identity consistent. Only the CFG
+  // bytes on disk can contradict the claimed constants.
+  function resignProvenance(
+    evidence: EvidenceFixture,
+    mutate: (body: Record<string, unknown>) => void,
+  ): void {
+    const { sourceIdentity: _dropped, ...body } = evidence.manifest.sourceProvenance as Record<string, unknown>;
+    mutate(body);
+    const sourceIdentity = canonicalIdentity(body, "amadeus.formal-verif.model-check-source.v1").sha256;
+    evidence.manifest.sourceProvenance = { ...body, sourceIdentity };
+    evidence.manifest.verification = {
+      ...(evidence.manifest.verification as Record<string, unknown>),
+      constants: body.constants,
+      sourceIdentity,
+    };
+    const markerPath = join(evidence.directory, "completion-marker.json");
+    writeJson(markerPath, {
+      complete: true,
+      runId: evidence.manifest.runId,
+      sourceIdentity,
+    });
+    evidence.manifest.artifacts = (evidence.manifest.artifacts as Array<Record<string, unknown>>).map((artifact) =>
+      artifact.path === "completion-marker.json"
+        ? { ...artifact, bytes: readFileSync(markerPath).byteLength, sha256: sha256(markerPath) }
+        : artifact
+    );
+    evidence.writeManifest(evidence.manifest);
+  }
+
+  test("provenance constants must match the constants declared by the CFG bytes", () => {
+    const { root, pending, evidence } = fixture();
+    resignProvenance(evidence, (body) => { body.constants = ["Voters={v1,v2}"]; });
+    expect(verifyAdvisoryModelCheckOutcome(root, pending)).toMatchObject({
+      kind: "invalid",
+      reason: "source provenance constants do not match the current config",
+    });
+
+    const dropped = fixture();
+    resignProvenance(dropped.evidence, (body) => { body.constants = "not-an-array"; });
+    expect(verifyAdvisoryModelCheckOutcome(dropped.root, dropped.pending)).toMatchObject({
+      kind: "invalid",
+      reason: "source provenance identities are invalid",
+    });
+  });
+
+  test("provenance carrying the CFG's real constants is accepted", () => {
+    const root = mkdtempSync(join(tmpdir(), "advisory-evidence-constants-"));
+    roots.push(root);
+    const pending = createPendingAdvisory(identity, () => "019fc698-ba1f-7000-8000-000000000001");
+    const evidence = writeEvidence(root, pending, "NOT_DETECTED", {
+      source: "SPECIFICATION Spec\nVoters = {v1, v2}\nQuorum = 2\n",
+      constants: ["Voters={v1, v2}", "Quorum=2"],
+    });
+    expect(verifyAdvisoryModelCheckOutcome(root, pending)).toEqual({
+      kind: "verified-not-detected",
+      runId: String(evidence.manifest.runId),
+    });
   });
 
   test("outcome payload validation runs after a valid artifact inventory", () => {

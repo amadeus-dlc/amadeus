@@ -164,7 +164,7 @@ describe("t369 #2976 failure-election fallback is complete on every conductor su
       expect(content).toContain(DISABLED_ENVELOPE);
       expect(content).toContain("hold / split / interrupt / CLI error");
       expect(content).toMatch(/Retry\s*\/\s*Skip\s*\/\s*Abort/);
-      expect(content).toContain("report --user-input retry|skip|abort");
+      expect(content).toContain("`report --user-input` with the ruling (`retry` / `skip` / `abort`)");
     }
   });
 });
@@ -229,7 +229,7 @@ describe("t369 the live §13 probe's fixture satisfies the ritual's precondition
       join(proj, PAYLOAD_NAME),
     ]);
     expect(opened.status).toBe(0);
-    expect(JSON.parse(opened.stdout).opened).toBe(ELECTION_ID);
+    expect(JSON.parse(opened.stdout).electionId).toBe(ELECTION_ID);
     expect(existsSync(join(proj, ELECTIONS_REL, "elections.json"))).toBe(true);
   });
 

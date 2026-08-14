@@ -126,9 +126,13 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     // emit (u1) and the question-route sweep (u3) — each entered as a granted
     // NSD001 identity. Moving plugin policy out of core removed both catches,
     // so their grants are now explicitly revoked and the baseline returns to 213.
-    expect(result.evidence.counts).toEqual({ C_pre: 213, B_pre: 213, B0: 213 });
-    expect(folded.grandfather).toHaveLength(213);
-    expect(removed).toHaveLength(16);
+    // 213 -> 212 is the canonical election replacement: deleting the legacy
+    // migration CLI (scripts/amadeus-election-migrate.ts) deleted its NSD001
+    // identity faacb3ea, whose grant is now explicitly revoked (filed under
+    // #1979, so the issue set is unchanged).
+    expect(result.evidence.counts).toEqual({ C_pre: 212, B_pre: 212, B0: 212 });
+    expect(folded.grandfather).toHaveLength(212);
+    expect(removed).toHaveLength(17);
     expect(removed.some((entry: { fingerprint: string }) => entry.fingerprint.startsWith("b775faf8"))).toBeTrue();
     expect(removed.some((entry: { fingerprint: string }) => entry.fingerprint.startsWith("56fefece"))).toBeTrue();
     expect(new Set(removed.flatMap((entry: { issues: string[] }) => entry.issues))).toEqual(

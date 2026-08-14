@@ -121,10 +121,10 @@ describe("isElectionRegistryEntry (row 4-field check)", () => {
       "draft",
       "open",
       "collecting",
+      "partial",
       "tallied",
       "rendered",
       "recorded",
-      "hold",
     ] as const) {
       expect(isElectionRegistryEntry({ ...good, status })).toBe(true);
     }

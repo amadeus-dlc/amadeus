@@ -79,12 +79,18 @@ function replaceOnce(source: string, before: string, after: string): string {
   return `${pieces[0]}${after}${pieces[1]}`;
 }
 
+// FormalElection: FinishRun keeps every question a target instead of narrowing
+// to the held ones, so an established question stays in `targets` while it also
+// enters `preserved`. TLC kills this during exploration on HeldOnlyTargets
+// (`preserved \cap targets = {}`); a state-predicate mutation such as
+// `QuestionIdsUnique == FALSE` would only prove the pipeline reports a
+// violation, not that the invariants catch broken behaviour.
 function semanticMutation(model: (typeof MODEL_NAMES)[number], source: string): string {
   if (model === "FormalElection") {
     return replaceOnce(
       source,
-      "Resolve(prior, ballot) == IF prior = NoBallot \\/ Later(ballot, prior) THEN ballot ELSE prior",
-      "Resolve(prior, ballot) == prior",
+      "        /\\ targets' = held\n        /\\ phase' = IF held",
+      "        /\\ targets' = targets\n        /\\ phase' = IF held",
     );
   }
   return replaceOnce(
@@ -111,7 +117,7 @@ function semanticPortDependencies(
     }
     const source = readFileSync(resolve(workspace, invokedModelPath), "utf8");
     return model === "FormalElection"
-      ? source.includes("Resolve(prior, ballot) == prior")
+      ? source.includes("targets' = targets")
       : source.includes("WITH CaptureBoundaryAlwaysCreates <- TRUE");
   };
   const writeTrace = (prefix: string, argv: readonly string[], exitCode: number) => {
@@ -133,7 +139,7 @@ function semanticPortDependencies(
     ];
     const mutated = isMutated(argv[argv.indexOf("--model") + 1]);
     writeTrace(trace, dockerArgs, mutated ? 1 : 0);
-    if (mutated) return { status: 1, stdout: "", stderr: "Invariant resolution is violated" };
+    if (mutated) return { status: 1, stdout: "", stderr: "Invariant HeldOnlyTargets is violated" };
 
     const outDir = argv[argv.indexOf("--out") + 1]!;
     const artifacts = beginModelCheckArtifacts(outDir, runId);

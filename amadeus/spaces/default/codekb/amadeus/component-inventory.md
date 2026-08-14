@@ -2572,6 +2572,39 @@ Issue #2785（grilling depth を質問数予算から frontier 駆動の枝刈�
 
 **未確定**: frontier 駆動（上流 `mattpocock/skills`、ピン SHA `1495d014303e041c51c29f9e442485ba06f5878d`）が具体的にどの層（正本のみか、機械契約の閉語彙・数値も含むか）まで置き換えるかは要件段の裁定事項。本棚卸しは現行構造の全数把握であり、再定義後の to-be 構造は含まない。
 
+## Issue #2813 コンポーネント一覧（履歴、observed `c0f9edf2782`）
+
+| コンポーネント | 責務 | 直接依存 | #2813 観点の健全性 |
+|---|---|---|---|
+| Election Model | definition、ballot parse、shuffle、resolution、tally | なし（純粋層） | **要変更**: 全主要型が単問 cardinality |
+| Election Store | atomic write、pending/ledger、registry、materialize | model、filesystem | **要変更**: scalar ElectionFile/tally/global status/voter file |
+| Election Record | ruling、GoA、reservation、timeline、self-verify | model、norm metrics parser | **要変更**: question 帰属と mixed ruling が不在 |
+| Election Transport | agmsg/subagent port、per-voter view path 配送 | filesystem、Bun.spawnSync | **健全**: view payload の複数問化で吸収可能 |
+| Election CLI | verb dispatch、state transition、hold policy、render/verify | model/store/record/transport | **高リスク**: 853行に global state と hold resolution が集中 |
+| Election Skill | typed directive の転送手順 | CLI vocabulary | **要変更**: question 単数と全体 hold/rerun を前提 |
+| Election Migration | directory/registry plan、approval、fidelity verify | store/CLI、git | **部分利用**: schema 破壊移行より dual decoder の回帰確認に利用 |
+| FormalElection | 有限 voter/choice の状態探索 | TLA+/TLC、model-map | **要変更**: accepted/tally/hold が election 全体で1組 |
+| Election Test Suite | example、PBT、integration、e2e | Bun test、fast-check、formal plugin | **被覆不足**: multi/mixed/held-only/legacy-new invariant が無い |
+
+所有境界は維持する。question schema と tally business rule は model、永続形式と dual decoder は store、判断を含まない配送は transport、human-facing state transition は CLI、監査 prose と完全性検査は record、有限状態の安全性は TLA+ が所有する。これらをCLI単一ファイルへ寄せる設計は責務境界を崩すため避ける。
+
+## Issue #2985 コンポーネント一覧（現在、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
+
+| コンポーネント | 責務 | 入力 / 出力 | 状態 |
+|---|---|---|---|
+| Delivery Planning artifact | Unit を Delivery Bolt へ編成 | `bolt-plan.md` | 複数 Unit Bolt を表現可能 |
+| Runtime DAG compiler | Unit dependency を topological batch へ変換 | dependency doc → `bolt_dag.batches` | Delivery Bolt ID を消費しない |
+| Construction orchestrator | batch dispatch と per-unit coverage | batches / Unit artifacts | Unit を実行 owner とする |
+| PR convergence contract | PR delivery / convergence loop | Bolt branch / GitHub state | one-Bolt-one-PR、複数 Unit fold 禁止 |
+| CLI target / context | repo / PR / record / Unit と heads を解決 | argv / checkout / PR | 単数 Unit のみ |
+| Provenance checker | title と `Amadeus Work` を検査 | PR title/body → verdict | Bolt / Unit 各1件 |
+| Attestation codec | report identity と digest を encode / parse | report / delivery identity | Bolt / Unit / PR 各1件 |
+| Git / GitHub runners | checkout と PR state を取得・検証 | branch / repo / PR | 1 head tuple / 1 PR summary |
+| Report format sensor | report、checkout、audit を検証 | Unit report path | path Unit と receipt Unit 一致必須 |
+| State completion guard | artifacts と sensors を全 Unit で検査 | graph / audit / Unit paths | per-unit evidence を要求 |
+
+健全な単一 Unit 経路では Git / GitHub head 一致、content digest、audit receipt、sensor fail-closed の責務が明確である。要注意点は Delivery Bolt、runtime batch、execution Bolt が同じ語を異なる cardinality で使うこと、劣化点は共有 PR evidence の composition owner が存在しないことである。既存 component の一般リファクタや新規 service 分割は対象外とする。
+
 ## 260814-unit-failure-autoelectio (2026-08-14, observed `cd64486a6`) — Issue #2976 患部のコンポーネント棚卸し
 
 ### 実装コンポーネント

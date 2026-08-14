@@ -11,10 +11,16 @@ import { join } from "node:path";
 import { main } from "../../packages/framework/core/tools/amadeus-election";
 
 const DEF = {
+  schemaVersion: 2,
   electionId: "E-DEFROOT1",
   kind: "zero-confirm",
-  question: "default project dir regression",
-  choices: [{ internalNo: 1, label: "0件で可" }],
+  questions: [
+    {
+      questionId: "q1",
+      text: "default project dir regression",
+      choices: [{ internalNo: 1, label: "0件で可" }],
+    },
+  ],
   voters: ["alice"],
 };
 

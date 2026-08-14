@@ -1,5 +1,8 @@
-// t261 — U2 election-path-resolver real-FS contract tests.
-import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test";
+// t261 — election-path-resolver real-FS contract tests.
+// The registry is the ONLY path to an election directory: resolveElectionDir
+// returns the indexed physical directory or throws. There is no direct-name
+// fallback — an election absent from the registry is not reachable.
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -33,10 +36,7 @@ function row(electionId: string, dirName: string): ElectionRegistryEntry {
 describe("resolveElectionDir", () => {
   test("registry hit resolves the indexed physical directory", () => {
     expect(appendElectionToRegistry(root, row("E-A", "260723-e-a")).ok).toBe(true);
-    expect(resolveElectionDir(root, "E-A")).toEqual({
-      kind: "registry",
-      dir: join(root, "260723-e-a"),
-    });
+    expect(resolveElectionDir(root, "E-A")).toBe(join(root, "260723-e-a"));
   });
 
   test("registry lookup is exact and does not bind a sibling row", () => {
@@ -44,38 +44,26 @@ describe("resolveElectionDir", () => {
     expect(() => resolveElectionDir(root, "E-AA")).toThrow("election not in registry: E-AA");
   });
 
-  test("absent registry permits an existing direct-name legacy directory and warns", () => {
-    mkdirSync(join(root, "E-LEGACY"));
-    const warn = spyOn(console, "error").mockImplementation(() => undefined);
-    expect(resolveElectionDir(root, "E-LEGACY")).toEqual({
-      kind: "legacy-unmigrated",
-      dir: join(root, "E-LEGACY"),
-    });
-    expect(warn).toHaveBeenCalledWith("unmigrated election E-LEGACY — legacy path(移行前)");
+  test("an unindexed directory carrying the election id is NOT reachable", () => {
+    mkdirSync(join(root, "E-UNINDEXED"));
+    expect(() => resolveElectionDir(root, "E-UNINDEXED")).toThrow(
+      "election not in registry: E-UNINDEXED",
+    );
   });
 
-  test("registry miss permits an existing direct-name legacy directory and warns", () => {
+  test("registry miss with an unindexed same-id directory present still throws", () => {
     expect(appendElectionToRegistry(root, row("E-NEW", "260723-e-new")).ok).toBe(true);
     mkdirSync(join(root, "E-OLD"));
-    const warn = spyOn(console, "error").mockImplementation(() => undefined);
-    expect(resolveElectionDir(root, "E-OLD").kind).toBe("legacy-unmigrated");
-    expect(warn).toHaveBeenCalledTimes(1);
+    expect(() => resolveElectionDir(root, "E-OLD")).toThrow("election not in registry: E-OLD");
   });
 
-  test("registry miss and absent legacy directory throws loudly", () => {
-    expect(appendElectionToRegistry(root, row("E-A", "260723-e-a")).ok).toBe(true);
+  test("absent registry and absent directory throws loudly", () => {
     expect(() => resolveElectionDir(root, "E-MISSING")).toThrow(
       "election not in registry: E-MISSING",
     );
   });
 
-  test("absent registry and absent legacy directory throws loudly", () => {
-    expect(() => resolveElectionDir(root, "E-MISSING")).toThrow(
-      "election not in registry: E-MISSING",
-    );
-  });
-
-  test("corrupt registry fails closed even when a legacy directory exists", () => {
+  test("corrupt registry fails closed even when a same-id directory exists", () => {
     mkdirSync(join(root, "E-LEGACY"));
     writeFileSync(electionsRegistryPath(root), "{broken");
     expect(() => resolveElectionDir(root, "E-LEGACY")).toThrow(
@@ -83,11 +71,9 @@ describe("resolveElectionDir", () => {
     );
   });
 
-  test("registry hit wins over a same-id legacy directory without warning", () => {
+  test("the indexed dirName wins over a same-id directory sitting beside it", () => {
     mkdirSync(join(root, "E-A"));
     expect(appendElectionToRegistry(root, row("E-A", "260723-e-a")).ok).toBe(true);
-    const warn = spyOn(console, "error").mockImplementation(() => undefined);
-    expect(resolveElectionDir(root, "E-A").dir).toBe(join(root, "260723-e-a"));
-    expect(warn).not.toHaveBeenCalled();
+    expect(resolveElectionDir(root, "E-A")).toBe(join(root, "260723-e-a"));
   });
 });
