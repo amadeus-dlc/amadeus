@@ -3,6 +3,7 @@ import {
   AMADEUS_WORK_HEADING,
   type AmadeusWorkFieldName,
   PR_TITLE_PREFIX_PATTERN,
+  canonicalUnitSlugs,
 } from "./pr-convergence-presentation.ts";
 
 export interface AmadeusWorkFields {
@@ -34,6 +35,7 @@ export interface ProvenanceInput {
   readonly body: string;
   readonly record: string;
   readonly unit: string;
+  readonly units?: readonly string[];
 }
 
 type FieldKey = keyof AmadeusWorkFields;
@@ -176,13 +178,29 @@ function parseTitlePrefix(title: string): TitleParts | null {
   return { intent, bolt, unit };
 }
 
-function titleViolations(title: TitleParts | null, expectedUnit: string): readonly ProvenanceViolation[] {
+function expectedUnits(input: ProvenanceInput): readonly string[] {
+  const parsed = canonicalUnitSlugs(input.units ?? [input.unit]);
+  return parsed.ok ? parsed.value : [];
+}
+
+function encodedUnits(value: string, separator: "+" | ","): readonly string[] | null {
+  const parsed = canonicalUnitSlugs(value.split(separator));
+  if (!parsed.ok || parsed.value.join(separator) !== value) return null;
+  return parsed.value;
+}
+
+function sameUnits(actual: readonly string[] | null, expected: readonly string[]): boolean {
+  return actual !== null && actual.length === expected.length && actual.every((unit, index) => unit === expected[index]);
+}
+
+function titleViolations(title: TitleParts | null, input: ProvenanceInput): readonly ProvenanceViolation[] {
   if (title === null) {
     return [{ kind: "title-prefix-missing" }];
   }
-  return title.unit === expectedUnit
+  const units = expectedUnits(input);
+  return units.includes(input.unit) && sameUnits(encodedUnits(title.unit, "+"), units)
     ? []
-    : [{ kind: "title-unit-mismatch", expected: expectedUnit, actual: title.unit }];
+    : [{ kind: "title-unit-mismatch", expected: units.join("+"), actual: title.unit }];
 }
 
 function missingFieldViolations(fields: PartialFields): readonly ProvenanceViolation[] {
@@ -202,7 +220,10 @@ function referenceViolations(input: ProvenanceInput, fields: PartialFields): rea
     violations.push({ kind: "record-mismatch", expected: input.record, actual: record });
   }
   if (unit !== undefined && unit !== input.unit) {
-    violations.push({ kind: "unit-mismatch", expected: input.unit, actual: unit });
+    const expected = expectedUnits(input);
+    if (!expected.includes(input.unit) || !sameUnits(encodedUnits(unit, ","), expected)) {
+      violations.push({ kind: "unit-mismatch", expected: expected.join(","), actual: unit });
+    }
   }
   return violations;
 }
@@ -220,7 +241,7 @@ function consistencyViolations(
   if (bolt !== undefined && title.bolt !== bolt) {
     violations.push({ kind: "title-body-inconsistent", segment: "bolt" });
   }
-  if (unit !== undefined && title.unit !== unit) {
+  if (unit !== undefined && !sameUnits(encodedUnits(title.unit, "+"), encodedUnits(unit, ",") ?? [])) {
     violations.push({ kind: "title-body-inconsistent", segment: "unit" });
   }
   return violations;
@@ -242,7 +263,7 @@ function bodyViolations(
 export function checkProvenance(input: ProvenanceInput): ProvenanceVerdict {
   const title = parseTitlePrefix(input.title);
   const violations = [
-    ...titleViolations(title, input.unit),
+    ...titleViolations(title, input),
     ...bodyViolations(input, scanAmadeusWork(input.body), title),
   ];
   return violations.length === 0 ? { ok: true } : { ok: false, violations };

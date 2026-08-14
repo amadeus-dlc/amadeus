@@ -51,13 +51,13 @@ function run(git: GitSpawn, cwd: string, args: readonly string[]): GitRunResult 
  * record and unit this invocation names; everything else still refuses.
  */
 interface SelfOutputPaths {
-  readonly report: string;
+  readonly reports: readonly string[];
   readonly auditDir: string;
 }
 
-function selfOutputPaths(prefix: string, unit: string): SelfOutputPaths {
+function selfOutputPaths(prefix: string, units: readonly string[]): SelfOutputPaths {
   return {
-    report: `${prefix}construction/${unit}/code-generation/pr-convergence-report.md`,
+    reports: units.map((unit) => `${prefix}construction/${unit}/code-generation/pr-convergence-report.md`),
     auditDir: `${prefix}audit/`,
   };
 }
@@ -71,7 +71,7 @@ function statusPath(line: string): string {
 }
 
 function isSelfOutput(path: string, self: SelfOutputPaths): boolean {
-  if (path === self.report) return true;
+  if (self.reports.includes(path)) return true;
   if (!path.startsWith(self.auditDir) || !path.endsWith(".jsonl")) return false;
   return !path.slice(self.auditDir.length).includes("/");
 }
@@ -83,14 +83,14 @@ function isSelfOutput(path: string, self: SelfOutputPaths): boolean {
  * and a prefix that cannot be resolved exempts nothing — the check stays
  * closed rather than guessing which paths are ours.
  */
-function foreignDirtyPaths(git: GitSpawn, cwd: string, unit: string | null): readonly string[] {
+function foreignDirtyPaths(git: GitSpawn, cwd: string, units: string | readonly string[] | null): readonly string[] {
   const status = run(git, cwd, ["status", "--porcelain", "--untracked-files=no"]);
   if (status.code !== 0) return ["<git status failed>"];
   const lines = status.stdout.split("\n").filter((line) => line.trim() !== "");
-  if (lines.length === 0 || unit === null) return lines.map(statusPath);
+  if (lines.length === 0 || units === null) return lines.map(statusPath);
   const prefix = run(git, cwd, ["rev-parse", "--show-prefix"]);
   if (prefix.code !== 0) return lines.map(statusPath);
-  const self = selfOutputPaths(prefix.stdout.trim(), unit);
+  const self = selfOutputPaths(prefix.stdout.trim(), typeof units === "string" ? [units] : units);
   return lines.map(statusPath).filter((path) => !isSelfOutput(path, self));
 }
 
@@ -119,7 +119,7 @@ export function verifyCreatePrerequisites(
   git: GitSpawn = nodeGitSpawn,
   // The unit whose report this delivery owns. Omitted (an unlinked caller), no
   // path is exempt from the clean-worktree check.
-  unit: string | null = null,
+  unit: string | readonly string[] | null = null,
 ): GitPrerequisite {
   const top = run(git, cwd, ["rev-parse", "--show-toplevel"]);
   if (top.code !== 0) return { ok: false, message: "not a git worktree; run create from a committed checkout" };
@@ -167,7 +167,7 @@ export function verifyCurrentPrerequisites(
   cwd: string,
   expected: ExpectedPrHead,
   git: GitSpawn = nodeGitSpawn,
-  unit: string | null = null,
+  unit: string | readonly string[] | null = null,
 ): GitPrerequisite {
   const branch = run(git, cwd, ["branch", "--show-current"]);
   const head = branch.stdout.trim();

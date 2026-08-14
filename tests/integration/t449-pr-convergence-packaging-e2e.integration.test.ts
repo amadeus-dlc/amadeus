@@ -65,13 +65,18 @@ import {
   compileStageGraph,
 } from "../../packages/framework/core/tools/amadeus-graph.ts";
 import { _resetStageGraphForTests } from "../../packages/framework/core/tools/amadeus-lib.ts";
-import { handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
+import {
+  deliveryEvidenceCoverageRefusal,
+  handleNext,
+  handleReport,
+} from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import {
   cleanupTestProject,
   createTestProject,
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
+import { projectDeliveryBoltPlan } from "../../packages/framework/core/tools/amadeus-delivery-bolts.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const CORE_ROOT = join(REPO_ROOT, "packages", "framework", "core");
@@ -167,13 +172,13 @@ function pinCompiledGraph(): void {
   __resetGraphCache();
 }
 
-function autonomousCodegenState(): string {
+function autonomousCodegenState(scope = "feature"): string {
   return `# AI-DLC State Tracking
 
 ## Project Information
 - **Project**: pr-convergence packaging e2e
 - **Project Type**: Greenfield
-- **Scope**: feature
+- **Scope**: ${scope}
 - **State Version**: 7
 - **Skeleton Stance**: on
 - **Intent Autonomy Mode**: full
@@ -202,10 +207,10 @@ function autonomousCodegenState(): string {
 `;
 }
 
-function seedProject(batches: string[][]): string {
+function seedProject(batches: string[][], scope = "feature"): string {
   const proj = createTestProject();
   projects.push(proj);
-  writeFileSync(seededStateFile(proj), autonomousCodegenState());
+  writeFileSync(seededStateFile(proj), autonomousCodegenState(scope));
   const dependencyDir = join(seededRecordDir(proj), "inception", "units-generation");
   mkdirSync(dependencyDir, { recursive: true });
   const units = batches.flatMap((batch, i) =>
@@ -230,6 +235,29 @@ function writeUnitArtifacts(proj: string, unit: string, names: readonly string[]
   for (const name of names) writeFileSync(join(dir, `${name}.md`), `# ${name} for ${unit}\n`);
 }
 
+function seedDeliveryCarrier(
+  proj: string,
+  units: readonly string[],
+  mode: "valid" | "empty" | "stale" | "mismatch" = "valid",
+): void {
+  const record = seededRecordDir(proj);
+  const planDir = join(record, "inception", "delivery-planning");
+  mkdirSync(planDir, { recursive: true });
+  const plan = `## Bolt delivery\n\n- **Units:** ${units.map((unit) => `\`${unit}\``).join(", ")}\n`;
+  writeFileSync(join(planDir, "bolt-plan.md"), plan);
+  const projected = projectDeliveryBoltPlan(plan);
+  if (!projected.ok) throw new Error(projected.message);
+  const graphPath = join(record, "runtime-graph.json");
+  const graph = JSON.parse(readFileSync(graphPath, "utf-8")) as Record<string, unknown>;
+  graph.delivery_bolts = mode === "empty"
+    ? { ...projected.projection, bolts: [] }
+    : mode === "mismatch"
+      ? { ...projected.projection, bolts: [{ bolt: "delivery", units: [...units, "foreign"] }] }
+      : projected.projection;
+  writeFileSync(graphPath, `${JSON.stringify(graph, null, 2)}\n`);
+  if (mode === "stale") writeFileSync(join(planDir, "bolt-plan.md"), `${plan}\n<!-- changed -->\n`);
+}
+
 function runNext(proj: string): Record<string, unknown> {
   let raw = "";
   const log = spyOn(console, "log").mockImplementation((v) => {
@@ -237,6 +265,19 @@ function runNext(proj: string): Record<string, unknown> {
   });
   try {
     handleNext([], proj);
+  } finally {
+    log.mockRestore();
+  }
+  return JSON.parse(raw) as Record<string, unknown>;
+}
+
+function runReport(proj: string): Record<string, unknown> {
+  let raw = "";
+  const log = spyOn(console, "log").mockImplementation((value) => {
+    raw = String(value);
+  });
+  try {
+    handleReport(["--stage", "code-generation", "--result", "completed"], proj);
   } finally {
     log.mockRestore();
   }
@@ -380,6 +421,99 @@ describe("t449 the guard consumes the overlay (NFR-1 falling evidence)", () => {
     expect(runNext(proj).units).toEqual(["alpha"]);
     writeUnitArtifacts(proj, "alpha", [SEAM_ENTRY]);
     expect(runNext(proj).units).toEqual(["beta"]);
+  });
+
+  test("code-generation completion rejects one missing owner projection", () => {
+    expect(handlePluginCli(["compose", "--project-root", host], deps())).toBe(0);
+    pinCompiledGraph();
+    const proj = seedProject([["alpha", "beta"]], "self-fix");
+    seedDeliveryCarrier(proj, ["alpha", "beta"]);
+    writeUnitArtifacts(proj, "alpha", [...STOCK_PRODUCES, SEAM_ENTRY]);
+    writeUnitArtifacts(proj, "beta", STOCK_PRODUCES);
+
+    const directive = runReport(proj);
+    expect(directive.kind).toBe("error");
+    expect(String(directive.message)).toContain("DELIVERY_EVIDENCE_INCOMPLETE");
+    expect(String(directive.message)).toContain("beta");
+  });
+
+  test("code-generation completion passes the owner-evidence guard when every Unit is covered", () => {
+    expect(handlePluginCli(["compose", "--project-root", host], deps())).toBe(0);
+    const codeGeneration = compileFromHost().stages.find((stage) => stage.slug === "code-generation");
+    expect(codeGeneration).toBeDefined();
+    pinCompiledGraph();
+    const proj = seedProject([["alpha", "beta"]], "self-fix");
+    seedDeliveryCarrier(proj, ["alpha", "beta"]);
+    writeUnitArtifacts(proj, "alpha", [...STOCK_PRODUCES, SEAM_ENTRY]);
+    writeUnitArtifacts(proj, "beta", [...STOCK_PRODUCES, SEAM_ENTRY]);
+
+    expect(deliveryEvidenceCoverageRefusal(proj, codeGeneration!)).toBeNull();
+    const directive = runReport(proj);
+    expect(String(directive.message ?? "")).not.toContain("DELIVERY_EVIDENCE_INCOMPLETE");
+  });
+
+  test("code-generation completion rejects a missing multi-Unit Delivery Bolt carrier", () => {
+    expect(handlePluginCli(["compose", "--project-root", host], deps())).toBe(0);
+    const codeGeneration = compileFromHost().stages.find((stage) => stage.slug === "code-generation");
+    expect(codeGeneration).toBeDefined();
+    pinCompiledGraph();
+    const proj = seedProject([["alpha", "beta"]], "self-fix");
+    writeUnitArtifacts(proj, "alpha", [...STOCK_PRODUCES, SEAM_ENTRY]);
+    writeUnitArtifacts(proj, "beta", [...STOCK_PRODUCES, SEAM_ENTRY]);
+
+    expect(deliveryEvidenceCoverageRefusal(proj, codeGeneration!))
+      .toContain("DELIVERY_EVIDENCE_CARRIER_MISSING");
+  });
+
+  for (const mode of ["empty", "stale", "mismatch"] as const) {
+    test(`code-generation completion rejects a ${mode} Delivery Bolt carrier`, () => {
+      expect(handlePluginCli(["compose", "--project-root", host], deps())).toBe(0);
+      const codeGeneration = compileFromHost().stages.find((stage) => stage.slug === "code-generation");
+      expect(codeGeneration).toBeDefined();
+      pinCompiledGraph();
+      const proj = seedProject([["alpha", "beta"]], "self-fix");
+      seedDeliveryCarrier(proj, ["alpha", "beta"], mode);
+      writeUnitArtifacts(proj, "alpha", [...STOCK_PRODUCES, SEAM_ENTRY]);
+      writeUnitArtifacts(proj, "beta", [...STOCK_PRODUCES, SEAM_ENTRY]);
+
+      expect(deliveryEvidenceCoverageRefusal(proj, codeGeneration!))
+        .toMatch(/^DELIVERY_EVIDENCE_CARRIER_(?:INVALID|STALE|MISMATCH):/);
+    });
+  }
+
+  test("singleton completion rejects absent Delivery Bolt authority", () => {
+    expect(handlePluginCli(["compose", "--project-root", host], deps())).toBe(0);
+    const codeGeneration = compileFromHost().stages.find((stage) => stage.slug === "code-generation");
+    expect(codeGeneration).toBeDefined();
+    pinCompiledGraph();
+    const proj = seedProject([["alpha"]], "self-fix");
+    writeUnitArtifacts(proj, "alpha", [...STOCK_PRODUCES, SEAM_ENTRY]);
+    expect(deliveryEvidenceCoverageRefusal(proj, codeGeneration!))
+      .toContain("DELIVERY_EVIDENCE_CARRIER_MISSING");
+  });
+
+  test("singleton completion accepts an approved Delivery Bolt carrier", () => {
+    expect(handlePluginCli(["compose", "--project-root", host], deps())).toBe(0);
+    const codeGeneration = compileFromHost().stages.find((stage) => stage.slug === "code-generation");
+    expect(codeGeneration).toBeDefined();
+    pinCompiledGraph();
+    const proj = seedProject([["alpha"]], "self-fix");
+    seedDeliveryCarrier(proj, ["alpha"]);
+    writeUnitArtifacts(proj, "alpha", [...STOCK_PRODUCES, SEAM_ENTRY]);
+    expect(deliveryEvidenceCoverageRefusal(proj, codeGeneration!)).toBeNull();
+  });
+
+  test("full autonomy resumes a covered 2U/1B delivery without a human PR choice", () => {
+    expect(handlePluginCli(["compose", "--project-root", host], deps())).toBe(0);
+    pinCompiledGraph();
+    const proj = seedProject([["alpha", "beta"]], "self-fix");
+    writeUnitArtifacts(proj, "alpha", [...STOCK_PRODUCES, SEAM_ENTRY]);
+    writeUnitArtifacts(proj, "beta", [...STOCK_PRODUCES, SEAM_ENTRY]);
+
+    const directive = runNext(proj);
+    expect(directive.kind).toBe("run-stage");
+    expect(directive.review_only).toBe(true);
+    expect(JSON.stringify(directive).toLowerCase()).not.toContain("pull request");
   });
 });
 

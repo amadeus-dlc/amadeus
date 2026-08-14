@@ -43,6 +43,19 @@ describe("t534 report attestation", () => {
     expect(attestationId({ ...unsigned, unit: "copied-unit" })).not.toBe(receipt.id);
   });
 
+  test("binds a per-owner projection to the complete canonical member set", () => {
+    const unsigned = {
+      intent: "intent", intentUuid: "uuid-1", record: "amadeus/spaces/default/intents/record/",
+      bolt: "delivery", unit: "unit-b", memberUnits: ["unit-a", "unit-b"],
+      repo: "amadeus-dlc/amadeus", pr: 2985, localHead: SHA, remoteHead: SHA,
+      prHead: SHA, contentDigest: reportPayloadDigest("payload\n"),
+    };
+    const receipt: ReportAttestation = { id: attestationId(unsigned), ...unsigned };
+    expect(parseAttestation(renderAttestation(receipt))).toEqual(receipt);
+    expect(attestationId({ ...unsigned, unit: "unit-a" })).not.toBe(receipt.id);
+    expect(attestationId({ ...unsigned, memberUnits: ["unit-a"] })).not.toBe(receipt.id);
+  });
+
   test("a one-byte payload change changes the digest", () => {
     expect(reportPayloadDigest("payload\n")).not.toBe(reportPayloadDigest("payload!\n"));
   });

@@ -10,6 +10,7 @@ import {
   AMADEUS_WORK_FIELD_LABELS,
   AMADEUS_WORK_HEADING,
   PR_TITLE_PREFIX_PATTERN,
+  canonicalUnitSlugs,
   renderPullRequestBody,
   renderPullRequestTitle,
 } from "../../plugins/pr-convergence/tools/pr-convergence-presentation.ts";
@@ -38,6 +39,13 @@ function violationsOf(candidate: ProvenanceInput): readonly ProvenanceViolation[
 }
 
 describe("presentation provenance tokens", () => {
+  test("canonicalizes a multi-Unit Bolt independently of input order", () => {
+    expect(canonicalUnitSlugs(["unit-b", "unit-a"])).toEqual({
+      ok: true,
+      value: ["unit-a", "unit-b"],
+    });
+  });
+
   test("exports the canonical heading, readonly field tuple, and title-prefix contract", () => {
     expect(AMADEUS_WORK_HEADING).toBe("## Amadeus Work");
     expect(AMADEUS_WORK_FIELD_LABELS).toEqual(["Intent", "Bolt", "Unit", "Record", "UUID"]);
@@ -52,6 +60,38 @@ describe("presentation provenance tokens", () => {
     };
     expect(renderPullRequestTitle("Add provenance checks", work)).toBe(TITLE);
     expect(renderPullRequestBody("Summary\n", work)).toBe(`Summary\n\n${CANONICAL_BODY}`);
+  });
+
+  test("renders one canonical provenance identity for every member of a multi-Unit Bolt", () => {
+    const work = {
+      intent: { name: "intent-a", recordPath: RECORD, uuid: UUID },
+      bolt: "bolt-1",
+      units: ["unit-b", "unit-a"],
+    };
+    expect(renderPullRequestTitle("Summary", work)).toBe("[intent-a/bolt-1/unit-a+unit-b] Summary");
+    expect(renderPullRequestBody("", work)).toContain("- Unit: `unit-a,unit-b`");
+    expect(checkProvenance({
+      title: renderPullRequestTitle("Summary", work),
+      body: renderPullRequestBody("", work),
+      record: RECORD,
+      unit: "unit-b",
+      units: ["unit-b", "unit-a"],
+    })).toEqual({ ok: true });
+  });
+
+  test("rejects empty, duplicate, malformed, and partial multi-Unit identities", () => {
+    expect(canonicalUnitSlugs([]).ok).toBe(false);
+    expect(canonicalUnitSlugs(["unit-a", "unit-a"]).ok).toBe(false);
+    expect(canonicalUnitSlugs([""]).ok).toBe(false);
+    const body = CANONICAL_BODY.replace("`unit-a`", "`unit-a,unit-b`");
+    const verdict = checkProvenance({
+      title: "[intent-a/bolt-1/unit-a+unit-b] Summary",
+      body,
+      record: RECORD,
+      unit: "unit-a",
+      units: ["unit-a", "unit-b", "unit-c"],
+    });
+    expect(verdict.ok).toBe(false);
   });
 });
 

@@ -32,11 +32,19 @@ import {
   auditCarriesAttestation,
   isSelfRecord,
   parseAttestation,
+  parseOwnerProjection,
+  type ReportAttestation,
   recordRootForReport,
+  renderAttestation,
+  renderOwnerProjection,
   reportPayload,
   reportPayloadDigest,
 } from "./pr-convergence-attestation.ts";
-import { resolveIntentReference } from "./pr-convergence-presentation.ts";
+import {
+  canonicalUnitSlugs,
+  resolveDeliveryBoltMembership,
+  resolveIntentReference,
+} from "./pr-convergence-presentation.ts";
 
 /** Result shape read by the dispatcher: `pass` gates PASSED/FAILED and
  *  `findings_count` is emitted verbatim; `reason` and `findings` are advisory
@@ -142,17 +150,63 @@ function checkLanded(body: string, converged: string | null, findings: ReportFor
   }
 }
 
-function checkAttestation(outputPath: string, body: string, findings: ReportFormatFinding[]): void {
-  const recordRoot = recordRootForReport(outputPath);
-  if (recordRoot === null || !isSelfRecord(recordRoot)) return;
-  const receipt = parseAttestation(body);
-  if (receipt === null) {
-    findings.push({ field: "attestation", reason: "missing or malformed CLI attestation" });
+function checkOwnerProjection(
+  body: string,
+  receipt: ReportAttestation,
+  ownerUnit: string,
+  findings: ReportFormatFinding[],
+): void {
+  const start = body.indexOf("## Owner Projection");
+  if (receipt.memberUnits === undefined) {
+    if (start !== -1) findings.push({ field: "owner projection", reason: "single-Unit reports must keep legacy bytes" });
     return;
   }
+  const projection = parseOwnerProjection(body);
+  const end = body.indexOf("## CLI Attestation");
+  if (
+    projection === null || start === -1 || end <= start ||
+    body.slice(start, end) !== renderOwnerProjection(projection)
+  ) {
+    findings.push({ field: "owner projection", reason: "missing, malformed, or non-canonical" });
+    return;
+  }
+  const expectedPath = `${receipt.record}construction/${ownerUnit}/code-generation/${REPORT_BASENAME}`;
+  if (
+    projection.intent !== receipt.intent || projection.intentUuid !== receipt.intentUuid ||
+    projection.record !== receipt.record || projection.bolt !== receipt.bolt ||
+    projection.memberUnits.join("\0") !== receipt.memberUnits.join("\0") ||
+    projection.ownerUnit !== receipt.unit || projection.ownerUnit !== ownerUnit ||
+    projection.reportPath !== expectedPath || projection.repo !== receipt.repo ||
+    projection.pr !== receipt.pr || projection.head !== receipt.localHead
+  ) {
+    findings.push({ field: "owner projection", reason: "does not bind the attestation tuple and owner path" });
+  }
+}
+
+function checkCanonicalAttestation(
+  body: string,
+  receipt: ReportAttestation,
+  findings: ReportFormatFinding[],
+): void {
+  if (body.startsWith("\uFEFF") || body.includes("\r") || !body.endsWith("\n") || body.endsWith("\n\n")) {
+    findings.push({ field: "canonical bytes", reason: "report must be BOM-free LF text with exactly one trailing newline" });
+  }
+  const start = body.indexOf("## CLI Attestation");
+  if (start === -1 || body.slice(start) !== renderAttestation(receipt)) {
+    findings.push({ field: "attestation", reason: "does not use the canonical field order" });
+  }
+}
+
+function checkAttestationIntegrity(
+  body: string,
+  receipt: ReportAttestation,
+  findings: ReportFormatFinding[],
+): void {
   const expectedId = attestationId({
     intent: receipt.intent, intentUuid: receipt.intentUuid, record: receipt.record,
-    bolt: receipt.bolt, unit: receipt.unit, repo: receipt.repo, pr: receipt.pr,
+    bolt: receipt.bolt, unit: receipt.unit,
+    ...(receipt.memberUnits === undefined ? {} : { memberUnits: receipt.memberUnits }),
+    repo: receipt.repo, pr: receipt.pr,
     localHead: receipt.localHead, remoteHead: receipt.remoteHead, prHead: receipt.prHead,
     contentDigest: receipt.contentDigest,
   });
@@ -160,12 +214,49 @@ function checkAttestation(outputPath: string, body: string, findings: ReportForm
   if (receipt.contentDigest !== reportPayloadDigest(reportPayload(body))) {
     findings.push({ field: "content digest", reason: "does not match current report bytes" });
   }
+}
+
+function checkAttestationOwner(
+  recordRoot: string,
+  outputPath: string,
+  body: string,
+  receipt: ReportAttestation,
+  findings: ReportFormatFinding[],
+): string {
   const intent = resolveIntentReference(recordRoot);
   const unit = basename(dirname(dirname(outputPath)));
+  checkOwnerProjection(body, receipt, unit, findings);
   if (!intent.ok || receipt.intent !== intent.value.name || receipt.intentUuid !== intent.value.uuid || receipt.record !== intent.value.recordPath) {
     findings.push({ field: "intent", reason: "does not match the report owner record" });
   }
   if (receipt.unit !== unit) findings.push({ field: "unit", reason: "does not match the report owner path" });
+  return unit;
+}
+
+function checkAttestationMembers(
+  recordRoot: string,
+  unit: string,
+  receipt: ReportAttestation,
+  findings: ReportFormatFinding[],
+): void {
+  if (receipt.memberUnits === undefined) return;
+  const members = canonicalUnitSlugs(receipt.memberUnits);
+  if (!members.ok || !receipt.memberUnits.includes(unit)) {
+    findings.push({ field: "member units", reason: "not canonical or does not contain the report owner" });
+    return;
+  }
+  const approved = resolveDeliveryBoltMembership(recordRoot, receipt.bolt);
+  if (!approved.ok || approved.value.join("\0") !== members.value.join("\0")) {
+    findings.push({ field: "member units", reason: "does not match the approved Delivery Bolt projection" });
+  }
+}
+
+function checkAttestationEnvironment(
+  recordRoot: string,
+  body: string,
+  receipt: ReportAttestation,
+  findings: ReportFormatFinding[],
+): void {
   const pr = field(body, "pull request");
   if (pr !== `${receipt.repo}#${receipt.pr}`) findings.push({ field: "pull request", reason: "does not match the attestation" });
   if (receipt.localHead !== receipt.remoteHead || receipt.localHead !== receipt.prHead) {
@@ -178,6 +269,21 @@ function checkAttestation(outputPath: string, body: string, findings: ReportForm
   if (!auditCarriesAttestation(recordRoot, receipt)) {
     findings.push({ field: "attestation event", reason: "canonical audit receipt is missing" });
   }
+}
+
+function checkAttestation(outputPath: string, body: string, findings: ReportFormatFinding[]): void {
+  const recordRoot = recordRootForReport(outputPath);
+  if (recordRoot === null || !isSelfRecord(recordRoot)) return;
+  const receipt = parseAttestation(body);
+  if (receipt === null) {
+    findings.push({ field: "attestation", reason: "missing or malformed CLI attestation" });
+    return;
+  }
+  checkCanonicalAttestation(body, receipt, findings);
+  checkAttestationIntegrity(body, receipt, findings);
+  const unit = checkAttestationOwner(recordRoot, outputPath, body, receipt, findings);
+  checkAttestationMembers(recordRoot, unit, receipt, findings);
+  checkAttestationEnvironment(recordRoot, body, receipt, findings);
 }
 
 /** Pure evaluation core (in-process test seam). Reads the file itself so the

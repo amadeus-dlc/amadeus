@@ -1,10 +1,25 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
+import { canonicalUnitSlugs } from "./pr-convergence-presentation.ts";
 
 export const SELF_SCOPES = new Set(["self-document", "self-feature", "self-fix", "self-refactor"]);
 export const ATTESTATION_EVENT = "ARTIFACT_ATTESTED";
 export const ATTESTATION_HEADING = "## CLI Attestation";
+export const OWNER_PROJECTION_HEADING = "## Owner Projection";
+
+export interface OwnerProjection {
+  readonly intent: string;
+  readonly intentUuid: string;
+  readonly record: string;
+  readonly bolt: string;
+  readonly memberUnits: readonly string[];
+  readonly ownerUnit: string;
+  readonly reportPath: string;
+  readonly repo: string;
+  readonly pr: number;
+  readonly head: string;
+}
 
 export interface ReportAttestation {
   readonly id: string;
@@ -13,6 +28,7 @@ export interface ReportAttestation {
   readonly record: string;
   readonly bolt: string;
   readonly unit: string;
+  readonly memberUnits?: readonly string[];
   readonly repo: string;
   readonly pr: number;
   readonly localHead: string;
@@ -54,6 +70,7 @@ export function renderAttestation(value: ReportAttestation): string {
     `- record: ${value.record}`,
     `- bolt: ${value.bolt}`,
     `- unit: ${value.unit}`,
+    ...(value.memberUnits === undefined ? [] : [`- member units: ${value.memberUnits.join(",")}`]),
     `- repository: ${value.repo}`,
     `- pr: ${value.pr}`,
     `- local head: ${value.localHead}`,
@@ -64,8 +81,52 @@ export function renderAttestation(value: ReportAttestation): string {
   ].join("\n");
 }
 
+export function renderOwnerProjection(value: OwnerProjection): string {
+  return [
+    OWNER_PROJECTION_HEADING,
+    "",
+    `- intent: ${value.intent}`,
+    `- intent uuid: ${value.intentUuid}`,
+    `- record: ${value.record}`,
+    `- bolt: ${value.bolt}`,
+    `- member units: ${value.memberUnits.join(",")}`,
+    `- owner unit: ${value.ownerUnit}`,
+    `- report path: ${value.reportPath}`,
+    `- repository: ${value.repo}`,
+    `- pr: ${value.pr}`,
+    `- head: ${value.head}`,
+    "",
+  ].join("\n");
+}
+
 function field(body: string, label: string): string | null {
   return body.match(new RegExp(`^- ${label}:[ \\t]*(.*)$`, "m"))?.[1]?.trim() ?? null;
+}
+
+export function parseOwnerProjection(body: string): OwnerProjection | null {
+  const start = body.indexOf(OWNER_PROJECTION_HEADING);
+  const end = body.indexOf(ATTESTATION_HEADING);
+  if (start === -1 || end <= start) return null;
+  const section = body.slice(start, end);
+  const pr = Number(field(section, "pr"));
+  const memberUnits = field(section, "member units");
+  const values = {
+    intent: field(section, "intent"), intentUuid: field(section, "intent uuid"),
+    record: field(section, "record"), bolt: field(section, "bolt"),
+    ownerUnit: field(section, "owner unit"), reportPath: field(section, "report path"),
+    repo: field(section, "repository"), head: field(section, "head"),
+  };
+  if (
+    !Number.isInteger(pr) || pr <= 0 || memberUnits === null ||
+    Object.values(values).some((value) => value === null || value === "")
+  ) return null;
+  const members = canonicalUnitSlugs(memberUnits.split(","));
+  if (!members.ok || members.value.join(",") !== memberUnits) return null;
+  return {
+    ...(values as Omit<OwnerProjection, "memberUnits" | "pr">),
+    memberUnits: members.value,
+    pr,
+  };
 }
 
 export function parseAttestation(body: string): ReportAttestation | null {
@@ -73,6 +134,7 @@ export function parseAttestation(body: string): ReportAttestation | null {
   if (start === -1) return null;
   const section = body.slice(start);
   const pr = Number(field(section, "pr"));
+  const memberUnits = field(section, "member units");
   const values = {
     id: field(section, "attestation id"), intent: field(section, "intent"),
     intentUuid: field(section, "intent uuid"), record: field(section, "record"),
@@ -82,7 +144,13 @@ export function parseAttestation(body: string): ReportAttestation | null {
     contentDigest: field(section, "content digest"),
   };
   if (!Number.isInteger(pr) || pr <= 0 || Object.values(values).some((value) => value === null || value === "")) return null;
-  return { ...(values as Omit<ReportAttestation, "pr">), pr };
+  const parsedMembers = memberUnits === null ? null : canonicalUnitSlugs(memberUnits.split(","));
+  if (parsedMembers !== null && (!parsedMembers.ok || parsedMembers.value.join(",") !== memberUnits)) return null;
+  return {
+    ...(values as Omit<ReportAttestation, "pr" | "memberUnits">),
+    ...(parsedMembers === null ? {} : { memberUnits: parsedMembers.value }),
+    pr,
+  };
 }
 
 export function reportPayload(body: string): string {

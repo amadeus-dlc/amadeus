@@ -76,7 +76,6 @@ import {
   fstatSync,
   lstatSync,
   openSync,
-  readdirSync,
   readFileSync,
   readSync,
   realpathSync,
@@ -162,6 +161,7 @@ import {
   relativeSpaceRecordPrefix,
   readIntentRegistry,
   readCurrentSessionId,
+  readStateFile,
   recordDirMatches,
   recoverBoltDag,
   resolveProjectDir,
@@ -239,6 +239,12 @@ import {
   callerAuthorizationError,
 } from "./amadeus-caller-authorization.ts";
 import { resolveAmadeusConfig } from "./amadeus-config.ts";
+import {
+  degradeUnitDirectories,
+  DELIVERY_BOLT_PLAN_SOURCE,
+  projectEngineSingletonDeliveryBolt,
+  projectDeliveryBoltPlan,
+} from "./amadeus-delivery-bolts.ts";
 import { createAuditUnitPoolRepository, createUnitPoolCoordinator } from "./amadeus-unit-pool-runtime.ts";
 import {
   constructionFailureTransition,
@@ -4244,13 +4250,8 @@ function unitDirsUnderConstruction(
   recordPrefix: string | null,
 ): string[] {
   const prefix = recordPrefix ?? relativeSpaceRecordPrefix();
-  const root = join(projectDir, ...`${prefix}/construction`.split("/"));
-  if (!existsSync(root)) return [];
-  const stageSlugs = new Set(loadGraph().map((s) => s.slug));
-  return readdirSync(root, { withFileTypes: true })
-    .filter((e) => e.isDirectory() && !stageSlugs.has(e.name))
-    .map((e) => e.name)
-    .sort();
+  const recordRoot = join(projectDir, ...prefix.split("/"));
+  return [...degradeUnitDirectories(recordRoot, new Set(loadGraph().map((stage) => stage.slug)))];
 }
 
 // Fail-closed refusal when the degrade path cannot name one Unit of Work.
@@ -5593,6 +5594,126 @@ function perUnitCoverageRefusal(
   );
 }
 
+// The pr-convergence overlay turns code-generation completion into the final
+// Delivery Bolt evidence boundary. Swarm batches may advance independently,
+// but the stage itself cannot complete until every owner projection exists.
+type DeliveryEvidenceOwners =
+  | { readonly ok: true; readonly units: readonly string[] }
+  | { readonly ok: false; readonly message: string };
+
+function engineSingletonEvidenceOwners(
+  pd: string,
+  projection: Record<string, unknown>,
+  intent?: string,
+): DeliveryEvidenceOwners {
+  const expected = projectEngineSingletonDeliveryBolt(
+    pd,
+    readStateFile(pd, intent),
+    new Set(loadGraph().map((stage) => stage.slug)),
+    intent,
+  );
+  if (expected.kind !== "projection") {
+    return { ok: false, message: "DELIVERY_EVIDENCE_CARRIER_STALE: engine singleton authority no longer resolves." };
+  }
+  if (JSON.stringify(projection) !== JSON.stringify(expected.projection)) {
+    return { ok: false, message: "DELIVERY_EVIDENCE_CARRIER_MISMATCH: engine singleton authority does not match the current state and Unit." };
+  }
+  return { ok: true, units: [expected.projection.unit] };
+}
+
+function approvedPlanEvidenceOwners(
+  projection: unknown,
+  planPath: string,
+): DeliveryEvidenceOwners {
+  if (!existsSync(planPath)) {
+    return { ok: false, message: "DELIVERY_EVIDENCE_CARRIER_STALE: the projected Delivery Bolt source is missing." };
+  }
+  const projected = projectDeliveryBoltPlan(readFileSync(planPath, "utf-8"));
+  if (!projected.ok) {
+    return { ok: false, message: `DELIVERY_EVIDENCE_CARRIER_INVALID: ${projected.message}.` };
+  }
+  if (
+    projection === null || typeof projection !== "object" || Array.isArray(projection) ||
+    (projection as Record<string, unknown>).source !== DELIVERY_BOLT_PLAN_SOURCE ||
+    !Array.isArray((projection as Record<string, unknown>).bolts) ||
+    (projection as Record<string, unknown>).bolts === undefined ||
+    ((projection as Record<string, unknown>).bolts as unknown[]).length === 0
+  ) {
+    return { ok: false, message: "DELIVERY_EVIDENCE_CARRIER_INVALID: Delivery Bolt projection is empty or malformed." };
+  }
+  const actualDigest = (projection as Record<string, unknown>).sourceDigest;
+  if (actualDigest !== projected.projection.sourceDigest) {
+    return { ok: false, message: "DELIVERY_EVIDENCE_CARRIER_STALE: Delivery Bolt source digest does not match the current plan." };
+  }
+  if (JSON.stringify(projection) !== JSON.stringify(projected.projection)) {
+    return { ok: false, message: "DELIVERY_EVIDENCE_CARRIER_MISMATCH: runtime membership does not match the approved plan." };
+  }
+  return { ok: true, units: projected.projection.bolts.flatMap((bolt) => bolt.units) };
+}
+
+function deliveryEvidenceOwners(
+  pd: string,
+  intent?: string,
+): DeliveryEvidenceOwners {
+  let graph: unknown;
+  try {
+    graph = JSON.parse(readFileSync(runtimeGraphPath(pd, intent), "utf-8"));
+  } catch {
+    return { ok: false, message: "DELIVERY_EVIDENCE_CARRIER_INVALID: runtime-graph.json is missing or unreadable." };
+  }
+  if (graph === null || typeof graph !== "object" || Array.isArray(graph)) {
+    return { ok: false, message: "DELIVERY_EVIDENCE_CARRIER_INVALID: runtime-graph.json is not an object." };
+  }
+  const projection = (graph as Record<string, unknown>).delivery_bolts;
+  const recordPrefix = relativeRecordDir(pd, intent);
+  if (recordPrefix === null) {
+    return { ok: false, message: "DELIVERY_EVIDENCE_CARRIER_MISSING: no Intent record resolves the Delivery Bolt owner set." };
+  }
+  const planPath = join(pd, ...recordPrefix.split("/"), DELIVERY_BOLT_PLAN_SOURCE);
+  if (projection === undefined) {
+    return { ok: false, message: "DELIVERY_EVIDENCE_CARRIER_MISSING: approved Delivery Bolt membership is absent." };
+  }
+  if (
+    projection !== null && typeof projection === "object" && !Array.isArray(projection) &&
+    (projection as Record<string, unknown>).authority === "engine-singleton"
+  ) {
+    return engineSingletonEvidenceOwners(pd, projection as Record<string, unknown>, intent);
+  }
+  return approvedPlanEvidenceOwners(projection, planPath);
+}
+
+export function deliveryEvidenceCoverageRefusal(
+  pd: string,
+  node: GraphStage,
+  intent?: string,
+): string | null {
+  if (
+    node.slug !== "code-generation" ||
+    !isPerUnit(node) ||
+    !node.produces?.includes("pr-convergence-report")
+  ) {
+    return null;
+  }
+  const owners = deliveryEvidenceOwners(pd, intent);
+  if (!owners.ok) return owners.message;
+  const recordPrefix = relativeRecordDir(pd, intent);
+  const units = [...owners.units];
+  const pick = nextUncoveredUnit(
+    pd,
+    node,
+    units,
+    recordPrefix,
+    codekbCtxFor(pd),
+    readUnitKinds(pd, intent),
+  );
+  if (pick === null) return null;
+  return (
+    `DELIVERY_EVIDENCE_INCOMPLETE: ${pick.uncovered.length} of ${units.length} Unit owner projections ` +
+    `are missing required code-generation evidence (${pick.uncovered.join(", ")}). ` +
+    "Finish every Delivery Bolt member before reporting code-generation completed."
+  );
+}
+
 // Approve-time reconciliation (FR-2). The issuance guard stops a run that is
 // ABOUT to serialise a parallel batch; this one stops a run that already did —
 // a hand-driven fan-out, or a batch built one unit at a time outside the
@@ -5661,6 +5782,7 @@ function gatedApproveRefusal(
   // gates, and only a gated stage has an approve to guard.
   if (node.phase === "initialization" || checkboxState === "completed") return null;
   return (
+    deliveryEvidenceCoverageRefusal(pd, node, intent) ??
     perUnitCoverageRefusal(pd, node, slug, stateContent, intent) ??
     swarmReconciliationRefusal(pd, node, scope, intent)
   );

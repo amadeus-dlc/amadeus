@@ -34,6 +34,17 @@ Fires on the per-unit report path the guard resolves (FR-2b):
 other output is skipped (`reason: "not-a-report"`), and an output path that
 does not exist is a failure (`reason: "no-file"`).
 
+For a multi-Unit Delivery Bolt, each member path carries a separate projection
+of the same Intent/Bolt/member-set/PR/head tuple. The attestation names the
+owner Unit and the complete sorted member set. The checker rejects a projection
+copied to another member path, a partial member set, non-canonical bytes or
+field order, a changed body digest, or a missing owner-specific audit receipt.
+It also re-resolves `runtime-graph.json.delivery_bolts` and verifies its source
+digest, so stale plan bytes or forged runtime membership are blocking evidence.
+For multi-Unit reports it strictly parses and canonically re-renders the Owner
+Projection before checking its owner Unit, report path, shared tuple, payload
+digest, attestation, and owner-specific audit receipt.
+
 ## Checked shape
 
 The canonical convergence report kinds are accepted:
