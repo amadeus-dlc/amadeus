@@ -31,8 +31,10 @@
 - `bun run lint` → exit 0、既存 warning 464 / info 17。最終変更 4 ファイルへの `biome check` も exit 0、既存 complexity 等 warning 18
 - 配布鮮度: `t2851-doctor-self-install-freshness.serial.test.ts` の旧世代投影検出ケースは最終 build 後 1 pass / 0 fail。`t265-engine-boundary.integration.test.ts` の全配布面 byte parity も pass
 - 最終フル `bun run test:ci -- --verbose` → 994 files / 13,419 assertions、0 files / 0 assertions fail、exit 0。ログ: `tests/logs/2026-08-14T09-23-11Z`
-- PR初回カバレッジで検出された未被覆3行を、到達不能な catch の除去と同値な条件式整形で是正。`bun run coverage:ci` は 996 files / 13,429 assertions を実行し、制約環境の全体実行では3 files / 3 assertions fail。修正対象のt511は64 pass / 0 fail、タイムアウト基線で既知の重いCodex移行3ファイルは `bun test --timeout 120000` で 66 pass / 0 fail / 1 skip / 1,926 expect
+- PR初回カバレッジで検出された未被覆3行を、到達不能な catch の除去と同値な条件式整形で是正。公式 patch coverage のローカル再計測は measured 32 / covered 32 / uncovered 0 / allowlist 0 で pass。制約環境での `bun run coverage:ci` 全体実行に残った3ファイル / 3 assertions の失敗は、対象t511が64 pass / 0 fail、該当する重いCodex移行3ファイルが個別の `bun test --timeout 120000` で 66 pass / 0 fail / 1 skip / 1,926 expect となることを確認
+- [PR #3045](https://github.com/amadeus-dlc/amadeus/pull/3045) の最終GitHub Actions run `31793032535` は全blocking jobが成功。`Tests`、`Coverage Report (head)` 内の `Project coverage gate` と `Patch coverage gate`、lint、typecheck、build、source-only、plugin conformance、mirror がすべて success
+- `pr-convergence-report.md` は head `67710ff75045c5d8ea1c70866dab03365b325ed9` に対して `converged: true`、`mergeStateStatus: CLEAN`、未解決blocking thread なしを記録
 
 ## Deviations
 
-- [PR #3045](https://github.com/amadeus-dlc/amadeus/pull/3045) は作成済み。正式な `pr-convergence-report` はこのコミットをpush後に最新HEADへ再発行し、blocking集合の収束後にCLIで `converged` attestationへ更新する
+- なし。[PR #3045](https://github.com/amadeus-dlc/amadeus/pull/3045) は最新HEADで全blocking CIとレビュー収束を完了し、正式な `pr-convergence-report` を `converged` として発行済み
