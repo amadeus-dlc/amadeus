@@ -45,7 +45,13 @@ const MODEL_NAMES = ["FormalElection", "MirrorLifecycle"] as const;
 // Every model the map registers — what the CI `run` command selects. This is a
 // superset of MODEL_NAMES: PrConvergenceGate is registered and therefore run,
 // but carries no authored semantic mutation, so it stays out of the matrix.
-const REGISTERED_MODEL_NAMES = [...MODEL_NAMES, "PrConvergenceGate"] as const;
+const REGISTERED_MODEL_NAMES = ["BoltPrAttestationGate", ...MODEL_NAMES, "PrConvergenceGate"] as const;
+const BOLT_PR_ATTESTATION_GATE_TARGET: CiModelTarget = {
+  name: "BoltPrAttestationGate",
+  modelPath: "amadeus/spaces/default/specs/tla/BoltPrAttestationGate.tla",
+  cfgPath: "amadeus/spaces/default/specs/tla/BoltPrAttestationGate.cfg",
+  layer: "verified-source",
+};
 const PR_CONVERGENCE_GATE_TARGET: CiModelTarget = {
   name: "PrConvergenceGate",
   modelPath: "amadeus/spaces/default/specs/tla/PrConvergenceGate.tla",
@@ -318,6 +324,7 @@ describe("t406 CI all-model acceptance", () => {
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
     expect(loaded.value.models.map((source) => ciModelTargetFor(source))).toEqual([
+      BOLT_PR_ATTESTATION_GATE_TARGET,
       {
         name: "FormalElection",
         modelPath: "amadeus/spaces/default/specs/tla/FormalElection.tla",

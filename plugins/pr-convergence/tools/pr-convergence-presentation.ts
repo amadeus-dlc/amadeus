@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
 
 export interface IntentReference {
@@ -10,7 +11,8 @@ export interface IntentReference {
 export interface PullRequestWorkReference {
   readonly intent: IntentReference;
   readonly bolt: string;
-  readonly unit: string;
+  readonly unit?: string;
+  readonly units?: readonly string[];
 }
 
 export const AMADEUS_WORK_HEADING = "## Amadeus Work";
@@ -30,6 +32,251 @@ interface RegistryRow {
 
 const SAFE_SEGMENT = /^[A-Za-z0-9._-]+$/;
 const SAFE_UUID = /^[A-Za-z0-9-]+$/;
+
+export type CanonicalUnitSlugsResult =
+  | { readonly ok: true; readonly value: readonly string[] }
+  | { readonly ok: false; readonly message: string };
+
+export type DeliveryBoltAuthorityFailure = "MISSING" | "INVALID" | "STALE" | "MISMATCH";
+
+export type DeliveryBoltMembershipResult =
+  | { readonly ok: true; readonly value: readonly string[] }
+  | { readonly ok: false; readonly code: DeliveryBoltAuthorityFailure; readonly message: string };
+
+type DeliveryBoltAuthorityRead =
+  | { readonly ok: true; readonly graph: unknown }
+  | { readonly ok: false; readonly result: DeliveryBoltMembershipResult };
+
+function readDeliveryBoltAuthority(recordRoot: string): DeliveryBoltAuthorityRead {
+  const graphPath = join(recordRoot, "runtime-graph.json");
+  if (!existsSync(graphPath)) {
+    return {
+      ok: false,
+      result: {
+        ok: false,
+        code: "MISSING",
+        message: "delivery requires a runtime Delivery Bolt authority projection",
+      },
+    };
+  }
+  try {
+    return {
+      ok: true,
+      graph: JSON.parse(readFileSync(graphPath, "utf-8")),
+    };
+  } catch {
+    return {
+      ok: false,
+      result: { ok: false, code: "INVALID", message: "Delivery Bolt authority is unreadable" },
+    };
+  }
+}
+
+function sha256(value: string): `sha256:${string}` {
+  return `sha256:${createHash("sha256").update(value).digest("hex")}`;
+}
+
+function stateAction(state: string, slug: string): "EXECUTE" | "SKIP" | null {
+  const escaped = slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const action = state.match(new RegExp(`^- \\[[ xSR?-]\\] ${escaped}\\s*—\\s*(EXECUTE|SKIP)\\b`, "m"))?.[1];
+  return action === "EXECUTE" || action === "SKIP" ? action : null;
+}
+
+type EngineSingletonSourceRead =
+  | { readonly ok: true; readonly state: string; readonly scope: string }
+  | { readonly ok: false; readonly result: DeliveryBoltMembershipResult };
+
+function readEngineSingletonSource(recordRoot: string): EngineSingletonSourceRead {
+  const planPath = join(recordRoot, "inception", "delivery-planning", "bolt-plan.md");
+  const statePath = join(recordRoot, "amadeus-state.md");
+  if (existsSync(planPath) || !existsSync(statePath)) {
+    return { ok: false, result: { ok: false, code: "STALE", message: "engine singleton authority no longer matches its source files" } };
+  }
+  const state = readFileSync(statePath, "utf-8");
+  const scope = state.match(/^- \*\*Scope\*\*:\s*(\S+)\s*$/m)?.[1] ?? "";
+  if (
+    !["self-document", "self-fix", "self-refactor"].includes(scope) ||
+    stateAction(state, "units-generation") !== "SKIP" ||
+    stateAction(state, "delivery-planning") !== "SKIP"
+  ) {
+    return { ok: false, result: { ok: false, code: "STALE", message: "engine singleton authority is not eligible in the current state" } };
+  }
+  return { ok: true, state, scope };
+}
+
+function stateStageSlugs(state: string): ReadonlySet<string> {
+  return new Set(Array.from(
+    state.matchAll(/^- \[[ xSR?-]\] ([A-Za-z0-9._-]+)\s*—\s*(?:EXECUTE|SKIP)\b/gm),
+    (match) => match[1] as string,
+  ));
+}
+
+function engineSingletonUnit(
+  recordRoot: string,
+  state: string,
+): { readonly ok: true; readonly unit: string } | { readonly ok: false; readonly result: DeliveryBoltMembershipResult } {
+  const construction = join(recordRoot, "construction");
+  const stages = stateStageSlugs(state);
+  const units = existsSync(construction)
+    ? readdirSync(construction, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && !stages.has(entry.name))
+      .map((entry) => entry.name)
+      .sort()
+    : [];
+  if (units.length !== 1 || !SAFE_SEGMENT.test(units[0] ?? "")) {
+    return { ok: false, result: { ok: false, code: "MISMATCH", message: `engine singleton resolves ${units.length} construction Units` } };
+  }
+  return { ok: true, unit: units[0] as string };
+}
+
+function engineSingletonProjectionMismatch(
+  fields: Record<string, unknown>,
+  state: string,
+  scope: string,
+  identity: { readonly uuid: string; readonly slug: string; readonly dirName: string },
+  unit: string,
+): DeliveryBoltMembershipResult | null {
+  const digest = sha256(JSON.stringify({
+    stateDigest: sha256(state), intent: identity, scope,
+    unitsGeneration: "SKIP", deliveryPlanning: "SKIP", unit,
+  }));
+  if (fields.source !== "amadeus-state.md" || fields.sourceDigest !== digest) {
+    return { ok: false, code: "STALE", message: "engine singleton digest does not bind the current state and Unit" };
+  }
+  if (
+    JSON.stringify(fields.intent) !== JSON.stringify(identity) || fields.scope !== scope ||
+    fields.deliveryPlanning !== "SKIP" || fields.unit !== unit
+  ) {
+    return { ok: false, code: "MISMATCH", message: "engine singleton identity does not match the current Intent" };
+  }
+  return null;
+}
+
+function engineSingletonMembership(
+  recordRoot: string,
+  fields: Record<string, unknown>,
+  bolt: string,
+): DeliveryBoltMembershipResult {
+  const source = readEngineSingletonSource(recordRoot);
+  if (!source.ok) return source.result;
+  const intent = resolveIntentReference(recordRoot);
+  if (!intent.ok) return { ok: false, code: "INVALID", message: intent.message };
+  const resolvedUnit = engineSingletonUnit(recordRoot, source.state);
+  if (!resolvedUnit.ok) return resolvedUnit.result;
+  const unit = resolvedUnit.unit;
+  const identity = {
+    uuid: intent.value.uuid,
+    slug: intent.value.name,
+    dirName: basename(resolve(recordRoot)),
+  };
+  const mismatch = engineSingletonProjectionMismatch(
+    fields, source.state, source.scope, identity, unit,
+  );
+  if (mismatch !== null) return mismatch;
+  if (bolt !== intent.value.name) {
+    return { ok: false, code: "MISMATCH", message: "--bolt does not name the engine singleton Delivery Bolt" };
+  }
+  const expected = [{ bolt: intent.value.name, units: [unit] }];
+  if (JSON.stringify(fields.bolts) !== JSON.stringify(expected)) {
+    return { ok: false, code: "MISMATCH", message: "engine singleton membership does not match its resolved Unit" };
+  }
+  return { ok: true, value: [unit] };
+}
+
+function approvedPlanMembership(
+  recordRoot: string,
+  fields: Record<string, unknown>,
+  bolt: string,
+): DeliveryBoltMembershipResult {
+  const planPath = join(recordRoot, "inception", "delivery-planning", "bolt-plan.md");
+  if (!existsSync(planPath)) {
+    return { ok: false, code: "STALE", message: "the approved Delivery Plan source is missing" };
+  }
+  const plan = readFileSync(planPath, "utf-8");
+  const digest = sha256(plan);
+  if (
+    fields.source !== "inception/delivery-planning/bolt-plan.md" ||
+    fields.sourceDigest !== digest || !Array.isArray(fields.bolts)
+  ) {
+    return { ok: false, code: "STALE", message: "Delivery Bolt projection is stale or does not bind the approved plan bytes" };
+  }
+  const projectedMatches = projectedBoltMemberships(fields.bolts, bolt);
+  if (projectedMatches.length !== 1) {
+    return { ok: false, code: "MISMATCH", message: `--bolt resolves to ${projectedMatches.length} approved Delivery Bolt entries` };
+  }
+  const projected = canonicalUnitSlugs(projectedMatches[0] ?? []);
+  if (!projected.ok) return { ...projected, code: "INVALID" };
+  const planMatches = plannedBoltSections(plan, bolt);
+  if (planMatches.length !== 1) {
+    return { ok: false, code: "MISMATCH", message: `--bolt resolves to ${planMatches.length} current Delivery Plan entries` };
+  }
+  const unitsLine = planMatches[0]?.match(/^- \*\*Units?:\*\*([^\r\n]*)$/m)?.[1] ?? "";
+  const planned = canonicalUnitSlugs([...unitsLine.matchAll(/`([^`]+)`/g)].map((match) => match[1] ?? ""));
+  if (!planned.ok) return { ...planned, code: "INVALID" };
+  return planned.value.join("\0") === projected.value.join("\0")
+    ? projected
+    : { ok: false, code: "MISMATCH", message: "Delivery Bolt projection does not match the approved plan membership" };
+}
+
+function projectedBoltMemberships(value: unknown[], bolt: string): readonly string[][] {
+  return value.flatMap((candidate) => {
+    if (typeof candidate !== "object" || candidate === null || Array.isArray(candidate)) return [];
+    const row = candidate as Record<string, unknown>;
+    if (typeof row.bolt !== "string" || !Array.isArray(row.units)) return [];
+    if (!row.units.every((unit) => typeof unit === "string")) return [];
+    return row.bolt === bolt || `bolt-${row.bolt}` === bolt ? [row.units as string[]] : [];
+  });
+}
+
+function plannedBoltSections(plan: string, bolt: string): readonly string[] {
+  return plan.split(/(?=^## Bolt\s+)/m).filter((section) => {
+    const heading = section.match(/^## Bolt\s+([^:\r\n]+)(?::[^\r\n]*)?$/m)?.[1]?.trim();
+    return heading === bolt || `bolt-${heading}` === bolt;
+  });
+}
+
+export function canonicalUnitSlugs(units: readonly string[]): CanonicalUnitSlugsResult {
+  if (units.length === 0) return { ok: false, message: "the Delivery Bolt must contain at least one Unit" };
+  if (units.some((unit) => !SAFE_SEGMENT.test(unit))) {
+    return { ok: false, message: "every Unit must be a non-empty slug" };
+  }
+  const value = [...units].sort();
+  if (value.some((unit, index) => index > 0 && value[index - 1] === unit)) {
+    return { ok: false, message: "the Delivery Bolt contains duplicate Units" };
+  }
+  return { ok: true, value };
+}
+
+export function unitsOf(work: Pick<PullRequestWorkReference, "unit" | "units">): readonly string[] {
+  const supplied = work.units ?? (work.unit === undefined ? [] : [work.unit]);
+  const canonical = canonicalUnitSlugs(supplied);
+  if (!canonical.ok) throw new Error(canonical.message);
+  return canonical.value;
+}
+
+export function resolveDeliveryBoltMembership(
+  recordRoot: string,
+  bolt: string,
+): DeliveryBoltMembershipResult {
+  const authority = readDeliveryBoltAuthority(recordRoot);
+  if (!authority.ok) return authority.result;
+  const { graph } = authority;
+  if (typeof graph !== "object" || graph === null || Array.isArray(graph)) {
+    return { ok: false, code: "INVALID", message: "runtime-graph.json does not contain a valid Delivery Bolt projection" };
+  }
+  const projection = (graph as Record<string, unknown>).delivery_bolts;
+  if (typeof projection !== "object" || projection === null || Array.isArray(projection)) {
+    return { ok: false, code: "MISSING", message: "runtime-graph.json has no approved Delivery Bolt projection" };
+  }
+  const fields = projection as Record<string, unknown>;
+  if (fields.authority === "engine-singleton") {
+    return engineSingletonMembership(recordRoot, fields, bolt);
+  }
+  if (fields.authority !== "approved-plan") {
+    return { ok: false, code: "INVALID", message: "Delivery Bolt projection has no recognized authority discriminator" };
+  }
+  return approvedPlanMembership(recordRoot, fields, bolt);
+}
 
 function registryRow(value: unknown): RegistryRow | null {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
@@ -98,18 +345,19 @@ export function resolveIntentReference(recordRoot: string): IntentReferenceResul
 }
 
 export function renderPullRequestTitle(title: string, work: PullRequestWorkReference): string {
-  return `[${work.intent.name}/${work.bolt}/${work.unit}] ${title}`;
+  return `[${work.intent.name}/${work.bolt}/${unitsOf(work).join("+")}] ${title}`;
 }
 
 export function renderPullRequestBody(body: string, work: PullRequestWorkReference): string {
   const separator = body === "" ? "" : body.endsWith("\n") ? "\n" : "\n\n";
   const [intentLabel, boltLabel, unitLabel, recordLabel, uuidLabel] = AMADEUS_WORK_FIELD_LABELS;
+  const units = unitsOf(work);
   return [
     `${body}${separator}${AMADEUS_WORK_HEADING}`,
     "",
     `- ${intentLabel}: \`${work.intent.name}\``,
     `- ${boltLabel}: \`${work.bolt}\``,
-    `- ${unitLabel}: \`${work.unit}\``,
+    `- ${unitLabel}: \`${units.join(",")}\``,
     `- ${recordLabel}: \`${work.intent.recordPath}\``,
     `- ${uuidLabel}: \`${work.intent.uuid}\``,
     "",

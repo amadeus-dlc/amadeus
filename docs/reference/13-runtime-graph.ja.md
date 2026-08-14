@@ -30,6 +30,7 @@ interface RuntimeGraph {
   stages: RuntimeStage[];         // chronological order by started_at
   bolt_dag?: BoltDag;             // present only when units-generation's unit-of-work-dependency.md carries a valid (well-formed, acyclic) fenced edge block
   bolt_dag_absence?: BoltDagAbsence; // mutually exclusive with bolt_dag: why there legitimately is no DAG
+  delivery_bolts?: DeliveryBoltProjection; // 承認済み Delivery Planning 所属。DAG batch とは独立
   execution_observability?: {     // 必須投影済みの最新の正典 execution event set
     root_operation_id: string;
     event_set_digest: string;
@@ -45,6 +46,28 @@ interface BoltDag {
   units: { name: string; depends_on: string[] }[]; // verbatim from the authored edge block
   batches: string[][];            // topological levels; each level = units whose deps are all satisfied by prior levels; level entries sorted lexicographically (deterministic)
 }
+
+interface ApprovedPlanDeliveryBoltProjection {
+  authority: "approved-plan";
+  source: "inception/delivery-planning/bolt-plan.md";
+  sourceDigest: `sha256:${string}`;
+  bolts: { bolt: string; units: string[] }[]; // Bolt と Unit の slug は辞書順
+}
+
+interface EngineSingletonDeliveryBoltProjection {
+  authority: "engine-singleton";
+  source: "amadeus-state.md";
+  sourceDigest: `sha256:${string}`;
+  intent: { uuid: string; slug: string; dirName: string };
+  scope: "self-document" | "self-fix" | "self-refactor";
+  deliveryPlanning: "SKIP";
+  unit: string;
+  bolts: [{ bolt: string; units: [string] }];
+}
+
+type DeliveryBoltProjection =
+  | ApprovedPlanDeliveryBoltProjection
+  | EngineSingletonDeliveryBoltProjection;
 
 interface RuntimeStage {
   stage_slug: string;
@@ -112,6 +135,26 @@ units:
 **正当な欠落**(スコープが units-generation をスキップする、またはステージがまだ成果物を出していない)は、その理由を載せた `bolt_dag_absence` を書いて exit 0 で終わります。下流はノード欠落の理由を推測せず、この値を読みます。
 
 **欠陥**は compile を失敗させます: 理由を名指しした stderr 診断を書き、graph を一切書かず、非ゼロで終了します。該当するのは2形です — units-generation が completed なのに成果物が不在の場合と、成果物は在るがエッジブロックがパースできない場合(不在、重複名・ダングリング/自己依存・パース不能行による不正、または循環)。後者はステージ状態に依りません: 書いた以上、author は機械可読な様式を負います。声を上げて失敗することが診断を読み手へ届ける唯一の手段です — PostToolUse フックはツールの stderr を非ゼロ終了時にしか記録しないため、exit 0 の省略は不可視でした。それらの失敗は、同じブロックを検証し `edge_block: ok | absent | malformed | cyclic` を報告する `required-sections` センサーによって、上流の 2.7 ゲートでも表面化されます。エッジを構造化データとして author すること(2.7 承認ゲートの背後で、一度だけの知識作業)が、フック発火の `compile` を再実行時にバイト同一に保つものです: compile パスにモデルは座っていません。
+
+### Delivery Bolt の所属 (`delivery_bolts`)
+
+`delivery_bolts` は承認済みの delivery 集約であり、並列実行 batch ではありません。DAG
+batch は同時に実行できる Unit を表し、Delivery Bolt は1つの pull request と head
+identity を共有する Unit を表します。この2つの境界は異なり得るため、consumer は一方から
+他方を推測してはいけません。
+
+`delivery-planning` 完了後、`compile` は現在の
+`inception/delivery-planning/bolt-plan.md` を parse し、Bolt と Unit の slug を整列して、
+SHA-256 で source の正確な bytes に projection を結び付けます。Delivery Bolt 成果物を持たない
+scope との互換性のため、plan がなければ省略します。承認済み plan が存在するのに malformed
+なら fail closed とし、古い runtime graph を削除します。consumer は projection を使う前に
+source を再 hash するため、compile 後の plan 編集は再開時の所属を暗黙に変えず stale と判定されます。
+
+`units-generation` と `delivery-planning` の両方を明示的に SKIP する incremental self scope
+では、engine の no-DAG construction ledger が Unit をちょうど1つ解決し、Delivery Plan が存在しない
+場合に限り `authority: "engine-singleton"` を使います。digest は state bytes、Intent identity、scope、
+SKIP 判定、解決済み Unit を束縛します。Unit が0件または複数、plan が存在、state/identity が drift
+した場合は、singleton authority を利用できません。
 
 ---
 

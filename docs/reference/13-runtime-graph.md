@@ -44,6 +44,7 @@ interface RuntimeGraph {
   stages: RuntimeStage[];         // chronological order by started_at
   bolt_dag?: BoltDag;             // present only when units-generation's unit-of-work-dependency.md carries a valid (well-formed, acyclic) fenced edge block
   bolt_dag_absence?: BoltDagAbsence; // mutually exclusive with bolt_dag: why there legitimately is no DAG
+  delivery_bolts?: DeliveryBoltProjection; // approved Delivery Planning membership; independent of DAG batches
   execution_observability?: {     // latest required-projected canonical execution event set
     root_operation_id: string;
     event_set_digest: string;
@@ -59,6 +60,28 @@ interface BoltDag {
   units: { name: string; depends_on: string[] }[]; // verbatim from the authored edge block
   batches: string[][];            // topological levels; each level = units whose deps are all satisfied by prior levels; level entries sorted lexicographically (deterministic)
 }
+
+interface ApprovedPlanDeliveryBoltProjection {
+  authority: "approved-plan";
+  source: "inception/delivery-planning/bolt-plan.md";
+  sourceDigest: `sha256:${string}`;
+  bolts: { bolt: string; units: string[] }[]; // Bolt and Unit slugs sorted lexicographically
+}
+
+interface EngineSingletonDeliveryBoltProjection {
+  authority: "engine-singleton";
+  source: "amadeus-state.md";
+  sourceDigest: `sha256:${string}`;
+  intent: { uuid: string; slug: string; dirName: string };
+  scope: "self-document" | "self-fix" | "self-refactor";
+  deliveryPlanning: "SKIP";
+  unit: string;
+  bolts: [{ bolt: string; units: [string] }];
+}
+
+type DeliveryBoltProjection =
+  | ApprovedPlanDeliveryBoltProjection
+  | EngineSingletonDeliveryBoltProjection;
 
 interface RuntimeStage {
   stage_slug: string;
@@ -161,6 +184,28 @@ Those failures are *also* surfaced upstream at the 2.7 gate by the
 `edge_block: ok | absent | malformed | cyclic`. Authoring the edges as structured data (knowledge
 work, once, behind the 2.7 approval gate) is what keeps the hook-fired
 `compile` byte-identical on re-run: no model sits in the compile path.
+
+### Delivery Bolt membership (`delivery_bolts`)
+
+`delivery_bolts` is the approved delivery aggregate, not a parallel execution
+batch. A DAG batch answers which Units may run concurrently; a Delivery Bolt
+answers which Units share one pull-request and head identity. The two boundaries
+may differ and consumers must not infer one from the other.
+
+After `delivery-planning` is completed, `compile` parses the current
+`inception/delivery-planning/bolt-plan.md`, sorts Bolt and Unit slugs, and binds
+the projection to the exact source bytes with SHA-256. A missing plan is omitted
+for compatibility with scopes that have no Delivery Bolt artifact. An existing
+but malformed approved plan fails closed and removes a stale runtime graph.
+Consumers re-hash the source before using the projection, so a plan edit after
+compile is stale rather than silently changing resumed delivery membership.
+
+Incremental self scopes that explicitly SKIP both `units-generation` and
+`delivery-planning` use `authority: "engine-singleton"` only when the engine's
+no-DAG construction ledger resolves exactly one Unit and no Delivery Plan
+exists. Its digest binds the state bytes, Intent identity, scope, SKIP decisions,
+and resolved Unit. Zero or multiple Units, a plan, or state/identity drift leave
+no usable singleton authority.
 
 ---
 

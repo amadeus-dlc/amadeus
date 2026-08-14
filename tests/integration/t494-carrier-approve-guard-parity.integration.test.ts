@@ -25,6 +25,7 @@ import {
   createTestProject,
   DEFAULT_INTENT_UUID,
   resetAidlcEnv,
+  seedDeliveryBoltPlan,
   seededAuditShard,
   seededRecordDir,
   seededStateFile,
@@ -38,7 +39,7 @@ process.env.AMADEUS_SKIP_ARTIFACT_GUARD ??= "1";
 process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD ??= "1";
 resetAidlcEnv();
 
-const CG_PRODUCES = ["code-generation-plan", "code-summary"];
+const CG_PRODUCES = ["code-generation-plan", "code-summary", "pr-convergence-report"];
 const SESSION_ID = "trusted-carrier-session";
 const ROUTE_ID = "12345678-1234-4abc-8def-1234567890ab";
 
@@ -133,10 +134,17 @@ function seedDag(proj: string, batches: string[][]): void {
       .map((unit) => `  - name: ${unit.name}\n    depends_on: [${unit.depends_on.join(", ")}]`)
       .join("\n")}\n\`\`\`\n`,
   );
+  const deliveryProjection = seedDeliveryBoltPlan(
+    seededRecordDir(proj),
+    units.map((unit) => unit.name),
+  );
   writeFileSync(
     join(seededRecordDir(proj), "runtime-graph.json"),
     JSON.stringify(
-      { bolt_dag: { units: batches.flat().map((name) => ({ name, depends_on: [] })), batches } },
+      {
+        bolt_dag: { units: batches.flat().map((name) => ({ name, depends_on: [] })), batches },
+        delivery_bolts: deliveryProjection,
+      },
       null,
       2,
     ),

@@ -50,6 +50,10 @@ import {
 } from "../../packages/framework/core/tools/amadeus-goal-reconciliation.ts";
 import { workflowCompletionContextDigest } from "../../packages/framework/core/tools/amadeus-workflow-completion.ts";
 import {
+  type ApprovedPlanDeliveryBoltProjection,
+  projectDeliveryBoltPlan,
+} from "../../packages/framework/core/tools/amadeus-delivery-bolts.ts";
+import {
   getField,
   setOrInsertField,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
@@ -156,6 +160,22 @@ export function intentsDirOf(proj: string, space = DEFAULT_SPACE): string {
  */
 export function seededRecordDir(proj: string, space = DEFAULT_SPACE): string {
   return join(intentsDirOf(proj, space), DEFAULT_RECORD_DIR);
+}
+
+/** Write a canonical single-Bolt Delivery Plan and return its runtime projection. */
+export function seedDeliveryBoltPlan(
+  recordDir: string,
+  units: readonly string[],
+): ApprovedPlanDeliveryBoltProjection {
+  const plan = `## Bolt delivery\n\n- **Units:** ${units.map((unit) => `\`${unit}\``).join(", ")}\n`;
+  const planningDir = join(recordDir, "inception", "delivery-planning");
+  mkdirSync(planningDir, { recursive: true });
+  writeFileSync(join(planningDir, "bolt-plan.md"), plan);
+  const projected = projectDeliveryBoltPlan(plan);
+  if (!projected.ok || projected.projection.authority !== "approved-plan") {
+    throw new Error(projected.ok ? "expected approved Delivery Bolt projection" : projected.message);
+  }
+  return projected.projection;
 }
 
 /** The seeded state file path: `<record>/amadeus-state.md`. */

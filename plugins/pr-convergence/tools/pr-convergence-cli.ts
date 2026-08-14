@@ -66,6 +66,8 @@ import {
   renderPullRequestBody,
   renderPullRequestTitle,
   resolveIntentReference,
+  canonicalUnitSlugs,
+  resolveDeliveryBoltMembership,
 } from "./pr-convergence-presentation.ts";
 import {
   checkProvenance,
@@ -78,8 +80,11 @@ import {
   attestationId,
   isSelfRecord,
   parseAttestation,
+  REPORT_BASENAME,
   type ReportAttestation,
+  reportPathFor,
   renderAttestation,
+  renderOwnerProjection,
   reportPayload,
   reportPayloadDigest,
 } from "./pr-convergence-attestation.ts";
@@ -139,12 +144,7 @@ export type ConvergenceReport =
       readonly attestation?: ReportAttestation;
     };
 
-export const REPORT_BASENAME = "pr-convergence-report.md";
-
-/** FR-2b: the path the code-generation artifact guard resolves. */
-export function reportPathFor(recordRoot: string, unit: string): string {
-  return join(recordRoot, "construction", unit, "code-generation", REPORT_BASENAME);
-}
+export { REPORT_BASENAME, reportPathFor };
 
 /**
  * The only way a report comes into existence (BR-U2-7). Hand-writing this file
@@ -369,6 +369,7 @@ interface ConvergenceOptions {
   readonly verb: "status" | "report" | "override";
   readonly ref: PrRef;
   readonly unit: string;
+  readonly units: readonly string[];
   readonly record: string;
   readonly reason: string | null;
   readonly logTool: string;
@@ -385,8 +386,8 @@ interface CreateBaseOptions {
 }
 
 type CreateWorkOptions =
-  | { readonly record: null; readonly bolt: null; readonly unit: null }
-  | { readonly record: string; readonly bolt: string; readonly unit: string };
+  | { readonly record: null; readonly bolt: null; readonly unit: null; readonly units: readonly [] }
+  | { readonly record: string; readonly bolt: string; readonly unit: string; readonly units: readonly string[] };
 
 type CreateOptions = CreateBaseOptions & CreateWorkOptions;
 
@@ -411,6 +412,7 @@ function parseFlags(rest: readonly string[]): Map<string, string> | null {
 interface CliTarget {
   readonly ref: PrRef;
   readonly unit: string;
+  readonly units: readonly string[];
   readonly record: string;
 }
 
@@ -431,11 +433,23 @@ function resolveTarget(flags: Map<string, string>): TargetParse {
     return { ok: false, message: "--unit is required and must be a slug" };
   }
   if (record === undefined) return { ok: false, message: "--record is required" };
+  const units = parseMemberUnits(flags, unit);
+  if (!units.ok) return units;
   const ref = parsePrRef(repo, pr);
   if (ref === null) {
     return { ok: false, message: `--repo/--pr do not name a pull request: ${repo} ${pr}` };
   }
-  return { ok: true, value: { ref, unit, record } };
+  return { ok: true, value: { ref, unit, units: units.value, record } };
+}
+
+function parseMemberUnits(
+  flags: Map<string, string>,
+  owner: string,
+): { readonly ok: true; readonly value: readonly string[] } | { readonly ok: false; readonly message: string } {
+  const parsed = canonicalUnitSlugs((flags.get("units") ?? owner).split(","));
+  if (!parsed.ok) return parsed;
+  if (!parsed.value.includes(owner)) return { ok: false, message: "--unit must be a member of --units" };
+  return parsed;
 }
 
 type CreateWorkParse =
@@ -450,12 +464,14 @@ function parseCreateWork(flags: Map<string, string>): CreateWorkParse {
     if (bolt !== null || unit !== null) {
       return { ok: false, message: "--bolt and --unit require --record" };
     }
-    return { ok: true, value: { record: null, bolt: null, unit: null } };
+    return { ok: true, value: { record: null, bolt: null, unit: null, units: [] } };
   }
   if (bolt === null || unit === null || !UNIT_RE.test(bolt) || !UNIT_RE.test(unit)) {
     return { ok: false, message: "--record requires --bolt and --unit slugs" };
   }
-  return { ok: true, value: { record, bolt, unit } };
+  const units = parseMemberUnits(flags, unit);
+  if (!units.ok) return units;
+  return { ok: true, value: { record, bolt, unit, units: units.value } };
 }
 
 function parseCreateOptions(flags: Map<string, string>): OptionParse {
@@ -538,6 +554,7 @@ interface DeliveryWork {
   readonly record: string;
   readonly bolt: string;
   readonly unit: string;
+  readonly units: readonly string[];
 }
 
 type SelfContext =
@@ -622,7 +639,7 @@ function currentSelfContext(
     options.record,
     { oid: prHead, ref: prHeadRef },
     seams.gitSpawn ?? nodeGitSpawn,
-    options.unit,
+    options.units,
   );
   if (!git.ok) {
     return { ok: false, outcome: { exitCode: 1, stdout: "", stderr: `delivery prerequisite failed: ${git.message}\n` } };
@@ -639,7 +656,7 @@ function currentSelfContext(
   }
   const work: DeliveryWork = {
     intent: intent.value.name, intentUuid: intent.value.uuid, record: intent.value.recordPath,
-    bolt: provenance.bolt, unit: options.unit,
+    bolt: provenance.bolt, unit: options.unit, units: options.units,
   };
   const heads: DeliveryHeads = { localHead: git.localHead, remoteHead: git.remoteHead, prHead };
   const receipt = parseAttestation(body);
@@ -671,7 +688,21 @@ function attestationBindsDelivery(
 ): boolean {
   return receipt.intent === work.intent && receipt.intentUuid === work.intentUuid &&
     receipt.record === work.record && receipt.bolt === work.bolt && receipt.unit === work.unit &&
+    sameMemberUnits(receipt.memberUnits, work.units) &&
     receipt.repo === ref.repo && receipt.pr === ref.number;
+}
+
+function sameMemberUnits(actual: readonly string[] | undefined, expected: readonly string[]): boolean {
+  const normalized = actual ?? (expected.length === 1 ? expected : []);
+  return normalized.length === expected.length && normalized.every((unit, index) => unit === expected[index]);
+}
+
+function deliveryMembershipFailure(record: string, bolt: string, units: readonly string[]): string | null {
+  const approved = resolveDeliveryBoltMembership(record, bolt);
+  if (!approved.ok) return `DELIVERY_BOLT_AUTHORITY_${approved.code}: ${approved.message}`;
+  return sameMemberUnits(approved.value, units)
+    ? null
+    : `DELIVERY_BOLT_AUTHORITY_MISMATCH: --units does not match the approved member Units for Delivery Bolt ${bolt}`;
 }
 
 /** The receipt names THIS delivery — a receipt copied from another intent, unit,
@@ -790,6 +821,24 @@ async function writeSelfReport(
   stage: "code-generation" | "pr-convergence",
 ): Promise<CliOutcome> {
   if (report.kind === "landed") return { exitCode: 1, stdout: "", stderr: "landed is not convergence evidence\n" };
+  const paths: string[] = [];
+  for (const ownerUnit of work.units) {
+    const ownerWork = { ...work, unit: ownerUnit };
+    const outcome = await writeSelfReportProjection(record, report, ownerWork, heads, seams, stage);
+    if (outcome.exitCode !== 0) return outcome;
+    paths.push(outcome.stdout.trim());
+  }
+  return { exitCode: 0, stdout: `${paths.join("\n")}\n`, stderr: "" };
+}
+
+async function writeSelfReportProjection(
+  record: string,
+  report: ConvergenceReport,
+  work: DeliveryWork,
+  heads: DeliveryHeads,
+  seams: CliSeams,
+  stage: "code-generation" | "pr-convergence",
+): Promise<CliOutcome> {
   const path = reportPathFor(record, work.unit);
   const lifecycle = selfReportLifecycle(path, report, heads, work, report.prRef);
   if (lifecycle.kind === "refuse") return lifecycle.outcome;
@@ -797,15 +846,31 @@ async function writeSelfReport(
     return resumeSelfReport(record, path, lifecycle.attestation, seams, stage);
   }
 
-  const payload = renderReport(report);
+  const basePayload = renderReport(report);
+  const payload = work.units.length === 1
+    ? basePayload
+    : `${basePayload}${renderOwnerProjection({
+        intent: work.intent,
+        intentUuid: work.intentUuid,
+        record: work.record,
+        bolt: work.bolt,
+        memberUnits: work.units,
+        ownerUnit: work.unit,
+        reportPath: reportPathFor(work.record, work.unit),
+        repo: report.prRef.repo,
+        pr: report.prRef.number,
+        head: heads.localHead,
+      })}`;
   const withoutId = {
     intent: work.intent, intentUuid: work.intentUuid, record: work.record,
-    bolt: work.bolt, unit: work.unit, repo: report.prRef.repo, pr: report.prRef.number,
+    bolt: work.bolt, unit: work.unit,
+    ...(work.units.length === 1 ? {} : { memberUnits: work.units }),
+    repo: report.prRef.repo, pr: report.prRef.number,
     localHead: heads.localHead, remoteHead: heads.remoteHead, prHead: heads.prHead,
     contentDigest: reportPayloadDigest(payload),
   };
   const attestation: ReportAttestation = { id: attestationId(withoutId), ...withoutId };
-  const body = renderReport({ ...report, attestation } as ConvergenceReport);
+  const body = `${payload}${renderAttestation(attestation)}`;
   mkdirSync(join(record, "construction", work.unit, "code-generation"), { recursive: true });
   writeFileSync(path, body, "utf-8");
 
@@ -826,6 +891,7 @@ async function emitAttestationReceipt(
   const fields: ReadonlyArray<readonly [string, string]> = [
     ["Attestation Id", attestation.id], ["Intent", attestation.intent], ["Intent UUID", attestation.intentUuid],
     ["Record", attestation.record], ["Bolt", attestation.bolt], ["Unit", attestation.unit],
+    ...(attestation.memberUnits === undefined ? [] : [["Member Units", attestation.memberUnits.join(",")] as const]),
     ["Repository", attestation.repo], ["PR", String(attestation.pr)], ["Local Head", attestation.localHead],
     ["Remote Head", attestation.remoteHead], ["PR Head", attestation.prHead], ["Content Digest", attestation.contentDigest],
   ];
@@ -933,6 +999,7 @@ function existingWorkMismatch(pr: OpenPrSummary, work: DeliveryWork): string | n
     body: pr.body,
     record: work.record,
     unit: work.unit,
+    units: work.units,
   });
   if (!provenance.ok) return renderProvenanceRemediation(provenance.violations);
   const fields = parseAmadeusWork(pr.body);
@@ -958,10 +1025,12 @@ async function createPullRequest(options: CreateOptions, seams: CliSeams): Promi
     }
     const intent = resolveIntentReference(options.record);
     if (!intent.ok) return { exitCode: 2, stdout: "", stderr: `${intent.message}\n` };
+    const membershipFailure = deliveryMembershipFailure(options.record, options.bolt, options.units);
+    if (membershipFailure !== null) return { exitCode: 2, stdout: "", stderr: `${membershipFailure}\n` };
     const work = {
       intent: intent.value,
       bolt: options.bolt,
-      unit: options.unit,
+      units: options.units,
     };
     title = renderPullRequestTitle(title, work);
     body = renderPullRequestBody(body, work);
@@ -971,6 +1040,7 @@ async function createPullRequest(options: CreateOptions, seams: CliSeams): Promi
       record: intent.value.recordPath,
       bolt: options.bolt,
       unit: options.unit,
+      units: options.units,
     };
     if (isSelfRecord(options.record)) {
       prerequisite = verifyCreatePrerequisites(
@@ -978,7 +1048,7 @@ async function createPullRequest(options: CreateOptions, seams: CliSeams): Promi
         options.head,
         options.base,
         seams.gitSpawn ?? nodeGitSpawn,
-        options.unit,
+        options.units,
       );
       if (!prerequisite.ok) {
         return { exitCode: 1, stdout: "", stderr: `create prerequisite failed: ${prerequisite.message}\n` };
@@ -1255,8 +1325,16 @@ function provenanceOutcome(
     ...evaluation.provenanceSource,
     record: intent.ok ? intent.value.recordPath : options.record,
     unit: options.unit,
+    units: options.units,
   });
-  if (provenance.ok) return null;
+  if (provenance.ok) {
+    const fields = parseAmadeusWork(evaluation.provenanceSource.body);
+    if (fields === null) return { exitCode: 3, stdout: "", stderr: "linked PR provenance cannot be parsed\n" };
+    const membershipFailure = deliveryMembershipFailure(options.record, fields.bolt, options.units);
+    return membershipFailure === null
+      ? null
+      : { exitCode: 3, stdout: "", stderr: `${membershipFailure}\n` };
+  }
   return {
     exitCode: 3,
     stdout: JSON.stringify(

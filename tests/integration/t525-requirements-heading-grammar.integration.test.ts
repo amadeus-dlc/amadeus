@@ -69,12 +69,12 @@ describe("t525 requirements heading grammar", () => {
     const map = JSON.parse(readFileSync(MODEL_MAP, "utf8")) as {
       models: ReadonlyArray<Record<string, unknown>>;
     };
-    expect(map.models.length).toBe(3);
+    expect(map.models.length).toBe(4);
     // Only evidence minted under the *old* grammar could be invalidated by the
-    // widening. PrConvergenceGate was authored and registered afterwards, so
-    // its bundle is bound to identities the widened grammar already produced.
+    // widening. BoltPrAttestationGate and PrConvergenceGate were authored and
+    // registered afterwards, so their bundles are bound to identities the widened grammar already produced.
     // Every other model must still carry none.
     const withEvidence = map.models.filter((model) => model.evidenceBundle !== undefined);
-    expect(withEvidence.map((model) => model.name)).toEqual(["PrConvergenceGate"]);
+    expect(withEvidence.map((model) => model.name)).toEqual(["BoltPrAttestationGate", "PrConvergenceGate"]);
   });
 });

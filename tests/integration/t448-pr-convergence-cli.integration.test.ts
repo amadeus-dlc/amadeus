@@ -30,6 +30,10 @@ import {
   GIT_TIMEOUT_MS,
   type GitSpawn,
 } from "../../plugins/pr-convergence/tools/pr-convergence-git-runner.ts";
+import {
+  projectDeliveryBoltPlan,
+  projectEngineSingletonDeliveryBolt,
+} from "../../packages/framework/core/tools/amadeus-delivery-bolts.ts";
 import { scaleTestTime } from "../lib/test-time-factor.ts";
 
 /**
@@ -318,6 +322,24 @@ function makeBodyFile(body: string): string {
   return path;
 }
 
+function seedApprovedDeliveryAuthority(
+  record: string,
+  bolt: string,
+  unit: string,
+): void {
+  const planDir = join(record, "inception", "delivery-planning");
+  mkdirSync(planDir, { recursive: true });
+  const plan = `## Bolt ${bolt}\n\n- **Units:** \`${unit}\`\n`;
+  writeFileSync(join(planDir, "bolt-plan.md"), plan, "utf-8");
+  const projected = projectDeliveryBoltPlan(plan);
+  if (!projected.ok) throw new Error(projected.message);
+  writeFileSync(
+    join(record, "runtime-graph.json"),
+    `${JSON.stringify({ delivery_bolts: projected.projection }, null, 2)}\n`,
+    "utf-8",
+  );
+}
+
 function makeIntentRecord(input: {
   readonly slug: string;
   readonly dirName: string;
@@ -345,6 +367,7 @@ function makeIntentRecord(input: {
     )}\n`,
     "utf-8",
   );
+  seedApprovedDeliveryAuthority(record, "ship-pr-metadata", "create-pr-command");
   return record;
 }
 
@@ -1393,10 +1416,10 @@ const SELF_SHA = "c".repeat(40);
 const SELF_BRANCH = "feature/2838";
 const SELF_UUID = "uuid-2838";
 const SELF_PROVENANCE = {
-  title: "[pr-gate/delivery/cli] fix: gate",
+  title: "[pr-gate/pr-gate/cli] fix: gate",
   body:
     "## Summary\n\nIssue 2838.\n\n## Amadeus Work\n\n" +
-    "- Intent: `pr-gate`\n- Bolt: `delivery`\n- Unit: `cli`\n" +
+    "- Intent: `pr-gate`\n- Bolt: `pr-gate`\n- Unit: `cli`\n" +
     "- Record: `amadeus/spaces/default/intents/260812-pr-gate/`\n- UUID: `uuid-2838`\n",
 };
 
@@ -1406,7 +1429,7 @@ interface SelfFixture {
   readonly bodyFile: string;
 }
 
-function makeSelfFixture(): SelfFixture {
+function makeSelfFixture(unit = "cli"): SelfFixture {
   const root = mkdtempSync(join(tmpdir(), "pr-convergence-self-"));
   roots.push(root);
   const intents = join(root, "amadeus", "spaces", "default", "intents");
@@ -1415,11 +1438,38 @@ function makeSelfFixture(): SelfFixture {
   writeFileSync(
     join(intents, "intents.json"),
     `${JSON.stringify([
-      { slug: "pr-gate", uuid: SELF_UUID, dirName: "260812-pr-gate", status: "in-flight" },
+      {
+        slug: "pr-gate",
+        uuid: SELF_UUID,
+        dirName: "260812-pr-gate",
+        scope: "self-fix",
+        status: "in-flight",
+      },
     ])}\n`,
     "utf-8",
   );
-  writeFileSync(join(record, "amadeus-state.md"), "- **Scope**: self-fix\n", "utf-8");
+  const state = [
+    "- **Scope**: self-fix",
+    "- [S] units-generation — SKIP",
+    "- [S] delivery-planning — SKIP",
+    "- [-] code-generation — EXECUTE",
+    "",
+  ].join("\n");
+  writeFileSync(join(record, "amadeus-state.md"), state, "utf-8");
+  mkdirSync(join(record, "construction", unit), { recursive: true });
+  const projected = projectEngineSingletonDeliveryBolt(
+    root,
+    state,
+    new Set(["units-generation", "delivery-planning", "code-generation"]),
+  );
+  if (projected.kind !== "projection") {
+    throw new Error("self fixture must resolve an engine singleton Delivery Bolt");
+  }
+  writeFileSync(
+    join(record, "runtime-graph.json"),
+    `${JSON.stringify({ delivery_bolts: projected.projection }, null, 2)}\n`,
+    "utf-8",
+  );
   writeFileSync(
     join(record, "audit", "human.jsonl"),
     `${JSON.stringify({
@@ -1565,7 +1615,7 @@ const createArgs = (f: SelfFixture) => [
   "--record",
   f.record,
   "--bolt",
-  "delivery",
+  "pr-gate",
   "--unit",
   "cli",
 ];
@@ -1691,7 +1741,7 @@ describe("CLI self report delivery — an interrupted run is resumable, not bric
   });
 
   test("refuses an attestation copied from another identity, audit shard and all", async () => {
-    const source = makeSelfFixture();
+    const source = makeSelfFixture("other-unit");
     // The source report belongs to a different unit; only the copy makes it
     // look like this delivery's evidence.
     const sourceArgs = createArgs(source).map((token) => (token === "cli" ? "other-unit" : token));
@@ -2197,7 +2247,7 @@ describe("CLI self report lifecycle — states the report file can be found in",
       intent: "pr-gate",
       intentUuid: SELF_UUID,
       record: "amadeus/spaces/default/intents/260812-pr-gate/",
-      bolt: "delivery",
+      bolt: "pr-gate",
       unit: "cli",
       repo: "amadeus-dlc/amadeus",
       pr: 2838,
