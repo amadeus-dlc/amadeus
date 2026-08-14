@@ -5,6 +5,10 @@
 
 import { describe, expect, test } from "bun:test";
 import { parsePluginManifest } from "../../packages/framework/core/tools/amadeus-plugin-compose.ts";
+import {
+  type PluginSettingsDeclaration,
+  resolvePluginSettings,
+} from "../../packages/framework/core/tools/amadeus-plugin-settings.ts";
 
 function manifest(extra: Record<string, unknown>): Buffer {
   return Buffer.from(
@@ -134,5 +138,79 @@ describe("t2997 settings misspelling detection", () => {
     const parsed = parse({ advisories: [{ code: "spec-change" }] });
     expect(parsed.errors).toEqual([]);
     expect(parsed.manifest).not.toBeNull();
+  });
+});
+
+const DECLARATION: PluginSettingsDeclaration = {
+  "fetch-throttle-seconds": { type: "number", default: 600, description: "throttle" },
+  label: { type: "string", default: "origin", description: "label" },
+  enabled: { type: "boolean", default: true, description: "toggle" },
+  mode: { type: "enum", values: ["fast", "thorough"], default: "fast", description: "mode" },
+};
+
+describe("t2997 settings resolution", () => {
+  test("no overrides resolves to the declared defaults", () => {
+    expect(resolvePluginSettings("git-drift", DECLARATION, {})).toEqual({
+      ok: true,
+      settings: {
+        "fetch-throttle-seconds": 600,
+        label: "origin",
+        enabled: true,
+        mode: "fast",
+      },
+    });
+  });
+
+  test("an override replaces only the key it names", () => {
+    const resolved = resolvePluginSettings("git-drift", DECLARATION, {
+      "fetch-throttle-seconds": 120,
+      mode: "thorough",
+    });
+    expect(resolved).toEqual({
+      ok: true,
+      settings: {
+        "fetch-throttle-seconds": 120,
+        label: "origin",
+        enabled: true,
+        mode: "thorough",
+      },
+    });
+  });
+
+  test("an undeclared key aborts rather than being passed through", () => {
+    expect(resolvePluginSettings("git-drift", DECLARATION, { unknown: 1 })).toEqual({
+      ok: false,
+      error: {
+        code: "unknown-key",
+        plugin: "git-drift",
+        key: "unknown",
+        detail: 'no such setting is declared by plugin "git-drift"',
+      },
+    });
+  });
+
+  test("a type mismatch aborts rather than falling back to the default", () => {
+    const resolved = resolvePluginSettings("git-drift", DECLARATION, {
+      "fetch-throttle-seconds": "600",
+    });
+    expect(resolved.ok).toBe(false);
+    if (resolved.ok) return;
+    expect(resolved.error.code).toBe("type-mismatch");
+    expect(resolved.error.detail).toContain("number");
+  });
+
+  test("an enum value outside the declared vocabulary aborts", () => {
+    const resolved = resolvePluginSettings("git-drift", DECLARATION, { mode: "exhaustive" });
+    expect(resolved.ok).toBe(false);
+    if (resolved.ok) return;
+    expect(resolved.error.code).toBe("enum-out-of-range");
+    expect(resolved.error.detail).toContain("fast | thorough");
+  });
+
+  test("resolution is deterministic for the same inputs", () => {
+    const overrides = { label: "upstream" };
+    expect(resolvePluginSettings("git-drift", DECLARATION, overrides)).toEqual(
+      resolvePluginSettings("git-drift", DECLARATION, overrides),
+    );
   });
 });
