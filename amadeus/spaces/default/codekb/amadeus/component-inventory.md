@@ -2569,3 +2569,74 @@ Issue #2785（grilling depth を質問数予算から frontier 駆動の枝刈�
 | prose 消費者 | `docs/guide/02-your-first-workflow.{md,ja.md}` / `docs/guide/07-interaction-modes.{md,ja.md}` | "one question at a time" を利用者向けガイドで踏襲説明（英語のみ、和訳は「一度に1質問」で別語彙） | `02-*.md:89` / `.ja.md:89`、`07-*.md:22,37` / `.ja.md:18`、和訳: `04-stage-protocol.ja.md:264` |
 
 **未確定**: frontier 駆動（上流 `mattpocock/skills`、ピン SHA `1495d014303e041c51c29f9e442485ba06f5878d`）が具体的にどの層（正本のみか、機械契約の閉語彙・数値も含むか）まで置き換えるかは要件段の裁定事項。本棚卸しは現行構造の全数把握であり、再定義後の to-be 構造は含まない。
+
+## 260814-unit-failure-autoelectio (2026-08-14, observed `cd64486a6`) — Issue #2976 患部のコンポーネント棚卸し
+
+### 実装コンポーネント
+
+| コンポーネント | 所在 | 本 intent での位置づけ |
+|---|---|---|
+| `emitConstructionFailureIfPresent` | `amadeus-orchestrate.ts:4027`（分岐 `:4069-4075`） | 欠陥の発生源。無条件に `askDirective` を emit する |
+| `askDirective` | `amadeus-orchestrate.ts:1042-1044` | directive 構築子（`{ kind: "ask", question }`） |
+| `failureOutsideRuntimePopulation` | `amadeus-orchestrate.ts:4018-4025` | 前段の絞り込み。config を見ない |
+| `canonicalConstructionFailurePending` | `amadeus-orchestrate.ts:3922-3936` | report 受け口のガード（state + audit 射影が `await-unit-ruling` か） |
+| `handleFailureRuling` | `amadeus-orchestrate.ts:6507`（受け口 `:6161-6169`、直接動線 `:6973`） | 裁定の commit。answer の出所を問わない — 変更不要 |
+| `emitConfiguredSwarm` | `amadeus-orchestrate.ts:3940` | engine が config を 1 引数で読む既存前例 |
+| mirror boundary の config 解決 | `amadeus-orchestrate.ts:632-643` | engine が config を 3 引数（intent + space）で読み、invalid を fail-closed する既存前例 |
+| `handleTriggeredOpen` | `amadeus-election.ts:443-463` | `soloElection.trigger.mode` を読む**唯一**の実装（`:459`） |
+| `handleOpen` | `amadeus-election.ts:402-434` | store 作成 + blind view 書出し |
+| `handleNotify` | `amadeus-election.ts:483` 付近 | subagent への配布 DeliveryDirective |
+| `Election.parse` | `amadeus-election-model.ts:100-116` | definition スキーマ |
+| `solo-election.trigger.mode` スキーマ | `amadeus-config.ts:563-574`（型 `:94`、解決 `:771-775`） | `ALL_LAYERS` の 3 層解決 |
+| solo auto-election hook（規範） | `stage-protocol.md:149-152` | branch 1 = prompt 非提示 / branch 2 = prompt 提示 |
+| voters 規約 | `skills/amadeus-election/SKILL.md:28` | `subagent-1` / `subagent-2`。CLI 側は無制約 |
+
+`soloElectionAvailable`（`amadeus-intent-autonomy-production.ts:834,910` / `amadeus-intent-autonomy.ts:802,956`）は decide-question 梯子の capability フラグであり、**本 intent の患部とは別機構**である。混同しない。
+
+### テストコンポーネントの棚卸しと交差の空集合
+
+述語 P1 `git grep -ln "solo-election\|soloElection" -- tests/`（**exit 0**、17 ファイル）:
+
+```
+tests/e2e/t-exec-codex-autosolo-s13.serial.test.ts
+tests/harness/autosolo-s13-fixture.ts
+tests/integration/t236-election-loop.integration.test.ts
+tests/integration/t269-election-solo-skill-template.integration.test.ts
+tests/integration/t282-amadeus-mirror-lifecycle.integration.test.ts
+tests/integration/t369-protocol-autosolo-hook.test.ts
+tests/integration/t432-config-vocabulary-drift.integration.test.ts
+tests/integration/t432-intent-autonomy-runtime.integration.test.ts
+tests/integration/t433-autonomy-review-observability.test.ts
+tests/integration/t434-intent-completion-live-seam.integration.test.ts
+tests/integration/t435-intent-autonomy-production.integration.test.ts
+tests/integration/t453-semi-ladder-runtime.integration.test.ts
+tests/unit/t234-election-model.test.ts
+tests/unit/t280-amadeus-mirror-coordinator.test.ts
+tests/unit/t431-intent-autonomy.test.ts
+tests/unit/t431-structured-config.test.ts
+tests/unit/t452-authorize-interaction-semi.test.ts
+```
+
+述語 P2 `git grep -ln -- "--trigger" tests/`（**exit 0**、5 ファイル）: `t-exec-codex-autosolo-s13.serial.test.ts`、`t236-election-loop`、`t269-election-solo-skill-template`、`t369-protocol-autosolo-hook`、`t432-config-vocabulary-drift`。
+
+述語 P3（engine 側の failure ruling 面、いずれも exit 0）:
+
+| 述語 | ヒット |
+|---|---|
+| `git grep -ln "await-unit-ruling" -- tests/` | `tests/integration/t533-per-unit-consume-fanout.integration.test.ts`、`tests/unit/t-construction-outcome-projection.test.ts` |
+| `git grep -ln "resolve-failure" -- tests/` | `tests/unit/t211-swarm-batch-progress.test.ts` のみ |
+| `git grep -ln "Retry, Skip, or Abort" -- tests/` | `tests/unit/t211-swarm-batch-progress.test.ts` のみ |
+
+**P2 ∩ P3 = ∅**。「auto 設定下で unit failure がどう扱われるか」を engine 断面で検証しているテストは 0 件である。これが本 Issue が緑のまま生存できた構造的理由である。
+
+### 既存テストの射程（修正時の扱い）
+
+- `tests/unit/t211-swarm-batch-progress.test.ts:326-333` — `seedFailedSwarmUnit()` を seed して `runNext(proj)` が `{ kind: "ask", question: expect.stringContaining("Retry, Skip, or Abort") }` に matchObject することを要求。`:395` にも同文言（error 側）。seed ヘルパは `:239-280`（`seedSwarmProject([["alpha"]])` → `createUnitPoolCoordinator(createAuditUnitPoolRepository(proj))` → initialEnqueue(batchId "1", cap 1, units [alpha]) → acquire → confirmDispatch → `settleRelease({ outcome: "failed" })`、`withClosure` 時は `BOLT_FAILED` と `SWARM_BATON_RETURNED` を追記）。**`amadeus/config.json` を seed しない**ため config はデフォルト `manual` 相当で走る → `manual` 経路の期待値としてそのまま維持でき、`auto` を植えた新ケース追加が構造的に整合する
+- `tests/integration/t369-protocol-autosolo-hook.test.ts` — 射程はテキスト固定のみ。判定述語 `findMissingHookMarker`（`:88-92`）が対象セクション文字列に (a) `OPEN_COMMAND` 正規表現（`open --trigger auto`）と (b) `DISABLED_ENVELOPE`（`solo-election-manual-trigger-required`）を含むかを見るだけで、**engine 挙動を一切拘束しない**。テストは `:96`（§13 セクション）、`:106`（halt-and-ask セクション）、`:114`（conductor persona）、`:124`（`--file` 名指し）、`:134`（falling proof）の 5 件 + `:178` `:197` `:211` の fixture 系 3 件。対象パスは `packages/framework/core/amadeus-common/`・`dist/<harness>/amadeus-common/`・self-install ツリー
+- `tests/integration/t236-election-loop.integration.test.ts:71-135` — `open --trigger auto` の 4 段階を 1 テスト内で実測する CLI 契約の正本。`:117` からは invalid config（`mode: "true"`）で exit 1 + `solo-election.trigger.mode expected manual | auto`。voters は両テストとも `["subagent-1", "subagent-2"]`
+
+### 本スキャンの未検証面
+
+- `amadeus-election.ts:137` `handleNext` / `:186` `handleReport` の内部指令生成ロジックは概要把握に留め、逐行未読
+- `tests/e2e/t-exec-codex-autosolo-s13.serial.test.ts` と `tests/harness/autosolo-s13-fixture.ts` は grep によるファイル特定のみ（§13 学習選定の auto 発動面であり本 Issue の halt-and-ask 面とは別類型）
+- `constructionFailureTransition` / `projectConstructionOutcomes` の射影ロジック（`amadeus-construction-outcome*.ts` 系）は患部外として未読

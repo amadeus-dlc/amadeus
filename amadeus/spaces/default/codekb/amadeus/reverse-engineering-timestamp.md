@@ -15,6 +15,20 @@
 - Reviewed-and-unchanged artifacts: `business-overview.md` / `code-structure.md` / `api-documentation.md` / `component-inventory.md` / `technology-stack.md` / `dependencies.md` / `code-quality-assessment.md` の **7 点** — いずれも本 intent の節を持たない。後続ステージはこれらから**本 intent の事実を引かない**（`cid:requirements-analysis:c4-consume-header-is-not-citable-content`）
 - Per-intent record: `re-scans/260814-autonomy-stop-fixes.md`
 
+## 実行メタデータ（履歴: 260814-unit-failure-autoelectio）
+
+- Date: `2026-08-14`
+- Base commit: `d7ffaa5442266508d8e67babc3e0b947fb4c1637`（`reverse-engineering-timestamp.md` + `re-scans/*.md` の全 observed のうち **HEAD の祖先で距離最小**。`git rev-list --count d7ffaa544..HEAD` = **4**、対抗候補 `5b12d96e9` は **5**。`cid:reverse-engineering:rescan-base-ancestry`）
+- Observed commit: `cd64486a68c6a1144db50fbe3fde8273f5e18455`（= 本 worktree HEAD = `origin/main`、`git rev-parse HEAD`。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、depth `Minimal`、build `bun`
+- Focus: [Issue #2976](https://github.com/amadeus-dlc/amadeus/issues/2976) の患部（failure-ruling seam、election CLI 受け口、config スキーマ、stage-protocol の halt-and-ask 契約）に集中した差分リフレッシュ + `base..observed` 差分全域
+- Scan mode: 通常の差分リフレッシュ（xrev 不採用。クロスレビュー target-sha `52f1f1b25` 以後に患部 4 ファイルへ触れたのは `d7ffaa544` の attestation 変更 1 件のみで、患部の表現形式を変える移行は不在。分岐構造は不変、行番号のみ移動）
+- 中核知見: `emitConstructionFailureIfPresent`（`amadeus-orchestrate.ts:4027`、分岐 `:4069-4075`）は config を読まず無条件に `askDirective` を emit する。engine は `election` の語を持たない（`git grep` A2/B ともに 0 行 / **exit 1**）。stage-protocol `:151` の branch 1「prompt 非提示」は engine 側に対応する抑止がなく実現不能。裁定 commit 経路（`:6161-6169` → `handleFailureRuling:6507`）は answer の出所を問わないため変更不要。テスト述語 P2（`--trigger`）∩ P3（unit failure ruling）は **空集合**
+- Verification: git 状態変更・GitHub 書込・engine/state ツール実行・コード変更はすべてゼロ。書込は `codekb/amadeus/` 配下のみ
+- Updated artifacts: `architecture.md` / `code-structure.md` / `api-documentation.md` / `component-inventory.md`（本 intent 節を追記）、`business-overview.md`（新現在節。直前の `260814-fmc-macos-provider` 節は履歴へ降格）、`code-quality-assessment.md`（現在節）
+- Reviewed-and-unchanged artifacts: `technology-stack.md` / `dependencies.md` — `base..observed` に `packages/` 変更 0 件でスタック・依存ともに不変。本 intent の節を持たないため後続はここから本 intent の事実を引かない
+- Per-intent record: `re-scans/260814-unit-failure-autoelectio.md`
+
 ## 実行メタデータ（履歴: 260814-coverage-quick-norm）
 
 - Date: `2026-08-14`

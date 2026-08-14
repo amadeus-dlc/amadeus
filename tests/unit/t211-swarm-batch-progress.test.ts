@@ -132,6 +132,9 @@ function autonomousCodegenState(current: "code-generation" | "infrastructure-des
 - **Lifecycle Phase**: CONSTRUCTION
 - **Current Stage**: ${current}
 - **Status**: Running
+
+## Runtime State
+- **Mirror Initial Create Receipt**: completed
 `;
 }
 
@@ -320,6 +323,14 @@ function projectedUnits(proj: string) {
   expect(projected.ok).toBe(true);
   if (!projected.ok) throw new TypeError("expected projected Construction outcomes");
   return projected.projection;
+}
+
+function auditAttributes(proj: string): Array<Record<string, unknown>> {
+  return readAllAuditShards(proj)
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+    .map((line) => JSON.parse(line) as { attributes?: Record<string, unknown> })
+    .flatMap((row) => row.attributes === undefined ? [] : [row.attributes]);
 }
 
 describe("t211 tryEmitSwarm excludes completed batches (#841)", () => {
@@ -736,5 +747,110 @@ describe("t211 Intent-scoped autonomy preserves batch fanout", () => {
     coverUnit(proj, "alpha");
     const directive = runReport(proj, ["--stage", "code-generation", "--result", "approved"]);
     expect(directive.kind).not.toBe("error");
+  });
+});
+
+function writeSoloElectionMode(proj: string, mode: string): void {
+  mkdirSync(join(proj, "amadeus"), { recursive: true });
+  writeFileSync(
+    join(proj, "amadeus", "config.json"),
+    `${JSON.stringify({ "solo-election": { trigger: { mode } } }, null, 2)}\n`,
+  );
+}
+
+function writeIntentSoloElectionMode(proj: string, mode: string): void {
+  const space = activeSpace(proj);
+  const intent = activeIntent(proj, space);
+  expect(intent).not.toBeNull();
+  const intentDir = join(proj, "amadeus", "spaces", space, "intents", intent!);
+  mkdirSync(intentDir, { recursive: true });
+  writeFileSync(
+    join(intentDir, "config.json"),
+    `${JSON.stringify({ "solo-election": { trigger: { mode } } }, null, 2)}\n`,
+  );
+}
+
+describe("t211 #2976 solo auto-election on Unit failure", () => {
+  test("auto config emits execute-failure-election instead of ask", () => {
+    const { proj, attempt, batch } = seedFailedSoloUnit();
+    writeSoloElectionMode(proj, "auto");
+    const directive = runNext(proj);
+    expect(directive.kind).not.toBe("ask");
+    expect(directive).toMatchObject({
+      kind: "execute-failure-election",
+      stage: "code-generation",
+      unit: "alpha",
+      attempt,
+      batch,
+      choices: ["Retry", "Skip", "Abort"],
+    });
+  });
+
+  test("manual config keeps the ordinary ask", () => {
+    const { proj } = seedFailedSoloUnit();
+    writeSoloElectionMode(proj, "manual");
+    expect(runNext(proj)).toMatchObject({
+      kind: "ask",
+      question: expect.stringContaining("Retry, Skip, or Abort"),
+    });
+  });
+
+  test("absent config keeps the ordinary ask", () => {
+    const { proj } = seedFailedSoloUnit();
+    expect(runNext(proj)).toMatchObject({
+      kind: "ask",
+      question: expect.stringContaining("Retry, Skip, or Abort"),
+    });
+  });
+
+  test("intent config overrides the project layer through the active cursor", () => {
+    const { proj } = seedFailedSoloUnit();
+    writeSoloElectionMode(proj, "manual");
+    writeIntentSoloElectionMode(proj, "auto");
+    expect(runNext(proj).kind).toBe("execute-failure-election");
+  });
+
+  test("invalid auto-election config fails closed instead of asking", () => {
+    const { proj } = seedFailedSoloUnit();
+    writeSoloElectionMode(proj, "true");
+    const directive = runNext(proj);
+    expect(directive.kind).toBe("error");
+    expect(directive.kind).not.toBe("ask");
+    expect(directive).toMatchObject({
+      kind: "error",
+      message: expect.stringContaining("Invalid solo-election configuration"),
+    });
+  });
+
+  test.each([
+    ["Retry", "committed"],
+    ["Skip", "committed"],
+    ["Abort", "parked"],
+  ] as const)("auto-election %s ruling commits through the existing report path", (ruling, kind) => {
+    const { proj, attempt } = seedFailedSoloUnit();
+    writeSoloElectionMode(proj, "auto");
+    expect(runNext(proj).kind).toBe("execute-failure-election");
+    expect(runFailureRuling(proj, ruling)).toMatchObject({ kind });
+    const audit = auditAttributes(proj);
+    expect(audit).toContainEqual(expect.objectContaining({
+      Event: "BOLT_FAILED",
+      "Attempt Id": attempt,
+    }));
+    if (ruling === "Retry") {
+      expect(audit.filter((row) => row.Event === "BOLT_STARTED")).toHaveLength(2);
+    } else if (ruling === "Skip") {
+      expect(audit).toContainEqual(expect.objectContaining({
+        Event: "BOLT_COMPLETED",
+        "Attempt Id": attempt,
+        Outcome: "cancelled",
+        Reason: "skipped",
+      }));
+    } else {
+      expect(audit).toContainEqual(expect.objectContaining({
+        Event: "BOLT_FAILED",
+        "Attempt Id": attempt,
+        Reason: "aborted",
+      }));
+    }
   });
 });

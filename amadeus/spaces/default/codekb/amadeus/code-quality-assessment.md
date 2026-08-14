@@ -3445,3 +3445,23 @@ round-trip プロパティはメタモルフィックで独立オラクル不要
 ### 投影・ゲートの品質コスト
 
 core/tools を触るため coverage patch ゲートの母集団に入る。CLI spawn 経由でしか通らない行は lcov に載らないため（`cid:requirements-analysis:bun-coverage-spawn-blindspot`）、in-process seam の設計を実装時点で行う。加えて `dist:check` / `promote:self:check`（7 ハーネス — 5 で止めると kiro / kiro-ide が DIFFERS）、`t258-boundary-guard`（出荷 core/tools は `scripts/` 非参照 — コメント文字列にも `scripts/<file>` を書かない、`cid:code-generation:c1-1569-shipped-comment-vocab`）が連動する。
+
+## 契約文書とエンジン実装の齟齬を拘束しないテスト面（260814-unit-failure-autoelectio、現在、observed `cd64486a6`）
+
+### 所見 1: 文言検査が挙動検査を代替している
+
+`tests/integration/t369-protocol-autosolo-hook.test.ts` は solo auto-election hook を扱う唯一の専用テストだが、判定述語 `findMissingHookMarker`（`:88-92`）は対象セクション文字列に `open --trigger auto` と `solo-election-manual-trigger-required` が含まれるかを見るだけである。protocol 文言が正しく存在することは保証するが、**engine がその文言どおりに振る舞うかは一切拘束しない**。結果として「protocol が branch 1 で prompt 非提示を規定し、engine は無条件で ask を出す」という食い違いが、8 件のテストすべて緑のまま生存できた。
+
+これは `team.md` § 検証・実測規律の「検証劇場」そのものではない（文言検査には固有の価値がある）が、**文言検査だけを置いて挙動検査を置かないと、契約と実装の乖離が構造的に不可視になる**という一般所見に当たる。契約文書に「engine がこう振る舞う」と書く節を追加・変更するときは、同じ変更で挙動側の述語を持つテストを追加すべきである。
+
+### 所見 2: テスト述語の交差が空であることは設計の穴の指標になる
+
+本スキャンでは 3 群の述語（P1 solo-election 参照 17 ファイル / P2 `--trigger` 5 ファイル / P3 unit failure ruling 3 述語）を取り、**P2 ∩ P3 = ∅** を実測した。両側に属するテストが 1 件も無いという事実が、「config auto と unit failure の組み合わせが検証されていない」という欠陥の存在を直接示している。二つの機構が protocol 上で結合しているのにテスト述語上で交差しない場合、その結合は未検証である可能性が高い。棚卸しの詳細は `component-inventory.md` の本 intent 節。
+
+### 所見 3: 既存テストは修正の Red を作れる形になっている
+
+`tests/unit/t211-swarm-batch-progress.test.ts:326-333` は `amadeus/config.json` を seed しないため、config はデフォルト `manual` 相当で走る。したがって既存期待値は `manual` 経路の正しい固定としてそのまま維持でき、`auto` を植えた新ケースを 1 件追加することで TDD の Red を作れる。既存テストを書き換えて緑にする形（欠陥挙動の固定を追認する形）にはならない — これは修正のコスト面で良好な条件である。
+
+### 所見 4: 修正が触る投影面
+
+`stage-protocol.md` を変更する場合、t369 が `dist/<harness>/amadeus-common/` と self-install ツリーを走査するため `bun run build` による全ハーネス投影の再生成が同一変更に必要である。ソース断面のみの green では配送先の退行を隠す（`project.md` の `cid:requirements-analysis:c2-acceptance-at-delivery-tree`）。
