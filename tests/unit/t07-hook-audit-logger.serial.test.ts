@@ -164,14 +164,13 @@ function readRecords(auditDir: string): AuditRecord[] {
 
 interface FireResult {
   exitCode: number;
-  durationMs: number;
 }
 
 /**
  * Fire the real audit-logger hook once with the given PostToolUse JSON on
  * stdin, mirroring the .sh's `echo '<json>' | CLAUDE_PROJECT_DIR=$PROJ bun
  * $HOOK`. When `setEnv` is false the env var is omitted so the hook exercises
- * its script-path projectDir fallback (test 10). Returns exit code + wall time.
+ * its script-path projectDir fallback (test 10). Returns the hook's exit code.
  *
  * cwd is always pinned to the project dir, matching how Claude Code actually
  * spawns hooks (cwd = project/worktree root) — without this, the subprocess
@@ -184,7 +183,6 @@ function fire(json: string, p: string, hookPath = HOOK, setEnv = true): FireResu
   const env = { ...process.env };
   if (setEnv) env.CLAUDE_PROJECT_DIR = p;
   else delete env.CLAUDE_PROJECT_DIR;
-  const t0 = performance.now();
   const r = Bun.spawnSync({
     cmd: [BUN, amadeusToolTarget(hookPath)],
     stdin: new TextEncoder().encode(json),
@@ -193,8 +191,7 @@ function fire(json: string, p: string, hookPath = HOOK, setEnv = true): FireResu
     cwd: p,
     env,
   });
-  const durationMs = performance.now() - t0;
-  return { exitCode: r.exitCode, durationMs };
+  return { exitCode: r.exitCode };
 }
 
 function writeJson(p: string): string {
@@ -390,19 +387,23 @@ describe("t07 audit-logger PostToolUse hook (mechanism cli — spawned hook + st
     ]);
   });
 
-  test("logging path completes within 500ms [.sh test 13]", () => {
-    const { recordRoot } = seedIntentShard(proj);
+  // The .sh bounded these two paths with wall-clock budgets (`assert_lt 500` /
+  // `assert_lt 300`). No NFR declares a latency target for the hook, and the
+  // budgets fired as false positives under CI load (#3035), so what these two
+  // cases pin is the path taken, not the time it took.
+  test("logging path exits 0 and records the write [.sh test 13]", () => {
+    const { auditDir, recordRoot } = seedIntentShard(proj);
     const r = fire(writeJson(join(recordRoot, "test.md")), proj);
-    // The .sh measured bun cold-start + the logging path with `assert_lt 500`.
-    // Same wall-clock budget here against the same spawned process.
-    expect(r.durationMs).toBeLessThan(500);
+    expect(r.exitCode).toBe(0);
+    expect(readRecords(auditDir).map((rec) => rec.event)).toEqual(["ARTIFACT_CREATED"]);
   });
 
-  test("skip path completes within 300ms [.sh test 14]", () => {
-    seedIntentShard(proj);
+  test("skip path exits 0 and leaves the audit trail untouched [.sh test 14]", () => {
+    const { auditDir } = seedIntentShard(proj);
+    const before = readShards(auditDir);
     const r = fire(writeJson("/tmp/other/file.txt"), proj);
-    // .sh: skip path (outside the record) under `assert_lt 300`.
-    expect(r.durationMs).toBeLessThan(300);
+    expect(r.exitCode).toBe(0);
+    expect(readShards(auditDir)).toBe(before);
   });
 
   test("emits canonical **Event**: ARTIFACT_* field [.sh test 15]", () => {
