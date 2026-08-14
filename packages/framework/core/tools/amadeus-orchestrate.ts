@@ -3026,12 +3026,38 @@ function refuseInactiveCodexHooks(projectDir: string | undefined): boolean {
   return true;
 }
 
-// Both `next` preconditions in one call site: the caller-authorization guard
-// runs first (it decides whether this process may speak for the workflow at
-// all), then the Codex hooks-activation guard. Composed here rather than as two
-// statements in handleNext so the handler's decision count — already at the
-// complexity ratchet's recorded ceiling — is unchanged.
+// Issue #3004. The exported handlers are in-process entrances: a test, a seam,
+// or any driver that imports this module calls them directly, with no
+// `--project-dir` in argv. When such a caller names no project, every internal
+// resolveProjectDir(undefined) falls through to the ambient ladder — the
+// CLAUDE_PROJECT_DIR of the surrounding session, then the workspace marker on
+// the cwd's ancestor chain — so the handler silently operates on, and records
+// ERROR_LOGGED into, whatever real workspace happens to surround the process.
+// #1389 fixed where the row lands once a project IS named; this closes the case
+// where none is. Fail-closed: refuse before anything is resolved, read, or
+// written. main() resolves argv's project dir before dispatch, so the CLI (with
+// or without --project-dir) never reaches this refusal.
+const AMBIENT_PROJECT_DIR_REFUSAL =
+  "amadeus-orchestrate requires an explicit --project-dir / projectDir: " +
+  "in-process callers must not rely on ambient workspace resolution " +
+  "(CLAUDE_PROJECT_DIR or the cwd workspace marker), which would operate on " +
+  "and record into whatever workspace surrounds the process.";
+
+function refuseAmbientProjectDir(projectDir: string | undefined): boolean {
+  if (projectDir !== undefined) return false;
+  // State-neutral: the refusal must not annotate the record it refuses to touch.
+  emitStateNeutralError(AMBIENT_PROJECT_DIR_REFUSAL);
+  return true;
+}
+
+// All three `next` preconditions in one call site: the unnamed-project refusal
+// runs first (nothing below it may resolve an ambient project), then the
+// caller-authorization guard (it decides whether this process may speak for the
+// workflow at all), then the Codex hooks-activation guard. Composed here rather
+// than as three statements in handleNext so the handler's decision count —
+// already at the complexity ratchet's recorded ceiling — is unchanged.
 function refuseBlockedNextEnvironment(projectDir: string | undefined): boolean {
+  if (refuseAmbientProjectDir(projectDir)) return true;
   if (refuseUnauthorizedKimiCaller(projectDir)) return true;
   return refuseInactiveCodexHooks(projectDir);
 }
@@ -6008,6 +6034,7 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
   // Record the project this handler operates on so emit()'s ERROR_LOGGED lands
   // here, not the ambient CLAUDE_PROJECT_DIR, under in-process drivers (#1389).
   _handlerProjectDir = projectDir;
+  if (refuseAmbientProjectDir(projectDir)) return;
   if (refuseUnauthorizedKimiCaller(projectDir)) return;
   if (
     args.includes("--standing-grant-id") ||
@@ -6506,6 +6533,7 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
 // is relayed verbatim as an error directive.
 export function handleFailureRuling(args: string[], projectDir: string | undefined): void {
   _handlerProjectDir = projectDir;
+  if (refuseAmbientProjectDir(projectDir)) return;
   const flags = parseReportFlags(args);
   const pd = resolveProjectDir(projectDir);
   const state = loadStateFileIfPresent(pd);
@@ -6563,7 +6591,10 @@ export function handleFailureRuling(args: string[], projectDir: string | undefin
   emit(parkedDirective(`Construction parked after Abort for Unit "${pending.target.unit}"; failure evidence and worktree are preserved.`, stage));
 }
 
-function handlePark(_args: string[], projectDir: string | undefined): void {
+// Not exported, so main() is its only caller and the project is always named
+// (main resolves it before dispatch) — the type says so, and no runtime refusal
+// is needed here.
+function handlePark(_args: string[], projectDir: string): void {
   _handlerProjectDir = projectDir;
   if (refuseUnauthorizedKimiCaller(projectDir)) return;
   const pd = resolveProjectDir(projectDir);
@@ -6962,18 +6993,24 @@ function main(): void {
   }
 
 
+  // The CLI always names the project it operates on: resolve argv's (possibly
+  // absent) --project-dir through the ordinary ladder HERE, once, so the
+  // workflow handlers below receive a named project and their unnamed-project
+  // refusal (#3004) stays exclusive to in-process callers. Resolution is
+  // idempotent — an explicit dir is returned unchanged — so the CLI contract is
+  // byte-unchanged.
   switch (subcommand) {
     case "next":
-      handleNext(subArgs, projectDir);
+      handleNext(subArgs, resolveProjectDir(projectDir));
       break;
     case "report":
-      handleReport(subArgs, projectDir);
+      handleReport(subArgs, resolveProjectDir(projectDir));
       break;
     case "resolve-failure":
-      handleFailureRuling(subArgs, projectDir);
+      handleFailureRuling(subArgs, resolveProjectDir(projectDir));
       break;
     case "park":
-      handlePark(subArgs, projectDir);
+      handlePark(subArgs, resolveProjectDir(projectDir));
       break;
     case "gate-reserve":
       handleGateReserve(subArgs, projectDir);
