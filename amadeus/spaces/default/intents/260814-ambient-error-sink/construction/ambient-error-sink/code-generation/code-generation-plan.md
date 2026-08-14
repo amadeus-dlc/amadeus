@@ -18,3 +18,17 @@ Step 1 → FR-4/FR-5 / Step 2 → FR-1 / Step 3 → FR-2 / Step 4 → FR-3 / Ste
 ## Test configuration
 
 既存ランナー構成不変。新規テストは `tests/integration/` に1ファイル追加(test path 集合へ自然編入、`.serial.` 不要 — 全 fixture が自前 temp dir)。
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-14T03:56:50Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+FR-1〜FR-6 の実装が orchestrate.ts の実体と一致し、fail-closed 拒否は既存ガード合成でフォールバック分岐ではない。t544 は実ハンドラ駆動で拒否 directive と ambient 監査シャード空の両面を実測。変更範囲は契約どおり2ファイルに限定、無申告の逸脱なし。findings 0件。
+
+### Findings
+
+- None

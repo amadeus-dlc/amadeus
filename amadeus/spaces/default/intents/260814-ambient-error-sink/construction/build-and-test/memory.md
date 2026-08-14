@@ -2,8 +2,7 @@
 > This file is maintained by the orchestrator during stage execution. Add observations at the gate ritual, not by editing here directly.
 
 ## Interpretations
-- 2026-08-14T13:10:00Z — degrade スコープの unit ディレクトリ `ambient-error-sink` を conductor が作成。plan 承認は梯子(auto-decision-da3c0031e76d29450f6a3320b757cc26)。deslop は diff 全読の実査で代替(不要コメント・死コード・フォールバックなし、コメントは制約記述のみ)
-- 2026-08-14T13:10:00Z — commit 順は record → code(birth-commit ガードの false-refusal 回避、前 intent の学び)
+- 2026-08-14T13:50:00Z — フルスイート1回目の赤12ファイルは全件、orchestrate.ts のハッシュをピンする2台帳(model-map / coverage allowlist)の同期漏れ。正本と生成物・台帳の同一変更同期の原則どおり、是正を同一 PR の追加 commit で同期
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations
