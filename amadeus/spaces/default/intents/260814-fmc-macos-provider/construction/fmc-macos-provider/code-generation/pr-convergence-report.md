@@ -1,12 +1,28 @@
 # PR Convergence Report
 
-- kind: created
+- kind: converged
 - pull request: amadeus-dlc/amadeus#3007
-- generated at: 2026-08-14T03:23:32Z
-- converged: false
+- generated at: 2026-08-14T03:51:33Z
+- converged: true
+- merge state: CLEAN
+- mergeable resolution: resolved
+
+## Violating threads
+
+- replied-unresolved: 0
+- ignored: 0
+
+## Ledger
+
+- resolved: 0
+- outdated: 0
+- replied-unresolved: 0
+- ignored: 0
+- human-only (out of scope): 0
+- terminalized: 0
 ## CLI Attestation
 
-- attestation id: prca:e921ef7d432c46c3e72ea1c42d34d0f6730a82334409c3519b4c9c741c18f7a9
+- attestation id: prca:8441b6646722a3ed7c80d56b7bb5286226a7caaa33881e128bd4a6dc8542f0ba
 - intent: fmc-macos-provider
 - intent uuid: 019ffda6-2636-755d-8e85-1f83b1719c6a
 - record: amadeus/spaces/default/intents/260814-fmc-macos-provider/
@@ -14,7 +30,7 @@
 - unit: fmc-macos-provider
 - repository: amadeus-dlc/amadeus
 - pr: 3007
-- local head: 24e8c5873d890cd7c2bee4d5df55b0ab9ba9619a
-- remote head: 24e8c5873d890cd7c2bee4d5df55b0ab9ba9619a
-- pr head: 24e8c5873d890cd7c2bee4d5df55b0ab9ba9619a
-- content digest: sha256:9b390a7ed7fba7d88907fbfd4477b401da921cdcf17c1c8dfae9df7881a33548
+- local head: 8594e578404bd67f1f30c0db516b65de5551677b
+- remote head: 8594e578404bd67f1f30c0db516b65de5551677b
+- pr head: 8594e578404bd67f1f30c0db516b65de5551677b
+- content digest: sha256:d259328eaf53d2b0fb88c59a48a0b05b86776cacd33756bc12e3908c064d5a7e
