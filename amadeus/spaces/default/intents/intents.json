@@ -1152,5 +1152,12 @@
     "dirName": "260814-t528-ambient-isolation",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019ffe33-9663-73f3-bcc6-70bd6fde1987",
+    "slug": "ambient-error-sink",
+    "dirName": "260814-ambient-error-sink",
+    "scope": "self-fix",
+    "status": "in-flight"
   }
 ]
