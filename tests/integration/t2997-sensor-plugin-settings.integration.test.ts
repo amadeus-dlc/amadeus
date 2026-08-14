@@ -9,7 +9,10 @@
 
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
-import type { PluginRuntimeFs } from "../../packages/framework/core/tools/amadeus-plugin-runtime.ts";
+import {
+  type PluginRuntimeFs,
+  readStagedPluginManifest,
+} from "../../packages/framework/core/tools/amadeus-plugin-runtime.ts";
 import {
   pluginSettingsArgs,
   pluginSettingsOverrides,
@@ -275,5 +278,41 @@ describe("t2997 settings failure becomes a sensor finding", () => {
     expect(outcome.detailBody).toContain('plugin \\"git-drift\\" setting \\"mode\\"');
     expect(outcome.detailBody).toContain("value must be one of fast | thorough");
     expect(outcome.detailBody).toContain("git-drift finding — code-generation");
+  });
+});
+
+describe("t2997 staged manifest reads", () => {
+  function stagedAs(text: string): PluginRuntimeFs {
+    return {
+      existsSync: () => true,
+      readFileSync: () => Buffer.from(text),
+    };
+  }
+
+  test("an absent manifest is an absence, not a failure", () => {
+    const read = readStagedPluginManifest(HOST, "git-drift", {
+      existsSync: () => false,
+      readFileSync: () => Buffer.alloc(0),
+    });
+    expect(read.kind).toBe("absent");
+  });
+
+  test("an object manifest is read", () => {
+    const read = readStagedPluginManifest(HOST, "git-drift", stagedAs('{"name":"git-drift"}'));
+    expect(read.kind).toBe("read");
+    if (read.kind !== "read") return;
+    expect(read.raw.name).toBe("git-drift");
+  });
+
+  test.each([
+    ["an array", "[]"],
+    ["a number", "42"],
+    ["a string", '"git-drift"'],
+    ["null", "null"],
+  ])("valid JSON that is %s is unreadable, not read as a manifest", (_label, text) => {
+    const read = readStagedPluginManifest(HOST, "git-drift", stagedAs(text));
+    expect(read.kind).toBe("unreadable");
+    if (read.kind !== "unreadable") return;
+    expect(read.detail).toContain("manifest must be a JSON object");
   });
 });

@@ -214,3 +214,28 @@ describe("t2997 settings resolution", () => {
     );
   });
 });
+
+describe("t2997 declaration shape rejections", () => {
+  test("a declaration that is not an object is rejected", () => {
+    const parsed = parse({ settings: { k: "number" } });
+    expect(parsed.manifest).toBeNull();
+    expect(parsed.errors.some((e) => e.includes("must be an object declaration"))).toBe(true);
+  });
+
+  test.each([["an array", ["number"]], ["null", null], ["a number", 1]])(
+    "a declaration that is %s is rejected",
+    (_label, declaration) => {
+      const parsed = parse({ settings: { k: declaration } });
+      expect(parsed.manifest).toBeNull();
+      expect(parsed.errors.some((e) => e.includes("must be an object declaration"))).toBe(true);
+    },
+  );
+
+  test("values on a non-enum type is rejected rather than ignored", () => {
+    const parsed = parse({
+      settings: { k: { type: "string", default: "a", description: "d", values: ["a", "b"] } },
+    });
+    expect(parsed.manifest).toBeNull();
+    expect(parsed.errors.some((e) => e.includes("only meaningful for type enum"))).toBe(true);
+  });
+});
