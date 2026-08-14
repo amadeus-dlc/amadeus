@@ -38,7 +38,7 @@
 - plugin は core module を直接 import しないため、汎用 receipt schema または process boundary contract が必要である。
 - generated `dist/` と self-install surface は編集元ではなく、source 修正後の build で同期する。
 
-## 差分リフレッシュ時点のスタック（260813-advisory-requestion-fix、現在、observed `c0f9edf27`）
+## 差分リフレッシュ時点のスタック（260813-advisory-requestion-fix、履歴、observed `c0f9edf27`）
 
 **観測 ref**: base `854692fd7a11b124236b0427fe3d59e2fe6bf785` → observed `c0f9edf27828def6fa3dbbbc4101d753b398e025`。
 

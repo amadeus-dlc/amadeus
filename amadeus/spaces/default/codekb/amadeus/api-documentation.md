@@ -1,6 +1,6 @@
 # API ドキュメント
 
-## ライフサイクルガードの内部契約（260813-lifecycle-guard-runtime、現在、observed `89532174c`）
+## ライフサイクルガードの内部契約（260813-lifecycle-guard-runtime、履歴、observed `89532174c`）
 
 **観測 ref**: すべて observed = `89532174c30ef9cc7ff29496cd6916586fdda00a`。差分 base = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（35 commits）。全数列挙（G1〜G40）は `re-scans/260813-lifecycle-guard-runtime.md` を正本とする。
 
