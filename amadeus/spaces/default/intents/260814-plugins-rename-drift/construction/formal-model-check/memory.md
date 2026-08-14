@@ -2,6 +2,7 @@
 > This file is maintained by the orchestrator during stage execution. Add observations at the gate ritual, not by editing here directly.
 
 ## Interpretations
+- 2026-08-14T15:52:18Z — tla-authoring の not-applicable を継承し NOT_APPLICABLE で終端(TLC 非起動); advisory handoff の単発実行 2 回(全モデル NOT_DETECTED)は参考実測として outcome に併記。
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations
