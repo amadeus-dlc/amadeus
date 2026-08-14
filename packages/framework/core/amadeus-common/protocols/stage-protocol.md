@@ -1038,6 +1038,22 @@ BR-U2-05 is unchanged throughout: opening a handoff stage is an entry point into
 the work the advisory is holding for, never a release. The hold lifts only when
 the declaring plugin's own evaluator returns no-hold.
 
+## 11b. Error Directive Receipt
+
+An `error` directive is the engine reporting a condition it has already ruled
+on. The receipt clause is fixed here once, and every harness conductor surface
+carries this sentence verbatim:
+
+Print `directive.message` verbatim and STOP. Do not recover, retry, or smooth it over, and do not invent a new question or a new gate — the message is the user-facing error.
+
+The last clause is the one most easily lost. The engine has already decided; the
+receipt is to relay that decision, not to re-open it. Substituting a question of
+the conductor's own devising — even a well-meant "how would you like to
+proceed?" — replaces the engine's ruling with an invented gate, and the user
+never sees the error that was actually raised. There is no autonomy mode in
+which this is allowed: an Intent grant authorizes decisions the engine routes to
+it, never decisions the conductor invents.
+
 ## 12. Phase Boundary Verification
 
 > See `stage-protocol-governance.md` §13 — load at phase transitions to run traceability verification. Capturing corrections as durable rules is the §13 Learnings Ritual below, not a separate guardrail flow.
