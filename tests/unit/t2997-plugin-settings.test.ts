@@ -113,3 +113,26 @@ describe("t2997 plugin.settings declaration parse", () => {
     );
   });
 });
+
+describe("t2997 settings misspelling detection", () => {
+  test.each(["setings", "setting", "Settings", "settngs"])(
+    "a near-miss top-level key (%s) is loud, not silently ignored",
+    (key) => {
+      const parsed = parse({ [key]: { k: { type: "string", default: "", description: "d" } } });
+      expect(parsed.manifest).toBeNull();
+      expect(parsed.errors.some((e) => e.includes('did you mean "settings"?'))).toBe(true);
+    },
+  );
+
+  test("a top-level key that is not a near miss stays tolerated", () => {
+    const parsed = parse({ description: "a plugin", version: "1.0.0" });
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.manifest).not.toBeNull();
+  });
+
+  test("advisories — owned by a separate parser — is a known key, not a near miss", () => {
+    const parsed = parse({ advisories: [{ code: "spec-change" }] });
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.manifest).not.toBeNull();
+  });
+});
