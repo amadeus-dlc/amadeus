@@ -634,18 +634,30 @@ const RETRYABLE_COPY_CODES = new Set(["ENOENT", "EAGAIN", "EMFILE", "ENOMEM"]);
 // post-condition (dest's recursive file count == src's), never by cpSync
 // returning without throwing: a partial copy that happens not to throw
 // would otherwise pass silently.
+//
+// dest-fresh contract (#3003, t99): `dest` must not exist when
+// copyTreeWithRetry is called — the helper owns it outright. Every attempt
+// therefore removes `dest` before copying: cpSync merges into an existing
+// destination, so anything left behind by a previous attempt (or landed
+// under dest by a racing writer) accumulates instead of being replaced, and
+// a dest that has grown past src can never satisfy the count post-condition
+// no matter how many attempts remain. Clearing first makes each attempt a
+// fresh copy rather than a merge, so a retry can actually converge.
 export interface CopyTreeOps {
   copy(src: string, dest: string): void;
   exists(path: string): boolean;
   sleep(ms: number): void;
   /** Recursive file count under `path` (directories excluded), or -1 if `path` does not exist. */
   count(path: string): number;
+  /** Idempotent removal of `path` — a no-op when `path` does not exist. */
+  remove(path: string): void;
 }
 const realCopyTreeOps: CopyTreeOps = {
   copy: (src, dest) => cpSync(src, dest, { recursive: true }),
   exists: existsSync,
   sleep: sleepSync,
   count: countFilesRecursive,
+  remove: (path) => rmSync(path, { recursive: true, force: true }),
 };
 const COPY_TREE_RETRY_LIMIT = 3;
 const COPY_TREE_RETRY_BACKOFF_MS = 50;
@@ -658,6 +670,9 @@ export function copyTreeWithRetry(
   let lastErr: unknown;
   for (let attempt = 1; attempt <= COPY_TREE_RETRY_LIMIT; attempt++) {
     try {
+      // Start every attempt from an empty dest — see the dest-fresh contract
+      // on CopyTreeOps above.
+      ops.remove(dest);
       ops.copy(src, dest);
       const srcCount = ops.count(src);
       const destCount = ops.count(dest);
@@ -693,6 +708,11 @@ function isRetryableCopyError(err: unknown): boolean {
  * the only positional evidence available: it can catch a sibling test
  * having deleted/replaced an entry mid-walk, without claiming that as the
  * mechanism.
+ *
+ * The two file counts alone say only THAT the trees differ. The set
+ * difference below says WHICH relative paths differ (#3003), which is the
+ * evidence needed to attribute the next occurrence to a vanished source
+ * entry or to an accumulation under dest.
  */
 function reportCopyTreeFailure(src: string, dest: string, err: unknown, attempt: number): void {
   const e = err as NodeJS.ErrnoException | undefined;
@@ -712,10 +732,53 @@ function reportCopyTreeFailure(src: string, dest: string, err: unknown, attempt:
       `  src top-level entries: ${srcTopEntries}`,
       `  src recursive file count (post-failure re-scan): ${srcFileCount}`,
       `  dest parent exists: ${destParentExists} (${destParent})`,
+      ...describeTreeDifference(src, dest),
       `  TMPDIR: ${process.env.TMPDIR ?? "(unset)"}`,
       "",
     ].join("\n"),
   );
+}
+
+const COPY_TREE_DIFF_SAMPLE_LIMIT = 20;
+
+/**
+ * The relative paths present on only one side of src/dest, as two
+ * diagnostic lines. Each line carries the full difference size and at most
+ * COPY_TREE_DIFF_SAMPLE_LIMIT sample paths, so a large divergence stays
+ * readable without hiding its magnitude.
+ */
+function describeTreeDifference(src: string, dest: string): string[] {
+  const srcEntries = new Set(safeReaddirRecursive(src));
+  const destEntries = new Set(safeReaddirRecursive(dest));
+  const onlyInSrc = [...srcEntries].filter((path) => !destEntries.has(path)).sort();
+  const onlyInDest = [...destEntries].filter((path) => !srcEntries.has(path)).sort();
+  return [
+    `  entries only in src (${onlyInSrc.length}): ${formatDiffSample(onlyInSrc)}`,
+    `  entries only in dest (${onlyInDest.length}): ${formatDiffSample(onlyInDest)}`,
+  ];
+}
+
+function formatDiffSample(paths: string[]): string {
+  if (paths.length === 0) return "(none)";
+  const shown = paths.slice(0, COPY_TREE_DIFF_SAMPLE_LIMIT).join(", ");
+  return paths.length > COPY_TREE_DIFF_SAMPLE_LIMIT
+    ? `${shown}, ... (${paths.length - COPY_TREE_DIFF_SAMPLE_LIMIT} more)`
+    : shown;
+}
+
+/**
+ * Every relative path under `path` (directories included — a directory that
+ * exists on only one side is itself evidence), or an empty list when `path`
+ * is absent, unreadable, or not a directory. Unlike countFilesRecursive this
+ * takes no per-entry stat: the diagnostics only need the names, and a stat
+ * per entry would add a second racing walk to a path that is already failing.
+ */
+function safeReaddirRecursive(path: string): string[] {
+  try {
+    return readdirSync(path, { recursive: true }) as string[];
+  } catch {
+    return [];
+  }
 }
 
 function safeReaddir(path: string): string[] {

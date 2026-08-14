@@ -1,0 +1,55 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "採用0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "採用0件で可",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "候補を採用すべき",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-14T05:25:44Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-260814-T99-RA-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "採用0件で可。一次資料を独立に確認した。(1) amadeus/spaces/default/intents/260814-t99-copytree-race/inception/requirements-analysis/memory.md の Tradeoffs 節に候補は2件: c1『修正方式は A(destクリア)+C(診断強化)を D(包含判定)より優先(D は verbatim 宣言済み設計意図の書き換え=仕様変更に接近するため回避。decide-question auto-decision-bb0179a6)』、c2『スコープは helper のみ+残余 follow-up 起票(surgical。未ガード面件数は述語依存で AC 化不適。auto-decision-d9d26159)』。(2) requirements-analysis-questions.md の Q1/Q2 裁定文を照合すると、c1 は team.md:39 の cid:requirements-analysis:escalation-canonical が定める『仕様変更 — 既存の要件・ユーザー可視契約・挙動を変える場合は迷えばエスカレーションに倒す』の適用そのものであり(D 案が verbatim 宣言済み設計意図2件の書き換えを伴うため回避)、新規の判断基準を導入していない。既決ルールの機械的執行であり P1『既決ルールの機械的執行は判断ではなく執行として選挙不要』に該当する。(3) c2 は team.md:19 の P5『触るのは必要な箇所だけ(surgical)』と、questions.md 内で明示される『RE UNMEASURED-3(未ガード面は件数が述語依存で19〜89とレンジが定まらずAC化に不適)』の適用であり、これも project.md の既存 corrections(数値は観測レンジの内側に置く/測定不能な AC は課さない、という既述原則)の派生であって、横断的な新規知見を含まない。(4) 両候補とも本 intent(260814-t99-copytree-race)固有の裁定であり、記録は questions file・phase-check・audit・本選挙記録に残るため追跡可能性は確保されている。他プロジェクト・他 intent へ一般化できる新規のノルムやチェック手順の提案は含まれていない。以上より提案どおり採用0件を可とする。",
+      "submittedAt": "2026-08-14T00:00:00Z",
+      "receivedAt": "2026-08-14T05:25:28Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-260814-T99-RA-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "一次資料(memory.md Tradeoffs 2件、requirements-analysis-questions.md Q1/Q2)を独立に確認した。c1(修正方式A+CをDより優先): Q1裁定文は『(D)は verbatim 宣言済みの設計意図2件(:614-616/:716-718)の書き換え=仕様変更に接近するため回避可能なAを優先』と述べており、これは team.md:39 cid:requirements-analysis:escalation-canonical の『仕様変更 — 既存の要件・ユーザー可視契約・挙動を変える場合』を避ける既定原則と、team.md:40 の『迷えばエスカレーション』方針を、本 intent 固有の設計選択(A vs D)へ適用した執行ログにすぎない。判断の実体は xrev reviewer 対照実験(既決 xrev-260814-3003 の実証済み事実、requirements-analysis-questions.md:7 に既決事項として明記)に基づく機械的選好であり、新しい横断原則の発見ではない。c2(スコープは helper のみ+follow-up): Q2裁定文は『self-fix は限定的是正(surgical)』『未ガード面は件数が述語依存(19〜89)で AC 化に不適(RE UNMEASURED-3)』と述べ、これは team.md:19 P5(触るのは必要な箇所だけ)と project.md の RE UNMEASURED 実測方針をそのまま適用した執行ログである。件数不確定ゆえに AC 化を避ける判断も、team.md の測定可能性規律(numbers-from-command-output-only 系)の直接適用であり、新規知見を追加しない。両候補とも『本 intent 固有の裁定』と自己申告どおりであり、横断的に他 intent へ一般化できる新規則・新機序は memory.md / questions ファイルのどこにも記載がない。よって候補一覧(c1・c2)を提示したうえでの『採用0件』提案に同意し、choiceInternalNo=1(採用0件で可)を支持する。",
+      "submittedAt": "2026-08-14T05:30:00Z",
+      "receivedAt": "2026-08-14T05:25:29Z"
+    }
+  ],
+  "resolutions": []
+}

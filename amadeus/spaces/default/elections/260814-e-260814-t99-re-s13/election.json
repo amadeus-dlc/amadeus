@@ -1,0 +1,22 @@
+{
+  "electionId": "E-260814-T99-RE-S13",
+  "kind": "s13-learning-selection",
+  "question": "§13 学習選定(reverse-engineering, intent 260814-t99-copytree-race): memory.md の候補は2件 — c1「xrev differential scan mode を採用」(currency 実測成立、既存判定手順の適用。cid 空洞化は既に Inbox 記録済み・PR #2998 マージ済み)、c2「base=5f6b5bf97 を祖先距離最小で選定」(既決の base 選定則の機械的適用)。いずれも既決ノルムの執行であり新規学習を含まないため、採用0件を提案する。可とするか。",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "採用0件で可",
+      "description": "両候補とも既決則の機械的適用。記録は diary と per-intent re-scan record に残存"
+    },
+    {
+      "internalNo": 2,
+      "label": "候補を採用すべき",
+      "description": "いずれかに横断的新規性がある(heading を rationale に明記)"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

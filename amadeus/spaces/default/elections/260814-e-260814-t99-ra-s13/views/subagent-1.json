@@ -1,0 +1,19 @@
+{
+  "electionId": "E-260814-T99-RA-S13",
+  "voter": "subagent-1",
+  "question": "§13 学習選定(requirements-analysis, intent 260814-t99-copytree-race): 候補2件 — c1「修正方式は A+C を D より優先(宣言済み設計意図の書き換え=仕様変更接近を回避)」、c2「スコープは helper のみ + 残余 follow-up 起票(未ガード面件数は述語依存で AC 化不適)」。c1 は『迷えばエスカレーション』原則の適用、c2 は surgical 原則と RE UNMEASURED の適用であり、いずれも本 intent 固有の裁定(記録は questions file・phase-check・audit に残存)。採用0件を提案する。可とするか。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 1,
+      "label": "採用0件で可",
+      "description": "両候補とも既存原理の intent 固有適用。横断的新規知見なし"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 2,
+      "label": "候補を採用すべき",
+      "description": "いずれかに横断的新規性がある(heading を rationale に明記)"
+    }
+  ]
+}

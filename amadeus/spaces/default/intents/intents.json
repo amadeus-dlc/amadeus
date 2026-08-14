@@ -1173,5 +1173,12 @@
     "dirName": "260814-fmc-macos-provider",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019ffea5-c321-70cd-a824-ecd9f9240a60",
+    "slug": "t99-copytree-race",
+    "dirName": "260814-t99-copytree-race",
+    "scope": "self-fix",
+    "status": "complete"
   }
 ]
