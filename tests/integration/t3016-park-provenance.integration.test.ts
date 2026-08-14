@@ -22,7 +22,7 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   applyProductionAutonomyMode,
@@ -47,10 +47,19 @@ const ORCHESTRATE_TOOL = join(REPO_ROOT, "packages/framework/core/tools/amadeus-
 // the strict field writer, which refuses to INSERT a field the file does not
 // already carry — so the fixture must be one that declares it.
 const CONSTRUCTION = join(FIXTURES_DIR, "state-construction.md");
+const STOCK_GRAPH = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "data", "stage-graph.json");
 
 let proj = "";
 
 beforeEach(() => {
+  // dist/ is a gitignored build output, so a fresh worktree has no stock graph
+  // and the `next --resume` re-entry would die on an ENOENT that names a path
+  // rather than the missing build. Fail on the precondition instead.
+  if (!existsSync(STOCK_GRAPH)) {
+    throw new Error(
+      `stock stage graph missing at ${STOCK_GRAPH} — run \`bun run build\` to generate dist/ before this test`,
+    );
+  }
   resetAidlcEnv();
   proj = "";
 });
@@ -77,7 +86,10 @@ function runState(args: string[]) {
 function runEngine(args: string[]) {
   return spawnSync(process.execPath, [ORCHESTRATE_TOOL, ...args, "--project-dir", proj], {
     encoding: "utf-8",
-    env: stripPresenceBypass(process.env),
+    // The canonical module resolves its stage graph relative to its own
+    // directory, which carries no compiled data file; point it at the shipped
+    // stock graph (the same seam t528 uses to drive the handlers).
+    env: { ...stripPresenceBypass(process.env), AMADEUS_STAGE_GRAPH: STOCK_GRAPH },
   });
 }
 
@@ -144,6 +156,36 @@ function fullAutonomyProject(): void {
   expect(field("Construction Autonomy Mode")).toBe("autonomous");
 }
 
+/**
+ * Drive the engine's `--resume` re-entry (Branch 2.6) over a parked workflow
+ * and return the print directive it emitted.
+ *
+ * Branch 2.6 does NOT mutate: clearing the marker is a mutation, so `next`
+ * NAMES the unpark move and the conductor runs it. Driving the real path
+ * therefore means asserting the named move, running it, and re-entering — which
+ * is what this helper does, so the round trip under test is the engine's, not a
+ * bare `amadeus-state unpark` standing in for it.
+ */
+function resumeThroughEngine(): Record<string, unknown> {
+  const parked = runEngine(["next", "--resume"]);
+  expect(parked.status).toBe(0);
+  const directive = directiveOf(parked.stdout);
+  // Branch 2.6's print names the unpark move and leaves the marker in place.
+  expect(directive.kind).toBe("print");
+  expect(String(directive.message)).toContain("This workflow is parked");
+  expect(String(directive.message)).toContain("amadeus-state.ts unpark");
+  expect(stateText()).toContain("- **Parked**:");
+  // Run the move the engine named, then re-enter as its message instructs.
+  expect(runState(["unpark"]).status).toBe(0);
+  expect(stateText()).not.toContain("- **Parked**:");
+  const reentered = runEngine(["next", "--resume"]);
+  expect(reentered.status).toBe(0);
+  const after = directiveOf(reentered.stdout);
+  // The re-entry is past the park: Branch 2.6 no longer fires.
+  expect(after.kind).not.toBe("parked");
+  return after;
+}
+
 describe("t3016 park under production `full` autonomy", () => {
   test("an unconsumed HUMAN_TURN parks the run and leaves the grant intact", () => {
     fullAutonomyProject();
@@ -171,10 +213,13 @@ describe("t3016 park under production `full` autonomy", () => {
     expect(field("Construction Autonomy Mode")).toBe("autonomous");
   });
 
+  // FR-3's "resume" step runs through the engine's `--resume` ladder, the same
+  // route FR-4 names — not a bare unpark that would leave the real re-entry
+  // path unexercised.
   test("the park consumes the turn - the same turn cannot park twice", () => {
     fullAutonomyProject();
     expect(runState(["park"]).status).toBe(0);
-    expect(runState(["unpark"]).status).toBe(0);
+    resumeThroughEngine();
     const second = runState(["park"]);
     expect(second.status).not.toBe(0);
     expect(second.stderr.toLowerCase()).toContain("human_turn");
@@ -199,12 +244,40 @@ describe("t3016 the engine passes the park verdict through", () => {
     expect(stateText()).toContain("- **Parked**:");
   });
 
+  // FR-4 driven end to end on the route the requirement names: the engine's
+  // `park` verb in, the engine's `--resume` re-entry (Branch 2.6) out. The
+  // Intent's autonomy mode and its grant are read at every step, so a park that
+  // silently revoked or downgraded the grant would fail here rather than only
+  // in a state-tool round trip.
+  test("engine park -> engine --resume preserves the Intent mode and grant", () => {
+    fullAutonomyProject();
+    const modeBefore = field("Intent Autonomy Mode");
+    const grantBefore = field("Intent Grant");
+    expect(modeBefore).toBe("full");
+    expect(grantBefore).not.toBe("none");
+    expect(grantBefore.length).toBeGreaterThan(0);
+
+    expect(directiveOf(runEngine(["park"]).stdout).kind).toBe("parked");
+    expect(stateText()).toContain("- **Parked**:");
+    // Parked, but still granted.
+    expect(field("Intent Autonomy Mode")).toBe(modeBefore);
+    expect(field("Intent Grant")).toBe(grantBefore);
+    expect(field("Construction Autonomy Mode")).toBe("autonomous");
+
+    resumeThroughEngine();
+
+    // Resumed, still the same grant: a park is a pause, not a revocation.
+    expect(field("Intent Autonomy Mode")).toBe(modeBefore);
+    expect(field("Intent Grant")).toBe(grantBefore);
+    expect(field("Construction Autonomy Mode")).toBe("autonomous");
+  });
+
   test("engine park emits `error` naming the refusal when the run is unattended", () => {
     fullAutonomyProject();
-    // Spend the declaration's turn, then clear the marker: the record is back
-    // to a running autonomous workflow with nobody at the keyboard.
+    // Spend the declaration's turn, then resume: the record is back to a
+    // running autonomous workflow with nobody at the keyboard.
     expect(runState(["park"]).status).toBe(0);
-    expect(runState(["unpark"]).status).toBe(0);
+    resumeThroughEngine();
 
     const res = runEngine(["park"]);
     expect(res.status).toBe(0); // the engine reports refusals as a directive
