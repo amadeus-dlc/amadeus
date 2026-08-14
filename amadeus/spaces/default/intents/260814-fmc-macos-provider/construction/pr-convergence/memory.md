@@ -2,6 +2,7 @@
 > This file is maintained by the orchestrator during stage execution. Add observations at the gate ritual, not by editing here directly.
 
 ## Interpretations
+- 2026-08-14T04:50:00Z — 収束ループ: DIRTY(main 前進 #3001/#2998)→ record checkpoint → merge → 台帳2件(intents.json / elections.json)を3ステージ blob 再構成で解決(重複0・マーカー0を機械検査)→ push → create epoch 再 mint。以後 CI green を監視して report を取得する
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations

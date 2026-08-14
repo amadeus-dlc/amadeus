@@ -2,11 +2,11 @@
 
 - kind: created
 - pull request: amadeus-dlc/amadeus#3007
-- generated at: 2026-08-14T02:44:09Z
+- generated at: 2026-08-14T03:23:32Z
 - converged: false
 ## CLI Attestation
 
-- attestation id: prca:6db756befd45d379f66e8e49218171aac70d78ac1fe85daba87931e2f4c921b3
+- attestation id: prca:e921ef7d432c46c3e72ea1c42d34d0f6730a82334409c3519b4c9c741c18f7a9
 - intent: fmc-macos-provider
 - intent uuid: 019ffda6-2636-755d-8e85-1f83b1719c6a
 - record: amadeus/spaces/default/intents/260814-fmc-macos-provider/
@@ -14,7 +14,7 @@
 - unit: fmc-macos-provider
 - repository: amadeus-dlc/amadeus
 - pr: 3007
-- local head: 1d49d9a57e4756d92739a1c0d12a07ade98922f0
-- remote head: 1d49d9a57e4756d92739a1c0d12a07ade98922f0
-- pr head: 1d49d9a57e4756d92739a1c0d12a07ade98922f0
-- content digest: sha256:9385a33cb3cba54ad6dd7db3d5d8d0aed0cb748724377e5c8a780cf9e22535a3
+- local head: 24e8c5873d890cd7c2bee4d5df55b0ab9ba9619a
+- remote head: 24e8c5873d890cd7c2bee4d5df55b0ab9ba9619a
+- pr head: 24e8c5873d890cd7c2bee4d5df55b0ab9ba9619a
+- content digest: sha256:9b390a7ed7fba7d88907fbfd4477b401da921cdcf17c1c8dfae9df7881a33548
