@@ -167,6 +167,9 @@ describe("t268 dependency purity", () => {
       "node:path",
       "./amadeus-contained-file.ts",
       "./amadeus-lib.ts",
+      // The plugin.settings lexicon (#2997) — an import-free leaf, so it adds
+      // no dependency the purity rule is defending against.
+      "./amadeus-plugin-settings.ts",
       "./amadeus-mirror-project-contract.ts",
       "./amadeus-mirror-types.ts",
     ]);
