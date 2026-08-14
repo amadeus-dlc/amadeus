@@ -17,6 +17,7 @@
 | Green(実装後) | 4 pass / 0 fail / 9 expect、EXIT 0 | 同上 |
 | 患部直接テスト | t-fixtures-copy-tree-retry 12/12(exists スタブ削除後も assert 変更 0) | `bun test ...` EXIT 0 |
 | tui-fixtures 消費回帰 | t-kiro-tui-live-gate 12/12、t80 + t-fixtures-remove-tree-retry 12/12 | EXIT 0 |
+| FR-1 機械検証(pred-a2) | 置換後の残ヒット 3 件 = 除外 3 面のみ(fixtures.ts:873 = dest-fresh 不成立の merge 面 / tui-fixtures.ts:176・:186 = AGENTS.md 単一ファイル)。**適用可能面(src ディレクトリかつ dest-fresh)のヒット 0 件** — 3 面すべてに FR-2 の帰属コメント実在 | `bun <scratch>/pred-a2.ts` 出力転記(TOTAL: 3) |
 | FR-3 機械検証 | `git grep -n "ops\.exists" -- tests/harness/fixtures.ts` → :600(RemoveTreeOps)の 1 行のみ | 本 worktree |
 | typecheck / lint | exit 0 / exit 0(setupTuiProject 複雑度 41→41 不変を stash 比較で実測) | `bun run typecheck` / `bun run lint` |
 | フルスイート | **RESULT: PASS**(Total assertions 13412 / Failed 0、coverage・patch coverage gate 込み、単独所有実行) | `bash tests/run-tests.sh --ci` @ 本 worktree |

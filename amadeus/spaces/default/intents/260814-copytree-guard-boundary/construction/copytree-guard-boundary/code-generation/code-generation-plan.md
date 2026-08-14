@@ -19,3 +19,19 @@
 ## 備考
 
 - degraded input 明記: units-generation 等 SKIP — requirements と captured intent から直接スコープ。実装は本 intent 専用 worktree(branch fix-3014-copytree-guard、origin/main 起点)。
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-14T07:58:54Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+FR-1〜FR-7/NFR-1〜2 の各受け入れ基準に実行結果由来の実測値が記録され、plan 逸脱なし。後方互換シム・無申告フォールバックの混入なし、変更は FR-5 の範囲に閉じる。
+
+### Findings
+
+- FOLLOW-UP | amadeus/spaces/default/intents/260814-copytree-guard-boundary/construction/copytree-guard-boundary/code-generation/code-summary.md: FR-1 の pred-a2 スクリプト実行証跡が実測表に未記載(→ conductor が実行し追記済み: 残 3 ヒット = 除外 3 面のみ、適用可能面 0)
+- FOLLOW-UP | amadeus/spaces/default/intents/260814-copytree-guard-boundary/construction/copytree-guard-boundary/code-generation/code-summary.md: 除外面の対象パス表記をコード実ファイル名に揃えること
+- NIT | amadeus/spaces/default/intents/260814-copytree-guard-boundary/construction/copytree-guard-boundary/code-generation/pr-convergence-report.md: created/converged:false は本段階で正常
