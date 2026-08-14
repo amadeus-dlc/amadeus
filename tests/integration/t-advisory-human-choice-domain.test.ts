@@ -260,12 +260,19 @@ describe("advisory human choice domain", () => {
       sourceProvenance: { ...sourceProvenance, implementations: ["not-an-object"] },
     });
     expect(verifyAdvisoryModelCheckOutcome(root, pending).kind).toBe("invalid");
+    // An auxiliary path outside the advisory target (`${target}/`) is rejected
+    // on the path-prefix check itself, before the identity is even compared —
+    // give it the CORRECT module identity so a pass here could only mean the
+    // prefix requirement was silently dropped, not a lucky digest mismatch.
     writeFileSync(join(root, "impl.ts"), "export {}\n");
     writeJson(join(out, "manifest.json"), {
       ...manifest,
       sourceProvenance: {
         ...sourceProvenance,
-        auxiliaries: [{ path: "impl.ts", identity: "wrong" }],
+        auxiliaries: [{
+          path: "impl.ts",
+          identity: canonicalIdentity(readFileSync(join(root, "impl.ts"), "utf8"), "amadeus.formal-verif.tla.module.v1").sha256,
+        }],
       },
     });
     expect(verifyAdvisoryModelCheckOutcome(root, pending).kind).toBe("invalid");

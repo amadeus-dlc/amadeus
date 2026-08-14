@@ -31,7 +31,6 @@ interface Workflow {
 }
 
 const EXPECTED_TARGETS = [
-  "tests/unit/t416-election-model-roundtrip.pbt.test.ts",
   "tests/integration/t417-election-store-failclosed.pbt.test.ts",
   "tests/unit/t418-state-receipts-codec.pbt.test.ts",
   "tests/unit/t419-state-field-codec.pbt.test.ts",

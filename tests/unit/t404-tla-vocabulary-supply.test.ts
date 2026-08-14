@@ -25,10 +25,8 @@ const FORMAL_ELECTION_NAMED_INVARIANTS = [
   "AcceptedDomain",
   "ResultCompleteness",
   "PerQuestionIsolation",
-  "EstablishedImmutable",
   "HeldOnlyTargets",
   "MixedLifecycle",
-  "ResponseCoverage",
 ] as const;
 
 const FORMAL_ELECTION_TRACE_STATE_VARIABLES = [
@@ -69,8 +67,8 @@ describe("t404: per-model vocabulary supply", () => {
     expect(model.vocabulary?.namedInvariants).toEqual([...FORMAL_ELECTION_NAMED_INVARIANTS]);
     expect(model.vocabulary?.traceStateVariables).toEqual([...FORMAL_ELECTION_TRACE_STATE_VARIABLES]);
     // The multi-question source and cfg identities are pinned with the map.
-    expect(model.model.identity).toBe("48a4545b1dc2a11a9d7de4c02da88dd9c144f1a83741f7a25a87f209c6985839");
-    expect(model.cfg.identity).toBe("d687f5c9d68f0bc93bf7f5c13e0bd8d8b99afaad32aa9c1de4f60edfb59ad611");
+    expect(model.model.identity).toBe("3ed4cf989d43982ac488d236cd138bca022078c7c3b1de7b47ba4faaf3406868");
+    expect(model.cfg.identity).toBe("ffb0617cb9599d707b549d34e0f6ddfac7c66aedbfa1cea03f6aed717c93aed5");
     expect(model.entries.length).toBe(5);
   });
 

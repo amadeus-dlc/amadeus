@@ -150,7 +150,7 @@ describe("run-model-check artifact publisher", () => {
     });
   });
 
-  test("rejects a success label without complete exploration evidence", () => {
+  test("rejects any outcome label without complete exploration evidence", () => {
     const root = mkdtempSync(join(tmpdir(), "model-check-artifacts-"));
     roots.push(root);
     const workspace = beginModelCheckArtifacts(join(root, "run"), RUN_ID);

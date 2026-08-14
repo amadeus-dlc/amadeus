@@ -1,8 +1,10 @@
-// t259 — U1 elections-registry real-FS tests (Bolt B1 space-record-catalog).
+// t259 — elections-registry real-FS tests.
 // Layer: integration (touches a tmp elections root — fs-tests-integration-first).
-// Covers the fs-bound registry surface and its wiring into Store.create/setState:
-// append/read round-trip, duplicate/corrupt fail-closed, the absent-vs-row-missing
-// setState split, the create e2e (open verb), and the create order contract.
+// Covers the fs-bound registry surface and its wiring into ElectionStore.create /
+// setState: append/read round-trip, duplicate/corrupt fail-closed, the
+// row-missing setState split, the create e2e (open verb), and the create order
+// contract. The registry is the only path to an election directory, so an
+// election without a row is unreachable rather than legacy-tolerated.
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
   chmodSync,
@@ -15,14 +17,17 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { Election } from "../../packages/framework/core/tools/amadeus-election-model";
-import { handleOpen } from "../../packages/framework/core/tools/amadeus-election";
+import {
+  type CanonicalElectionDefinition,
+  ElectionDefinitionCodec,
+} from "../../packages/framework/core/tools/amadeus-election-codec";
+import { openElection } from "../../packages/framework/core/tools/amadeus-election";
 import {
   type ElectionRegistryEntry,
   appendElectionToRegistry,
   electionsRegistryPath,
   readElectionsRegistry,
-  Store,
+  ElectionStore,
   updateElectionStatus,
 } from "../../packages/framework/core/tools/amadeus-election-store";
 
@@ -36,44 +41,41 @@ afterEach(() => {
   rmSync(root, { recursive: true, force: true });
 });
 
-function entry(electionId: string, status: ElectionRegistryEntry["status"] = "draft"): ElectionRegistryEntry {
+function entry(
+  electionId: string,
+  status: ElectionRegistryEntry["status"] = "draft",
+): ElectionRegistryEntry {
   return { electionId, dirName: electionId, createdAt: "2026-07-22T00:00:00Z", status };
 }
 
-function election(electionId: string) {
-  const parsed = Election.parse({
+function definitionJson(electionId: string): unknown {
+  return {
+    schemaVersion: 2,
     electionId,
     kind: "zero-confirm",
-    question: "q",
-    choices: [{ internalNo: 1, label: "a" }],
+    questions: [
+      { questionId: "q1", text: "q", choices: [{ internalNo: 1, label: "a" }] },
+    ],
     voters: ["alice", "bob"],
-  });
-  if (!parsed.ok) throw new Error("definition must parse");
-  return parsed.value;
+  };
 }
 
-// Write a raw ElectionFile directly (bypassing Store.create) so no registry row
-// exists — used to exercise the absent/row-missing setState branches. The
-// definition itself must be valid: setState reads it back through the
-// definition validator (#1980), so an invalid stand-in would fail the read
-// before the registry branch under test is reached.
+function election(electionId: string): CanonicalElectionDefinition {
+  const decoded = ElectionDefinitionCodec.decode(definitionJson(electionId));
+  if (!decoded.ok) throw new Error("definition must decode");
+  return decoded.value;
+}
+
+// Write a raw election.json directly (bypassing ElectionStore.create) so no
+// registry row exists — used to exercise the row-missing read branches. The
+// definition itself is canonical: the read path decodes it, so an invalid
+// stand-in would fail before the registry branch under test is reached.
 function seedElectionFileWithoutRow(electionId: string): void {
   const dir = join(root, electionId);
   mkdirSync(dir, { recursive: true });
   writeFileSync(
     join(dir, "election.json"),
-    JSON.stringify(
-      {
-        electionId,
-        kind: "k",
-        question: "q",
-        choices: [{ internalNo: 1, label: "a" }],
-        voters: ["a"],
-        state: "draft",
-      },
-      null,
-      2,
-    ),
+    JSON.stringify({ ...(definitionJson(electionId) as object), state: "draft" }, null, 2),
   );
 }
 
@@ -163,18 +165,25 @@ describe("create io-error branches (fault-injection)", () => {
   test("a root path that is a file (not a dir) -> create fails io-error before any row", () => {
     const fileRoot = join(root, "iamafile");
     writeFileSync(fileRoot, "x"); // root cannot be mkdir'd -> mkdir(root) throws
-    const res = Store.create(fileRoot, election("E-X"));
+    const res = ElectionStore.create(fileRoot, election("E-X"));
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error).toBe("io-error");
   });
 });
 
 describe("updateElectionStatus row-missing", () => {
-  test("registry present but no row for the id -> loud not-found", () => {
+  test("registry present but no row for the id -> loud missing", () => {
     expect(appendElectionToRegistry(root, entry("E-A")).ok).toBe(true);
     const res = updateElectionStatus(root, "E-MISSING", "open");
     expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.error).toBe("not-found");
+    if (!res.ok) expect(res.error).toBe("missing");
+  });
+
+  test("absent registry -> loud missing (no file is created)", () => {
+    const res = updateElectionStatus(root, "E-A", "open");
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toBe("missing");
+    expect(existsSync(electionsRegistryPath(root))).toBe(false);
   });
 
   test("existing row is updated in place, siblings untouched", () => {
@@ -189,31 +198,31 @@ describe("updateElectionStatus row-missing", () => {
   });
 });
 
-describe("Store.setState registry wiring (absent vs row-missing)", () => {
-  test("absent registry -> setState is a no-op ok, no elections.json is created", () => {
+describe("ElectionStore.setState registry wiring (the registry is the only path)", () => {
+  test("absent registry -> setState fails closed and writes nothing", () => {
     seedElectionFileWithoutRow("E-NOREG");
-    const res = Store.setState(root, "E-NOREG", "open");
-    expect(res.ok).toBe(true);
+    const before = readFileSync(join(root, "E-NOREG", "election.json"), "utf8");
+    const res = ElectionStore.setState(root, "E-NOREG", "open");
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toBe("missing");
     expect(existsSync(electionsRegistryPath(root))).toBe(false);
-    // the election.json state still advanced
-    const ej = JSON.parse(readFileSync(join(root, "E-NOREG", "election.json"), "utf8"));
-    expect(ej.state).toBe("open");
+    // the unindexed election.json is left byte-identical
+    expect(readFileSync(join(root, "E-NOREG", "election.json"), "utf8")).toBe(before);
   });
 
-  test("registry present + legacy row missing -> setState uses the loud migration path", () => {
-    // E-A goes through Store.create (registry gets a row); E-B is a pre-migration
-    // direct-name directory and therefore intentionally has no row.
-    expect(Store.create(root, election("E-A")).ok).toBe(true);
+  test("registry present + row missing -> setState fails closed, leaving the bytes untouched", () => {
+    expect(ElectionStore.create(root, election("E-A")).ok).toBe(true);
     seedElectionFileWithoutRow("E-B");
-    const res = Store.setState(root, "E-B", "open");
-    expect(res.ok).toBe(true);
-    const ej = JSON.parse(readFileSync(join(root, "E-B", "election.json"), "utf8"));
-    expect(ej.state).toBe("open");
+    const before = readFileSync(join(root, "E-B", "election.json"), "utf8");
+    const res = ElectionStore.setState(root, "E-B", "open");
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.error).toBe("missing");
+    expect(readFileSync(join(root, "E-B", "election.json"), "utf8")).toBe(before);
   });
 
   test("registry present + row present -> setState syncs the row status", () => {
-    expect(Store.create(root, election("E-A")).ok).toBe(true);
-    expect(Store.setState(root, "E-A", "collecting").ok).toBe(true);
+    expect(ElectionStore.create(root, election("E-A")).ok).toBe(true);
+    expect(ElectionStore.setState(root, "E-A", "collecting").ok).toBe(true);
     const read = readElectionsRegistry(root);
     if (read.kind === "ok") {
       expect(read.entries.find((e) => e.electionId === "E-A")?.status).toBe("collecting");
@@ -224,19 +233,20 @@ describe("Store.setState registry wiring (absent vs row-missing)", () => {
 describe("create e2e via the open verb", () => {
   test("open -> row resolves the date-prefixed physical dir and status mirrors election.json", () => {
     const electionId = "E-SRCB1CG";
-    const defPath = join(root, "def.json");
-    writeFileSync(
-      defPath,
-      JSON.stringify({
-        electionId,
-        kind: "zero-confirm",
-        question: "学習候補 0 件でよいか",
-        choices: [{ internalNo: 1, label: "0件で可" }],
-        voters: ["alice", "bob"],
-      }),
-    );
-    const code = handleOpen(root, defPath);
-    expect(code).toBe(0);
+    const opened = openElection(root, {
+      schemaVersion: 2,
+      electionId,
+      kind: "zero-confirm",
+      questions: [
+        {
+          questionId: "q1",
+          text: "学習候補 0 件でよいか",
+          choices: [{ internalNo: 1, label: "0件で可" }],
+        },
+      ],
+      voters: ["alice", "bob"],
+    });
+    expect(opened.ok).toBe(true);
 
     const read = readElectionsRegistry(root);
     expect(read.kind).toBe("ok");
@@ -264,14 +274,14 @@ describe("create order contract (row append BEFORE dir creation)", () => {
 
     // create must attempt the registry append (which fails duplicate) BEFORE it
     // creates the electionId directory — so the dir must NOT appear on failure.
-    const res = Store.create(root, election(electionId));
+    const res = ElectionStore.create(root, election(electionId));
     expect(res.ok).toBe(false);
     if (!res.ok) expect(res.error).toBe("duplicate");
     expect(existsSync(join(root, electionId))).toBe(false); // observable order: no dir
   });
 
   test("create success writes the row with status draft and a date-prefixed dirName", () => {
-    expect(Store.create(root, election("E-FRESH")).ok).toBe(true);
+    expect(ElectionStore.create(root, election("E-FRESH")).ok).toBe(true);
     const read = readElectionsRegistry(root);
     if (read.kind === "ok") {
       const row = read.entries.find((e) => e.electionId === "E-FRESH");

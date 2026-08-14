@@ -1,4 +1,4 @@
-// covers: function:nextElectionV2
+// covers: function:nextElection
 // size: medium
 import { describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
@@ -10,8 +10,8 @@ import type {
   CanonicalQuestionResult,
   CanonicalTally,
 } from "../../packages/framework/core/tools/amadeus-election-codec.ts";
-import { nextElectionV2 } from "../../packages/framework/core/tools/amadeus-election-v2-cli.ts";
-import { ElectionV2Store } from "../../packages/framework/core/tools/amadeus-election-v2-store.ts";
+import { nextElection } from "../../packages/framework/core/tools/amadeus-election.ts";
+import { ElectionStore } from "../../packages/framework/core/tools/amadeus-election-store.ts";
 
 const reasons = ["tie", "block", "quorum-short", "discussion-needed", "split"] as const;
 
@@ -50,11 +50,11 @@ describe("t554 election mixed lifecycle CLI properties", () => {
         };
         const root = mkdtempSync(join(tmpdir(), "election-v2-cli-pbt-"));
         try {
-          expect(ElectionV2Store.create(root, definition).ok).toBe(true);
-          expect(ElectionV2Store.setState(root, definition.electionId, "collecting").ok).toBe(true);
-          expect(ElectionV2Store.commitTally(root, definition.electionId, tally, { expectedState: "collecting", nextState: "partial" }).ok).toBe(true);
-          const first = nextElectionV2(root, definition.electionId);
-          const second = nextElectionV2(root, definition.electionId);
+          expect(ElectionStore.create(root, definition).ok).toBe(true);
+          expect(ElectionStore.setState(root, definition.electionId, "collecting").ok).toBe(true);
+          expect(ElectionStore.commitTally(root, definition.electionId, tally, { expectedState: "collecting", nextState: "partial" }).ok).toBe(true);
+          const first = nextElection(root, definition.electionId);
+          const second = nextElection(root, definition.electionId);
           expect(second).toEqual(first);
           if (!first.ok || first.value.kind !== "hold") throw new Error("expected hold");
           const expected = results.flatMap((result) => result.kind === "hold" ? [{ questionId: result.questionId, reason: result.reason }] : []);

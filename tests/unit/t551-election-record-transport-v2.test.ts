@@ -1,3 +1,5 @@
+// covers: function:buildDistributionView, function:renderElectionRecord, function:verifyElectionRecord, function:canonicalizeDeliveryRecord, function:bookDelivery, function:reportDelivery
+// size: medium
 import { describe, expect, test } from "bun:test";
 import type {
   CanonicalBallot,
@@ -464,7 +466,7 @@ describe("U4 multi-question record", () => {
       record: validRecord,
       timeline: [
         { schemaVersion: 2, kind: "tallied", runId: "run-1", at: "2026-08-13T12:00:00Z" },
-        { schemaVersion: 2, kind: "tallied", runId: "missing-run", at: "2026-08-13T11:00:00Z", questionIds: ["q-z"] },
+        { schemaVersion: 2, kind: "tallied", runId: "missing-run", at: "2026-08-13T11:00:00Z" },
       ],
     });
     expect(timelineFinalResult.ok).toBe(false);

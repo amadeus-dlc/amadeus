@@ -8,17 +8,19 @@ import type {
   CanonicalTally,
 } from "../../packages/framework/core/tools/amadeus-election-codec.ts";
 import {
-  nextElectionV2,
-  notifyElectionV2,
-  reportElectionV2,
-  renderElectionV2,
-  statusElectionV2,
-  tallyElectionV2,
-  verifyElectionV2,
-  voteElectionV2,
-} from "../../packages/framework/core/tools/amadeus-election-v2-cli.ts";
-import { ElectionV2Store } from "../../packages/framework/core/tools/amadeus-election-v2-store.ts";
-import { resolveElectionDir } from "../../packages/framework/core/tools/amadeus-election-store.ts";
+  nextElection,
+  notifyElection,
+  reportElection,
+  renderElection,
+  statusElection,
+  tallyElection,
+  verifyElection,
+  voteElection,
+} from "../../packages/framework/core/tools/amadeus-election.ts";
+import {
+  ElectionStore,
+  resolveElectionDir,
+} from "../../packages/framework/core/tools/amadeus-election-store.ts";
 
 const definition: CanonicalElectionDefinition = {
   schemaVersion: 2,
@@ -65,18 +67,18 @@ let root = "";
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "election-v2-cli-"));
-  expect(ElectionV2Store.create(root, definition).ok).toBe(true);
-  expect(ElectionV2Store.setState(root, definition.electionId, "collecting").ok).toBe(true);
+  expect(ElectionStore.create(root, definition).ok).toBe(true);
+  expect(ElectionStore.setState(root, definition.electionId, "collecting").ok).toBe(true);
 });
 
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
 describe("t553 election mixed lifecycle CLI", () => {
   test("status fails closed on malformed canonical state without rewriting it", () => {
-    const path = join(resolveElectionDir(root, definition.electionId).dir, "timeline.json");
+    const path = join(resolveElectionDir(root, definition.electionId), "timeline.json");
     const malformed = JSON.stringify({ schemaVersion: 2, events: [] });
     writeFileSync(path, malformed);
-    expect(statusElectionV2(root, definition.electionId)).toMatchObject({
+    expect(statusElection(root, definition.electionId)).toMatchObject({
       ok: false,
       error: { category: "store" },
     });
@@ -92,15 +94,15 @@ describe("t553 election mixed lifecycle CLI", () => {
       preservedResultDigest: null,
       talliedAt: "2026-08-13T10:00:00Z",
     };
-    expect(ElectionV2Store.commitTally(root, definition.electionId, tally, {
+    expect(ElectionStore.commitTally(root, definition.electionId, tally, {
       expectedState: "collecting",
       nextState: "partial",
     }).ok).toBe(true);
-    const digest = ElectionV2Store.establishedResultsDigest(root, definition.electionId, tally);
+    const digest = ElectionStore.establishedResultsDigest(root, definition.electionId, tally);
     if (!digest.ok) throw new Error("fixture digest must be available");
     const before = treeBytes(root);
 
-    expect(nextElectionV2(root, definition.electionId)).toEqual({
+    expect(nextElection(root, definition.electionId)).toEqual({
       ok: true,
       value: {
         kind: "hold",
@@ -135,20 +137,20 @@ describe("t553 election mixed lifecycle CLI", () => {
       ],
       submittedAt: voter === "alice" ? "2026-08-13T09:00:00Z" : "2026-08-13T09:00:01Z",
     });
-    expect(voteElectionV2(root, definition.electionId, firstBallot("alice"), "2026-08-13T09:01:00Z").ok).toBe(true);
-    expect(voteElectionV2(root, definition.electionId, firstBallot("bob"), "2026-08-13T09:01:01Z").ok).toBe(true);
-    const ready = nextElectionV2(root, definition.electionId);
+    expect(voteElection(root, definition.electionId, firstBallot("alice"), "2026-08-13T09:01:00Z").ok).toBe(true);
+    expect(voteElection(root, definition.electionId, firstBallot("bob"), "2026-08-13T09:01:01Z").ok).toBe(true);
+    const ready = nextElection(root, definition.electionId);
     if (!ready.ok || ready.value.kind !== "tally-ready") throw new Error("expected tally-ready");
-    expect(tallyElectionV2(root, ready.value, "2026-08-13T10:00:00Z")).toMatchObject({
+    expect(tallyElection(root, ready.value, "2026-08-13T10:00:00Z")).toMatchObject({
       ok: true,
       value: { to: "partial", runId: "run-1" },
     });
-    const partial = nextElectionV2(root, definition.electionId);
+    const partial = nextElection(root, definition.electionId);
     if (!partial.ok || partial.value.kind !== "hold") throw new Error("expected hold");
     expect(partial.value.targetQuestionIds).toEqual(["q-b", "q-c"]);
-    expect(notifyElectionV2(root, partial.value).ok).toBe(true);
+    expect(notifyElection(root, partial.value).ok).toBe(true);
 
-    const stale = tallyElectionV2(root, ready.value, "2026-08-13T10:00:00Z");
+    const stale = tallyElection(root, ready.value, "2026-08-13T10:00:00Z");
     expect(stale).toMatchObject({ ok: false, error: { category: "stale-directive" } });
     const establishedTargetBallot = {
       ...firstBallot("alice"),
@@ -157,7 +159,7 @@ describe("t553 election mixed lifecycle CLI", () => {
       responses: firstBallot("alice").responses,
       submittedAt: "2026-08-13T10:01:00Z",
     };
-    expect(voteElectionV2(root, definition.electionId, establishedTargetBallot, "2026-08-13T10:01:01Z")).toMatchObject({
+    expect(voteElection(root, definition.electionId, establishedTargetBallot, "2026-08-13T10:01:01Z")).toMatchObject({
       ok: false,
       error: { category: "coverage" },
     });
@@ -174,58 +176,58 @@ describe("t553 election mixed lifecycle CLI", () => {
       ],
       submittedAt: voter === "alice" ? "2026-08-13T10:02:00Z" : "2026-08-13T10:02:01Z",
     });
-    expect(voteElectionV2(root, definition.electionId, rerunBallot("alice"), "2026-08-13T10:03:00Z").ok).toBe(true);
-    expect(voteElectionV2(root, definition.electionId, rerunBallot("bob"), "2026-08-13T10:03:01Z").ok).toBe(true);
-    const rerun = nextElectionV2(root, definition.electionId);
+    expect(voteElection(root, definition.electionId, rerunBallot("alice"), "2026-08-13T10:03:00Z").ok).toBe(true);
+    expect(voteElection(root, definition.electionId, rerunBallot("bob"), "2026-08-13T10:03:01Z").ok).toBe(true);
+    const rerun = nextElection(root, definition.electionId);
     if (!rerun.ok || rerun.value.kind !== "tally-ready") throw new Error("expected rerun tally-ready");
     expect(rerun.value).toMatchObject({ targetQuestionIds: ["q-b", "q-c"], expectedRunId: "run-1" });
-    expect(tallyElectionV2(root, rerun.value, "2026-08-13T11:00:00Z")).toMatchObject({
+    expect(tallyElection(root, rerun.value, "2026-08-13T11:00:00Z")).toMatchObject({
       ok: true,
       value: { to: "tallied", runId: "run-2" },
     });
-    expect(reportElectionV2(root, rerun.value, "2026-08-13T11:00:01Z")).toMatchObject({
+    expect(reportElection(root, rerun.value, "2026-08-13T11:00:01Z")).toMatchObject({
       ok: true,
       value: { result: "tallied", runId: "run-2" },
     });
-    expect(reportElectionV2(root, { ...rerun.value, targetQuestionIds: ["q-c"] }, "2026-08-13T11:00:01Z")).toMatchObject({
+    expect(reportElection(root, { ...rerun.value, targetQuestionIds: ["q-c"] }, "2026-08-13T11:00:01Z")).toMatchObject({
       ok: false,
       error: { category: "stale-directive" },
     });
-    expect(reportElectionV2(root, { ...rerun.value, preservedResultDigest: `sha256:${"0".repeat(64)}` }, "2026-08-13T11:00:01Z")).toMatchObject({
+    expect(reportElection(root, { ...rerun.value, preservedResultDigest: `sha256:${"0".repeat(64)}` }, "2026-08-13T11:00:01Z")).toMatchObject({
       ok: false,
       error: { category: "stale-directive" },
     });
-    const history = ElectionV2Store.readTallyHistory(root, definition.electionId);
+    const history = ElectionStore.readTallyHistory(root, definition.electionId);
     if (!history.ok) throw new Error("expected history");
     expect(history.value.map((entry) => entry.runId)).toEqual(["run-1", "run-2"]);
     expect(history.value[1]?.results.find((result) => result.questionId === "q-a")).toEqual(established("q-a"));
 
-    expect(tallyElectionV2(root, rerun.value, "2099-01-01T00:00:00Z")).toMatchObject({
+    expect(tallyElection(root, rerun.value, "2099-01-01T00:00:00Z")).toMatchObject({
       ok: true,
       value: { repaired: true, runId: "run-2", committedAt: "2026-08-13T11:00:00Z" },
     });
-    const timelinePath = join(resolveElectionDir(root, definition.electionId).dir, "timeline.json");
+    const timelinePath = join(resolveElectionDir(root, definition.electionId), "timeline.json");
     const timeline = JSON.parse(readFileSync(timelinePath, "utf8"));
     expect(timeline.filter((event: { runId?: string }) => event.runId === "run-2")).toHaveLength(1);
 
-    const render = nextElectionV2(root, definition.electionId);
+    const render = nextElection(root, definition.electionId);
     if (!render.ok || render.value.kind !== "render") throw new Error("expected render");
-    expect(renderElectionV2(root, render.value, "2026-08-13T11:01:00Z").ok).toBe(true);
-    const verify = nextElectionV2(root, definition.electionId);
+    expect(renderElection(root, render.value, "2026-08-13T11:01:00Z").ok).toBe(true);
+    const verify = nextElection(root, definition.electionId);
     if (!verify.ok || verify.value.kind !== "verify") throw new Error("expected verify");
-    const recordPath = join(resolveElectionDir(root, definition.electionId).dir, "record.md");
+    const recordPath = join(resolveElectionDir(root, definition.electionId), "record.md");
     const validRecord = readFileSync(recordPath, "utf8");
     writeFileSync(recordPath, validRecord.replace("Established: yes", "Established: tampered"));
-    expect(verifyElectionV2(root, verify.value, "2026-08-13T11:02:00Z")).toMatchObject({
+    expect(verifyElection(root, verify.value, "2026-08-13T11:02:00Z")).toMatchObject({
       ok: false,
       error: { category: "verification" },
     });
-    expect(ElectionV2Store.load(root, definition.electionId)).toMatchObject({ ok: true, value: { state: "rendered" } });
+    expect(ElectionStore.load(root, definition.electionId)).toMatchObject({ ok: true, value: { state: "rendered" } });
     writeFileSync(recordPath, validRecord);
-    expect(verifyElectionV2(root, verify.value, "2026-08-13T11:02:00Z")).toMatchObject({
+    expect(verifyElection(root, verify.value, "2026-08-13T11:02:00Z")).toMatchObject({
       ok: true,
       value: { to: "recorded", runId: "run-2" },
     });
-    expect(nextElectionV2(root, definition.electionId)).toMatchObject({ ok: true, value: { kind: "done" } });
+    expect(nextElection(root, definition.electionId)).toMatchObject({ ok: true, value: { kind: "done" } });
   });
 });

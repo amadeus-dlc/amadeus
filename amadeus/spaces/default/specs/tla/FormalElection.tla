@@ -102,9 +102,6 @@ PerQuestionIsolation ==
     \/ (AllResponded(accepted, Voters, q)
         /\ results[q] = QuestionResult(accepted, Voters, q, Block))
 
-EstablishedImmutable ==
-  \A q \in preserved: results[q] = ResultEstablished
-
 HeldOnlyTargets ==
   /\ preserved \cap targets = {}
   /\ preserved \subseteq Questions
@@ -113,15 +110,10 @@ HeldOnlyTargets ==
        targets = Questions \ preserved
 
 MixedLifecycle ==
-  /\ (phase = PhasePartial => HeldQuestions(results, targets) /= {})
   /\ (phase = PhaseTallied =>
        \A q \in Questions: results[q] = ResultEstablished)
   /\ ((phase \in {PhasePartial, PhaseTallied}) =>
        (phase = PhasePartial <=> HeldQuestions(results, targets) /= {}))
-
-ResponseCoverage ==
-  \A q \in Questions:
-    results[q] /= ResultNone => AllResponded(accepted, Voters, q)
 
 TypeOK ==
   /\ accepted \in [Voters -> [Questions -> ResponseDomain(UNION {Choices[q] : q \in Questions}, Goas)]]

@@ -53,11 +53,11 @@ describe("t557: FormalElection multi-question identity after rebase", () => {
     const cfg = readFileSync("amadeus/spaces/default/specs/tla/FormalElection.cfg", "utf8");
     expect(source).toContain("QuestionOrder == <<Q1, Q2>>");
     expect(source).toContain("AcceptResponse(v, q, c, g)");
-    expect(source).toContain("EstablishedImmutable");
+    expect(source).toContain("ResultCompleteness");
     expect(source).toContain("HeldOnlyTargets");
     expect(source).toContain("targets' = held");
     expect(source).toContain("\\A q \\in preserved: results[q] = ResultEstablished");
-    expect(cfg).toContain("INVARIANT EstablishedImmutable");
+    expect(cfg).toContain("INVARIANT ResultCompleteness");
     expect(cfg).toContain("INVARIANT HeldOnlyTargets");
   });
 });

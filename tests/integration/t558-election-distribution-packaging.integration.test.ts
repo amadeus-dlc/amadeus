@@ -6,12 +6,26 @@ import { spawnSync } from "bun";
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { discoverHarnessNames } from "../../scripts/package.ts";
+import { MIRROR_PROJECTIONS } from "../../packages/framework/harness/projections.ts";
 
 const ROOT = join(import.meta.dir, "..", "..");
 const SKILL_PATH = join(ROOT, "packages", "framework", "core", "skills", "amadeus-election", "SKILL.md");
 const MEMORY_DIR = join(ROOT, "amadeus", "spaces", "default", "memory");
 const TEAM_MD = join(MEMORY_DIR, "team.md");
 const SCRIPT = join(ROOT, "packages", "framework", "core", "tools", "amadeus-election.ts");
+const HARNESS_ROOT = join(ROOT, "packages", "framework", "harness");
+
+/** Whether a harness's own manifest.ts (or, for codex, its emit.ts session-skill
+ *  list) declares amadeus-election as a projected skill. Read from the harness's
+ *  own source rather than hardcoded, so a harness gaining or losing the election
+ *  skill flips this set without touching the test. */
+function shipsElectionSkill(harness: string): boolean {
+  const emitPath = join(HARNESS_ROOT, harness, "emit.ts");
+  if (existsSync(emitPath) && readFileSync(emitPath, "utf8").includes('"amadeus-election"')) return true;
+  const manifestPath = join(HARNESS_ROOT, harness, "manifest.ts");
+  return existsSync(manifestPath) && readFileSync(manifestPath, "utf8").includes("skills/amadeus-election");
+}
 
 const REQUIRED_SKILL_TOKENS = [
   "questions",
@@ -167,55 +181,74 @@ describe("t558 election distribution packaging", () => {
     }
   });
 
-  test("the published CLI still completes a legacy single-question election", () => {
-    const project = mkdtempSync(join(tmpdir(), "election-u8-legacy-"));
+  // #2967/b402f5ce0 removed the pre-canonical (schemaVersion-less, single
+  // top-level `question`/`choiceInternalNo`) v1 wire format entirely — it is a
+  // declared BREAKING CHANGE, not a bug: "pre-canonical (single-question v1)
+  // election data is no longer readable". What remains distinctly worth
+  // covering is that a canonical (schemaVersion 2) definition carrying exactly
+  // ONE question — as opposed to the two-question case above — still drives
+  // the same directive loop end to end.
+  test("the published CLI completes a single-question canonical election", () => {
+    const project = mkdtempSync(join(tmpdir(), "election-u8-single-"));
     const definitionPath = join(project, "def.json");
     const ballotPath = join(project, "b1.json");
+    const directivePath = join(project, "directive.json");
     mkdirSync(join(project, "amadeus", "spaces", "default", "elections"), { recursive: true });
     writeFileSync(
       definitionPath,
       JSON.stringify({
-        electionId: "E-U8-LEGACY",
+        schemaVersion: 2,
+        electionId: "E-U8-SINGLE",
         kind: "zero-confirm",
-        question: "0件でよいか",
-        choices: [{ internalNo: 1, label: "0件で可" }],
+        questions: [
+          { questionId: "q-only", text: "0件でよいか", choices: [{ internalNo: 1, label: "0件で可" }] },
+        ],
         voters: ["alice"],
       }),
     );
     writeFileSync(
       ballotPath,
       JSON.stringify({
-        electionId: "E-U8-LEGACY",
+        schemaVersion: 2,
+        kind: "original",
+        electionId: "E-U8-SINGLE",
         voter: "alice",
         voterKind: "member",
-        choiceInternalNo: 1,
-        goa: 1,
+        responses: [{ questionId: "q-only", choiceInternalNo: 1, goa: 1, reservation: null, rationale: null }],
         submittedAt: "2026-08-14T00:01:00Z",
       }),
     );
     try {
-      expect(cli(project, ["open", "--file", definitionPath]).code).toBe(0);
+      expect(cli(project, ["open", "--file", definitionPath])).toMatchObject({ code: 0, stderr: "" });
       const kinds: string[] = [];
+      let voted = false;
       for (let guard = 0; guard < 20; guard++) {
-        const next = cli(project, ["next", "--election", "E-U8-LEGACY"]);
-        expect(next.code).toBe(0);
+        const next = cli(project, ["next", "--election", "E-U8-SINGLE"]);
+        expect(next).toMatchObject({ code: 0, stderr: "" });
         const directive = JSON.parse(next.stdout) as {
           kind: string;
           verb: string | null;
           report: string | null;
           schemaVersion?: number;
+          targetQuestionIds?: readonly string[];
         };
         kinds.push(directive.kind);
-        expect(directive.schemaVersion).toBeUndefined();
         if (directive.kind === "done") break;
+        expect(directive.schemaVersion).toBe(2);
+        expect(directive.targetQuestionIds).toEqual(["q-only"]);
         if (directive.kind === "collect-wait") {
-          expect(cli(project, ["vote", "--election", "E-U8-LEGACY", "--file", ballotPath]).code).toBe(0);
+          if (!voted) {
+            expect(cli(project, ["vote", "--election", "E-U8-SINGLE", "--file", ballotPath]).code).toBe(0);
+            voted = true;
+          }
           continue;
         }
-        expect(cli(project, [String(directive.verb), "--election", "E-U8-LEGACY"]).code).toBe(0);
-        expect(
-          cli(project, ["report", "--election", "E-U8-LEGACY", "--result", String(directive.report)]).code,
-        ).toBe(0);
+        writeFileSync(directivePath, next.stdout);
+        expect(cli(project, [String(directive.verb), "--election", "E-U8-SINGLE", "--file", directivePath]).code).toBe(0);
+        expect(cli(project, ["report", "--election", "E-U8-SINGLE", "--file", directivePath])).toMatchObject({
+          code: 0,
+          stderr: "",
+        });
       }
       expect(kinds).toEqual(["distribute", "collect-wait", "tally-ready", "render", "verify", "done"]);
     } finally {
@@ -224,12 +257,23 @@ describe("t558 election distribution packaging", () => {
   });
 
   test("FR-2c: non-target harness distributions still omit the election skill", () => {
-    for (const [harness, dir] of [
-      ["cursor", ".cursor"],
-      ["kiro", ".kiro"],
-      ["opencode", ".opencode"],
-    ] as const) {
-      const skillsDir = join(ROOT, "dist", harness, dir, "skills");
+    const harnesses = discoverHarnessNames();
+    const nonTargetHarnesses = harnesses.filter((harness) => !shipsElectionSkill(harness));
+    // Sanity: the split must actually separate something, and it must match the
+    // harnesses whose manifest/emit source we know ship the skill (#2967 rename
+    // merged v2 tooling into amadeus-election; claude/kimi/pi/codex still carry it).
+    expect(nonTargetHarnesses.length).toBeGreaterThan(0);
+    expect(nonTargetHarnesses.length).toBeLessThan(harnesses.length);
+    expect(harnesses.filter((harness) => shipsElectionSkill(harness)).sort()).toEqual(
+      ["claude", "codex", "kimi", "pi"].sort(),
+    );
+
+    for (const harness of nonTargetHarnesses) {
+      const distSkill = MIRROR_PROJECTIONS.find((projection) => projection.surface === harness)?.distSkill;
+      if (distSkill === undefined) throw new Error(`no mirror projection for harness ${harness}`);
+      // distSkill points at .../skills/amadeus-mirror/SKILL.md; the skills root
+      // is two segments up.
+      const skillsDir = join(ROOT, distSkill, "..", "..");
       expect(existsSync(skillsDir)).toBe(true);
       expect(existsSync(join(skillsDir, "amadeus-election"))).toBe(false);
     }

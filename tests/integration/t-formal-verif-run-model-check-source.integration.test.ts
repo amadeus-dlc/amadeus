@@ -65,10 +65,8 @@ describe("run-model-check source adapter", () => {
         "AcceptedDomain",
         "ResultCompleteness",
         "PerQuestionIsolation",
-        "EstablishedImmutable",
         "HeldOnlyTargets",
         "MixedLifecycle",
-        "ResponseCoverage",
       ],
       traceStateVariables: [
         "accepted",
@@ -212,7 +210,7 @@ describe("run-model-check source adapter", () => {
     if (source === undefined) return;
     const spacedSource = {
       ...source,
-      moduleSource: source.moduleSource.replace("EstablishedImmutable ==", "EstablishedImmutable\t=="),
+      moduleSource: source.moduleSource.replace("HeldOnlyTargets ==", "HeldOnlyTargets\t=="),
     };
     // The line follows the module: the resolution axis revision (ruling Q2=A,
     // 2026-08-05 — Issue #1946, FR-2f) shifted the invariant block by one. What
@@ -221,7 +219,7 @@ describe("run-model-check source adapter", () => {
     expect(generateFrozenTlaModel(
       { publicContractIdentity: "a".repeat(64) },
       spacedSource,
-    ).invariantSourceMap.EstablishedImmutable).toEqual({ line: 105, column: 1 });
+    ).invariantSourceMap.HeldOnlyTargets).toEqual({ line: 105, column: 1 });
   });
 
   test("loads the registered MirrorLifecycle source with its map-supplied vocabulary", () => {

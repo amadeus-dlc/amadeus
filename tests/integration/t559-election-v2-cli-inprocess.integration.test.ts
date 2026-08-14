@@ -1,20 +1,22 @@
-// covers: function:main, function:openElectionV2, function:statusElectionV2
+// covers: function:main, function:nextElection, function:openElection, function:reportElection, function:statusElection, function:voteElection
 // size: medium
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { main as dispatchMain } from "../../packages/framework/core/tools/amadeus-election.ts";
 import {
   main,
-  nextElectionV2,
-  openElectionV2,
-  reportElectionV2,
-  statusElectionV2,
-  voteElectionV2,
-} from "../../packages/framework/core/tools/amadeus-election-v2-cli.ts";
-import { electionsRoot, resolveElectionDir } from "../../packages/framework/core/tools/amadeus-election-store.ts";
-import { ElectionV2Store } from "../../packages/framework/core/tools/amadeus-election-v2-store.ts";
+  nextElection,
+  openElection,
+  reportElection,
+  statusElection,
+  voteElection,
+} from "../../packages/framework/core/tools/amadeus-election.ts";
+import {
+  electionsRoot,
+  ElectionStore,
+  resolveElectionDir,
+} from "../../packages/framework/core/tools/amadeus-election-store.ts";
 
 const definition = {
   schemaVersion: 2 as const,
@@ -116,7 +118,7 @@ describe("t559 election v2 CLI in-process", () => {
     expect(run(["status", "--election", definition.electionId, "--project", dir]).code).toBe(0);
 
     writeFileSync(directivePath, JSON.stringify({ schemaVersion: 2, kind: "done" }));
-    expect(run(["notify", "--election", definition.electionId, "--file", directivePath, "--project", dir])).toMatchObject({ code: 1 });
+    expectFailure(run(["notify", "--election", definition.electionId, "--file", directivePath, "--project", dir]), "decode");
     writeFileSync(directivePath, JSON.stringify({
       schemaVersion: 2,
       kind: "done",
@@ -129,39 +131,39 @@ describe("t559 election v2 CLI in-process", () => {
       report: null,
     }));
     expect(run(["unknown", "--election", definition.electionId, "--file", directivePath, "--project", dir])).toMatchObject({ code: 2 });
-    expect(run(["vote", "--election", definition.electionId, "--file", join(dir, "missing.json"), "--project", dir])).toMatchObject({ code: 1 });
+    expectFailure(run(["vote", "--election", definition.electionId, "--file", join(dir, "missing.json"), "--project", dir]), "decode");
   });
 
   test("exported helpers cover draft, decode, stale, and report-null arms", () => {
     const dir = project();
     const root = electionsRoot(dir);
-    expect(ElectionV2Store.create(root, definition).ok).toBe(true);
-    expect(nextElectionV2(root, definition.electionId)).toMatchObject({
+    expect(ElectionStore.create(root, definition).ok).toBe(true);
+    expect(nextElection(root, definition.electionId)).toMatchObject({
       ok: false,
       error: { category: "invalid-transition" },
     });
-    expect(statusElectionV2(root, definition.electionId)).toMatchObject({
+    expect(statusElection(root, definition.electionId)).toMatchObject({
       ok: false,
       error: { category: "invalid-transition" },
     });
-    expect(openElectionV2(root, { not: "an election" })).toMatchObject({
+    expect(openElection(root, { not: "an election" })).toMatchObject({
       ok: false,
       error: { category: "decode" },
     });
-    expect(openElectionV2(root, { ...definition, electionId: "E-V2-OPEN" }).ok).toBe(true);
-    expect(statusElectionV2(root, "E-V2-OPEN").ok).toBe(true);
-    expect(voteElectionV2(root, definition.electionId, ballot, "2026-08-13T00:00:01Z")).toMatchObject({
+    expect(openElection(root, { ...definition, electionId: "E-V2-OPEN" }).ok).toBe(true);
+    expect(statusElection(root, "E-V2-OPEN").ok).toBe(true);
+    expect(voteElection(root, definition.electionId, ballot, "2026-08-13T00:00:01Z")).toMatchObject({
       ok: false,
       error: { category: "invalid-transition" },
     });
 
-    const opened = nextElectionV2(root, "E-V2-OPEN");
+    const opened = nextElection(root, "E-V2-OPEN");
     if (!opened.ok || opened.value.kind !== "distribute") throw new Error("expected distribute");
-    expect(reportElectionV2(root, { ...opened.value, report: null, verb: null, kind: "done" }, "2026-08-13T00:00:02Z")).toMatchObject({
+    expect(reportElection(root, { ...opened.value, report: null, verb: null, kind: "done" }, "2026-08-13T00:00:02Z")).toMatchObject({
       ok: false,
       error: { category: "invalid-transition" },
     });
-    expect(reportElectionV2(root, {
+    expect(reportElection(root, {
       ...opened.value,
       targetQuestionIds: ["q-z"],
     }, "2026-08-13T00:00:03Z")).toMatchObject({
@@ -252,7 +254,7 @@ describe("t559 election v2 CLI in-process", () => {
     const next = run(["next", "--election", "E-V2-HOLD", "--project", dir]);
     expect(next.code).toBe(0);
     writeFileSync(directivePath, next.stdout);
-    const viewsPath = join(resolveElectionDir(electionsRoot(dir), "E-V2-HOLD").dir, "views");
+    const viewsPath = join(resolveElectionDir(electionsRoot(dir), "E-V2-HOLD"), "views");
     rmSync(viewsPath, { recursive: true, force: true });
     writeFileSync(viewsPath, "blocked");
     expectFailure(run(["notify", "--election", "E-V2-HOLD", "--file", directivePath, "--project", dir]), "store");
@@ -269,9 +271,9 @@ describe("t559 election v2 CLI in-process", () => {
     const distribute = run(["next", "--election", definition.electionId, "--project", dir]);
     writeFileSync(directivePath, distribute.stdout);
     expect(run(["notify", "--election", definition.electionId, "--file", directivePath, "--project", dir]).code).toBe(0);
-    writeFileSync(join(resolveElectionDir(electionsRoot(dir), definition.electionId).dir, "pending"), "blocked");
-    expect(run(["vote", "--election", definition.electionId, "--file", ballotPath, "--project", dir]).code).toBe(1);
-    rmSync(join(resolveElectionDir(electionsRoot(dir), definition.electionId).dir, "pending"));
+    writeFileSync(join(resolveElectionDir(electionsRoot(dir), definition.electionId), "pending"), "blocked");
+    expectFailure(run(["vote", "--election", definition.electionId, "--file", ballotPath, "--project", dir]), "store");
+    rmSync(join(resolveElectionDir(electionsRoot(dir), definition.electionId), "pending"));
     expect(run(["vote", "--election", definition.electionId, "--file", ballotPath, "--project", dir]).code).toBe(0);
     const tallyReady = run(["next", "--election", definition.electionId, "--project", dir]);
     writeFileSync(directivePath, tallyReady.stdout);
@@ -279,13 +281,13 @@ describe("t559 election v2 CLI in-process", () => {
     const render = run(["next", "--election", definition.electionId, "--project", dir]);
     writeFileSync(directivePath, render.stdout);
     expect(run(["render", "--election", definition.electionId, "--file", directivePath, "--project", dir]).code).toBe(0);
-    rmSync(join(resolveElectionDir(electionsRoot(dir), definition.electionId).dir, "record.md"), { force: true });
+    rmSync(join(resolveElectionDir(electionsRoot(dir), definition.electionId), "record.md"), { force: true });
     const verify = run(["next", "--election", definition.electionId, "--project", dir]);
     writeFileSync(directivePath, verify.stdout);
-    expect(run(["verify", "--election", definition.electionId, "--file", directivePath, "--project", dir]).code).toBe(1);
+    expectFailure(run(["verify", "--election", definition.electionId, "--file", directivePath, "--project", dir]), "verification");
   });
 
-  test("published dispatcher forwards the second-argument project dir to v2", () => {
+  test("main accepts an explicit project directory as its second argument", () => {
     const dir = project();
     const definitionPath = join(dir, "definition.json");
     writeFileSync(definitionPath, JSON.stringify(definition));
@@ -300,8 +302,8 @@ describe("t559 election v2 CLI in-process", () => {
       errors.push(String(value ?? ""));
     };
     try {
-      expect(dispatchMain(["open", "--file", definitionPath], dir)).toBe(0);
-      expect(dispatchMain(["status", "--election", definition.electionId], dir)).toBe(0);
+      expect(main(["open", "--file", definitionPath], dir)).toBe(0);
+      expect(main(["status", "--election", definition.electionId], dir)).toBe(0);
     } finally {
       console.log = log;
       console.error = err;

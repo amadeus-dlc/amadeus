@@ -17,10 +17,8 @@ const INVARIANTS = [
   "AcceptedDomain",
   "ResultCompleteness",
   "PerQuestionIsolation",
-  "EstablishedImmutable",
   "HeldOnlyTargets",
   "MixedLifecycle",
-  "ResponseCoverage",
 ] as const;
 
 const original = (

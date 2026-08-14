@@ -39,8 +39,8 @@ import type {
 const REPOSITORY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 // Multi-question execution-model identities are pinned at the real-filesystem
 // boundary so source migration cannot silently fall back to embedded bytes.
-const EXPECTED_MODULE_IDENTITY = "48a4545b1dc2a11a9d7de4c02da88dd9c144f1a83741f7a25a87f209c6985839";
-const EXPECTED_CFG_IDENTITY = "d687f5c9d68f0bc93bf7f5c13e0bd8d8b99afaad32aa9c1de4f60edfb59ad611";
+const EXPECTED_MODULE_IDENTITY = "3ed4cf989d43982ac488d236cd138bca022078c7c3b1de7b47ba4faaf3406868";
+const EXPECTED_CFG_IDENTITY = "ffb0617cb9599d707b549d34e0f6ddfac7c66aedbfa1cea03f6aed717c93aed5";
 const temporaryRoots: string[] = [];
 
 interface Fixture {

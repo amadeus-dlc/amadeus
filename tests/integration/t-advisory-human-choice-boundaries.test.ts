@@ -454,11 +454,17 @@ describe("advisory model-check evidence boundaries", () => {
   test("provenance constants must match the constants declared by the CFG bytes", () => {
     const { root, pending, evidence } = fixture();
     resignProvenance(evidence, (body) => { body.constants = ["Voters={v1,v2}"]; });
-    expect(verifyAdvisoryModelCheckOutcome(root, pending).kind).toBe("invalid");
+    expect(verifyAdvisoryModelCheckOutcome(root, pending)).toMatchObject({
+      kind: "invalid",
+      reason: "source provenance constants do not match the current config",
+    });
 
     const dropped = fixture();
     resignProvenance(dropped.evidence, (body) => { body.constants = "not-an-array"; });
-    expect(verifyAdvisoryModelCheckOutcome(dropped.root, dropped.pending).kind).toBe("invalid");
+    expect(verifyAdvisoryModelCheckOutcome(dropped.root, dropped.pending)).toMatchObject({
+      kind: "invalid",
+      reason: "source provenance identities are invalid",
+    });
   });
 
   test("provenance carrying the CFG's real constants is accepted", () => {

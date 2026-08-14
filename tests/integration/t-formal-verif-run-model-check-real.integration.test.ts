@@ -200,7 +200,7 @@ describe("run-model-check real Darwin acceptance", () => {
         readFileSync("amadeus/spaces/default/specs/tla/FormalElection.cfg", "utf8")
           .split("\n")
           .filter((line) =>
-            (!line.startsWith("INVARIANT ") || line === "INVARIANT EstablishedImmutable")
+            (!line.startsWith("INVARIANT ") || line === "INVARIANT ResultCompleteness")
             && !line.startsWith("PROPERTY ")
           )
           .join("\n"),
@@ -209,7 +209,7 @@ describe("run-model-check real Darwin acceptance", () => {
         "amadeus/spaces/default/specs/tla/FormalElectionCore.tla",
         join(root, "FormalElectionCore.tla"),
       );
-      const invariant = InvariantNameCodec.parse("EstablishedImmutable");
+      const invariant = InvariantNameCodec.parse("ResultCompleteness");
       if (!invariant.ok) throw new Error(JSON.stringify(invariant.error));
 
       const exploration = await createRefereeToolchain({
@@ -225,7 +225,7 @@ describe("run-model-check real Darwin acceptance", () => {
 
       expect(exploration).toMatchObject({
         kind: "COUNTEREXAMPLE",
-        invariant: "EstablishedImmutable",
+        invariant: "ResultCompleteness",
       });
       if (exploration.kind !== "COUNTEREXAMPLE") return;
       expect(exploration.trace.length).toBeGreaterThan(1);

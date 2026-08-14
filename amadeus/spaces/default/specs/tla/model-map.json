@@ -67,11 +67,11 @@
       "name": "FormalElection",
       "model": {
         "path": "amadeus/spaces/default/specs/tla/FormalElection.tla",
-        "identity": "48a4545b1dc2a11a9d7de4c02da88dd9c144f1a83741f7a25a87f209c6985839"
+        "identity": "3ed4cf989d43982ac488d236cd138bca022078c7c3b1de7b47ba4faaf3406868"
       },
       "cfg": {
         "path": "amadeus/spaces/default/specs/tla/FormalElection.cfg",
-        "identity": "d687f5c9d68f0bc93bf7f5c13e0bd8d8b99afaad32aa9c1de4f60edfb59ad611"
+        "identity": "ffb0617cb9599d707b549d34e0f6ddfac7c66aedbfa1cea03f6aed717c93aed5"
       },
       "auxiliaries": [
         {
@@ -82,23 +82,23 @@
       "entries": [
         {
           "implPath": "packages/framework/core/tools/amadeus-election-codec.ts",
-          "sha256": "455e5a69547cbf0687767703faa3cf447bb5973d28b6e62b33128f2efda2e828"
+          "sha256": "d93dc067d384536c76622c3ac841f17cef87f147f69ac1a56dfa5c1022de458e"
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election-record.ts",
-          "sha256": "1e0a37e469ff63126a93000fe3630182e500860ab249cc4ed5427a78ae189b7c"
+          "sha256": "9887b938e0a22dfa6089de2baefc5768f95d8cc2f14cd8d8bd8c63ce6d43dc99"
+        },
+        {
+          "implPath": "packages/framework/core/tools/amadeus-election-store.ts",
+          "sha256": "f00d5aedecf1df7e5d50b1549c1f01bfc6b4c88ebbcec62717e9643cfb44ab3a"
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election-transport.ts",
           "sha256": "4a8e400eb9bf85ef2950686c6102b918f79ddbcb445d0630824fcc5d5acc5c18"
         },
         {
-          "implPath": "packages/framework/core/tools/amadeus-election-v2-cli.ts",
-          "sha256": "0508d3d3180b02be6392864097c10a4490befa7823b6383c7f52c11ca5672bca"
-        },
-        {
-          "implPath": "packages/framework/core/tools/amadeus-election-v2-store.ts",
-          "sha256": "f33cc7fb84ca2b97c80cab36f16c06f3b2785a2eb533500922ab187caf1d1adc"
+          "implPath": "packages/framework/core/tools/amadeus-election.ts",
+          "sha256": "40ea32060aa9a30ff15736f25efbf391e0a2e4cbab09969cc36aa94ad6da52c7"
         }
       ],
       "vocabulary": {
@@ -108,10 +108,8 @@
           "AcceptedDomain",
           "ResultCompleteness",
           "PerQuestionIsolation",
-          "EstablishedImmutable",
           "HeldOnlyTargets",
-          "MixedLifecycle",
-          "ResponseCoverage"
+          "MixedLifecycle"
         ],
         "traceStateVariables": [
           "accepted",
