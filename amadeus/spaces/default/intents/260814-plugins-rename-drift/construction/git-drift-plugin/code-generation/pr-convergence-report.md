@@ -1,18 +1,20 @@
-# PR Convergence Report — git-drift-plugin
+# PR Convergence Report
 
-## 判定
+- kind: created
+- pull request: amadeus-dlc/amadeus#3055
+- generated at: 2026-08-14T14:25:40Z
+- converged: false
+## CLI Attestation
 
-- kind: `not-applicable-yet`
-- converged: `false`
-- pull request: `https://github.com/amadeus-dlc/amadeus/pull/3055`
-- observed at: `2026-08-14T13:30:00Z`
-
-PR #3055 は作成済み(base = `bolt-plugin-settings-core` のスタック PR)。観測時点で check は 15 pass / 3 skipping・mergeState CLEAN だが、base が main でないため三面収束の最終判定は #3052 マージ後の retarget を経て行う。この N/A は PASS の代用ではなく観測事実である。
-
-## 現在の検証面
-
-- builder ローカル: typecheck / lint / complexity / source-only すべて exit 0、落ちる実証 3 経路 + 正当系 + 設定実消費成立、フルスイート PASS(1 回)
-- referee: `amadeus-swarm.ts check git-drift-plugin` → converged / tampered=false
-- リモート CI(blocking の正): head `07c368b19` で 15 pass / 3 skipping・mergeState CLEAN。**Plugin conformance E2E = pass**(job 94770584366)、Tests = pass(job 94770584411)— FR-DRIFT-1 の名指し経路を CI で実測
-
-PR Convergence は pr-convergence ステージで実行する(#3052 マージ → retarget → 最終収束)。マージはユーザーの事前承認(CI green 条件付き)に基づきスカッシュマージする。
+- attestation id: prca:fe48294e82a59ac76e909a2acdac9a4a262322f3582959f672759afd08c705a7
+- intent: plugins-rename-drift
+- intent uuid: 019fff1a-bae8-77b2-99a4-5f9e19d75d17
+- record: amadeus/spaces/default/intents/260814-plugins-rename-drift/
+- bolt: b3-git-drift
+- unit: git-drift-plugin
+- repository: amadeus-dlc/amadeus
+- pr: 3055
+- local head: 33ebe38509713ffeaa1e18481d378009806e4853
+- remote head: 33ebe38509713ffeaa1e18481d378009806e4853
+- pr head: 33ebe38509713ffeaa1e18481d378009806e4853
+- content digest: sha256:4467ce8ea434bf2fa52f14cb8c837d0408dfbad9a8b3b6945cfb617ed02aa57f
