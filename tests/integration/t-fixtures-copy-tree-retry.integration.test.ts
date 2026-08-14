@@ -38,6 +38,10 @@ function opsRecorder(overrides: Partial<CopyTreeOps>): CopyTreeOps & { calls: st
       calls.push(`count:${path}`);
       return overrides.count ? overrides.count(path) : 0;
     },
+    remove(path: string) {
+      calls.push(`remove:${path}`);
+      overrides.remove?.(path);
+    },
   };
 }
 
@@ -46,6 +50,9 @@ describe("copyTreeWithRetry (#2397 in-process branches)", () => {
     const ops = opsRecorder({ count: () => 3 });
     copyTreeWithRetry("/fake/src", "/fake/dest", ops);
     expect(ops.calls).toEqual([
+      // dest is cleared before the copy on every attempt (the dest-fresh
+      // contract), so even the first-attempt success starts from an empty dest.
+      "remove:/fake/dest",
       "copy:/fake/src->/fake/dest",
       "count:/fake/src",
       "count:/fake/dest",
@@ -126,6 +133,37 @@ describe("copyTreeWithRetry (#2397 in-process branches)", () => {
     expect(sleeps).toEqual([50, 100]);
   });
 
+  test("a dest left larger than src by merge accumulation converges once the attempt clears dest first", () => {
+    let attempts = 0;
+    let destExtra = 0;
+    const sleeps: number[] = [];
+    const ops = opsRecorder({
+      copy: () => {
+        attempts++;
+        // Attempt 1 races an outside writer: the copy lands one extra entry
+        // under dest, leaving dest a strict superset of src (src 10 / dest
+        // 11). cpSync merges into an existing dest, so without a per-attempt
+        // dest clear the surplus survives every retry and the count
+        // post-condition can never be satisfied (#3003).
+        if (attempts === 1) destExtra = 1;
+      },
+      remove: () => {
+        destExtra = 0;
+      },
+      count: (path) => (path === "/fake/src" ? 10 : 10 + destExtra),
+      sleep: (ms) => sleeps.push(ms),
+    });
+    expect(() => copyTreeWithRetry("/fake/src", "/fake/dest", ops)).not.toThrow();
+    expect(attempts).toBe(2);
+    expect(sleeps).toEqual([50]);
+    // Every attempt removes dest before copying — including the first, which
+    // is what makes the helper's dest-fresh contract self-enforcing.
+    expect(ops.calls.filter((call) => call.startsWith("remove:"))).toEqual([
+      "remove:/fake/dest",
+      "remove:/fake/dest",
+    ]);
+  });
+
   test("a copy that recovers on a later attempt succeeds without throwing", () => {
     let attempts = 0;
     const ops = opsRecorder({
@@ -198,6 +236,88 @@ describe("copyTreeWithRetry (#2397 real filesystem)", () => {
     // Three attempts (COPY_TREE_RETRY_LIMIT): diagnostics fire before every
     // retry, never silently.
     expect(diagnostics.split("[copyTreeWithRetry diagnostics]").length - 1).toBe(3);
+  });
+
+  test("count-mismatch diagnostics name the relative paths present on only one side", () => {
+    // The count post-condition alone reports two integers, which is exactly
+    // the information that left #3003 undiagnosable. Against real src/dest
+    // trees the mismatch branch must also name WHICH entries differ, so the
+    // next occurrence identifies what vanished or accumulated.
+    const src = tmp("t-copy-tree-retry-diff-src-");
+    writeFileSync(join(src, "shared.txt"), "s\n");
+    writeFileSync(join(src, "only-in-src.txt"), "a\n");
+    const dest = tmp("t-copy-tree-retry-diff-dest-");
+    writeFileSync(join(dest, "shared.txt"), "s\n");
+    writeFileSync(join(dest, "only-in-dest.txt"), "b\n");
+
+    const ops = opsRecorder({
+      // The copy is a no-op: the trees on disk above ARE the state under
+      // inspection, and the injected counts force the mismatch branch.
+      copy: () => {},
+      count: (path) => (path === src ? 10 : 11),
+    });
+
+    const originalWrite = process.stderr.write.bind(process.stderr);
+    const captured: string[] = [];
+    process.stderr.write = ((chunk: unknown) => {
+      captured.push(String(chunk));
+      return true;
+    }) as typeof process.stderr.write;
+    try {
+      expect(() => copyTreeWithRetry(src, dest, ops)).toThrow(
+        "copyTreeWithRetry: cpSync returned but the file count does not match",
+      );
+    } finally {
+      process.stderr.write = originalWrite;
+    }
+
+    const diagnostics = captured.join("");
+    expect(diagnostics).toContain("only in src (1):");
+    expect(diagnostics).toContain("only-in-src.txt");
+    expect(diagnostics).toContain("only in dest (1):");
+    expect(diagnostics).toContain("only-in-dest.txt");
+    // shared.txt is on both sides, so it must not be reported as a difference.
+    expect(diagnostics).not.toContain("shared.txt");
+  });
+
+  test("a large difference is sampled, and a dest that is not a readable directory degrades to an empty side", () => {
+    const src = tmp("t-copy-tree-retry-many-src-");
+    for (let i = 0; i < 25; i++) {
+      writeFileSync(join(src, `file-${String(i).padStart(2, "0")}.txt`), "x\n");
+    }
+    // dest is a regular file, not a directory — the shape left behind when
+    // something outside the suite replaces the destination. readdir on it
+    // throws ENOTDIR, which the diagnostics must survive (they run on an
+    // already-failing path) by reporting dest as contributing no entries.
+    const destParent = tmp("t-copy-tree-retry-many-dest-");
+    const dest = join(destParent, "dest");
+    writeFileSync(dest, "not a directory\n");
+
+    const ops = opsRecorder({ copy: () => {}, count: (path) => (path === src ? 25 : 0) });
+
+    const originalWrite = process.stderr.write.bind(process.stderr);
+    const captured: string[] = [];
+    process.stderr.write = ((chunk: unknown) => {
+      captured.push(String(chunk));
+      return true;
+    }) as typeof process.stderr.write;
+    try {
+      expect(() => copyTreeWithRetry(src, dest, ops)).toThrow(
+        "copyTreeWithRetry: cpSync returned but the file count does not match",
+      );
+    } finally {
+      process.stderr.write = originalWrite;
+    }
+
+    const diagnostics = captured.join("");
+    // The full size is reported even though only the first 20 are listed —
+    // a truncated sample must never understate the divergence.
+    expect(diagnostics).toContain("entries only in src (25):");
+    expect(diagnostics).toContain("file-00.txt");
+    expect(diagnostics).toContain("file-19.txt");
+    expect(diagnostics).toContain("... (5 more)");
+    expect(diagnostics).not.toContain("file-24.txt");
+    expect(diagnostics).toContain("entries only in dest (0): (none)");
   });
 
   test("diagnostics for a real, existing src walk its entries via safeReaddir (the srcExists===true branch, not the vanished-src short circuit above)", () => {
