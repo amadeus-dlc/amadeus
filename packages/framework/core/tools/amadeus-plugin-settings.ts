@@ -68,26 +68,105 @@ export function parseSettingsDeclaration(
   return out;
 }
 
+// Judge a key NAME against the shared lexicon. Returns the violation text so
+// the declaration and override sides word the same rejection the same way.
+export function settingsKeyViolation(key: string): string | null {
+  if (!SETTINGS_KEY_RE.test(key)) {
+    return `key name "${key}" must match ${SETTINGS_KEY_RE.source}`;
+  }
+  if (SECRET_KEY_RE.test(key)) {
+    return `key "${key}" must not name a credential (${SECRET_KEY_RE.source})`;
+  }
+  return null;
+}
+
 function parseOneDeclaration(
   key: string,
   raw: unknown,
   errors: string[],
 ): SettingDeclaration | null {
+  const keyViolation = settingsKeyViolation(key);
+  if (keyViolation !== null) {
+    errors.push(`settings ${keyViolation}`);
+    return null;
+  }
   if (!isRecord(raw)) {
     errors.push(`settings["${key}"] must be an object declaration`);
     return null;
   }
   const type = raw.type;
   if (!SETTING_TYPES.includes(type as SettingType)) {
-    errors.push(
-      `settings["${key}"].type must be one of ${SETTING_TYPES.join(" | ")}`,
-    );
+    errors.push(`settings["${key}"].type must be one of ${SETTING_TYPES.join(" | ")}`);
+    return null;
+  }
+  if (typeof raw.description !== "string" || raw.description.trim() === "") {
+    errors.push(`settings["${key}"].description must be a non-empty string`);
+    return null;
+  }
+  const values = parseEnumValues(key, type as SettingType, raw.values, errors);
+  if (values === null) return null;
+  if (!defaultMatches(type as SettingType, raw.default, values)) {
+    errors.push(defaultViolation(key, type as SettingType, values));
     return null;
   }
   return {
     type: type as SettingType,
     default: raw.default as SettingScalar,
-    ...(Array.isArray(raw.values) ? { values: raw.values as readonly string[] } : {}),
-    description: raw.description as string,
+    ...(values === undefined ? {} : { values }),
+    description: raw.description,
   };
+}
+
+// `values` is required by exactly one type and meaningless for the rest, so a
+// stray list on a non-enum is a declaration error rather than dead data.
+function parseEnumValues(
+  key: string,
+  type: SettingType,
+  raw: unknown,
+  errors: string[],
+): readonly string[] | undefined | null {
+  if (type !== "enum") {
+    if (raw === undefined) return undefined;
+    errors.push(`settings["${key}"].values is only meaningful for type enum`);
+    return null;
+  }
+  if (
+    !Array.isArray(raw) ||
+    raw.length === 0 ||
+    raw.some((v) => typeof v !== "string" || v === "")
+  ) {
+    errors.push(`settings["${key}"].values must be a non-empty array of non-empty strings`);
+    return null;
+  }
+  return raw as readonly string[];
+}
+
+// The one place declaration defaults and config overrides are judged against a
+// declared type, so the two surfaces can never drift into disagreeing.
+export function valueMatchesType(
+  type: SettingType,
+  value: unknown,
+  values: readonly string[] | undefined,
+): value is SettingScalar {
+  if (type === "enum") return typeof value === "string" && (values ?? []).includes(value);
+  if (type === "number") return typeof value === "number" && Number.isFinite(value);
+  return typeof value === type;
+}
+
+function defaultMatches(
+  type: SettingType,
+  value: unknown,
+  values: readonly string[] | undefined,
+): boolean {
+  return valueMatchesType(type, value, values);
+}
+
+function defaultViolation(
+  key: string,
+  type: SettingType,
+  values: readonly string[] | undefined,
+): string {
+  return type === "enum"
+    ? `settings["${key}"].default must be one of ${(values ?? []).join(" | ")}`
+    : `settings["${key}"].default must be a ${type}`;
 }
