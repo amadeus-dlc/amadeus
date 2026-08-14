@@ -50,4 +50,66 @@ describe("t2997 plugin.settings declaration parse", () => {
       },
     });
   });
+
+  test("a non-object settings field is rejected whole", () => {
+    const parsed = parse({ settings: ["fetch-throttle-seconds"] });
+    expect(parsed.manifest).toBeNull();
+    expect(parsed.errors.some((e) => e.includes("must be an object mapping keys"))).toBe(true);
+  });
+
+  test.each([
+    ["Fetch", { type: "number", default: 1, description: "d" }, "key name"],
+    ["-lead", { type: "number", default: 1, description: "d" }, "key name"],
+    ["a".repeat(65), { type: "number", default: 1, description: "d" }, "key name"],
+  ])("an out-of-class key name (%s) is rejected", (key, declaration, needle) => {
+    const parsed = parse({ settings: { [key]: declaration } });
+    expect(parsed.manifest).toBeNull();
+    expect(parsed.errors.some((e) => e.includes(needle))).toBe(true);
+  });
+
+  test.each(["api-token", "password", "client-secret", "gh-credential", "apikey", "my-api-key"])(
+    "a secret-shaped key name (%s) is rejected",
+    (key) => {
+      const parsed = parse({
+        settings: { [key]: { type: "string", default: "", description: "d" } },
+      });
+      expect(parsed.manifest).toBeNull();
+      expect(parsed.errors.some((e) => e.includes("must not name a credential"))).toBe(true);
+    },
+  );
+
+  test("an unknown type is rejected against the closed vocabulary", () => {
+    const parsed = parse({ settings: { k: { type: "object", default: 1, description: "d" } } });
+    expect(parsed.manifest).toBeNull();
+    expect(parsed.errors.some((e) => e.includes("string | number | boolean | enum"))).toBe(true);
+  });
+
+  test("a default whose JS type contradicts the declared type is rejected", () => {
+    const parsed = parse({ settings: { k: { type: "number", default: "600", description: "d" } } });
+    expect(parsed.manifest).toBeNull();
+    expect(parsed.errors.some((e) => e.includes("default must be a number"))).toBe(true);
+  });
+
+  test("an enum without a non-empty string values array is rejected", () => {
+    const parsed = parse({ settings: { k: { type: "enum", default: "a", description: "d" } } });
+    expect(parsed.manifest).toBeNull();
+    expect(parsed.errors.some((e) => e.includes("values must be a non-empty array"))).toBe(true);
+  });
+
+  test("an enum default outside its declared values is rejected", () => {
+    const parsed = parse({
+      settings: { k: { type: "enum", values: ["a", "b"], default: "c", description: "d" } },
+    });
+    expect(parsed.manifest).toBeNull();
+    expect(parsed.errors.some((e) => e.includes("default must be one of"))).toBe(true);
+  });
+
+  test("a missing or blank description is rejected", () => {
+    expect(parse({ settings: { k: { type: "string", default: "" } } }).manifest).toBeNull();
+    const blank = parse({ settings: { k: { type: "string", default: "", description: " " } } });
+    expect(blank.manifest).toBeNull();
+    expect(blank.errors.some((e) => e.includes("description must be a non-empty string"))).toBe(
+      true,
+    );
+  });
 });
