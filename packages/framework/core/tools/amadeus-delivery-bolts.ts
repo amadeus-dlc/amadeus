@@ -52,6 +52,14 @@ export type DeliveryBoltPlanResult =
   | { readonly ok: true; readonly bolts: readonly DeliveryBolt[] }
   | { readonly ok: false; readonly message: string };
 
+type DeliveryBoltSectionResult =
+  | { readonly ok: true; readonly bolt: DeliveryBolt }
+  | { readonly ok: false; readonly message: string };
+
+type DeliveryBoltProjectionResult =
+  | { readonly ok: true; readonly projection: DeliveryBoltProjection }
+  | { readonly ok: false; readonly message: string };
+
 const SAFE_SEGMENT = /^[A-Za-z0-9._-]+$/;
 const ENGINE_SINGLETON_SCOPES = new Set(["self-document", "self-fix", "self-refactor"] as const);
 
@@ -145,9 +153,7 @@ export function projectEngineSingletonDeliveryBolt(
   };
 }
 
-function parseDeliveryBoltSection(section: string):
-  | { readonly ok: true; readonly bolt: DeliveryBolt }
-  | { readonly ok: false; readonly message: string } {
+function parseDeliveryBoltSection(section: string): DeliveryBoltSectionResult {
   const bolt = section.match(/^## Bolt\s+([^:\r\n]+)(?::[^\r\n]*)?$/m)?.[1]?.trim() ?? "";
   if (!SAFE_SEGMENT.test(bolt)) {
     return { ok: false, message: "every Delivery Bolt must have a non-empty slug" };
@@ -192,9 +198,7 @@ export function parseDeliveryBoltPlan(body: string): DeliveryBoltPlanResult {
   return { ok: true, bolts };
 }
 
-export function projectDeliveryBoltPlan(body: string):
-  | { readonly ok: true; readonly projection: DeliveryBoltProjection }
-  | { readonly ok: false; readonly message: string } {
+export function projectDeliveryBoltPlan(body: string): DeliveryBoltProjectionResult {
   const parsed = parseDeliveryBoltPlan(body);
   if (!parsed.ok) return parsed;
   const digest = createHash("sha256").update(body).digest("hex");
