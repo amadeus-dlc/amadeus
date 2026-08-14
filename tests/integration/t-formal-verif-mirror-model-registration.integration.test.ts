@@ -36,6 +36,7 @@ describe("MirrorLifecycle model registration", () => {
   test("registers MirrorLifecycle alongside the execution model", () => {
     const map = repositoryModelMap();
     expect(map.models.map((model) => model.name)).toEqual([
+      "BoltPrAttestationGate",
       "FormalElection",
       "MirrorLifecycle",
       "PrConvergenceGate",

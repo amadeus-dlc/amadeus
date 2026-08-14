@@ -62,6 +62,7 @@ import { initProcessObservability } from "./amadeus-observability.ts";
 import {
   DELIVERY_BOLT_PLAN_SOURCE,
   type DeliveryBoltProjection,
+  isEngineSingletonDeliveryBoltState,
   projectEngineSingletonDeliveryBolt,
   projectDeliveryBoltPlan,
 } from "./amadeus-delivery-bolts.ts";
@@ -165,6 +166,7 @@ export function computeDeliveryBoltProjectionOutcome(
       : { kind: "invalid", detail: projected.message };
   }
 
+  if (!isEngineSingletonDeliveryBoltState(stateContent)) return { kind: "absent" };
   return projectEngineSingletonDeliveryBolt(
     projectDir,
     stateContent,

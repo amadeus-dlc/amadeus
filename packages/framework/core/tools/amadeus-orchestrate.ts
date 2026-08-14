@@ -5594,8 +5594,8 @@ function perUnitCoverageRefusal(
   );
 }
 
-// The pr-convergence overlay turns code-generation completion into the final
-// Delivery Bolt evidence boundary. Swarm batches may advance independently,
+// This overlay turns code-generation completion into the final Delivery Bolt
+// evidence boundary. Swarm batches may advance independently,
 // but the stage itself cannot complete until every owner projection exists.
 type DeliveryEvidenceOwners =
   | { readonly ok: true; readonly units: readonly string[] }
@@ -5689,8 +5689,7 @@ export function deliveryEvidenceCoverageRefusal(
 ): string | null {
   if (
     node.slug !== "code-generation" ||
-    !isPerUnit(node) ||
-    !node.produces?.includes("pr-convergence-report")
+    !isPerUnit(node)
   ) {
     return null;
   }

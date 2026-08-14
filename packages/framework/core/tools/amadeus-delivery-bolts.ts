@@ -59,6 +59,18 @@ function digest(value: string): `sha256:${string}` {
   return `sha256:${createHash("sha256").update(value).digest("hex")}`;
 }
 
+/** Whether state can use the narrow no-planning singleton authority. */
+export function isEngineSingletonDeliveryBoltState(stateContent: string | null): boolean {
+  if (stateContent === null) return false;
+  const scope = getField(stateContent, "Scope");
+  if (scope === null || !ENGINE_SINGLETON_SCOPES.has(scope as never)) return false;
+  const suffixes = parseStateStageSuffixes(stateContent);
+  return (
+    suffixes.get("delivery-planning") === "SKIP" &&
+    suffixes.get("units-generation") === "SKIP"
+  );
+}
+
 /** The same directory ledger used by the engine's no-DAG per-Unit resolver. */
 export function degradeUnitDirectories(
   recordRoot: string,
@@ -84,16 +96,10 @@ export function projectEngineSingletonDeliveryBolt(
   intent?: string,
   space?: string,
 ): EngineSingletonProjectionResult {
-  if (stateContent === null) return { kind: "absent" };
-  const scope = getField(stateContent, "Scope");
-  if (scope === null || !ENGINE_SINGLETON_SCOPES.has(scope as never)) return { kind: "absent" };
-  const suffixes = parseStateStageSuffixes(stateContent);
-  if (
-    suffixes.get("delivery-planning") !== "SKIP" ||
-    suffixes.get("units-generation") !== "SKIP"
-  ) {
+  if (stateContent === null || !isEngineSingletonDeliveryBoltState(stateContent)) {
     return { kind: "absent" };
   }
+  const scope = getField(stateContent, "Scope") as EngineSingletonDeliveryBoltProjection["scope"];
 
   const dirName = activeIntent(projectDir, space, intent);
   if (dirName === null) return { kind: "absent" };

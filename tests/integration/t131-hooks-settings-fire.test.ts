@@ -272,6 +272,7 @@ function makeProject(withState: boolean): string {
   mkdirSync(join(proj, ".claude", "hooks"), { recursive: true });
   for (const t of [
     "amadeus-runtime.ts",
+    "amadeus-delivery-bolts.ts",
     "amadeus-lib.ts",
     "amadeus-harness.ts",
     // The resource bag names the framework version (otel/resource.ts).

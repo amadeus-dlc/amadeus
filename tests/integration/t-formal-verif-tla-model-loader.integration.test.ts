@@ -139,11 +139,14 @@ describe("TLA model loader real-filesystem boundary", () => {
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
     expect(loaded.value.models.map((model) => model.model.name)).toEqual([
+      "BoltPrAttestationGate",
       "FormalElection",
       "MirrorLifecycle",
       "PrConvergenceGate",
     ]);
-    expect(loaded.value.models[1]?.auxIdentities).toHaveLength(1);
+    expect(
+      loaded.value.models.find((model) => model.model.name === "MirrorLifecycle")?.auxIdentities,
+    ).toHaveLength(1);
   });
 
   test("loads every registered model with migration identities under 250ms", () => {
@@ -458,6 +461,7 @@ describe("TLA model loader real-filesystem boundary", () => {
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
     expect(loaded.value.models.map((model) => model.model.name)).toEqual([
+      "BoltPrAttestationGate",
       "MirrorLifecycle",
       "PrConvergenceGate",
     ]);
