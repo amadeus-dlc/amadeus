@@ -17,3 +17,18 @@ Traceability(step → FR): S2-S3 → FR-ERR-1 / S4-S5 → FR-BND-1, FR-BND-2 / S
 Test strategy: Comprehensive(self-fix 既定: 対象バグへのリグレッションテスト必須 + 既存スイート green 維持)。本 unit の「実行可能な振る舞い」は新設 drift ガード・文面検査そのものであり、TDD(Red 実測 → 最小実装 → Green)を S2→S3、S4→S5 の vertical slice で適用する。
 
 申し送り(RA レビュー FOLLOW-UP 反映): FR-BND-2 の受け入れはプロトコル文面検査のみで閉じず、S4 の機械検査(テスト)を必須とする。
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-14T08:44:57Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+plan/summary は FR-ERR-1・FR-BND-1・FR-BND-2 へ過不足なくトレースし、RA レビュー FOLLOW-UP(FR-BND-2 のテスト必須化)も plan/summary の両方に明記・実装されており、pr-convergence-report は本 unit と PR #3037 に束縛されている。
+
+### Findings
+
+- FOLLOW-UP | code-summary.md:20 の正本文引用は git grep hit 数(9件)を添えており実測転記の形式に沿うが、9件という数値の対象集合(検索範囲・除外条件)が明記されていないため、再現性確保のため次回は検索述語(対象ディレクトリ・除外パス)も併記すること
+- NIT | pr-convergence-report.md:13 の bolt フィールドが intent レベルの Bolt スラッグ(autonomy-stop-fixes)であり Bolt worktree のブランチ名(bolt-2974-error-arm-boundary)と異なる。契約上は正しい可能性が高いが、レビュー時に紛らわしいため plan/summary 側で Bolt スラッグと worktree ブランチ名の対応を一行明記すると読み手の負担が減る

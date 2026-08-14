@@ -645,7 +645,6 @@ const RETRYABLE_COPY_CODES = new Set(["ENOENT", "EAGAIN", "EMFILE", "ENOMEM"]);
 // fresh copy rather than a merge, so a retry can actually converge.
 export interface CopyTreeOps {
   copy(src: string, dest: string): void;
-  exists(path: string): boolean;
   sleep(ms: number): void;
   /** Recursive file count under `path` (directories excluded), or -1 if `path` does not exist. */
   count(path: string): number;
@@ -654,7 +653,6 @@ export interface CopyTreeOps {
 }
 const realCopyTreeOps: CopyTreeOps = {
   copy: (src, dest) => cpSync(src, dest, { recursive: true }),
-  exists: existsSync,
   sleep: sleepSync,
   count: countFilesRecursive,
   remove: (path) => rmSync(path, { recursive: true, force: true }),
@@ -863,6 +861,14 @@ export function setupIntegrationProject(
   // Copy the relocated method tree (amadeus/spaces/default/memory/) to the project
   // root beside .claude/ — the resolver reads the rule layers from there now
   // (P5 relocation). Absent in a tree built before P5, so guard it.
+  //
+  // This one stays a bare cpSync by attribution: unlike the tui fixture, this
+  // project already carries a seeded <proj>/amadeus (seedWorkspaceShell runs in
+  // createTestProject above), so copyTreeWithRetry's dest-fresh contract does
+  // not hold — its per-attempt `remove(dest)` would delete the seeded record,
+  // cursors and clone-id. cpSync's merge semantics are the intended behaviour
+  // here, so the guard is deliberately not applied (#3014 follow-up: the merge
+  // case needs its own verified helper before this site can be guarded).
   if (existsSync(AMADEUS_MEMORY_SRC)) {
     cpSync(AMADEUS_MEMORY_SRC, join(proj, "amadeus"), { recursive: true });
   }
