@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-260814-ASF-RE-S13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 3,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "c1(スキャン方式判断)は既存機構の適用に留まる: memory.md の理由(#3016クロスレビュー未了/#2974凍結SHA distance15+REFRAME_REQUIRED)は、project.md Inbox に既にある cid:reverse-engineering:c5-xrev-currency-schema-migration および同じ Inbox の cid:reverse-engineering:xrev-scan-mode-cid-hollowing が既にカバーする論点(xrev前提未成立時は通常スキャンへ倒す)の一事例であり、新規の一般化された手順を追加しない。対して c2(REFRAME_REQUIRED verdict の完了条件2/3を24-intent-autonomy.mdのgrant不変条件(new-permission/irreversible禁止, :79-84)と突き合わせてリフレーム後の枠をrequirements-analysis入力とする判断)は、project.md/team.md/org.mdいずれにも同種の手順(REFRAME_REQUIRED収束時に完了条件を上位不変条件と照合しリフレームする)を記録したcidが存在しないことをgrep実測(REFRAME_REQUIRED/reframeで0hit)で確認した。今後もREFRAME_REQUIRED verdictを持つIssueは生じうるため、c2のみを横断学習としてInboxへ追記する価値がある。",
+  "submittedAt": "2026-08-14T08:00:00Z",
+  "receivedAt": "2026-08-14T07:25:08Z"
+}

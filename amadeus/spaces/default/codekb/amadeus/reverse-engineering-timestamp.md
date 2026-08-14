@@ -1,6 +1,21 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260814-coverage-quick-norm）
+## 実行メタデータ（現在: 260814-autonomy-stop-fixes）
+
+- Date: `2026-08-14`
+- Base commit: `d7ffaa5442266508d8e67babc3e0b947fb4c1637`（`reverse-engineering-timestamp.md` + `re-scans/*.md` の全 40-hex トークン **159 件**のうち、**HEAD の祖先で距離最小**。`git merge-base --is-ancestor d7ffaa544 HEAD` = **exit 0**、`git rev-list --count d7ffaa544..HEAD` = **4**。`cid:reverse-engineering:rescan-base-ancestry`）
+- Observed commit: `cd64486a68c6a1144db50fbe3fde8273f5e18455`（= 本 worktree HEAD = `origin/main`、`git rev-parse HEAD`。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、depth `Minimal`、build `bun`
+- Focus: [Issue #3016](https://github.com/amadeus-dlc/amadeus/issues/3016)（`Construction Autonomy Mode: autonomous` 下で実ユーザーの明示 park も一律拒否）/ [Issue #2974](https://github.com/amadeus-dlc/amadeus/issues/2974)（full grant 下で `error` directive 受領時に message を逐語出力せず新規質問を発明して停止）
+- Scan mode: **通常の差分リフレッシュ**（xrev 不採用 — #3016 はクロスレビュー未了で xrev の前提が不成立、#2974 は収束 REFRAME_REQUIRED かつ凍結 SHA `52f1f1b2` が observed から距離 15。#2974 の verdict は背景としてのみ用い、全主張を observed 断面で取り直した。実際 verdict が引く `pr-convergence.md:78-79, 354-357` は observed では `:80` / `:363` `:381` へ移動しており行ピンが写らない）
+- Focus 領域の差分: `git diff --name-only d7ffaa544 HEAD` の非 `amadeus/` 出力は **4 件のみ**（`metrics/*.json` 2 / `tests/harness/fixtures.ts` / `tests/integration/t-fixtures-copy-tree-retry.integration.test.ts`）で、焦点 10 面（state / orchestrate / stop hook / bolt / autonomy-production / harness 全表層 / pr-convergence / 24-intent-autonomy / t17 / t122）は**いずれも含まれない**。全 file:line を observed 断面の実読で採取
+- 中核知見: **#3016** — 拒否は `amadeus-state.ts:1583-1587` の 1 点のみで、コメントが主張する「Stop hook の同一ガード」は**実在しない**（hooks に `Construction Autonomy Mode` 0 hit / exit 1。hook は `amadeus-stop.ts:947-949` で `parked` を全モード終端 allow）。判定入力は `stage-protocol.md:126` が「認可の正本ではない」と明文化した派生投影フィールド単独。Abort park（`orchestrate:4050-4052`）と REPAIR_STALLED park（`:5944-5969`）は `handlePark` を通らず autonomous 下でも成立しており、拒否は経路依存の非対称。`--resume` 再開機構は Branch 2.6（`:3261-3277`）に既存。fresh HUMAN_TURN 判定は `freshHumanRetryTurn`（`amadeus-intent-autonomy-production.ts:1163-1185`）が先例。**#2974** — 停止自体は契約準拠だが、「message を逐語出力して停止」の条項は **core に正本がなく 8 ハーネス表層に手書き散在**（完全形 5 / 短縮形 2 = cursor・opencode / 逐語出力指示なし 1 = pi）。破られた条項は `cid:scope-definition:c1-semi-ladder-routing`。未文書点は「approval boundary の定義」（全域述語 5 hit・**定義 0 件**）と「Intent grant との優先順位」の 2 点で確定。`stage-protocol.md:139-141` の無条件 halt は Bolt code-generation 失敗のみが対象で remote write は非該当。**両 Issue とも修正方式は複数候補があり、裁定は requirements-analysis へ申し送り**
+- Verification: git 状態変更・GitHub 書込・engine/state ツール実行・`bun run build` は**すべてゼロ**。書き込みは `codekb/amadeus/` 配下のみ
+- Updated artifacts: `architecture.md`（新現在節 A-1〜A-6）/ `reverse-engineering-timestamp.md`（本節）/ `re-scans/260814-autonomy-stop-fixes.md`（新規）。直前の現在節（`260814-coverage-quick-norm`）は本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）
+- Reviewed-and-unchanged artifacts: `business-overview.md` / `code-structure.md` / `api-documentation.md` / `component-inventory.md` / `technology-stack.md` / `dependencies.md` / `code-quality-assessment.md` の **7 点** — いずれも本 intent の節を持たない。後続ステージはこれらから**本 intent の事実を引かない**（`cid:requirements-analysis:c4-consume-header-is-not-citable-content`）
+- Per-intent record: `re-scans/260814-autonomy-stop-fixes.md`
+
+## 実行メタデータ（履歴: 260814-coverage-quick-norm）
 
 - Date: `2026-08-14`
 - Base commit: `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`（直前 timestamp の observed。`git merge-base --is-ancestor 5f6b5bf97 HEAD` = **exit 0**、`git rev-list --count 5f6b5bf97..HEAD` = **10**）

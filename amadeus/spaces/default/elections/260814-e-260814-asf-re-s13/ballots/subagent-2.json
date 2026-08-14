@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-260814-ASF-RE-S13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 7,
+  "reservation": null,
+  "rationale": "実測: (1) c1 は memory.md 自身が『cid:reverse-engineering:c5-xrev-currency-schema-migration の判定手順に整合』と明記しており、既存 cid の適用例であって新規汎化ではない。project.md:160 の xrev-scan-mode-cid-hollowing エントリが本則欠落を既に指摘し是正手段(次回蒸留ラウンドでの裁定)を用意済みであり、本 candidate を Inbox へ足しても穴は埋まらず、むしろ蒸留判断を先取りしうる。(2) c2 の REFRAME_REQUIRED は .claude/skills/j5ik2o-gh-issue-cross-review/references/protocol.md:321 で『枠組み・機構・スコープの material change が必要』と定義済みの収束区分であり、リフレーム後の枠を requirements-analysis の入力に使うのは定義どおりの機械的運用にすぎない。上位不変条件(grant invariant)と衝突する完了条件をそのまま実装せず停止・裁定を得る動きは team.md P3(承認済み意図からの逸脱は所有者へ戻す)の直接適用であり新規手順ではない。grep -rn REFRAME_REQUIRED amadeus/spaces/default/memory .claude で protocol.md 以外に定義重複なしを確認し、project.md/team.md いずれにも REFRAME_REQUIRED 固有の未収載手順が存在しないことを確認した。両候補とも一次記録(codekb/amadeus/re-scans/260814-autonomy-stop-fixes.md、intent record の reverse-engineering/memory.md)で十分であり、横断 norm 化の追加価値を認めない。",
+  "submittedAt": "2026-08-14T07:40:00Z",
+  "receivedAt": "2026-08-14T07:25:39Z"
+}
