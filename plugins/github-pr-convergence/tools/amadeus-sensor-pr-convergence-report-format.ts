@@ -297,8 +297,34 @@ function checkAttestation(outputPath: string, body: string, findings: ReportForm
   checkAttestationEnvironment(recordRoot, body, receipt, findings);
 }
 
+/** The section body between a real `## <heading>` line (outside code fences)
+ *  and the next heading, or null when the heading never appears as a heading. */
+function markdownSectionContent(body: string, heading: string): string | null {
+  const lines = body.split("\n");
+  let inFence = false;
+  let start = -1;
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index] ?? "";
+    if (/^\s*```/.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+    if (start < 0) {
+      if (line.trimEnd() === heading) start = index + 1;
+      continue;
+    }
+    if (/^#{1,6} /.test(line)) return lines.slice(start, index).join("\n");
+  }
+  return start < 0 ? null : lines.slice(start).join("\n");
+}
+
 function isLocalCodeGenerationEvidence(body: string): boolean {
-  return body.includes("## 判定") && body.includes("## 実行証拠") && field(body, "kind") === null;
+  if (field(body, "kind") !== null) return false;
+  const verdictSection = markdownSectionContent(body, "## 判定");
+  const evidenceSection = markdownSectionContent(body, "## 実行証拠");
+  return verdictSection !== null && verdictSection.trim().length > 0
+    && evidenceSection !== null && evidenceSection.trim().length > 0;
 }
 
 /** Pure evaluation core (in-process test seam). Reads the file itself so the

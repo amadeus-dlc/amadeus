@@ -210,6 +210,35 @@ describe("t450 predicate accepts both canonical shapes (ADR-3)", () => {
   // isLocalCodeGenerationEvidence requires BOTH headings — a report carrying
   // only one of the two is not local evidence and falls through to the
   // CLI-shape parse, which fails closed on the missing `- kind:` field.
+  test("code-generation fail-closes headings that only appear inside a code fence", () => {
+    const body = [
+      "# 収束レポート — forged",
+      "",
+      "```",
+      "## 判定",
+      "## 実行証拠",
+      "```",
+      "",
+    ].join("\n");
+    const result = evaluateReportFormat(reportAt(body), "code-generation");
+    expect(result.pass).toBe(false);
+    expect(result.findings.map((finding) => finding.field)).toContain("kind");
+  });
+
+  test("code-generation fail-closes local-evidence headings with empty sections", () => {
+    const body = [
+      "# 収束レポート — hollow",
+      "",
+      "## 判定",
+      "",
+      "## 実行証拠",
+      "",
+    ].join("\n");
+    const result = evaluateReportFormat(reportAt(body), "code-generation");
+    expect(result.pass).toBe(false);
+    expect(result.findings.map((finding) => finding.field)).toContain("kind");
+  });
+
   test("code-generation fail-closes a report with only 判定 and no 実行証拠", () => {
     const body = [
       "# 収束レポート — example",

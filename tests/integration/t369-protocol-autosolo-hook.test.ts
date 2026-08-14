@@ -164,7 +164,7 @@ describe("t369 #2976 failure-election fallback is complete on every conductor su
       expect(content).toContain(DISABLED_ENVELOPE);
       expect(content).toContain("hold / split / interrupt / CLI error");
       expect(content).toMatch(/Retry\s*\/\s*Skip\s*\/\s*Abort/);
-      expect(content).toContain("report --user-input");
+      expect(content).toContain("`report --user-input` with the ruling (`retry` / `skip` / `abort`)");
     }
   });
 });

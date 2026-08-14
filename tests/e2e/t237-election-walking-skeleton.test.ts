@@ -221,7 +221,7 @@ describe("t237 election walking skeleton (e2e)", () => {
       const actingContract = readFileSync(CODEX_SKILL, "utf8");
       expect(actingContract).toContain("hold / split / interrupt / CLI error");
       expect(actingContract).toContain("Retry / Skip / Abort");
-      expect(actingContract).toContain("report --user-input");
+      expect(actingContract).toContain("`report --user-input` with the ruling (`retry` / `skip` / `abort`)");
     } finally {
       rmSync(projectDir, { recursive: true, force: true });
     }
