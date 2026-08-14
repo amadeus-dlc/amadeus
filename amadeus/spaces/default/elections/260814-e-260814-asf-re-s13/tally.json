@@ -1,0 +1,47 @@
+{
+  "result": {
+    "kind": "hold",
+    "reason": "split",
+    "counts": {
+      "favor": 1,
+      "against": 1,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-14T07:26:04Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-260814-ASF-RE-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 3,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "c1(スキャン方式判断)は既存機構の適用に留まる: memory.md の理由(#3016クロスレビュー未了/#2974凍結SHA distance15+REFRAME_REQUIRED)は、project.md Inbox に既にある cid:reverse-engineering:c5-xrev-currency-schema-migration および同じ Inbox の cid:reverse-engineering:xrev-scan-mode-cid-hollowing が既にカバーする論点(xrev前提未成立時は通常スキャンへ倒す)の一事例であり、新規の一般化された手順を追加しない。対して c2(REFRAME_REQUIRED verdict の完了条件2/3を24-intent-autonomy.mdのgrant不変条件(new-permission/irreversible禁止, :79-84)と突き合わせてリフレーム後の枠をrequirements-analysis入力とする判断)は、project.md/team.md/org.mdいずれにも同種の手順(REFRAME_REQUIRED収束時に完了条件を上位不変条件と照合しリフレームする)を記録したcidが存在しないことをgrep実測(REFRAME_REQUIRED/reframeで0hit)で確認した。今後もREFRAME_REQUIRED verdictを持つIssueは生じうるため、c2のみを横断学習としてInboxへ追記する価値がある。",
+      "submittedAt": "2026-08-14T08:00:00Z",
+      "receivedAt": "2026-08-14T07:25:08Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-260814-ASF-RE-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 7,
+      "reservation": null,
+      "rationale": "実測: (1) c1 は memory.md 自身が『cid:reverse-engineering:c5-xrev-currency-schema-migration の判定手順に整合』と明記しており、既存 cid の適用例であって新規汎化ではない。project.md:160 の xrev-scan-mode-cid-hollowing エントリが本則欠落を既に指摘し是正手段(次回蒸留ラウンドでの裁定)を用意済みであり、本 candidate を Inbox へ足しても穴は埋まらず、むしろ蒸留判断を先取りしうる。(2) c2 の REFRAME_REQUIRED は .claude/skills/j5ik2o-gh-issue-cross-review/references/protocol.md:321 で『枠組み・機構・スコープの material change が必要』と定義済みの収束区分であり、リフレーム後の枠を requirements-analysis の入力に使うのは定義どおりの機械的運用にすぎない。上位不変条件(grant invariant)と衝突する完了条件をそのまま実装せず停止・裁定を得る動きは team.md P3(承認済み意図からの逸脱は所有者へ戻す)の直接適用であり新規手順ではない。grep -rn REFRAME_REQUIRED amadeus/spaces/default/memory .claude で protocol.md 以外に定義重複なしを確認し、project.md/team.md いずれにも REFRAME_REQUIRED 固有の未収載手順が存在しないことを確認した。両候補とも一次記録(codekb/amadeus/re-scans/260814-autonomy-stop-fixes.md、intent record の reverse-engineering/memory.md)で十分であり、横断 norm 化の追加価値を認めない。",
+      "submittedAt": "2026-08-14T07:40:00Z",
+      "receivedAt": "2026-08-14T07:25:39Z"
+    }
+  ],
+  "resolutions": [
+    {
+      "reason": "split",
+      "resolution": "choice:1",
+      "resumedTo": "tallied",
+      "at": "2026-08-14T07:27:04Z"
+    }
+  ]
+}

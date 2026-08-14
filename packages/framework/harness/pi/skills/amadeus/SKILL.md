@@ -138,7 +138,9 @@ state-transition tools directly.
 - `select-intent`: render the supplied options and stop. Pass the opaque
   selection token and the exact answer as separately quoted argv values to the
   command named by the directive.
-- `error`: print the engine message verbatim and stop.
+- `error`: Print `directive.message` verbatim and STOP. Do not recover, retry,
+  or smooth it over, and do not invent a new question or a new gate — the
+  message is the user-facing error.
 - `parked`: state that the workflow is parked and can resume with
   `/skill:amadeus --resume`.
 - `await-completion`: the workflow's terminal completion transaction has not

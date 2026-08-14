@@ -1038,6 +1038,42 @@ BR-U2-05 is unchanged throughout: opening a handoff stage is an entry point into
 the work the advisory is holding for, never a release. The hold lifts only when
 the declaring plugin's own evaluator returns no-hold.
 
+## 11b. Error Directive Receipt
+
+An `error` directive is the engine reporting a condition it has already ruled
+on. The receipt clause is fixed here once, and every harness conductor surface
+carries this sentence verbatim:
+
+Print `directive.message` verbatim and STOP. Do not recover, retry, or smooth it over, and do not invent a new question or a new gate — the message is the user-facing error.
+
+The last clause is the one most easily lost. The engine has already decided; the
+receipt is to relay that decision, not to re-open it. Substituting a question of
+the conductor's own devising — even a well-meant "how would you like to
+proceed?" — replaces the engine's ruling with an invented gate, and the user
+never sees the error that was actually raised. There is no autonomy mode in
+which this is allowed: an Intent grant authorizes decisions the engine routes to
+it, never decisions the conductor invents.
+
+## 11c. Approval boundary for remote writes
+
+A remote write changes a surface other people share: a push, opening a PR,
+replying to or resolving a review thread, and filing an Issue. Stages defer
+these to "the workspace's approval boundary"; the boundary is defined in
+`docs/reference/24-intent-autonomy.md`, and this is how a stage reaches it.
+
+Under `none`, ask the human. Under `semi` and `full`, do **not** put the remote
+write to the human directly, and do not take it on the strength of the grant
+either: put the occurrence through `amadeus-bolt decide-question` exactly as
+for any other stage question, take `decided.effect.optionId` as the answer, and
+send it to a person only when the result is `human-required`. The ruling and its
+basis are recorded in the audit as `AUTO_DECIDED`.
+
+Routing through the ladder never widens a grant. A remote write the occurrence
+classifies as one of the five effects a grant can never authorize returns
+`human-required` rather than being decided. A merge is not on this route at all:
+the merge question goes to a human on that specific PR, every time, and no
+verdict, grant, or ruling authorizes it.
+
 ## 12. Phase Boundary Verification
 
 > See `stage-protocol-governance.md` §13 — load at phase transitions to run traceability verification. Capturing corrections as durable rules is the §13 Learnings Ritual below, not a separate guardrail flow.

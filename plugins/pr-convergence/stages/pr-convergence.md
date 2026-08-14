@@ -376,10 +376,13 @@ These rules are part of this stage, not a pointer to something outside it.
 - **No flat comments.** A reply belongs on the thread it answers, so the thread
   can terminalise. A top-level comment that responds to an inline finding leaves
   that finding open, and the verdict will keep counting it — correctly.
-- **Ask before writing to the remote.** Pushing, replying, resolving, and
-  filing Issues are all writes to a shared surface. Follow this workspace's
-  approval boundary for them, and never merge: merging is a separate human
-  decision and no convergence verdict authorises it.
+- **Route every remote write through the boundary.** Pushing, replying,
+  resolving, and filing Issues are all writes to a shared surface. Under `none`
+  ask the human; under `semi` and `full` put the occurrence through
+  `decide-question` rather than asking directly or acting on the grant, and
+  escalate only a `human-required` result. The boundary is defined in
+  `docs/reference/24-intent-autonomy.md`. And never merge: merging is a separate
+  human decision and no convergence verdict authorises it.
 - **No hook bypass.** Do not bypass hooks (`--no-verify`) to force progress.
 - **Flakes are evidence, not noise.** Re-run a suspected flake and record both
   outcomes. If it passes on re-run, say so explicitly rather than quietly
