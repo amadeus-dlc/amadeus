@@ -1173,5 +1173,12 @@
     "dirName": "260814-t99-copytree-race",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019fff14-98a2-725c-9b20-99add2639251",
+    "slug": "copytree-guard-boundary",
+    "dirName": "260814-copytree-guard-boundary",
+    "scope": "self-fix",
+    "status": "in-flight"
   }
 ]

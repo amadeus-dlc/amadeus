@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-260814-CGB-RE-S13",
+  "voter": "subagent-2",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "一次資料を独立に確認した。amadeus/spaces/default/intents/260814-copytree-guard-boundary/inception/reverse-engineering/memory.md の Interpretations 節は、c1(xrev differential scan mode 採用 — xrev-260814-3014 が本 HEAD と同一 SHA f60b3f4c8 で凍結・2名成立・diff ゼロ)と c2(base=5b12d96e9、HEAD 祖先で距離最小=3)をそのまま裏づけており、いずれも cid:reverse-engineering:c1(距離最小 base 選定)・xrev 差分スキャンモードという既決手順の機械的適用であって、他 intent へ汎化できる新規原則の発見ではない。amadeus/spaces/default/codekb/amadeus/re-scans/260814-copytree-guard-boundary.md §5.1.1(Developer scan からの訂正)を独立に読んだ — Architect が『6 サイト中 1 サイト(fixtures.ts:867)は dest-fresh を満たさない』ことを、setupIntegrationProject → createTestProject → seedWorkspaceShell の呼出構造(:129-141, :219-244, :221)から実測訂正した事実は、`<proj>/amadeus/` が呼出時点で既に seed 済みであるという本 intent 固有の実装事実に強く紐づいており、一般則(例: 『copyTreeWithRetry 系ガードは常に dest-fresh を要求する』)としては定式化できない — 現に同節はこれを『素 cpSync が merge 意味論に依存した意図的な選択』であり設計裁定を要する intent 固有の未決事項として記録している。この訂正事実は per-intent record(re-scan §5.1.1、code-quality-assessment)に既に残存しており、Learnings Inbox へ具象のまま追記するほどの横断的新規性は認められない。よって候補2件(c1・c2)いずれも既決則の適用であり、採用0件の提案(displayNo 2 / internalNo 1)を支持する。",
+  "submittedAt": "2026-08-14T07:20:00Z",
+  "receivedAt": "2026-08-14T07:22:54Z"
+}
