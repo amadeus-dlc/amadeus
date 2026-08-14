@@ -1,6 +1,20 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260814-fmc-macos-provider）
+## 実行メタデータ（現在: 260814-t99-copytree-race）
+
+- Date: `2026-08-14`
+- Base commit: `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`（`reverse-engineering-timestamp.md` + `re-scans/*.md` の全 observed のうち **HEAD の祖先で距離最小**。`git merge-base --is-ancestor 5f6b5bf97 HEAD` = **exit 0**、`git rev-list --count 5f6b5bf97..HEAD` = **9 commits**。`cid:reverse-engineering:rescan-base-ancestry`）
+- Observed commit: `5b12d96e99cbf46711acd3dc2b8c103be1b0f801`（= 本 worktree HEAD = `origin/main`、`git rev-parse HEAD`。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、depth `Minimal`、build `bun`
+- Focus: [Issue #3003](https://github.com/amadeus-dlc/amadeus/issues/3003) — `tests/harness/fixtures.ts` の `copyTreeWithRetry` が dest 汚染時に 3/3 必ず count mismatch で失敗し、リトライ構造が構造的に無効化される（t99 経路）
+- Scan mode: **xrev differential scan**（`cid:reverse-engineering:c1-xrev-scan-mode` / `c1-xrev-single-issue`）— run `xrev-260814-3003`、クロスレビュー 2 名とも **CONFIRMED_WITH_REFINEMENTS**、収束 `ESTABLISHED_WITH_REFINEMENTS`。**currency 根拠(実測)**: 患部 2 面（`tests/harness/fixtures.ts` / `tests/integration/t99-learnings-gate-flow.test.ts`）は `git diff --name-only 5f6b5bf97..HEAD` の出力 151 件に**含まれない**（`| grep -E "fixtures.ts|t99-learnings"` が rc=1 の空出力）ため、xrev 断面と observed 断面は患部について同一。表現形式の移行検査（`cid:reverse-engineering:c5-xrev-currency-schema-migration`）: 区間の `tests/` 変更 7 件は formal-verif 系・t245・t528・allowlist のみで、`CopyTreeOps` の型・診断書式・免除セレクタ様式を変える移行を含まない → c5 の構造的不成立条件に該当しない
+- Focus 領域の差分: `git diff --name-only 5f6b5bf97..HEAD -- tests/harness/fixtures.ts tests/integration/t-fixtures-copy-tree-retry.integration.test.ts tests/integration/t99-learnings-gate-flow.test.ts` が**空出力**。患部は base..observed で無変更であり、全主張を observed 断面の実読で採取した
+- 中核知見: 症状（稀な count mismatch）とは別に、**リトライ機構が失敗様式に対して構造的に無力**である点が本質。`copyTreeWithRetry`（`:633-661`）は attempt 間で dest を変えないため、dest が src の真の上位集合になると 3 回とも同一の不一致を再生産する。姉妹関数 `removeTreeWithRetry`（`:574-590`）は `rm` が冪等収束するためリトライが機能するが、`copy` は dest に対し累積的（非冪等）であり、その差を吸収していない。`CopyTreeOps`（`:617-623`）に remove 面が無く、`exists` は本体未消費（`ops.exists` は `:580` の `RemoveTreeOps` 1 hit のみ）。count mismatch は `isRetryableCopyError`（`:663-666`）を経由せず常に retryable 扱い。診断（`:677-701`）は src 側のみで dest 件数を出さないため、機序が観測面に現れない。**ガード面の非対称**: `copyTreeWithRetry` 呼出は本番 6 件に対し、同じ dist 系ツリーを素 `cpSync` で読む未ガード面が `tests/` 配下に 19 件 / 15 ファイル(狭い述語 P-A。広い述語では更に増える)。`fixtures.ts:784`（`AMADEUS_MEMORY_SRC`）は `:769` のガード呼出と同一関数内の直後にありながら未ガード。**修正方式は 4 候補（A dest クリア / B src スナップショット / C 診断強化 / D post-condition を包含へ）あり、D と A は `:614-616` / `:716-718` が明言する設計意図の書き換えを伴うため、裁定は requirements-analysis へ申し送り**
+- Verification: git 状態変更・GitHub 書込・`bun run build`・engine/state 操作は**すべてゼロ**。書き込みは `codekb/amadeus/` 配下のみ
+- Updated artifacts: `code-quality-assessment.md`（新現在節 — Q-A〜Q-F）/ `reverse-engineering-timestamp.md`（本節）/ `re-scans/260814-t99-copytree-race.md`（新規）。直前の現在節（`260814-fmc-macos-provider`）は本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）
+- 差分リージョンの非交差判定: `base..observed` の主要変更（formal-verif 系 = `plugins/formal-model-check` / `tests/*formal-verif*` / `mise.toml`）は、本 intent の焦点（テストハーネスの tree コピー機構）と**呼出・型・データのいずれでも交差しない**（`git grep -n "copyTreeWithRetry\|CopyTreeOps" -- plugins/ mise.toml` = 0 hit）。既存 codekb の formal-verif 記述は `260814-fmc-macos-provider` の節が正本であり、本スキャンでは触れない
+
+## 実行メタデータ（履歴: 260814-fmc-macos-provider）
 
 - Date: `2026-08-14`
 - Base commit: `89532174c30ef9cc7ff29496cd6916586fdda00a`（`reverse-engineering-timestamp.md` + `re-scans/*.md` の全 observed のうち **HEAD の祖先で距離最小**。`git merge-base --is-ancestor 89532174c HEAD` = **exit 0**、`git rev-list --count 89532174c..HEAD` = **9 commits**。`cid:reverse-engineering:rescan-base-ancestry`）
