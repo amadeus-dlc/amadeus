@@ -14,12 +14,15 @@ Issue #2361 の修正。Bolt branch `fix/2361-fmc-provider-fallback`(base origin
 ## 主要判断
 
 - 挿入点 (b') 合成 planner(plan §設計決定、AUTO_DECIDED auto-decision-0230a868e7cb52b2315e78a40c423701)
+- owned set の記載漏れ訂正(レビュー iteration 1 BLOCKER): `run-model-check-execution.ts` への変更は委任プロンプトで当初から明示許可済み(plan 側の列挙が落としていた誤記。plan に訂正注記を追記済み)。無関係ファイルへの変更ではない
+- catch-all 経路への配線根拠(レビュー iteration 1 FOLLOW-UP): FR-4 の受入は「選択(selectTlcSpawnPlanner)と receipt 判定(createNotRunPlannerReceipt)の auto 判定を乖離させない」ことであり、catch-all(run-model-check-execution.ts の try 外 publish)は createNotRunPlannerReceipt の3呼び出し元の1つ。ここを配線しないと FR-4 が名指す乖離が catch-all 経路にだけ残るため、これは FR-4 の受入面そのものであってスコープ拡張ではない(選挙不要と判断した根拠)
 - 逸脱申告2点(builder 報告 §5): (1) D/E の重複正規表現を共有述語へ統合(意味論保存) (2) catch-all 経路にも実選択 planner を配線(FR-4 の同種乖離の閉包)。いずれも surgical で要件範囲内と conductor が判定
 - `jdkVersion: "OpenJDK 26.0.1"`(run-model-check.ts:87 / run-skeleton-ci.ts:133)は artifact キャッシュ受領書のパーティションラベルで FR-5 の6面外 — 未変更(片側変更は CacheIntegrityError を招く。変更するなら owned set 外の run-skeleton-ci.ts を含む別裁定)
 
 ## テスト / 検証(実測)
 
-- TDD Red/Green: 7 slice で Red 実測 → Green(builder 報告 §2)。Red が取れなかった 3 面(FR-2/FR-3/FR-7 の一部)は注入 → 赤実測 → 復元(残渣 0 を grep 確認)の落ちる実証で代替
+- TDD Red/Green: 7 slice で Red 実測 → Green(builder 報告 §2)。Red が先に取れなかった 3 面(FR-2/FR-3/FR-7 の一部)は plan の「Red 実測で担保」前提からの逸脱としてソロ選挙 E-260814-CG-TDD-SUBSTITUTE にかけ、**2-0 で「FR-2 のみ厳密再実施、FR-3/FR-7 は受理(FR-3 は挙動不変の保存要件で characterization が正当、FR-7 は既存挙動 assert の強化)」** の裁定が成立(2026-08-14、選挙 record: amadeus/spaces/default/elections/260814-e-260814-cg-tdd-substitu/record.md)
+- FR-2 の厳密再実施(裁定履行、2026-08-14): AutoTlcSpawnPlanner.snapshotEnvironment の両系統失敗合成を revert → `bun test tests/unit/t-formal-verif-tlc-spawn-planner.test.ts -t "both fail"` で **1 fail(Red)を実測**(detail に JAVA_HOME 理由が欠落)→ 合成を再実装 → 同ファイル全 9 テスト **9 pass 0 fail(Green)** → `git status -- plugins/` clean(net diff ゼロ、実装は commit 済み内容と同一に収束)
 - Bolt worktree: typecheck 0 / lint 0 / source-only 0 / distribution 0 / test:ci PASS(992 files, 13369 assertions, 0 fail)
 - 統合後 conductor ツリー(merge `4a0379e9a` 後): `bun run build` 0(追跡ファイル不変)/ typecheck 0 / lint 0 / `bash tests/run-tests.sh --ci` **RESULT: PASS(992 files / Failed 0 / 13370 assertions / Failed 0)**(log: セッション scratchpad fullsuite-3.log)
 - merge 前のフルスイートで観測した既存赤2件は帰属切り分け済み: t528 は ambient isolation 欠陥(Issue #2981、修正 #3000 が origin/main に着地済み — merge 取込で解消を実測)、t99 は dist コピーの transient(単独再実行で緑)

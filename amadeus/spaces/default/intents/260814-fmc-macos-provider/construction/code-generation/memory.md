@@ -6,6 +6,8 @@
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations
+- 2026-08-14T03:40:00Z — TDD 3面(FR-2/FR-3/FR-7 の一部)で先行 Red が取れず、builder が注入→赤→復元の代替を実施していた(builder は誠実に申告)。ソロ選挙 E-260814-CG-TDD-SUBSTITUTE(auto トリガ・設計逸脱)で 2-0「FR-2 のみ厳密再実施、FR-3/FR-7 受理」が成立し、FR-2 は revert→Red 実測→再実装→Green で履行した
+- 2026-08-14T03:40:00Z — reviewer iteration 2 の verdict が complete-review で無効化された(スコープ外読取を conductor が check-read 機構を通さずプロンプトで許可した誤り)。observe-quality(repair)を経て scope 厳守の再 invocation で READY を確定。教訓: reviewer への追加読取許可は check-read の integration 契約に適合する場合のみ、それ以外は attested context としてプロンプト供給する
 <!-- example: 2026-05-29T10:14:32Z — skipped the optional caching layer the stage prose suggested; the dataset is small enough that it adds risk -->
 
 ## Tradeoffs

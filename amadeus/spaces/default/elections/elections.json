@@ -1576,5 +1576,11 @@
     "dirName": "260813-e-260813-record-bundling",
     "createdAt": "2026-08-13T22:38:29Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-260814-CG-TDD-SUBSTITUTE",
+    "dirName": "260814-e-260814-cg-tdd-substitu",
+    "createdAt": "2026-08-14T02:48:33Z",
+    "status": "recorded"
   }
 ]

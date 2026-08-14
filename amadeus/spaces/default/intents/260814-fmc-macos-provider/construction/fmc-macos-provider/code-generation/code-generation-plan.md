@@ -35,8 +35,38 @@ full autonomy ladder による AUTO_DECIDED(`auto-decision-0230a868e7cb52b2315e7
 
 ## 触ってよいファイル(owned set)
 
-`plugins/formal-model-check/tools/{tlc-spawn-planner,tlc-toolchain,fs-tlc-toolchain,run-model-check}.ts`、`plugins/formal-model-check/README.md`、`mise.toml`(コメントのみ)、`tests/unit/t-formal-verif-*.test.ts`、`tests/unit/t401-directive-and-toolchain-rejections.test.ts`、`tests/integration/t-formal-verif-*.integration.test.ts`、`tests/formal-verif/support/*.ts`、`tests/.coverage-patch-allowlist.json`(該当エントリのみ)。それ以外への変更は禁止(要件 Constraints)。
+`plugins/formal-model-check/tools/{tlc-spawn-planner,tlc-toolchain,fs-tlc-toolchain,run-model-check}.ts`(訂正 2026-08-14、レビュー iteration 1 BLOCKER 対応: builder への委任プロンプトは当初から「必要なら run-model-check-execution.ts / run-model-check-domain.ts も可 — 挿入点設計上必要な場合のみ」と明示許可しており、本行の列挙がその2ファイルを落としていた記載漏れ。正しい owned set は `{tlc-spawn-planner,tlc-toolchain,fs-tlc-toolchain,run-model-check,run-model-check-execution,run-model-check-domain}.ts`。実変更は run-model-check-execution.ts のみで、FR-4 の receipt 配線(実選択 planner を createNotRunPlannerReceipt へ渡す)に必要だった)、`plugins/formal-model-check/README.md`、`mise.toml`(コメントのみ)、`tests/unit/t-formal-verif-*.test.ts`、`tests/unit/t401-directive-and-toolchain-rejections.test.ts`、`tests/integration/t-formal-verif-*.integration.test.ts`、`tests/formal-verif/support/*.ts`、`tests/.coverage-patch-allowlist.json`(該当エントリのみ)。それ以外への変更は禁止(要件 Constraints)。
 
 ## 検証コマンド(受入)
 
 `bun run typecheck` / `bun run lint` / `bash tests/run-tests.sh --ci`(フル)/ 落ちる実証は TDD の Red 実測で担保(注入→赤→revert の1セット規律は新設ゲートがないため通常 TDD Red で足りる)
+
+## Review — Iteration 1
+
+- **Verdict:** NOT-READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-14T02:47:11Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+FR トレーサビリティは概ね良好だが、TDD Red 未取得3面の無申告な代替検証と、承認済み owned set 外ファイルへの変更疑いの2点が未解決
+
+### Findings
+
+- BLOCKER | code-summary.md:22 は「Red が取れなかった3面(FR-2/FR-3/FR-7の一部)は注入→赤実測→復元の落ちる実証で代替」と申告するが、team.md Testing Posture は『実装後の落ちる実証は TDD 実施とみなさない』と明記し、requirements.md Constraints も『TDD 必須(team.md Testing Posture)』を課している。承認済み code-generation-plan.md:42 は『通常 TDD Red で足りる』と明言していたにもかかわらず3面でこれを満たせなかったのは計画からの逸脱だが、code-summary.md:17 の逸脱申告2点にはこの点が含まれておらず、P3(承認済み計画からの逸脱は無申告で実装せず裁定を得る)違反の疑いがある
+- BLOCKER | code-generation-plan.md:38 の owned set 宣言は `plugins/formal-model-check/tools/{tlc-spawn-planner,tlc-toolchain,fs-tlc-toolchain,run-model-check}.ts`(すなわち run-model-check.ts)だが、code-summary.md:10 は実変更ファイルとして `plugins/formal-model-check/tools/run-model-check-execution.ts` を報告しており、承認済み owned set に含まれないファイル名である。requirements.md Constraints の『無関係ファイルへの変更禁止』に照らし、これが計画記載の誤記(既存ファイルの正式名が run-model-check-execution.ts)か、実際に owned set 外ファイルへ触れた未申告逸脱かの切り分けが成果物内から判定できない。code-summary.md:17 の逸脱申告2点にもこの点は含まれていない
+- FOLLOW-UP | code-summary.md:17 の逸脱(2)『catch-all 経路にも実選択 planner を配線(FR-4 の同種乖離の閉包)』は、requirements.md FR-4 の受入基準がフォールバック経路の receipt 整合のみを明示しており、catch-all 経路への拡張は conductor の単独判断(『surgical で要件範囲内』)で処理されている。team.md P1(判断は独立検証された合意で行う)の趣旨に照らし、スコープ拡張の妥当性を裏付ける根拠(なぜ election 不要と判断したか)の明記が望ましい
+
+## Review — Iteration 2
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-14T03:15:39Z
+- **Iteration:** 2
+- **Scope decision:** none
+
+iteration 1 の2 BLOCKER(TDD代替の無申告、owned set 不整合)はいずれも成果物内で申告・訂正済みで内部整合が取れており、新規 BLOCKER なし
+
+### Findings
+
+- FOLLOW-UP | code-summary.md:24 は FR-3/FR-7 をソロ選挙で「落ちる実証なしで受理」としたが、requirements.md FR-7 の受入基準は明示的に「修正前実装で赤・修正後で緑」を求めている。手続き上は team.md の設計逸脱ソロ選挙(2-0)で正しく裁定されており BLOCKER ではないが、build-and-test ステージで FR-3/FR-7 が扱う経路(明示 provider 非フォールバック、auto 選択の planner 種別 assert)を独立に再検証することを推奨する
