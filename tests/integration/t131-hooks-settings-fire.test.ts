@@ -287,6 +287,9 @@ function makeProject(withState: boolean): string {
     // its layered config reader are part of their module graph.
     "amadeus-observability.ts",
     "amadeus-config.ts",
+    // The config reader parses plugin.settings through the shared settings
+    // lexicon (#2997), so that leaf is part of the same module graph.
+    "amadeus-plugin-settings.ts",
     "amadeus-contained-file.ts",
     "amadeus-mirror-policy.ts",
     "amadeus-mirror-project-contract.ts",

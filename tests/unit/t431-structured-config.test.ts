@@ -53,7 +53,7 @@ describe("t431 structured config", () => {
           github: { issue: { creation: { mode: "prompt" } } },
         },
         swarm: { unit: { concurrency: { limit: 4 } } },
-        plugin: { activation: { names: [] }, scopeBindings: {} },
+        plugin: { activation: { names: [] }, scopeBindings: {}, settings: {} },
         subagent: { dispatch: { enforcedModels: ["opus", "sonnet"] } },
       },
       sources: [],
@@ -146,7 +146,7 @@ describe("t431 structured config", () => {
       soloElection: { trigger: { mode: "auto" } },
       finding: { github: { issue: { creation: { mode: "off" } } } },
       swarm: { unit: { concurrency: { limit: 1 } } },
-      plugin: { activation: { names: ["alpha", "zeta"] }, scopeBindings: {} },
+      plugin: { activation: { names: ["alpha", "zeta"] }, scopeBindings: {}, settings: {} },
       subagent: { dispatch: { enforcedModels: ["opus", "sonnet"] } },
     });
     expect(outcome.sources).toEqual([

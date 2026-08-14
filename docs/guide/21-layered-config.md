@@ -49,6 +49,7 @@ Space override:
 | `swarm.unit.concurrency.limit` | integer `1..4` | `4` |
 | `plugin.activation.names` | plugin-name array; Project only | `[]` |
 | `plugin.scope-bindings` | plugin-to-stage-to-scope map; Project only | `{}` |
+| `plugin.settings` | plugin-to-setting-key scalar map; merged per key | `{}` |
 | `subagent.dispatch.enforced-models` | model-name array (aliases match full ids) | `["opus","sonnet"]` |
 
 Configuration is fail-closed. Unknown paths, legacy flat keys, `null`, malformed

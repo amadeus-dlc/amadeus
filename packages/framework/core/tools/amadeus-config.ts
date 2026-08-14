@@ -23,6 +23,11 @@ import {
 } from "./amadeus-contained-file.ts";
 import { activeIntent, activeSpace, workspaceRoot } from "./amadeus-lib.ts";
 import {
+  type PluginSettingsOverrides,
+  type SettingScalar,
+  settingsKeyViolation,
+} from "./amadeus-plugin-settings.ts";
+import {
   DEFAULT_PROJECT_PHASE_FIELD,
   mirrorProjectKey,
   normalizeMirrorProjectIdentity,
@@ -63,6 +68,7 @@ export type AmadeusConfigKey =
   | "swarm.unit.concurrency.limit"
   | "plugin.activation.names"
   | "plugin.scope-bindings"
+  | "plugin.settings"
   | "subagent.dispatch.enforced-models";
 
 export type SoloElectionTriggerMode = "manual" | "auto";
@@ -105,6 +111,7 @@ export type AmadeusConfig = Readonly<{
   plugin: Readonly<{
     activation: Readonly<{ names: readonly string[] }>;
     scopeBindings: PluginScopeBindings;
+    settings: PluginSettingsOverrides;
   }>;
   subagent: Readonly<{
     dispatch: Readonly<{ enforcedModels: readonly string[] }>;
@@ -432,7 +439,8 @@ type ConfigLeafValue =
   | number
   | readonly MirrorProjectTarget[]
   | readonly string[]
-  | PluginScopeBindings;
+  | PluginScopeBindings
+  | PluginSettingsOverrides;
 
 type LeafParseOutcome =
   | { ok: true; value: ConfigLeafValue }
@@ -442,7 +450,10 @@ export type AmadeusConfigRegistryEntry = Readonly<{
   path: AmadeusConfigKey;
   domain: string;
   layers: readonly ConfigLayer[];
-  merge: "replace";
+  // How a later layer combines with an earlier one. "replace" takes the
+  // highest layer whole; "plugin-settings" merges per plugin per key so a space
+  // or intent can retune one value without restating the project's map.
+  merge: "replace" | "plugin-settings";
   defaultValue: ConfigLeafValue;
   parse: (value: unknown) => LeafParseOutcome;
   // Absent for keys born structured: they never had a flat legacy spelling.
@@ -519,6 +530,34 @@ function parsePluginScopeBindings(value: unknown): LeafParseOutcome {
     bindings[plugin] = stageBindings;
   }
   return { ok: true, value: bindings };
+}
+
+// #2997: per-plugin runtime settings. Only the LEXICON is judged here — a
+// config read can precede compose, so no declaration is available to match a
+// value against. The type and closed-vocabulary check happens at sensor fire
+// time, where a mismatch aborts the sensor instead of defaulting silently.
+function parsePluginSettings(value: unknown): LeafParseOutcome {
+  const expected =
+    "object mapping plugin names to non-secret setting keys with string, number or boolean values";
+  if (!isPlainObject(value)) return { ok: false, actualType: valueKind(value), expected };
+  const settings: Record<string, Record<string, SettingScalar>> = {};
+  for (const [plugin, kvs] of Object.entries(value)) {
+    if (!PLUGIN_NAME_RE.test(plugin) || !isPlainObject(kvs)) {
+      return { ok: false, actualType: valueKind(kvs), expected };
+    }
+    const entries: Record<string, SettingScalar> = {};
+    for (const [key, scalar] of Object.entries(kvs)) {
+      if (settingsKeyViolation(key) !== null) {
+        return { ok: false, actualType: `key ${key}`, expected };
+      }
+      if (typeof scalar !== "string" && typeof scalar !== "number" && typeof scalar !== "boolean") {
+        return { ok: false, actualType: valueKind(scalar), expected };
+      }
+      entries[key] = scalar;
+    }
+    settings[plugin] = entries;
+  }
+  return { ok: true, value: settings };
 }
 
 // #2438: the models a subagent dispatch may run on. Malformed sets are
@@ -606,6 +645,14 @@ export const AMADEUS_CONFIG_REGISTRY: readonly AmadeusConfigRegistryEntry[] = [
     merge: "replace",
     defaultValue: {},
     parse: parsePluginScopeBindings,
+  },
+  {
+    path: "plugin.settings",
+    domain: "plugin",
+    layers: ALL_LAYERS,
+    merge: "plugin-settings",
+    defaultValue: {},
+    parse: parsePluginSettings,
   },
   {
     path: "subagent.dispatch.enforced-models",
@@ -754,6 +801,35 @@ function parseLayer(
   return { values, issues };
 }
 
+// Combine a lower layer's value with a higher one according to the registry's
+// declared merge mode. The mode is data, not prose: this is the only place it
+// is read, so a new entry's declaration decides its precedence behaviour.
+function mergeLeaf(
+  path: AmadeusConfigKey,
+  lower: ConfigLeafValue | undefined,
+  higher: ConfigLeafValue,
+): ConfigLeafValue {
+  const entry = AMADEUS_CONFIG_REGISTRY.find((candidate) => candidate.path === path);
+  if (entry === undefined) throw new Error(`Missing config registry entry: ${path}`);
+  if (entry.merge === "replace" || lower === undefined) return higher;
+  return mergePluginSettings(
+    lower as PluginSettingsOverrides,
+    higher as PluginSettingsOverrides,
+  );
+}
+
+function mergePluginSettings(
+  lower: PluginSettingsOverrides,
+  higher: PluginSettingsOverrides,
+): PluginSettingsOverrides {
+  const merged: Record<string, Record<string, SettingScalar>> = {};
+  for (const [plugin, kvs] of Object.entries(lower)) merged[plugin] = { ...kvs };
+  for (const [plugin, kvs] of Object.entries(higher)) {
+    merged[plugin] = { ...(merged[plugin] ?? {}), ...kvs };
+  }
+  return merged;
+}
+
 function resolvedConfig(values: ReadonlyMap<AmadeusConfigKey, ConfigLeafValue>): AmadeusConfig {
   function value(path: AmadeusConfigKey): ConfigLeafValue {
     const entry = AMADEUS_CONFIG_REGISTRY.find((candidate) => candidate.path === path);
@@ -795,6 +871,7 @@ function resolvedConfig(values: ReadonlyMap<AmadeusConfigKey, ConfigLeafValue>):
         names: value("plugin.activation.names") as readonly string[],
       },
       scopeBindings: value("plugin.scope-bindings") as PluginScopeBindings,
+      settings: value("plugin.settings") as PluginSettingsOverrides,
     },
     subagent: {
       dispatch: {
@@ -833,7 +910,9 @@ export function parseAmadeusConfigLayers(
     }));
     issues.push(...layerIssues);
     if (layerIssues.length === 0 && parsed.values.size > 0) {
-      for (const [path, value] of parsed.values) resolved.set(path, value);
+      for (const [path, value] of parsed.values) {
+        resolved.set(path, mergeLeaf(path, resolved.get(path), value));
+      }
       sources.push(layer.path);
     }
   }
