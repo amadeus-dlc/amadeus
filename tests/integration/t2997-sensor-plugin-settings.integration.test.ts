@@ -17,6 +17,7 @@ import {
   settingsFailureOutcome,
 } from "../../packages/framework/core/tools/amadeus-sensor.ts";
 import type { AmadeusConfigOutcome } from "../../packages/framework/core/tools/amadeus-config.ts";
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 
 const HOST = "/w/.claude";
 
@@ -239,7 +240,10 @@ describe("t2997 settings failure becomes a sensor finding", () => {
     detailPath: "/w/.amadeus-sensors/code-generation/git-drift-abcd1234.md",
     scriptArgs: [],
     scriptAbsPath: "/w/.claude/tools/amadeus-sensor-git-drift.ts",
-    timeoutMs: 60_000,
+    // The fixture never waits on this budget — settingsFailureOutcome short-
+    // circuits before any spawn — but it is a per-sensor timeout field, so it
+    // goes through scaleTestTime like every other test-side timeout.
+    timeoutMs: scaleTestTime(60_000),
     outputDigest: "sha256:0",
   } as unknown as Parameters<typeof settingsFailureOutcome>[0];
 
