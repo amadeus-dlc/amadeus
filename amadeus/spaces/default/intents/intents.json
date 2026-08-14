@@ -1203,6 +1203,20 @@
     "status": "complete"
   },
   {
+    "uuid": "019fff1a-becf-72aa-ae9f-6c87f8323fbc",
+    "slug": "unit-failure-autoelectio",
+    "dirName": "260814-unit-failure-autoelectio",
+    "scope": "self-fix",
+    "status": "in-flight"
+  },
+  {
+    "uuid": "019fff1a-ba9f-7173-abec-40c9e7a6d004",
+    "slug": "failopen-error-paths",
+    "dirName": "260814-failopen-error-paths",
+    "scope": "self-fix",
+    "status": "in-flight"
+  },
+  {
     "uuid": "019fffa6-bc7f-735f-8ed5-4e4cc4e3ce62",
     "slug": "park-provenance",
     "dirName": "260814-park-provenance",

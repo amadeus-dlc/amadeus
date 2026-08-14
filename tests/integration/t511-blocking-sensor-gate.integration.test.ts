@@ -58,6 +58,14 @@ const RECORD_ID8 = DEFAULT_RECORD_DIR.replace(/^fixture-/, "");
 // Record-dir date prefixes either side of BLOCKING_SENSOR_CUTOFF_YYMMDD (260809).
 const POST_CUTOFF = "260810-t511";
 const PRE_CUTOFF = "260701-t511";
+const SENSOR_FIXTURE_DIR = join(import.meta.dir, "..", "fixtures", "blocking-sensor");
+const SENSOR_SCRIPT_DIR = join(
+  import.meta.dir,
+  "..",
+  "fixtures",
+  "v05-mr9-sensor-fire",
+  "scripts",
+);
 
 class ExitSignal extends Error {
   constructor(public readonly code: number) {
@@ -206,7 +214,7 @@ function useGraphWithAdvisorySensor(stage: string = STAGE): void {
 
 /** Write SENSOR_* rows into an audit shard the record's readers glob. */
 function seedSensorAudit(
-  rows: { event: string; sensor?: string; stage?: string; ts: string }[],
+  rows: { event: string; sensor?: string; stage?: string; ts: string; note?: string }[],
   stage: string = STAGE,
 ): void {
   const dir = join(recordDir(), "audit");
@@ -233,10 +241,50 @@ function seedSensorAudit(
         "Stage slug": row.stage ?? stage,
         "Output path": outputPath,
         "Output digest": outputDigest,
+        ...(row.note === undefined ? {} : { Note: row.note }),
       },
     });
   });
   writeFileSync(join(dir, "t511-seeded.jsonl"), `${lines.join("\n")}\n`, "utf-8");
+}
+
+function fireBlockingSensor(scriptName: string, stage: string = STAGE): void {
+  useGraphWithBlockingSensor(stage);
+  const sensors = join(proj, `t511-sensors-${scriptName}`);
+  mkdirSync(sensors, { recursive: true });
+  const manifest = readFileSync(join(SENSOR_FIXTURE_DIR, "amadeus-blocking-probe.md"), "utf-8")
+    .replace(
+      "command: bun .claude/tools/amadeus-sensor-blocking-probe.ts",
+      `command: bun .claude/tools/${scriptName}`,
+    );
+  writeFileSync(join(sensors, "amadeus-blocking-probe.md"), manifest, "utf-8");
+  const output = join(recordDir(), `${stage}-output.md`);
+  writeFileSync(output, `# ${stage} output\n`, "utf-8");
+  const result = spawnSync(
+    process.execPath,
+    [
+      join(AMADEUS_SRC, "tools", "amadeus-sensor.ts"),
+      "fire",
+      SENSOR,
+      "--stage",
+      stage,
+      "--output-path",
+      output,
+    ],
+    {
+      cwd: proj,
+      encoding: "utf-8",
+      env: {
+        ...process.env,
+        CLAUDE_PROJECT_DIR: proj,
+        AMADEUS_SENSORS_DIR: sensors,
+        AMADEUS_SENSOR_SCRIPT_DIR: SENSOR_SCRIPT_DIR,
+      },
+    },
+  );
+  if (result.status !== 0) {
+    throw new Error(`${result.stdout ?? ""}${result.stderr ?? ""}`);
+  }
 }
 
 const FIRED = { event: "SENSOR_FIRED", ts: "2026-08-10T01:00:00Z" };
@@ -298,6 +346,31 @@ describe("t511 — approve refuses on an unresolved blocking sensor (#2671 c)", 
     expect(r.stderr).toContain("no SENSOR_FIRED row");
     expect(r.stderr).toContain("amadeus-sensor.ts fire");
     expect(readFileSync(stateFile(), "utf-8")).toBe(before);
+  });
+
+  test("refuses approve after the exit-2 stub emits a script-error PASSED (#2988)", () => {
+    fireBlockingSensor("amadeus-sensor-stub-exit2.ts");
+    const before = readFileSync(stateFile(), "utf-8");
+    const r = captureExit(() => handleApprove([STAGE]));
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain(SENSOR);
+    expect(r.stderr).toContain("script-error: exit-2");
+    expect(readFileSync(stateFile(), "utf-8")).toBe(before);
+  });
+
+  test("refuses approve after the bad-output stub emits a script-error PASSED (#2988)", () => {
+    fireBlockingSensor("amadeus-sensor-stub-bad.ts");
+    const r = captureExit(() => handleApprove([STAGE]));
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain(SENSOR);
+    expect(r.stderr).toContain("script-error: bad-output");
+  });
+
+  test("approves after the exit-127 stub emits tool-unavailable (#2988)", () => {
+    fireBlockingSensor("amadeus-sensor-stub-127.ts");
+    const r = captureExit(() => handleApprove([STAGE]));
+    expect(r.threw).toBe(false);
+    expect(readFileSync(stateFile(), "utf-8")).toContain(`- [x] ${STAGE}`);
   });
 
   test("approves once the sensor's latest terminal is SENSOR_PASSED", () => {
@@ -475,6 +548,20 @@ for (const path of COMPLETION_PATHS) {
     afterEach(() => {
       restoreEnv();
       cleanupTestProject(proj);
+    });
+
+    test("refuses when SENSOR_PASSED Note is script-error: exit-2 (#2988)", () => {
+      useGraphWithBlockingSensor(path.stage);
+      seedSensorAudit([
+        FIRED,
+        { event: "SENSOR_PASSED", ts: "2026-08-10T01:00:02Z", note: "script-error: exit-2" },
+      ], path.stage);
+      const before = readFileSync(stateFile(), "utf-8");
+      const r = captureExit(() => path.run(path.stage));
+      expect(r.threw).toBe(true);
+      expect(r.stderr).toContain(SENSOR);
+      expect(r.stderr).toContain("script-error: exit-2");
+      expect(readFileSync(stateFile(), "utf-8")).toBe(before);
     });
 
     test("refuses while the latest terminal is SENSOR_FAILED, leaving state untouched", () => {

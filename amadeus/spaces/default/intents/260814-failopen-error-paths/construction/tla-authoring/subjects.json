@@ -1,0 +1,16 @@
+{
+  "documents": [
+    {
+      "path": "amadeus/spaces/default/intents/260814-failopen-error-paths/inception/requirements-analysis/requirements.md",
+      "kind": "requirements"
+    },
+    {
+      "path": "amadeus/spaces/default/intents/260814-failopen-error-paths/inception/requirements-analysis/requirements.md",
+      "kind": "requirements"
+    }
+  ],
+  "subjects": [
+    "FR-1",
+    "FR-2"
+  ]
+}

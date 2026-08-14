@@ -4985,3 +4985,82 @@ round-trip（`write → read` で同値）はメタモルフィックで独立�
 ### 配置と投影の含意
 
 対象コーデック群（`amadeus-mirror-state-codec.ts` / `amadeus-election-model.ts` / `amadeus-election-store.ts` / `amadeus-journal.ts` / `amadeus-audit.ts` / `amadeus-state.ts`）はすべて `packages/framework/core/tools/` にあり、全ハーネス manifest の `coreDirs` が `{ src: "tools", dst: "tools" }`（`packages/framework/harness/claude/manifest.ts:53`、observed 実測。レビュー記載 `:52` から +1 シフト）で投影する。したがってコア側の一本化・fail-closed 化は自動的に (a) dist 7 ハーネス全ての再生成 (b) `dist:check` / `promote:self:check` (c) coverage patch ゲートの母集団入り（spawn 盲点があるため in-process seam 設計を実装時点で行う） (d) `t258-boundary-guard`（出荷 core/tools は `scripts/` 非参照）を引き込む。テスト側は dist へ投影されない（`find dist -type d -name tests` / `find dist -name "*.test.ts"` ともに 0 件）。
+
+## 260814-unit-failure-autoelectio (2026-08-14, observed `cd64486a6`) — failure-ruling seam と solo auto-election hook の責務境界断裂
+
+対象は GitHub Issue #2976。`solo-election.trigger.mode = auto` の設定下でも Unit 失敗が人間向け Retry/Skip/Abort の ask で停止する。本節は差分リフレッシュ（base `d7ffaa5442266508d8e67babc3e0b947fb4c1637` → observed `cd64486a68c6a1144db50fbe3fde8273f5e18455`）で取り直した患部の構造断面である。
+
+### 構造: 三層のうち engine 層だけが hook を知らない
+
+failure ruling は 3 つの層をまたぐ。
+
+| 層 | 実体 | solo auto-election hook の認識 |
+|---|---|---|
+| engine（directive 生成） | `packages/framework/core/tools/amadeus-orchestrate.ts` | **なし**（下記の不在実測） |
+| conductor（手続き規範） | `packages/framework/core/amadeus-common/protocols/stage-protocol.md:149-152` | あり（branch 1 / branch 2 を規定） |
+| election CLI（裁定機構） | `packages/framework/core/tools/amadeus-election.ts:443-463` `handleTriggeredOpen` | あり（config を読んで auto/manual を分岐） |
+
+`emitConstructionFailureIfPresent`（`amadeus-orchestrate.ts:4027` に定義）は `transition.kind === "await-unit-ruling"` に到達すると **config 値・autonomy mode に依らず無条件で** `askDirective` を emit する。HEAD 断面の該当分岐は `:4069-4075`、逐語:
+
+```ts
+  if (transition.kind === "await-unit-ruling") {
+    const siblingSummary = transition.siblings.map((entry) => `${entry.unit}:${entry.outcome}`).join(", ") || "none";
+    emit(askDirective(
+      `Unit "${transition.target.unit}" failed during ${stageSlug} (attempt ${transition.target.attempt}, batch ${transition.target.batch}; siblings: ${siblingSummary}). Choose exactly one: Retry, Skip, or Abort. The answer is committed through the ordinary ask report path.`,
+    ));
+    return true;
+  }
+```
+
+この分岐に至る前段は `constructionSuspended` の parked 分岐（`:4056-4062`）と runtime population スコープの絞り込み（`:4064-4068`、`failureOutsideRuntimePopulation` は `:4018-4025`）のみで、条件に config も autonomy mode も入らない。`askDirective` の定義は `:1042-1044`（`return { kind: "ask", question }`）。呼び出し元は `next` の両経路 2 箇所、`:3694`（in-flight ステージ再入）と `:3737`（次ステージへの前進）。
+
+いっぽう stage-protocol は同じ局面について、`:141` 逐語で「Halting is unconditional; who rules on the halt is decided by the solo auto-election hook below, **which names the one branch that does not present the prompt**.」と述べ、`:151` の branch 1（solo mode かつ階層 config が `auto`）で「the blocker goes to an election **INSTEAD OF** the prompt below」「the prompt below is not presented」と規定する。branch 2（team mode / config 不在 or manual / CLI が `{"opened":null,"reason":"solo-election-manual-trigger-required"}` を返した場合）でのみ prompt を提示する。
+
+**齟齬の核心**: protocol の branch 1 は conductor の手続きとしてのみ書かれており、engine 側に対応する抑止が存在しない。conductor が `next` を回した時点で ask directive が必ず降ってくるため、branch 1 は engine 断面で実現不能である。
+
+### 不在の実測（engine が solo-election を知らない）
+
+述語を分割して実行した結果（`git grep`、不一致は exit 1・エラーは exit 2）:
+
+| 述語 | コマンド | 結果 |
+|---|---|---|
+| A2 | `git grep -inE "(^\|[^s])election" -- packages/framework/core/tools/amadeus-orchestrate.ts` | 出力 0 行、**exit 1** |
+| B | `git grep -n "solo-election" -- packages/framework/core/tools/amadeus-orchestrate.ts` | 出力 0 行、**exit 1** |
+| C | `git grep -n "soloElection" -- packages/` | **exit 0**、5 ファイル 7 行 |
+
+C の全ヒットは `amadeus-config.ts:94`（型宣言）、`:772`（resolvedConfig 構築）、`amadeus-election.ts:459`（唯一の読取）、`amadeus-intent-autonomy-production.ts:834,910` と `amadeus-intent-autonomy.ts:802,956`（`soloElectionAvailable` — decide-question 梯子の capability フラグであり別機構）。語境界なしの `git grep -in "election"` は exit 0 で 11 行返すが、すべて `selection` / `IntentSelectionSnapshot` の部分一致で election ドメインの参照はゼロ。
+
+### 能力は既にある — 欠けているのは前例だけ
+
+engine は階層 config を読む能力と fail-closed の作法を既に持つ。
+
+- import: `amadeus-orchestrate.ts:241` `import { resolveAmadeusConfig } from "./amadeus-config.ts";`
+- 3 引数（intent + space を含む完全な階層解決）: `:632` `const resolved = resolveAmadeusConfig(projectDir, intent, space);` — mirror boundary で使用、invalid は `errorDirective` で fail-closed（`:633-643`）
+- 1 引数: `:3940`（`emitConfiguredSwarm`、swarm concurrency 用）、invalid は `Invalid swarm configuration:` の errorDirective（`:3941-3944`）
+
+`solo-election.trigger.mode` は `amadeus-config.ts:563-574` で `layers: ALL_LAYERS`・`defaultValue: "manual"`・legacy key `auto-solo-election` として宣言されており、project / space / intent の 3 層で解決される。したがって「engine が `soloElection.trigger.mode` を読む前例」だけが欠けている。
+
+なお呼び分けは揃っていない（`:632` は 3 引数、`:3940` と `handleTriggeredOpen` は 1 引数）。intent レイヤの設定を効かせるなら 3 引数が必要であり、これは設計判断事項として functional-design へ送る。
+
+### 裁定結果の commit 経路は answer の出所を問わない
+
+- `report --user-input retry|skip|abort` の受け口: `amadeus-orchestrate.ts:6161-6169`。条件は `flags.result === undefined && (answer === "retry"|"skip"|"abort") && canonicalConstructionFailurePending(...)` で `handleFailureRuling(args, projectDir)` へ委譲
+- `canonicalConstructionFailurePending`: `:3922-3936`（state の `Current Stage` + audit 射影が `await-unit-ruling` かを判定）
+- `handleFailureRuling`: `:6507` に `export function`。`--user-input` を retry/skip/abort に限定（`:6521`）、solo バッチ識別子 `solo:<n>` を検証（`:6522-6524`）、retry は `amadeus-bolt.ts start`（solo）/ `pool.retryFailedUnit` + `preparedSwarmRetryDirective`、skip は `BOLT_COMPLETED` 追記（solo）/ `pool.skipFailedUnit`、abort は `amadeus-bolt.ts abort` + `parkedDirective`
+- サブコマンド直接動線: `:6973` にも `handleFailureRuling(subArgs, projectDir)`
+
+この経路は answer が人間由来か election 裁定由来かを区別しない。**したがって修正の最小着地面は ask の抑止側だけで足り、commit 側に新規経路は不要**である。
+
+### 設計選択点（本 intent が決めるべきこと）
+
+1. engine は election を open **できない**（`amadeus-election.ts` を import していない、A2 exit 1）。engine が出せるのは directive のみであるため、(a) ask を出さず conductor に election を回させる新種 directive を出すか、(b) 既存 ask に auto である旨のメタを載せるか、という engine/conductor 責務境界の選択が発生する
+2. `resolveAmadeusConfig` を 1 引数で呼ぶか 3 引数で呼ぶか（intent レイヤの有効性に直結）
+3. protocol 文言を触る修正は t369 が全ハーネス投影（`dist/<harness>/`・self-install ツリー）を走査するため、`bun run build` による再生成を同一変更に含める必要がある
+
+### 検証の空白（本欠陥が緑のまま生存できた構造的理由）
+
+テスト棚卸しの 3 群の交差は空である。詳細は `component-inventory.md` の本 intent 節に置く。要点のみ: `--trigger` を検証するテスト群（5 ファイル）と unit failure ruling を検証するテスト群（`await-unit-ruling` / `resolve-failure` / `Retry, Skip, or Abort` の 3 述語）に重なるファイルは 1 件もなく、「auto 設定下で unit failure がどう扱われるか」を engine 断面で検証しているテストは 0 件である。`tests/integration/t369-protocol-autosolo-hook.test.ts` は protocol 文言の存在のみを検査し、engine 挙動を一切拘束しない。
+
+### base..observed の差分が患部に与えた影響
+
+区間 4 コミット（`cd64486a6` / `fb1939dfd` / `f60b3f4c8` / `da0acecdd`）、`89 files changed, 3129 insertions(+), 4 deletions(-)`。着地面は `amadeus/spaces/default/`・`metrics/`・`tests/harness/fixtures.ts`・`tests/integration/t-fixtures-copy-tree-retry.integration.test.ts`・`amadeus/spaces/default/memory/project.md` のみで、**`packages/` 配下の変更は 0 件**。本節の患部にこの区間は一切触れていない。

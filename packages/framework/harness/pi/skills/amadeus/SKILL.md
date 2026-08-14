@@ -110,6 +110,18 @@ state-transition tools directly.
   `directive.advisories[].message` and `directive.advisories[].result`, and
   stop. Opening a handoff stage never releases the hold — the hold lifts only
   when the declaring plugin's own evaluator returns no-hold on a later `next`.
+- `execute-failure-election`: Construction Unit failure under
+  `solo-election.trigger.mode=auto`. This is work, not a question: do NOT
+  present Retry/Skip/Abort. Write a definition JSON carrying `electionId`,
+  `kind`, `question`, `choices` (one per `directive.choices`) and `voters`,
+  then run
+  `bun .pi/tools/amadeus-election.ts open --trigger auto --file <definition.json>`.
+  `--file` is REQUIRED. Drive the election to a ruling, then commit it through
+  the ordinary ask report path: `report --user-input retry|skip|abort`. If the
+  CLI answers `{"opened":null,"reason":"solo-election-manual-trigger-required"}`,
+  or the election does not converge (hold / split / interrupt / CLI error),
+  fall back to the existing halt-and-ask and commit the human ruling the same
+  way.
 - `await-advisory-choice`: this is the human question route only; an advisory
   that already carries its answer arrives as `execute-advisory-handoff`
   instead. Run

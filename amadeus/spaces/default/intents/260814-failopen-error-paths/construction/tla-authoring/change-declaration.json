@@ -1,0 +1,8 @@
+{
+  "subjects": [
+    "FR-1",
+    "FR-2"
+  ],
+  "kind": "impl-only",
+  "rationale": "既存モデルは sensorPassed を健全な最終述語として扱い、WorkflowGuarded と CodeGenerationGuarded が完了を拘束している。今回の変更は SENSOR_PASSED + script-error を sensorPassed=true へ写像しないよう実装境界を修復するもので、TLA+ の状態遷移・不変量・構成の意味は変更しない。"
+}

@@ -87,7 +87,98 @@ c1 は surgical な負債返済、c2 は検証面の投資。**独立に実施�
 - #3015 が導入した `describeTreeDifference` により、dest 側の余剰エントリが診断へ出るようになった（前 intent の Q-D は解消）
 - `ops.calls` の `toEqual`（テスト `:52-59`）が呼出列を完全一致で pin しているため、Q-5 の「未消費」は既にテストで固定されており、除去しても検出漏れは起きない
 
-## リトライ構造が構造的に無効化される経路と、ガード面の非対称（260814-t99-copytree-race、履歴、observed `5b12d96e9`。**#3015 着地前の断面**。Q-A / Q-B の remove 面欠如は #3015 で解決済み、Q-E のガード境界非対称は本ファイル冒頭の 260814-copytree-guard-boundary 節が後継として扱う。以下の file:line は observed `5b12d96e9` の座標であり、#3015 と #2999 による行シフトのため observed `f60b3f4c8` とは一致しない）
+## sensor 真理値表の fail-open と、severity-blind な dispatcher という制約（260814-failopen-error-paths、履歴、observed `cd64486a6`）
+
+対象: [Issue #2988](https://github.com/amadeus-dlc/amadeus/issues/2988)（sensor 真理値表がスクリプト異常を `PASSED` へ倒す fail-open）。**[Issue #3004](https://github.com/amadeus-dlc/amadeus/issues/3004) は本 intent のスコープ外**（PR #3011 で別途処理中）。測定 ref = observed `cd64486a68c6a1144db50fbe3fde8273f5e18455`（`git rev-parse HEAD` = `git rev-parse origin/main`）、差分 base = `d7ffaa5442266508d8e67babc3e0b947fb4c1637`。一次証拠は Developer scan（`<record>/inception/reverse-engineering/developer-scan.md`、run `xrev-260814-2988`、target-sha `52f1f1b25`、クロスレビュー 2 名とも `CONFIRMED_WITH_REFINEMENTS`）で、正本は `re-scans/260814-failopen-error-paths.md`。以下の file:line は Developer scan の実測からの転記であり、Architect が `git grep -n` / `sed` で再照合したものは個別に注記した。
+
+### Q-1: 異常経路 9 本が `passed` へ合流する（fail-open の全数マップ）
+
+`decideOutcome`（`packages/framework/core/tools/amadeus-sensor.ts:612-735`）の分岐と return site の対応（Developer scan §1 の表からの転記）:
+
+| Branch | コメント行 | コード行 | 述語 | 結果 |
+|---|---|---|---|---|
+| a (timeout) | `:20` | `:620-631` | SIGTERM ∧ elapsed ≥ timeout−GRACE | `budget-override`（`:627`） |
+| 0 (spawn-failed) | `:21` | `:633-641` | error ∧ status null ∧ signal null | **`passed`** + note `script-error: spawn-failed: …` |
+| b (127) | `:22` | `:643-650` | status === 127 | **`passed`** + note `tool-unavailable` |
+| f (parse throw) | `:26` | `:659-666` | `JSON.parse` catch | **`passed`** + note `script-error: bad-output` |
+| f (pass 欠落/非 bool) | `:26` | `:668-674` | `!isPlainObject ∨ typeof pass ≠ boolean` | **`passed`** + note `script-error: bad-output` |
+| c (FAILED) | `:23` | `:676-694` | `pass === false` | `failed`（`:689`） |
+| d (正常 PASS) | `:24` | `:695-696` | status 0 ∧ pass true | `passed`、**note なし** |
+| e (external SIGTERM) | `:25` 相当 | `:699-709` | SIGTERM ∧ elapsed < timeout−GRACE | **`passed`** + note `script-error: external-sigterm` |
+| e (非 0 exit) | `:25` | `:711-717` | `status !== null` | **`passed`** + note `script-error: exit-${status}` |
+| e′ (非 SIGTERM signal) | 表に無し | `:721-727` | `signal !== null` | **`passed`** + note `script-error: signal-${signal}` |
+| default | `:27` | `:730-734` | 無条件 | **`passed`** + note `script-error: unknown` |
+| (throw fold) | 表外 | `:745-751` `scriptErrorOutcome` | spawn 同期 throw | **`passed`** + note `script-error: spawn-threw: …` |
+| (detail 書込失敗) | 表外 | `:588-593` | detail write throw | **`failed` → `passed` へ降格** + note `script-error: detail-write-failed: …` |
+
+`FireOutcome` は `amadeus-sensor.ts:87-95` の閉集合 `"passed" | "failed" | "budget-override"`。11 return site のうち **9 本が `passed`** であり、うち 1 本（detail 書込失敗、`:588-593`）は**いったん確定した `failed` を `passed` へ降格させる**。品質上の問題は「異常が記録されないこと」ではなく、**異常が記録されたうえでゲートに対しては成功と等価に見えること**にある。
+
+### Q-2: 機械的根本は「Note がどの判定にも読まれない」こと
+
+ゲートに届く「PASSED」は監査イベント名 `SENSOR_PASSED` そのものである（emitter `amadeus-sensor.ts:870`。script-error note 付きでも同一イベント）。消費側 `evaluateBlockingSensors`（`packages/framework/core/tools/amadeus-state.ts:1932-1995`）は監査 trail を歩き、`sensorRowsForStage`（`:1890-1913`）が `Stage slug` / `Sensor ID` / `Output path` / `Output digest` / `Fire id` の **5 フィールドのみ**を抽出する（`:1898-1903`）。pass 判定はイベント名の裸等価（`:1972` / `:1979`）。
+
+`Note` フィールドは `amadeus-sensor.ts:866-869` で付与されるが、**判定のために読む消費者はゼロ**である（repo-wide grep の hit は emitter `amadeus-sensor.ts:868` / `otel/event-registry.ts:893` / `otel/redaction.ts:98` の 3 件のみ。述語と件数は Developer scan §2 からの転記）。`SENSOR_PASSED` の読者は gate（`amadeus-state.ts:1972` / `:1979`）のほか `amadeus-runtime.ts:732→:741`、`amadeus-stage-stats.ts:409`、`amadeus-stage-attribution-candidates.ts:122`、`amadeus-stage-attribution-report.ts:152` があるが、いずれも Note を読まない。
+
+**つまり診断は記録されているのに、ゲートからは構造的に見えない。** これが #2988 の機械的根本であり、ゲート側が既に fail-closed 化している面（fire による先行 terminal 無効化 `:1954`、receipt/digest 束縛 `:1966-1971`、同時刻 tie-break の failure 優先 `:849-852`）が効かない理由でもある。
+
+### Q-3: dispatcher は severity-blind — 真理値表側の是正は blocking 限定にできない
+
+severity の鎖は「宣言 → compile 搬送 → ゲート消費」で閉じており、**実行側には存在しない**。
+
+| 段 | 位置 | severity の扱い |
+|---|---|---|
+| 閉集合宣言 | `amadeus-sensor-schema.ts:41`（`SENSOR_SEVERITIES = ["advisory", "blocking"]`） | 2 値 |
+| manifest 宣言 | frontmatter `default_severity:`（必須 `:48` / `:61`、閉語彙検証 `:146-157`） | 宣言面 |
+| compile 搬送 | `amadeus-graph.ts:813-815`（型 `:144` `severity?: SensorSeverity`、advisory は省略デフォルト） | 搬送 |
+| ゲート消費 | `amadeus-state.ts:2004-2013` `blockingSensorIdsForStage` | `sensors_applicable[].severity === "blocking"` を収集 |
+| **実行(dispatch)** | `amadeus-sensor-fire.ts:208` | **severity を見ず全件発火** |
+
+したがって真理値表を触る是正は、**必然的に advisory sensor の挙動も同時に変える**（新配管を足さない限り分離できない）。これは Issue #2988 本文に無い最重要制約である。`amadeus-sensor-schema.ts:35-40` の doc も「Runtime carriage is via the compiled stage graph (SensorResolution.severity), not the audit row.」と、搬送が graph 側にしか無いことを明言している。
+
+shipped の blocking sensor は 2 件のみ（`plugins/pr-convergence/sensors/amadeus-pr-convergence-report-format.md:5` = **本ワークスペースで活性な実配布**、`tests/fixtures/blocking-sensor/amadeus-blocking-probe.md:5` = fixture）。core 14 sensor は全て advisory。すなわち #2988 は仮説ではなく実害経路を持つ。
+
+消費側には in-source の逸脱記録がある — `amadeus-state.ts:2018-2022`（Architect 再照合。verbatim 末尾: `fail-closed rule governs aggregation, not what a sensor decides.`）が真理値表の fail-open を「個別ガードの政策内容」として意図的に温存している。**是正するならこのコメントも同一変更で更新/削除が要る。**
+
+### Q-4: 回帰ピン t2771 はコメントテキストのみで、挙動を守っていない
+
+`tests/integration/t2771-lifecycle-guard-regression.integration.test.ts:151-163` の `test("the sensor truth table's fail-open arms are untouched")` は `readFileSync` + `toContain` で**コメント行 `:25`-`:26` の逐語テキストだけ**をピンする。挙動は一切ピンしない。テスト自身のコメント（`:152-154`）が「既知逸脱・別途是正・将来の編集を decision にするためのピン」と宣言しており、#2988 是正を先取りした drift-detector として機能している。
+
+品質上の含意は 2 つ。(a) このピンは**消費側だけを強化する修正では緑のまま**であり、回帰防御にならない。(b) 同 describe の隣接ピン（`:132-144` の `AMADEUS_SKIP_*` 4 名、`:146-150` の cutoff）は壊してはならない。なお `:147` の cutoff ピンは非 export 再宣言でも通る substring match である（NIT）。
+
+### Q-5: コメント/実装 drift — 7 arm 対 11 return site（#2988 と独立の既存債務）
+
+`amadeus-sensor.ts:19-31` の真理値表コメントは **7 arm**を列挙するが、実装の return site は **11 本**ある。コメント表に無いのは `external-sigterm`（`:706`）/ `signal-<n>`（`:723`）/ `detail-write-failed`（`:592`）の 3 経路。**コメントは実装の部分被覆であり、`:19-31` を読んだだけでは fail-open の全域が見えない。** `:19-31` を触る是正なら、この drift はほぼ無償で閉じられる。
+
+### Q-6: 修正形状ランドスケープ（**未裁定** — 裁定は requirements-analysis / application-design の所掌）
+
+| Shape | 変更点 | 影響半径 | t2771 ピン |
+|---|---|---|---|
+| A. 真理値表を変える（e/f 等を新イベント or FAILED へ） | `FireOutcome` + `emitTerminal` + 監査閉集合 + otel + `SENSOR_TERMINAL_EVENTS` | advisory の監査形状も変わる（severity-blind のため）。runtime 集計・stage-stats・attribution・`audit-format.md:249-261` へ波及 | `:156-161` 要変更 |
+| B. 消費側を強化（gate が Note `script-error:` 前置の `SENSOR_PASSED` を不通過扱い） | `sensorRowsForStage` に Note 抽出 + pass 述語 + `BlockingSensorFinding` に新 kind | **ゲート内に封じ込め**。advisory・監査形状・doc/otel 不変 | `:156-161` **不変のまま真**（= 回帰防御にならない） |
+| C. A+B 両方 | 両者の和 | 最大 | 要変更 |
+| D. dispatcher へ severity を配管 | 新 flag / graph 読取 | 「dispatcher は thin routing surface」設計（`amadeus-sensor.ts:10-18`）と `amadeus-state.ts:2018-2022` の政策分界コメントに反する新結合 | 要変更 |
+
+新 terminal イベントを導入する場合の必須配線（A/C 系）: `SENSOR_TERMINAL_EVENTS`（`amadeus-state.ts:852`）/ 監査閉集合 + 表示 map（`amadeus-audit.ts:188-191` / `:297-298`）/ otel `event-registry.ts:880-893`（event-registry-drift sensor が欠落を検出）/ pair-closure 不変量（`amadeus-sensor.ts:16-17`）/ prose 契約 `packages/framework/core/knowledge/amadeus-shared/audit-format.md:249-261`（`:259` の Note 脚注が現行 fail-open 契約の散文記述）。
+
+既存テストへの影響: `tests/integration/t92.test.ts` Group E（`:790-827`、`:1271-1300` test 44、`:1310-1342` test 45）と `tests/unit/t-sensor-fire-seam.test.ts:83-131` / `:259` は **A/C/D では要書換、B では全て不変**。正常経路（`amadeus-sensor.ts:695-696`）は是正後も note-free / event-stable を維持しないと t92 test 45 が赤になる。
+
+### Q-7: 落ちる実証の部品は全て既存 — 新規 fixture は不要
+
+| 層 | 面 | 位置づけ |
+|---|---|---|
+| unit（生成側） | `tests/unit/t-sensor-fire-seam.test.ts` | 唯一の導出 seam 直叩き。`scriptErrorOutcome`（`amadeus-sensor.ts:745`）/ `decideOutcomeOrScriptError`（`:758`）を export 経由で叩く（`decideOutcome` 自体は非 export）。injected-spawn thunk（`:758-771`）が新規 unit ピンの自然な seam |
+| unit（消費側） | `tests/unit/t511-blocking-sensor-severity.test.ts`（26 tests、決定表 `:138-`） | shape B の回帰テストの自然な置き場 |
+| integration | `tests/integration/t511-blocking-sensor-gate.integration.test.ts` | approve/complete/advance/finalize 経路。「blocking sensor script exit 2 → approve 拒否」の end-to-end ピンの置き場 |
+| fixture | `tests/fixtures/v05-mr9-sensor-fire/scripts/`（`-exit2.ts` = branch e、`-bad.ts` = branch f 他）、`tests/fixtures/blocking-sensor/amadeus-blocking-probe.md` | 既存 |
+| seam | `AMADEUS_SENSORS_DIR` + `AMADEUS_SENSOR_SCRIPT_DIR`（`tests/integration/t92.test.ts:100-135`）、fork-manifest builder `makeForkSensors`（`:242`） | 既存 |
+
+前例として `tests/e2e/t-formal-verif-model-completeness-sensor.test.ts:323` が「sensor スクリプト自身が FAILED を選ぶ」sanctioned パターンを持つ。
+
+### 配送面（是正時の必須手順）
+
+追跡ファイルは `packages/framework/core/tools/amadeus-sensor.ts` の **1 本のみ**（`git ls-files | grep -E 'amadeus-sensor\.ts$'`）。ディスク上のコピー 14 面（self-install 5 + dist 8 + 正本）は正本以外すべて untracked で、HEAD 時点で self-install 5 面は正本と byte 一致（`diff -q` ×5）。core 変更後は全 harness（8 dir）に対する `bun run build` と追跡ファイル不変の確認が要る（`cid:build-and-test:bt-dist-regen-seven-harnesses`）。
+
+## リトライ構造が構造的に無効化される経路と、ガード面の非対称（260814-t99-copytree-race、履歴、observed `5b12d96e9`）
 
 対象: [Issue #3003](https://github.com/amadeus-dlc/amadeus/issues/3003)（`copyTreeWithRetry` のリトライが dest 汚染下で必ず 3/3 失敗する）。測定 ref = observed `5b12d96e99cbf46711acd3dc2b8c103be1b0f801`(`git rev-parse HEAD` = `git rev-parse origin/main`)、差分 base = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`。正本は `re-scans/260814-t99-copytree-race.md`。以下の file:line は Architect が observed 断面で `sed` / `git grep` により verbatim 再照合した。
 
@@ -258,6 +349,8 @@ blocking sensor 経路は 2 段で構成され、**段ごとに fail 方向が�
 | --- | --- | --- |
 | sensor 実行 → verdict 生成 | `amadeus-sensor.ts:19-31` の真理値表 | **fail-open**。verbatim: `//   e) status non-0/non-127 (non-timeout)  → PASSED script-error: exit-<n>` / `//   f) bad JSON / missing pass  → PASSED script-error: bad-output` |
 | verdict 消費 → 完了可否 | `amadeus-state.ts:1835` `verifyBlockingSensors` | **fail-closed**。verbatim（`:1855-1857`）: `A blocking sensor that never ran is not a pass.` |
+
+> **引用の訂正（2026-08-14、intent `260814-failopen-error-paths`、observed `cd64486a6`）**: 上表の `verifyBlockingSensors` / `amadeus-state.ts:1835` は observed `89532174c` 断面の記録であり、**現行断面には当該シンボルの定義も呼出も存在しない**（#2986 の Lifecycle Guard Runtime 移行で置換。`git grep -n "verifyBlockingSensors" -- packages/` は exit 0 / **1 hit** だが、それは `amadeus-sensor-schema.ts:21` の散文コメント内の stale な言及であり定義・呼出ではない）。現行の対応面は Guard adapter `evaluateBlockingSensorGuard`（`amadeus-state.ts:2023`、`git grep -n` 実測。本文は `:2068` まで）と decision core `evaluateBlockingSensors`（`:1932-1995`）で、fail-closed 宣言文字列 `A blocking sensor that never ran is not a pass.` は **`:2052`**。**上段（生成側 `amadeus-sensor.ts:19-31` の fail-open）と下段の衝突という Q-1 の主張自体は observed `cd64486a6` でも成立する**（本ファイル冒頭の 260814-failopen-error-paths 節を参照）。履歴節の本文は当時の記録として保存する。
 
 上段が異常を PASSED へ倒すため、**下段の fail-closed は「実行されなかった」ケースしか捕まえられず、「実行して壊れた」ケースは素通りする**。`amadeus-sensor.ts` は `base..observed` で `46 ++--` の変更を受けているが、**分岐 e/f は fail-open のまま**である（verbatim 再確認済み）。Issue #2771 が掲げる「移行前後で判定結果が変わらない」AC と「fail-closed」AC は、ここで**構造的に両立しない** — どちらを採るかは requirements の裁定事項であり、暗黙に片方へ倒してはならない。
 
@@ -3445,3 +3538,23 @@ round-trip プロパティはメタモルフィックで独立オラクル不要
 ### 投影・ゲートの品質コスト
 
 core/tools を触るため coverage patch ゲートの母集団に入る。CLI spawn 経由でしか通らない行は lcov に載らないため（`cid:requirements-analysis:bun-coverage-spawn-blindspot`）、in-process seam の設計を実装時点で行う。加えて `dist:check` / `promote:self:check`（7 ハーネス — 5 で止めると kiro / kiro-ide が DIFFERS）、`t258-boundary-guard`（出荷 core/tools は `scripts/` 非参照 — コメント文字列にも `scripts/<file>` を書かない、`cid:code-generation:c1-1569-shipped-comment-vocab`）が連動する。
+
+## 契約文書とエンジン実装の齟齬を拘束しないテスト面（260814-unit-failure-autoelectio、現在、observed `cd64486a6`）
+
+### 所見 1: 文言検査が挙動検査を代替している
+
+`tests/integration/t369-protocol-autosolo-hook.test.ts` は solo auto-election hook を扱う唯一の専用テストだが、判定述語 `findMissingHookMarker`（`:88-92`）は対象セクション文字列に `open --trigger auto` と `solo-election-manual-trigger-required` が含まれるかを見るだけである。protocol 文言が正しく存在することは保証するが、**engine がその文言どおりに振る舞うかは一切拘束しない**。結果として「protocol が branch 1 で prompt 非提示を規定し、engine は無条件で ask を出す」という食い違いが、8 件のテストすべて緑のまま生存できた。
+
+これは `team.md` § 検証・実測規律の「検証劇場」そのものではない（文言検査には固有の価値がある）が、**文言検査だけを置いて挙動検査を置かないと、契約と実装の乖離が構造的に不可視になる**という一般所見に当たる。契約文書に「engine がこう振る舞う」と書く節を追加・変更するときは、同じ変更で挙動側の述語を持つテストを追加すべきである。
+
+### 所見 2: テスト述語の交差が空であることは設計の穴の指標になる
+
+本スキャンでは 3 群の述語（P1 solo-election 参照 17 ファイル / P2 `--trigger` 5 ファイル / P3 unit failure ruling 3 述語）を取り、**P2 ∩ P3 = ∅** を実測した。両側に属するテストが 1 件も無いという事実が、「config auto と unit failure の組み合わせが検証されていない」という欠陥の存在を直接示している。二つの機構が protocol 上で結合しているのにテスト述語上で交差しない場合、その結合は未検証である可能性が高い。棚卸しの詳細は `component-inventory.md` の本 intent 節。
+
+### 所見 3: 既存テストは修正の Red を作れる形になっている
+
+`tests/unit/t211-swarm-batch-progress.test.ts:326-333` は `amadeus/config.json` を seed しないため、config はデフォルト `manual` 相当で走る。したがって既存期待値は `manual` 経路の正しい固定としてそのまま維持でき、`auto` を植えた新ケースを 1 件追加することで TDD の Red を作れる。既存テストを書き換えて緑にする形（欠陥挙動の固定を追認する形）にはならない — これは修正のコスト面で良好な条件である。
+
+### 所見 4: 修正が触る投影面
+
+`stage-protocol.md` を変更する場合、t369 が `dist/<harness>/amadeus-common/` と self-install ツリーを走査するため `bun run build` による全ハーネス投影の再生成が同一変更に必要である。ソース断面のみの green では配送先の退行を隠す（`project.md` の `cid:requirements-analysis:c2-acceptance-at-delivery-tree`）。

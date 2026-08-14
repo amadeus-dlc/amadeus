@@ -5,7 +5,9 @@ import { basename, dirname, isAbsolute, join } from "node:path";
 import { appendLifecycleAuditEntryUnlocked, escapeAuditValue } from "./amadeus-audit.ts";
 import type { AwaitCompletionDirective } from "./amadeus-directive.ts";
 import {
+  isJournalEntryV2,
   JOURNAL_SCHEMA_VERSION,
+  parseJournalLine,
   serializeJournalEntry,
   splitJournalLines,
 } from "./amadeus-journal.ts";
@@ -1876,7 +1878,8 @@ export const ARTIFACT_ATTESTED_EVENT = "ARTIFACT_ATTESTED";
 export type BlockingSensorFinding =
   | { kind: "never-fired"; sensorId: string }
   | { kind: "unresolved"; sensorId: string; outputPath: string; terminal: string | null }
-  | { kind: "stale"; sensorId: string; outputPath: string };
+  | { kind: "stale"; sensorId: string; outputPath: string }
+  | { kind: "script-error"; sensorId: string; outputPath: string; note: string };
 
 type SensorAuditRow = {
   event: string;
@@ -1884,6 +1887,7 @@ type SensorAuditRow = {
   sensorId: string;
   outputPath: string;
   outputDigest: string | null;
+  note: string | null;
 };
 
 type TimedSensorRow = { ts: string; row: SensorAuditRow };
@@ -1918,7 +1922,11 @@ function sensorRowsForStage(
       const outputPath = auditBlockField(block, "Output path") ?? "";
       const outputDigest = auditBlockField(block, "Output digest");
       const fireId = auditBlockField(block, "Fire id") ?? "";
-      collected.push({ ts: timestamp, row: { event, fireId, sensorId, outputPath, outputDigest } });
+      const note = sensorAuditNote(block);
+      collected.push({
+        ts: timestamp,
+        row: { event, fireId, sensorId, outputPath, outputDigest, note },
+      });
     }
   }
   collected.sort(compareSensorRowTime);
@@ -1930,7 +1938,7 @@ function sensorRowsForStage(
 // Decide whether a stage's blocking sensors permit completion. Returns the first
 // finding that refuses, or null when every blocking sensor is settled clean.
 //
-// Two refusal shapes, both fail-closed:
+// Four refusal shapes, all fail-closed:
 //   never-fired — the sensor produced no SENSOR_FIRED for this stage at all.
 //     "It never ran" is not evidence that it would pass. A sensor whose
 //     `matches` glob excludes every artifact this stage wrote is NOT this case
@@ -1939,10 +1947,30 @@ function sensorRowsForStage(
 //     about — while a sensor that never applied to anything is refused.
 //   unresolved — some fired output's latest terminal is not SENSOR_PASSED
 //     (a FAILED, a budget override, or no terminal at all).
+//   stale — the current artifact bytes differ from the terminal receipt.
+//   script-error — SENSOR_PASSED carries a script-error diagnostic, or the
+//     Note field exists in a shape this reader cannot safely interpret.
 interface TerminalSensorVerdict {
   readonly event: string;
   readonly outputDigest: string | null;
   readonly receiptMatches: boolean;
+  readonly note: string | null;
+}
+
+const SENSOR_NOTE_UNREADABLE = "script-error: note-unreadable";
+
+function sensorAuditNote(block: string): string | null {
+  const record = parseJournalLine(block.trim());
+  if (isJournalEntryV2(record)) {
+    const note = record.attributes.Note;
+    if (note === undefined || note === null) return null;
+    return typeof note === "string" ? note.trim() : SENSOR_NOTE_UNREADABLE;
+  }
+  return auditBlockField(block, "Note");
+}
+
+function isScriptErrorNote(note: string | null): boolean {
+  return note?.startsWith("script-error:") === true;
 }
 
 export function evaluateBlockingSensors(
@@ -1980,18 +2008,29 @@ export function evaluateBlockingSensors(
         event: row.event,
         outputDigest: row.outputDigest,
         receiptMatches,
+        note: row.note,
       });
     }
     if (firedOutputs.length === 0) return { kind: "never-fired", sensorId };
     const latest = latestTerminal.get(latestOutputPath) ?? null;
     const latestDigest = currentDigest?.(latestOutputPath);
-    const latestOutputPassed = latest?.event === "SENSOR_PASSED" && latest.receiptMatches && (
-      currentDigest === undefined || (
-        latest.outputDigest !== null && latestDigest === latest.outputDigest
-      )
-    );
+    const latestOutputPassed = latest?.event === "SENSOR_PASSED"
+      && latest.receiptMatches
+      && !isScriptErrorNote(latest.note)
+      && (currentDigest === undefined || (
+          latest.outputDigest !== null && latestDigest === latest.outputDigest
+        )
+      );
     for (const outputPath of firedOutputs) {
       const terminal = latestTerminal.get(outputPath) ?? null;
+      if (isScriptErrorNote(terminal?.note ?? null)) {
+        return {
+          kind: "script-error",
+          sensorId,
+          outputPath,
+          note: terminal?.note ?? SENSOR_NOTE_UNREADABLE,
+        };
+      }
       if (terminal?.event !== "SENSOR_PASSED" || !terminal.receiptMatches) {
         return { kind: "unresolved", sensorId, outputPath, terminal: terminal?.event ?? null };
       }
@@ -2033,9 +2072,10 @@ function blockingSensorIdsForStage(slug: string): string[] {
 // removed, while WHICH sensors it judges comes from the project's own sensor
 // manifests through the compiled graph's sensors_applicable rows. A project that
 // registers no blocking sensor is resolved not-applicable and sees no change.
-// The sensor's own PASSED/FAILED truth table (amadeus-sensor.ts) is the policy
-// content of an individual guard and is left exactly as it was — the Runtime's
-// fail-closed rule governs aggregation, not what a sensor decides.
+// The sensor's own PASSED/FAILED truth table (amadeus-sensor.ts) is left
+// unchanged. This guard additionally consumes a SENSOR_PASSED Note that
+// starts with `script-error:` as not-pass, so a crashed blocking sensor
+// cannot complete a stage.
 function evaluateBlockingSensorGuard(
   context: StageCompletionGuardContext,
 ): LifecycleGuardVerdict {
@@ -2074,6 +2114,14 @@ function evaluateBlockingSensorGuard(
         `Refusing to complete "${stage.slug}": the blocking sensor "${finding.sensorId}" ` +
         `passed different bytes at ${finding.outputPath}.`,
       recovery: "Re-fire it against the current artifact.",
+    });
+  }
+  if (finding.kind === "script-error") {
+    return guardDenied({
+      reason:
+        `Refusing to complete "${stage.slug}": the blocking sensor "${finding.sensorId}" ` +
+        `has a script-error verdict (${finding.note}) on ${finding.outputPath}.`,
+      recovery: BLOCKING_SENSOR_REMEDY,
     });
   }
   const terminal = finding.terminal ?? "no terminal row";
