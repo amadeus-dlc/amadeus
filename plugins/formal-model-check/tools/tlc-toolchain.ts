@@ -87,9 +87,29 @@ export const FIXED_TLC_PROFILE = deepFreeze({
   workers: 1,
 } as const);
 
+/**
+ * The contracted JDK release line. Patch releases inside major 26 are the same
+ * toolchain identity: the exact build is still recorded per run through the
+ * java `-version` output digest and the executable checksum.
+ */
+export type JdkMajor26Version = "26" | `26.${string}`;
+
+const JDK_MAJOR_26 = /^26(?:\.\d+)*$/;
+
+export function isJdkMajor26Version(value: string): value is JdkMajor26Version {
+  return JDK_MAJOR_26.test(value);
+}
+
+const JDK_VERSION_OUTPUT = /^openjdk version "26(?:\.\d+)*(?:"|\+)/m;
+
+/** Single acceptance rule for `java -version` output, shared by every probe. */
+export function acceptsFixedJdkVersionOutput(output: string): boolean {
+  return JDK_VERSION_OUTPUT.test(output) && output.includes("OpenJDK");
+}
+
 export const FIXED_JDK_RUN_PROFILE = deepFreeze({
   vendor: "OpenJDK",
-  version: "26.0.1",
+  version: "26",
   jvmArgs: [
     "-Xms256m",
     "-Xmx1024m",
@@ -707,7 +727,7 @@ export interface JdkDistributionEntry {
 
 export interface JdkDistributionManifest {
   readonly vendor: "OpenJDK";
-  readonly version: "26.0.1";
+  readonly version: JdkMajor26Version;
   readonly javaExecutablePath: string;
   readonly javaExecutableSha256: string;
   readonly entries: readonly JdkDistributionEntry[];
@@ -751,8 +771,8 @@ export function createJdkDistributionManifest(
     ok: false,
     error: { kind: "JdkDistributionError", message },
   });
-  if (input.vendor !== FIXED_JDK_RUN_PROFILE.vendor || input.version !== FIXED_JDK_RUN_PROFILE.version) {
-    return fail("JDK vendor or version differs from the fixed run profile");
+  if (input.vendor !== FIXED_JDK_RUN_PROFILE.vendor || !isJdkMajor26Version(input.version)) {
+    return fail("JDK vendor or major version differs from the fixed run profile");
   }
   if (!canonicalRelativePath(input.javaExecutablePath) || !SHA256.test(input.javaExecutableSha256)) {
     return fail("JDK executable identity is invalid");

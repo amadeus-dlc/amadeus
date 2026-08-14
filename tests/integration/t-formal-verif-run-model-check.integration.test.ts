@@ -262,14 +262,14 @@ describe("run-model-check orchestration", () => {
       kind: "InvocationError",
       code: "ENVIRONMENT_UNAVAILABLE",
       message: "Darwin environment inspection failed",
-      cause: 'Error: OpenJDK 26.0.1 verification failed: expected `openjdk version "26.0.1…"`',
+      cause: 'Error: OpenJDK major 26 verification failed: expected `openjdk version "26.…"`',
     });
     const [envJson, envHuman] = terminalModelCheckLines("run-env", environment);
     const parsed = JSON.parse(envJson) as { errorDetail: string | null };
     expect(parsed.errorDetail).toContain("Darwin environment inspection failed");
-    expect(parsed.errorDetail).toContain("OpenJDK 26.0.1 verification failed");
+    expect(parsed.errorDetail).toContain("OpenJDK major 26 verification failed");
     expect(envHuman).toContain("HARNESS_ERROR (ENVIRONMENT_UNAVAILABLE)");
-    expect(envHuman).toContain("OpenJDK 26.0.1 verification failed");
+    expect(envHuman).toContain("OpenJDK major 26 verification failed");
 
     // The acquisition contract is unchanged: its message stays off stderr, and
     // the published receipt remains its diagnostic surface. Widening that is a

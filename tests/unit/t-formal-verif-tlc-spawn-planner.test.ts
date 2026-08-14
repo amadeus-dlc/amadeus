@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  DARWIN_INSPECTION_PLAN,
   DarwinTlcSpawnPlanner,
   DockerTlcSpawnPlanner,
   FIXED_DOCKER_IMAGE,
@@ -173,6 +174,12 @@ describe("TLC spawn planners", () => {
         expect(inspection.reason).toBe("not run because NETWORK occurred before environment verification");
       }
     }
+  });
+
+  // #2361: the Darwin plan declares the contracted JDK major, not one patch
+  // release, so a Temurin patch bump does not read as a foreign toolchain.
+  test("declares the Darwin JDK expectation at the contracted major", () => {
+    expect(DARWIN_INSPECTION_PLAN.find(({ id }) => id === "jdk-snapshot")?.expected).toBe("OpenJDK 26");
   });
 
   test("rejects Docker tags and selects auto provider by platform", () => {

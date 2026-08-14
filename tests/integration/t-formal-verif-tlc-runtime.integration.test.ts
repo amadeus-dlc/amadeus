@@ -389,6 +389,30 @@ describe("formal verification TLC runtime", () => {
     expect(probes).toBe(0);
   });
 
+  // #2361: the contract is the JDK major, so a Temurin patch bump on the host
+  // must still prepare while a neighbouring major stays rejected.
+  test("accepts any OpenJDK major 26 patch release and rejects a neighbouring major", async () => {
+    const withVersion = (output: string) => ({
+      javaVersion: {
+        inspect: async ({ javaExecutablePath }: { javaExecutablePath: string }) => ({
+          executableRealpath: realpathSync(javaExecutablePath),
+          output,
+        }),
+      },
+    });
+    const patched = await acquireRuntime(
+      () => { throw new Error("patched Java reached spawn"); },
+      withVersion("openjdk version \"26.0.2\" 2026-01-20\nOpenJDK Runtime Environment\n"),
+    );
+    const nextMajor = await acquireRuntime(
+      () => { throw new Error("next-major Java reached spawn"); },
+      withVersion("openjdk version \"27.0.1\"\nOpenJDK Runtime Environment\n"),
+    );
+
+    expect((await patched.toolchain.prepare(patched.prepareInput)).ok).toBe(true);
+    expect(errorCode(await nextMajor.toolchain.prepare(nextMajor.prepareInput))).toBe("JDK_VERSION");
+  });
+
   test("rejects an oversized module by metadata before reading or sandbox probing", async () => {
     let probes = 0;
     const acquired = await acquireRuntime(() => { throw new Error("drift reached spawn"); }, {

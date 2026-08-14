@@ -23,6 +23,7 @@ import {
   type TlcSpawnPlanner,
 } from "./run-model-check-domain.ts";
 import {
+  acceptsFixedJdkVersionOutput,
   FIXED_TLC_ARTIFACT_DESCRIPTOR,
   type TlcToolchainError,
 } from "./tlc-toolchain.ts";
@@ -47,7 +48,7 @@ export const DARWIN_INSPECTION_PLAN: readonly EnvInspectionPlan[] = Object.freez
   { id: "image-digest", expected: null, notApplicableReason: "Darwin sandbox-exec does not use a container image" },
   { id: "jar-sha256", expected: FIXED_TLC_ARTIFACT_DESCRIPTOR.sha256, notApplicableReason: null },
   { id: "network-deny", expected: "sandbox network-deny", notApplicableReason: null },
-  { id: "jdk-snapshot", expected: "OpenJDK 26.0.1", notApplicableReason: null },
+  { id: "jdk-snapshot", expected: "OpenJDK 26", notApplicableReason: null },
   { id: "sandbox-profile", expected: "network-deny", notApplicableReason: null },
 ]);
 
@@ -147,11 +148,7 @@ export class NodePlannerEnvironmentPort implements PlannerEnvironmentPort {
       timeout: Math.min(context.deadlineMs, 5_000),
     });
     const versionOutput = `${version.stdout}${version.stderr}`;
-    if (
-      version.status !== 0
-      || !/^openjdk version "26\.0\.1(?:"|\+)/m.test(versionOutput)
-      || !versionOutput.includes("OpenJDK")
-    ) {
+    if (version.status !== 0 || !acceptsFixedJdkVersionOutput(versionOutput)) {
       // Name what was expected AND what was observed. The bare message cost
       // four intents the same rediscovery: on a machine whose global mise
       // activates a different JDK, `bun` resolved through a mise shim
@@ -159,7 +156,7 @@ export class NodePlannerEnvironmentPort implements PlannerEnvironmentPort {
       // overwritten and the only visible symptom was ENVIRONMENT_UNAVAILABLE.
       const observed = versionOutput.split("\n")[0]?.trim() ?? "(no output)";
       throw new Error(
-        `OpenJDK 26.0.1 verification failed: expected \`openjdk version "26.0.1…"\` `
+        `OpenJDK major 26 verification failed: expected \`openjdk version "26.…"\` `
           + `from JAVA_HOME=${canonicalJavaHome}, observed \`${observed}\` `
           + "(see plugins/formal-model-check/README.md § Local execution requirements)",
       );
