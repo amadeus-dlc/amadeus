@@ -1,6 +1,49 @@
 # コンポーネント棚卸し
 
-## ライフサイクル進行ガードの構成要素棚卸し（260813-lifecycle-guard-runtime、履歴、observed `89532174c`）
+## core/tools の増減と formal-model-check patient 面の構成要素（260814-fmc-macos-provider、現在、observed `5f6b5bf97`）
+
+**観測 ref**: すべて observed = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`。差分 base = `89532174c30ef9cc7ff29496cd6916586fdda00a`（9 commits）。全数列挙と検索述語は `re-scans/260814-fmc-macos-provider.md` を正本とする。
+
+### base..observed の増減（`packages/framework/core/tools/`）
+
+| 変化 | コンポーネント | 位置 | 責務 |
+| --- | --- | --- | --- |
+| **追加** | `amadeus-lifecycle-guard.ts`（236 行） | `packages/framework/core/tools/` | 4 checkpoint 共通の guard 評価 Runtime（`0fbbec42b` / #2986）。`LifecycleCheckpoint` `:42` / `LifecycleGuardAdapter` `:80` / `evaluateLifecycleGuards` `:208` / `guardReceipt` `:153` / `formatGuardRefusal` `:137` |
+| **削除** | `team-up.sh` | 旧 `packages/framework/core/tools/` | チームモードの正本ランチャ（bash）。`8b6089275` / #2975 で撤去 |
+| **削除** | `team-up-codex-safety-wait.ts` | 同上 | ランチャ専用 supervisor。同上 |
+| **削除** | `team-msg.sh` | 同上 | チーム間メッセージング CLI。同上 |
+
+削除 3 件は `git ls-files` に現行コード面としては残らない（`git ls-files \| grep -iE "team-up\|team-msg"` の残ヒットは intent record・re-scan 履歴と、不在を固定する `tests/integration/t-remove-team-up-absence.test.ts` のみ）。本棚卸しの履歴節（`:1504` / `:1506` ほか）が引く `team-up.sh:508` / `team-up-codex-safety-wait.ts:643` は、いずれも**当時の断面の記録**であり observed には存在しない。
+
+### Lifecycle Guard Runtime の adapter registry（5 本、いずれも `Object.freeze` された module-level 配列）
+
+| registry | 位置 | adapter（order 昇順） | receipt 型 |
+| --- | --- | --- | --- |
+| `INTENT_BIRTH_WORKSPACE_GUARDS` | `amadeus-utility.ts:4123` | `intent-birth.workspace-scan`(10) | `ClassifiedWorkspaceScan` |
+| `STAGE_COMPLETION_GUARDS` | `amadeus-state.ts:329` | `.artifacts`(10) / `.unit-review`(20) / `.blocking-sensors`(30) | なし（`never`） |
+| `PHASE_TRANSITION_GUARDS` | `amadeus-state.ts:353` | `.phase-check-artifact`(10) | なし |
+| `WORKFLOW_COMPLETION_PREPARATION_GUARDS` | `amadeus-state.ts:369` | `.prepared`(10) / `.mandatory-plugin-stages`(20) | なし |
+| `WORKFLOW_COMPLETION_AUTHORIZATION_GUARDS` | `amadeus-state.ts:387` | `.record-resolution`(10) / `.goal-receipt`(20)（`WORKFLOW_COMPLETION_GOAL_RECEIPT_POLICY` `:385`） | `GoalReconciliationReceipt` |
+
+拒否の合流点は `refuseBlockedTransition`（`amadeus-state.ts:405`）。消費側 8 ファイル（`git grep -l "amadeus-lifecycle-guard" -- . ':!amadeus/spaces'`）は正本 2（`amadeus-state.ts` / `amadeus-utility.ts`）+ 文書 2（`docs/reference/26-lifecycle-guard-runtime{,.ja}.md`）+ テスト 4（`tests/unit/t2771-lifecycle-guard-runtime.test.ts` 240 行 / `tests/integration/t2771-lifecycle-guard-checkpoints.integration.test.ts` 728 行 / `t2771-lifecycle-guard-regression.integration.test.ts` 164 行 / `t511-blocking-sensor-gate.integration.test.ts`）。**hooks 配下は 0 ヒット** — hook 層のガードは Runtime の外にある。
+
+### 本 intent の患部コンポーネント（`plugins/formal-model-check/tools/`、base..observed で無変更）
+
+| コンポーネント | 位置 | 責務 | #2361 との関係 |
+| --- | --- | --- | --- |
+| `selectTlcSpawnPlanner` | `tlc-spawn-planner.ts:520` | provider → planner。**同期・可用性検査ゼロ**。`auto` 分岐は `:526` | 患部（フォールバック不在） |
+| `createNotRunPlannerReceipt` | `tlc-spawn-planner.ts:62` | not-run receipt の inspection plan 選択。`auto` 分岐は `:68` | 患部（`:526` と同期必須） |
+| `NodePlannerEnvironmentPort.inspectDarwin` | `tlc-spawn-planner.ts:131-191` | JAVA_HOME / JDK version / sandbox-exec / network-deny の実 probe | JDK 不一致の実観測点（`:150-166`） |
+| `DarwinTlcSpawnPlanner.snapshotEnvironment` | `tlc-spawn-planner.ts:292`（catch `:316-321`） | probe 失敗を `ENVIRONMENT_UNAVAILABLE` へ | フォールバックの自然な合流点 |
+| `DockerTlcSpawnPlanner.snapshotEnvironment` | `tlc-spawn-planner.ts:415` → `inspectDocker` `:193` → `inspectImage` `:246-265` | docker CLI 実在 + `docker image inspect` | 代替経路の可用性判定（デーモン独立検査なし） |
+| `DARWIN_INSPECTION_PLAN` / `DOCKER_INSPECTION_PLAN` | `tlc-spawn-planner.ts:46-52` / `:54-60` | 同じ 5 `EnvInspectionId` を持つ平行構造 | plan の取り違えが receipt の不整合になる |
+| `FIXED_JDK_RUN_PROFILE` | `tlc-toolchain.ts:90-92` | JDK ピンのデータ正本（`OpenJDK` / `26.0.1`） | ピン 6 面のうち A |
+| `JdkDistributionManifest` | `tlc-toolchain.ts:709-710` | **型レベルのリテラル固定**（`"OpenJDK"` / `"26.0.1"`） | ピン 6 面のうち C。version を緩めるなら型から |
+| `#verifyJavaVersion` | `fs-tlc-toolchain.ts:1331` | distribution snapshot 経路の同一正規表現 | ピン 6 面のうち E。planner 側と独立に走る |
+
+`selectTlcSpawnPlanner` の production 呼出は 2 件 — `run-model-check-execution.ts:225-234`（platform を DI）と `tla-referee-toolchain.ts:224-228`（**platform を注入せず既定 `process.platform`**）。テスト seam が経路間で非対称である。
+
+## ライフサイクル進行ガードの構成要素棚卸し（260813-lifecycle-guard-runtime、履歴、observed `89532174c`。**#2986 着地前の断面**。着地後の registry 構成は上の 260814 節）
 
 **観測 ref**: すべて observed = `89532174c30ef9cc7ff29496cd6916586fdda00a`。差分 base = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（35 commits / 233 files、うち `packages/framework/core/tools` は 9 files / +680 −105）。**G 番号付きの全数棚卸し（G1〜G40）と検索述語 P1〜P13 は `re-scans/260813-lifecycle-guard-runtime.md` を正本とする**。本節は checkpoint 群ごとの component だけを掲げる。
 

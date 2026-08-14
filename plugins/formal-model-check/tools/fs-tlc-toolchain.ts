@@ -44,6 +44,7 @@ import {
   type ModelCheckReceiptBundle,
 } from "./tla-model-receipt.ts";
 import {
+  acceptsFixedJdkVersionOutput,
   createJdkDistributionManifest,
   createJdkSnapshotIdentity,
   createSandboxProbeReceipt,
@@ -1328,7 +1329,7 @@ class FsTlcRuntime {
     let receipt: JavaVersionReceipt;
     try { receipt = await port.inspect({ javaExecutablePath: expectedExecutable, javaHome: jdk.snapshotRoot, deadlineMs: Math.min(deadlineMs, 5_000) }); }
     catch (cause) { toolchainAbort(kind, "JDK_VERSION", "java version inspection failed", cause); }
-    if (receipt.executableRealpath !== realpathSync(expectedExecutable) || !/^openjdk version "26\.0\.1(?:"|\+)/m.test(receipt.output) || !receipt.output.includes("OpenJDK")) toolchainAbort(kind, "JDK_VERSION", "java realpath, OpenJDK vendor, or 26.0.1 version output drifted");
+    if (receipt.executableRealpath !== realpathSync(expectedExecutable) || !acceptsFixedJdkVersionOutput(receipt.output)) toolchainAbort(kind, "JDK_VERSION", "java realpath, OpenJDK vendor, or major 26 version output drifted");
     return canonicalIdentity(receipt, "amadeus.formal-verif.jdk-version-receipt.v1").sha256;
   }
 

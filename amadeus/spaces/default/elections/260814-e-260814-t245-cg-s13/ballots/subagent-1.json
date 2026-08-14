@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-260814-T245-CG-S13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "採用0件で可。一次資料を独立に確認した。(1) construction/code-generation/memory.md の Interpretations 節に候補は c1 の1件のみ:『本 intent 専用 worktree(branch fix-2971-t245-origin、origin/main 起点)を Bolt worktree として使用』。本文は具体的なブランチ名 fix-2971-t245-origin を名指ししており、他 intent へそのまま転用できる一般化された手順の記述ではなく、本 intent の実行環境固有の一回性の記録である。(2) project.md:13 の cid:code-generation:solo-bolt-worktree-required を grep で確認した。同 cid の要求は『ソロ運用でも Bolt 実装は最初から git worktree 分離で行い、本線ツリーのブランチ切替で実装しない』であり、懸念の実質は本線ツリーの汚染防止(ブランチ切替の回避)にある。本 intent は CLAUDE.md の指示(『必ず専用 worktree とブランチを作成してから作業を開始する』)に従い、intent 開始時点で既に branch fix-2971-t245-origin の専用 worktree で稼働しており、その既存 worktree を Bolt 実装にもそのまま用いることは、本線ツリーで直接ブランチ切替する行為とは異なり、cid が禁じる事態(本線汚染)を発生させない。ゆえに c1 は既存 cid の**新しい解釈や例外**を導入するものではなく、既存 cid の文言が要求する条件(worktree 分離・非本線)をこの実行環境において機械的に満たしていることの確認にすぎない。team.md P1『既決ルールの機械的執行は判断ではなく執行として選挙不要』に該当し、§13 学習が要求する一般化・機械化可能な新規知見の性質を満たさない。記録は diary(memory.md)と本選挙記録に残るため追跡可能性も確保されている。Open questions 2件(t528, t99)は起票候補として別経路(§14)に委ねられており本選挙の対象外。以上より提案どおり採用0件を可とする。",
+  "submittedAt": "2026-08-14T00:00:00Z",
+  "receivedAt": "2026-08-14T01:49:00Z"
+}

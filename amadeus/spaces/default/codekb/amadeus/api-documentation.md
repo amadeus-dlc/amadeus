@@ -1,6 +1,51 @@
 # API ドキュメント
 
-## ライフサイクルガードの内部契約（260813-lifecycle-guard-runtime、履歴、observed `89532174c`）
+## Lifecycle Guard Runtime の公開契約と新設リファレンス（260814-fmc-macos-provider、現在、observed `5f6b5bf97`）
+
+**観測 ref**: observed = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`、差分 base = `89532174c30ef9cc7ff29496cd6916586fdda00a`（9 commits）。正本は `re-scans/260814-fmc-macos-provider.md`。
+
+### 新設リファレンス
+
+`docs/reference/26-lifecycle-guard-runtime.md`（222 行）と対訳 `.ja.md`（214 行）が `0fbbec42b`（#2986）で新設された。**Runtime の意図・信頼境界・不変条件を宣言する文書側の正本**であり、直下の 260813 節が記した「判定語彙 5 系統」問題への回答をここで明文化している（逐語: `those answers were expressed in five different result vocabularies and wired by hand into every commit path, so adding a guard meant editing every handler and a missed wire was a silent fail-open rather than a failing test.`）。文書は Runtime を「既存機構の一般化であって隣に建てた新サブシステムではない」と位置づける。
+
+### 型・関数の公開面（`packages/framework/core/tools/amadeus-lifecycle-guard.ts`、236 行）
+
+| 契約 | 位置 | 形 |
+|---|---|---|
+| `LifecycleCheckpoint` | `:42-46` | `"intent-birth" \| "stage-completion" \| "phase-transition" \| "workflow-completion"` |
+| `GuardAuditDisposition` | `:54` | `"error-logged" \| "none"` — 拒否を監査台帳へ書くか |
+| `GuardRefusal` | `:56` | `reason`（先頭に逐語表示）+ `recovery`（末尾）+ `evidence` + `audit` |
+| `LifecycleGuardVerdict<P>` | `:74-78` | `allowed`(receipt 任意) / `denied` / `unknown` / `not-applicable` |
+| `LifecycleGuardAdapter<C, P>` | `:80-89` | `{ id, checkpoint, order, evaluate(context) }`。`id` は checkpoint 内で一意かつリリース間で安定 |
+| `LifecycleGuardDecision<P>` | `:96-111` | `allowed` / `blocked` の判別ユニオン。`blocked` は `policyId` / `blockingKind`（`"denied" \| "unknown"`）/ `refusal` を持つ |
+| `evaluateLifecycleGuards<C, P>` | `:208` | `{ checkpoint, targetRevision, context, adapters }` → `LifecycleGuardDecision<P>`。**最初の blocking verdict で停止**。checkpoint 不一致の adapter は `not-applicable` として記録（`:214-218`） |
+| `guardReceipt<P>` | `:153` | 許可 adapter が解決した値を取り出す。receipt 不在なら throw（`:161`） |
+| `formatGuardRefusal` | `:137` | `reason [+ " " + recovery] [+ " (evidence: k=v; …)"]` |
+| `guardAllowed` / `guardDenied` / `guardUnknown` / `guardNotApplicable` | `:118` / `:122` / `:126` / `:130` | verdict コンストラクタ |
+
+`unknown` は `denied` と同じく blocking である。Runtime は同期であり自前の締切を持たない — 時間予算を持つ adapter が失効を `unknown` として報告し、同じ規則でブロックする（`:25-28`）。
+
+**登録 API は存在しない**（`:36-38`）。registry は checkpoint を所有するファイルの module-level frozen 配列（`amadeus-state.ts:329` / `:353` / `:369` / `:387`、`amadeus-utility.ts:4123`）で、プロジェクトはシステム不変ガードを外せない。ユーザ空間の policy は adapter 経由でのみ入る（現状は `stage-completion.blocking-sensors` のみ）。
+
+### 「バイパス不能」は測定述語として固定されている
+
+`tests/integration/t2771-lifecycle-guard-census.integration.test.ts`（155 行）が **ソースを読んで** commit path を全数列挙する（`readFileSync` で `packages/framework/core/tools/` を直読。当該テストは Runtime を import しないため `git grep -l "amadeus-lifecycle-guard"` の 8 ヒットには現れない）。固定する不変条件は 3 つ — `setCheckbox(…, "completed")` を書く全関数が chokepoint を呼ぶこと、各 chokepoint 本体が `evaluateLifecycleGuards` を呼ぶこと、宣言済み registry が**ちょうど 1 本**の commit path から到達されること。5 つ目の完了ハンドラを chokepoint 無しで足すと赤くなる。
+
+jump は phase-transition のみを評価し stage-completion を評価しない（`[S]` / `pending` 化であって完了ではない）。この非対称は文書上も census 上も**意図的**として固定されている。
+
+### 本 intent の患部が触れる公開契約（`plugins/formal-model-check`、base..observed で無変更）
+
+| 契約 | 位置 | 内容 |
+|---|---|---|
+| `ModelCheckProvider` | `run-model-check-domain.ts:7` | `"auto" \| "sandbox-exec" \| "docker"`。CLI 既定は `auto`（`:240`）、受理値は `parseProvider`（`:191-198`）の 3 値のみ |
+| `selectTlcSpawnPlanner` | `tlc-spawn-planner.ts:520-539` | `(provider, config, environment, platform = process.platform) => Result<TlcSpawnPlanner, TlcToolchainError>`。**同期**。明示 `sandbox-exec` × 非 darwin は `PROVIDER_PLATFORM` で拒否 |
+| `createNotRunPlannerReceipt` | `tlc-spawn-planner.ts:62-75` | `(provider, platform, runId, priorFailureCode) => EnvReceipt`。`docker` 判定は `provider === "docker" \|\| (provider === "auto" && platform !== "darwin")`（`:68`） |
+| `amadeus.env-receipt.v1` | `run-model-check-domain.ts:93-98` | receipt スキーマ。**provider 中立**であり、フォールバック導入に schema 変更は不要 |
+| `EnvInspectionId` | `run-model-check-domain.ts:71-76` | `image-digest` / `jar-sha256` / `network-deny` / `jdk-snapshot` / `sandbox-profile` の 5 値。Darwin / Docker の plan は同じ 5 値で not-applicable 理由だけが異なる |
+| JDK ピンの**型レベル**契約 | `tlc-toolchain.ts:709-710` | `readonly vendor: "OpenJDK"` / `readonly version: "26.0.1"`。緩和は型変更を要し、`fs-tlc-toolchain.ts:659-660` と `tests/unit/t401-directive-and-toolchain-rejections.test.ts:67-68` へ波及する |
+| `ENVIRONMENT_UNAVAILABLE` の文言 | `tlc-spawn-planner.ts:161-165` | `tests/integration/t-formal-verif-run-model-check.integration.test.ts:263-272` が `OpenJDK 26.0.1 verification failed` を 3 箇所で `toContain`。**文言変更は既存テストを赤にする** |
+
+## ライフサイクルガードの内部契約（260813-lifecycle-guard-runtime、履歴、observed `89532174c`。**#2986 着地前の断面**であり、以下のシグネチャ表は移行前のもの。着地後の公開面は上の 260814 節）
 
 **観測 ref**: すべて observed = `89532174c30ef9cc7ff29496cd6916586fdda00a`。差分 base = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（35 commits）。全数列挙（G1〜G40）は `re-scans/260813-lifecycle-guard-runtime.md` を正本とする。
 

@@ -1,0 +1,25 @@
+{
+  "electionId": "E-260814-CG-TDD-SUBSTITUTE",
+  "voter": "subagent-1",
+  "question": "code-generation(intent 260814-fmc-macos-provider、Issue #2361、PR #3007)の TDD 実施逸脱の裁定。承認済み plan は全 slice の Red 実測を前提としたが、実装後に3面で先行 Red が取れなかった: (1) FR-2(auto の両系統失敗で ENVIRONMENT_UNAVAILABLE + 両理由連結)— FR-1 の最小実装(AutoTlcSpawnPlanner の snapshot フォールバック)が両系統失敗分岐を必然的に含んだため、テスト追加時に即緑。(2) FR-3(明示 provider は非フォールバック)— 挙動不変の保存要件で、新規挙動が存在しない。(3) FR-7 の planner 種別 assert の一部(auto+非darwin→Docker 等の既存挙動面)。builder は3面すべてで代替の落ちる実証を実施済み: 対象分岐へ故障注入 → テスト赤を実測 → 復元 → 残渣ゼロを grep で機械確認(FR-2: describeFailure 合成式の除去注入で 1 fail、FR-3: 明示経路へ Auto planner を噛ませる注入で 1 fail、FR-7: platform 分岐反転注入で 1 fail)。team.md Testing Posture は「実装後の落ちる実証は TDD 実施とみなさない」「エラーパスも TDD 適用対象」と定める一方、「振る舞い不変のリファクタリング」は適用外とし characterization test を認める。検証結果自体は全緑(統合ツリーでフルスイート 992 files / 0 fail)。この3面の代替検証を受理して成果物を確定させるか、厳密再実施(該当実装の revert → テスト追加 → Red 実測 → 再実装)を要求するか。",
+  "ordered": [
+    {
+      "displayNo": 1,
+      "internalNo": 3,
+      "label": "3面すべて厳密再実施を要求",
+      "description": "承認済み plan の Red 実測前提を字義どおり適用し、3面すべてで該当実装を revert してテスト先行を再演する"
+    },
+    {
+      "displayNo": 2,
+      "internalNo": 1,
+      "label": "代替の落ちる実証を受理し、逸脱として記録して確定",
+      "description": "3面の注入→赤→復元(残渣ゼロ機械確認)はテストの検出力を実測で立証しており、FR-3 は挙動不変の保存要件で characterization test が正当、FR-2 は FR-1 の最小実装が同一分岐を含んだ帰結、FR-7 の該当部は既存挙動の assert 強化。厳密再実施(revert→Red→再実装)は同一の注入操作を git 上で再演するだけで検出力の証拠を増やさない。code-summary の逸脱申告にこの3面を明記して確定する"
+    },
+    {
+      "displayNo": 3,
+      "internalNo": 2,
+      "label": "FR-2 のみ厳密再実施を要求(FR-3/FR-7 は受理)",
+      "description": "FR-2 はエラーパスであり team.md が明示的に TDD 適用対象と定める。両系統失敗分岐を revert し、テスト追加 → Red 実測 → 再実装で TDD を厳密に満たす。FR-3(挙動不変)と FR-7(既存挙動 assert)は適用外・強化として受理"
+    }
+  ]
+}
