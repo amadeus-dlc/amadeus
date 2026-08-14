@@ -1,6 +1,93 @@
 # コード品質評価
 
-## リトライ構造が構造的に無効化される経路と、ガード面の非対称（260814-t99-copytree-race、現在、observed `5b12d96e9`）
+## ガードの適用境界が原理を持たない — 契約が doc 止まりで違反を検出できない（260814-copytree-guard-boundary、現在、observed `f60b3f4c8`）
+
+対象: [Issue #3014](https://github.com/amadeus-dlc/amadeus/issues/3014)（`copyTreeWithRetry` のガード適用境界が非対称）。測定 ref = observed `f60b3f4c868f3b7608a06f08393b8e2f10287fad`（`git rev-parse HEAD`。`origin/main` 系譜上のコミットであり `git merge-base HEAD origin/main` = 同一 SHA。ローカル `origin/main` は本 scan 時点で 2 commits 先行 = `cd64486a6`、いずれも患部非交差）、差分 base = `5b12d96e99cbf46711acd3dc2b8c103be1b0f801`。正本は `re-scans/260814-copytree-guard-boundary.md`。以下の file:line は Architect が observed 断面で `sed` / `git grep` により verbatim 再照合した。
+
+### Q-1. ガードの適用原理がコード上に存在しない（本 intent の中核）
+
+`copyTreeWithRetry` は #3003 の修正（#3015）で dest-fresh 契約を得たが、**どのサイトにガードを貼るかの原理**はコードにもコメントにも記録されていない。結果として、**同一関数内**にガード呼出と素 `cpSync` が同居する面が 2 ファイルに残る:
+
+- `tests/harness/fixtures.ts` — `:852` が `copyTreeWithRetry(AMADEUS_SRC, join(proj, ".claude"));`、その 14 行後の `:866-867` が `if (existsSync(AMADEUS_MEMORY_SRC)) {` / `cpSync(AMADEUS_MEMORY_SRC, join(proj, "amadeus"), { recursive: true });`
+- `tests/harness/tui-fixtures.ts` — `:181` の claude 分岐だけがガードされ、`:170-179` の kiro / kiro-ide 分岐は**丸ごと素 `cpSync`**（同一関数 `setupTuiProject` 内の兄弟分岐）
+
+品質所見としては、ガードは「危険な操作を集約するチョークポイント」ではなく「特定サイトに貼られたパッチ」として存在しており、**分岐を 1 本増やすたびに未ガード面が静かに増える**構造になっている。
+
+### Q-2. dest-fresh 契約が doc 止まりであり、違反サイトを機械検出できない
+
+契約は `CopyTreeOps` 直上のコメント（`:638-645`）にのみ存在する。verbatim:
+
+```
+// dest-fresh contract (#3003, t99): `dest` must not exist when
+// copyTreeWithRetry is called — the helper owns it outright.
+```
+
+型にも assert にも現れないため、契約違反は**レビューの目視でしか検出できない**。そしてその目視は実際に失敗している — 本 intent の Developer scan は「ガード適用候補 6 サイト全てが dest-fresh を満たす」と報告したが、Architect の再検証で **`fixtures.ts:867` は満たさない**ことが判明した:
+
+- `setupIntegrationProject` は `:851` で `createTestProject()` を呼び、`createTestProject`（`:129-141`）は内部で `seedWorkspaceShell(proj)`（`:139`）を呼ぶ。`seedWorkspaceShell`（`:219-244`）は `mkdirSync(join(proj, "amadeus", "spaces", space, "memory"), …)`（`:221`）ほかで `<proj>/amadeus/` を**作成し内容を書き込む**
+- 実測（scratch、repo 外実行）: `createTestProject()` 直後に `<proj>/amadeus` は `exists=true`、直下エントリは `.amadeus-clone-id,active-space,spaces`
+- 一方 `dist/claude/amadeus` の直下は `active-space` / `spaces` のみ（`ls dist/claude/amadeus`）で、`.amadeus-clone-id` と `spaces/default/intents/` を**含まない**
+
+したがって `:867` の素 `cpSync` は **merge 意味論に依存した意図的な選択**であり、ガードへ素朴に置換すると seed 済みの clone-id・cursor・intents registry・record dir が消える。**「契約が doc にしかない」ことのコストが、本 intent の scan 自体で実証された**形になる。
+
+### Q-3. 単一ファイル面はガード適用が構造的に不可能（ENOTDIR 罠）
+
+`countFilesRecursive`（`:792-805`）は `readdirSync` を **`try` の外**で呼ぶ（`:795`。`try` は `:796` 以降で `statSync` のみを覆う）。src が単一ファイルだと `existsSync` は true、`readdirSync(file)` が **`ENOTDIR`** で throw する。`ENOTDIR` は `RETRYABLE_COPY_CODES`（`:620` = ENOENT/EAGAIN/EMFILE/ENOMEM）に含まれないため、`isRetryableCopyError` が false → attempt 1 で `break` → throw。つまり単一ファイルへガードを貼ると「**リトライせずに必ず落ちる**」。
+
+これは post-condition を件数照合に選んだ設計の副作用であり、ガードの適用可能域が「ディレクトリのみ」に暗黙で限定されていることを意味する。この限定もまた doc・型・assert のいずれにも記録されていない（Q-2 と同根）。該当面は `tui-fixtures.ts:171` / `:178`（いずれも `AGENTS.md` の単一ファイルコピー）の 2 面。
+
+### Q-4. 適用境界の実数 — pred-a2 で 8 サイト、実質適用可能は 5 サイト
+
+述語 pred-a2（「`copyTreeWithRetry` 呼出と**同一関数本体**にあり、src が `*_SRC` / `*_DIST` 定数に根ざす素 `cpSync`」）で列挙すると 8 サイト / 2 ファイル。内訳と可否:
+
+| 区分 | 件数 | サイト |
+|---|---|---|
+| 適用可能（ディレクトリ + dest-fresh） | **5** | `tui-fixtures.ts:170` / `:172` / `:177` / `:179` / `:188` |
+| dest-fresh 不成立（設計裁定要） | 1 | `fixtures.ts:867`（Q-2） |
+| 単一ファイル（構造的に適用不可） | 2 | `tui-fixtures.ts:171` / `:178`（Q-3） |
+
+なお `fixtures.ts:1030/1031/1032/1034/1037/1038/1039/1041/1048` の 9 件（`setupWorkspaceJourney`、`:1022-1070`）は同一関数内にガード呼出が無いため pred-a2 の外。Developer scan が報告した「広い述語で 35 コードサイト」との差は**述語の広さの差**であり、どちらの述語でも未ガード面がガード面を上回る非対称は変わらない。
+
+### Q-5. `CopyTreeOps.exists` は宣言のみで本体が消費していない
+
+`CopyTreeOps`（`:646-654`）は `copy` / `exists` / `sleep` / `count` / `remove` の 5 面を宣言するが、`exists`（`:648`）は `copyTreeWithRetry` 本体（`:665-696`）から**呼ばれていない**。`git grep -n 'ops\.exists' -- tests/harness/fixtures.ts` は **1 hit のみ**（`:600`、`removeTreeWithRetry` の post-condition `if (!ops.exists(path)) return;`、型は `RemoveTreeOps`）。
+
+`team.md` の「どのコードも消費しない検証用フィールド」に該当する。除去コスト（実測）は**削除 6 行**（`fixtures.ts:648` / `:657` の 2 行 + `t-fixtures-copy-tree-retry.integration.test.ts:29-32` の `opsRecorder.exists` 4 行）、**assert 変更 0** — 同テスト `:52-59` の `ops.calls` 期待値は `remove:` / `copy:` / `count:` のみを列挙しており、`exists:` を含まない（＝呼ばれていないことが既に pin されている）。
+
+### Q-6. 診断が注入シームを迂回して素の `fs` を直呼びする
+
+`reportCopyTreeFailure` 以下の診断経路は `ops` を経由しない直接 fs 呼出を 7 面持つ: `existsSync` 3 面（`:719` / `:723` / `:793`）、`readdirSync` 3 面（`:778` / `:786` / `:795`）、`statSync` 1 面（`:797`）。
+
+これは偶発ではなく**既存テストが明文で前提化している**。`tests/integration/t-fixtures-copy-tree-retry.integration.test.ts:324-326` verbatim:
+
+```
+    // reportCopyTreeFailure's existsSync(src)/safeReaddir(src) calls are
+    // real fs calls, unaffected by an injected `ops` — `ops` only stands in
+    // for the copy operation itself.
+```
+
+このため診断経路の一部は in-process では駆動できず、`tests/.coverage-patch-allowlist.json` の `safeReaddir` エントリ（`class: "catch-arm"`）で免除されている。その `expiry` は verbatim `remove when reportCopyTreeFailure takes an injectable readdir port` であり、**readdir ポート新設（本 intent のスコープ c2）はこの expiry 条件そのものを満たす** — つまり c2 を採る場合は免除エントリの削除と catch 面の driver 追加が同一変更に含まれる（`cid:code-generation:c-measure-not-prose` に従い lcov DA で被覆を実測）。
+
+### Q-7. c1 / c2 のトレードオフ
+
+| | **c1: `exists` 除去** | **c2: 診断の readdir シーム化** |
+|---|---|---|
+| 契約 | 縮小（5 面 → 4 面） | 拡張（ポート新設） |
+| 変更規模（実測） | 削除 6 行 / assert 変更 0 | ポート面 + 診断書き換え + テスト前提反転 |
+| 既存テストへの作用 | なし | `:323-368` の明文前提（Q-6 の verbatim）を反転させる |
+| 免除台帳連動 | なし | あり（`safeReaddir` エントリの expiry 到達） |
+| 振る舞い | 不変 | 診断経路の意味論が変わる |
+| リスク | 低 | 中 |
+
+c1 は surgical な負債返済、c2 は検証面の投資。**独立に実施可能**であり、同一 Unit に束ねるか分けるかは requirements-analysis の裁定事項。
+
+### Q-8. 強み（本 scan で確認できた点）
+
+- `opsRecorder`（テスト `:21-45`）はオブジェクトリテラルで `CopyTreeOps` を実装しているため、**必須メンバの追加は型エラーで全ケースの更新を強制する**（契約拡張が無音で通らない）
+- #3015 が導入した `describeTreeDifference` により、dest 側の余剰エントリが診断へ出るようになった（前 intent の Q-D は解消）
+- `ops.calls` の `toEqual`（テスト `:52-59`）が呼出列を完全一致で pin しているため、Q-5 の「未消費」は既にテストで固定されており、除去しても検出漏れは起きない
+
+## リトライ構造が構造的に無効化される経路と、ガード面の非対称（260814-t99-copytree-race、履歴、observed `5b12d96e9`。**#3015 着地前の断面**。Q-A / Q-B の remove 面欠如は #3015 で解決済み、Q-E のガード境界非対称は本ファイル冒頭の 260814-copytree-guard-boundary 節が後継として扱う。以下の file:line は observed `5b12d96e9` の座標であり、#3015 と #2999 による行シフトのため observed `f60b3f4c8` とは一致しない）
 
 対象: [Issue #3003](https://github.com/amadeus-dlc/amadeus/issues/3003)（`copyTreeWithRetry` のリトライが dest 汚染下で必ず 3/3 失敗する）。測定 ref = observed `5b12d96e99cbf46711acd3dc2b8c103be1b0f801`(`git rev-parse HEAD` = `git rev-parse origin/main`)、差分 base = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`。正本は `re-scans/260814-t99-copytree-race.md`。以下の file:line は Architect が observed 断面で `sed` / `git grep` により verbatim 再照合した。
 
@@ -96,7 +183,7 @@
 **落ちる実証の所在**が本 intent の主要な検証リスクである。JDK ピン緩和を実環境で実証できる唯一の面は `tests/integration/t-formal-verif-run-model-check-real.integration.test.ts` だが、`REAL_TLC_AVAILABLE = AMADEUS_RUN_REAL_TLC === "1" && process.platform === "darwin" && JAVA_HOME !== undefined`（`:30-32`）により **CI 既定では skip** される。どこで赤を実測するかは build-and-test の設計事項である。
 
 ## ライフサイクルガードの品質所見 — fail 方向の衝突と迂回路（260813-lifecycle-guard-runtime、履歴、observed `89532174c`。**#2986 着地前の断面**。Q-2 が挙げる「判定語彙 5 系統」は Runtime 導入で 4 checkpoint 分が `LifecycleGuardVerdict` へ統一された。**Q-1 の fail 方向衝突は未解消** — verdict 消費側が `stage-completion.blocking-sensors` adapter（`amadeus-state.ts:341-346`）へ移っただけで、生成側 `amadeus-sensor.ts:19-31` の分岐 e/f は observed `5f6b5bf97` でも fail-open のまま(逐語再確認済み)）
-## テスト実行文脈への依存 — 失敗集合が入れ替わる二重機序（260814-t528-ambient-isolation、現在、observed `5f6b5bf97`）
+## テスト実行文脈への依存 — 失敗集合が入れ替わる二重機序（260814-t528-ambient-isolation、履歴、observed `5f6b5bf97`）
 
 対象: [Issue #2981](https://github.com/amadeus-dlc/amadeus/issues/2981)（`tests/integration/t528-report-ack-kind.integration.test.ts` の失敗集合が実行文脈で入れ替わる）。測定 ref = observed `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`（`git rev-parse HEAD` = `git rev-parse origin/main`）。一次証拠は Developer scan（run `xrev-260814-2981`、target-sha `52f1f1b2575ea35bd23b761697b2d17a5e9a7ac3`）で、下記の file:line は Architect が observed 断面で `sed` により verbatim 再照合した。
 
