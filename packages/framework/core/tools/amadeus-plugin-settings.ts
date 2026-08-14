@@ -217,3 +217,58 @@ function defaultViolation(
     ? `settings["${key}"].default must be one of ${(values ?? []).join(" | ")}`
     : `settings["${key}"].default must be a ${type}`;
 }
+
+export type ResolvedSettings = Readonly<Record<string, SettingScalar>>;
+
+export type SettingsResolution =
+  | { readonly ok: true; readonly settings: ResolvedSettings }
+  | {
+      readonly ok: false;
+      readonly error: {
+        readonly code: "unknown-key" | "type-mismatch" | "enum-out-of-range";
+        readonly plugin: string;
+        readonly key: string;
+        readonly detail: string;
+      };
+    };
+
+// Fold a plugin's declared defaults with the config overrides that survived the
+// lexical parse. This is the ONLY point where an override meets its declaration,
+// so it is also the only point that can catch a key nobody declared or a value
+// of the wrong type — and it refuses rather than defaulting: a plugin running on
+// a default the operator did not ask for is a silent misconfiguration.
+export function resolvePluginSettings(
+  plugin: string,
+  declaration: PluginSettingsDeclaration,
+  overrides: Readonly<Record<string, SettingScalar>>,
+): SettingsResolution {
+  const settings: Record<string, SettingScalar> = {};
+  for (const [key, decl] of Object.entries(declaration)) settings[key] = decl.default;
+  for (const [key, value] of Object.entries(overrides)) {
+    const decl = declaration[key];
+    if (decl === undefined) {
+      return fail("unknown-key", plugin, key, `no such setting is declared by plugin "${plugin}"`);
+    }
+    if (!valueMatchesType(decl.type, value, decl.values)) {
+      return decl.type === "enum"
+        ? fail(
+            "enum-out-of-range",
+            plugin,
+            key,
+            `value must be one of ${(decl.values ?? []).join(" | ")}`,
+          )
+        : fail("type-mismatch", plugin, key, `value must be a ${decl.type}`);
+    }
+    settings[key] = value;
+  }
+  return { ok: true, settings };
+}
+
+function fail(
+  code: "unknown-key" | "type-mismatch" | "enum-out-of-range",
+  plugin: string,
+  key: string,
+  detail: string,
+): SettingsResolution {
+  return { ok: false, error: { code, plugin, key, detail } };
+}
