@@ -17,3 +17,18 @@ Step 1 → FR-3 / Step 2 → FR-1 / Step 3 → FR-2 / Step 4 → FR-4 / Step 5 �
 ## Test configuration
 
 既存の `tests/run-tests.sh` / bun test 構成を変更しない(t528 は integration tier、`.serial.` なしの並行帯のまま)。新テストは既存ファイル内に追加するため test path 集合は不変。
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-14T01:26:01Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+FR-1/FR-2/FR-4 の実装をテストファイル実体で確認。変更は t528 テストファイル1本のみで production 不変(Q1=A)、後方互換シム・フォールバック分岐の混入なし、オラクル再実装なし、無申告の逸脱なし。非ブロッキング指摘2件(FR-2/FR-4 の落ちる実証ログの verbatim 度、afterEach 側 OTel リセット未実装の残課題記録)。
+
+### Findings
+
+- FOLLOW-UP | code-summary.md: FR-2/FR-4 の落ちる実証記録は FR-3 ほど verbatim なログを伴っていない(scratch に実測ログは保存済み)
+- NIT | tests/integration/t528-report-ack-kind.integration.test.ts: OTel リセットの afterEach 側未実装は残課題として妥当に記録済み
