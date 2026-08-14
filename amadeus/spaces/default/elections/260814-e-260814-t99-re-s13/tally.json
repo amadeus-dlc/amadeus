@@ -1,0 +1,55 @@
+{
+  "result": {
+    "kind": "established",
+    "winner": {
+      "internalNo": 1,
+      "label": "採用0件で可"
+    },
+    "choiceCounts": [
+      {
+        "internalNo": 1,
+        "label": "採用0件で可",
+        "count": 2
+      },
+      {
+        "internalNo": 2,
+        "label": "候補を採用すべき",
+        "count": 0
+      }
+    ],
+    "goa": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-14T05:20:15Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-260814-T99-RE-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "採用0件で可。一次資料を独立に確認した。(1) amadeus/spaces/default/intents/260814-t99-copytree-race/inception/reverse-engineering/memory.md の Interpretations 節に候補は2件: c1『xrev differential scan mode を採用(Issue #3003 は xrev-260814-3003 2名成立、患部2面が base..observed diff 非含有で currency 成立。判定手順は c5 追補と Inbox 記録済みの空洞化状態を踏まえ、git 履歴の旧本則を背景参照)』、c2『base=5f6b5bf97(re-scans/*.md の observed のうち HEAD 祖先で距離最小=9)、observed=HEAD=origin/main=5b12d96e9』。(2) c2 は project.md:142 の cid:reverse-engineering:c1 が定める『差分 base は HEAD の祖先である observed のうち距離最小を選ぶ』の文言どおりの機械適用であり、新規解釈を含まない。(3) c1 は project.md:152 の cid:reverse-engineering:c5-xrev-currency-schema-migration が定める判定手順『(1) review 断面以後に患部の表現形式を変える移行 PR が着地しているかを実測 (2) 着地していれば通常スキャンへ切替、なければ xrev 採用』の適用であり、memory.md の記述はこの手順を辿った結果(移行 PR 非該当、currency 成立)を機械的に記録したものにすぎない。(4) c1 が言及する『cid 空洞化』は project.md:160 の cid:reverse-engineering:xrev-scan-mode-cid-hollowing に既に記録済みであることを確認した — この Inbox エントリは PR #2998(コミット 0fa15633b5、`git log --oneline --all | grep 2998` で実在確認)で着地済みであり、本則(cid:reverse-engineering:c1-xrev-scan-mode)が2026-08-12蒸留(PR #2919)で本文から削除され追補(c5)のみ残存する空洞化状態を既に記録し、次回蒸留ラウンドでの裁定へ委ねる旨も明記済みである。よって本 intent(260814-t99-copytree-race)での c1 適用は、既に記録済みの空洞化状態を追認する以上の新規知見を含まない。(5) 両候補とも team.md P1『既決ルールの機械的執行は判断ではなく執行として執行不要』に該当し、§13 学習が要求する一般化・機械化可能な新規知見の性質を満たさない。記録は本 intent の diary(memory.md)と本選挙記録に残るため追跡可能性も確保されている。以上より提案どおり採用0件を可とする。",
+      "submittedAt": "2026-08-14T00:00:00Z",
+      "receivedAt": "2026-08-14T05:19:26Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-260814-T99-RE-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "一次資料を独立に確認した。memory.md の Interpretations は c1(xrev differential scan mode 採用、Issue #3003 の xrev-260814-3003 2名成立を根拠に currency 実測成立)と c2(base=5f6b5bf97、observed=HEAD=origin/main=5b12d96e9)の2件のみ。c2 は project.md:142 の既決則 cid:reverse-engineering:c1(『差分 base は HEAD の祖先である observed のうち距離最小を選ぶ』)をそのまま機械適用した執行ログであり、新規解釈を含まない。c1 は project.md:152 の cid:reverse-engineering:c5-xrev-currency-schema-migration(currency 判定手順: 患部の表現形式を変える移行が review..observed 間に挟まっていなければ xrev モード可)を機械適用した執行ログである。この c5 が引く本則(旧 cid:reverse-engineering:c1-xrev-scan-mode)が 2026-08-12 のノルム蒸留(PR #2919)で project.md から削除され空洞化している事実は、既に project.md:160 の Learnings Inbox(cid:reverse-engineering:xrev-scan-mode-cid-hollowing)に記録済みであることを実測で確認した(`git log --oneline -- amadeus/spaces/default/memory/project.md` に `0fa15633b5 docs(norms): xrev-scan-mode cid の空洞化を Learnings Inbox へ記録する(E-260814-T245-RE-S13) (#2998)` を確認、当該コミットは main に着地済み)。したがって空洞化そのものは本選挙より前の独立選挙(E-260814-T245-RE-S13)で既に §13 学習として採録されており、本 intent の c1 はその既決記録の再度の機械適用にすぎず、横断的新規性を持たない。よって候補一覧(c1・c2)を提示したうえでの『採用0件』提案に同意し、choiceInternalNo=1 を支持する。",
+      "submittedAt": "2026-08-14T05:20:00Z",
+      "receivedAt": "2026-08-14T05:20:03Z"
+    }
+  ],
+  "resolutions": []
+}

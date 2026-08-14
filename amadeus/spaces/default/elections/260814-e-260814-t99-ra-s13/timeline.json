@@ -1,0 +1,36 @@
+[
+  {
+    "kind": "ballot",
+    "at": "2026-08-14T05:25:28Z",
+    "receivedAt": "2026-08-14T05:25:28Z",
+    "detail": "ballot accepted: subagent-1",
+    "voter": "subagent-1"
+  },
+  {
+    "kind": "ballot",
+    "at": "2026-08-14T05:25:29Z",
+    "receivedAt": "2026-08-14T05:25:29Z",
+    "detail": "ballot accepted: subagent-2",
+    "voter": "subagent-2"
+  },
+  {
+    "kind": "distributed",
+    "at": "2026-08-14T05:25:44Z",
+    "receivedAt": "2026-08-14T05:25:44Z",
+    "detail": "delivered via subagent: subagent-1 (reported-by-conductor)",
+    "voter": "subagent-1"
+  },
+  {
+    "kind": "distributed",
+    "at": "2026-08-14T05:25:44Z",
+    "receivedAt": "2026-08-14T05:25:44Z",
+    "detail": "delivered via subagent: subagent-2 (reported-by-conductor)",
+    "voter": "subagent-2"
+  },
+  {
+    "kind": "tallied",
+    "at": "2026-08-14T05:25:44Z",
+    "receivedAt": "2026-08-14T05:25:44Z",
+    "detail": "tally: established"
+  }
+]

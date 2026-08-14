@@ -1,6 +1,57 @@
 # コード品質評価
 
-## 検証面の縮小と、患部を覆う coverage 免除の指紋制約（260814-fmc-macos-provider、現在、observed `5f6b5bf97`）
+## リトライ構造が構造的に無効化される経路と、ガード面の非対称（260814-t99-copytree-race、現在、observed `5b12d96e9`）
+
+対象: [Issue #3003](https://github.com/amadeus-dlc/amadeus/issues/3003)（`copyTreeWithRetry` のリトライが dest 汚染下で必ず 3/3 失敗する）。測定 ref = observed `5b12d96e99cbf46711acd3dc2b8c103be1b0f801`(`git rev-parse HEAD` = `git rev-parse origin/main`)、差分 base = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`。正本は `re-scans/260814-t99-copytree-race.md`。以下の file:line は Architect が observed 断面で `sed` / `git grep` により verbatim 再照合した。
+
+### Q-A. リトライループが「同じ失敗を 3 回繰り返す」構造になっている
+
+`tests/harness/fixtures.ts:633-661` の `copyTreeWithRetry` は、attempt ループ内に **dest を消去する経路を持たない**。post-condition は `ops.count(src) === ops.count(dest)` の等値（`:644`）であるため、dest が src の真の上位集合になった瞬間に `destCount > srcCount` が固定され、attempt 2/3 も同じ不一致を再生産して必ず throw に到達する。
+
+リトライは「試行間で状態が変わりうる」ことを前提にした構造だが、この実装は試行間で dest 側の状態を一切変えない。したがって**リトライ回数を増やしても成功確率は上がらない** — 遅延（`:659` の `sleep(50 * attempt)`）が src 側の変異収束を待つ効果しか持たない。品質上の問題は「稀に失敗する」ことではなく、**失敗様式に対してリトライ機構が構造的に無力である**ことにある。
+
+### Q-B. ops 契約に remove 面が無く、`exists` は本体が消費していない
+
+`CopyTreeOps`（`:617-623`）が宣言するのは `copy` / `exists` / `sleep` / `count` の 4 面で、**dest を消す面が無い**。Q-A の修正（attempt 毎の dest クリア）は、この契約自体の拡張を要求する。
+
+さらに `CopyTreeOps.exists` は `copyTreeWithRetry` 本体から**呼ばれていない**。`git grep -n "ops\.exists" -- tests/harness/fixtures.ts` は **1 hit のみ**で、それは `:580`（`removeTreeWithRetry` 内、型は `RemoveTreeOps`（`:564-568`））であり、`copyTreeWithRetry` の本体レンジ `:633-661` には出現しない。注入シームに宣言だけがあり本体が消費しない面であり、`team.md` の「どのコードも消費しない検証用フィールド」に該当する疑いがある(FOLLOW-UP: 本 intent の患部ではないため是正は別途)。
+
+**対比**: 姉妹関数 `removeTreeWithRetry`（`:574-590`）の post-condition は `!ops.exists(path)`（`:580`）であり、`rm` は**再試行が収束する冪等操作**なのでリトライ構造が機能する。`copyTreeWithRetry` は同じ形をコピーしながら、`copy` が dest に対して累積的（非冪等）であるという差を吸収していない。これが Q-A の根である。
+
+### Q-C. count mismatch 経路が retryable 判定を経由しない
+
+`isRetryableCopyError`（`:663-666`）は `RETRYABLE_COPY_CODES`（`:600` = ENOENT/EAGAIN/EMFILE/ENOMEM）への所属で判定するが、count mismatch は `catch` ではなく `try` 内で合成される `Error`（`:645-651`）であり、**`isRetryableCopyError` を通らない**。結果として count mismatch は常に「リトライ対象」として扱われる。`tests/integration/t-fixtures-copy-tree-retry.integration.test.ts:121-124` のコメントが述べる意図（不一致自体が transient race でありうる）とは整合するが、**恒久的な不一致（Q-A）と transient な不一致を区別する述語が存在しない**ことが、Q-A の症状を「3 回失敗して終わる」形に固定している。
+
+### Q-D. 診断が src 側しか出さないため、dest 汚染が観測面に現れない
+
+`reportCopyTreeFailure`（`:677-701`）が出力するのは `src exists` / `src top-level entries` / `src recursive file count` / `dest parent exists` / `TMPDIR` で、**dest 自体の内容・件数は 1 行も出ない**。Q-A の機序（dest が src の上位集合）は、この診断ブロックからは原理的に読み取れない。診断は #2397 の「bun が path を落とす ENOENT」に照準して設計されており、count mismatch 経路には照準していない。
+
+`countFilesRecursive`（`:709-720`）の `:716-718` コメントは「entry が消えたら数えない — undercount は post-condition を正しく赤にする」と設計意図を明言しており、**post-condition を等値から緩める修正は、このコメントが宣言する意図を書き換える裁定を要する**。
+
+### Q-E. ガード面 6 件 vs 未ガード面 19 件（同一 dist ソースの並行読み）
+
+`copyTreeWithRetry` の呼び出しは本番 6 件（`git grep -n "copyTreeWithRetry(" -- tests/` = 16 hit から、定義行 `fixtures.ts:633` 1 件と専用テスト `t-fixtures-copy-tree-retry.integration.test.ts` 内の 9 呼び出しを除いた残り）:
+
+| # | 呼出面 |
+|---|---|
+| 1 | `tests/harness/fixtures.ts:769`（`setupIntegrationProject`） |
+| 2 | `tests/harness/tui-fixtures.ts:181` |
+| 3 | `tests/integration/t99-learnings-gate-flow.test.ts:128` |
+| 4 | `tests/unit/t27.test.ts:257` |
+| 5 | `tests/unit/t80.test.ts:163` |
+| 6 | `tests/e2e/t-tui-statusline.serial.test.ts:67` |
+
+一方、同じ dist 系ツリーを**ガードなしの素 `cpSync` で読む**サイトが `tests/` 配下に **19 件 / 15 ファイル**存在する（述語は re-scan 記録 P-A。Developer scan は別の広い述語で ≈53 件と報告しており、**件数は述語の広さに依存する** — 述語を狭く取っても広く取っても未ガード面がガード面を大きく上回る非対称は変わらない）。特に `tests/harness/fixtures.ts:784`（`AMADEUS_MEMORY_SRC`）は、**`:769` のガード呼出と同一関数内の直後にある姉妹面**でありながら素 `cpSync` である。
+
+品質所見としては、`copyTreeWithRetry` は「危険な操作を一箇所に集約するガード」ではなく「特定の 6 サイトだけに貼られたパッチ」として存在している。ガードの適用境界がどの原理で引かれたのかがコード上に記録されていない(6 サイトはいずれも dest が事前非存在の新規パスだが、その **fresh 契約は関数の doc・型・assert のいずれにも明文化されていない**)。
+
+### Q-F. 落ちる実証の立て所は既に存在する
+
+`tests/integration/t-fixtures-copy-tree-retry.integration.test.ts` の `opsRecorder`（`:21-42`）はオブジェクトリテラルで `CopyTreeOps` を実装しているため、**必須メンバを追加すれば型エラーで全ケースが強制更新される**（Q-B の契約拡張が無音で通らない）。count mismatch の既存ケース（`:107-127` の 3/3 失敗、`:129-139` の途中回復）はいずれも `count: (path) => (path === "/fake/src" ? 10 : 4)` すなわち **dest < src 方向のみ**で、**dest > src 方向のケースは 0 本**である。Q-A の落ちる実証はこの方向に 1 本立てれば成立する。
+
+`tests/harness/fixtures.ts` は patch coverage の計測対象であるため、新設分岐には driver が必須になるが、注入シームがあるためコストは低い。
+
+## 検証面の縮小と、患部を覆う coverage 免除の指紋制約（260814-fmc-macos-provider、履歴、observed `5f6b5bf97`）
 
 **観測 ref**: observed = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`、差分 base = `89532174c30ef9cc7ff29496cd6916586fdda00a`（9 commits）。正本は `re-scans/260814-fmc-macos-provider.md`。
 
