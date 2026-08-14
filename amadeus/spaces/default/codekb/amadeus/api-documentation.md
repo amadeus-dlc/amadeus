@@ -1855,3 +1855,92 @@ bun scripts/package.ts [<harness>] [--check]
 ## 記録系 round-trip PBT が触れる内部契約（260802-record-roundtrip-pbt、履歴、observed `9750f8aea`）
 
 - 判断: 本 intent での実質変更なし — 公開 CLI verb・flag・directive JSON スキーマの追加も変更もない。触れるのは内部関数契約 2 点で、いずれも `architecture.md` 現在節の seam ペア表を正本とする — (1) `readJson<T>`（`amadeus-election-store.ts:71`、`:80` 無検査キャスト）の戻り型契約を「無検査キャスト」から「検証済み値または棄却」へ強める（`Store.load` `:503-510` が呼出元）、(2) 読み側 fail-closed 化により、従来は受理されていた不正記録が `Result` の err 側／throw へ回るため、消費側の分岐が増える。いずれも境界ごとの一本化であり、4 境界を貫く単一の汎用バリデータ API は新設しない。
+
+## 260814-unit-failure-autoelectio (2026-08-14, observed `cd64486a6`) — failure ruling と election open の契約
+
+### 1. `next` が返す ask directive（`amadeus-orchestrate.ts:4069-4075`）
+
+`transition.kind === "await-unit-ruling"` のとき、`askDirective`（`:1042-1044`、`return { kind: "ask", question }`）で以下の question を返す。
+
+```
+Unit "<unit>" failed during <stageSlug> (attempt <n>, batch <b>; siblings: <unit:outcome, ...|none>). Choose exactly one: Retry, Skip, or Abort. The answer is committed through the ordinary ask report path.
+```
+
+**現契約の性質**: この emit は無条件である。入力に config も autonomy mode も取らない。前段の条件は parked 分岐（`:4056-4062`）と runtime population 絞り込み（`:4064-4068`）のみ。
+
+### 2. 裁定の commit 契約（`report --user-input`）
+
+- 受け口: `amadeus-orchestrate.ts:6161-6169`。発火条件は `flags.result === undefined` かつ `answer ∈ {retry, skip, abort}` かつ `canonicalConstructionFailurePending(...)`（`:3922-3936`）
+- 委譲先: `handleFailureRuling`（`:6507` `export function`）
+  - `--user-input` は retry / skip / abort に限定（`:6521`）。それ以外は拒否
+  - solo バッチ識別子は `solo:<n>` 形式を検証（`:6522-6524`）
+  - `retry` → solo は `amadeus-bolt.ts start`、swarm は `pool.retryFailedUnit` + `preparedSwarmRetryDirective`
+  - `skip` → solo は `BOLT_COMPLETED` 追記、swarm は `pool.skipFailedUnit`
+  - `abort` → `amadeus-bolt.ts abort` + `parkedDirective`
+- 直接動線: `:6973` の `resolve-failure` 相当サブコマンドも同じ `handleFailureRuling` を呼ぶ
+
+**契約上の重要点**: この経路は answer の**出所を問わない**。人間の回答でも election の裁定結果でも、`report --user-input <裁定>` として渡せば同一に処理される。
+
+### 3. `amadeus-election open --trigger <mode>` の契約(`amadeus-election.ts:443-463`)
+
+```ts
+  if (trigger === "manual") return handleOpen(root, filePath);
+  if (trigger !== "auto") {
+    return fail(`open: unknown trigger "${trigger}"`);
+  }
+  const resolved = resolveAmadeusConfig(projectDir);
+  if (resolved.kind === "invalid") {
+    return fail(`open: invalid configuration: ${resolved.issues.map(configIssueSummary).join(" | ")}`);
+  }
+  if (resolved.config.soloElection.trigger.mode !== "auto") {
+    out({ opened: null, reason: "solo-election-manual-trigger-required" });
+    return 0;
+  }
+  return handleOpen(root, filePath);
+```
+
+| 入力 | exit | 出力 |
+|---|---|---|
+| `--trigger` が manual / auto 以外 | 1 | error `unknown trigger "<v>"`、registry 未作成 |
+| `--trigger auto` + config 不在 or `mode: manual` | **0** | `{"opened": null, "reason": "solo-election-manual-trigger-required"}`、registry 未作成 |
+| `--trigger auto` + invalid config（例 `mode: "true"`） | 1 | `solo-election.trigger.mode expected manual \| auto` |
+| `--trigger auto` + `mode: auto` | 0 | `{"opened": "<id>", "views": <n>}`、election dir 作成 |
+| `--file` 省略 | 2 | usage（stage-protocol `:151` 逐語「`--file` is REQUIRED: without it the CLI exits 2 on usage」） |
+
+**呼び出し側の注意**: 無効化ケースは exit 0 で返るため、成否を exit code で判定してはならない。`opened === null` を見る必要がある。またここでの `resolveAmadeusConfig(projectDir)` は **1 引数呼出**で、`amadeus-orchestrate.ts:632` のような intent / space レイヤを渡していない。
+
+上表の 4 段階は `tests/integration/t236-election-loop.integration.test.ts:71-135` が正本として実測している。
+
+### 4. election definition JSON のスキーマ（`amadeus-election-model.ts:100-116` `Election.parse`）
+
+| フィールド | 制約 |
+|---|---|
+| `electionId` | 非空 string。加えて `handleOpen` が `GoaLineCode.parse` で `^E-[A-Z0-9]+(-[A-Z0-9]+)*$` を要求（`amadeus-election.ts:413-414`） |
+| `kind` | string |
+| `question` | string |
+| `choices` | 非空配列。各要素 `{ internalNo: number, label: string, description?: string }`。`internalNo` の重複は parse 失敗（`:76-97`） |
+| `voters` | 非空 string 配列。重複は parse 失敗（`:107-108`） |
+
+`handleOpen`（`:402-434`）は store 作成 → voter ごとの blind view を `views/<voter>.json` へ書出し → state を `open` に設定し `{opened: <id>, views: <n>}` を出力する。
+
+**voter 名は CLI が制約しない**。`subagent-1` / `subagent-2` という具体名は `packages/framework/core/skills/amadeus-election/SKILL.md:28` の規約と test fixture に留まる。`VoterKind`（`"member" | "subagent"`）は ballot 側の属性であり definition 側には現れない。
+
+### 5. 指令ループ契約
+
+`next --election <id>`（`amadeus-election.ts:137`）が 1 行 JSON の指令を返す。`kind` が `done` で終了、`hold` は人間委譲、`collect-wait` は `vote --file <ballot.json>` 待ち。それ以外は指令の `verb` を実行して `report --election <id> --result <report フィールド>`（`handleReport` `:186`）でループする。usage 文字列は `:66`（`open|notify|vote|status|tally|render|verify|next|report`）、ディスパッチは `:805`。配布は `handleNotify`（`:483` 付近）が `--transport subagent`（デフォルト）で DeliveryDirective を返し、conductor が directive ごとに subagent を 1 体 spawn する。spawn プロンプトは `{electionId}` / `{viewPath}` / `spawnInstruction` の 3 要素のみで、main agent の分析・推奨は含めない（アンカリング防止）。
+
+### 6. `solo-election.trigger.mode` の config 契約（`amadeus-config.ts:563-574`）
+
+```ts
+  {
+    path: "solo-election.trigger.mode",
+    domain: "solo-election",
+    layers: ALL_LAYERS,
+    merge: "replace",
+    defaultValue: "manual",
+    parse: parseElectionMode,
+    legacy: { key: "auto-solo-election", valueConversion: "false -> manual; true -> auto" },
+  },
+```
+
+型面は `:94`（`soloElection: Readonly<{...}>`）、解決は `:771-775`（`mode: value("solo-election.trigger.mode") as SoloElectionTriggerMode`）。`ALL_LAYERS` により project / space / intent の 3 層で解決される。

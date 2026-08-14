@@ -155,3 +155,32 @@ tests/harness/fixtures.ts
 | ノルム蒸留 | `amadeus/spaces/default/memory/team.md` / `project.md` | 原理原則への縮約（#2919）と pin テスト同期（#2922） |
 
 本 intent の患部（[Issue #2967](https://github.com/amadeus-dlc/amadeus/issues/2967)）はモジュール配置ではなく既存 3 ファイル（`amadeus-advisory-choice.ts` / `amadeus-orchestrate.ts` / `amadeus-directive.ts`）間の関係にあり、`amadeus-advisory-choice.ts` は本区間で**無変更**である（`git diff --name-only 854692fd7..c0f9edf27 -- packages/framework/core/tools/amadeus-advisory-choice.ts` が空出力）。
+
+## 260814-unit-failure-autoelectio (2026-08-14, observed `cd64486a6`) — Issue #2976 の変更面
+
+### 患部ファイルと責務
+
+| パス | 本 intent での役割 | 主要位置（HEAD 断面） |
+|---|---|---|
+| `packages/framework/core/tools/amadeus-orchestrate.ts` | 無条件 ask の発生源。修正の主着地面 | `:4027` `emitConstructionFailureIfPresent` / `:4069-4075` await-unit-ruling 分岐 / `:1042-1044` `askDirective` / `:241` config import / `:632`（3 引数）`:3940`（1 引数）config 呼出 / `:3694` `:3737` 呼び出し元 / `:6161-6169` report 受け口 / `:6507` `handleFailureRuling` / `:6973` サブコマンド動線 / `:3922-3936` `canonicalConstructionFailurePending` |
+| `packages/framework/core/tools/amadeus-election.ts` | `--trigger auto` の受け口。config を読む唯一の実装 | `:443-463` `handleTriggeredOpen` / `:459` `soloElection.trigger.mode` 読取 / `:402-434` `handleOpen` / `:413-414` `GoaLineCode.parse` / `:137` `next` / `:186` `handleReport` / `:483` 付近 `handleNotify` / `:805` ディスパッチ / `:66` usage |
+| `packages/framework/core/tools/amadeus-election-model.ts` | election definition のスキーマ | `:100-116` `Election.parse` / `:76-97` choices 検証 / `:107-108` voters 検証 |
+| `packages/framework/core/tools/amadeus-config.ts` | `solo-election.trigger.mode` の宣言と解決 | `:94` 型宣言 / `:563-574` スキーマ定義 / `:771-775` 解決 |
+| `packages/framework/core/amadeus-common/protocols/stage-protocol.md` | halt-and-ask 契約と solo auto-election hook | `:139` `**Halt-and-ask on failure**` / `:141` 無条件 halt の逐語 / `:143-147` solo/parallel/retry/skip/abort / `:149` hook 見出し / `:151` branch 1 / `:152` branch 2 / `:156-166` question fenced block |
+| `packages/framework/core/skills/amadeus-election/SKILL.md` | voters 規約（`subagent-1` / `subagent-2`） | `:28` |
+
+### テスト面の位置
+
+| パス | 射程 |
+|---|---|
+| `tests/unit/t211-swarm-batch-progress.test.ts` | `:326-333` ask 文言の固定（`Retry, Skip, or Abort`）/ `:395` error 側の同文言 / `:239-280` `seedFailedSwarmUnit` |
+| `tests/integration/t369-protocol-autosolo-hook.test.ts` | `:88-92` `findMissingHookMarker` / `:96` `:106` `:114` `:124` `:134` の 5 件 + `:178` `:197` `:211` の fixture 系 3 件 |
+| `tests/integration/t236-election-loop.integration.test.ts` | `:71-135` `open --trigger auto` の 4 段階 CLI 契約 / `:117-` invalid config |
+
+### 投影の連鎖（修正時に同期が要る面）
+
+`stage-protocol.md` を触る修正は、t369 が `packages/framework/core/amadeus-common/`・`dist/<harness>/amadeus-common/`・self-install ツリーの各 `stage-protocol.md` / `conductor.md` を走査するため、`bun run build` による全ハーネス投影の再生成を同一変更に含めないと赤になる。`packages/framework/core/tools/` 側のみを触る修正では、同じ理由から dist 再生成が必要になる（`project.md` § Mandated の正本・配布物・self-install 同期則）。
+
+### base..observed で構造は動いていない
+
+base `d7ffaa544` → observed `cd64486a6` の 4 コミットは `packages/` を 1 行も変更していない。したがって上表の構造は前回スキャン断面から不変であり、クロスレビュー target-sha `52f1f1b25` 以後に患部 4 ファイルへ触れたのは `d7ffaa544`（Bolt PR attestation、`amadeus-orchestrate.ts` のみ 167 insertions / 8 deletions）の 1 件だけである。分岐構造は保たれ、行番号のみ移動した（クロスレビュー時の `:4063-4068` → HEAD `:4069-4075`）。

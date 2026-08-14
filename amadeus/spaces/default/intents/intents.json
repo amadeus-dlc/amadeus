@@ -1180,5 +1180,12 @@
     "dirName": "260814-coverage-quick-norm",
     "scope": "self-document",
     "status": "in-flight"
+  },
+  {
+    "uuid": "019fff1a-becf-72aa-ae9f-6c87f8323fbc",
+    "slug": "unit-failure-autoelectio",
+    "dirName": "260814-unit-failure-autoelectio",
+    "scope": "self-fix",
+    "status": "in-flight"
   }
 ]
