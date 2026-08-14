@@ -171,16 +171,24 @@ function checkOwnerProjection(
     return;
   }
   const expectedPath = `${receipt.record}construction/${ownerUnit}/code-generation/${REPORT_BASENAME}`;
-  if (
-    projection.intent !== receipt.intent || projection.intentUuid !== receipt.intentUuid ||
-    projection.record !== receipt.record || projection.bolt !== receipt.bolt ||
-    projection.memberUnits.join("\0") !== receipt.memberUnits.join("\0") ||
-    projection.ownerUnit !== receipt.unit || projection.ownerUnit !== ownerUnit ||
-    projection.reportPath !== expectedPath || projection.repo !== receipt.repo ||
-    projection.pr !== receipt.pr || projection.head !== receipt.localHead
-  ) {
+  if (!ownerProjectionMatches(projection, receipt, receipt.memberUnits, ownerUnit, expectedPath)) {
     findings.push({ field: "owner projection", reason: "does not bind the attestation tuple and owner path" });
   }
+}
+
+function ownerProjectionMatches(
+  projection: NonNullable<ReturnType<typeof parseOwnerProjection>>,
+  receipt: ReportAttestation,
+  memberUnits: readonly string[],
+  ownerUnit: string,
+  expectedPath: string,
+): boolean {
+  return projection.intent === receipt.intent && projection.intentUuid === receipt.intentUuid &&
+    projection.record === receipt.record && projection.bolt === receipt.bolt &&
+    projection.memberUnits.join("\0") === memberUnits.join("\0") &&
+    projection.ownerUnit === receipt.unit && projection.ownerUnit === ownerUnit &&
+    projection.reportPath === expectedPath && projection.repo === receipt.repo &&
+    projection.pr === receipt.pr && projection.head === receipt.localHead;
 }
 
 function checkCanonicalAttestation(

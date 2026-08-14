@@ -200,21 +200,13 @@ function approvedPlanMembership(
   ) {
     return { ok: false, code: "STALE", message: "Delivery Bolt projection is stale or does not bind the approved plan bytes" };
   }
-  const projectedMatches: readonly string[][] = fields.bolts.flatMap((candidate) => {
-    if (typeof candidate !== "object" || candidate === null || Array.isArray(candidate)) return [];
-    const row = candidate as Record<string, unknown>;
-    if (typeof row.bolt !== "string" || !Array.isArray(row.units) || !row.units.every((unit) => typeof unit === "string")) return [];
-    return row.bolt === bolt || `bolt-${row.bolt}` === bolt ? [row.units as string[]] : [];
-  });
+  const projectedMatches = projectedBoltMemberships(fields.bolts, bolt);
   if (projectedMatches.length !== 1) {
     return { ok: false, code: "MISMATCH", message: `--bolt resolves to ${projectedMatches.length} approved Delivery Bolt entries` };
   }
   const projected = canonicalUnitSlugs(projectedMatches[0] ?? []);
   if (!projected.ok) return { ...projected, code: "INVALID" };
-  const planMatches = plan.split(/(?=^## Bolt\s+)/m).filter((section) => {
-    const heading = section.match(/^## Bolt\s+([^:\r\n]+)(?::[^\r\n]*)?$/m)?.[1]?.trim();
-    return heading === bolt || `bolt-${heading}` === bolt;
-  });
+  const planMatches = plannedBoltSections(plan, bolt);
   if (planMatches.length !== 1) {
     return { ok: false, code: "MISMATCH", message: `--bolt resolves to ${planMatches.length} current Delivery Plan entries` };
   }
@@ -224,6 +216,23 @@ function approvedPlanMembership(
   return planned.value.join("\0") === projected.value.join("\0")
     ? projected
     : { ok: false, code: "MISMATCH", message: "Delivery Bolt projection does not match the approved plan membership" };
+}
+
+function projectedBoltMemberships(value: unknown[], bolt: string): readonly string[][] {
+  return value.flatMap((candidate) => {
+    if (typeof candidate !== "object" || candidate === null || Array.isArray(candidate)) return [];
+    const row = candidate as Record<string, unknown>;
+    if (typeof row.bolt !== "string" || !Array.isArray(row.units)) return [];
+    if (!row.units.every((unit) => typeof unit === "string")) return [];
+    return row.bolt === bolt || `bolt-${row.bolt}` === bolt ? [row.units as string[]] : [];
+  });
+}
+
+function plannedBoltSections(plan: string, bolt: string): readonly string[] {
+  return plan.split(/(?=^## Bolt\s+)/m).filter((section) => {
+    const heading = section.match(/^## Bolt\s+([^:\r\n]+)(?::[^\r\n]*)?$/m)?.[1]?.trim();
+    return heading === bolt || `bolt-${heading}` === bolt;
+  });
 }
 
 export function canonicalUnitSlugs(units: readonly string[]): CanonicalUnitSlugsResult {
