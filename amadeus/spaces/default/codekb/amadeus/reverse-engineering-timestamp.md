@@ -1,6 +1,20 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260814-fmc-macos-provider）
+## 実行メタデータ（現在: 260814-coverage-quick-norm）
+
+- Date: `2026-08-14`
+- Base commit: `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`（直前 timestamp の observed。`git merge-base --is-ancestor 5f6b5bf97 HEAD` = **exit 0**、`git rev-list --count 5f6b5bf97..HEAD` = **10**）
+- Observed commit: `d7ffaa5442266508d8e67babc3e0b947fb4c1637`（= 本 worktree HEAD = `origin/main`、`git rev-parse HEAD`）
+- Scope: `self-document`、Brownfield、単一 repo `amadeus`、depth `Standard`、build `bun`
+- Focus: coverage-patch-quick を pre-push 内側ループの標準とする運用ノルム（Inbox 追記）。ツーリングは PR #2965 / Issue #2933 で着地済み
+- Scan mode: 通常の差分リフレッシュ（xrev 不採用 — 再実装 Issue ではない）
+- 中核知見: quick は `EXIT_ADVISORY=0` の近似。CI 正本は `coverage:ci -- -P 4`。job 94095568607 で入力生成 11 分 03 秒 / 判定 3 秒。single-owner と数値転記規律との矛盾なし。Inbox に当該ノルムは未存在（`git grep` 0 行 / exit 1）
+- Verification: git 状態変更・GitHub 書込・engine 操作・coverage 実行はすべてゼロ
+- Updated artifacts: `architecture.md`（新現在節）。直前の現在節は履歴へ降格
+- Reviewed-and-unchanged artifacts: `business-overview.md` / `code-structure.md` / `api-documentation.md` / `component-inventory.md` / `technology-stack.md` / `dependencies.md` / `code-quality-assessment.md` — 本 intent の節を持たないため後続はここから本 intent の事実を引かない
+- Per-intent record: `re-scans/260814-coverage-quick-norm.md`
+
+## 実行メタデータ（履歴: 260814-fmc-macos-provider）
 
 - Date: `2026-08-14`
 - Base commit: `89532174c30ef9cc7ff29496cd6916586fdda00a`（`reverse-engineering-timestamp.md` + `re-scans/*.md` の全 observed のうち **HEAD の祖先で距離最小**。`git merge-base --is-ancestor 89532174c HEAD` = **exit 0**、`git rev-list --count 89532174c..HEAD` = **9 commits**。`cid:reverse-engineering:rescan-base-ancestry`）

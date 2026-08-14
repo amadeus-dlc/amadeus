@@ -1,6 +1,16 @@
 # アーキテクチャ
 
-## Lifecycle Guard Runtime の着地と formal-model-check の provider 選択構造（260814-fmc-macos-provider、現在、observed `5f6b5bf97`）
+## coverage-patch-quick は advisory 近似であり CI gate の代替ではない（260814-coverage-quick-norm、現在、observed `d7ffaa544`）
+
+**観測 ref**: observed = `d7ffaa5442266508d8e67babc3e0b947fb4c1637`（`git rev-parse HEAD`）。差分 base = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`。詳細と検索述語は `re-scans/260814-coverage-quick-norm.md` を正本とする。
+
+`coverage-patch-quick` は targeted lcov を scratch に書き、`tests/coverage-patch-gate.ts` を `AMADEUS_PATCH_LCOV` 差し替えで spawn する。判定ロジックの複製はない。完了時の exit は常に 0（`EXIT_ADVISORY`、`coverage-patch-quick-cli.ts:254-255`）。バナーは CI Patch Coverage Gate が正本であると逐語で述べる（同 `:266-284`）。
+
+CI の正本入力はフル `bun run coverage:ci -- -P 4`（`ci.yml:466` / `:550`）。判定 3 秒に対し合流 lcov 生成は job 94095568607 で 11 分 03 秒（`gh api .../jobs/94095568607`）。
+
+既存の coverage single-owner（`project.md:136`）と数値転記規律（`team.md:68`）を緩めない。quick は既定 `coverage/` を使わない。Learnings Inbox に「quick を内側ループの標準とする」運用ノルムは未存在（re-scan の不在述語、exit 1 / 0 行）。
+
+## Lifecycle Guard Runtime の着地と formal-model-check の provider 選択構造（260814-fmc-macos-provider、履歴、observed `5f6b5bf97` — 260814-coverage-quick-norm 時点でも構造は有効）
 
 **観測 ref**: すべて observed = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`（= 本 worktree HEAD = `origin/main`、`git rev-parse HEAD`）。差分 base = `89532174c30ef9cc7ff29496cd6916586fdda00a`（`git merge-base --is-ancestor 89532174c HEAD` = exit 0、`git rev-list --count 89532174c..HEAD` = **9**）。検索述語と患部の全数列挙は `re-scans/260814-fmc-macos-provider.md` を正本とし、本節は構造だけを転記する。
 

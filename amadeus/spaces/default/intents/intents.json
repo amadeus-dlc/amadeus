@@ -1166,5 +1166,12 @@
     "dirName": "260814-fmc-macos-provider",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "019ffee6-ed59-7748-85cb-7f578201362a",
+    "slug": "coverage-quick-norm",
+    "dirName": "260814-coverage-quick-norm",
+    "scope": "self-document",
+    "status": "in-flight"
   }
 ]
