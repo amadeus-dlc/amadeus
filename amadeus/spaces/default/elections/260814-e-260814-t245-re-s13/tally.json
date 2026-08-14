@@ -1,0 +1,47 @@
+{
+  "result": {
+    "kind": "hold",
+    "reason": "tie",
+    "counts": {
+      "favor": 2,
+      "against": 0,
+      "abstain": 0,
+      "discuss": 0
+    }
+  },
+  "talliedAt": "2026-08-14T00:47:54Z",
+  "ballots": [
+    {
+      "kind": "original",
+      "electionId": "E-260814-T245-RE-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "choiceInternalNo": 1,
+      "goa": 1,
+      "reservation": null,
+      "rationale": "採用0件で可。一次資料を独立に確認した。(1) intent 260814-t245-origin-fixture/inception/reverse-engineering/memory.md の Interpretations 2件は、いずれも『既存 cid の判定手順を実施/選定に従った』とそれ自体が明記しており、候補文言そのものが既決ノルムの機械的執行であることを自認している。(2) project.md:142 の cid:reverse-engineering:c1 は『既存 codekb がある場合、差分リフレッシュで実行し、observed commit は origin/main 系譜を記録し、差分 base は HEAD の祖先である observed のうち距離最小を選ぶ』を既に定めており、memory.md の interpretation 2(base=89532174c、祖先距離最小=9 で c0f9edf27=11・97581b3e3=10 より優位)はこの規則の入力を変えただけの適用で、規則自体に新規性はない。project.md:152 の cid:reverse-engineering:c5-xrev-currency-schema-migration は currency 判定手順(review..observed diff と被引用パス集合の交わりが空か)を既に定めており、memory.md の interpretation 1(target-sha 52f1f1b25..HEAD の diff は elections.json 1件のみで被引用パスと交差ゼロ→currency 成立)はこの手順をそのまま適用した結果に過ぎない。(3) 両 interpretation とも、既存手順が想定しない例外・エッジケース・手順自体の欠陥は記載されておらず、通常経路での一致した適用結果のみが記録されている — 一般化・機械化すべき新規知見(このスコープの candidate として要求される性質)を含まない。以上より、c1/c2 いずれも既存 cid の execution であり判断ではないため(team.md P1: 既決ルールの機械的執行は判断ではなく執行として選挙不要、の趣旨とも整合)、§13 学習として新規 persist する対象はなく、提案どおり採用0件を可とする。",
+      "submittedAt": "2026-08-14T00:00:00Z",
+      "receivedAt": "2026-08-14T00:39:03Z"
+    },
+    {
+      "kind": "original",
+      "electionId": "E-260814-T245-RE-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "choiceInternalNo": 2,
+      "goa": 2,
+      "reservation": "c1 を『採用すべき』とするのは字面どおりの c1(xrev scan mode 選択そのもの)ではなく、その引用が指す cid:reverse-engineering:c1-xrev-scan-mode が2026-08-12蒸留(bd567fd1b)で project.md から消滅している事実の発見に限定する。他方の投票者がこの空洞化を独立に確認できず内容一致(choice2)にならない場合は、少なくとも c1 の『新規学習ではない』という確定は保留し、norm-consistency-review へのエスカレーションを対案として提示することを条件とする。",
+      "rationale": "候補ごとに独立検証した。c2(base=89532174c 選定)は cid:reverse-engineering:c1(project.md:142『差分 base は HEAD の祖先である observed のうち距離最小を選ぶ』)の機械的適用と確認できた — memory.md はこれを『cid:reverse-engineering:rescan-base-ancestry』として引用しているが、project.md 全文検索でこの cid 名は現存しない(grep 0件)。実体は c1 と一致するため、cid 名の誤記はあるが c2 自体は新規学習ではなく不採用が妥当。一方 c1(xrev differential scan mode 採用)の引用は構造的に異なる問題を持つ。memory.md は『cid:reverse-engineering:c1-xrev-scan-mode / c5-xrev-currency-schema-migration の判定手順を実施』と記すが、project.md を全文検索すると xrev 関連で現存する cid は c5-xrev-currency-schema-migration の1件のみ(project.md:152)であり、c1-xrev-scan-mode 自体は現存しない。git 履歴で確認すると、c1-xrev-scan-mode は 2026-08-01〜08-07 に E-OBB5-RES13/E-RRP-RES13/E-SIRE-RES13/E-XBB-RE-S13/E-PWF-RES13 の各選挙で段階的に確立・追補された cid だったが、2026-08-12 のノルム蒸留コミット(bd567fd1b、team.md/project.md を88%削減)で本文から削除された(旧文面は git 履歴保存のみ)。ところが c5 自身の文面は『既存則は免除条件を...と定める』とその c1-xrev-scan-mode 側の基底規則を前提に書かれており、基底が消えた現在は c5 単独では『何の免除か』が自己完結しない。にもかかわらず codekb/amadeus/reverse-engineering-timestamp.md(run xrev-260814-2971、2026-08-14 = 蒸留後)を含む複数の re-scan 成果物が蒸留後も c1-xrev-scan-mode を現行ノルムであるかのように引用し続けている。これは team.md の cid:requirements-analysis:mechanism-cite-verify-at-draft(機構引用は起草時に実在確認する)の趣旨に反する形で、消滅した cid への参照が連鎖的に複製されている構造的な見落としであり、単なる『既決ノルムの機械的執行』ではなく、蒸留が意図せず基底ノルムを空洞化させたまま下流が追従を続けているという新規の観測である。よって c1 の memory.md 記載そのものを§13学習として採用するのではなく、この『cid citation が現存を欠いたまま連鎖引用されている』という発見を reverse-engineering(または全体の Learnings Inbox)に record し、team.md の norm-consistency-review(cid:requirements-analysis:norm-consistency-review)の棚卸し対象として明示的に持ち込むべきである。配布ビューの選択肢1(採用0件)は c1 についてこの空洞化を見逃したまま『新規学習ではない』と確定させてしまう点で不正確なため、選択肢2(候補を採用すべき)を選ぶ。採用対象は c1 の字面ではなく『xrev-scan-mode cid 空洞化の発見』であり、格納先は project.md の Learnings Inbox(reverse-engineering)とする。",
+      "submittedAt": "2026-08-14T00:00:00Z",
+      "receivedAt": "2026-08-14T00:40:42Z"
+    }
+  ],
+  "resolutions": [
+    {
+      "reason": "tie",
+      "resolution": "choice:1",
+      "resumedTo": "tallied",
+      "at": "2026-08-14T00:51:09Z"
+    }
+  ]
+}

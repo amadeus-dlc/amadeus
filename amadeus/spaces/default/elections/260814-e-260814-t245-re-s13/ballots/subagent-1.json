@@ -1,0 +1,12 @@
+{
+  "kind": "original",
+  "electionId": "E-260814-T245-RE-S13",
+  "voter": "subagent-1",
+  "voterKind": "subagent",
+  "choiceInternalNo": 1,
+  "goa": 1,
+  "reservation": null,
+  "rationale": "採用0件で可。一次資料を独立に確認した。(1) intent 260814-t245-origin-fixture/inception/reverse-engineering/memory.md の Interpretations 2件は、いずれも『既存 cid の判定手順を実施/選定に従った』とそれ自体が明記しており、候補文言そのものが既決ノルムの機械的執行であることを自認している。(2) project.md:142 の cid:reverse-engineering:c1 は『既存 codekb がある場合、差分リフレッシュで実行し、observed commit は origin/main 系譜を記録し、差分 base は HEAD の祖先である observed のうち距離最小を選ぶ』を既に定めており、memory.md の interpretation 2(base=89532174c、祖先距離最小=9 で c0f9edf27=11・97581b3e3=10 より優位)はこの規則の入力を変えただけの適用で、規則自体に新規性はない。project.md:152 の cid:reverse-engineering:c5-xrev-currency-schema-migration は currency 判定手順(review..observed diff と被引用パス集合の交わりが空か)を既に定めており、memory.md の interpretation 1(target-sha 52f1f1b25..HEAD の diff は elections.json 1件のみで被引用パスと交差ゼロ→currency 成立)はこの手順をそのまま適用した結果に過ぎない。(3) 両 interpretation とも、既存手順が想定しない例外・エッジケース・手順自体の欠陥は記載されておらず、通常経路での一致した適用結果のみが記録されている — 一般化・機械化すべき新規知見(このスコープの candidate として要求される性質)を含まない。以上より、c1/c2 いずれも既存 cid の execution であり判断ではないため(team.md P1: 既決ルールの機械的執行は判断ではなく執行として選挙不要、の趣旨とも整合)、§13 学習として新規 persist する対象はなく、提案どおり採用0件を可とする。",
+  "submittedAt": "2026-08-14T00:00:00Z",
+  "receivedAt": "2026-08-14T00:39:03Z"
+}
