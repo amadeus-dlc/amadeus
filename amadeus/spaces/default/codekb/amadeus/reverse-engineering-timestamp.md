@@ -1,6 +1,23 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260814-autonomy-stop-fixes）
+## 実行メタデータ（現在: 260814-park-provenance）
+
+- Date: `2026-08-14`
+- Base commit: `cd64486a68c6a1144db50fbe3fde8273f5e18455`（`reverse-engineering-timestamp.md` + `re-scans/*.md` の全 40-hex トークン **162 件**のうち、**observed の祖先で距離最小**。`git merge-base --is-ancestor cd64486a6 1d08374cd` = **exit 0**、`git rev-list --count cd64486a6..1d08374cd` = **6**。`cid:reverse-engineering:rescan-base-ancestry`）
+- Observed commit: `1d08374cd7e4ef89637b4a8000bab3fcf1a0f780`（`origin/main`、PR #3037 の着地コミット。本 worktree HEAD = `c2aaf88631b7a620079a0e4547dbe87b16ac5861` は observed を merge した conductor tree で、`git diff --stat 1d08374cd HEAD -- ':!amadeus/'` が**空 / exit 0** = 非 `amadeus/` ツリーは observed とバイト等価。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、depth `Minimal`、build `bun`
+- Focus: [Issue #3016](https://github.com/amadeus-dlc/amadeus/issues/3016)（`Construction Autonomy Mode: autonomous` 下で実ユーザーの明示的な park 指示が一律拒否される）。クロスレビュー2名 `CONFIRMED_WITH_REFINEMENTS` / 収束 `ESTABLISHED_WITH_REFINEMENTS`
+- Scan mode: **通常の差分リフレッシュ**（xrev differential 不採用 — 凍結 SHA `cd64486a6` は本スキャンの base そのものだが、`review..observed` の 6 コミット・24 ファイルに患部隣接面 `amadeus-orchestrate.ts`（#3011、+57/-8）が含まれ currency 免除条件が不成立。verdict の R1〜R5 / A1〜A5 は背景としてのみ用い、全主張を observed 断面で再実測した）
+- Focus 領域の差分: `amadeus-state.ts` / `amadeus-stop.ts` / `amadeus-bolt.ts` / `amadeus-intent-autonomy-production.ts` / `tests/unit/t17.test.ts` / `tests/e2e/t122-stop-hook-e2e.test.ts` は base..observed で**無変更**（患部の行番号は前 intent の記録から不変）。変化したのは `amadeus-orchestrate.ts`（#3011 の ambient projectDir fail-closed 化、行 drift あり）、`stage-protocol.md`（#3037 §11b/§11c 新設）、`docs/reference/24-intent-autonomy(.ja).md`、8 ハーネス表層、`tests/.coverage-patch-allowlist.json`（`handlePark` の fingerprint 2 件）
+- 中核知見: 患部は `amadeus-state.ts:1579` `handlePark` のガード `:1583-1587`（全域 1 hit、8 dist 投影はすべて同一正本）。コメント `:1573` の「Stop hook との二層防御」は observed でも**虚偽**（hooks に `Construction Autonomy Mode` 0 hit / exit 1、`amadeus-stop.ts:947` は `parked` を全モード allow）。`amadeus-stop.ts:823` の continuation 文言はモード非依存で park を案内しており（唯一のブロック経路 `:1047`）、**hook が案内する操作を tool が拒否する**内部矛盾が実在。**PR #3037 §11b（`stage-protocol.md:1041,1047`、8 ハーネス同期済み = 全域 9 hit）が「`error` は逐語出力して停止、回復・新規質問の発明は禁止」を正典化したため、park 拒否の回避操作を conductor が自動適用することも禁じられ、#3016 の劣化は固定された**。一方 §11c の承認境界は remote write 限定であり park には直接適用されない。fresh HUMAN_TURN の既成部品は fail-open/closed で性質が割れる — `humanActedSinceGate`（`amadeus-lib.ts:3858`）は active record で **fail OPEN** のため単独使用は完了条件1を破る。適合するのは `outstandingHumanTurns`（`:3904`、fail closed）/ `selectLifecycleHumanTurn`（`:2954`、**consume-once 付きの最適先例**）/ `humanTurnGroundsTakeover`（`amadeus-state.ts:5067`）/ `latestHumanTurnAfter`（`amadeus-goal.ts:100`）。修正候補 A（provenance 引数）/ B（state 側の暗黙判定のみ）/ C（判定入力を Intent 監査へ付替）と、基準時刻・grant 保持/失効・presence off-switch・directive park の非対称の 4 裁定を requirements-analysis へ申し送り
+- 訂正（クロスレビューに対する）: reviewer-1 の「拒否契約は docs に一切書かれていない」は**不正確**。文字列 `Refusing to park` は `docs/` に 0 hit / exit 1 だが、契約自体は `docs/reference/12-state-machine.md:139` / `.ja.md:139`（逐語「Outside an unattended `full` run」/「無人の`full`実行以外では」）と `docs/reference/06-hooks-and-tools.md:260` / `.ja.md:258` の **4 面**に明文化されており、修正は英日 4 ファイルの同期を伴う。また A3 の `parkedDirective` 発行点は全数 **7 hit**（定義 1 + park verb 自身 1 + 他経路 5）で、verdict の 5 件は park verb 自身を除いた集合
+- 実装時 resync 申し送り: `amadeus/spaces/default/specs/tla/model-map.json` の実装ハッシュピン **4 エントリ**（`:17` `:21` `:179` `:183`、現行 `shasum -a 256` と一致を実測）— `updateModelMap --impl-only` 経路のみ、手編集禁止。`WORKFLOW_PARKED` に項目を足す場合は `otel/event-registry.ts:118-125` と `knowledge/amadeus-shared/audit-format.md:40` と docs 英日が同一変更で必須（未宣言キーは `redaction.ts:66-72` で無音に落ち t385 が赤化）。`tests/.coverage-patch-allowlist.json` の `handlePark` 免除 **4 件**（全 430 エントリ中）はすべて orchestrate 側で、state 側には免除なし
+- Verification: git 状態変更・GitHub 書込・engine/state ツール実行・`bun run build` は**すべてゼロ**（`gh` は読取のみ）。書き込みは `codekb/amadeus/` 配下のみ。並行 intent `260814-failopen-error-paths` の面には一切触れていない
+- Updated artifacts: `re-scans/260814-park-provenance.md`（新規）/ `reverse-engineering-timestamp.md`（本節）/ `architecture.md`（新現在節）。直前の現在節（`260814-autonomy-stop-fixes`）は本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）。`260814-failopen-error-paths` 節は**並行実行中の別 intent の現在節**のため意図的に現在ラベルのまま残置
+- Reviewed-and-unchanged artifacts: `business-overview.md` / `code-structure.md` / `api-documentation.md` / `component-inventory.md` / `technology-stack.md` / `dependencies.md` / `code-quality-assessment.md` の **7 点** — いずれも本 intent の節を持たない。後続ステージはこれらから**本 intent の事実を引かない**（`cid:requirements-analysis:c4-consume-header-is-not-citable-content`）
+- Per-intent record: `re-scans/260814-park-provenance.md`
+
+## 実行メタデータ（履歴: 260814-autonomy-stop-fixes）
 
 - Date: `2026-08-14`
 - Base commit: `d7ffaa5442266508d8e67babc3e0b947fb4c1637`（`reverse-engineering-timestamp.md` + `re-scans/*.md` の全 40-hex トークン **159 件**のうち、**HEAD の祖先で距離最小**。`git merge-base --is-ancestor d7ffaa544 HEAD` = **exit 0**、`git rev-list --count d7ffaa544..HEAD` = **4**。`cid:reverse-engineering:rescan-base-ancestry`）
@@ -14,6 +31,7 @@
 - Updated artifacts: `architecture.md`（新現在節 A-1〜A-6）/ `reverse-engineering-timestamp.md`（本節）/ `re-scans/260814-autonomy-stop-fixes.md`（新規）。直前の現在節（`260814-coverage-quick-norm`）は本文保持のまま履歴へ降格（`cid:reverse-engineering:c3-relabel`）
 - Reviewed-and-unchanged artifacts: `business-overview.md` / `code-structure.md` / `api-documentation.md` / `component-inventory.md` / `technology-stack.md` / `dependencies.md` / `code-quality-assessment.md` の **7 点** — いずれも本 intent の節を持たない。後続ステージはこれらから**本 intent の事実を引かない**（`cid:requirements-analysis:c4-consume-header-is-not-citable-content`）
 - Per-intent record: `re-scans/260814-autonomy-stop-fixes.md`
+
 
 ## 実行メタデータ（履歴: 260814-coverage-quick-norm）
 
