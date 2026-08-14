@@ -1,5 +1,5 @@
 // covers: stage-protocol:error-arm-receipt
-// size: small
+// size: medium
 //
 // t2974 — the `error` directive receipt clause and the approval boundary (#2974).
 //
@@ -143,6 +143,13 @@ const BOUNDARY_JA_TOKENS = [
   "merge は常に人間専権",
 ] as const;
 
+/** Gaps in one language's boundary section: an absent section is reported as a
+ *  single gap rather than as every token, so the failure names the real cause. */
+function boundaryGaps(lang: string, body: string, tokens: readonly string[]): string[] {
+  if (body === "") return [`${lang}: section absent`];
+  return tokens.filter((token) => !body.includes(token)).map((token) => `${lang} missing: ${token}`);
+}
+
 describe("t2974 error-directive receipt clause", () => {
   test("the conductor-surface set is derived and non-empty (no vacuous pass)", () => {
     const malformed = HARNESSES.filter((harness) => entryPointsOf(harness).length !== 1);
@@ -169,17 +176,10 @@ describe("t2974 error-directive receipt clause", () => {
 
 describe("t2974 approval boundary for remote writes", () => {
   test("the autonomy reference defines the boundary, in both languages", () => {
-    const en = section(read(AUTONOMY_EN), "Approval boundary");
-    const ja = section(read(AUTONOMY_JA), "承認境界");
-    const missing: string[] = [];
-    if (en === "") missing.push("en: section absent");
-    if (ja === "") missing.push("ja: section absent");
-    for (const token of BOUNDARY_EN_TOKENS) {
-      if (en !== "" && !en.includes(token)) missing.push(`en missing: ${token}`);
-    }
-    for (const token of BOUNDARY_JA_TOKENS) {
-      if (ja !== "" && !ja.includes(token)) missing.push(`ja missing: ${token}`);
-    }
+    const missing = [
+      ...boundaryGaps("en", section(read(AUTONOMY_EN), "Approval boundary"), BOUNDARY_EN_TOKENS),
+      ...boundaryGaps("ja", section(read(AUTONOMY_JA), "承認境界"), BOUNDARY_JA_TOKENS),
+    ];
     expect(missing).toEqual([]);
   });
 
