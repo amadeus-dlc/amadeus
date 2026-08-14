@@ -1196,11 +1196,18 @@
     "status": "complete"
   },
   {
+    "uuid": "019fffa6-bc7f-735f-8ed5-4e4cc4e3ce62",
+    "slug": "park-provenance",
+    "dirName": "260814-park-provenance",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
     "uuid": "019fff1a-bae8-77b2-99a4-5f9e19d75d17",
     "slug": "plugins-rename-drift",
     "dirName": "260814-plugins-rename-drift",
     "scope": "self-feature",
-    "status": "in-flight"
+    "status": "complete"
   },
   {
     "uuid": "019ffda5-bc87-754d-92b6-ff1b7a50d9a4",
@@ -1229,12 +1236,5 @@
     "dirName": "260814-unit-failure-autoelectio",
     "scope": "self-fix",
     "status": "in-flight"
-  },
-  {
-    "uuid": "019fffa6-bc7f-735f-8ed5-4e4cc4e3ce62",
-    "slug": "park-provenance",
-    "dirName": "260814-park-provenance",
-    "scope": "self-fix",
-    "status": "complete"
   }
 ]
