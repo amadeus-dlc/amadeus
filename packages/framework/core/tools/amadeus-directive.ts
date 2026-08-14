@@ -44,6 +44,7 @@ export type DirectiveKind =
   | "dispatch-subagent"
   | "await-advisory-choice"
   | "execute-advisory-handoff"
+  | "execute-failure-election"
   | "invoke-swarm"
   | "present-gate"
   | "ask"
@@ -62,6 +63,8 @@ export type DirectiveKind =
 // dependency-free. The wire carries only these Capitalized forms.
 export const VALID_DEPTH_VALUES = ["Minimal", "Standard", "Comprehensive"] as const;
 export type DepthLevel = (typeof VALID_DEPTH_VALUES)[number];
+
+export const FAILURE_ELECTION_CHOICES = ["Retry", "Skip", "Abort"] as const;
 
 // run-stage — load lead + support agents, load `consumes` artifacts, run the
 // stage body, write required `produces` plus condition-matched optional outputs,
@@ -252,6 +255,21 @@ export interface ExecuteAdvisoryHandoffDirective {
   advisories: AdvisoryChoiceDirectiveAdvisory[];
 }
 
+// execute-failure-election — Construction Unit failure under
+// solo-election.trigger.mode=auto. Not a question: the conductor opens an
+// election with Retry/Skip/Abort and commits the ruling through the existing
+// report --user-input retry|skip|abort path. Absent/manual config still emits
+// ask; invalid config fails closed.
+export interface ExecuteFailureElectionDirective {
+  kind: "execute-failure-election";
+  stage: string;
+  unit: string;
+  attempt: string;
+  batch: string;
+  siblings: string;
+  choices: [...typeof FAILURE_ELECTION_CHOICES];
+}
+
 // dispatch-subagent — same as run-stage, but the stage runs via a Task call to
 // a named worker (e.g. code-generation, reverse-engineering). Carries every
 // run-stage field PLUS `worker` (the named worker the conductor Tasks).
@@ -410,6 +428,7 @@ export type Directive =
   | DispatchSubagentDirective
   | AwaitAdvisoryChoiceDirective
   | ExecuteAdvisoryHandoffDirective
+  | ExecuteFailureElectionDirective
   | InvokeSwarmDirective
   | PresentGateDirective
   | AskDirective
@@ -435,6 +454,7 @@ export const VALID_KINDS = [
   "dispatch-subagent",
   "await-advisory-choice",
   "execute-advisory-handoff",
+  "execute-failure-election",
   "invoke-swarm",
   "present-gate",
   "ask",
@@ -503,6 +523,15 @@ const AWAIT_ADVISORY_CHOICE_FIELDS = [
 ] as const;
 
 const EXECUTE_ADVISORY_HANDOFF_FIELDS = ["kind", "stage", "handoff_stages", "advisories"] as const;
+const EXECUTE_FAILURE_ELECTION_FIELDS = [
+  "kind",
+  "stage",
+  "unit",
+  "attempt",
+  "batch",
+  "siblings",
+  "choices",
+] as const;
 
 const INVOKE_SWARM_FIELDS = ["kind", "units", "cap", "repo", "prepared_batch", "retry_unit"] as const;
 const PRESENT_GATE_FIELDS = ["kind", "stage", "phase", "memory_path"] as const;
@@ -527,6 +556,7 @@ const KNOWN_FIELDS_BY_KIND: Readonly<Record<DirectiveKind, readonly string[]>> =
   "dispatch-subagent": DISPATCH_SUBAGENT_FIELDS,
   "await-advisory-choice": AWAIT_ADVISORY_CHOICE_FIELDS,
   "execute-advisory-handoff": EXECUTE_ADVISORY_HANDOFF_FIELDS,
+  "execute-failure-election": EXECUTE_FAILURE_ELECTION_FIELDS,
   "invoke-swarm": INVOKE_SWARM_FIELDS,
   "present-gate": PRESENT_GATE_FIELDS,
   ask: ASK_FIELDS,
@@ -581,6 +611,25 @@ const FIELD_CHECKS_BY_KIND: Readonly<Record<DirectiveKind, DirectiveFieldCheck>>
   },
   "await-advisory-choice": (o, errors) => checkAwaitAdvisoryChoice(o, errors),
   "execute-advisory-handoff": (o, errors) => checkExecuteAdvisoryHandoff(o, errors),
+  "execute-failure-election": (o, errors) => {
+    checkString(o, "stage", "execute-failure-election", errors);
+    checkString(o, "unit", "execute-failure-election", errors);
+    checkString(o, "attempt", "execute-failure-election", errors);
+    checkString(o, "batch", "execute-failure-election", errors);
+    checkString(o, "siblings", "execute-failure-election", errors);
+    checkNonEmptyStringArray(o, "choices", "execute-failure-election", errors);
+    if (
+      Array.isArray(o.choices) &&
+      o.choices.length > 0 &&
+      o.choices.every((choice) => typeof choice === "string") &&
+      (o.choices.length !== FAILURE_ELECTION_CHOICES.length ||
+        o.choices.some((choice, index) => choice !== FAILURE_ELECTION_CHOICES[index]))
+    ) {
+      errors.push(
+        `execute-failure-election: choices must be exactly ${FAILURE_ELECTION_CHOICES.join(", ")}`,
+      );
+    }
+  },
   "invoke-swarm": (o, errors) => {
     checkStringArray(o, "units", "invoke-swarm", errors);
     if (!("cap" in o)) {
@@ -1294,6 +1343,15 @@ export const directiveSelfCheckExamples: Directive[] = [
       stage: "application-design",
       phase: "inception",
       memory_path: "amadeus-docs/inception/application-design/memory.md",
+    },
+    {
+      kind: "execute-failure-election",
+      stage: "code-generation",
+      unit: "alpha",
+      attempt: "solo-attempt-alpha",
+      batch: "solo:1:alpha",
+      siblings: "none",
+      choices: [...FAILURE_ELECTION_CHOICES],
     },
     { kind: "ask", question: "Resume from the last checkpoint, or start fresh?" },
     {

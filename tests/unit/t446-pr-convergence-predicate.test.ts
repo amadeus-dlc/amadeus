@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import type { PrRef } from "../../plugins/pr-convergence/tools/pr-convergence-gh-runner.ts";
-import type { ThreadClass } from "../../plugins/pr-convergence/tools/pr-convergence-predicate.ts";
+import type { PrRef } from "../../plugins/github-pr-convergence/tools/pr-convergence-gh-runner.ts";
+import type { ThreadClass } from "../../plugins/github-pr-convergence/tools/pr-convergence-predicate.ts";
 import {
   classifyThread,
   evaluateConvergence,
@@ -10,7 +10,7 @@ import {
   KNOWN_MERGE_STATE_STATUSES,
   Mergeable,
   MergeStateStatus,
-} from "../../plugins/pr-convergence/tools/pr-convergence-predicate.ts";
+} from "../../plugins/github-pr-convergence/tools/pr-convergence-predicate.ts";
 
 // U2 convergence-toolchain (C3 predicate). Pure layer only: no filesystem,
 // no process spawn. business-logic-model.md § classifyThread decision table.

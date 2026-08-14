@@ -15,15 +15,16 @@ compatibility: Requires bun; the CLI is bundled at {{HARNESS_DIR}}/tools/amadeus
 
 ## 起動
 
-選挙定義 JSON(electionId・kind・question・choices・voters)を受け取り、次を実行する。
-`choices[]` は `internalNo`・`label` に加えて任意の `description`(その選択肢の本文)を持てる。
-`question` と `description` は投票者ごとの blind view にそのまま搬送されるため、選択肢に説明を要する選挙では `description` を付ける:
+選挙定義 JSON を受け取る。定義は常に `schemaVersion: 2`・`electionId`・`kind`・`questions[]`・`voters` を持つ。単問は `questions[]` が1要素、複数問は複数要素で、各要素は `questionId`・`text`・`choices` を持つ。`choices[]` は `internalNo`・`label` に加えて任意の `description`(その選択肢の本文)を持てる。
+`questions[].text` と `description` は投票者ごとの blind view にそのまま搬送されるため、選択肢に説明を要する選挙では `description` を付ける:
 
-```
+```bash
 bun {{HARNESS_DIR}}/tools/amadeus-election.ts open --file <definition.json>
 ```
 
 exit 0 以外なら出力の error をそのまま人間へ提示して停止する。
+
+**票の形:** 票も常に `schemaVersion: 2` で、回答は `responses[]`(各要素は `questionId`・`choiceInternalNo`・`goa`・`reservation`・`rationale`)に入れる。単問の選挙でも要素1個の `responses[]` を使う。
 
 **ソロモード(subagent 投票者):** voters は `subagent-1` と `subagent-2` を指定する。conductor(main agent)は選挙管理委員として指令ループを駆動し、自らは投票しない。
 
@@ -33,17 +34,19 @@ exit 0 以外なら出力の error をそのまま人間へ提示して停止す
 
 ## 転送
 
-以下のループを繰り返す。**このスキルは次の一手を自分で決めない** — `next` の指令が名指しした verb と report を字義どおり実行するだけである:
+以下のループを繰り返す。**このスキルは次の一手を自分で決めない** — `next` の指令が名指しした verb と report を字義どおり実行するだけである。`targetQuestionIds`・`held`・`preservedResultDigest` を自分で選んだり作り直したりしない:
 
-```
+```bash
 bun {{HARNESS_DIR}}/tools/amadeus-election.ts next --election <id>
 ```
 
 1. 出力(stdout の JSON 1行)を読む。
 2. `kind` が `done` ならループを終了する(→ 終了節)。
-3. `kind` が `hold` なら人間委譲節へ移る。
-4. `kind` が `collect-wait` なら、`pending` に列挙された投票者からの票を待つ。票が届いたら `vote --election <id> --file <ballot.json>` で受理し、ループ先頭へ戻る。受理が exit 1 なら error を投票者へそのまま返す。
-5. それ以外は、指令の `verb` フィールドが名指しするサブコマンドを `--election <id>` 付きで実行し、続けて `report --election <id> --result <指令の report フィールド>` を実行してループ先頭へ戻る。いずれかが exit 0 以外なら停止して人間へ提示する。
+3. `kind` が `hold` なら、まず人間委譲節へ移る(再投票ラウンドを回すかどうかは人間が決める)。
+4. `kind` が `collect-wait` なら、`pending` に列挙された投票者からの票を待つ。票が届いたら `vote --election <id> --file <ballot.json>` で受理し、ループ先頭へ戻る。受理が exit 1 なら error を投票者へそのまま返す。再実行中は `targetQuestionIds` に列挙された question だけを `responses[]` に含める。
+5. それ以外は、stdout の指令 JSON をファイルへ保存し、指令の `verb` フィールドが名指しするサブコマンドと続く `report` の両方を `--election <id> --file <そのファイル>` 付きで実行する（指令を再構築しない）。いずれかが exit 0 以外なら停止して人間へ提示する。
+
+人間が再投票を選んだ場合、`hold` 指令も他の指令と同じ転送に従う。これは mixed result のあと hold-only rerun を配る指令であり、`held` から対象をスキルが選ばない。
 
 補助照会はいつでも `status --election <id>` を使ってよい(読み取りのみ)。
 
@@ -59,11 +62,10 @@ bun {{HARNESS_DIR}}/tools/amadeus-election.ts next --election <id>
 
 `hold` 指令・エラー・およびあらゆる判断点は人間の裁定事項である。このスキルは解決を試みない:
 
-- `hold` 指令の `reason` と、CLI が出力した選択肢をそのまま人間へ提示する。
-- 単一提案型の hold は二値裁定、多肢 tie の hold は `choice:<internalNo>` を人間の裁定として使う。
-- `reason` が `split` の hold、棄権票を含む hold、ブロック hold は人間の裁定事項である。`split` と `tie` は `report --result hold-resolved --resolution choice:<internalNo>` で勝者選択肢を明示する。
-- 人間が解決を告げたら `report --election <id> --result hold-resolved --resolution <人間の裁定>` を実行し、転送節のループへ戻る。
-- 追加議論 hold の解決(discussed → collecting)後の再投票は、同一 subagent 個体を resume する。resume メッセージには相手票の留保・rationale を verbatim で添付し、amend ballot(同一 voter 名・既存 ref 契約)で再提出する。resume 不能時は新規 spawn で同一 voter 名を引き継ぎ、その旨を record に残す。再投票後も GoA 5 が残存する場合はユーザーへエスカレーションする(追加議論は1ラウンドのみ)。
+- `hold` 指令の `reason` と、CLI が出力した選択肢をそのまま人間へ提示する。`held[]` があるときは各 `questionId` と `reason` もそのまま提示する。
+- `reason` が `tie` の hold・`reason` が `split` の hold、棄権票を含む hold、ブロック hold は人間の裁定事項である。CLI に人間の裁定を投入する verb は存在しないため、このスキルは裁定を CLI へ代理入力しない。
+- 人間が「同じ問いを議論のうえ再投票する」と決めた場合にかぎり、`next` が返す hold 指令(`verb` が `notify`)を転送節どおりに実行し、`held[]` の question だけの再投票ラウンドを回す。人間が選挙外で決着させると決めた場合は、そこで選挙を止めて記録を残す。
+- 追加議論を求める hold について人間が再投票を選んだ場合、同一 subagent 個体を resume する。resume メッセージには相手票の留保・rationale を verbatim で添付し、amend ballot(同一 voter 名・既存 ref 契約)で再提出する。resume 不能時は新規 spawn で同一 voter 名を引き継ぎ、その旨を record に残す。再投票後も GoA 5 が残存する場合はユーザーへエスカレーションする(追加議論は1ラウンドのみ)。
 - 催促するかどうか・いつ開票するか等の裁量も人間へ委ねる(このスキルは待つだけである)。
 
 ## 終了

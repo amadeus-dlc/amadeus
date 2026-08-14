@@ -14,11 +14,11 @@
       "entries": [
         {
           "implPath": "packages/framework/core/tools/amadeus-orchestrate.ts",
-          "sha256": "f751635b6b47785a10a062649aee2cce0e0e522289dafa16f629b69951c7bee5"
+          "sha256": "be55e1bbb8b9e5ae06ff3f76dd1f4fb377739f8a570c0544bee68134c4883f58"
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-state.ts",
-          "sha256": "cb3c7e63181a1def5d62ab121d92d75a2f3e9f9e21fc877f869011074f8d2b6c"
+          "sha256": "1225e576878a9e80404abc855c1a763ca3e37f6d13ea035a88e80a238b24029a"
         }
       ],
       "vocabulary": {
@@ -67,52 +67,56 @@
       "name": "FormalElection",
       "model": {
         "path": "amadeus/spaces/default/specs/tla/FormalElection.tla",
-        "identity": "e8cc39a918d6893dc3b8e2f31d8e81857e1885ac0f93dec6212ec2a0b11e7213"
+        "identity": "3ed4cf989d43982ac488d236cd138bca022078c7c3b1de7b47ba4faaf3406868"
       },
       "cfg": {
         "path": "amadeus/spaces/default/specs/tla/FormalElection.cfg",
-        "identity": "92656a5c8cf2a83a0251bc35fef8c8260e9cb1baec459bef2d87a104474ed62b"
+        "identity": "ffb0617cb9599d707b549d34e0f6ddfac7c66aedbfa1cea03f6aed717c93aed5"
       },
+      "auxiliaries": [
+        {
+          "path": "amadeus/spaces/default/specs/tla/FormalElectionCore.tla",
+          "identity": "0711f95454cb1c13d336327fbc82ec02d7c804b9fc14b8d6525c148ff3de78c9"
+        }
+      ],
       "entries": [
         {
-          "implPath": "packages/framework/core/tools/amadeus-election-model.ts",
-          "sha256": "1c7db437b6d2cfaa835506266704b50960bc4c01515d55547a62236da6a2b4c7"
+          "implPath": "packages/framework/core/tools/amadeus-election-codec.ts",
+          "sha256": "6b4ea9cbbfe1401de41cb1b0063ececb3064ff87fd1efcdd62d4a578632ed52b"
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election-record.ts",
-          "sha256": "c143cfc61bc40de195441688808bb0f36143da31d02fb45d74c8f0cbef98c264"
+          "sha256": "9887b938e0a22dfa6089de2baefc5768f95d8cc2f14cd8d8bd8c63ce6d43dc99"
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election-store.ts",
-          "sha256": "f3419faf5518fbe98692387e16cfecdc50e256976999ccf220ec9d9cca470ad4"
+          "sha256": "546d854602deb9d21cc554382dd936d0747bea74feca792a0cc575ec23eeb3f2"
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election-transport.ts",
-          "sha256": "d1927f41434c126d49d37d502385add9b54990c00d982ebb575520177d7c77b1"
+          "sha256": "4a8e400eb9bf85ef2950686c6102b918f79ddbcb445d0630824fcc5d5acc5c18"
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election.ts",
-          "sha256": "4ec2a232aed4f771fa22c2991ca72c0b1099fd6c15193a40fc256354f4760d29"
+          "sha256": "40ea32060aa9a30ff15736f25efbf391e0a2e4cbab09969cc36aa94ad6da52c7"
         }
       ],
       "vocabulary": {
         "namedInvariants": [
-          "ChoiceWinner",
-          "UnknownChoiceRejected",
-          "ReceivedAtAxis",
-          "InvalidTimestampRejected",
-          "AmendSubmission",
-          "UnknownRefRejected",
-          "PerVoterResolution"
+          "TypeOK",
+          "QuestionIdsUnique",
+          "AcceptedDomain",
+          "ResultCompleteness",
+          "PerQuestionIsolation",
+          "HeldOnlyTargets",
+          "MixedLifecycle"
         ],
         "traceStateVariables": [
-          "initialBudget",
-          "amendBudget",
           "accepted",
-          "holdMarkers",
-          "holdBudget",
-          "tally",
-          "reexamRequired"
+          "results",
+          "targets",
+          "preserved",
+          "phase"
         ]
       }
     },
@@ -176,11 +180,11 @@
       "entries": [
         {
           "implPath": "packages/framework/core/tools/amadeus-orchestrate.ts",
-          "sha256": "f751635b6b47785a10a062649aee2cce0e0e522289dafa16f629b69951c7bee5"
+          "sha256": "be55e1bbb8b9e5ae06ff3f76dd1f4fb377739f8a570c0544bee68134c4883f58"
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-state.ts",
-          "sha256": "cb3c7e63181a1def5d62ab121d92d75a2f3e9f9e21fc877f869011074f8d2b6c"
+          "sha256": "1225e576878a9e80404abc855c1a763ca3e37f6d13ea035a88e80a238b24029a"
         }
       ],
       "vocabulary": {

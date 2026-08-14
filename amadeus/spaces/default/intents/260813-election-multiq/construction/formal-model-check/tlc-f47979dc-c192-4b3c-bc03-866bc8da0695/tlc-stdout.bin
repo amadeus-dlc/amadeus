@@ -1,0 +1,59 @@
+@!@!@STARTMSG 2262:0 @!@!@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+@!@!@ENDMSG 2262 @!@!@
+@!@!@STARTMSG 2187:0 @!@!@
+Running breadth-first search Model-Checking with fp 64 and seed -8841069189367001446 with 1 worker on 16 cores with 910MB heap and 64MB offheap memory [pid: 9590] (Mac OS X 26.5.1 aarch64, Eclipse Adoptium 26.0.1 x86_64, MSBDiskFPSet, DiskStateQueue).
+@!@!@ENDMSG 2187 @!@!@
+@!@!@STARTMSG 2220:0 @!@!@
+Starting SANY...
+@!@!@ENDMSG 2220 @!@!@
+Parsing file /Users/j5ik2o/orca/workspaces/amadeus/enhancement-election-cli-cli-per-question-choice/amadeus/spaces/default/intents/260813-election-multiq/construction/formal-model-check/tlc-f47979dc-c192-4b3c-bc03-866bc8da0695.tmp-49d4ba5d-e726-4451-86f9-6d8d76747e7d/.scratch/.tlc-inputs/FormalElection.tla
+Parsing file /Users/j5ik2o/orca/workspaces/amadeus/enhancement-election-cli-cli-per-question-choice/amadeus/spaces/default/intents/260813-election-multiq/construction/formal-model-check/tlc-f47979dc-c192-4b3c-bc03-866bc8da0695.tmp-49d4ba5d-e726-4451-86f9-6d8d76747e7d/.scratch/.tlc-stdlib/Naturals.tla
+Parsing file /Users/j5ik2o/orca/workspaces/amadeus/enhancement-election-cli-cli-per-question-choice/amadeus/spaces/default/intents/260813-election-multiq/construction/formal-model-check/tlc-f47979dc-c192-4b3c-bc03-866bc8da0695.tmp-49d4ba5d-e726-4451-86f9-6d8d76747e7d/.scratch/.tlc-stdlib/Sequences.tla
+Parsing file /Users/j5ik2o/orca/workspaces/amadeus/enhancement-election-cli-cli-per-question-choice/amadeus/spaces/default/intents/260813-election-multiq/construction/formal-model-check/tlc-f47979dc-c192-4b3c-bc03-866bc8da0695.tmp-49d4ba5d-e726-4451-86f9-6d8d76747e7d/.scratch/.tlc-stdlib/FiniteSets.tla
+Parsing file /Users/j5ik2o/orca/workspaces/amadeus/enhancement-election-cli-cli-per-question-choice/amadeus/spaces/default/intents/260813-election-multiq/construction/formal-model-check/tlc-f47979dc-c192-4b3c-bc03-866bc8da0695.tmp-49d4ba5d-e726-4451-86f9-6d8d76747e7d/.scratch/.tlc-stdlib/TLC.tla
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module FormalElection
+@!@!@STARTMSG 2219:0 @!@!@
+SANY finished.
+@!@!@ENDMSG 2219 @!@!@
+@!@!@STARTMSG 2185:0 @!@!@
+Starting... (2026-08-13 11:33:17)
+@!@!@ENDMSG 2185 @!@!@
+@!@!@STARTMSG 2189:0 @!@!@
+Computing initial states...
+@!@!@ENDMSG 2189 @!@!@
+@!@!@STARTMSG 2190:0 @!@!@
+Finished computing initial states: 1 distinct state generated at 2026-08-13 11:33:17.
+@!@!@ENDMSG 2190 @!@!@
+@!@!@STARTMSG 2200:0 @!@!@
+Progress(6) at 2026-08-13 11:33:20: 156,427 states generated (156,427 s/min), 15,483 distinct states found (15,483 ds/min), 14,229 states left on queue.
+@!@!@ENDMSG 2200 @!@!@
+@!@!@STARTMSG 2200:0 @!@!@
+Progress(7) at 2026-08-13 11:34:20: 3,701,880 states generated (3,545,453 s/min), 251,791 distinct states found (236,308 ds/min), 180,778 states left on queue.
+@!@!@ENDMSG 2200 @!@!@
+@!@!@STARTMSG 2193:0 @!@!@
+Model checking completed. No error has been found.
+  Estimates of the probability that TLC did not check all reachable states
+  because two distinct states had the same fingerprint:
+  calculated (optimistic):  val = 2.0E-7
+  based on the actual fingerprints:  val = 2.3E-8
+@!@!@ENDMSG 2193 @!@!@
+@!@!@STARTMSG 2200:0 @!@!@
+Progress(9) at 2026-08-13 11:35:18: 5,818,173 states generated (2,873,219 s/min), 704,329 distinct states found (347,822 ds/min), 0 states left on queue.
+@!@!@ENDMSG 2200 @!@!@
+@!@!@STARTMSG 2199:0 @!@!@
+5818173 states generated, 704329 distinct states found, 0 states left on queue.
+@!@!@ENDMSG 2199 @!@!@
+@!@!@STARTMSG 2194:0 @!@!@
+The depth of the complete state graph search is 9.
+@!@!@ENDMSG 2194 @!@!@
+@!@!@STARTMSG 2268:0 @!@!@
+The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 31 and the 95th percentile is 3).
+@!@!@ENDMSG 2268 @!@!@
+@!@!@STARTMSG 2186:0 @!@!@
+Finished in 121512ms at (2026-08-13 11:35:18)
+@!@!@ENDMSG 2186 @!@!@

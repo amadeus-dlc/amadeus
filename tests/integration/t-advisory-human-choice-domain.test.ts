@@ -15,6 +15,8 @@ import {
   advisoryModelCheckOutputDir,
   verifyAdvisoryModelCheckOutcome,
 } from "../../plugins/formal-model-check/tools/advisory-model-check.ts";
+import { canonicalIdentity } from "../../plugins/formal-model-check/tools/canonical.ts";
+import { FIXED_TLC_VERSION_LINE } from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 
 const base = {
   plugin: "formal-model-check",
@@ -144,7 +146,36 @@ describe("advisory human choice domain", () => {
     writeFileSync(cfgPath, "SPECIFICATION Spec\n");
     const runId = "00000000-0000-4000-8000-000000000001";
     const writeJson = (path: string, value: unknown) => writeFileSync(path, `${JSON.stringify(value)}\n`);
-    writeJson(join(out, "completion-marker.json"), { complete: true, runId });
+    const provenanceBody = {
+      modelPath: "amadeus/spaces/default/specs/tla/FormalElection.tla",
+      cfgPath: "amadeus/spaces/default/specs/tla/FormalElection.cfg",
+      modelIdentity: "registered-model",
+      moduleIdentity: canonicalIdentity(
+        readFileSync(modelPath, "utf8"),
+        "amadeus.formal-verif.tla.module.v1",
+      ).sha256,
+      cfgIdentity: canonicalIdentity(
+        readFileSync(cfgPath, "utf8"),
+        "amadeus.formal-verif.tla.cfg.v1",
+      ).sha256,
+      moduleSha256: createHash("sha256").update(readFileSync(modelPath)).digest("hex"),
+      cfgSha256: createHash("sha256").update(readFileSync(cfgPath)).digest("hex"),
+      auxiliaries: [],
+      implementations: [],
+      constants: [],
+    };
+    const sourceProvenance = {
+      ...provenanceBody,
+      sourceIdentity: canonicalIdentity(
+        provenanceBody,
+        "amadeus.formal-verif.model-check-source.v1",
+      ).sha256,
+    };
+    writeJson(join(out, "completion-marker.json"), {
+      complete: true,
+      runId,
+      sourceIdentity: sourceProvenance.sourceIdentity,
+    });
     writeJson(join(out, "env-receipt.json"), {
       schema: "amadeus.env-receipt.v1",
       runId,
@@ -171,13 +202,16 @@ describe("advisory human choice domain", () => {
         specIdentity: pending.identity.specIdentity,
         instance: pending.identity.advisoryInstance,
       },
-      sourceProvenance: {
-        modelPath: "amadeus/spaces/default/specs/tla/FormalElection.tla",
-        cfgPath: "amadeus/spaces/default/specs/tla/FormalElection.cfg",
-        moduleIdentity: "registered-module",
-        cfgIdentity: "registered-cfg",
-        moduleSha256: createHash("sha256").update(readFileSync(modelPath)).digest("hex"),
-        cfgSha256: createHash("sha256").update(readFileSync(cfgPath)).digest("hex"),
+      sourceProvenance,
+      verification: {
+        toolchainVersion: FIXED_TLC_VERSION_LINE,
+        constants: [],
+        completionMarker: "Model checking completed. No error has been found.",
+        generatedStates: 3,
+        distinctStates: 2,
+        statesLeftOnQueue: 0,
+        searchDepth: 2,
+        sourceIdentity: sourceProvenance.sourceIdentity,
       },
       errorCode: null,
       errorDetail: null,
@@ -205,6 +239,65 @@ describe("advisory human choice domain", () => {
     });
     expect(verifyAdvisoryModelCheckOutcome(root, pending).kind).toBe("detected");
     writeJson(join(out, "manifest.json"), { ...manifest, advisory: { ...manifest.advisory, specIdentity: "sha256:old" } });
+    expect(verifyAdvisoryModelCheckOutcome(root, pending).kind).toBe("invalid");
+
+    writeJson(join(out, "manifest.json"), {
+      ...manifest,
+      sourceProvenance: { ...sourceProvenance, auxiliaries: ["not-an-object"] },
+    });
+    expect(verifyAdvisoryModelCheckOutcome(root, pending).kind).toBe("invalid");
+    writeFileSync(join(root, "amadeus/spaces/default/specs/tla/Aux.tla"), "---- MODULE Aux ----\n====\n");
+    writeJson(join(out, "manifest.json"), {
+      ...manifest,
+      sourceProvenance: {
+        ...sourceProvenance,
+        auxiliaries: [{ path: "amadeus/spaces/default/specs/tla/Aux.tla", identity: "wrong" }],
+      },
+    });
+    expect(verifyAdvisoryModelCheckOutcome(root, pending).kind).toBe("invalid");
+    writeJson(join(out, "manifest.json"), {
+      ...manifest,
+      sourceProvenance: { ...sourceProvenance, implementations: ["not-an-object"] },
+    });
+    expect(verifyAdvisoryModelCheckOutcome(root, pending).kind).toBe("invalid");
+    // An auxiliary path outside the advisory target (`${target}/`) is rejected
+    // on the path-prefix check itself, before the identity is even compared —
+    // give it the CORRECT module identity so a pass here could only mean the
+    // prefix requirement was silently dropped, not a lucky digest mismatch.
+    writeFileSync(join(root, "impl.ts"), "export {}\n");
+    writeJson(join(out, "manifest.json"), {
+      ...manifest,
+      sourceProvenance: {
+        ...sourceProvenance,
+        auxiliaries: [{
+          path: "impl.ts",
+          identity: canonicalIdentity(readFileSync(join(root, "impl.ts"), "utf8"), "amadeus.formal-verif.tla.module.v1").sha256,
+        }],
+      },
+    });
+    expect(verifyAdvisoryModelCheckOutcome(root, pending).kind).toBe("invalid");
+    writeJson(join(out, "manifest.json"), {
+      ...manifest,
+      sourceProvenance: {
+        ...sourceProvenance,
+        implementations: [{ path: "../escape.ts", identity: "wrong" }],
+      },
+    });
+    expect(verifyAdvisoryModelCheckOutcome(root, pending).kind).toBe("invalid");
+    writeJson(join(out, "manifest.json"), {
+      ...manifest,
+      sourceProvenance: {
+        ...sourceProvenance,
+        implementations: [{ path: "impl.ts", identity: "wrong" }],
+      },
+    });
+    expect(verifyAdvisoryModelCheckOutcome(root, pending).kind).toBe("invalid");
+    writeJson(join(out, "manifest.json"), {
+      ...manifest,
+      sourceProvenance: { ...sourceProvenance, sourceIdentity: `sha256:${"0".repeat(64)}` },
+    });
+    expect(verifyAdvisoryModelCheckOutcome(root, pending).kind).toBe("invalid");
+    writeJson(join(out, "manifest.json"), { ...manifest, verification: "missing" });
     expect(verifyAdvisoryModelCheckOutcome(root, pending).kind).toBe("invalid");
   });
 });

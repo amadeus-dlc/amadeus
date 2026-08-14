@@ -1,18 +1,18 @@
-// covers: file:plugins/pr-convergence/tools/pr-convergence-predicate.ts
+// covers: file:plugins/github-pr-convergence/tools/pr-convergence-predicate.ts
 // size: small
 //
 // Bolt landed-report (#2401): the pull-request lifecycle vocabulary and the
 // landed-verdict constructors. Pure functions only — no filesystem, no process.
 
 import { describe, expect, test } from "bun:test";
-import type { RawPrState } from "../../plugins/pr-convergence/tools/pr-convergence-gh-runner.ts";
+import type { RawPrState } from "../../plugins/github-pr-convergence/tools/pr-convergence-gh-runner.ts";
 import {
   type ConvergenceVerdict,
   labeledVerdict,
   LandedFacts,
   landedVerdict,
   PrLifecycleState,
-} from "../../plugins/pr-convergence/tools/pr-convergence-predicate.ts";
+} from "../../plugins/github-pr-convergence/tools/pr-convergence-predicate.ts";
 
 const MERGED_RAW: RawPrState = {
   mergeable: "UNKNOWN",

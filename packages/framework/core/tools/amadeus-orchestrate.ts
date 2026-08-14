@@ -91,6 +91,8 @@ import {
   type Directive,
   type ErrorDirective,
   type ExecuteAdvisoryHandoffDirective,
+  type ExecuteFailureElectionDirective,
+  FAILURE_ELECTION_CHOICES,
   GATE_UNRESOLVED,
   type GateValue,
   type InvokeSwarmDirective,
@@ -4050,6 +4052,32 @@ function failureOutsideRuntimePopulation(
   return index >= batches.length || !batches[index].includes(entry.unit);
 }
 
+function constructionFailureRulingDirective(
+  projectDir: string,
+  stage: string,
+  target: { unit: string; attempt?: string; batch?: string },
+  siblings: string,
+): Directive {
+  const config = resolveAmadeusConfig(projectDir);
+  if (config.kind === "invalid") return errorDirective(`Invalid solo-election configuration: ${config.issues.map(swarmConfigIssue).join(" | ")}`);
+  if (config.config.soloElection.trigger.mode !== "auto") {
+    return askDirective(
+      `Unit "${target.unit}" failed during ${stage} (attempt ${target.attempt}, batch ${target.batch}; siblings: ${siblings}). Choose exactly one: Retry, Skip, or Abort. The answer is committed through the ordinary ask report path.`,
+    );
+  }
+  if (!target.attempt || !target.batch) return errorDirective("Construction Unit failure is missing attempt or batch identity; waiting fail-closed.");
+  const directive: ExecuteFailureElectionDirective = {
+    kind: "execute-failure-election",
+    stage,
+    unit: target.unit,
+    attempt: target.attempt,
+    batch: target.batch,
+    siblings,
+    choices: [...FAILURE_ELECTION_CHOICES],
+  };
+  return directive;
+}
+
 function emitConstructionFailureIfPresent(
   projectDir: string,
   stageSlug: string,
@@ -4094,8 +4122,11 @@ function emitConstructionFailureIfPresent(
   );
   if (transition.kind === "await-unit-ruling") {
     const siblingSummary = transition.siblings.map((entry) => `${entry.unit}:${entry.outcome}`).join(", ") || "none";
-    emit(askDirective(
-      `Unit "${transition.target.unit}" failed during ${stageSlug} (attempt ${transition.target.attempt}, batch ${transition.target.batch}; siblings: ${siblingSummary}). Choose exactly one: Retry, Skip, or Abort. The answer is committed through the ordinary ask report path.`,
+    emit(constructionFailureRulingDirective(
+      projectDir,
+      stageSlug,
+      transition.target,
+      siblingSummary,
     ));
     return true;
   }
@@ -6198,7 +6229,9 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
   // A stage-owned referee that failed closed (issue #2912). `report` commits
   // forward transitions only and the generic manual park is refused under an
   // autonomous Construction run, so without this route a typed failure has no
-  // admission path and `next` re-issues the same run-stage forever. Under semi
+  // admission path and `next` re-issues the same run-stage forever. (#3016
+  // narrowed that refusal to a genuinely UNATTENDED run — one with no unconsumed
+  // HUMAN_TURN — which is exactly the case this route answers.) Under semi
   // or full the failure belongs to Quality Repair: it becomes an unresolved
   // obligation, bounded repair owns the recovery, and a nonproductive loop parks
   // as REPAIR_STALLED with the grant intact. Under `none` there is no repair

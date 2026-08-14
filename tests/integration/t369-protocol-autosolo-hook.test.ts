@@ -45,6 +45,17 @@ const HARNESS_DIRS = [
 
 const SELF_INSTALL_DIRS = [".claude", ".codex", ".cursor", ".kimi-code", ".opencode"] as const;
 
+const FAILURE_ELECTION_SURFACES = [
+  "packages/framework/harness/claude/skills/amadeus/SKILL.md",
+  "packages/framework/harness/codex/skills/amadeus/SKILL.md",
+  "packages/framework/harness/cursor/commands/amadeus.md",
+  "packages/framework/harness/kimi/skills/amadeus/SKILL.md",
+  "packages/framework/harness/kiro/skills/amadeus/SKILL.md",
+  "packages/framework/harness/kiro-ide/skills/amadeus/SKILL.md",
+  "packages/framework/harness/opencode/commands/amadeus.md",
+  "packages/framework/harness/pi/skills/amadeus/SKILL.md",
+] as const;
+
 function protocolSurfaces(): string[] {
   const paths = [join(ROOT, "packages/framework/core/amadeus-common/protocols/stage-protocol.md")];
   for (const [dist, harness] of HARNESS_DIRS) {
@@ -144,6 +155,20 @@ describe("t369 automatic solo hook is baked into the harness-neutral protocol (#
   });
 });
 
+describe("t369 #2976 failure-election fallback is complete on every conductor surface", () => {
+  test("hold, split, interrupt, CLI error, and decline all return to the human ruling path", () => {
+    for (const relativePath of FAILURE_ELECTION_SURFACES) {
+      const content = readFileSync(join(ROOT, relativePath), "utf8");
+      expect(content).toContain("execute-failure-election");
+      expect(content).toContain("open --trigger auto --file <definition.json>");
+      expect(content).toContain(DISABLED_ENVELOPE);
+      expect(content).toContain("hold / split / interrupt / CLI error");
+      expect(content).toMatch(/Retry\s*\/\s*Skip\s*\/\s*Abort/);
+      expect(content).toContain("`report --user-input` with the ruling (`retry` / `skip` / `abort`)");
+    }
+  });
+});
+
 // The live probe in tests/e2e/t-exec-codex-autosolo-s13.serial.test.ts runs only
 // under --release and only with a codex binary + auth. Its fixture is verified
 // HERE, in the integration band --ci runs, so a fixture that stops satisfying
@@ -204,7 +229,7 @@ describe("t369 the live §13 probe's fixture satisfies the ritual's precondition
       join(proj, PAYLOAD_NAME),
     ]);
     expect(opened.status).toBe(0);
-    expect(JSON.parse(opened.stdout).opened).toBe(ELECTION_ID);
+    expect(JSON.parse(opened.stdout).electionId).toBe(ELECTION_ID);
     expect(existsSync(join(proj, ELECTIONS_REL, "elections.json"))).toBe(true);
   });
 

@@ -62,8 +62,9 @@ function closedLifecycle(modulePath: string, standardModuleDirectory: string): s
     envelope(2220, 0, "Starting SANY..."),
     [
       `Parsing file ${modulePath}`,
+      `Parsing file ${join(dirname(modulePath), "FormalElectionCore.tla")}`,
       ...["Naturals", "Sequences", "FiniteSets", "TLC"].map((name) => `Parsing file ${standardModuleDirectory}/${name}.tla`),
-      ...["Naturals", "Sequences", "FiniteSets", "TLC", "FormalElection"].map((name) => `Semantic processing of module ${name}`),
+      ...["Naturals", "Sequences", "FiniteSets", "TLC", "FormalElectionCore", "FormalElection"].map((name) => `Semantic processing of module ${name}`),
       "",
     ].join("\n"),
     envelope(2219, 0, "SANY finished."),
@@ -94,17 +95,15 @@ function completeExplorationOutput(modulePath: string, standardModuleDirectory: 
 
 function namedCounterexampleOutput(modulePath: string, standardModuleDirectory: string): string {
   const state = (ordinal: number, label: string) => envelope(2217, 4, `${ordinal}: <${label}>\n${[
-    "/\\ initialBudget = (V1 :> 1 @@ V2 :> 1 @@ V3 :> 1)",
-    "/\\ amendBudget = (V1 :> 1 @@ V2 :> 1 @@ V3 :> 1)",
-    "/\\ accepted = (V1 :> [choice |-> C1])",
-    "/\\ holdMarkers = <<>>",
-    "/\\ holdBudget = 1",
-    "/\\ tally = [kind |-> \"NONE\"]",
-    "/\\ reexamRequired = FALSE",
+    "/\\ accepted = (V1 :> (Q1 :> NoResponse))",
+    "/\\ results = (Q1 :> ResultNone)",
+    "/\\ targets = {Q1, Q2}",
+    "/\\ preserved = {}",
+    "/\\ phase = PhaseCollecting",
   ].join("\n")}`);
   return [
     closedLifecycle(modulePath, standardModuleDirectory),
-    envelope(2110, 1, "Invariant InvalidTimestampRejected is violated."),
+    envelope(2110, 1, "Invariant PerQuestionIsolation is violated."),
     envelope(2121, 1, "The behavior up to this point is:"),
     state(1, "Initial predicate"),
     state(2, "Next line 160, col 8 to line 161, col 66 of module FormalElection"),
@@ -229,6 +228,10 @@ describe("formal verification TLC runtime", () => {
     mkdirSync(workspaceRoot);
     writeFileSync(join(workspaceRoot, "FormalElection.tla"), moduleSource);
     writeFileSync(join(workspaceRoot, "FormalElection.cfg"), cfgSource);
+    writeFileSync(
+      join(workspaceRoot, "FormalElectionCore.tla"),
+      readFileSync("amadeus/spaces/default/specs/tla/FormalElectionCore.tla"),
+    );
     const toolchain = new FsTlcToolchain(root, dependencies(spawn, {
       workspaceRoot,
       jdkDistributionRoot: distributionRoot,

@@ -18,7 +18,7 @@
 //                                      only; "blocking" additionally gates the
 //                                      stage's approval on the sensor's latest
 //                                      terminal verdict (amadeus-state.ts
-//                                      verifyBlockingSensors).
+//                                      evaluateBlockingSensors).
 //   - description: string           — required; one-line capability summary
 //   - category: string              — optional grouping label
 //   - input_schema: object          — optional invocation contract

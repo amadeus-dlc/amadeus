@@ -90,6 +90,30 @@ function auditLine(
   });
 }
 
+function v2AuditLine(
+  event: string,
+  attributes: Record<string, unknown>,
+  timestamp: string,
+): string {
+  seq += 1;
+  return JSON.stringify({
+    schemaVersion: 2,
+    eventId: `evt-${seq}`,
+    seq,
+    timestamp,
+    eventName: `amadeus.sensor.${event.toLowerCase()}`,
+    attributes: { Event: event, ...attributes },
+    intentId: "260810-t511-fixture",
+    space: "default",
+    cloneId: "t511clone",
+    traceId: null,
+    spanId: null,
+    traceFlags: 0,
+    idempotencyKey: `260810-t511-fixture:t511clone:${seq}`,
+    canonical: true,
+  });
+}
+
 function sensorRow(
   event: string,
   sensorId: string,
@@ -138,9 +162,9 @@ describe("t511 — severity carriage through the compiled stage graph (#2671 c)"
 describe("t511 — evaluateBlockingSensors decision table (#2671 c)", () => {
   test("a projected plugin sensor command resolves inside the plugin subtree", () => {
     expect(resolveScriptPath(
-      "bun .claude/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts",
+      "bun .claude/plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts",
     )).toEndWith(
-      "/dist/claude/.claude/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts",
+      "/dist/claude/.claude/plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts",
     );
   });
 
@@ -420,5 +444,95 @@ describe("t511 — evaluateBlockingSensors decision table (#2671 c)", () => {
     expect(
       evaluateBlockingSensors(["blocking-probe"], audit, "requirements-analysis")?.kind,
     ).toBe("unresolved");
+  });
+
+  test("SENSOR_PASSED with Note script-error: exit-2 is not a pass (#2988)", () => {
+    const fields = {
+      "Fire id": "exit2",
+      "Sensor ID": "blocking-probe",
+      "Stage slug": "requirements-analysis",
+      "Output path": OUT,
+      Note: "script-error: exit-2",
+    };
+    const audit = [
+      auditLine("SENSOR_FIRED", fields, "2026-08-10T01:00:00Z"),
+      auditLine("SENSOR_PASSED", fields, "2026-08-10T01:00:01Z"),
+    ].join("\n");
+    const finding = evaluateBlockingSensors(["blocking-probe"], audit, "requirements-analysis");
+    expect(finding).toEqual({
+      kind: "script-error",
+      sensorId: "blocking-probe",
+      outputPath: OUT,
+      note: "script-error: exit-2",
+    });
+  });
+
+  test("SENSOR_PASSED with Note script-error: bad-output is not a pass (#2988)", () => {
+    const fields = {
+      "Fire id": "badout",
+      "Sensor ID": "blocking-probe",
+      "Stage slug": "requirements-analysis",
+      "Output path": OUT,
+      Note: "script-error: bad-output",
+    };
+    const audit = [
+      auditLine("SENSOR_FIRED", fields, "2026-08-10T01:00:00Z"),
+      auditLine("SENSOR_PASSED", fields, "2026-08-10T01:00:01Z"),
+    ].join("\n");
+    expect(
+      evaluateBlockingSensors(["blocking-probe"], audit, "requirements-analysis")?.kind,
+    ).toBe("script-error");
+  });
+
+  test("SENSOR_PASSED with a non-string v2 Note fails closed (#2988)", () => {
+    const fields = {
+      "Fire id": "malformed-note",
+      "Sensor ID": "blocking-probe",
+      "Stage slug": "requirements-analysis",
+      "Output path": OUT,
+    };
+    const audit = [
+      auditLine("SENSOR_FIRED", fields, "2026-08-10T01:00:00Z"),
+      v2AuditLine(
+        "SENSOR_PASSED",
+        { ...fields, Note: { diagnostic: "script-error: exit-2" } },
+        "2026-08-10T01:00:01Z",
+      ),
+    ].join("\n");
+    expect(
+      evaluateBlockingSensors(["blocking-probe"], audit, "requirements-analysis"),
+    ).toEqual({
+      kind: "script-error",
+      sensorId: "blocking-probe",
+      outputPath: OUT,
+      note: "script-error: note-unreadable",
+    });
+  });
+
+  test("SENSOR_PASSED with Note tool-unavailable remains a pass (#2988)", () => {
+    const fields = {
+      "Fire id": "tu127",
+      "Sensor ID": "blocking-probe",
+      "Stage slug": "requirements-analysis",
+      "Output path": OUT,
+      Note: "tool-unavailable",
+    };
+    const audit = [
+      auditLine("SENSOR_FIRED", fields, "2026-08-10T01:00:00Z"),
+      auditLine("SENSOR_PASSED", fields, "2026-08-10T01:00:01Z"),
+    ].join("\n");
+    expect(
+      evaluateBlockingSensors(["blocking-probe"], audit, "requirements-analysis"),
+    ).toBeNull();
+  });
+
+  test("note-less SENSOR_PASSED remains a pass (#2988)", () => {
+    const audit = [
+      sensorRow("SENSOR_FIRED", "blocking-probe", OUT, "2026-08-10T01:00:00Z"),
+      sensorRow("SENSOR_PASSED", "blocking-probe", OUT, "2026-08-10T01:00:01Z"),
+    ].join("\n");
+    expect(
+      evaluateBlockingSensors(["blocking-probe"], audit, "requirements-analysis"),
+    ).toBeNull();
   });
 });

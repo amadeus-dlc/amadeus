@@ -3694,11 +3694,14 @@ function cloneId(projectDir: string): string {
 //
 // Per-delegate resolution slots (#736, election Q1=A / Q2=A). A HUMAN_TURN is a
 // local, single-use act: ANY resolution after it (GATE_APPROVED / GATE_REJECTED /
-// QUESTION_ANSWERED) consumes it — this is the t188 one-act-per-turn semantics and
-// is UNCHANGED. A delegation, by contrast, carries a REMOTE grounding and opens
-// exactly one KIND of gate, so it owns two independent slots:
+// QUESTION_ANSWERED / WORKFLOW_PARKED) consumes it — this is the t188
+// one-act-per-turn semantics and is UNCHANGED. A delegation, by contrast,
+// carries a REMOTE grounding and opens exactly one KIND of gate, so it owns two
+// independent slots:
 //   - its "gate slot" is consumed only by a GATE_APPROVED / GATE_REJECTED;
 //   - its "answer slot" is consumed only by a QUESTION_ANSWERED.
+// A park owns NEITHER slot: #3016 spends the human's own turn, not a delegate's
+// standing authority, so `res: "park"` consumes a HUMAN_TURN and nothing else.
 // The #736 bug was that a QUESTION_ANSWERED (emitted by amadeus-log answer the
 // moment a delegate lands) consumed the delegation's GATE slot, so the very
 // delegate that authorised an approval could no longer satisfy the approve gate.
@@ -3715,15 +3718,17 @@ function cloneId(projectDir: string): string {
 // One classified, chronologically-ordered ledger event. `delegVerb` is set only
 // for a VERIFIED delegation (unverifiable delegations are dropped during the
 // scan and never reach here). `res` classifies a resolution as a gate resolution
-// (GATE_APPROVED / GATE_REJECTED) or an answer resolution (QUESTION_ANSWERED),
-// the split the per-delegate slots key off.
+// (GATE_APPROVED / GATE_REJECTED), an answer resolution (QUESTION_ANSWERED), or
+// a park resolution (WORKFLOW_PARKED) — the split the per-delegate slots key
+// off. Every kind consumes a HUMAN_TURN; only "gate" and "answer" reach a
+// delegation's slots.
 type PresenceEvent = {
   ts: string;
   shard: number; // index of the origin shard (presenceLedgerShards order); the tie-break key
   pos: number; // append order WITHIN the origin shard (authoritative there only)
   human: boolean; // HUMAN_TURN or a verified delegation
   delegVerb?: "approve" | "reject"; // present iff this is a verified delegation
-  res?: "gate" | "answer"; // present iff this is a resolution
+  res?: "gate" | "answer" | "park"; // present iff this is a resolution
   // The raw block + its origin shard path, carried for HUMAN_TURN events only.
   // outstandingHumanTurns needs an identity for the turn it hands back; every
   // other predicate here answers a yes/no question and ignores both fields.
@@ -3785,6 +3790,8 @@ function scanPresenceLedger(
         events.push({ ts, shard, pos, human: false, res: "gate" });
       } else if (ev === "QUESTION_ANSWERED") {
         events.push({ ts, shard, pos, human: false, res: "answer" });
+      } else if (ev === "WORKFLOW_PARKED") {
+        events.push({ ts, shard, pos, human: false, res: "park" });
       }
     }
   }

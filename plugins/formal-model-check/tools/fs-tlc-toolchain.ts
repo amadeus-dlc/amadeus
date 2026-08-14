@@ -1577,7 +1577,6 @@ function verifiedAuxiliaryModulePaths(
   modulePath: string,
   modelReceipt: ModelCheckReceipt,
 ): VerifiedAuxiliaryModulePaths {
-  if (!isSourceBoundTlaModelReceipt(modelReceipt)) return Object.freeze([]);
   return Object.freeze(modelReceipt.auxiliaryModules.map((auxiliary) => {
     const requestedPath = join(dirname(modulePath), `${auxiliary.name}.tla`);
     const canonicalPath = realpathSync(requestedPath);
@@ -1628,6 +1627,7 @@ function snapshotModelReceipt(bundle: ModelCheckReceiptBundle): ModelCheckReceip
     cfgBytesIdentity: bundle.cfgBytesIdentity,
     profileIdentity: bundle.profileIdentity,
     publicContractIdentity: bundle.publicContractIdentity,
+    auxiliaryModules: Object.freeze(bundle.auxiliaryModules.map((module) => Object.freeze({ ...module }))),
     namedInvariantFormulas: Object.freeze({ ...bundle.namedInvariantFormulas }),
     invariantSourceMap,
     freezeRevision: bundle.freezeRevision,

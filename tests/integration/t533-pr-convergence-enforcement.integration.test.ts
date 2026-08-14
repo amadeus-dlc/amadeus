@@ -11,11 +11,11 @@ import {
   type GhSpawnResult,
   parsePrRef,
   PR_STATE_QUERY,
-} from "../../plugins/pr-convergence/tools/pr-convergence-gh-runner.ts";
+} from "../../plugins/github-pr-convergence/tools/pr-convergence-gh-runner.ts";
 import {
   reportPathFor,
   runCli,
-} from "../../plugins/pr-convergence/tools/pr-convergence-cli.ts";
+} from "../../plugins/github-pr-convergence/tools/pr-convergence-cli.ts";
 import { cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
 
 const REPO = "amadeus-dlc/amadeus";

@@ -1,195 +1,199 @@
 // t451 — Issue #1946: the ballot receipt stamp is the authoritative axis.
-// Layer: integration (real FS via a tmp project dir; in-process main() so the
-// CLI wiring lines stay lcov-visible — seam-export-handler-amend).
+// Layer: integration (real FS via a tmp elections root; in-process CLI handlers
+// so the wiring lines stay lcov-visible — seam-export-handler-amend).
 //
 // The defect this pins: submittedAt is voter-self-reported and compared against
-// no clock, so a future-dated original outranked every genuine later amend in
-// resolveBallots — a voter could make their own correction unreachable, and a
-// block vote raised by amendment vanished from the tally. Ruling Q2=A
-// (2026-08-05) moved the axis to the instant the CLI accepts the ballot.
+// no clock, so a future-dated original outranked every genuine later amend when
+// responses were resolved — a voter could make their own correction unreachable,
+// and a block vote raised by amendment vanished from the tally. Ruling Q2=A
+// (2026-08-05) moved the axis to the instant the CLI accepts the ballot, which
+// `vote` stamps onto the ballot as receivedAt.
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { main } from "../../packages/framework/core/tools/amadeus-election";
 import {
-  electionsRoot,
-  resolveElectionDir,
-} from "../../packages/framework/core/tools/amadeus-election-store";
+  type CanonicalElectionDefinition,
+  ElectionDefinitionCodec,
+} from "../../packages/framework/core/tools/amadeus-election-codec";
+import {
+  nextElection,
+  tallyElection,
+  voteElection,
+} from "../../packages/framework/core/tools/amadeus-election";
+import { ElectionStore } from "../../packages/framework/core/tools/amadeus-election-store";
 
 const ELECTION_ID = "E-RCPT1";
 const HIJACK_AT = "2099-01-01T00:00:00Z";
 
 const DEF = {
+  schemaVersion: 2,
   electionId: ELECTION_ID,
   kind: "choice",
-  question: "どちらの案か",
-  choices: [
-    { internalNo: 1, label: "案1" },
-    { internalNo: 2, label: "案2" },
+  questions: [
+    {
+      questionId: "q1",
+      text: "どちらの案か",
+      choices: [
+        { internalNo: 1, label: "案1" },
+        { internalNo: 2, label: "案2" },
+      ],
+    },
   ],
   voters: ["alice", "bob"],
 };
 
-let projectDir = "";
-let logs: string[] = [];
-const origLog = console.log;
-const origErr = console.error;
-
-function run(argv: string[]): number {
-  logs = [];
-  return main(argv, projectDir);
+function election(): CanonicalElectionDefinition {
+  const decoded = ElectionDefinitionCodec.decode(DEF);
+  if (!decoded.ok) throw new Error("definition must decode");
+  return decoded.value;
 }
 
-function lastJson(): Record<string, unknown> {
-  return JSON.parse(logs[logs.length - 1] ?? "null");
+function response(goa: number) {
+  return { questionId: "q1", choiceInternalNo: 1, goa, reservation: null, rationale: null };
 }
 
-function writeJson(name: string, value: unknown): string {
-  const path = join(projectDir, name);
-  writeFileSync(path, JSON.stringify(value));
-  return path;
-}
-
-function electionPath(...segments: string[]): string {
-  return join(resolveElectionDir(electionsRoot(projectDir), ELECTION_ID).dir, ...segments);
-}
-
-function readJsonFile(...segments: string[]): Record<string, unknown> {
-  return JSON.parse(readFileSync(electionPath(...segments), "utf8"));
-}
+let root = "";
 
 beforeEach(() => {
-  projectDir = mkdtempSync(join(tmpdir(), "election-receipt-"));
-  mkdirSync(join(projectDir, "amadeus", "spaces", "default", "elections"), { recursive: true });
-  console.log = (line: string) => {
-    logs.push(String(line));
-  };
-  console.error = () => {};
+  root = mkdtempSync(join(tmpdir(), "election-receipt-"));
+  expect(ElectionStore.create(root, election()).ok).toBe(true);
+  expect(ElectionStore.setState(root, ELECTION_ID, "collecting").ok).toBe(true);
 });
 
 afterEach(() => {
-  console.log = origLog;
-  console.error = origErr;
-  rmSync(projectDir, { recursive: true, force: true });
+  rmSync(root, { recursive: true, force: true });
 });
 
 describe("t451 election receipt stamp", () => {
   test("#1946: a future-dated original cannot discard a later amend — the block holds the tally", () => {
-    expect(run(["open", "--file", writeJson("def.json", DEF)])).toBe(0);
-    expect(run(["report", "--election", ELECTION_ID, "--result", "distributed"])).toBe(0);
+    // alice's original claims an instant 73 years in the future and picks
+    // choice 1 in favour. It is received first.
+    expect(
+      voteElection(
+        root,
+        ELECTION_ID,
+        {
+          schemaVersion: 2,
+          kind: "original",
+          electionId: ELECTION_ID,
+          voter: "alice",
+          voterKind: "member",
+          responses: [response(1)],
+          submittedAt: HIJACK_AT,
+        },
+        "2026-07-19T00:01:00Z",
+      ).ok,
+    ).toBe(true);
 
-    // alice's original claims an instant 73 years in the future and picks choice 1.
-    const original = writeJson("a1.json", {
-      electionId: ELECTION_ID,
-      voter: "alice",
-      voterKind: "member",
-      choiceInternalNo: 1,
-      goa: 1,
-      submittedAt: HIJACK_AT,
-    });
-    expect(run(["vote", "--election", ELECTION_ID, "--file", original])).toBe(0);
+    // She then amends to a GoA 8 block. Its self-reported instant is far BELOW
+    // the original's, so a submittedAt axis would discard it.
+    expect(
+      voteElection(
+        root,
+        ELECTION_ID,
+        {
+          schemaVersion: 2,
+          kind: "amend",
+          electionId: ELECTION_ID,
+          voter: "alice",
+          voterKind: "member",
+          ref: { electionId: ELECTION_ID, voter: "alice", submittedAt: HIJACK_AT },
+          responses: [response(8)],
+          submittedAt: "2026-07-19T00:02:00Z",
+        },
+        "2026-07-19T00:03:00Z",
+      ).ok,
+    ).toBe(true);
 
-    // She then amends to a GoA 8 block. Its self-reported instant is far below
-    // the original's, so the old submittedAt axis discarded it.
-    const amend = writeJson("a2.json", {
-      electionId: ELECTION_ID,
-      voter: "alice",
-      voterKind: "member",
-      kind: "amend",
-      ref: { electionId: ELECTION_ID, voter: "alice", submittedAt: HIJACK_AT },
-      choiceInternalNo: 1,
-      goa: 8,
-      submittedAt: "2026-07-19T00:02:00Z",
-    });
-    expect(run(["vote", "--election", ELECTION_ID, "--file", amend])).toBe(0);
+    expect(
+      voteElection(
+        root,
+        ELECTION_ID,
+        {
+          schemaVersion: 2,
+          kind: "original",
+          electionId: ELECTION_ID,
+          voter: "bob",
+          voterKind: "member",
+          responses: [response(1)],
+          submittedAt: "2026-07-19T00:04:00Z",
+        },
+        "2026-07-19T00:05:00Z",
+      ).ok,
+    ).toBe(true);
 
-    const bob = writeJson("b.json", {
-      electionId: ELECTION_ID,
-      voter: "bob",
-      voterKind: "member",
-      choiceInternalNo: 1,
-      goa: 1,
-      submittedAt: "2026-07-19T00:03:00Z",
-    });
-    expect(run(["vote", "--election", ELECTION_ID, "--file", bob])).toBe(0);
+    const directive = nextElection(root, ELECTION_ID);
+    expect(directive.ok).toBe(true);
+    if (!directive.ok || directive.value.kind !== "tally-ready") {
+      throw new Error("every voter has voted, so the loop must be tally-ready");
+    }
+    const tallied = tallyElection(root, directive.value, "2026-07-19T01:00:00Z");
+    expect(tallied.ok).toBe(true);
 
-    expect(run(["tally", "--election", ELECTION_ID])).toBe(0);
-    const result = lastJson().result as { kind: string; reason?: string };
-    expect(result.kind).toBe("hold");
-    expect(result.reason).toBe("block");
-
-    // Every accepted ballot carries the receipt stamp, and the amend's stamp is
-    // at or after the original's even though its claimed instant is far below.
-    const fixed = readJsonFile("tally.json").ballots as Array<{
-      kind: string;
-      submittedAt: string;
-      receivedAt?: string;
-    }>;
-    expect(fixed.map((b) => b.receivedAt).every((at) => typeof at === "string")).toBe(true);
-    const aliceOriginal = fixed.find((b) => b.kind === "original" && b.submittedAt === HIJACK_AT);
-    const aliceAmend = fixed.find((b) => b.kind === "amend");
-    expect((aliceAmend?.receivedAt ?? "") >= (aliceOriginal?.receivedAt ?? "")).toBe(true);
-
-    // The record and its self-check agree with the held result.
-    expect(run(["report", "--election", ELECTION_ID, "--result", "tallied"])).toBe(0);
-    expect(lastJson().state).toBe("hold");
-    expect(run(["render", "--election", ELECTION_ID])).toBe(0);
-    expect(run(["verify", "--election", ELECTION_ID])).toBe(0);
+    // The amend's GoA 8 reached the tally: the question is held for block, not
+    // established on the hijacked original's favour vote.
+    const snapshot = ElectionStore.readSnapshot(root, ELECTION_ID);
+    expect(snapshot.ok).toBe(true);
+    if (!snapshot.ok) return;
+    const result = snapshot.value.currentTally?.results[0];
+    expect(result?.kind).toBe("hold");
+    if (result?.kind === "hold") expect(result.reason).toBe("block");
   });
 
-  test("#1946: the ballot and late timeline rows are stamped on the receipt axis", () => {
-    expect(run(["open", "--file", writeJson("def.json", DEF)])).toBe(0);
-    expect(run(["report", "--election", ELECTION_ID, "--result", "distributed"])).toBe(0);
-    for (const [voter, at] of [
-      ["alice", HIJACK_AT],
-      ["bob", "2026-07-19T00:03:00Z"],
-    ] as const) {
-      const file = writeJson(`${voter}.json`, {
-        electionId: ELECTION_ID,
-        voter,
-        voterKind: "member",
-        choiceInternalNo: 1,
-        goa: 1,
-        submittedAt: at,
-      });
-      expect(run(["vote", "--election", ELECTION_ID, "--file", file])).toBe(0);
-    }
-    expect(run(["tally", "--election", ELECTION_ID])).toBe(0);
-    expect(run(["report", "--election", ELECTION_ID, "--result", "tallied"])).toBe(0);
+  test("#1946: every accepted ballot carries the receipt stamp and it, not submittedAt, orders the lane", () => {
+    expect(
+      voteElection(
+        root,
+        ELECTION_ID,
+        {
+          schemaVersion: 2,
+          kind: "original",
+          electionId: ELECTION_ID,
+          voter: "alice",
+          voterKind: "member",
+          responses: [response(1)],
+          submittedAt: HIJACK_AT,
+        },
+        "2026-07-19T00:01:00Z",
+      ).ok,
+    ).toBe(true);
+    expect(
+      voteElection(
+        root,
+        ELECTION_ID,
+        {
+          schemaVersion: 2,
+          kind: "amend",
+          electionId: ELECTION_ID,
+          voter: "alice",
+          voterKind: "member",
+          ref: { electionId: ELECTION_ID, voter: "alice", submittedAt: HIJACK_AT },
+          responses: [response(5)],
+          submittedAt: "2026-07-19T00:02:00Z",
+        },
+        "2026-07-19T00:03:00Z",
+      ).ok,
+    ).toBe(true);
 
-    // A ballot arriving after the tally lands in the late lane; its row is
-    // stamped with the receipt instant, not with the claimed one.
-    const lateFile = writeJson("late.json", {
-      electionId: ELECTION_ID,
-      voter: "alice",
-      voterKind: "member",
-      kind: "amend",
-      ref: { electionId: ELECTION_ID, voter: "alice", submittedAt: HIJACK_AT },
-      choiceInternalNo: 2,
-      goa: 8,
-      submittedAt: HIJACK_AT,
-    });
-    expect(run(["vote", "--election", ELECTION_ID, "--file", lateFile])).toBe(0);
+    const pending = ElectionStore.readSnapshot(root, ELECTION_ID);
+    expect(pending.ok).toBe(true);
+    if (!pending.ok) return;
+    // Both ballots are stamped, and the amend's stamp is at or after the
+    // original's even though its claimed instant is far below.
+    expect(pending.value.pending.every((b) => typeof b.receivedAt === "string")).toBe(true);
+    const original = pending.value.pending.find((b) => b.kind === "original");
+    const amended = pending.value.pending.find((b) => b.kind === "amend");
+    expect((amended?.receivedAt ?? "") >= (original?.receivedAt ?? "")).toBe(true);
 
-    const timeline = JSON.parse(readFileSync(electionPath("timeline.json"), "utf8")) as Array<{
-      kind: string;
-      at: string;
-      receivedAt?: string;
-    }>;
-    const stamped = timeline.filter((e) => e.kind === "ballot" || e.kind === "late");
-    expect(stamped.length).toBe(3);
-    for (const row of stamped) {
-      expect(row.receivedAt).toBeDefined();
-      expect(row.at).toBe(row.receivedAt as string);
-      expect(row.at).not.toBe(HIJACK_AT);
-    }
-    // The late row is reexam-flagged (GoA 8) and the fixed set is untouched.
-    const ledger = JSON.parse(readFileSync(electionPath("ledger.json"), "utf8")) as {
-      ballots: unknown[];
-      late: Array<{ reexamRequired: boolean }>;
-    };
-    expect(ledger.ballots.length).toBe(2);
-    expect(ledger.late.map((l) => l.reexamRequired)).toEqual([true]);
+    // Integration keeps both rows but materializes the later-RECEIVED amend.
+    expect(ElectionStore.integratePending(root, ELECTION_ID, ["alice"]).ok).toBe(true);
+    const integrated = ElectionStore.readSnapshot(root, ELECTION_ID);
+    expect(integrated.ok).toBe(true);
+    if (!integrated.ok) return;
+    expect(integrated.value.ledger).toHaveLength(2);
+    expect(integrated.value.materialized).toHaveLength(1);
+    expect(integrated.value.materialized[0]?.kind).toBe("amend");
+    expect(integrated.value.materialized[0]?.responses[0]?.goa).toBe(5);
   });
 });

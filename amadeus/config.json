@@ -39,7 +39,8 @@
       "names": [
         "coverage-patch-quick",
         "formal-model-check",
-        "pr-convergence"
+        "git-drift",
+        "github-pr-convergence"
       ]
     },
     "scope-bindings": {
@@ -57,7 +58,7 @@
           "self-refactor"
         ]
       },
-      "pr-convergence": {
+      "github-pr-convergence": {
         "pr-convergence": [
           "self-document",
           "self-feature",

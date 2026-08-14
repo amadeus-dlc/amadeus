@@ -105,7 +105,7 @@ function canonicalReceipt(): string {
 
 const AUTONOMY_EN = join(REPO_ROOT, "docs", "reference", "24-intent-autonomy.md");
 const AUTONOMY_JA = join(REPO_ROOT, "docs", "reference", "24-intent-autonomy.ja.md");
-const PR_CONVERGENCE = join(REPO_ROOT, "plugins", "pr-convergence", "stages", "pr-convergence.md");
+const PR_CONVERGENCE = join(REPO_ROOT, "plugins", "github-pr-convergence", "stages", "pr-convergence.md");
 
 /** Extract one `## `-level section body by heading substring. Returns "" when
  *  the heading is absent, so a missing section reds rather than passing on an

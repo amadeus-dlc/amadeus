@@ -375,6 +375,7 @@ export interface FrozenTlaModelReceipt {
   cfgBytesIdentity: string;
   profileIdentity: string;
   publicContractIdentity: string;
+  auxiliaryModules: readonly { readonly name: string; readonly moduleBytesIdentity: string }[];
   // Key set = the selected model's vocabulary; closed-set enforced at runtime
   // by exactPlainObject inside validateFrozenTlaModelReceipt.
   namedInvariantFormulas: Record<string, string>;
@@ -510,11 +511,16 @@ function generateFrozenTlaModelFromSource(
     name,
     canonicalIdentity(invariantRhs(source.moduleSource, name, invariants), "amadeus.formal-verif.tla.invariant-formula.v1").sha256,
   ]));
+  const auxiliaryModules = source.auxIdentities.map(({ path, identity }) => ({
+    name: path.split(/[\\/]/).at(-1)!.replace(/\.tla$/, ""),
+    moduleBytesIdentity: identity,
+  }));
   const modelIdentity = canonicalIdentity({
     moduleBytesIdentity: source.moduleIdentity,
     cfgBytesIdentity: source.cfgIdentity,
     profileIdentity: profileIdentity.sha256,
     publicContractIdentity: input.publicContractIdentity,
+    auxiliaryModules,
     namedInvariantFormulas: formulas,
     invariantSourceMap: sourceMap.value,
     freezeRevision: 1,
@@ -529,6 +535,7 @@ function generateFrozenTlaModelFromSource(
     cfgBytesIdentity: source.cfgIdentity,
     profileIdentity: profileIdentity.sha256,
     publicContractIdentity: input.publicContractIdentity,
+    auxiliaryModules,
     namedInvariantFormulas: formulas,
     invariantSourceMap: sourceMap.value,
     freezeRevision: 1,
@@ -561,6 +568,7 @@ const FROZEN_TLA_RECEIPT_KEYS = [
   "cfgBytesIdentity",
   "profileIdentity",
   "publicContractIdentity",
+  "auxiliaryModules",
   "namedInvariantFormulas",
   "invariantSourceMap",
   "freezeRevision",
@@ -573,6 +581,7 @@ export function createFrozenTlaModelReceipt(bundle: FrozenTlaModelBundle): Froze
     cfgBytesIdentity: bundle.cfgBytesIdentity,
     profileIdentity: bundle.profileIdentity,
     publicContractIdentity: bundle.publicContractIdentity,
+    auxiliaryModules: bundle.auxiliaryModules.map((module) => ({ ...module })),
     namedInvariantFormulas: { ...bundle.namedInvariantFormulas },
     invariantSourceMap: Object.fromEntries(Object.keys(bundle.namedInvariantFormulas).map((name) => [
       name,
@@ -610,6 +619,57 @@ function frozenModelNamedInvariants(): readonly string[] | null {
   return invariants.ok ? invariants.value : null;
 }
 
+// Structural, not serialization-order, comparison: a receipt that spells an
+// auxiliary module entry with its keys in the other order carries the same
+// frozen model.
+function auxiliaryModulesMatch(
+  input: readonly unknown[],
+  expected: FrozenTlaModelReceipt["auxiliaryModules"],
+): boolean {
+  return input.length === expected.length
+    && input.every((module, index) =>
+      exactPlainObject(module, ["name", "moduleBytesIdentity"])
+      && module.name === expected[index]!.name
+      && module.moduleBytesIdentity === expected[index]!.moduleBytesIdentity
+    );
+}
+
+function scalarReceiptFieldError(
+  input: Record<string, unknown>,
+  expectedReceipt: FrozenTlaModelReceipt,
+): string | null {
+  for (const key of [
+    "modelIdentity",
+    "moduleBytesIdentity",
+    "cfgBytesIdentity",
+    "profileIdentity",
+    "publicContractIdentity",
+    "freezeRevision",
+  ] as const) {
+    if (input[key] !== expectedReceipt[key]) return `${key} differs from the generated frozen model`;
+  }
+  return null;
+}
+
+function invariantMatchError(
+  formulas: Record<string, unknown>,
+  sourceMap: Record<string, unknown>,
+  expectedReceipt: FrozenTlaModelReceipt,
+): string | null {
+  for (const name of Object.keys(expectedReceipt.namedInvariantFormulas)) {
+    if (formulas[name] !== expectedReceipt.namedInvariantFormulas[name]) {
+      return `formula identity differs for ${name}`;
+    }
+    const location = sourceMap[name];
+    if (!exactPlainObject(location, ["line", "column"])) return `invalid source location for ${name}`;
+    const expectedLocation = expectedReceipt.invariantSourceMap[name]!;
+    if (location.line !== expectedLocation.line || location.column !== expectedLocation.column) {
+      return `source location differs for ${name}`;
+    }
+  }
+  return null;
+}
+
 export function validateFrozenTlaModelReceipt(
   input: unknown,
 ): Result<FrozenTlaModelBundle, FrozenTlaModelValidationError> {
@@ -629,6 +689,7 @@ export function validateFrozenTlaModelReceipt(
   const shapeError = invariantReceiptShapeError(input.namedInvariantFormulas, input.invariantSourceMap, invariants);
   if (shapeError !== null) return reject(shapeError);
   if (typeof input.publicContractIdentity !== "string") return reject("public contract identity must be a lowercase SHA-256 value");
+  if (!Array.isArray(input.auxiliaryModules)) return reject("auxiliary modules differ from the generated frozen model");
   let expected: FrozenTlaModelBundle;
   try {
     expected = generateFrozenTlaModel({ publicContractIdentity: input.publicContractIdentity });
@@ -636,26 +697,16 @@ export function validateFrozenTlaModelReceipt(
     return reject("public contract identity must be a lowercase SHA-256 value");
   }
   const expectedReceipt = createFrozenTlaModelReceipt(expected);
-  for (const key of [
-    "modelIdentity",
-    "moduleBytesIdentity",
-    "cfgBytesIdentity",
-    "profileIdentity",
-    "publicContractIdentity",
-    "freezeRevision",
-  ] as const) {
-    if (input[key] !== expectedReceipt[key]) return reject(`${key} differs from the generated frozen model`);
+  const scalarError = scalarReceiptFieldError(input, expectedReceipt);
+  if (scalarError !== null) return reject(scalarError);
+  if (!auxiliaryModulesMatch(input.auxiliaryModules, expectedReceipt.auxiliaryModules)) {
+    return reject("auxiliary modules differ from the generated frozen model");
   }
-  for (const name of Object.keys(expectedReceipt.namedInvariantFormulas)) {
-    if (input.namedInvariantFormulas[name] !== expectedReceipt.namedInvariantFormulas[name]) {
-      return reject(`formula identity differs for ${name}`);
-    }
-    const location = input.invariantSourceMap[name];
-    if (!exactPlainObject(location, ["line", "column"])) return reject(`invalid source location for ${name}`);
-    const expectedLocation = expectedReceipt.invariantSourceMap[name];
-    if (location.line !== expectedLocation.line || location.column !== expectedLocation.column) {
-      return reject(`source location differs for ${name}`);
-    }
-  }
+  const invariantError = invariantMatchError(
+    input.namedInvariantFormulas,
+    input.invariantSourceMap,
+    expectedReceipt,
+  );
+  if (invariantError !== null) return reject(invariantError);
   return { ok: true, value: expected };
 }

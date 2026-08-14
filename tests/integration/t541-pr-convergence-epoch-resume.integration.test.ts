@@ -5,13 +5,13 @@ import { join } from "node:path";
 import type {
   GhSpawn,
   GhSpawnResult,
-} from "../../plugins/pr-convergence/tools/pr-convergence-gh-runner.ts";
+} from "../../plugins/github-pr-convergence/tools/pr-convergence-gh-runner.ts";
 import {
   type CliSeams,
   reportPathFor,
   runCli,
-} from "../../plugins/pr-convergence/tools/pr-convergence-cli.ts";
-import type { GitSpawn } from "../../plugins/pr-convergence/tools/pr-convergence-git-runner.ts";
+} from "../../plugins/github-pr-convergence/tools/pr-convergence-cli.ts";
+import type { GitSpawn } from "../../plugins/github-pr-convergence/tools/pr-convergence-git-runner.ts";
 import { projectDeliveryBoltPlan } from "../../packages/framework/core/tools/amadeus-delivery-bolts.ts";
 
 const FIXTURES = join(import.meta.dir, "..", "fixtures", "pr-convergence");
@@ -94,7 +94,7 @@ function git(sha: string): GitSpawn {
         code: 0,
         stdout: "amadeus/spaces/default/intents/260812-pr-gate/\n",
       },
-      "diff --name-only main...HEAD": { code: 0, stdout: "plugins/pr-convergence/tool.ts\n" },
+      "diff --name-only main...HEAD": { code: 0, stdout: "plugins/github-pr-convergence/tool.ts\n" },
       "status --porcelain --untracked-files=no": { code: 0, stdout: "" },
       [`ls-remote --exit-code --heads origin refs/heads/${BRANCH}`]: {
         code: 0,

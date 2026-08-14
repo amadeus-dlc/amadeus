@@ -131,6 +131,18 @@ function executeAdvisoryHandoff(): Record<string, unknown> {
   };
 }
 
+function executeFailureElection(): Record<string, unknown> {
+  return {
+    kind: "execute-failure-election",
+    stage: "code-generation",
+    unit: "alpha",
+    attempt: "solo-attempt-alpha",
+    batch: "solo:1:alpha",
+    siblings: "none",
+    choices: ["Retry", "Skip", "Abort"],
+  };
+}
+
 function selectIntent(): Record<string, unknown> {
   const options = ["first-intent", "second-intent"];
   return {
@@ -221,6 +233,20 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
   // silently drops the work the directive exists to carry.
   test("execute-advisory-handoff well-formed -> VALID", () => {
     expect(errs(executeAdvisoryHandoff())).toBe("VALID");
+  });
+
+  test("execute-failure-election well-formed -> VALID", () => {
+    expect(errs(executeFailureElection())).toBe("VALID");
+  });
+
+  test("execute-failure-election rejects an empty choices array", () => {
+    expect(errs({ ...executeFailureElection(), choices: [] }))
+      .toContain("choices must be a non-empty string array");
+  });
+
+  test("execute-failure-election rejects non-canonical choices", () => {
+    expect(errs({ ...executeFailureElection(), choices: ["Skip", "Retry", "Abort"] }))
+      .toContain("choices must be exactly Retry, Skip, Abort");
   });
 
   test("execute-advisory-handoff accepts an empty handoff_stages when no advisory declares one", () => {

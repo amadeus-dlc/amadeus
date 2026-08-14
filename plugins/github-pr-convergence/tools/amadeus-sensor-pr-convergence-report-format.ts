@@ -1,0 +1,419 @@
+// Plugin-owned blocking evidence check for the convergence report (FR-4).
+//
+// The `pr-convergence` plugin's CLI is the only legitimate writer of
+// `pr-convergence-report.md`; the code-generation artifact guard only asks
+// whether that file EXISTS. This sensor closes the gap in the only way a
+// sensor may — by looking, never by enforcing: it re-reads the report and
+// reports which required fields the CLI would have written and a hand-written
+// forgery would not. Both canonical shapes are accepted (ADR-3):
+//
+//   converged  — the loop reached a clean verdict.
+//   override   — a human ruled the Bolt forward without convergence (FR-7b).
+//                The human-turn id, the timestamp, and the reason are the
+//                whole point of that record, so their absence is a finding.
+//
+// Deliberately does NOT import the plugin's renderReport. Core ships to every
+// harness whether or not the plugin is installed, and a core->plugin import
+// would break the composed host the moment the plugin is dropped. The price is
+// a second, minimal reader of the same field names; the shipped test renders
+// its fixtures FROM renderReport so the two cannot drift unobserved.
+//
+// Dispatcher contract: every check
+// outcome — pass or fail — exits 0. The only exit-1 path is a missing CLI flag.
+// A non-existent --output-path is not an exception to that: it exits 0 like any
+// other outcome, but as a BLOCKING finding, because the convergence evidence
+// the stage requires is absent.
+import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { basename, dirname } from "node:path";
+import { requireFlagValue } from "./sensor-flags.ts";
+import {
+  ATTESTATION_HEADING,
+  attestationId,
+  auditCarriesAttestation,
+  isSelfRecord,
+  OWNER_PROJECTION_HEADING,
+  parseAttestation,
+  parseOwnerProjection,
+  REPORT_BASENAME,
+  type ReportAttestation,
+  recordRootForReport,
+  renderAttestation,
+  renderOwnerProjection,
+  reportPathFor,
+  reportPayload,
+  reportPayloadDigest,
+} from "./pr-convergence-attestation.ts";
+import {
+  canonicalUnitSlugs,
+  resolveDeliveryBoltMembership,
+  resolveIntentReference,
+} from "./pr-convergence-presentation.ts";
+
+/** Result shape read by the dispatcher: `pass` gates PASSED/FAILED and
+ *  `findings_count` is emitted verbatim; `reason` and `findings` are advisory
+ *  detail written to the finding file. */
+export interface ReportFormatFinding {
+  field: string;
+  reason: string;
+}
+
+export interface ReportFormatResult {
+  pass: boolean;
+  findings_count: number;
+  reason: string;
+  findings: ReportFormatFinding[];
+}
+
+export { REPORT_BASENAME };
+
+function verdict(reason: string, findings: ReportFormatFinding[]): ReportFormatResult {
+  return { pass: findings.length === 0, findings_count: findings.length, reason, findings };
+}
+
+/** Read one `- <label>: <value>` line from the report body. Returns null when
+ *  the label is absent and "" when it is present but empty — the caller
+ *  distinguishes the two so a blank `- reason:` is a finding rather than a
+ *  missing field. */
+function field(body: string, label: string): string | null {
+  const match = body.match(new RegExp(`^- ${label}:[ \\t]*(.*)$`, "m"));
+  return match === null ? null : match[1].trim();
+}
+
+/** Collect the fields both shapes must carry. `kind` and `converged` are
+ *  returned so the caller can cross-check them against each other. */
+function checkCommon(body: string, findings: ReportFormatFinding[]): {
+  kind: string | null;
+  converged: string | null;
+} {
+  const kind = field(body, "kind");
+  if (kind === null || kind === "") {
+    findings.push({
+      field: "kind",
+      reason: "missing — every report declares created, converged, or override",
+    });
+  } else if (kind !== "created" && kind !== "converged" && kind !== "override" && kind !== "landed") {
+    findings.push({
+      field: "kind",
+      reason: `unknown kind "${kind}" — expected created, converged, or override`,
+    });
+  }
+
+  const pr = field(body, "pull request");
+  if (pr === null || !/^[^\s]+#\d+$/.test(pr)) {
+    findings.push({ field: "pull request", reason: "missing or not <repo>#<number>" });
+  }
+
+  const generatedAt = field(body, "generated at");
+  if (generatedAt === null || generatedAt === "") {
+    findings.push({ field: "generated at", reason: "missing — the report records when it was produced" });
+  } else if (Number.isNaN(Date.parse(generatedAt))) {
+    findings.push({ field: "generated at", reason: `unparseable timestamp "${generatedAt}"` });
+  }
+
+  const converged = field(body, "converged");
+  if (converged !== "true" && converged !== "false") {
+    findings.push({ field: "converged", reason: "missing or not a boolean" });
+  }
+  return { kind, converged };
+}
+
+/** The override record (FR-7b): the three fields that make the human ruling
+ *  auditable. Absent or blank, the report claims a ruling it cannot evidence. */
+function checkOverride(body: string, findings: ReportFormatFinding[]): void {
+  for (const label of ["human turn", "reason"]) {
+    const value = field(body, label);
+    if (value === null || value === "") {
+      findings.push({ field: label, reason: `missing — an override records the ${label}` });
+    }
+  }
+  const recordedAt = field(body, "recorded at");
+  if (recordedAt === null || recordedAt === "") {
+    findings.push({ field: "recorded at", reason: "missing — an override records when it was ruled" });
+  } else if (Number.isNaN(Date.parse(recordedAt))) {
+    findings.push({ field: "recorded at", reason: `unparseable timestamp "${recordedAt}"` });
+  }
+}
+
+/** The landed record (#2401): the merge instant and the merge commit are what
+ *  make it a factual record rather than a bare claim, and a landed report that
+ *  says converged: true would smuggle a convergence claim through a merge
+ *  fact. The check rollup is informational and deliberately not checked. */
+function checkLanded(body: string, converged: string | null, findings: ReportFormatFinding[]): void {
+  if (converged === "true") {
+    findings.push({ field: "converged", reason: "a landed report is converged: false by construction" });
+  }
+  for (const label of ["merged at", "merge commit"]) {
+    const value = field(body, label);
+    if (value === null || value === "") {
+      findings.push({ field: label, reason: `missing — a landed report records the ${label}` });
+    } else if (label === "merged at" && Number.isNaN(Date.parse(value))) {
+      findings.push({ field: label, reason: `unparseable timestamp "${value}"` });
+    }
+  }
+}
+
+function checkOwnerProjection(
+  body: string,
+  receipt: ReportAttestation,
+  ownerUnit: string,
+  findings: ReportFormatFinding[],
+): void {
+  const start = body.indexOf(OWNER_PROJECTION_HEADING);
+  if (receipt.memberUnits === undefined) {
+    if (start !== -1) findings.push({ field: "owner projection", reason: "single-Unit reports must keep legacy bytes" });
+    return;
+  }
+  const projection = parseOwnerProjection(body);
+  const end = body.indexOf(ATTESTATION_HEADING);
+  if (
+    projection === null || start === -1 || end <= start ||
+    body.slice(start, end) !== renderOwnerProjection(projection)
+  ) {
+    findings.push({ field: "owner projection", reason: "missing, malformed, or non-canonical" });
+    return;
+  }
+  const expectedPath = reportPathFor(receipt.record, ownerUnit);
+  if (!ownerProjectionMatches(projection, receipt, receipt.memberUnits, ownerUnit, expectedPath)) {
+    findings.push({ field: "owner projection", reason: "does not bind the attestation tuple and owner path" });
+  }
+}
+
+function ownerProjectionMatches(
+  projection: NonNullable<ReturnType<typeof parseOwnerProjection>>,
+  receipt: ReportAttestation,
+  memberUnits: readonly string[],
+  ownerUnit: string,
+  expectedPath: string,
+): boolean {
+  return projection.intent === receipt.intent && projection.intentUuid === receipt.intentUuid &&
+    projection.record === receipt.record && projection.bolt === receipt.bolt &&
+    projection.memberUnits.join("\0") === memberUnits.join("\0") &&
+    projection.ownerUnit === receipt.unit && projection.ownerUnit === ownerUnit &&
+    projection.reportPath === expectedPath && projection.repo === receipt.repo &&
+    projection.pr === receipt.pr && projection.head === receipt.localHead;
+}
+
+function checkCanonicalAttestation(
+  body: string,
+  receipt: ReportAttestation,
+  findings: ReportFormatFinding[],
+): void {
+  if (body.startsWith("\uFEFF") || body.includes("\r") || !body.endsWith("\n") || body.endsWith("\n\n")) {
+    findings.push({ field: "canonical bytes", reason: "report must be BOM-free LF text with exactly one trailing newline" });
+  }
+  const start = body.indexOf(ATTESTATION_HEADING);
+  if (start === -1 || body.slice(start) !== renderAttestation(receipt)) {
+    findings.push({ field: "attestation", reason: "does not use the canonical field order" });
+  }
+}
+
+function checkAttestationIntegrity(
+  body: string,
+  receipt: ReportAttestation,
+  findings: ReportFormatFinding[],
+): void {
+  const expectedId = attestationId({
+    intent: receipt.intent, intentUuid: receipt.intentUuid, record: receipt.record,
+    bolt: receipt.bolt, unit: receipt.unit,
+    ...(receipt.memberUnits === undefined ? {} : { memberUnits: receipt.memberUnits }),
+    repo: receipt.repo, pr: receipt.pr,
+    localHead: receipt.localHead, remoteHead: receipt.remoteHead, prHead: receipt.prHead,
+    contentDigest: receipt.contentDigest,
+  });
+  if (receipt.id !== expectedId) findings.push({ field: "attestation id", reason: "does not bind the declared identity" });
+  if (receipt.contentDigest !== reportPayloadDigest(reportPayload(body))) {
+    findings.push({ field: "content digest", reason: "does not match current report bytes" });
+  }
+}
+
+function checkAttestationOwner(
+  recordRoot: string,
+  outputPath: string,
+  body: string,
+  receipt: ReportAttestation,
+  findings: ReportFormatFinding[],
+): string {
+  const intent = resolveIntentReference(recordRoot);
+  const unit = basename(dirname(dirname(outputPath)));
+  checkOwnerProjection(body, receipt, unit, findings);
+  if (!intent.ok || receipt.intent !== intent.value.name || receipt.intentUuid !== intent.value.uuid || receipt.record !== intent.value.recordPath) {
+    findings.push({ field: "intent", reason: "does not match the report owner record" });
+  }
+  if (receipt.unit !== unit) findings.push({ field: "unit", reason: "does not match the report owner path" });
+  return unit;
+}
+
+function checkAttestationMembers(
+  recordRoot: string,
+  unit: string,
+  receipt: ReportAttestation,
+  findings: ReportFormatFinding[],
+): void {
+  const effectiveMembers = receipt.memberUnits ?? [receipt.unit];
+  const members = canonicalUnitSlugs(effectiveMembers);
+  if (!members.ok || !effectiveMembers.includes(unit)) {
+    findings.push({ field: "member units", reason: "not canonical or does not contain the report owner" });
+    return;
+  }
+  const approved = resolveDeliveryBoltMembership(recordRoot, receipt.bolt);
+  if (!approved.ok || approved.value.join("\0") !== members.value.join("\0")) {
+    findings.push({ field: "member units", reason: "does not match the approved Delivery Bolt projection" });
+  }
+}
+
+function checkAttestationEnvironment(
+  recordRoot: string,
+  body: string,
+  receipt: ReportAttestation,
+  findings: ReportFormatFinding[],
+): void {
+  const pr = field(body, "pull request");
+  if (pr !== `${receipt.repo}#${receipt.pr}`) findings.push({ field: "pull request", reason: "does not match the attestation" });
+  if (receipt.localHead !== receipt.remoteHead || receipt.localHead !== receipt.prHead) {
+    findings.push({ field: "head", reason: "local, remote, and PR head SHAs differ" });
+  }
+  const local = spawnSync("git", ["rev-parse", "HEAD"], { cwd: recordRoot, encoding: "utf-8" });
+  if (local.status !== 0 || local.stdout.trim() !== receipt.localHead) {
+    findings.push({ field: "local head", reason: "does not match the current checkout" });
+  }
+  if (!auditCarriesAttestation(recordRoot, receipt)) {
+    findings.push({ field: "attestation event", reason: "canonical audit receipt is missing" });
+  }
+}
+
+function checkAttestation(outputPath: string, body: string, findings: ReportFormatFinding[]): void {
+  const recordRoot = recordRootForReport(outputPath);
+  if (recordRoot === null || !isSelfRecord(recordRoot)) return;
+  const receipt = parseAttestation(body);
+  if (receipt === null) {
+    findings.push({ field: "attestation", reason: "missing or malformed CLI attestation" });
+    return;
+  }
+  checkCanonicalAttestation(body, receipt, findings);
+  checkAttestationIntegrity(body, receipt, findings);
+  const unit = checkAttestationOwner(recordRoot, outputPath, body, receipt, findings);
+  checkAttestationMembers(recordRoot, unit, receipt, findings);
+  checkAttestationEnvironment(recordRoot, body, receipt, findings);
+}
+
+/** The section body between a real `## <heading>` line (outside code fences)
+ *  and the next heading, or null when the heading never appears as a heading. */
+function markdownSectionContent(body: string, heading: string): string | null {
+  const lines = body.split("\n");
+  let inFence = false;
+  let start = -1;
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index] ?? "";
+    if (/^\s*```/.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+    if (start < 0) {
+      if (line.trimEnd() === heading) start = index + 1;
+      continue;
+    }
+    if (/^#{1,6} /.test(line)) return lines.slice(start, index).join("\n");
+  }
+  return start < 0 ? null : lines.slice(start).join("\n");
+}
+
+function isLocalCodeGenerationEvidence(body: string): boolean {
+  if (field(body, "kind") !== null) return false;
+  const verdictSection = markdownSectionContent(body, "## 判定");
+  const evidenceSection = markdownSectionContent(body, "## 実行証拠");
+  return verdictSection !== null && verdictSection.trim().length > 0
+    && evidenceSection !== null && evidenceSection.trim().length > 0;
+}
+
+/** Pure evaluation core (in-process test seam). Reads the file itself so the
+ *  CLI entry stays a thin argv shim. */
+export function evaluateReportFormat(outputPath: string, stage?: string): ReportFormatResult {
+  if (basename(outputPath) !== REPORT_BASENAME) return verdict("not-a-report", []);
+
+  let body: string;
+  try {
+    body = readFileSync(outputPath, "utf-8");
+  } catch {
+    return verdict("no-file", [{ field: "report", reason: "missing — blocking evidence must exist" }]);
+  }
+
+  if (stage === "code-generation" && isLocalCodeGenerationEvidence(body)) {
+    return verdict("local-evidence", []);
+  }
+
+  const findings: ReportFormatFinding[] = [];
+  const { kind, converged } = checkCommon(body, findings);
+  applyKindRules(kind, converged, body, findings, stage);
+  checkAttestation(outputPath, body, findings);
+  const reason = kind === "override" || kind === "landed" || kind === "created" ? kind : "converged";
+  return verdict(reason, findings);
+}
+
+function applyKindRules(
+  kind: string | null,
+  converged: string | null,
+  body: string,
+  findings: ReportFormatFinding[],
+  stage?: string,
+): void {
+  if (kind === "override") {
+    checkOverride(body, findings);
+    if (converged === "true") {
+      findings.push({ field: "converged", reason: "an override report is converged: false by construction" });
+    }
+    return;
+  }
+  if (kind === "landed") {
+    checkLanded(body, converged, findings);
+    findings.push({ field: "kind", reason: "landed is a merge fact, not convergence evidence" });
+    return;
+  }
+  if (kind === "converged" && converged === "false") {
+    findings.push({ field: "converged", reason: "a converged report is converged: true by construction" });
+  } else if (kind === "created" && converged === "true") {
+    findings.push({ field: "converged", reason: "a created report is converged: false by construction" });
+  }
+  if (stage === "pr-convergence" && kind === "created") {
+    findings.push({ field: "kind", reason: "created proves PR delivery only; final convergence requires converged or override" });
+  }
+}
+
+interface Flags {
+  stage?: string;
+  outputPath?: string;
+}
+
+function parseFlags(argv: string[]): Flags {
+  const out: Flags = {};
+  for (let i = 0; i < argv.length; i++) {
+    if (argv[i] === "--stage") out.stage = requireFlagValue(argv, ++i, "--stage", fail);
+    else if (argv[i] === "--output-path") out.outputPath = requireFlagValue(argv, ++i, "--output-path", fail);
+  }
+  return out;
+}
+
+/** The only non-zero exit: a missing required flag, or a flag whose value is
+ *  missing / stolen by the next flag. Exported as an in-process seam — reached
+ *  from `main` it runs inside a spawned child, which bun's coverage does not
+ *  measure, so the arm would sit permanently uncovered while its behaviour is
+ *  genuinely tested. */
+export function fail(msg: string): never {
+  process.stderr.write(`amadeus-sensor-pr-convergence-report-format: ${msg}\n`);
+  process.exit(1);
+}
+
+/** CLI entry / in-process test seam. Exits 1 ONLY on a missing required flag;
+ *  every check outcome is stdout JSON with exit 0 for the dispatcher. */
+export function main(argv: string[] = process.argv.slice(2)): void {
+  const flags = parseFlags(argv);
+  if (!flags.stage) fail("--stage is required");
+  if (!flags.outputPath) fail("--output-path is required");
+  process.stdout.write(`${JSON.stringify(evaluateReportFormat(flags.outputPath, flags.stage))}\n`);
+  process.exit(0);
+}
+
+// Guard the CLI entry so the module can be imported (the exported seams are
+// driven in-process by tests) without executing main() at load time.
+if (import.meta.main) main();

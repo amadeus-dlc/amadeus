@@ -5,7 +5,6 @@
     "tests/unit/t257-status-registry.test.ts",
     "tests/unit/complexity-gate.test.ts",
     "tests/unit/coverage-project-gate.test.ts",
-    "tests/unit/gen-coverage-registry.test.ts",
     "tests/unit/setup-cli-wiring.test.ts",
     "tests/unit/setup-fetcher.test.ts",
     "tests/unit/setup-fsops-resolve.test.ts",

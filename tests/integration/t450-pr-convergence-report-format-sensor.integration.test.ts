@@ -1,5 +1,5 @@
-// covers: file:plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts,
-//         file:plugins/pr-convergence/sensors/amadeus-pr-convergence-report-format.md
+// covers: file:plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts,
+//         file:plugins/github-pr-convergence/sensors/amadeus-pr-convergence-report-format.md
 // size: medium
 //
 // U3 C8 — the blocking report-format sensor (FR-4, NFR-3). Two halves:
@@ -34,19 +34,19 @@ import {
 import {
   evaluateReportFormat,
   main as sensorMain,
-} from "../../plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts";
+} from "../../plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts";
 import {
   attestationId,
   renderAttestation,
   type ReportAttestation,
   reportPayloadDigest,
-} from "../../plugins/pr-convergence/tools/pr-convergence-attestation.ts";
-import { renderReport } from "../../plugins/pr-convergence/tools/pr-convergence-cli.ts";
+} from "../../plugins/github-pr-convergence/tools/pr-convergence-attestation.ts";
+import { renderReport } from "../../plugins/github-pr-convergence/tools/pr-convergence-cli.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const MANIFEST = join(
   REPO_ROOT,
-  "plugins/pr-convergence/sensors/amadeus-pr-convergence-report-format.md",
+  "plugins/github-pr-convergence/sensors/amadeus-pr-convergence-report-format.md",
 );
 
 const VERDICT = {
@@ -170,6 +170,101 @@ describe("t450 predicate accepts both canonical shapes (ADR-3)", () => {
     const result = evaluateReportFormat(join(dir, "pr-convergence-report.md"));
     expect(result.pass).toBe(false);
     expect(result.reason).toBe("no-file");
+  });
+
+  test("code-generation accepts a local-evidence report without a CLI kind", () => {
+    const body = [
+      "# 収束レポート — example",
+      "",
+      "## 判定",
+      "",
+      "READY（local implementation scope）。",
+      "",
+      "## 実行証拠",
+      "",
+      "| Command | Result |",
+      "",
+    ].join("\n");
+    const result = evaluateReportFormat(reportAt(body), "code-generation");
+    expect(result).toEqual({
+      pass: true,
+      findings_count: 0,
+      reason: "local-evidence",
+      findings: [],
+    });
+  });
+
+  test("pr-convergence still rejects a local-evidence report", () => {
+    const body = "# 収束レポート\n\n## 判定\n\nREADY\n\n## 実行証拠\n\n";
+    const result = evaluateReportFormat(reportAt(body), "pr-convergence");
+    expect(result.pass).toBe(false);
+    expect(result.findings.map((finding) => finding.field)).toContain("kind");
+  });
+
+  test("code-generation still fail-closes a report that is neither local evidence nor CLI-shaped", () => {
+    const result = evaluateReportFormat(reportAt("# notes\n"), "code-generation");
+    expect(result.pass).toBe(false);
+    expect(result.findings.map((finding) => finding.field)).toContain("kind");
+  });
+
+  // isLocalCodeGenerationEvidence requires BOTH headings — a report carrying
+  // only one of the two is not local evidence and falls through to the
+  // CLI-shape parse, which fails closed on the missing `- kind:` field.
+  test("code-generation fail-closes headings that only appear inside a code fence", () => {
+    const body = [
+      "# 収束レポート — forged",
+      "",
+      "```",
+      "## 判定",
+      "## 実行証拠",
+      "```",
+      "",
+    ].join("\n");
+    const result = evaluateReportFormat(reportAt(body), "code-generation");
+    expect(result.pass).toBe(false);
+    expect(result.findings.map((finding) => finding.field)).toContain("kind");
+  });
+
+  test("code-generation fail-closes local-evidence headings with empty sections", () => {
+    const body = [
+      "# 収束レポート — hollow",
+      "",
+      "## 判定",
+      "",
+      "## 実行証拠",
+      "",
+    ].join("\n");
+    const result = evaluateReportFormat(reportAt(body), "code-generation");
+    expect(result.pass).toBe(false);
+    expect(result.findings.map((finding) => finding.field)).toContain("kind");
+  });
+
+  test("code-generation fail-closes a report with only 判定 and no 実行証拠", () => {
+    const body = [
+      "# 収束レポート — example",
+      "",
+      "## 判定",
+      "",
+      "READY（local implementation scope）。",
+      "",
+    ].join("\n");
+    const result = evaluateReportFormat(reportAt(body), "code-generation");
+    expect(result.pass).toBe(false);
+    expect(result.findings.map((finding) => finding.field)).toContain("kind");
+  });
+
+  test("code-generation fail-closes a report with only 実行証拠 and no 判定", () => {
+    const body = [
+      "# 収束レポート — example",
+      "",
+      "## 実行証拠",
+      "",
+      "| Command | Result |",
+      "",
+    ].join("\n");
+    const result = evaluateReportFormat(reportAt(body), "code-generation");
+    expect(result.pass).toBe(false);
+    expect(result.findings.map((finding) => finding.field)).toContain("kind");
   });
 });
 
