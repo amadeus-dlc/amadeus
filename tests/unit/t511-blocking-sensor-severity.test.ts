@@ -162,9 +162,9 @@ describe("t511 — severity carriage through the compiled stage graph (#2671 c)"
 describe("t511 — evaluateBlockingSensors decision table (#2671 c)", () => {
   test("a projected plugin sensor command resolves inside the plugin subtree", () => {
     expect(resolveScriptPath(
-      "bun .claude/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts",
+      "bun .claude/plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts",
     )).toEndWith(
-      "/dist/claude/.claude/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts",
+      "/dist/claude/.claude/plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts",
     );
   });
 

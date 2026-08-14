@@ -1,14 +1,14 @@
-// covers: file:plugins/pr-convergence/tools/pr-convergence-cli.ts, file:plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts
+// covers: file:plugins/github-pr-convergence/tools/pr-convergence-cli.ts, file:plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts
 import { afterEach, describe, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { evaluateReportFormat } from "../../plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts";
-import { parseAttestation } from "../../plugins/pr-convergence/tools/pr-convergence-attestation.ts";
-import { reportPathFor, runCli, type CliSeams } from "../../plugins/pr-convergence/tools/pr-convergence-cli.ts";
-import type { GhSpawn } from "../../plugins/pr-convergence/tools/pr-convergence-gh-runner.ts";
-import type { GitSpawn } from "../../plugins/pr-convergence/tools/pr-convergence-git-runner.ts";
+import { evaluateReportFormat } from "../../plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts";
+import { parseAttestation } from "../../plugins/github-pr-convergence/tools/pr-convergence-attestation.ts";
+import { reportPathFor, runCli, type CliSeams } from "../../plugins/github-pr-convergence/tools/pr-convergence-cli.ts";
+import type { GhSpawn } from "../../plugins/github-pr-convergence/tools/pr-convergence-gh-runner.ts";
+import type { GitSpawn } from "../../plugins/github-pr-convergence/tools/pr-convergence-git-runner.ts";
 import {
   projectDeliveryBoltPlan,
   projectEngineSingletonDeliveryBolt,
@@ -90,7 +90,7 @@ function git(sha: string, dirty = false, branch = "feature/2838"): GitSpawn {
     const key = argv.slice(1).join(" ");
     const stdout = key === "branch --show-current" ? `${branch}\n`
       : key.startsWith("rev-parse") ? `${sha}\n`
-      : key.startsWith("diff --name-only") ? "plugins/pr-convergence/tool.ts\n"
+      : key.startsWith("diff --name-only") ? "plugins/github-pr-convergence/tool.ts\n"
       : key.startsWith("status") ? (dirty ? " M tracked.ts\n" : "")
       : key.startsWith("ls-remote") ? `${sha}\trefs/heads/${branch}\n` : "";
     return { code: 0, stdout, stderr: "" };

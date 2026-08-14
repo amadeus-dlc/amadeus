@@ -10,7 +10,7 @@ import {
   type GhSpawnResult,
   parsePrRef,
   type PrNumber,
-} from "../../plugins/pr-convergence/tools/pr-convergence-gh-runner.ts";
+} from "../../plugins/github-pr-convergence/tools/pr-convergence-gh-runner.ts";
 import {
   type CliSeams,
   DEFAULT_LOG_TOOL_RELATIVE,
@@ -19,17 +19,17 @@ import {
   renderReport,
   reportPathFor,
   runCli as invokeCli,
-} from "../../plugins/pr-convergence/tools/pr-convergence-cli.ts";
+} from "../../plugins/github-pr-convergence/tools/pr-convergence-cli.ts";
 import {
   attestationId,
   renderAttestation,
   reportPayloadDigest,
-} from "../../plugins/pr-convergence/tools/pr-convergence-attestation.ts";
+} from "../../plugins/github-pr-convergence/tools/pr-convergence-attestation.ts";
 import {
   createNodeGitSpawn,
   GIT_TIMEOUT_MS,
   type GitSpawn,
-} from "../../plugins/pr-convergence/tools/pr-convergence-git-runner.ts";
+} from "../../plugins/github-pr-convergence/tools/pr-convergence-git-runner.ts";
 import {
   projectDeliveryBoltPlan,
   projectEngineSingletonDeliveryBolt,
@@ -150,7 +150,7 @@ describe("GhRunner — BR-U2-6 (ii)/(iii)/(iv) execution contracts", () => {
 
   test("the module never reaches for a shell", async () => {
     const source = await Bun.file(
-      new URL("../../plugins/pr-convergence/tools/pr-convergence-gh-runner.ts", import.meta.url),
+      new URL("../../plugins/github-pr-convergence/tools/pr-convergence-gh-runner.ts", import.meta.url),
     ).text();
     expect(source).not.toMatch(/shell\s*:\s*true/);
     expect(source).not.toMatch(/\bexecSync\b|\bexec\(/);
@@ -1373,7 +1373,7 @@ describe("the audit tool path is harness-neutral", () => {
     // tools/ directory of whichever harness tree the plugin was installed in.
     expect(DEFAULT_LOG_TOOL_RELATIVE).toBe("../../../tools/amadeus-log.ts");
     expect(resolved.endsWith(join("tools", "amadeus-log.ts"))).toBe(true);
-    expect(resolved).not.toContain(join("plugins", "pr-convergence"));
+    expect(resolved).not.toContain(join("plugins", "github-pr-convergence"));
   });
 
   test("an explicit --log-tool wins over the derived default", async () => {
@@ -1499,7 +1499,7 @@ function selfGit(
         code: 0,
         stdout: "amadeus/spaces/default/intents/260812-pr-gate/\n",
       },
-      "diff --name-only main...HEAD": { code: 0, stdout: "plugins/pr-convergence/tool.ts\n" },
+      "diff --name-only main...HEAD": { code: 0, stdout: "plugins/github-pr-convergence/tool.ts\n" },
       "status --porcelain --untracked-files=no": { code: 0, stdout: "" },
       [`ls-remote --exit-code --heads origin refs/heads/${SELF_BRANCH}`]: {
         code: 0,

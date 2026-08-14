@@ -1,5 +1,5 @@
-// covers: file:plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts,
-//         file:plugins/pr-convergence/sensors/amadeus-pr-convergence-report-format.md
+// covers: file:plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts,
+//         file:plugins/github-pr-convergence/sensors/amadeus-pr-convergence-report-format.md
 // size: medium
 //
 // U3 C8 — the blocking report-format sensor (FR-4, NFR-3). Two halves:
@@ -34,19 +34,19 @@ import {
 import {
   evaluateReportFormat,
   main as sensorMain,
-} from "../../plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts";
+} from "../../plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts";
 import {
   attestationId,
   renderAttestation,
   type ReportAttestation,
   reportPayloadDigest,
-} from "../../plugins/pr-convergence/tools/pr-convergence-attestation.ts";
-import { renderReport } from "../../plugins/pr-convergence/tools/pr-convergence-cli.ts";
+} from "../../plugins/github-pr-convergence/tools/pr-convergence-attestation.ts";
+import { renderReport } from "../../plugins/github-pr-convergence/tools/pr-convergence-cli.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const MANIFEST = join(
   REPO_ROOT,
-  "plugins/pr-convergence/sensors/amadeus-pr-convergence-report-format.md",
+  "plugins/github-pr-convergence/sensors/amadeus-pr-convergence-report-format.md",
 );
 
 const VERDICT = {

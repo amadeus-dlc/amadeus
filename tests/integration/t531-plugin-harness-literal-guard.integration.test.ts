@@ -124,7 +124,7 @@ function projectedSensorLine(plugin: PluginSource, harness: PackageHarness): str
   const artifact = artifacts.find(
     (a) =>
       a.relativePath ===
-      "plugins/pr-convergence/sensors/amadeus-pr-convergence-report-format.md",
+      "plugins/github-pr-convergence/sensors/amadeus-pr-convergence-report-format.md",
   );
   return artifact?.bytes
     .toString("utf8")
@@ -148,7 +148,7 @@ describe("t531 positive projection proof — the real fix resolves on every pack
   });
 
   test("every package face resolves the plugin sensor line to its own tool path, never Claude's", () => {
-    const plugin = discoverPluginSources(join(REPO_ROOT, "plugins")).find((p) => p.directoryName === "pr-convergence");
+    const plugin = discoverPluginSources(join(REPO_ROOT, "plugins")).find((p) => p.directoryName === "github-pr-convergence");
     if (!plugin) throw new Error("pr-convergence plugin source not found under plugins/");
 
     expect(PACKAGE_HARNESSES.length).toBeGreaterThan(0);
@@ -156,7 +156,7 @@ describe("t531 positive projection proof — the real fix resolves on every pack
       const { harnessDir } = harnessProjectionSpec(harness);
       const line = projectedSensorLine(plugin, harness);
       expect(line).toBe(
-        `command: bun ${harnessDir}/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts`,
+        `command: bun ${harnessDir}/plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts`,
       );
       // Claude's own harnessDir legitimately IS `.claude` (harness === "claude"
       // resolves to itself); every OTHER harness must carry no Claude literal.

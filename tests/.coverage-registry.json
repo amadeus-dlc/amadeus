@@ -1162,6 +1162,10 @@
       "minMechanism": "none",
       "coveredBy": [
         {
+          "file": "tests/integration/t2996-pr-convergence-scope-grid.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/integration/t355-plugin-scope-grid-clobber.integration.test.ts",
           "mechanism": "none"
         },
@@ -1589,6 +1593,10 @@
         {
           "file": "tests/integration/t248-stage-contract-routing.test.ts",
           "mechanism": "cli"
+        },
+        {
+          "file": "tests/integration/t2996-pr-convergence-scope-grid.integration.test.ts",
+          "mechanism": "none"
         },
         {
           "file": "tests/integration/t355-plugin-scope-grid-clobber.integration.test.ts",

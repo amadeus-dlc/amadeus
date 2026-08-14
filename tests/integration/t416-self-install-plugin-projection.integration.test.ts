@@ -74,7 +74,7 @@ describe("t416 deterministic self-install plugin projections", () => {
   // literal reached every face as a foreign path. Asserted on the composed stage
   // (the surface a host actually reads), face by face.
   test("plugin prose resolves to each self-install face's own harness dir", () => {
-    const composedStage = "plugins/pr-convergence/stages/pr-convergence.md";
+    const composedStage = "plugins/github-pr-convergence/stages/pr-convergence.md";
     for (const harness of SELF_INSTALL_HARNESSES) {
       const dir = harnessDirOf(harness);
       const projection = buildSelfInstallProjection(harness, REPO_ROOT);
@@ -83,7 +83,7 @@ describe("t416 deterministic self-install plugin projections", () => {
       const text = entry![1].toString("utf-8");
       // (i) the plugin-owned sensor line names THIS face's plugin tools dir, exactly once.
       expect(
-        text.split(`${dir}/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts`).length - 1,
+        text.split(`${dir}/plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts`).length - 1,
         harness,
       ).toBe(1);
       // (ii) no unresolved token survived the seeding copy.

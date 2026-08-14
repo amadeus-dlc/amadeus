@@ -189,31 +189,31 @@
       "ccn": 23
     },
     {
-      "path": "plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts",
+      "path": "plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts",
       "name": "checkAttestation",
       "ordinal": 0,
       "ccn": 17
     },
     {
-      "path": "plugins/pr-convergence/tools/pr-convergence-cli.ts",
+      "path": "plugins/github-pr-convergence/tools/pr-convergence-cli.ts",
       "name": "createPullRequest",
       "ordinal": 0,
       "ccn": 22
     },
     {
-      "path": "plugins/pr-convergence/tools/pr-convergence-cli.ts",
+      "path": "plugins/github-pr-convergence/tools/pr-convergence-cli.ts",
       "name": "currentSelfContext",
       "ordinal": 0,
       "ccn": 26
     },
     {
-      "path": "plugins/pr-convergence/tools/pr-convergence-cli.ts",
+      "path": "plugins/github-pr-convergence/tools/pr-convergence-cli.ts",
       "name": "runConvergence",
       "ordinal": 0,
       "ccn": 21
     },
     {
-      "path": "plugins/pr-convergence/tools/pr-convergence-cli.ts",
+      "path": "plugins/github-pr-convergence/tools/pr-convergence-cli.ts",
       "name": "writeSelfReport",
       "ordinal": 0,
       "ccn": 18

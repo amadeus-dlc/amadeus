@@ -175,11 +175,11 @@ describe("t-plugin-projection-packaging — U09 FR-6 item 19", () => {
 // (not the hermetic fixture) because the acceptance condition is about the
 // shipped corpus.
 describe("consumer install bundle resolves plugin prose per face (#2790)", () => {
-  const composedStage = "plugins/pr-convergence/stages/pr-convergence.md";
+  const composedStage = "plugins/github-pr-convergence/stages/pr-convergence.md";
 
   test("all eight package faces name their own harness dir and no other", () => {
     const plugin = discoverPluginSources(join(REPO_ROOT, "plugins")).find(
-      (candidate) => candidate.directoryName === "pr-convergence",
+      (candidate) => candidate.directoryName === "github-pr-convergence",
     );
     expect(plugin, "pr-convergence source missing").toBeDefined();
     for (const harness of PACKAGE_HARNESSES) {
@@ -188,7 +188,7 @@ describe("consumer install bundle resolves plugin prose per face (#2790)", () =>
       expect(artifact, `${harness}: ${composedStage} missing from install bundle`).toBeDefined();
       const text = artifact!.bytes.toString("utf-8");
       expect(
-        text.split(`${dir}/plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts`).length - 1,
+        text.split(`${dir}/plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts`).length - 1,
         harness,
       ).toBe(1);
       expect(text.includes("{{HARNESS_DIR}}"), `${harness}: raw token survived`).toBe(false);
