@@ -229,7 +229,7 @@ describe("t369 the live §13 probe's fixture satisfies the ritual's precondition
       join(proj, PAYLOAD_NAME),
     ]);
     expect(opened.status).toBe(0);
-    expect(JSON.parse(opened.stdout).opened).toBe(ELECTION_ID);
+    expect(JSON.parse(opened.stdout).electionId).toBe(ELECTION_ID);
     expect(existsSync(join(proj, ELECTIONS_REL, "elections.json"))).toBe(true);
   });
 

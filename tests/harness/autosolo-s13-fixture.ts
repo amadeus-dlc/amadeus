@@ -122,10 +122,16 @@ export function seedAutoSoloS13Project(proj: string): void {
     join(proj, PAYLOAD_NAME),
     `${JSON.stringify(
       {
+        schemaVersion: 2,
         electionId: ELECTION_ID,
         kind: "zero-confirm",
-        question: "この学習候補を採用してよいか",
-        choices: [{ internalNo: 1, label: "採用" }],
+        questions: [
+          {
+            questionId: "q-s13",
+            text: "この学習候補を採用してよいか",
+            choices: [{ internalNo: 1, label: "採用" }],
+          },
+        ],
         voters: ["subagent-1", "subagent-2"],
       },
       null,

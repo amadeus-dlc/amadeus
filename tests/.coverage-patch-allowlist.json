@@ -391,30 +391,6 @@
     "expiry": "remove when unsupported filesystems are dropped or the filesystem constants port becomes injectable"
   },
   {
-    "file": "packages/framework/core/tools/amadeus-election-store.ts",
-    "selector": {
-      "function": "create",
-      "fingerprint": "sha256:93cda30b768cbbaf26f8d41569288bb2567343bee404c36e3f624d9ff949cfde",
-      "anchorLines": 4,
-      "targetLines": "2-3",
-      "class": "catch-arm"
-    },
-    "reason": "Defensive readdirSync catch after mkdirSync(root, {recursive:true}) already succeeded. Normal I/O creation failures are covered; reaching this second guard requires a permission or filesystem race between mkdir and readdir.",
-    "expiry": "remove when Store.create gains an injectable filesystem seam for post-mkdir readdir failure"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-election-store.ts",
-    "selector": {
-      "function": "create",
-      "fingerprint": "sha256:dec59460ac8310b500cb32770ac9cc194edb3961f2f12cd8ca140a47b6d6fa94",
-      "anchorLines": 3,
-      "targetLines": "2",
-      "class": "catch-arm"
-    },
-    "reason": "Defensive election-directory mkdirSync catch after the registry append has committed and after the same root was created and read successfully. Normal root creation, registry-write, and store-write I/O failures are covered; reaching this row requires a permission or filesystem race between the registry append and the directory mkdir.",
-    "expiry": "remove when Store.create gains an injectable filesystem seam for post-registry directory creation failure"
-  },
-  {
     "file": "packages/framework/core/tools/amadeus-convergence-runtime.ts",
     "selector": {
       "function": "projectRequired",
@@ -4830,8 +4806,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-election.ts",
     "selector": {
-      "function": "tallyElection",
-      "fingerprint": "sha256:98c5d2ce769253c1ff6658ce51cdcdcba740d47c2c7f20aca170f53edda7a092",
+      "function": "repairTallyRun",
+      "fingerprint": "sha256:6b57f335383232122f23e865a8637b9a90e81d6c3f6ffd656ad9805599022a1d",
       "anchorLines": 1,
       "targetLines": "1"
     },
@@ -4966,7 +4942,7 @@
     "file": "packages/framework/core/tools/amadeus-election-store.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:8eb644d1adac019ce798b8e20a2f4f19c3843a0ec2b98b64f58c0d3f0c3b483c",
+      "fingerprint": "sha256:e3c183edcee7937848a13925190da58b18a6dd0e6c1972a4ba47006f1677c73b",
       "anchorLines": 4,
       "targetLines": "1-4",
       "class": "type-only"

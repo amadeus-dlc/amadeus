@@ -28,7 +28,7 @@ exit 0 以外なら出力の error をそのまま人間へ提示して停止す
 
 **ソロモード(subagent 投票者):** voters は `subagent-1` と `subagent-2` を指定する。conductor(main agent)は選挙管理委員として指令ループを駆動し、自らは投票しない。
 
-**ソロ選挙の発動:** 自動発動は opt-in である。`amadeus/config.json`、space、intent の階層設定で最終解決された `solo-election.trigger.mode` が `auto` の場合に限り、(a) 設計逸脱 (b) ブロッカー (c) §13 学習選定 の3類型を自動発動する。自動発動では `open` に `--trigger auto` を必ず付け(`--trigger` を省略すると `manual` として扱われる)、`{"opened":null,"reason":"solo-election-manual-trigger-required"}` が返ったら選挙を作成せずユーザー裁定へ切り替える。未設定または `manual`、および上記以外の類型では、ユーザーが「選挙にかけて」と明示したときだけ通常の `open` で発動する。仕様変更およびエスカレーション正準リスト事項は設定値にかかわらず選挙対象外(ユーザー専権)とする。
+**ソロ選挙の発動:** 自動発動は opt-in である。`amadeus/config.json`、space、intent の階層設定で最終解決された `solo-election.trigger.mode` が `auto` の場合に限り、(a) 設計逸脱 (b) ブロッカー (c) §13 学習選定 の3類型を自動発動する。自動発動では `open` に `--trigger auto` を必ず付け、`{"opened":null,"reason":"solo-election-manual-trigger-required"}` が返ったら選挙を作成せずユーザー裁定へ切り替える。未設定または `manual`、および上記以外の類型では、ユーザーが「選挙にかけて」と明示したときだけ通常の `open` で発動する。仕様変更およびエスカレーション正準リスト事項は設定値にかかわらず選挙対象外(ユーザー専権)とする。
 
 **spawn 不能時:** Agent tool(spawn)が使えない環境では、選挙を開かず次の1行を stderr または会話へ出力してユーザー裁定へ切り替える: `spawn 不能のためユーザー裁定へ降格`
 
@@ -63,9 +63,9 @@ bun {{HARNESS_DIR}}/tools/amadeus-election.ts next --election <id>
 `hold` 指令・エラー・およびあらゆる判断点は人間の裁定事項である。このスキルは解決を試みない:
 
 - `hold` 指令の `reason` と、CLI が出力した選択肢をそのまま人間へ提示する。`held[]` があるときは各 `questionId` と `reason` もそのまま提示する。
-- `reason` が `tie`・`split` の hold、棄権票を含む hold、ブロック hold は人間の裁定事項である。CLI に人間の裁定を投入する verb は存在しないため、このスキルは裁定を CLI へ代理入力しない。
+- `reason` が `tie` の hold・`reason` が `split` の hold、棄権票を含む hold、ブロック hold は人間の裁定事項である。CLI に人間の裁定を投入する verb は存在しないため、このスキルは裁定を CLI へ代理入力しない。
 - 人間が「同じ問いを議論のうえ再投票する」と決めた場合にかぎり、`next` が返す hold 指令(`verb` が `notify`)を転送節どおりに実行し、`held[]` の question だけの再投票ラウンドを回す。人間が選挙外で決着させると決めた場合は、そこで選挙を止めて記録を残す。
-- 追加議論 hold(`discussion-needed`)について人間が再投票を選んだ場合、同一 subagent 個体を resume する。resume メッセージには相手票の留保・rationale を verbatim で添付し、amend ballot(同一 voter 名・既存 ref 契約)で再提出する。resume 不能時は新規 spawn で同一 voter 名を引き継ぎ、その旨を record に残す。再投票後も GoA 5 が残存する場合はユーザーへエスカレーションする(追加議論は1ラウンドのみ)。
+- 追加議論を求める hold について人間が再投票を選んだ場合、同一 subagent 個体を resume する。resume メッセージには相手票の留保・rationale を verbatim で添付し、amend ballot(同一 voter 名・既存 ref 契約)で再提出する。resume 不能時は新規 spawn で同一 voter 名を引き継ぎ、その旨を record に残す。再投票後も GoA 5 が残存する場合はユーザーへエスカレーションする(追加議論は1ラウンドのみ)。
 - 催促するかどうか・いつ開票するか等の裁量も人間へ委ねる(このスキルは待つだけである)。
 
 ## 終了
