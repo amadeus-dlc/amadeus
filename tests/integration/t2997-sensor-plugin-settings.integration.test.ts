@@ -1,7 +1,11 @@
 // t2997 — sensor-side settings resolution and argv hand-off (#2997 C4).
 // covers: packages/framework/core/tools/amadeus-sensor.ts
 // covers: packages/framework/core/tools/amadeus-plugin-runtime.ts
-// size: small
+// size: medium
+//
+// Integration tier by SIZE, not by behaviour: the injected PluginRuntimeFs fake
+// spells the node:fs method names (existsSync / readFileSync), which the static
+// size classifier reads as a filesystem signal. The test itself is pure.
 
 import { describe, expect, test } from "bun:test";
 import { join } from "node:path";
@@ -44,7 +48,10 @@ const DECLARING_PLUGIN = { name: "git-drift", settings: DECLARATION };
 
 describe("t2997 sensor settings resolution", () => {
   test("a sensor whose plugin declares no settings resolves to nothing", () => {
-    const resolved = resolvePluginSettingsForSensor("git-drift", HOST, () => ({}), host({ name: "git-drift" }));
+    const resolved = resolvePluginSettingsForSensor("git-drift", HOST, "/w", {
+      fs: host({ name: "git-drift" }),
+      readOverrides: () => ({}),
+    });
     expect(resolved).toBeNull();
   });
 
@@ -52,14 +59,17 @@ describe("t2997 sensor settings resolution", () => {
     const resolved = resolvePluginSettingsForSensor(
       "required-sections",
       HOST,
-      () => ({}),
-      host(DECLARING_PLUGIN),
+      "/w",
+      { fs: host(DECLARING_PLUGIN), readOverrides: () => ({}) },
     );
     expect(resolved).toBeNull();
   });
 
   test("declared defaults resolve when the config carries no overrides", () => {
-    const resolved = resolvePluginSettingsForSensor("git-drift", HOST, () => ({}), host(DECLARING_PLUGIN));
+    const resolved = resolvePluginSettingsForSensor("git-drift", HOST, "/w", {
+      fs: host(DECLARING_PLUGIN),
+      readOverrides: () => ({}),
+    });
     expect(resolved).toEqual({
       ok: true,
       settings: { "fetch-throttle-seconds": 600, mode: "fast" },
@@ -70,8 +80,11 @@ describe("t2997 sensor settings resolution", () => {
     const resolved = resolvePluginSettingsForSensor(
       "git-drift",
       HOST,
-      () => ({ "git-drift": { mode: "thorough" }, other: { mode: "nonsense" } }),
-      host(DECLARING_PLUGIN),
+      "/w",
+      {
+        fs: host(DECLARING_PLUGIN),
+        readOverrides: () => ({ "git-drift": { mode: "thorough" }, other: { mode: "nonsense" } }),
+      },
     );
     expect(resolved).toEqual({
       ok: true,
@@ -83,8 +96,8 @@ describe("t2997 sensor settings resolution", () => {
     const resolved = resolvePluginSettingsForSensor(
       "git-drift",
       HOST,
-      () => ({ "git-drift": { unknown: 1 } }),
-      host(DECLARING_PLUGIN),
+      "/w",
+      { fs: host(DECLARING_PLUGIN), readOverrides: () => ({ "git-drift": { unknown: 1 } }) },
     );
     expect(resolved?.ok).toBe(false);
   });

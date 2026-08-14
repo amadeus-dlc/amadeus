@@ -280,14 +280,21 @@ export function resolveScriptPath(command: string): string {
 // owning plugin that declares no settings. That is an absence, not a fallback:
 // a plugin with no declaration has no settings to be wrong about, and its spawn
 // argv is byte-identical to what it was before this feature existed.
-// `readOverrides` is a thunk so a sensor whose plugin declares nothing never
-// pays for — nor fails on — a configuration read it has no use for.
+// Both seams are injected rather than called eagerly so a sensor whose plugin
+// declares nothing never pays for — nor fails on — a configuration read it has
+// no use for.
+export type SensorSettingsDeps = {
+	fs?: PluginRuntimeFs;
+	readOverrides?: (projectDir: string) => PluginSettingsOverrides;
+};
+
 export function resolvePluginSettingsForSensor(
 	sensorId: string,
 	hostRoot: string,
-	readOverrides: () => PluginSettingsOverrides,
-	fs: PluginRuntimeFs = defaultPluginRuntimeFs,
+	projectDir: string,
+	deps: SensorSettingsDeps = {},
 ): SettingsResolution | null {
+	const fs = deps.fs ?? defaultPluginRuntimeFs;
 	const plugin = pluginOwningSensor(hostRoot, sensorId, fs);
 	if (plugin === null) return null;
 	const read = readStagedPluginManifest(hostRoot, plugin, fs);
@@ -303,7 +310,8 @@ export function resolvePluginSettingsForSensor(
 		);
 	}
 	if (declaration === undefined) return null;
-	return resolvePluginSettings(plugin, declaration, readOverrides()[plugin] ?? {});
+	const readOverrides = deps.readOverrides ?? pluginSettingsOverrides;
+	return resolvePluginSettings(plugin, declaration, readOverrides(projectDir)[plugin] ?? {});
 }
 
 // The plugin.settings overrides from the layered configuration. An invalid
@@ -324,8 +332,11 @@ function pluginSettingsOverrides(projectDir: string): PluginSettingsOverrides {
 // A resolution failure aborts the sensor as a FINDING rather than a crash: the
 // SENSOR_FIRED row already exists, so the run must close with a terminal row,
 // and the operator needs the offending key named in the detail file.
-function settingsFailureOutcome(ctx: FireContext, resolved: SettingsResolution): FireOutcome | null {
-	if (resolved.ok) return null;
+function settingsFailureOutcome(
+	ctx: FireContext,
+	resolved: SettingsResolution | null,
+): FireOutcome | null {
+	if (resolved === null || resolved.ok) return null;
 	const { code, plugin, key, detail } = resolved.error;
 	return {
 		kind: "failed",
@@ -626,8 +637,10 @@ export async function handleFire(args: string[], projectDirArg?: string): Promis
 	// Plugin settings (#2997). Absent for a core sensor and for any plugin that
 	// declares none; a resolution failure becomes the terminal outcome below
 	// instead of a spawn.
-	const settings = resolvePluginSettingsForSensor(id, join(projectDir, harnessDir()), () =>
-		pluginSettingsOverrides(projectDir),
+	const settings = resolvePluginSettingsForSensor(
+		id,
+		join(projectDir, harnessDir()),
+		projectDir,
 	);
 	scriptArgs.push(...pluginSettingsArgs(settings));
 	const detailDir = join(sensorsDir(projectDir), stageSlug);
@@ -673,11 +686,8 @@ export async function handleFire(args: string[], projectDirArg?: string): Promis
 	});
 
 	// --- 5. Spawn (no lock held). Wall-clock measured for branch a. ---
-	// A settings resolution that failed short-circuits the spawn: the sensor
-	// cannot run correctly on settings nobody declared or typed.
-	const settingsFailure = settings === null ? null : settingsFailureOutcome(ctx, settings);
 	const startedAt = Date.now();
-	const outcome = settingsFailure ?? decideOutcomeOrScriptError(ctx, timeoutMs, startedAt, () =>
+	const outcome = outcomeOrSettingsFailure(ctx, settings, timeoutMs, startedAt, () =>
 		observeSpawn(projectDir, `sensor:${ctx.sensor.id}`, () =>
 			spawnSync("bun", [ctx.scriptAbsPath, ...ctx.scriptArgs], {
 				encoding: "utf-8",
@@ -860,6 +870,22 @@ export function scriptErrorOutcome(err: unknown, elapsedMs: number): FireOutcome
 		durationMs: elapsedMs,
 		note: `script-error: spawn-threw: ${errorMessage(err)}`,
 	};
+}
+
+// A settings resolution that failed short-circuits the spawn: the sensor cannot
+// run correctly on settings nobody declared or typed, so the failure IS the
+// outcome and the script is never started.
+function outcomeOrSettingsFailure(
+	ctx: FireContext,
+	settings: SettingsResolution | null,
+	timeoutMs: number,
+	startedAt: number,
+	spawn: () => ReturnType<typeof spawnSync>,
+): FireOutcome {
+	return (
+		settingsFailureOutcome(ctx, settings) ??
+		decideOutcomeOrScriptError(ctx, timeoutMs, startedAt, spawn)
+	);
 }
 
 // decideOutcomeOrScriptError — run the injected spawn and classify its result
