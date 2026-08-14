@@ -17,3 +17,18 @@ RA レビュー FOLLOW-UP の反映: (a) upstream-coverage の3語参照は本 p
 - [ ] Step 9: 検証 — `bun run build`(追跡ファイル不変)/ `bun run typecheck` / `bun run lint` / `bun run source-only:check` / `bun run distribution:check` / フルスイート `bash tests/run-tests.sh --ci`(テスト新設のため必須)/ `coverage-patch-quick` advisory
 
 Test strategy: Comprehensive(self-fix: 対象バグへのリグレッション必須 + 既存 green 維持)。TDD は S2→S3、S4、S5、S6 の vertical slice で適用(各 slice で Red 実測 → 最小実装 → Green)。
+
+## Review — Iteration 2
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-14T12:42:48Z
+- **Iteration:** 2
+- **Scope decision:** none
+
+iteration 1 BLOCKER (FR-4 engine-resume path untested) is closed with commit c0fed35a5's resumeThroughEngine() 3-step drive and passing counts; artifacts are internally consistent and FR-4/FR-3 acceptance criteria are traced to the named Branch 2.6 engine path.
+
+### Findings
+
+- FOLLOW-UP | code-summary.md:16 attests exit-0 counts (t3016 5 pass, t17 87 pass, typecheck 0) for the BLOCKER-closing commit but the review scope (5-path allowlist) does not include the test file itself, so this reviewer relies on conductor-attested evidence rather than direct verification of resumeThroughEngine() — acceptable per the attested provenance, but flag for a future iteration if provenance attestation practice changes.
+- NIT | requirements.md:72 Open questions still lists the WORKFLOW_PARKED attribute question as open, while code-generation-plan.md:7 and code-summary.md record the settled decision (no new attribute) — consider closing the Open-questions line in a future requirements sync to avoid stale-looking ambiguity.
