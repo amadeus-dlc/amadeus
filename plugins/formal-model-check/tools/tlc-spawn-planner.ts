@@ -60,13 +60,23 @@ export const DOCKER_INSPECTION_PLAN: readonly EnvInspectionPlan[] = Object.freez
   { id: "sandbox-profile", expected: null, notApplicableReason: "Docker isolation replaces sandbox-exec" },
 ]);
 
+/**
+ * `plannerIdentity` is the planner the run actually selected, when one was
+ * selected before the failure. It decides the plan so that `auto`, which can
+ * fall back after inspecting the host, never publishes the other provider's
+ * checks. Without it the platform default answers, as it must for failures that
+ * precede planner selection.
+ */
 export function createNotRunPlannerReceipt(
   provider: ModelCheckProvider,
   platform: NodeJS.Platform,
   runId: string,
   priorFailureCode: string,
+  plannerIdentity?: string,
 ): EnvReceipt {
-  const docker = provider === "docker" || (provider === "auto" && platform !== "darwin");
+  const docker = plannerIdentity === undefined
+    ? provider === "docker" || (provider === "auto" && platform !== "darwin")
+    : plannerIdentity === DOCKER_TLC_PLANNER_IDENTITY;
   return buildNotRunEnvReceipt(
     runId,
     docker ? "docker-unavailable" : "sandbox-exec-unavailable",
@@ -498,6 +508,66 @@ export class DockerTlcSpawnPlanner implements TlcSpawnPlanner {
   }
 }
 
+function describeFailure(error: TlcToolchainError): string {
+  const cause = "cause" in error && typeof error.cause === "string" ? error.cause.trim() : "";
+  return cause.length > 0 ? `${error.message}: ${cause}` : error.message;
+}
+
+/**
+ * `--provider auto` on Darwin: try sandbox-exec, and fall back to Docker when
+ * the host cannot supply the sandbox-exec environment. The planner that
+ * snapshots successfully owns every later phase, so argv and receipt describe
+ * the provider that actually runs. Before a snapshot resolves the choice, the
+ * primary planner answers — it is the one that will be tried first.
+ */
+export class AutoTlcSpawnPlanner implements TlcSpawnPlanner {
+  #resolved: TlcSpawnPlanner | undefined;
+
+  constructor(
+    private readonly primary: TlcSpawnPlanner,
+    private readonly fallback: TlcSpawnPlanner,
+  ) {}
+
+  get identity(): string {
+    return this.#current().identity;
+  }
+
+  buildArgv(manifestArgv: readonly string[]): readonly string[] {
+    return this.#current().buildArgv(manifestArgv);
+  }
+
+  async snapshotEnvironment(
+    context: EnvVerifyContext,
+  ): Promise<Result<EnvSnapshot, TlcToolchainError>> {
+    const primary = await this.primary.snapshotEnvironment(context);
+    if (primary.ok) {
+      this.#resolved = this.primary;
+      return primary;
+    }
+    const fallback = await this.fallback.snapshotEnvironment(context);
+    if (fallback.ok) {
+      this.#resolved = this.fallback;
+      return fallback;
+    }
+    return {
+      ok: false,
+      error: invocationError(
+        "ENVIRONMENT_UNAVAILABLE",
+        "auto provider found no usable environment",
+        `sandbox-exec: ${describeFailure(primary.error)}; docker: ${describeFailure(fallback.error)}`,
+      ),
+    };
+  }
+
+  async verifyEnvironment(snapshot: EnvSnapshot): Promise<Result<EnvReceipt, TlcToolchainError>> {
+    return this.#current().verifyEnvironment(snapshot);
+  }
+
+  #current(): TlcSpawnPlanner {
+    return this.#resolved ?? this.primary;
+  }
+}
+
 export function createDockerPlannerConfig(
   input: DockerPlannerConfig,
 ): Result<DockerPlannerConfig, TlcToolchainError> {
@@ -520,17 +590,29 @@ export function selectTlcSpawnPlanner(
   environment: PlannerEnvironmentPort,
   platform: NodeJS.Platform = process.platform,
 ): Result<TlcSpawnPlanner, TlcToolchainError> {
-  const selected = provider === "auto"
-    ? (platform === "darwin" ? "sandbox-exec" : "docker")
-    : provider;
-  if (selected === "sandbox-exec") {
+  const docker = (): Result<DockerTlcSpawnPlanner, TlcToolchainError> => {
+    const parsed = createDockerPlannerConfig(config);
+    return parsed.ok
+      ? { ok: true, value: new DockerTlcSpawnPlanner(parsed.value, environment) }
+      : parsed;
+  };
+  if (provider === "auto") {
+    if (platform !== "darwin") return docker();
+    const fallback = docker();
+    // A Docker config this host cannot even parse leaves sandbox-exec as the
+    // only candidate; the run then fails loudly on its own inspection.
+    return {
+      ok: true,
+      value: fallback.ok
+        ? new AutoTlcSpawnPlanner(new DarwinTlcSpawnPlanner(environment), fallback.value)
+        : new DarwinTlcSpawnPlanner(environment),
+    };
+  }
+  if (provider === "sandbox-exec") {
     if (platform !== "darwin") {
       return { ok: false, error: invocationError("PROVIDER_PLATFORM", "sandbox-exec is available only on Darwin") };
     }
     return { ok: true, value: new DarwinTlcSpawnPlanner(environment) };
   }
-  const parsed = createDockerPlannerConfig(config);
-  return parsed.ok
-    ? { ok: true, value: new DockerTlcSpawnPlanner(parsed.value, environment) }
-    : parsed;
+  return docker();
 }

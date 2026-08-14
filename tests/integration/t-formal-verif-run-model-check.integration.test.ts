@@ -15,6 +15,10 @@ import {
   terminalModelCheckLines,
 } from "../../plugins/formal-model-check/tools/run-model-check-reporter.ts";
 import type { EnvReceipt } from "../../plugins/formal-model-check/tools/run-model-check-domain.ts";
+import {
+  FIXED_DOCKER_IMAGE,
+  type PlannerEnvironmentPort,
+} from "../../plugins/formal-model-check/tools/tlc-spawn-planner.ts";
 import { toolchainErrorOutcome } from "../../plugins/formal-model-check/tools/run-model-check-domain.ts";
 import type { PlannedTlcOutcome } from "../../plugins/formal-model-check/tools/fs-tlc-toolchain.ts";
 import {
@@ -89,12 +93,14 @@ describe("run-model-check orchestration", () => {
       | "ACQUIRE_ERROR"
       | "PREPARE_ERROR"
       | "RUN_ERROR"
+      | "RUN_THROW"
       | "PUBLISH_ERROR"
       | "PUBLISH_THROW_ONCE"
       | "TOOLCHAIN_THROW"
       | "CACHE_ERROR",
-    provider: "docker" | "sandbox-exec" = "docker",
+    provider: "docker" | "sandbox-exec" | "auto" = "docker",
     platform: NodeJS.Platform = "linux",
+    environment?: PlannerEnvironmentPort,
   ): Promise<{ result: Awaited<ReturnType<typeof runModelCheck>>; stderr: string[] }> {
     const root = mkdtempSync(join(tmpdir(), "run-model-check-"));
     roots.push(root);
@@ -113,6 +119,18 @@ describe("run-model-check orchestration", () => {
       cachePath: join(root, "cache", "tla2tools.jar"),
       receiptIdentity: "c".repeat(64),
     });
+    const plannerEnvironment: PlannerEnvironmentPort = environment ?? {
+      inspectDarwin: async () => ({
+        jarSha256: artifact.actualSha256,
+        jdkIdentity: "e".repeat(64),
+        sandboxIdentity: "f".repeat(64),
+      }),
+      inspectDocker: async () => ({
+        jarSha256: artifact.actualSha256,
+        imageRef: FIXED_DOCKER_IMAGE,
+        dockerExecutable: "/usr/bin/docker",
+      }),
+    };
     const toolchain: PlannedModelCheckToolchain = {
       acquire: async () => exploration === "ACQUIRE_ERROR"
         ? {
@@ -124,16 +142,29 @@ describe("run-model-check orchestration", () => {
             },
           }
         : { ok: true, value: artifact },
-      preparePlanned: async (input) => exploration === "PREPARE_ERROR"
-        ? {
+      preparePlanned: async (input) => {
+        if (exploration === "PREPARE_ERROR") {
+          return {
             ok: false,
             error: {
               kind: "PreparationError",
               code: "SOURCE_DRIFT",
               message: "injected prepare failure",
             },
-          }
-        : ({ ok: true, value: Object.freeze({
+          };
+        }
+        // The real toolchain snapshots the environment here, which is where the
+        // auto planner resolves which provider owns the rest of the run.
+        const snapshot = await input.planner.snapshotEnvironment({
+          runId: RUN_ID,
+          workspaceRoot: workspace,
+          scratchRoot: input.scratchRoot,
+          jarPath: artifact.cachePath,
+          jarSha256: artifact.actualSha256,
+          deadlineMs: input.deadlineMs,
+        });
+        if (!snapshot.ok) return snapshot;
+        return ({ ok: true, value: Object.freeze({
         artifact,
         modelReceipt: input.modelReceipt,
         vocabulary: input.vocabulary,
@@ -145,15 +176,12 @@ describe("run-model-check orchestration", () => {
         deadlineMs: input.deadlineMs,
         manifestArgv: [],
         planner: input.planner,
-        environmentSnapshot: {
-          kind: "DOCKER" as const,
-          plannerIdentity: "test",
-          imageRef: "image",
-          jarSha256: artifact.actualSha256,
-        },
+        environmentSnapshot: snapshot.value,
         environment: { LANG: "en_US.UTF-8", LC_ALL: "en_US.UTF-8", TZ: "UTC" },
-      }) }),
+      }) });
+      },
       runPlanned: async (prepared) => {
+        if (exploration === "RUN_THROW") throw new Error("injected run exception");
         if (exploration === "RUN_ERROR") return {
             ok: false,
             error: {
@@ -187,10 +215,7 @@ describe("run-model-check orchestration", () => {
         return () => `2026-07-24T00:00:0${seconds++}.000Z`;
       })(),
       platform,
-      environment: {
-        inspectDarwin: async () => { throw new Error("not used"); },
-        inspectDocker: async () => { throw new Error("not used"); },
-      },
+      environment: plannerEnvironment,
       filesystem: exploration === "CACHE_ERROR"
         ? {
             ...NODE_RUN_MODEL_CHECK_FILESYSTEM,
@@ -362,6 +387,54 @@ describe("run-model-check orchestration", () => {
       exitCode: 2,
       outcome: { code: "PROVIDER_PLATFORM" },
     });
+  });
+
+  // #2361: after auto falls back on Darwin, the published receipt must describe
+  // the provider that ran. A Darwin plan here would claim sandbox-exec checks
+  // for a Docker run.
+  test("publishes the fallback provider's plan when auto falls back on Darwin", async () => {
+    const fallenBack = await execute("RUN_ERROR", "auto", "darwin", {
+      inspectDarwin: async () => { throw new Error("JAVA_HOME is required"); },
+      inspectDocker: async () => ({
+        jarSha256: FIXED_TLC_ARTIFACT_DESCRIPTOR.sha256,
+        imageRef: FIXED_DOCKER_IMAGE,
+        dockerExecutable: "/usr/bin/docker",
+      }),
+    });
+
+    const threw = await execute("RUN_THROW", "auto", "darwin", {
+      inspectDarwin: async () => { throw new Error("JAVA_HOME is required"); },
+      inspectDocker: async () => ({
+        jarSha256: FIXED_TLC_ARTIFACT_DESCRIPTOR.sha256,
+        imageRef: FIXED_DOCKER_IMAGE,
+        dockerExecutable: "/usr/bin/docker",
+      }),
+    });
+
+    expect(fallenBack.result).toMatchObject({ exitCode: 2, outcome: { code: "TIMEOUT" } });
+    expect(threw.result).toMatchObject({ exitCode: 2, outcome: { code: "UNEXPECTED_RUNTIME" } });
+    const unexpected = JSON.parse(readFileSync(
+      join(threw.result.publishedDirectory!, "env-receipt.json"),
+      "utf8",
+    ));
+    expect(unexpected.inspections.map(({ status }: { status: string }) => status)).toEqual([
+      "not-run",
+      "not-run",
+      "not-run",
+      "not-applicable",
+      "not-applicable",
+    ]);
+    const receipt = JSON.parse(readFileSync(
+      join(fallenBack.result.publishedDirectory!, "env-receipt.json"),
+      "utf8",
+    ));
+    expect(receipt.inspections.map(({ id, status }: { id: string; status: string }) => [id, status])).toEqual([
+      ["image-digest", "not-run"],
+      ["jar-sha256", "not-run"],
+      ["network-deny", "not-run"],
+      ["jdk-snapshot", "not-applicable"],
+      ["sandbox-profile", "not-applicable"],
+    ]);
   });
 
   test("fails before toolchain creation for CLI, source, and output path errors", async () => {

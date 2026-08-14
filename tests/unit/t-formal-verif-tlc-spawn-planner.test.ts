@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   DARWIN_INSPECTION_PLAN,
+  DOCKER_TLC_PLANNER_IDENTITY,
   DarwinTlcSpawnPlanner,
   DockerTlcSpawnPlanner,
   FIXED_DOCKER_IMAGE,
@@ -10,7 +11,11 @@ import {
   type PlannerEnvironmentObservation,
   type PlannerEnvironmentPort,
 } from "../../plugins/formal-model-check/tools/tlc-spawn-planner.ts";
-import type { EnvVerifyContext } from "../../plugins/formal-model-check/tools/run-model-check-domain.ts";
+import {
+  modelCheckExitCode,
+  toolchainErrorOutcome,
+  type EnvVerifyContext,
+} from "../../plugins/formal-model-check/tools/run-model-check-domain.ts";
 
 const SHA = "a".repeat(64);
 const OTHER_SHA = "b".repeat(64);
@@ -22,6 +27,8 @@ const context: EnvVerifyContext = {
   jarSha256: SHA,
   deadlineMs: 120_000,
 };
+
+const dockerConfig = { imageRef: FIXED_DOCKER_IMAGE, jarPath: context.jarPath, jarSha256: SHA };
 
 class SequenceEnvironment implements PlannerEnvironmentPort {
   constructor(
@@ -168,12 +175,110 @@ describe("TLC spawn planners", () => {
       "not-run",
       "not-run",
     ]);
+    // #2361: once auto has resolved to a provider, the pre-verification receipt
+    // follows the planner that actually ran, not the platform default.
+    const fallen = createNotRunPlannerReceipt(
+      "auto",
+      "darwin",
+      context.runId,
+      "TIMEOUT",
+      DOCKER_TLC_PLANNER_IDENTITY,
+    );
+    expect(fallen.inspections.map(({ status }) => status)).toEqual([
+      "not-run",
+      "not-run",
+      "not-run",
+      "not-applicable",
+      "not-applicable",
+    ]);
     for (const inspection of [...docker.inspections, ...darwin.inspections]) {
       if (inspection.status === "not-run") {
         expect(inspection.observed).toBeNull();
         expect(inspection.reason).toBe("not run because NETWORK occurred before environment verification");
       }
     }
+  });
+
+  // #2361: `--provider auto` on a Darwin host whose sandbox-exec environment
+  // cannot be inspected must reach the Docker provider instead of failing the
+  // whole run, and everything after the snapshot must follow the planner that
+  // actually succeeded.
+  test("auto on Darwin falls back to Docker when the sandbox-exec inspection fails", async () => {
+    const dockerObservation = {
+      jarSha256: SHA,
+      imageRef: FIXED_DOCKER_IMAGE,
+      dockerExecutable: "/usr/bin/docker",
+    };
+    const environment: PlannerEnvironmentPort = {
+      inspectDarwin: async () => { throw new Error("JAVA_HOME is required"); },
+      inspectDocker: async () => dockerObservation,
+    };
+    const selected = selectTlcSpawnPlanner("auto", dockerConfig, environment, "darwin");
+    expect(selected.ok).toBe(true);
+    if (!selected.ok) return;
+
+    const snapshot = await selected.value.snapshotEnvironment(context);
+    expect(snapshot).toMatchObject({ ok: true, value: { kind: "DOCKER" } });
+    if (!snapshot.ok) return;
+    expect(selected.value.identity).toBe(DOCKER_TLC_PLANNER_IDENTITY);
+    expect(selected.value.buildArgv(["/host/jdk/bin/java", "-cp", context.jarPath])).toContain("--network=none");
+    const receipt = await selected.value.verifyEnvironment(snapshot.value);
+    expect(receipt).toMatchObject({ ok: true });
+  });
+
+  // #2361: when neither provider is usable the run must still fail closed, and
+  // the terminal detail must name both refusals — the fallback attempt is
+  // invisible otherwise.
+  test("auto reports the sandbox-exec and Docker reasons together when both fail", async () => {
+    const environment: PlannerEnvironmentPort = {
+      inspectDarwin: async () => { throw new Error("JAVA_HOME is required"); },
+      inspectDocker: async () => { throw new Error("docker executable is unavailable"); },
+    };
+    const selected = selectTlcSpawnPlanner("auto", dockerConfig, environment, "darwin");
+    if (!selected.ok) throw new Error("planner selection fixture failed");
+
+    const snapshot = await selected.value.snapshotEnvironment(context);
+
+    expect(snapshot).toMatchObject({ ok: false, error: { code: "ENVIRONMENT_UNAVAILABLE" } });
+    if (snapshot.ok) return;
+    const detail = toolchainErrorOutcome(snapshot.error).detail;
+    expect(detail).toContain("JAVA_HOME is required");
+    expect(detail).toContain("docker executable is unavailable");
+    expect(modelCheckExitCode(toolchainErrorOutcome(snapshot.error))).toBe(2);
+  });
+
+  // #2361: fallback belongs to `auto` alone. An explicit provider is a request
+  // for that one isolation mode, so it must fail loudly rather than silently
+  // running somewhere else.
+  test("an explicit provider never reaches the other provider", async () => {
+    const calls: string[] = [];
+    const environment: PlannerEnvironmentPort = {
+      inspectDarwin: async () => {
+        calls.push("darwin");
+        throw new Error("JAVA_HOME is required");
+      },
+      inspectDocker: async () => {
+        calls.push("docker");
+        throw new Error("docker executable is unavailable");
+      },
+    };
+    const sandbox = selectTlcSpawnPlanner("sandbox-exec", dockerConfig, environment, "darwin");
+    const docker = selectTlcSpawnPlanner("docker", dockerConfig, environment, "darwin");
+    if (!sandbox.ok || !docker.ok) throw new Error("planner selection fixture failed");
+
+    const sandboxSnapshot = await sandbox.value.snapshotEnvironment(context);
+    expect(calls).toEqual(["darwin"]);
+    const dockerSnapshot = await docker.value.snapshotEnvironment(context);
+
+    expect(calls).toEqual(["darwin", "docker"]);
+    expect(sandboxSnapshot).toMatchObject({
+      ok: false,
+      error: { code: "ENVIRONMENT_UNAVAILABLE", message: "Darwin environment inspection failed" },
+    });
+    expect(dockerSnapshot).toMatchObject({
+      ok: false,
+      error: { code: "ENVIRONMENT_UNAVAILABLE", message: "Docker environment inspection failed" },
+    });
   });
 
   // #2361: the Darwin plan declares the contracted JDK major, not one patch
@@ -190,8 +295,25 @@ describe("TLC spawn planners", () => {
     })).toMatchObject({ ok: false, error: { code: "DOCKER_CONFIG" } });
     const environment = new SequenceEnvironment([], []);
     const config = { imageRef: FIXED_DOCKER_IMAGE, jarPath: context.jarPath, jarSha256: SHA };
-    expect(selectTlcSpawnPlanner("auto", config, environment, "darwin").ok).toBe(true);
-    expect(selectTlcSpawnPlanner("auto", config, environment, "linux").ok).toBe(true);
+    // #2361: `.ok` alone accepted any planner, so a wrong selection read as a
+    // pass. Name the planner each provider/platform pair must produce.
+    const selectedKind = (provider: "auto" | "docker" | "sandbox-exec", platform: NodeJS.Platform) => {
+      const selected = selectTlcSpawnPlanner(provider, config, environment, platform);
+      return selected.ok ? selected.value.constructor.name : `error:${selected.error.kind}`;
+    };
+    expect([
+      selectedKind("auto", "darwin"),
+      selectedKind("auto", "linux"),
+      selectedKind("sandbox-exec", "darwin"),
+      selectedKind("docker", "darwin"),
+      selectedKind("docker", "linux"),
+    ]).toEqual([
+      "AutoTlcSpawnPlanner",
+      "DockerTlcSpawnPlanner",
+      "DarwinTlcSpawnPlanner",
+      "DockerTlcSpawnPlanner",
+      "DockerTlcSpawnPlanner",
+    ]);
     expect(selectTlcSpawnPlanner("sandbox-exec", config, environment, "linux")).toMatchObject({
       ok: false,
       error: { code: "PROVIDER_PLATFORM" },
