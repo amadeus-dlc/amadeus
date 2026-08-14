@@ -1203,6 +1203,13 @@
     "status": "complete"
   },
   {
+    "uuid": "019ffa02-2d39-71f4-bd0c-e8dbe87244fa",
+    "slug": "election-multiq",
+    "dirName": "260813-election-multiq",
+    "scope": "self-feature",
+    "status": "in-flight"
+  },
+  {
     "uuid": "019fff1a-becf-72aa-ae9f-6c87f8323fbc",
     "slug": "unit-failure-autoelectio",
     "dirName": "260814-unit-failure-autoelectio",

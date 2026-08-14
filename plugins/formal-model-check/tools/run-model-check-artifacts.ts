@@ -18,6 +18,10 @@ import type {
   EnvReceipt,
   ModelCheckOutcome,
 } from "./run-model-check-domain.ts";
+import {
+  FIXED_TLC_VERSION_LINE,
+  type TlcExploration,
+} from "./tlc-toolchain.ts";
 
 export interface ArtifactWorkspace {
   readonly runId: string;
@@ -37,6 +41,7 @@ export interface ModelCheckArtifactInput {
   readonly finishedAt: string;
   readonly advisory?: AdvisoryArtifactCorrelation;
   readonly sourceProvenance?: ModelCheckSourceProvenance;
+  readonly exploration?: TlcExploration;
 }
 
 export interface AdvisoryArtifactCorrelation {
@@ -48,10 +53,36 @@ export interface AdvisoryArtifactCorrelation {
 export interface ModelCheckSourceProvenance {
   readonly modelPath: string;
   readonly cfgPath: string;
+  readonly modelIdentity: string;
   readonly moduleIdentity: string;
   readonly cfgIdentity: string;
   readonly moduleSha256: string;
   readonly cfgSha256: string;
+  readonly auxiliaries: readonly { readonly path: string; readonly identity: string }[];
+  readonly implementations: readonly { readonly path: string; readonly identity: string }[];
+  readonly constants: readonly string[];
+  readonly sourceIdentity: string;
+}
+
+// The single extraction of the CONSTANTS a .cfg declares: the publisher records
+// them into provenance, and advisory verification re-derives them from the same
+// bytes to confirm a submitted manifest.
+export function cfgConstants(source: string): readonly string[] {
+  return source.split("\n").flatMap((line) => {
+    const match = /^([A-Za-z][A-Za-z0-9_]*)\s*=\s*(.+)$/.exec(line.trim());
+    return match === null ? [] : [`${match[1]}=${match[2]}`];
+  });
+}
+
+export interface ModelCheckVerification {
+  readonly toolchainVersion: string;
+  readonly constants: readonly string[];
+  readonly completionMarker: string | null;
+  readonly generatedStates: number | null;
+  readonly distinctStates: number | null;
+  readonly statesLeftOnQueue: number | null;
+  readonly searchDepth: number | null;
+  readonly sourceIdentity: string;
 }
 
 export interface ModelCheckArtifactEntry {
@@ -74,6 +105,7 @@ export interface ModelCheckManifest {
   readonly errorDetail: string | null;
   readonly advisory: AdvisoryArtifactCorrelation | null;
   readonly sourceProvenance: ModelCheckSourceProvenance | null;
+  readonly verification: ModelCheckVerification | null;
 }
 
 export interface PublishedModelCheckArtifacts {
@@ -177,60 +209,112 @@ export function beginModelCheckArtifacts(
   }
 }
 
+function workspaceProblem(workspace: ArtifactWorkspace): string | null {
+  if (
+    realpathSync(workspace.temporaryDir) !== workspace.temporaryDir
+    || !lstatSync(workspace.temporaryDir).isDirectory()
+    || !isContained(workspace.temporaryDir, realpathSync(workspace.scratchRoot))
+  ) return "artifact workspace changed before publish";
+  return null;
+}
+
+// Provenance-carrying runs must present exploration evidence of the shape their
+// outcome claims; runs without provenance predate that binding.
+function explorationEvidenceProblem(input: ModelCheckArtifactInput): string | null {
+  if (input.sourceProvenance === undefined) return null;
+  if (input.outcome.kind === "NOT_DETECTED" && input.exploration?.kind !== "COMPLETE") {
+    return "NOT_DETECTED requires complete TLC exploration evidence";
+  }
+  if (input.outcome.kind === "DETECTED" && input.exploration?.kind !== "COUNTEREXAMPLE") {
+    return "DETECTED requires counterexample TLC exploration evidence";
+  }
+  return null;
+}
+
+function writeOutcomeArtifacts(input: ModelCheckArtifactInput): string[] {
+  const { workspace } = input;
+  writeDurable(join(workspace.temporaryDir, "env-receipt.json"), jsonBytes(input.environmentReceipt));
+  writeDurable(join(workspace.temporaryDir, "tlc-stdout.bin"), input.stdout);
+  writeDurable(join(workspace.temporaryDir, "tlc-stderr.bin"), input.stderr);
+  const expected = ["env-receipt.json", "tlc-stdout.bin", "tlc-stderr.bin"];
+  if (input.outcome.kind === "NOT_DETECTED") {
+    const marker = join(workspace.temporaryDir, "completion-marker.json");
+    writeDurable(marker, jsonBytes({
+      complete: true,
+      runId: workspace.runId,
+      sourceIdentity: input.sourceProvenance?.sourceIdentity ?? null,
+    }));
+    expected.push(basename(marker));
+  } else if (input.outcome.kind === "DETECTED") {
+    const counterexample = join(workspace.temporaryDir, "counterexample.json");
+    const exploration = input.exploration?.kind === "COUNTEREXAMPLE" ? input.exploration : null;
+    writeDurable(counterexample, jsonBytes({
+      runId: workspace.runId,
+      counterexampleIdentity: input.outcome.counterexampleIdentity,
+      invariant: exploration?.invariant ?? null,
+      sourceLocation: exploration?.sourceLocation ?? null,
+      trace: exploration?.trace ?? null,
+    }));
+    expected.push(basename(counterexample));
+  }
+  return expected;
+}
+
+function verificationOf(input: ModelCheckArtifactInput): ModelCheckVerification | null {
+  const exploration = input.exploration;
+  if (exploration?.kind !== "COMPLETE" && exploration?.kind !== "COUNTEREXAMPLE") return null;
+  return {
+    toolchainVersion: FIXED_TLC_VERSION_LINE,
+    constants: input.sourceProvenance?.constants ?? [],
+    completionMarker: exploration.kind === "COMPLETE" ? exploration.completionMarker : null,
+    generatedStates: exploration.generatedStates,
+    distinctStates: exploration.distinctStates,
+    statesLeftOnQueue: exploration.statesLeftOnQueue,
+    searchDepth: exploration.searchDepth,
+    sourceIdentity: input.sourceProvenance?.sourceIdentity ?? "",
+  };
+}
+
+function buildManifest(
+  input: ModelCheckArtifactInput,
+  expected: readonly string[],
+  artifacts: readonly ModelCheckArtifactEntry[],
+): ModelCheckManifest {
+  const harnessError = input.outcome.kind === "HARNESS_ERROR" ? input.outcome : null;
+  return {
+    schema: "amadeus.model-check-manifest.v1",
+    runId: input.workspace.runId,
+    outcome: input.outcome.kind,
+    exitCode: input.exitCode,
+    startedAt: input.startedAt,
+    finishedAt: input.finishedAt,
+    expectedArtifacts: expected,
+    artifacts,
+    partial: harnessError !== null,
+    errorCode: harnessError?.code ?? null,
+    errorDetail: harnessError?.detail ?? null,
+    advisory: input.advisory ?? null,
+    sourceProvenance: input.sourceProvenance ?? null,
+    verification: verificationOf(input),
+  };
+}
+
 export function publishModelCheckArtifacts(
   input: ModelCheckArtifactInput,
 ): Result<PublishedModelCheckArtifacts, ArtifactPublishError> {
   const { workspace } = input;
   try {
-    if (
-      realpathSync(workspace.temporaryDir) !== workspace.temporaryDir
-      || !lstatSync(workspace.temporaryDir).isDirectory()
-      || !isContained(workspace.temporaryDir, realpathSync(workspace.scratchRoot))
-    ) {
-      return failure("OUT_PATH", "artifact workspace changed before publish");
-    }
+    const pathProblem = workspaceProblem(workspace);
+    if (pathProblem !== null) return failure("OUT_PATH", pathProblem);
+    const evidenceProblem = explorationEvidenceProblem(input);
+    if (evidenceProblem !== null) return failure("WRITE", evidenceProblem);
     rmSync(workspace.scratchRoot, { recursive: true, force: false });
-    const paths = {
-      receipt: join(workspace.temporaryDir, "env-receipt.json"),
-      stdout: join(workspace.temporaryDir, "tlc-stdout.bin"),
-      stderr: join(workspace.temporaryDir, "tlc-stderr.bin"),
-    };
-    writeDurable(paths.receipt, jsonBytes(input.environmentReceipt));
-    writeDurable(paths.stdout, input.stdout);
-    writeDurable(paths.stderr, input.stderr);
-
-    const expected = ["env-receipt.json", "tlc-stdout.bin", "tlc-stderr.bin"];
-    if (input.outcome.kind === "NOT_DETECTED") {
-      const marker = join(workspace.temporaryDir, "completion-marker.json");
-      writeDurable(marker, jsonBytes({ complete: true, runId: workspace.runId }));
-      expected.push(basename(marker));
-    } else if (input.outcome.kind === "DETECTED") {
-      const counterexample = join(workspace.temporaryDir, "counterexample.json");
-      writeDurable(counterexample, jsonBytes({
-        runId: workspace.runId,
-        counterexampleIdentity: input.outcome.counterexampleIdentity,
-      }));
-      expected.push(basename(counterexample));
-    }
+    const expected = writeOutcomeArtifacts(input);
     const artifacts = expected.map((name) => entry(
       workspace.temporaryDir,
       join(workspace.temporaryDir, name),
     ));
-    const manifest: ModelCheckManifest = {
-      schema: "amadeus.model-check-manifest.v1",
-      runId: workspace.runId,
-      outcome: input.outcome.kind,
-      exitCode: input.exitCode,
-      startedAt: input.startedAt,
-      finishedAt: input.finishedAt,
-      expectedArtifacts: expected,
-      artifacts,
-      partial: input.outcome.kind === "HARNESS_ERROR",
-      errorCode: input.outcome.kind === "HARNESS_ERROR" ? input.outcome.code : null,
-      errorDetail: input.outcome.kind === "HARNESS_ERROR" ? input.outcome.detail : null,
-      advisory: input.advisory ?? null,
-      sourceProvenance: input.sourceProvenance ?? null,
-    };
+    const manifest = buildManifest(input, expected, artifacts);
     writeDurable(
       join(workspace.temporaryDir, "manifest.json"),
       jsonBytes(manifest),

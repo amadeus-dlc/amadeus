@@ -83,8 +83,8 @@ function semanticMutation(model: (typeof MODEL_NAMES)[number], source: string): 
   if (model === "FormalElection") {
     return replaceOnce(
       source,
-      "Resolve(prior, ballot) == IF prior = NoBallot \\/ Later(ballot, prior) THEN ballot ELSE prior",
-      "Resolve(prior, ballot) == prior",
+      "QuestionIdsUnique == Len(QuestionOrder) = Cardinality(Questions)",
+      "QuestionIdsUnique == FALSE",
     );
   }
   return replaceOnce(
@@ -111,7 +111,7 @@ function semanticPortDependencies(
     }
     const source = readFileSync(resolve(workspace, invokedModelPath), "utf8");
     return model === "FormalElection"
-      ? source.includes("Resolve(prior, ballot) == prior")
+      ? source.includes("QuestionIdsUnique == FALSE")
       : source.includes("WITH CaptureBoundaryAlwaysCreates <- TRUE");
   };
   const writeTrace = (prefix: string, argv: readonly string[], exitCode: number) => {

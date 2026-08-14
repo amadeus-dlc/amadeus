@@ -32,6 +32,15 @@ const receipt: EnvReceipt = {
     { id: "sandbox-profile", status: "not-applicable", expected: null, observed: null, reason: "container isolation" },
   ],
 };
+const completeExploration = {
+  kind: "COMPLETE" as const,
+  generatedStates: 12,
+  distinctStates: 8,
+  statesLeftOnQueue: 0 as const,
+  searchDepth: 4,
+  completionMarker: "Model checking completed. No error has been found." as const,
+  terminationReason: "EXHAUSTED" as const,
+};
 
 describe("run-model-check artifact publisher", () => {
   const roots: string[] = [];
@@ -64,11 +73,17 @@ describe("run-model-check artifact publisher", () => {
       sourceProvenance: {
         modelPath: "amadeus/spaces/default/specs/tla/FormalElection.tla",
         cfgPath: "amadeus/spaces/default/specs/tla/FormalElection.cfg",
+        modelIdentity: "a".repeat(64),
         moduleIdentity: "registered-module",
         cfgIdentity: "registered-cfg",
         moduleSha256: "b".repeat(64),
         cfgSha256: "c".repeat(64),
+        auxiliaries: [],
+        implementations: [],
+        constants: ["V1=V1", "V2=V2"],
+        sourceIdentity: "d".repeat(64),
       },
+      exploration: completeExploration,
     });
     expect(published.ok).toBe(true);
     if (!published.ok) return;
@@ -81,6 +96,17 @@ describe("run-model-check artifact publisher", () => {
       instance: "019fc698-ba1f-7000-8000-000000000001",
     });
     expect(manifest.sourceProvenance?.modelPath).toBe("amadeus/spaces/default/specs/tla/FormalElection.tla");
+    expect(manifest.verification).toMatchObject({
+      generatedStates: 12,
+      distinctStates: 8,
+      statesLeftOnQueue: 0,
+      sourceIdentity: "d".repeat(64),
+    });
+    expect(JSON.parse(readFileSync(join(out, "completion-marker.json"), "utf8"))).toMatchObject({
+      complete: true,
+      runId: RUN_ID,
+      sourceIdentity: "d".repeat(64),
+    });
     for (const artifact of manifest.artifacts) {
       const bytes = readFileSync(join(out, artifact.path));
       expect(bytes.byteLength).toBe(artifact.bytes);
@@ -122,6 +148,59 @@ describe("run-model-check artifact publisher", () => {
       ok: false,
       error: { code: "OUT_CONFLICT" },
     });
+  });
+
+  test("rejects a success label without complete exploration evidence", () => {
+    const root = mkdtempSync(join(tmpdir(), "model-check-artifacts-"));
+    roots.push(root);
+    const workspace = beginModelCheckArtifacts(join(root, "run"), RUN_ID);
+    if (!workspace.ok) throw new Error(workspace.error.detail);
+    expect(publishModelCheckArtifacts({
+      workspace: workspace.value,
+      outcome: { kind: "DETECTED", counterexampleIdentity: "a".repeat(64) },
+      exitCode: 1,
+      environmentReceipt: receipt,
+      stdout: new Uint8Array(),
+      stderr: new Uint8Array(),
+      startedAt: "2026-07-24T00:00:00.000Z",
+      finishedAt: "2026-07-24T00:00:01.000Z",
+      sourceProvenance: {
+        modelPath: "amadeus/spaces/default/specs/tla/FormalElection.tla",
+        cfgPath: "amadeus/spaces/default/specs/tla/FormalElection.cfg",
+        modelIdentity: "a".repeat(64),
+        moduleIdentity: "registered-module",
+        cfgIdentity: "registered-cfg",
+        moduleSha256: "b".repeat(64),
+        cfgSha256: "c".repeat(64),
+        auxiliaries: [],
+        implementations: [],
+        constants: [],
+        sourceIdentity: "d".repeat(64),
+      },
+    })).toMatchObject({ ok: false, error: { code: "WRITE" } });
+    expect(publishModelCheckArtifacts({
+      workspace: workspace.value,
+      outcome: { kind: "NOT_DETECTED" },
+      exitCode: 0,
+      environmentReceipt: receipt,
+      stdout: new Uint8Array(),
+      stderr: new Uint8Array(),
+      startedAt: "2026-07-24T00:00:00.000Z",
+      finishedAt: "2026-07-24T00:00:01.000Z",
+      sourceProvenance: {
+        modelPath: "amadeus/spaces/default/specs/tla/FormalElection.tla",
+        cfgPath: "amadeus/spaces/default/specs/tla/FormalElection.cfg",
+        modelIdentity: "a".repeat(64),
+        moduleIdentity: "registered-module",
+        cfgIdentity: "registered-cfg",
+        moduleSha256: "b".repeat(64),
+        cfgSha256: "c".repeat(64),
+        auxiliaries: [],
+        implementations: [],
+        constants: [],
+        sourceIdentity: "d".repeat(64),
+      },
+    })).toMatchObject({ ok: false, error: { code: "WRITE" } });
   });
 
   test("rejects invalid reservations and workspace drift", () => {
@@ -197,6 +276,7 @@ describe("run-model-check artifact publisher", () => {
       stderr: new Uint8Array(),
       startedAt: "2026-07-24T00:00:00.000Z",
       finishedAt: "2026-07-24T00:00:01.000Z",
+      exploration: completeExploration,
     })).toMatchObject({ ok: false, error: { code: "RENAME" } });
   });
 });

@@ -12,13 +12,15 @@ import {
 
 const PUBLIC_CONTRACT_IDENTITY = "a".repeat(64);
 const INVARIANTS = [
-  "ChoiceWinner",
-  "UnknownChoiceRejected",
-  "ReceivedAtAxis",
-  "InvalidTimestampRejected",
-  "AmendSubmission",
-  "UnknownRefRejected",
-  "PerVoterResolution",
+  "TypeOK",
+  "QuestionIdsUnique",
+  "AcceptedDomain",
+  "ResultCompleteness",
+  "PerQuestionIsolation",
+  "EstablishedImmutable",
+  "HeldOnlyTargets",
+  "MixedLifecycle",
+  "ResponseCoverage",
 ] as const;
 
 const original = (
@@ -316,7 +318,7 @@ describe("finite TLA election model", () => {
 });
 
 describe("frozen TLA model generator", () => {
-  test("generates one deterministic blind bundle for the closed domain and action union", () => {
+  test("generates one deterministic bundle for the finite multi-question domain", () => {
     const first = generateFrozenTlaModel({ publicContractIdentity: PUBLIC_CONTRACT_IDENTITY });
     const replay = generateFrozenTlaModel({ publicContractIdentity: PUBLIC_CONTRACT_IDENTITY });
     expect(replay).toEqual(first);
@@ -324,18 +326,19 @@ describe("frozen TLA model generator", () => {
     expect(first.modelIdentity).toMatch(/^[0-9a-f]{64}$/);
 
     for (const token of [
-      "V1", "V2", "V3", "C1", "C2", "C3", "UNKNOWN_CHOICE",
-      "T0", "T1", "T2", "INVALID_FORMAT", "INVALID_DATE", "UNKNOWN_REF",
-      "SubmitOriginal", "SubmitAmend", "Tally", "RecordHold", "TerminalStutter",
-      "cutoffSeq", "ballotSnapshot", "reexamRequired",
+      "V1", "V2", "Q1", "Q2", "Q1C1", "Q2C2", "Favor", "Block",
+      "AcceptResponse", "TallyQuestion", "FinishRun", "Rerun", "TerminalStutter",
+      "accepted", "results", "targets", "preserved", "phase",
     ]) {
       expect(first.moduleSource).toContain(token);
     }
-    for (const forbidden of ["V4", "C4", "T3"]) expect(first.moduleSource).not.toContain(forbidden);
-    expect(first.moduleSource).toContain("reexamRequired' = (reexamRequired \\/ (g = 8))");
+    expect(first.auxiliaryModules).toEqual([{
+      name: "FormalElectionCore",
+      moduleBytesIdentity: expect.stringMatching(/^[0-9a-f]{64}$/),
+    }]);
   });
 
-  test("binds exactly seven named invariants to deterministic module source locations", () => {
+  test("binds the declared invariants to deterministic module source locations", () => {
     const bundle = generateFrozenTlaModel({ publicContractIdentity: PUBLIC_CONTRACT_IDENTITY });
     expect(Object.keys(bundle.invariantSourceMap).sort()).toEqual([...INVARIANTS].sort());
     for (const invariant of INVARIANTS) {
@@ -359,126 +362,15 @@ describe("frozen TLA model generator", () => {
     }
   });
 
-  test("binds TypeOK to every branch of all seven invariant formulas", () => {
+  test("models question-local responses, mixed results, and held-only reruns", () => {
     const source = generateFrozenTlaModel({ publicContractIdentity: PUBLIC_CONTRACT_IDENTITY }).moduleSource;
-    for (const invariant of INVARIANTS) {
-      const start = source.indexOf(`${invariant} ==`);
-      const nextStarts = INVARIANTS
-        .map((name) => source.indexOf(`${name} ==`, start + invariant.length + 3))
-        .filter((index) => index > start);
-      const end = Math.min(...nextStarts, source.indexOf("Spec ==", start));
-      const formula = source.slice(start, end);
-      expect(formula.startsWith(`${invariant} ==\n  /\\ TypeOK\n  /\\ ActionRefinement\n  /\\ (`)).toBe(true);
-    }
-  });
-
-  test("emits NONE for both winner fields of every HOLD receipt", () => {
-    const source = generateFrozenTlaModel({ publicContractIdentity: PUBLIC_CONTRACT_IDENTITY }).moduleSource;
-    expect(source).toContain('ReceiptWinner(r) == IF TallyKind(r) = "ESTABLISHED" THEN UniqueWinner(r) ELSE "NONE"');
-    expect(source).toContain("winner |-> ReceiptWinner(r)");
-    expect(source).toContain("choiceWinner |-> ReceiptWinner(r)");
-  });
-
-  test("derives counts and action refinement without transition-history state", () => {
-    const source = generateFrozenTlaModel({ publicContractIdentity: PUBLIC_CONTRACT_IDENTITY }).moduleSource;
-    for (const history of ["lastOutcome", "previousAcceptedCount", "previousLateCount", "previousBudgetSpent"]) {
-      expect(source).not.toContain(history);
-    }
-    expect(source).not.toContain("VARIABLES accepted, acceptedCount");
-    for (const derived of ["SubmissionCount", "AcceptedCount", "LateCount", "NextSeq", "ActionRefinement"]) {
-      expect(source).toContain(derived);
-    }
-    expect(source.match(/\/\\ ActionRefinement/g)).toHaveLength(7);
-  });
-
-  test("proves unknown-reference rejection over the action relation without history state", () => {
-    const source = generateFrozenTlaModel({ publicContractIdentity: PUBLIC_CONTRACT_IDENTITY }).moduleSource;
-    const invariantStart = source.indexOf("UnknownRefRejected ==");
-    const invariantEnd = source.indexOf("PerVoterResolution ==", invariantStart);
-    const invariant = source.slice(invariantStart, invariantEnd);
-
-    expect(invariant).toContain('~ENABLED (SubmitAmend(v, 0, C1, "T1", 1)');
-    expect(invariant).toContain("/\\ ~(UNCHANGED vars)");
-    expect(invariant).not.toContain("amendBudget[v] = 0 => accepted[v] /= NoBallot");
-    for (const history of ["lastOutcome", "previousAcceptedCount", "previousLateCount", "previousBudgetSpent"]) {
-      expect(invariant).not.toContain(history);
-    }
-  });
-
-  test("pins rejection, amend append, and per-voter argmax to independent action obligations", () => {
-    const source = generateFrozenTlaModel({ publicContractIdentity: PUBLIC_CONTRACT_IDENTITY }).moduleSource;
-    const expectedStart = source.indexOf("ExpectedResolution(prior, ballot) ==");
-    const badResolutionStart = source.indexOf("BadResolutionStep ==", expectedStart);
-    const expectedResolution = source.slice(expectedStart, badResolutionStart);
-
-    expect(expectedStart).toBeGreaterThan(-1);
-    // Test-contract revision (ruling Q2=A, 2026-08-05 — Issue #1946, executed
-    // under FR-2f): the obligation used to pin the claimed-instant rank that
-    // headed the old comparison. That rank is gone from the spec; what remains
-    // pinned is that the obligation re-derives the arrival comparison inline,
-    // independently of the operators the action itself uses.
-    expect(expectedResolution).toContain("ballot.arrivalSeq > prior.arrivalSeq");
-    expect(expectedResolution).not.toContain("submittedAt");
-    for (const selfReference of ["Later(", "Resolve(", "SubmittedRank("]) {
-      expect(expectedResolution).not.toContain(selfReference);
-    }
-
-    expect(source).toContain("UnknownChoiceAction ==");
-    expect(source).toContain("InvalidTimestampAction ==");
-    expect(source).toContain("BadAmendStep ==");
-    expect(source).toContain("BadResolutionStep ==");
-    expect(source).toContain("SubmissionCount' = SubmissionCount + 1");
-    expect(source).toContain("amendBudget' = [amendBudget EXCEPT ![v] = 0]");
-    expect(source).toContain("UNCHANGED <<initialBudget, holdBudget, holdMarkers, tally>>");
-
-    const obligations = {
-      UnknownChoiceRejected: "~ENABLED (UnknownChoiceAction /\\ ~(UNCHANGED vars))",
-      InvalidTimestampRejected: "~ENABLED (InvalidTimestampAction /\\ ~(UNCHANGED vars))",
-      AmendSubmission: "~ENABLED BadAmendStep",
-      PerVoterResolution: "~ENABLED BadResolutionStep",
-    } as const;
-    for (const [name, obligation] of Object.entries(obligations)) {
-      const start = source.indexOf(`${name} ==`);
-      const next = INVARIANTS.map((candidate) => source.indexOf(`${candidate} ==`, start + 1)).filter((index) => index > start);
-      const end = Math.min(...next, source.indexOf("Spec ==", start));
-      expect(source.slice(start, end)).toContain(obligation);
-    }
-  });
-
-  test("enumerates one representative per state-equivalent submission input", () => {
-    const source = generateFrozenTlaModel({ publicContractIdentity: PUBLIC_CONTRACT_IDENTITY }).moduleSource;
-    expect(source).toContain("GoARepresentatives == {1, 4, 5, 7, 8}");
-    expect(source).toContain("LateGoARepresentatives == {1, 8}");
-    expect(source).toContain('OriginalSubmittedRepresentative == "T1"');
-    expect(source).toContain('TallyReceivedRepresentative == "T1"');
-    expect(source).not.toContain("SubmitOriginal(v, c, s, received, g)");
-    expect(source).not.toContain("ref \\\\in 0..6");
-    expect(source).toContain('/\\ tally.kind = "NONE"');
-    expect(source).toContain('/\\ tally.kind /= "NONE"');
-    expect(source).toContain("SubmitOriginal(v, c, OriginalSubmittedRepresentative, g)");
-    expect(source).toContain('SubmitOriginal(v, C1, "T1", g)');
-    expect(source).toContain('SubmitOriginal(v, "UNKNOWN_CHOICE", "T1", 1)');
-    expect(source).toContain('SubmitOriginal(v, C1, "INVALID_FORMAT", 1)');
-    expect(source).toContain("SubmitAmend(v, accepted[v].arrivalSeq, c, s, g)");
-    expect(source).toContain('SubmitAmend(v, accepted[v].arrivalSeq, C1, "T1", g)');
-    expect(source).toContain('SubmitAmend(v, 0, C1, "T1", 1)');
-    expect(source).toContain("Tally(TallyReceivedRepresentative)");
-    expect(source).toContain("SpendableSubmission ==");
-    expect(source).toContain("TerminalStutter ==");
-    expect(source).toContain("\\/ TerminalStutter");
-    expect(source).not.toContain("\\E received \\in ReceivedAt: Tally(received)");
-    expect(source).not.toContain("c \\\\in ChoiceInputs, s \\\\in SubmittedInputs");
-  });
-
-  test("uses only voter and choice permutations as a semantic symmetry quotient", () => {
-    const bundle = generateFrozenTlaModel({ publicContractIdentity: PUBLIC_CONTRACT_IDENTITY });
-    expect(bundle.moduleSource).toContain("CONSTANTS V1, V2, V3, C1, C2, C3");
-    expect(bundle.moduleSource).toContain("pv \\in Permutations(Voters), pc \\in Permutations(Choices)");
-    expect(bundle.moduleSource).toContain("IF x \\in Voters THEN pv[x] ELSE pc[x]");
-    expect(bundle.cfgSource).toContain("V1 = V1");
-    expect(bundle.cfgSource).toContain("C3 = C3");
-    expect(bundle.cfgSource).toContain("SYMMETRY Symmetry");
-    expect(bundle.cfgSource).not.toContain("CONSTRAINT");
+    expect(source).toContain("accepted[v][q]");
+    expect(source).toContain("results[q]");
+    expect(source).toContain("targets' = held");
+    expect(source).toContain("preserved' = preserved \\cup EstablishedQuestions(results, targets)");
+    expect(source).toContain("IF q \\in held THEN NoResponse ELSE accepted[v][q]");
+    expect(source).toContain("EnabledRunCompletes == [](ReadyToComplete => <>RunComplete)");
+    expect(source).not.toContain("WF_vars(\\E c \\in Choices[q]");
   });
 
   test("recomputes frozen module and cfg identities from exact fatal-UTF8 bytes", () => {
@@ -502,6 +394,7 @@ describe("frozen TLA model generator", () => {
 
     expect(validateFrozenTlaModelReceipt(receipt)).toEqual({ ok: true, value: bundle });
     expect(Object.keys(receipt).sort()).toEqual([
+      "auxiliaryModules",
       "cfgBytesIdentity",
       "freezeRevision",
       "invariantSourceMap",
@@ -514,15 +407,44 @@ describe("frozen TLA model generator", () => {
 
     const forgedModelIdentity = { ...receipt, modelIdentity: "b".repeat(64) };
     const driftedFormula = structuredClone(receipt);
-    driftedFormula.namedInvariantFormulas.UnknownRefRejected = "c".repeat(64);
+    driftedFormula.namedInvariantFormulas.PerQuestionIsolation = "c".repeat(64);
     const driftedLocation = structuredClone(receipt);
-    driftedLocation.invariantSourceMap.UnknownRefRejected.line += 1;
+    driftedLocation.invariantSourceMap.PerQuestionIsolation.line += 1;
     const missingField = { ...receipt } as Record<string, unknown>;
     delete missingField.profileIdentity;
     const extraField = { ...receipt, unexpected: true };
 
     for (const candidate of [forgedModelIdentity, driftedFormula, driftedLocation, missingField, extraField]) {
       expect(validateFrozenTlaModelReceipt(candidate)).toMatchObject({
+        ok: false,
+        error: { kind: "FrozenTlaModelValidationError" },
+      });
+    }
+  });
+
+  test("compares auxiliary modules structurally rather than by serialization order", () => {
+    const receipt = createFrozenTlaModelReceipt(
+      generateFrozenTlaModel({ publicContractIdentity: PUBLIC_CONTRACT_IDENTITY }),
+    );
+    expect(receipt.auxiliaryModules.length).toBeGreaterThan(0);
+
+    const reordered = {
+      ...receipt,
+      auxiliaryModules: receipt.auxiliaryModules.map(({ name, moduleBytesIdentity }) => ({
+        moduleBytesIdentity,
+        name,
+      })),
+    };
+    expect(validateFrozenTlaModelReceipt(reordered)).toMatchObject({ ok: true });
+
+    for (const auxiliaryModules of [
+      receipt.auxiliaryModules.map((module) => ({ ...module, moduleBytesIdentity: "d".repeat(64) })),
+      receipt.auxiliaryModules.map((module) => ({ ...module, name: "OtherModule" })),
+      receipt.auxiliaryModules.map((module) => ({ ...module, extra: true })),
+      [...receipt.auxiliaryModules, ...receipt.auxiliaryModules],
+      [],
+    ]) {
+      expect(validateFrozenTlaModelReceipt({ ...receipt, auxiliaryModules })).toMatchObject({
         ok: false,
         error: { kind: "FrozenTlaModelValidationError" },
       });

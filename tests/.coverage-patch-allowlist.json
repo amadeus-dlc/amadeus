@@ -1478,56 +1478,33 @@
   {
     "file": "scripts/amadeus-election-migrate.ts",
     "selector": {
-      "function": "planMigration",
-      "fingerprint": "sha256:3a83f789469d4bbceceac56256c0d0bfa46bea678547ca8ca45f4d25b7c049ff",
-      "anchorLines": 2,
-      "targetLines": "1-2"
+      "function": "createMigrationPlan",
+      "fingerprint": "sha256:4427dd7f9f48531d90297e5d18129c8575102c783ea8d96772239c3050663502",
+      "anchorLines": 3,
+      "targetLines": "1-3"
     },
-    "reason": "Defensive directory-collision guard after mintElectionDirName. The same physicalNames set is passed as unavailable names, so the minting function suffixes away from every occupied target before this check; unit and integration tests cover the collision-avoidance behavior, but no valid input can reach this redundant fail-closed branch.",
+    "reason": "Defensive directory-collision guard after mintElectionDirName. The same allocated set is passed as unavailable names, so the minting function suffixes away from every occupied target before this check; unit and integration tests cover the collision-avoidance behavior, but no valid input can reach this redundant fail-closed branch.",
     "expiry": "remove if mintElectionDirName can return an unavailable name or the guard is removed as proven redundant"
   },
   {
     "file": "scripts/amadeus-election-migrate.ts",
     "selector": {
-      "function": "readCandidates",
-      "fingerprint": "sha256:96c4397449a9f781a48e0811f1f8724f6ac025f1142d67be4d7a1d51f0c90104",
-      "anchorLines": 3,
-      "targetLines": "1-3",
-      "class": "type-only"
-    },
-    "reason": "Multi-line Record<string, unknown> type assertion in readCandidates; the type-only lines are runtime-erased and Bun's full-suite LCOV merge stamps them DA:0. Tests drive both valid and invalid election.json parsing through the surrounding statement.",
-    "expiry": "remove if the assertion is collapsed or Bun LCOV stops stamping erased type lines"
-  },
-  {
-    "file": "scripts/amadeus-election-migrate.ts",
-    "selector": {
-      "function": "verifyFidelity",
-      "fingerprint": "sha256:bffd6e53c14bfab701285c511db9b121ee683df64f8da215dfc8838441d94fa4",
-      "anchorLines": 2,
-      "targetLines": "1-2",
+      "function": "verifyCanonicalSnapshot",
+      "fingerprint": "sha256:d60db7fd77d634c2d2cd70198e53ea0fbe48b1c08a6fbe1b13f22c4224582a92",
+      "anchorLines": 7,
+      "targetLines": "1-7",
       "class": "catch-arm"
     },
-    "reason": "Defensive resolver catch for an I/O race after a registry was read successfully. Normal missing-directory and invalid-registry outcomes are covered in-process; reaching this catch requires the filesystem or registry to become unreadable between those two operations.",
-    "expiry": "remove when verifyFidelity gains an injectable resolver seam for I/O race fault injection"
-  },
-  {
-    "file": "scripts/amadeus-election-migrate.ts",
-    "selector": {
-      "function": "runExecute",
-      "fingerprint": "sha256:bf2475c08406bf39e7b27cba7e4645f25ee43185992dae8ff5bb4ec8be96a9b9",
-      "anchorLines": 8,
-      "targetLines": "1-8"
-    },
-    "reason": "Production --execute orchestration requires a separately authored human approval record and intentionally is not exercised end-to-end in CI. Its constituent precondition checks, plan application, pre/post verification, fidelity evaluation, and fidelity rendering are all covered in-process; only the live mutation composition remains unmeasured.",
-    "expiry": "remove when runExecute gains injected migration ports that permit a non-production end-to-end execution fixture"
+    "reason": "Defensive resolver catch-arm for an I/O race after layout findings were empty. Normal missing-directory and invalid-registry outcomes are covered in-process; reaching this catch requires the snapshot to become unreadable between those two operations.",
+    "expiry": "remove when verifyCanonicalSnapshot gains an injectable resolver seam for I/O race fault injection"
   },
   {
     "file": "scripts/amadeus-election-migrate.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:fd5d3a1d758d012ed9aff7eaeb4cbc281d8a728bbffcf804c8b7a40b90421d64",
-      "anchorLines": 5,
-      "targetLines": "1-5"
+      "fingerprint": "sha256:13594ba2c7d7edbe3b98ac27670b356dd1ea481f387cbf2718c4a6296dee5e1f",
+      "anchorLines": 8,
+      "targetLines": "1-8"
     },
     "reason": "Spawn-only import.meta.main CLI exit wrapper. CI tests call the exported main function in-process so Bun coverage cannot attribute the spawned entrypoint wrapper; success and rejection behavior are covered through main.",
     "expiry": "remove if the CLI wrapper gains an in-process exit/error seam"
@@ -4827,5 +4804,331 @@
       "targetLines": "1"
     },
     "reason": "Fail-closed bijection/consistency guard over internally produced populations; producing the inconsistent input requires bypassing the module's own constructors, so the arm is unreachable via the report composition seam; kept per the typed-invariant fail-closed design."
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-question-tally.ts",
+    "selector": {
+      "function": "validatePartition",
+      "fingerprint": "sha256:509c96a4552e372e32250b09480750e8be4f2fda23ccfb12c492963cf3bcc39d",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Duplicate established question IDs cannot reach validatePartition because establishedResultsDigest re-decodes the prior tally and rejects duplicates first; the arm is a typed-invariant fail-closed guard.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-transport.ts",
+    "selector": {
+      "function": "deliveryFingerprint",
+      "fingerprint": "sha256:fe4d3507a3bf778cc7506d1adbdd1cf98e5d6f96be00b0aecd302d23f5e60c40",
+      "anchorLines": 7,
+      "targetLines": "1-7",
+      "class": "type-only"
+    },
+    "reason": "These lines contain only the multiline TypeScript input type of deliveryFingerprint. canonicalizeDeliveryRecord and bookDelivery cover the function body; Bun emits zero-hit DA records for the type-only signature.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-v2-cli.ts",
+    "selector": {
+      "function": "openElectionV2",
+      "fingerprint": "sha256:8cb69c39d4790583bf4766173d449f13639bbc1fe4cd2dbc6649cdbf060e72d2",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "setState failure after a successful create and view write requires injecting an IO fault between those steps in one call; t559 covers the decode and store-create failure arms of openElectionV2.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-v2-cli.ts",
+    "selector": {
+      "function": "voteElectionV2",
+      "fingerprint": "sha256:1d2e398a3ce5497878e3a2fb824a1544dafb1d034603a27d7bc7a6f08a529c56",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "appendPending failure after a successful ballot decode requires a TOCTOU store fault; t559 covers the invalid-transition and decode arms of voteElectionV2.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-v2-cli.ts",
+    "selector": {
+      "function": "notifyElectionV2",
+      "fingerprint": "sha256:534d1d7159401c32210398a5798151c6f609904f98f4c5c7207a88c2dae7ac37",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "createSubagentTransport cannot return a failed delivery after writeViews has just written those view files; the transport-failure arm is a fail-closed guard over an unreachable seam.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-v2-cli.ts",
+    "selector": {
+      "function": "tallyElectionV2",
+      "fingerprint": "sha256:98c5d2ce769253c1ff6658ce51cdcdcba740d47c2c7f20aca170f53edda7a092",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Same-run tally repair only reaches commitTally after the store already has a matching current tally; forcing that commit to fail requires a TOCTOU IO fault. t559 covers the primary tally path.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-v2-store.ts",
+    "selector": {
+      "function": "consumePending",
+      "fingerprint": "sha256:0600fd53c38c7de974edf58d007edea96a9a43f31f7bcda51feeb22cba4b2ee7",
+      "anchorLines": 2,
+      "targetLines": "1-2",
+      "class": "catch-arm"
+    },
+    "reason": "consumePending catch only fires when the pending directory mutates between readAllPending and consume in the same integratePending call; t549 covers the successful consume and earlier pending IO failures.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-v2-store.ts",
+    "selector": {
+      "function": "verifyPartialHistoryBaseline",
+      "fingerprint": "sha256:e5781dcb3904f3d4f751380269a0463b2abfcb3b0787ea50648ca030c8f31482",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Partial-history run-conflict after a durable same-run history write is already covered by t549 run-conflict cases; this remaining comparison is a fail-closed guard on an internally inconsistent baseline.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-v2-store.ts",
+    "selector": {
+      "function": "verifyPartialHistoryBaseline",
+      "fingerprint": "sha256:999303578ede853c26c6700624229c6c05d326e0bab44f3c6e41ca94accd3d0c",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "Prefix preservation failure inside verifyPartialHistoryBaseline requires a history chain that decode accepts but preservation rejects after the last-run identity already matched; kept as a typed-invariant fail-closed guard.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-v2-store.ts",
+    "selector": {
+      "function": "createOnly",
+      "fingerprint": "sha256:d3d3eeb4e63d0d9b6d519daf74e64690df0fadf4ad0d4ebadc122a31eb750e5c",
+      "anchorLines": 3,
+      "targetLines": "1-3",
+      "class": "catch-arm"
+    },
+    "reason": "createOnly catch is a TOCTOU IO arm around wx-create plus rename; t549 covers the same-bytes and run-conflict paths.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-v2-store.ts",
+    "selector": {
+      "function": "appendTimeline",
+      "fingerprint": "sha256:eaf74f2fa153eeffe5ebae3d45395525491184ff581871bfddd3285f9952d983",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "appendTimeline write failure after a valid timeline read requires a TOCTOU IO fault; t549 covers corrupt and run-conflict timeline arms.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-v2-store.ts",
+    "selector": {
+      "function": "writeCommitState",
+      "fingerprint": "sha256:922fe0f1358fd29343410b6fe608ffab0dde3b32f9dbaae76912993d1b0deba9",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "Registry-status mismatch during writeCommitState is a fail-closed guard after load(checkRegistry=false); t549 covers the load-time registry-mismatch path.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-v2-store.ts",
+    "selector": {
+      "function": "writeCommitState",
+      "fingerprint": "sha256:9b74c5183e9c33b59c3d8e679329820071ce7700936c2495826cfeb8c20d535f",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "election.json write failure during commit requires a TOCTOU IO fault after encode; t549 covers setState IO failure on the same write helper.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-v2-store.ts",
+    "selector": {
+      "function": "writeCommitState",
+      "fingerprint": "sha256:f7d9394876f7678e3efa29d7ce4182f2dfceac7fab89c4f3a25ffd808c83028f",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "Legacy unregistered elections skip registry update; the remaining branch is a fail-closed path for a registry-less dir that current create no longer produces.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-v2-store.ts",
+    "selector": {
+      "function": "storeCreate",
+      "fingerprint": "sha256:79bb33682d3b139fbe3f95e52c690b79b28b3023102ba05ee2f3b33a9850ac94",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Non-duplicate registry append failure during create is a TOCTOU corrupt/io arm; t549 covers the duplicate create path.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-v2-store.ts",
+    "selector": {
+      "function": "storeCreate",
+      "fingerprint": "sha256:b3599f41bdbd2fd03d1112fffd10d143487f9206df50ff5f88a5ebf7f07b930c",
+      "anchorLines": 1,
+      "targetLines": "1",
+      "class": "catch-arm"
+    },
+    "reason": "storeCreate catch is a TOCTOU IO arm around mkdir and the first durable writes; t549 covers validation and duplicate failures.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-v2-store.ts",
+    "selector": {
+      "function": "<module>",
+      "fingerprint": "sha256:8eb644d1adac019ce798b8e20a2f4f19c3843a0ec2b98b64f58c0d3f0c3b483c",
+      "anchorLines": 4,
+      "targetLines": "1-4",
+      "class": "type-only"
+    },
+    "reason": "These lines contain only the multiline TypeScript return type of ElectionV2Store.load. t549 covers the function body; Bun emits zero-hit DA records for the type-only signature.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-v2-store.ts",
+    "selector": {
+      "function": "appendPending",
+      "fingerprint": "sha256:2fdd8eecc875ccfbd5c57e32edf9ae71e2b0cb09cbd5f8287e8e6ef7290e2747",
+      "anchorLines": 1,
+      "targetLines": "1",
+      "class": "catch-arm"
+    },
+    "reason": "pending mkdir failure requires the parent to exist as a file after load succeeded; t549 covers pending-as-file via readAllPending before this mkdir.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-v2-store.ts",
+    "selector": {
+      "function": "integratePending",
+      "fingerprint": "sha256:7f9ab216f9d6a4c361e4699838587bd7d3bc556c296cef0b8483ed57516e550f",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Unsafe voter IDs are rejected by appendPending before integratePending; the remaining safeFileId check is a fail-closed typed invariant on an internally constructed voter list.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-v2-store.ts",
+    "selector": {
+      "function": "integratePending",
+      "fingerprint": "sha256:df88e342c6e10e9c6da31be8f952daa29bf2f652516b141e9732040aa5886fc5",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "ledger write failure during integratePending requires a TOCTOU IO fault after merge; t549 covers materialize IO failure after a durable ledger write.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-v2-store.ts",
+    "selector": {
+      "function": "readTallyHistory",
+      "fingerprint": "sha256:0fdc645be6bd3a5774587760e50ce2109d69b1c25db085c91bcaae38765ffcf2",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "readTallyHistory current-read failure after an empty verified history requires the current file to appear between verifyHistory and readCurrent; t549 covers missing and corrupt current paths.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-v2-store.ts",
+    "selector": {
+      "function": "commitTally",
+      "fingerprint": "sha256:2fdd8eecc875ccfbd5c57e32edf9ae71e2b0cb09cbd5f8287e8e6ef7290e2747",
+      "anchorLines": 1,
+      "targetLines": "1",
+      "class": "catch-arm"
+    },
+    "reason": "tallies mkdir failure requires the election dir to vanish after load; t549 covers tallies-as-file via readHistory before this mkdir.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "plugins/formal-model-check/tools/advisory-model-check.ts",
+    "selector": {
+      "function": "auxiliariesProblem",
+      "fingerprint": "sha256:6c508d48061a7edf38fda3a0e1186a5d3e7a0ac23aefb09b4bb260b45c7231c8",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Auxiliary identity mismatch shares one return with the path-null and prefix checks; Bun attributes the hit to the condition line. t-advisory-human-choice-domain covers the invalid-auxiliary outcomes.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "plugins/formal-model-check/tools/advisory-model-check.ts",
+    "selector": {
+      "function": "implementationsProblem",
+      "fingerprint": "sha256:120ff577112c10916280689a8706a26697cdaefc6e6883835f333c0519359dbd",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Implementation identity mismatch shares one return with the path-null check; Bun attributes the hit to the condition line. t-advisory-human-choice-domain covers the invalid-implementation outcomes.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "scripts/amadeus-election-migrate.ts",
+    "selector": {
+      "function": "readCanonicalSnapshot",
+      "fingerprint": "sha256:7acadd8a29a0b97057d39d6aa6692d85f0c9f95a2b939380e10a8c12e6970dd3",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "A snapshot whose definition.electionId differs from the requested id fails earlier in ElectionV2Store.readSnapshot when ballots still carry the original id; the identity check is a fail-closed typed invariant.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "scripts/amadeus-election-migrate.ts",
+    "selector": {
+      "function": "assertExactFiles",
+      "fingerprint": "sha256:3b20b5d79227ba1e43ba0eb3fb960d8438e52a3c7688eb584f8bb0a2403bfab1",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "sourceTreeDigest conflict after sameValue(files) succeeded is unreachable because treeDigest is a function of those files and assertPlanIntegrity already checked the plan digest; fail-closed guard.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "scripts/amadeus-election-migrate.ts",
+    "selector": {
+      "function": "assertPlanIntegrity",
+      "fingerprint": "sha256:f372922e198755a38c57c7fdd1f8cad58e14dd59f7d7a3746054c4a0750641aa",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "sourcePath !== electionId is rejected after safeSegment; t556 covers the other plan-integrity conflicts with recomputed digests.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "scripts/amadeus-election-migrate.ts",
+    "selector": {
+      "function": "prepareMove",
+      "fingerprint": "sha256:aa87870a3f38cb3cfc0e1aa6598da1b477b0c48116e677ba02be0dce4c5370da",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Canonical snapshot digest conflict after assertExactFiles passed requires file bytes to match the plan while decoded snapshot identity drifts; fail-closed guard over an internally inconsistent store read.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "scripts/amadeus-election-migrate.ts",
+    "selector": {
+      "function": "commitRegistry",
+      "fingerprint": "sha256:40ad9bd1fbe28320c8bd4a321fcf2be72ff8d3b1dc14e282f3832de265745633",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "Registry matching neither before nor after after a successful move is covered by t556 collision/dirty cases at earlier gates; this remaining arm is a fail-closed recovery guard.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
   }
 ]

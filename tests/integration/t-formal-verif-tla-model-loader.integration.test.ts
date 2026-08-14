@@ -37,10 +37,10 @@ import type {
 } from "../../plugins/formal-model-check/tools/tla-model-map.ts";
 
 const REPOSITORY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-// Moved with the resolution axis revision published through updateModelMap
-// (ruling Q2=A, 2026-08-05 — Issue #1946, FR-2f). The cfg bytes were untouched.
-const EXPECTED_MODULE_IDENTITY = "e8cc39a918d6893dc3b8e2f31d8e81857e1885ac0f93dec6212ec2a0b11e7213";
-const EXPECTED_CFG_IDENTITY = "92656a5c8cf2a83a0251bc35fef8c8260e9cb1baec459bef2d87a104474ed62b";
+// Multi-question execution-model identities are pinned at the real-filesystem
+// boundary so source migration cannot silently fall back to embedded bytes.
+const EXPECTED_MODULE_IDENTITY = "48a4545b1dc2a11a9d7de4c02da88dd9c144f1a83741f7a25a87f209c6985839";
+const EXPECTED_CFG_IDENTITY = "d687f5c9d68f0bc93bf7f5c13e0bd8d8b99afaad32aa9c1de4f60edfb59ad611";
 const temporaryRoots: string[] = [];
 
 interface Fixture {
@@ -159,8 +159,7 @@ describe("TLA model loader real-filesystem boundary", () => {
     expect(loaded.value.models.map((model) => model.model.name)).toEqual(
       fixture.modelMap.models.map((model) => model.name),
     );
-    // FR-6 invariance pin: the FormalElection identity values are unchanged
-    // by the multi-model generalization.
+    // The selected execution model stays byte-bound after multi-model loading.
     const formalElection = selectVerifiedModel(loaded.value, "FormalElection");
     expect(formalElection).toMatchObject({
       ok: true,

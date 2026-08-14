@@ -2802,6 +2802,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/integration/t559-election-v2-cli-inprocess.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/unit/t-graph-dispatch-seam.test.ts",
           "mechanism": "cli"
         }

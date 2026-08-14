@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { canonicalIdentity } from "./canonical.ts";
 import type { Result } from "./contract.ts";
 import type {
   PlannedTlcOutcome,
@@ -14,7 +15,9 @@ import {
   type RunModelCheckInput,
   type TlcSpawnPlanner,
 } from "./run-model-check-domain.ts";
+import type { TlcExploration } from "./tlc-toolchain.ts";
 import {
+  cfgConstants,
   publishModelCheckArtifacts,
   type ArtifactPublishError,
   type ArtifactWorkspace,
@@ -119,6 +122,7 @@ function publish(
   stderr: Uint8Array,
   startedAt: string,
   dependencies: ReservedModelCheckDependencies,
+  exploration?: TlcExploration,
 ): RunModelCheckResult {
   const exitCode = modelCheckExitCode(outcome);
   const attempt = (
@@ -136,14 +140,8 @@ function publish(
         startedAt,
         finishedAt: dependencies.utcNow(),
         ...(input.advisory === undefined ? {} : { advisory: input.advisory }),
-        sourceProvenance: {
-          modelPath: source.source.model.model.path,
-          cfgPath: source.source.model.cfg.path,
-          moduleIdentity: source.source.moduleIdentity,
-          cfgIdentity: source.source.cfgIdentity,
-          moduleSha256: createHash("sha256").update(source.source.moduleBytes).digest("hex"),
-          cfgSha256: createHash("sha256").update(source.source.cfgBytes).digest("hex"),
-        },
+        sourceProvenance: sourceProvenance(source),
+        ...(exploration === undefined ? {} : { exploration }),
       });
     } catch {
       return {
@@ -173,6 +171,28 @@ function publish(
     exitCode: 2,
     outcome: publishFailure,
     publishedDirectory: null,
+  };
+}
+
+function sourceProvenance(source: RunModelCheckSource) {
+  const body = {
+    modelPath: source.source.model.model.path,
+    cfgPath: source.source.model.cfg.path,
+    modelIdentity: source.modelReceipt.modelIdentity,
+    moduleIdentity: source.source.moduleIdentity,
+    cfgIdentity: source.source.cfgIdentity,
+    moduleSha256: createHash("sha256").update(source.source.moduleBytes).digest("hex"),
+    cfgSha256: createHash("sha256").update(source.source.cfgBytes).digest("hex"),
+    auxiliaries: source.source.auxIdentities.map(({ path, identity }) => ({ path, identity })),
+    implementations: source.source.model.entries.map(({ implPath, sha256 }) => ({
+      path: implPath,
+      identity: sha256,
+    })),
+    constants: cfgConstants(source.source.cfgSource),
+  };
+  return {
+    ...body,
+    sourceIdentity: canonicalIdentity(body, "amadeus.formal-verif.model-check-source.v1").sha256,
   };
 }
 
@@ -272,6 +292,7 @@ export async function executeReservedModelCheck(
       joinChunks(executed.value.raw.stderrChunks),
       startedAt,
       dependencies,
+      executed.value.exploration,
     );
   } catch {
     const outcome = failure("UNEXPECTED_RUNTIME", "reserved model-check execution failed");

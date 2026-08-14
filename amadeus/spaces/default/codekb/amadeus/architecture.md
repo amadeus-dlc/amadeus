@@ -4944,6 +4944,142 @@ round-trip（`write → read` で同値）はメタモルフィックで独立�
 
 対象コーデック群（`amadeus-mirror-state-codec.ts` / `amadeus-election-model.ts` / `amadeus-election-store.ts` / `amadeus-journal.ts` / `amadeus-audit.ts` / `amadeus-state.ts`）はすべて `packages/framework/core/tools/` にあり、全ハーネス manifest の `coreDirs` が `{ src: "tools", dst: "tools" }`（`packages/framework/harness/claude/manifest.ts:53`、observed 実測。レビュー記載 `:52` から +1 シフト）で投影する。したがってコア側の一本化・fail-closed 化は自動的に (a) dist 7 ハーネス全ての再生成 (b) `dist:check` / `promote:self:check` (c) coverage patch ゲートの母集団入り（spawn 盲点があるため in-process seam 設計を実装時点で行う） (d) `t258-boundary-guard`（出荷 core/tools は `scripts/` 非参照）を引き込む。テスト側は dist へ投影されない（`find dist -type d -name tests` / `find dist -name "*.test.ts"` ともに 0 件）。
 
+## Issue #2813 多問選挙アーキテクチャ（履歴、observed `c0f9edf2782`）
+
+### 現行スタイルと境界
+
+選挙機構は、1プロセスで完結する layered modular CLI である。純粋ドメイン層 `amadeus-election-model.ts`、filesystem adapter `amadeus-election-store.ts`、記録 renderer/verifier、輸送 port、CLI state machine に分離され、長時間稼働サービス・database・remote API は持たない。`packages/framework/core/` が正本で、build が各 harness へ投影する。
+
+単問性は1箇所の表示制約ではなく、次の同一 cardinality が境界を横断している。
+
+- Definition: 選挙あたり `question` 1件、共有 `choices` 1集合。
+- Ballot: voter あたり有効票1件、票あたり choice / GoA / reservation 各1件。
+- Resolution: `resolveBallots` の key は voter のみ。
+- State/tally: 選挙あたり state 1件、単一 established winner または単一 hold reason。
+- Persistence/record: voter ごとの materialized ballot 1ファイル、集約 GoA 1行、ruling 1件。
+- Formal model: `accepted[voter]`、`Choices`、`tally.kind/winner/reason` が選挙全体で1組。
+
+### Interaction Diagrams
+
+現行の business transaction は次のとおりである。
+
+```mermaid
+sequenceDiagram
+    actor Author as 選挙定義者
+    participant CLI as election CLI
+    participant Model as Election Model
+    participant Store as File Store
+    participant Voter as Voter
+    participant Record as Record Renderer
+    Author->>CLI: open(definition: question + choices + voters)
+    CLI->>Model: Election.parse
+    CLI->>Store: election.json / per-voter view を保存
+    CLI-->>Voter: viewPath を通知
+    Voter->>CLI: vote(choice, GoA, reservation)
+    CLI->>Model: Ballot.parse
+    CLI->>Store: pending voter ballot を追記
+    CLI->>Model: tally(election, ballots)
+    Model-->>CLI: established 1件 または hold 1件
+    CLI->>Store: tally.json と ballots/voter.json を固定
+    CLI->>Record: ruling / reservations / GoA を描画・検証
+    Record->>Store: record.md
+```
+
+Issue #2813 が要求する状態遷移の境界は次である。これは観測済み要件の写像であり、具体 schema の最終決定ではない。
+
+```mermaid
+flowchart LR
+    D[Definition: questions with stable IDs] --> V[Blind view per voter]
+    V --> R[Responses keyed by voter and question]
+    R --> T[Per-question tally]
+    T --> E[Established question results]
+    T --> H[Held question results]
+    H --> U[Re-discuss or amend held questions only]
+    U --> T
+    E --> P[Preserved immutable results]
+    P --> M[Mixed election result]
+    T --> M
+```
+
+### 変更時に守る設計不変量
+
+1. question ID は選挙内で一意・安定で、definition、ballot、tally、reservation、record、hold resolution を同じ ID で結ぶ。
+2. `voter × question` が resolution の最小 key であり、amend と receipt ordering は同じ question 内でだけ先行票を置換する。
+3. 選挙全体 state と問ごとの result を分離する。global `hold` だけでは mixed result を表せない。
+4. 再集計は未決問だけを評価し、成立済み問の result bytes または正規化値を不変に保つ。
+5. 旧単問 schema は read adapter で新 canonical model へ持ち上げ、新規 write と内部演算は単一の新 model に収斂させる。append-only 履歴の一括破壊移行は避ける。
+6. transport は voter ごとに view path を配送する port のまま維持できる。view 自体を複数問化すれば、問ごとの個別通知は不要である。
+7. TLA+ と TypeScript の対応は model-map の5実装面 identity で拘束されるため、形式モデルと identity 更新を実装から分離しない。
+
+### 結合ホットスポットと設計判断の保留
+
+最大の結合点は、CLI 853行と store 719行が global state、raw tally read、hold policy、filesystem materialization を同時に担う箇所である。model/store/CLI を一括で配列化すると責務混合が増えるため、canonical schema・legacy decoder、per-question tally、state/directive adapter の順に境界を保って変更する必要がある。
+
+「`questions[]` を1選挙へ直接持たせる」か「子選挙を親 ID 配下で束ねる」かは後続設計の判断事項である。ただし、現行 store と transport を最小変更にし、1 voter file に response 配列を持てる前者は観測された構造との適合度が高い。これは RE 時点の候補評価であり ADR 決定ではない。
+
+## Issue #2985 Bolt / Unit / PR 証跡アーキテクチャ（現在、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
+
+### 現行スタイルと責務境界
+
+Amadeus は Bun 上の短命 TypeScript CLI 群からなるモジュラーモノリスである。今回の取引は計画、実行、証跡、完了判定の4境界を横断する。
+
+| 境界 | 観測された正本 | 現行 cardinality |
+|---|---|---|
+| 計画 | `delivery-planning/bolt-plan.md` | Delivery Bolt は1個以上の Unit を束ねられる |
+| 実行 | `runtime-graph.json` の `bolt_dag.batches` | unit dependency DAG の topological level。Delivery Bolt ID を保持しない |
+| PR identity | CLI / title / `## Amadeus Work` / attestation | `bolt: string` と `unit: string` が1件ずつ |
+| 完了 | per-unit artifact coverage + blocking sensor guard | 全 Unit path ごとの evidence |
+
+runtime compile は `unit-of-work-dependency.md` から `units` と `batches` を構築し、`batches` を prior batch で依存が満たされた Unit 集合と定義する（`packages/framework/core/tools/amadeus-runtime.ts:112-121`, `:333-404`）。orchestrator はこれを flatten し、Unit ごとの artifact を coverage ledger として走査する（`packages/framework/core/tools/amadeus-orchestrate.ts:4206-4231`, `:4295-4325`）。Delivery Planning の `bolt-plan.md` を runtime topology へ取り込む seam は観測されない。
+
+plugin overlay は `code-generation` へ report と blocking sensor を追加する（`plugins/pr-convergence/plugin.json:9-19`）。CLI は `ConvergenceOptions.unit`、create の `{ record, bolt, unit }`、`DeliveryWork.bolt/unit` を単数で保持する（`plugins/pr-convergence/tools/pr-convergence-cli.ts:368-393`, `:535-541`）。provenance と attestation も単数契約である（`plugins/pr-convergence/tools/pr-convergence-provenance.ts:8-14`, `plugins/pr-convergence/tools/pr-convergence-attestation.ts:9-22`）。
+
+### Interaction Diagrams
+
+#### 正常経路: 1 Unit / 1 Bolt / 1 PR
+
+```mermaid
+sequenceDiagram
+    participant U as Unit worktree
+    participant CLI as PR convergence CLI
+    participant GH as GitHub PR
+    participant R as Unit report
+    participant S as Blocking sensor
+    participant C as State completion
+    U->>CLI: create(record, bolt, unit)
+    CLI->>CLI: checkout と local/remote head を検証
+    CLI->>GH: PR を作成または同一 head PR を再利用
+    GH-->>CLI: PR number と PR head
+    CLI->>R: Unit path に report と attestation を生成
+    CLI->>S: report を評価
+    S-->>C: Unit path の PASS と audit receipt
+    C-->>U: Unit evidence を完了条件へ採用
+```
+
+Text fallback: Unit worktree の同一 checkout から CLI が `record + bolt + unit` を受け取り、local/remote/PR head を一致させる。CLI は1 PR の identity を title/body と attestation に固定し、Unit path の report を生成する。sensor が path Unit、attestation Unit、PR、3 heads、current checkout、audit receipt を照合し、state completion がその Unit evidence を採用する。
+
+#### 破綻経路: 複数 Unit / 1 Delivery Bolt / 1 PR
+
+```mermaid
+flowchart TD
+    DP["Delivery Bolt: units A と B"] --> RT["Runtime: Unit DAG batches"]
+    RT --> A["Unit A execution"]
+    RT --> B["Unit B execution"]
+    A --> PR["One PR identity"]
+    B --> PR
+    PR --> PA["Provenance: bolt と unit A"]
+    PA --> SA["A の report と sensor は成立可能"]
+    PA --> MB["B は unit mismatch"]
+    MB --> CB["B の evidence 不足"]
+    CB --> STOP["Stage completion が停止"]
+```
+
+Text fallback: Delivery Bolt が Unit A と B を所有しても runtime は各 Unit を別 execution owner として扱う。1つの PR に Unit A identity を載せると A の report は成立し得るが、B の provenance、attestation、path ownership が一致しない。B 用に別 PR を作ると one-Bolt-one-PR と複数 Unit fold 禁止へ反し、全 Unit evidence を要求する完了判定が停止する。
+
+### Missing composition seam と設計保留
+
+欠落しているのは Delivery Bolt identity を実行時の第一級データとして保持し、その `units[]` と1つの PR identity／head tuple／attestation／audit receipt を結び、各 Unit completion へ正規投影する seam である。state は全 Unit の produce path を列挙し（`packages/framework/core/tools/amadeus-state.ts:3747-3778`）、sensor は report owner Unit、attestation Unit、PR、3 heads、current checkout、audit receipt を照合する（`plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts:145-180`）。この fail-closed 性を緩めずに共有 evidence の所有権を追加する候補Aと、計画 cardinality を単数へ統一する候補Bを requirements へ引き継ぎ、RE では決定しない。
+
 ## 260814-unit-failure-autoelectio (2026-08-14, observed `cd64486a6`) — failure-ruling seam と solo auto-election hook の責務境界断裂
 
 対象は GitHub Issue #2976。`solo-election.trigger.mode = auto` の設定下でも Unit 失敗が人間向け Retry/Skip/Abort の ask で停止する。本節は差分リフレッシュ（base `d7ffaa5442266508d8e67babc3e0b947fb4c1637` → observed `cd64486a68c6a1144db50fbe3fde8273f5e18455`）で取り直した患部の構造断面である。

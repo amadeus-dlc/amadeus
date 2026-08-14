@@ -1856,6 +1856,62 @@ bun scripts/package.ts [<harness>] [--check]
 
 - 判断: 本 intent での実質変更なし — 公開 CLI verb・flag・directive JSON スキーマの追加も変更もない。触れるのは内部関数契約 2 点で、いずれも `architecture.md` 現在節の seam ペア表を正本とする — (1) `readJson<T>`（`amadeus-election-store.ts:71`、`:80` 無検査キャスト）の戻り型契約を「無検査キャスト」から「検証済み値または棄却」へ強める（`Store.load` `:503-510` が呼出元）、(2) 読み側 fail-closed 化により、従来は受理されていた不正記録が `Result` の err 側／throw へ回るため、消費側の分岐が増える。いずれも境界ごとの一本化であり、4 境界を貫く単一の汎用バリデータ API は新設しない。
 
+## Election CLI 契約（履歴、Issue #2813、observed `c0f9edf2782`）
+
+### 現行 CLI
+
+```text
+bun <harness-dir>/tools/amadeus-election.ts <open|notify|vote|status|tally|render|verify|next|report>
+  --election <id> --file <path> --result <r> --resolution <r>
+  --transport <agmsg|subagent> --team <t> --from <name>
+  --send-script <path> --trigger <manual|auto> --project <dir>
+```
+
+Definition は `{ electionId, kind, question, choices, voters }`、ballot は `{ electionId, voter, voterKind, choiceInternalNo, goa, reservation, rationale, submittedAt, receivedAt? }` である。amend はこれに `kind: "amend"` と `{ electionId, voter, submittedAt }` の `ref` を加える。いずれも question ID を持たない。
+
+`next` の directive は `distribute` / `collect-wait` / `tally-ready` / `render` / `verify` / `done` / `hold`。`hold` は `reason` 1件だけを返す。`report --result hold-resolved --resolution ...` は選挙全体を `tallied` または `collecting` に戻し、tie/split では `choice:<internalNo>`、block/quorum/discussion では理由別の固定語彙を受理する。
+
+Store の読み取り API は次の単問 shape を返す。
+
+- `Store.load`: `{ election, state }`。state は election 全体で1件。
+- `Store.status`: `{ voted: string[], pending: string[], state }`。question ごとの未回答を表さない。
+- `Store.ledger`: `{ ballots, late }`。`resolveBallots` は voter だけで最新票を選ぶ。
+- `tally.json`: `{ result, talliedAt, ballots, resolutions }`。`result` は `TallyResult` 1件。
+
+### 必要な契約差分
+
+- Definition: stable ID を持つ `questions[]`。各問が自身の choices を所有する。
+- Ballot: `responses[]` または同等の question-keyed collection。各 response が choice / GoA / reservation を所有する。
+- Tally: question ID ごとの result collection と、established/hold の混在を表す election summary。
+- Directive/status: held / unsettled question IDs を返し、再議論・amend・rerun の対象を明示する。
+- Hold resolution: resolution を question ID へ帰属させ、成立済み問を変更対象から除外する。
+- Record/verify: question ごとの裁定、GoA、留保、response completeness を deterministic order で検証する。
+
+後方読み取りは「旧 definition を新 canonical model の1問へ decode」する API 境界で実現し、新形式専用 parser へ即時置換して既存 `election.json` を読めなくすることはできない。`readTally` の raw JSON cast と `JSON.stringify` 同士の tally equality は、多問 schema 導入時に typed parser / canonical equality へ置き換える必要がある。
+
+## PR convergence 契約（現在、Issue #2985、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
+
+### CLI
+
+```text
+create --repo <owner/repo> --head <branch> --title <text> --body-file <path>
+       --record <record-root> --bolt <bolt-name> --unit <unit-name> [--base <branch>]
+status|report|override --repo <owner/repo> --pr <number>
+       --record <record-root> --unit <unit-name> [--reason <text>]
+```
+
+`ConvergenceOptions` は `unit: string` を必須とし、linked create は `{ record: string, bolt: string, unit: string }` の全組または全欠落だけを受理する（`plugins/pr-convergence/tools/pr-convergence-cli.ts:368-393`）。複数 Unit flag や Bolt から Unit 集合を解決する API はない。
+
+### PR provenance と attestation
+
+PR title は `[<intent>/<bolt>/<unit>] <summary>`、body の `## Amadeus Work` は Intent / Bolt / Unit / Record / UUID を各1件持つ。`AmadeusWorkFields` は単数 shape で（`plugins/pr-convergence/tools/pr-convergence-provenance.ts:8-14`）、title/body/期待 Unit の不一致を拒否する（同 `:179-206`）。既存 PR 再利用時も CLI は Unit と Bolt を再検証する（`plugins/pr-convergence/tools/pr-convergence-cli.ts:928-942`）。
+
+`ReportAttestation` は `id, intent, intentUuid, record, bolt, unit, repo, pr, localHead, remoteHead, prHead, contentDigest` を持つ（`plugins/pr-convergence/tools/pr-convergence-attestation.ts:9-22`）。sensor は report owner path から Unit を導出し `receipt.unit` と一致させ、PR field、3 heads、current checkout、audit receipt を検査する（`plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts:145-180`）。
+
+### 欠落契約
+
+Delivery Bolt の `units[]` を解決し、1つの PR attestation を複数 Unit report の正規 evidence として投影する契約がない。候補Aでは aggregate と projection API が必要になり、候補Bでは Delivery Planning が複数 Unit Bolt を拒否して既存 API を正準 cardinality とする。選択は requirements に保留する。
+
 ## 260814-unit-failure-autoelectio (2026-08-14, observed `cd64486a6`) — failure ruling と election open の契約
 
 ### 1. `next` が返す ask directive（`amadeus-orchestrate.ts:4069-4075`）

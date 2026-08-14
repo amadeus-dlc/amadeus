@@ -20,23 +20,23 @@ import {
 // per-model trace/invariant vocabulary. Changing a value, its order, or its
 // count must fail this file (FR-6 — the drift pin does not cover vocabulary).
 const FORMAL_ELECTION_NAMED_INVARIANTS = [
-  "ChoiceWinner",
-  "UnknownChoiceRejected",
-  "ReceivedAtAxis",
-  "InvalidTimestampRejected",
-  "AmendSubmission",
-  "UnknownRefRejected",
-  "PerVoterResolution",
+  "TypeOK",
+  "QuestionIdsUnique",
+  "AcceptedDomain",
+  "ResultCompleteness",
+  "PerQuestionIsolation",
+  "EstablishedImmutable",
+  "HeldOnlyTargets",
+  "MixedLifecycle",
+  "ResponseCoverage",
 ] as const;
 
 const FORMAL_ELECTION_TRACE_STATE_VARIABLES = [
-  "initialBudget",
-  "amendBudget",
   "accepted",
-  "holdMarkers",
-  "holdBudget",
-  "tally",
-  "reexamRequired",
+  "results",
+  "targets",
+  "preserved",
+  "phase",
 ] as const;
 
 // MirrorLifecycle values are u4's declaration responsibility; this fixture
@@ -68,12 +68,9 @@ describe("t404: per-model vocabulary supply", () => {
     const model = formalElectionModel();
     expect(model.vocabulary?.namedInvariants).toEqual([...FORMAL_ELECTION_NAMED_INVARIANTS]);
     expect(model.vocabulary?.traceStateVariables).toEqual([...FORMAL_ELECTION_TRACE_STATE_VARIABLES]);
-    // The declaration did not disturb the drift-pinned identity values. The
-    // module identity moved once, with the resolution axis revision published
-    // through updateModelMap (ruling Q2=A, 2026-08-05 — Issue #1946, FR-2f);
-    // the cfg was untouched, which is why only the module value changed here.
-    expect(model.model.identity).toBe("e8cc39a918d6893dc3b8e2f31d8e81857e1885ac0f93dec6212ec2a0b11e7213");
-    expect(model.cfg.identity).toBe("92656a5c8cf2a83a0251bc35fef8c8260e9cb1baec459bef2d87a104474ed62b");
+    // The multi-question source and cfg identities are pinned with the map.
+    expect(model.model.identity).toBe("48a4545b1dc2a11a9d7de4c02da88dd9c144f1a83741f7a25a87f209c6985839");
+    expect(model.cfg.identity).toBe("d687f5c9d68f0bc93bf7f5c13e0bd8d8b99afaad32aa9c1de4f60edfb59ad611");
     expect(model.entries.length).toBe(5);
   });
 
@@ -143,6 +140,7 @@ describe("t404: per-model vocabulary supply", () => {
       envelope(2220, 0, "Starting SANY..."),
       [
         "Parsing file /workspace/FormalElection.tla",
+        "Parsing file /workspace/FormalElectionCore.tla",
         "Parsing file /fixed/Naturals.tla",
         "Parsing file /fixed/Sequences.tla",
         "Parsing file /fixed/FiniteSets.tla",
@@ -151,6 +149,7 @@ describe("t404: per-model vocabulary supply", () => {
         "Semantic processing of module Sequences",
         "Semantic processing of module FiniteSets",
         "Semantic processing of module TLC",
+        "Semantic processing of module FormalElectionCore",
         "Semantic processing of module FormalElection",
         "",
       ].join("\n"),
@@ -158,10 +157,10 @@ describe("t404: per-model vocabulary supply", () => {
       envelope(2185, 0, "Starting... (2026-07-21 09:26:25)"),
       envelope(2189, 0, "Computing initial states..."),
       envelope(2190, 0, "Finished computing initial states: 1 distinct state generated at 2026-07-21 09:26:25."),
-      // ChoiceWinner belongs to FormalElection — under the MirrorLifecycle
+      // PerQuestionIsolation belongs to FormalElection — under the MirrorLifecycle
       // vocabulary it is an unknown invariant and must be rejected, proving
       // the membership check is per-model rather than a union.
-      envelope(2110, 1, "Invariant ChoiceWinner is violated."),
+      envelope(2110, 1, "Invariant PerQuestionIsolation is violated."),
       envelope(2121, 1, "The behavior up to this point is:"),
       // Two ordered trace states carrying the MirrorLifecycle variable tuple,
       // so the rejection below is attributable to the invariant membership
@@ -201,7 +200,7 @@ describe("t404: per-model vocabulary supply", () => {
     });
     const absentSourceMapResult = parseTlcOutput174({
       chunks: [encoder.encode(output.replace(
-        "Invariant ChoiceWinner is violated.",
+        "Invariant PerQuestionIsolation is violated.",
         "Invariant NoCloseWithoutLandedSync is violated.",
       ))],
       exitCode: 12,

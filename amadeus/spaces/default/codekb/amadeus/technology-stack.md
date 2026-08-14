@@ -37,7 +37,6 @@
 - 現行 audit は filesystem record であり、digest と event identity を結ぶ決定的 receipt は既存 stack 内で実装可能である。
 - plugin は core module を直接 import しないため、汎用 receipt schema または process boundary contract が必要である。
 - generated `dist/` と self-install surface は編集元ではなく、source 修正後の build で同期する。
-
 ## 差分リフレッシュ時点のスタック（260813-advisory-requestion-fix、履歴、observed `c0f9edf27`）
 
 **観測 ref**: base `854692fd7a11b124236b0427fe3d59e2fe6bf785` → observed `c0f9edf27828def6fa3dbbbc4101d753b398e025`。
@@ -46,3 +45,22 @@
 - 開発用ツールチェーンのピンのみ更新: `mise.toml` に `@openai/codex 0.146.0` / `takt 0.58.0`。
 - ハーネス配布面の総数は 8（`ls -d packages/framework/harness/*/ | wc -l`）。[Issue #2967](https://github.com/amadeus-dlc/amadeus/issues/2967) の修正は engine 型と 8 ハーネスの skill 散文の同時更新（+ `bun run build` によるセルフインストール面の再生成）を要する。
 - 有効プラグインは 3（`coverage-patch-quick` / `formal-model-check` / `pr-convergence`、`amadeus/config.json` の `plugin.activation.names`）。
+## Issue #2813 技術制約（履歴、observed `c0f9edf2782`）
+
+多問対応に新しい runtime dependency は不要である。現行の Bun `1.3.13` 系、TypeScript `^6.0.3` strict ESM、filesystem JSON/Markdown、fast-check `^4.9.0`、TLA+/TLC の範囲で実装・検証できる。
+
+- 永続化: database ではなく `election.json` / `ledger.json` / `pending/` / `tally.json` / `record.md`。atomicity は tmp + rename を継続する。
+- 型/validation: class-free の discriminated union と `Result`、parse-don't-validate。旧/new schema は decoder で new canonical type へ正規化する。
+- Property testing: `tests/helpers/arbitraries/election.ts` と fast-check。question ID 一意性、legacy/new round-trip、mixed result、不変な established result を生成対象へ加える。
+- Formal verification: `FormalElection.tla` / `.cfg` と `model-map.json`。5実装面の SHA identity 更新が必要で、spec だけまたは実装だけの変更は model-map drift になる。
+- Distribution: `packages/framework/core/` を正本とし、各 harness 配布面は `bun run build` で生成する。`dist/` と self-install tree は直接編集しない。
+
+Biome `2.5.5` は formatter 無効、cognitive complexity 15超を warning とする。model 550行、store 719行、CLI 853行、migration 580行であり、多問化を理由に新ロジックをCLIへ集中させないことが保守性上の制約である。
+
+## Issue #2985 技術制約（現在、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
+
+- Runtime / language は Bun `1.3.13` と TypeScript ESM。focused test 実測も Bun `1.3.13` で行われた。
+- 永続化は Markdown artifact、JSON runtime graph、append-only audit shard、Git/GitHub PR で構成され、長時間稼働 service や database はない。
+- PR convergence は `git` と `gh` を外部 process boundary とし、CLI 自身は commit / push を行わない。
+- report integrity は SHA-256 digest と canonical audit receipt に依存する。署名付き trust boundary ではなく、repository write 権限を持つ攻撃者への防御は既存 threat model の対象外である。
+- #2985 は技術バージョン不足ではなく TypeScript data contract と Markdown／audit evidence ownership の cardinality 不一致である。新規 framework、database、queue の必要性は観測されていない。

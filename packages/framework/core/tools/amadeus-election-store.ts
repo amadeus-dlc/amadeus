@@ -273,6 +273,7 @@ const VALID_STATES: ReadonlySet<string> = new Set<ElectionState>([
   "draft",
   "open",
   "collecting",
+  "partial",
   "tallied",
   "rendered",
   "recorded",

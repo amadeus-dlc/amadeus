@@ -171,6 +171,41 @@ describe("t450 predicate accepts both canonical shapes (ADR-3)", () => {
     expect(result.pass).toBe(false);
     expect(result.reason).toBe("no-file");
   });
+
+  test("code-generation accepts a local-evidence report without a CLI kind", () => {
+    const body = [
+      "# 収束レポート — example",
+      "",
+      "## 判定",
+      "",
+      "READY（local implementation scope）。",
+      "",
+      "## 実行証拠",
+      "",
+      "| Command | Result |",
+      "",
+    ].join("\n");
+    const result = evaluateReportFormat(reportAt(body), "code-generation");
+    expect(result).toEqual({
+      pass: true,
+      findings_count: 0,
+      reason: "local-evidence",
+      findings: [],
+    });
+  });
+
+  test("pr-convergence still rejects a local-evidence report", () => {
+    const body = "# 収束レポート\n\n## 判定\n\nREADY\n\n## 実行証拠\n\n";
+    const result = evaluateReportFormat(reportAt(body), "pr-convergence");
+    expect(result.pass).toBe(false);
+    expect(result.findings.map((finding) => finding.field)).toContain("kind");
+  });
+
+  test("code-generation still fail-closes a report that is neither local evidence nor CLI-shaped", () => {
+    const result = evaluateReportFormat(reportAt("# notes\n"), "code-generation");
+    expect(result.pass).toBe(false);
+    expect(result.findings.map((finding) => finding.field)).toContain("kind");
+  });
 });
 
 describe("t450 falling evidence — each missing required field goes red", () => {

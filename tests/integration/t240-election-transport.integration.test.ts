@@ -6,7 +6,9 @@ import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  bookDelivery,
   buildShortNotification,
+  canonicalizeDeliveryRecord,
   createAgmsgTransport,
   createSubagentTransport,
   distribute,
@@ -76,6 +78,25 @@ describe("BR-T2 — DeliveryRecord is minted only from a completed send", () => 
     const t = agmsg(fakeSend("fail.sh", "exit 1"), ["alice"]);
     const res = t.notify("alice", buildShortNotification("E-T2", viewPath));
     expect(res).toEqual({ ok: false, error: "send-failed" });
+  });
+
+  test("a successful multi-question view send books once for its run and voter", () => {
+    const t = agmsg(fakeSend("v2-pass.sh", "exit 0"), ["alice"]);
+    const sent = t.notify("alice", buildShortNotification("E-T2", viewPath));
+    if (!sent.ok || sent.value.kind !== "delivered") throw new Error("expected delivered");
+    const record = canonicalizeDeliveryRecord(
+      sent.value.record,
+      "E-T2",
+      "distribution-1",
+      viewPath,
+    );
+    const booked = bookDelivery([], record);
+    expect(booked).toMatchObject({ ok: true, value: { status: "booked" } });
+    if (!booked.ok) throw new Error("expected booked");
+    expect(bookDelivery(booked.value.records, record)).toMatchObject({
+      ok: true,
+      value: { status: "idempotent" },
+    });
   });
 });
 

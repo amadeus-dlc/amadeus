@@ -51,12 +51,14 @@ import { resolveProjectDir } from "./amadeus-lib";
 import { parseGoaLine } from "./amadeus-norm-metrics";
 import {
   electionsRoot,
+  readElectionsRegistry,
   resolveElectionDir,
   Store,
   type StoreError,
   type TimelineEvent,
   writeStoreFile,
 } from "./amadeus-election-store";
+import { main as electionV2Main } from "./amadeus-election-v2-cli.ts";
 import {
   type AmadeusConfigIssue,
   resolveAmadeusConfig,
@@ -826,6 +828,38 @@ const VERBS: Record<
   verify: (root, a) => (a.electionId === null ? usageFail() : handleVerify(root, a.electionId)),
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function readJsonFile(path: string): unknown | null {
+  try {
+    return JSON.parse(readFileSync(path, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function isExplicitV2Definition(raw: unknown): boolean {
+  return isRecord(raw) && raw.schemaVersion === 2;
+}
+
+function storedElectionIsV2(root: string, electionId: string): boolean {
+  const registry = readElectionsRegistry(root);
+  if (registry.kind !== "ok") return false;
+  const entry = registry.entries.find((row) => row.electionId === electionId);
+  if (entry === undefined) return false;
+  const raw = readJsonFile(join(root, entry.dirName, "election.json"));
+  return isExplicitV2Definition(raw);
+}
+
+function shouldDispatchV2(root: string, args: ParsedArgs): boolean {
+  if (args.verb === "open") {
+    return args.file !== null && isExplicitV2Definition(readJsonFile(args.file));
+  }
+  return args.electionId !== null && storedElectionIsV2(root, args.electionId);
+}
+
 export function main(argv: string[], projectDir?: string): number {
   const args = parseArgs(argv);
   if ("usage" in args) {
@@ -840,6 +874,12 @@ export function main(argv: string[], projectDir?: string): number {
   // repo root because import.meta.dir is this script's OWN directory).
   const resolvedProjectDir = resolveProjectDir(args.project ?? projectDir);
   const root = electionsRoot(resolvedProjectDir);
+  if (shouldDispatchV2(root, args)) {
+    const forwarded = args.project !== null
+      ? argv
+      : [...argv, "--project", resolvedProjectDir];
+    return electionV2Main(forwarded);
+  }
   const handler = VERBS[args.verb];
   if (handler === undefined) return usageFail();
   return handler(root, args, resolvedProjectDir);
