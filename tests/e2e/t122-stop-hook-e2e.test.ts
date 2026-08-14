@@ -85,13 +85,13 @@
 //          are written (amadeus-state.ts:418-441). The real hook then sees the
 //          engine re-emit `parked` and ALLOWS the stop (empty stdout, exit 0;
 //          amadeus-stop.ts:760-771), the supported multi-session exit.
-//   10 PARK under autonomous Construction is REFUSED (NEW, issue #365 guard)
-//       -> inject `Construction Autonomy Mode: autonomous`; the REAL
-//          `amadeus-state.ts park` refuses (NON-ZERO exit, stderr names the
-//          autonomous refusal, amadeus-state.ts:420-424). Defence-in-depth: with
-//          Parked markers injected by hand, the hook's parked branch DECLINES
-//          the allow under autonomous and falls through to the cap-bounded BLOCK
-//          (amadeus-stop.ts:760-771).
+//   10 PARK in an UNATTENDED autonomous Construction run is REFUSED (issue #365
+//      guard, narrowed by #3016)
+//       -> inject `Construction Autonomy Mode: autonomous` into a record whose
+//          ledger holds no HUMAN_TURN; the REAL `amadeus-state.ts park` refuses
+//          (NON-ZERO exit, stderr names the autonomous refusal — handlePark's
+//          autonomy guard). The hook is NOT a second layer of that guard: with
+//          Parked markers injected by hand it ALLOWS the stop in every mode.
 //   11 CONVERSATIONAL carve-out (tier 3) against the REAL engine (NEW, issue
 //      #365 broader reading)
 //       -> keep the final stage [-] (engine emits a pending run-stage, as test
@@ -490,11 +490,14 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
   );
 
   // =========================================================================
-  // (10) PARK under autonomous Construction is REFUSED (issue #365 guard,
-  // salvaged from the suspend branch). An unattended autonomous run has no human
-  // to resume it, so `park` must refuse outright. Two deterministic surfaces:
+  // (10) PARK in an UNATTENDED autonomous Construction run is REFUSED (issue
+  // #365 guard, salvaged from the suspend branch; narrowed by #3016). Such a run
+  // has no human to resume it, so `park` must refuse. This fixture's ledger
+  // carries no HUMAN_TURN, which is precisely what "unattended" means to the
+  // guard — a park from a real human turn is accepted (pinned by t17 and
+  // t3016-park-provenance). Two deterministic surfaces:
   //   - the REAL `amadeus-state.ts park` exits NON-ZERO with stderr naming the
-  //     autonomous refusal (amadeus-state.ts:420-424);
+  //     autonomous refusal (handlePark's autonomy guard);
   //   - even if the Parked markers were somehow present, the hook's parked
   //     branch ALLOWS a durable safe-stop even under full autonomy. The generic
   //     state-tool park still refuses an unattended run; an emitted parked
@@ -516,8 +519,8 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
           "## Runtime State\n- **Revision Count**: 0\n- **Construction Autonomy Mode**: autonomous",
         );
 
-        // The REAL state-tool park refuses outright: non-zero exit, stderr names
-        // the autonomous refusal (amadeus-state.ts:420-424).
+        // The REAL state-tool park refuses this unattended run: non-zero exit,
+        // stderr names the autonomous refusal (handlePark's autonomy guard).
         const park = spawnSync(
           BUN,
           [
