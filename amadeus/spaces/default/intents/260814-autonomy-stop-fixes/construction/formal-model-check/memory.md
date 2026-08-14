@@ -2,6 +2,7 @@
 > This file is maintained by the orchestrator during stage execution. Add observations at the gate ritual, not by editing here directly.
 
 ## Interpretations
+- 2026-08-14T09:42:00Z — host workflow の Step 1 どおり、tla-authoring の not-applicable を受けて NOT_APPLICABLE を記録し TLC 非起動。advisory 対応の single run で登録4モデル NOT_DETECTED を実測済み(ローカル CLI。CI ランナーは GitHub Actions runtime receipt 前提のためローカルでは ARTIFACT_VERIFY_FAILURE — fail-closed の正しい挙動)。
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations
