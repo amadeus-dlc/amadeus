@@ -1,71 +1,74 @@
 # アーキテクチャ
 
-## in-process 入口と emit 集約点における ambient 逸出面の全数（260814-ambient-error-sink、現在、observed `6e94189de`）
+## coverage-patch-quick は advisory 近似であり CI gate の代替ではない（260814-coverage-quick-norm、現在、observed `d7ffaa544`）
 
-対象: [Issue #3004](https://github.com/amadeus-dlc/amadeus/issues/3004)。測定 ref = observed `6e94189dec9e8e2bd0aaeb53bcff7cf9cba27440`（= HEAD = `origin/main`）。
+**観測 ref**: observed = `d7ffaa5442266508d8e67babc3e0b947fb4c1637`（`git rev-parse HEAD`）。差分 base = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`。詳細と検索述語は `re-scans/260814-coverage-quick-norm.md` を正本とする。
 
-**前 intent 節との関係（重要）**: 直下の履歴節（260814-t528-ambient-isolation、observed `5f6b5bf97`）は同じ根の逸出を **E1 / E2 の 2 点**として記述した。本節はその**上位互換の全数棚卸し**であり、E1（`:6020-6023` の制御フロー分岐）と E2（`emit()` → `recordEngineError`）を**部分集合として包含する**。両節が矛盾しているのではなく、前節が患部 1 本（t528）から見た 2 点、本節が入口側・集約点側の両方から採った全数である。`5f6b5bf97..6e94189de` のコード面差分は `tests/integration/t528-report-ack-kind.integration.test.ts` **1 ファイルのみ**（`git diff --name-only 5f6b5bf97 6e94189de -- packages/ tests/ .claude/`、rc=0）であり、`amadeus-orchestrate.ts` / `amadeus-lib.ts` は無変更なので、履歴節の行番号引用は本 observed でもそのまま有効である。
+`coverage-patch-quick` は targeted lcov を scratch に書き、`tests/coverage-patch-gate.ts` を `AMADEUS_PATCH_LCOV` 差し替えで spawn する。判定ロジックの複製はない。完了時の exit は常に 0（`EXIT_ADVISORY`、`coverage-patch-quick-cli.ts:254-255`）。バナーは CI Patch Coverage Gate が正本であると逐語で述べる（同 `:266-284`）。
 
-### A. in-process 入口の全数と export 実態
+CI の正本入力はフル `bun run coverage:ci -- -P 4`（`ci.yml:466` / `:550`）。判定 3 秒に対し合流 lcov 生成は job 94095568607 で 11 分 03 秒（`gh api .../jobs/94095568607`）。
 
-`_handlerProjectDir` への代入は `amadeus-orchestrate.ts` に 5 箇所（すべて逐語 `_handlerProjectDir = projectDir;`、`main` のみ argv 由来のローカル変数）。
+既存の coverage single-owner（`project.md:136`）と数値転記規律（`team.md:68`）を緩めない。quick は既定 `coverage/` を使わない。Learnings Inbox に「quick を内側ループの標準とする」運用ノルムは未存在（re-scan の不在述語、exit 1 / 0 行）。
 
-| # | 位置 | シグネチャ | export | 到達経路 |
-|---|---|---|---|---|
-| 1 | `:3110` | `:3107 export function handleNext(args: string[], projectDir: string \| undefined): void` | **あり** | `main:6808` / in-process |
-| 2 | `:5851` | `:5848 export function handleReport(args: string[], projectDir: string \| undefined): void` | **あり** | `main:6811` / in-process / `handleReport:6008` の自己転送 |
-| 3 | `:6349` | `:6348 export function handleFailureRuling(args: string[], projectDir: string \| undefined): void` | **あり** | `main:6814` / `handleReport:6008` / in-process |
-| 4 | `:6408` | `:6407 function handlePark(_args: string[], projectDir: string \| undefined): void` | **なし** | **`main:6817` のみ** |
-| 5 | `:6795` | `main()`（`:6773`）の `let projectDir: string \| undefined`（argv 抽出） | — | CLI |
+## Lifecycle Guard Runtime の着地と formal-model-check の provider 選択構造（260814-fmc-macos-provider、履歴、observed `5f6b5bf97` — 260814-coverage-quick-norm 時点でも構造は有効）
 
-**Issue 本文の訂正**: Issue は in-process 入口を 4 つ（`handlePark` を含む）と述べるが、`handlePark` は core にも `dist/claude/.claude/tools/amadeus-orchestrate.ts` にも export がなく（`grep -c "export function handlePark" dist/claude/.claude/tools/amadeus-orchestrate.ts` → **0**）、in-process driver から到達できない。**実効的な in-process 射程は 3 入口**（`handleNext` / `handleReport` / `handleFailureRuling`）。`handlePark` へ `undefined` が入る経路は `main` 経由の CLI だけで、これは意図挙動側である。ただし将来 export された時点で穴が復活するため、修正対象に含めること自体は防御的に妥当。
+**観測 ref**: すべて observed = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`（= 本 worktree HEAD = `origin/main`、`git rev-parse HEAD`）。差分 base = `89532174c30ef9cc7ff29496cd6916586fdda00a`（`git merge-base --is-ancestor 89532174c HEAD` = exit 0、`git rev-list --count 89532174c..HEAD` = **9**）。検索述語と患部の全数列挙は `re-scans/260814-fmc-macos-provider.md` を正本とし、本節は構造だけを転記する。
 
-なお `amadeus-state.ts:1579` の `handlePark(_args: string[])` は **1 引数の別関数**（`amadeus-state.ts:1280` から呼ばれる）。棚卸しで混同しないこと。
+### Lifecycle Guard Runtime は着地した（直前節の「不在」は base 断面の記録）
 
-**本番経路の実態**: 4 ハンドラの実呼出 69 件のうち、非テスト呼出元は `amadeus-orchestrate.ts` 内の 5 件のみ（`:6008` の自己転送 + `main` の switch `:6808/:6811/:6814/:6817`）。全 69 件が変数渡しでリテラル `undefined` は 0 件。**すなわち `undefined` を実際に流している本番経路は `main` だけ**であり、残りはすべてテストドライバである。
+直下の 260813-lifecycle-guard-runtime 節は observed `89532174c`（**実装前**の断面）で「Guard Runtime は存在しない」を実測した記録である。base..observed の `0fbbec42b`（#2986）がこれを実装し、observed `5f6b5bf97` では `packages/framework/core/tools/amadeus-lifecycle-guard.ts`（**236 行**、`wc -l`）が 4 つの authoritative checkpoint を共通型で扱う。
 
-### B. `emit()` 集約点から届く ambient 副作用面
+`LifecycleCheckpoint`（`:42-46`）は `"intent-birth" | "stage-completion" | "phase-transition" | "workflow-completion"` の 4 値。checkpoint はハンドラの identity ではなく**コミット経路の identity** であることを宣言コメント（`:39-41`）が明示する — 逐語: `four CLI handlers complete a stage and five cross a phase boundary, and all of them evaluate the same checkpoint.`
 
-`function emit(directive: Directive, recordError = true): void`（`:775`）。実行順に 3 面。
+判定は `LifecycleGuardVerdict`（`:74-78`）の 4 値 — `allowed`(receipt 付き可) / `denied` / `unknown` / `not-applicable` — に統一され、`evaluateLifecycleGuards`（`:208`）が **最初の blocking verdict で停止**して `LifecycleGuardDecision`（`:96-111`、`allowed` / `blocked` の判別ユニオン）を返す。`unknown` は `denied` と同じく blocking である（時間予算の失効を持つ adapter は `unknown` を報告して同じ規則でブロックする、`:25-28`）。
 
-| 順 | 位置 | 面 | 発火条件 | `_handlerProjectDir` の消費 | 書込先 |
-|---|---|---|---|---|---|
-| 1 | `:786` → `:826-831` | `applyPendingAdvisoryGuard` | `pending.length > 0` **かつ** kind が `run-stage` / `dispatch-subagent` | `:831 const advisoryProjectDir = resolveProjectDir(_handlerProjectDir);` | `guardAdvisoryChoices`（判定のみ） |
-| 2 | `:802-804` | **`recordEngineError`** | `directive.kind === "error"` **かつ** `recordError` | `:803 recordEngineError(directive.message, _handlerProjectDir);` | 監査シャード（`emitErrorAuditRow` `:962`）— **git 追跡下** |
-| 3 | `:805-817` | `projectSensorInvocation` | `result.data.kind === "run-stage"` | `:808 resolveProjectDir(_handlerProjectDir),` | `.amadeus-hooks-health`（`amadeus-sensor-invocation.ts:94-102`、gitignored） |
+**登録面は module-level の frozen 配列で、登録 API を持たない**（`:36-38` 逐語: `there is no registration API, so a project cannot remove a system-invariant guard`）。observed の registry は 5 本:
 
-集約点の**外**にもう 1 面: `:4757 raisePluginAdvisoriesFor(slug, resolveProjectDir(_handlerProjectDir));` → `advisoryLatchDirForRun(projectDir)`（`:1878-1880`、`<record>/.amadeus-advisory-latch/<session>`、gitignored）。
+| registry | 位置 | adapter id（order 昇順） |
+| --- | --- | --- |
+| `INTENT_BIRTH_WORKSPACE_GUARDS` | `amadeus-utility.ts:4123` | `intent-birth.workspace-scan`(10) |
+| `STAGE_COMPLETION_GUARDS` | `amadeus-state.ts:329` | `stage-completion.artifacts`(10) / `stage-completion.unit-review`(20) / `stage-completion.blocking-sensors`(30) |
+| `PHASE_TRANSITION_GUARDS` | `amadeus-state.ts:353` | `phase-transition.phase-check-artifact`(10) |
+| `WORKFLOW_COMPLETION_PREPARATION_GUARDS` | `amadeus-state.ts:369` | `workflow-completion.prepared`(10) / `workflow-completion.mandatory-plugin-stages`(20) |
+| `WORKFLOW_COMPLETION_AUTHORIZATION_GUARDS` | `amadeus-state.ts:387` | `workflow-completion.record-resolution`(10) / `workflow-completion.goal-receipt`(20) |
 
-**順序上の含意（設計判断に効く）**: `applyPendingAdvisoryGuard` は `if (pending.length === 0) return directive;`（`:828`）と `if (directive.kind !== "run-stage" && directive.kind !== "dispatch-subagent") return directive;`（`:829`）の**後**に `resolveProjectDir` を呼ぶ。したがって **error directive はこの面で ambient 解決に一切触れない**。既存の `emitStateNeutralError`（`:903-905`、`emit(errorDirective(message), false)`）と `emitMigrationError`（`:1088`）は、この順序ゆえに ambient に対して完全に無害な「拒否 directive」の形になっている。新設の拒否ガードが同じ形を取れば、拒否そのものが ambient を汚さないことが構造的に保証される。
+Workflow 完了だけが **2 ラウンド**に分かれる。context の構築が 2 段（state 文書のみで判じる準備段 → completion instance と Intent record を解決した後の認可段）であるためで、移行前のハンドラの報告順を保存する意図が宣言コメント（`amadeus-state.ts:362-367`）に明示されている。
 
-### C. 設計欠落 — CLI（`main`）と in-process の区別が型にも制御フローにも存在しない
+拒否の合流点は `refuseBlockedTransition`（`amadeus-state.ts:405-412`）1 箇所で、`error(formatGuardRefusal(decision.refusal))` により **`writeStateFile` の前に exit** する。これが「メモリ上の content 反転が半端な遷移ではなく破棄可能」であることの構造的根拠である（同 `:402-404` のコメント）。receipt を持つ checkpoint は `guardReceipt(decision, policyId)`（`amadeus-lifecycle-guard.ts:153`）で取り出す — 例は workflow-completion の `GoalReconciliationReceipt`（`amadeus-state.ts:3249`）と intent-birth の `ClassifiedWorkspaceScan`。
 
-4 ハンドラはいずれも `projectDir: string | undefined` という**同一の引数型**を持ち、呼出元が CLI entry point なのか in-process driver なのかを判別する情報を一切受け取らない。`undefined` は `resolveProjectDir`（`amadeus-lib.ts:232-269`）の 6 段 open-set ラダーへそのまま渡り、**必ず何かを返す**。この設計は `main`（`:6795` で argv から `projectDir` を組み立てる唯一の正当な ambient 源）にとっては正しいが、in-process 呼出では同じ `undefined` が「テストプロジェクトではなく開発者の実 workspace」を意味してしまう。
+呼出側は `evaluateLifecycleGuards` の 4 箇所（`amadeus-state.ts:582` phase-transition / `:2738` stage-completion / `:3208` workflow 準備段 / `:3232` workflow 認可段）と `amadeus-utility.ts` の intent-birth 面。**hook 層（`amadeus-subagent-model-guard.ts`）は Runtime の外に残る**（`git grep -l "amadeus-lifecycle-guard"` の 8 ヒットに hooks 配下は含まれない）。直前節が「単一 Runtime を名乗るなら hook 層の扱いが主要論点」と記した点は、observed でも未決のままである。
 
-**この非対称を表現する型も分岐も存在しない**ことが本 Issue の構造的な根である。帰結:
+内部契約の詳細は `docs/reference/26-lifecycle-guard-runtime.md`（222 行）/ `.ja.md`（214 行）が正本。
 
-- 「`undefined` は誤り」と「`undefined` は ambient 要求」の両方が同じ値・同じ型で表現されるため、**呼出側を見ずに正誤を判定できない**
-- `_handlerProjectDir` の型だけを判別ユニオン（`{declared}` | `{cli-ambient}`）へ直す設計は、B の 3 面 + advisory latch しか閉じない
+### チームモードのランチャ面は撤去された
 
-### D. `_handlerProjectDir` の**外**にある ambient 面 — 射程の広さ
+`8b6089275`（#2975）が `packages/framework/core/tools/team-up.sh` / `team-up-codex-safety-wait.ts` / `team-msg.sh` を削除した。observed で `git ls-files | grep -iE "team-up|team-msg"` が返す tracked ファイルのうち**現行コード面は `tests/integration/t-remove-team-up-absence.test.ts`（不在を固定する回帰テスト）1 件のみ**で、残りは intent record と re-scan の履歴である。`docs/guide/20-team-mode{,.ja}.md` と `docs/guide/team-messaging{,.ja}.md` は残存するが大幅に縮小した（`git diff --numstat 89532174c..HEAD -- docs`: team-mode `+30 −77` / `.ja` `+49 −96`、team-messaging `+13 −67` / `.ja` `+12 −66`）。8 harness への `coreDirs.tools` 無条件投影という配布構造そのものは不変で、投影元から 3 ファイルが消えただけである。
 
-`amadeus-orchestrate.ts` の `resolveProjectDir` 出現は **26 箇所**（`grep -c "resolveProjectDir" packages/framework/core/tools/amadeus-orchestrate.ts` → 26、Architect 独立再実測で一致）。うち `_handlerProjectDir` を読むのは B の 4 箇所（`:808` / `:831` / `:948-956` 経由 / `:4757`）だけで、**残り 22 箇所はハンドラのパラメータ `projectDir` を直接解決している**:
+### 本 intent の焦点 — formal-model-check の provider 選択は「可用性を見ない同期選択」である
 
-`:2972`（`refuseUnauthorizedKimiCaller`）/ `:3013` `:3039` `:3191`（next 系）/ `:5902` `:5993` `:6006` `:6020` `:6049`（report 系）/ `:6351`（failure ruling）/ `:6410`（park）/ `:6654` `:6725`（gate 系）/ `:6800`（`initProcessObservability`）ほか。
+[Issue #2361](https://github.com/amadeus-dlc/amadeus/issues/2361)（ミラー [#2995](https://github.com/amadeus-dlc/amadeus/issues/2995)）の患部領域は base..observed で**変更ゼロ**（`git diff --name-only 89532174c..HEAD -- plugins/formal-model-check tests/unit/t-formal-verif-tlc-spawn-planner.test.ts mise.toml` が空出力）。以下は observed 断面の構造である。
 
-→ **Issue の被害 (iii)「成功する undefined report が `spawnState(pd, …)`（`:5935` / `:6283`）で ambient record の state を変更する」は、`_handlerProjectDir` 側の型付けでは閉じない。** 閉じるには**入口レベルで `projectDir === undefined` を止める**しかない。逆に入口で止めれば、22 箇所の `resolveProjectDir(projectDir)` 面（`spawnState`、`handleStageFailureReport`、sensor、advisory latch）は**同時に**閉じる。
+`selectTlcSpawnPlanner`（`plugins/formal-model-check/tools/tlc-spawn-planner.ts:520-539`）は **同期関数で、可用性判定を一切持たない**。`provider === "auto"` は `platform === "darwin" ? "sandbox-exec" : "docker"` を選び、あとは planner のコンストラクタを返すだけである（`:533` / `:537`）。JDK 検出・`sandbox-exec` バイナリ・docker CLI の実在は、いずれも後段の `snapshotEnvironment` まで判明しない。
 
-### E. 既存の precedent（拒否ガードの様式）
+```text
+run-model-check-execution.ts:225  selectTlcSpawnPlanner   ← 同期・可用性検査ゼロ
+   ↓
+run-model-check-execution.ts:238  toolchain.preparePlanned({…, planner})
+   ↓
+fs-tlc-toolchain.ts:1831          await planner.snapshotEnvironment(…)
+   ↓
+tlc-spawn-planner.ts:131-191      NodePlannerEnvironmentPort.inspectDarwin
+     :132 platform 不一致 / :134 JAVA_HOME 不在 / :150-166 JDK version 不一致
+     / :167-168 sandbox-exec 不在 / :177-179 network-deny 未 deny → throw
+   ↓ catch（:316-321）→ ENVIRONMENT_UNAVAILABLE
+fs-tlc-toolchain.ts:1838          if (!environmentSnapshot.ok) return environmentSnapshot;
+```
 
-入口冒頭の拒否 → early return は既存様式である: `handleReport:5852 if (refuseUnauthorizedKimiCaller(projectDir)) return;`、`handleNext:3114 if (refuseBlockedNextEnvironment(projectDir)) return;`。拒否 directive の発行は `emitStateNeutralError`（`:903-905`）が既存形で、B の順序解析より ambient を一切触らない。
+Docker 側も対称で、可用性は `DockerTlcSpawnPlanner.snapshotEnvironment`（`:415`）→ `inspectDocker`（`:193`）→ `docker image inspect`（`:261`）まで判明しない（**デーモン起動の独立検査は存在せず**、image inspect の失敗としてのみ観測される）。
 
-ただし「projectDir の明示を要求する」既存の拒否**メッセージ**は不在（`git grep -n "requires --project-dir\|--project-dir is required\|projectDir is required" -- '*.ts'` → **0 hit / rc=0**、`\b` を含まない単純部分文字列述語）。文言は新規に設計する必要がある。
+構造上の帰結は 2 点である。(1) **フォールバックを差し込める自然な合流点は「選択時」ではなく `snapshotEnvironment` 失敗の直後**であり、選択時に倒すなら `selectTlcSpawnPlanner` の async 化(= referee 経路 `tla-referee-toolchain.ts:224` への signature 波及)が要る。(2) `provider === "auto"` の分岐は repo 全体で **2 箇所のみ**（`:526` の選択と `:68` の `createNotRunPlannerReceipt` 内 receipt plan 選択）で、**片方だけ変えると receipt が実際に走った planner と異なる inspection plan を名乗る**。env-receipt スキーマ（`amadeus.env-receipt.v1`、`run-model-check-domain.ts:93-98`）自体は provider 中立なので、フォールバックのための schema 変更は不要である。
 
-### 適用範囲外（明示）
-
-入口で拒否するか型で表現するか、`main` 側で dispatch 前に解決するか、拒否メッセージの文言、`handlePark` を対象に含めるか否かは、requirements-analysis / application-design の所掌である。
-
-## projectDir 解決の段構造と in-process 呼出における ambient 逸出（260814-t528-ambient-isolation、履歴、observed `5f6b5bf97`）
+## projectDir 解決の段構造と in-process 呼出における ambient 逸出（260814-t528-ambient-isolation、現在、observed `5f6b5bf97`）
 
 対象: [Issue #2981](https://github.com/amadeus-dlc/amadeus/issues/2981)。測定 ref = observed `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`。file:line はすべて observed 断面で verbatim 実読して採取した。
 
@@ -119,7 +122,7 @@ E2 の汚染は監査シャード1行に限定される。`admitProductionStageF
 
 E1 / E2 の閉包方式の選定、`undefined` を引数契約から排除するか実行時に拒否するか、`pluginHostRoot()` に projectDir を通すか否かは requirements-analysis / application-design の所掌である。
 
-## ライフサイクル進行ガードの集約構造と分散（260813-lifecycle-guard-runtime、履歴、observed `89532174c`）
+## ライフサイクル進行ガードの集約構造と分散（260813-lifecycle-guard-runtime、履歴、observed `89532174c`。**本節は #2986 着地前の断面**であり、Runtime の不在はこの断面の事実。着地後の構造は上の 260814 節を参照）
 
 **観測 ref**: すべて observed = `89532174c30ef9cc7ff29496cd6916586fdda00a`（= 本 worktree HEAD = `origin/main`）。差分 base = `854692fd7a11b124236b0427fe3d59e2fe6bf785`（`git merge-base --is-ancestor` exit 0、`git rev-list --count` = 35 commits / 233 files）。全数列挙・検索述語 P1〜P13・G1〜G40 の棚卸しは `re-scans/260813-lifecycle-guard-runtime.md` を正本とする。本節はそこから**構造だけ**を転記する。
 
