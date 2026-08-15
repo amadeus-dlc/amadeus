@@ -109,6 +109,40 @@ function projectionDigest(): string {
   return hash.digest("hex");
 }
 
+/**
+ * Probe the checkout's own self-install projection. The final case below drives
+ * the live `promote-self --check` and therefore only holds while the projection
+ * is in sync; a local `bun run build` or a plugin compose can leave it dirty
+ * (#3034), which is a property of the working tree, not of doctor's contract.
+ *
+ * Only detected drift earns the skip. `--check` exits 1 for reasons that are
+ * NOT drift as well (a usage error, a failed build, a spawn that never ran), and
+ * treating those as "not in sync" would silently retire the case — so anything
+ * that is neither a clean run nor a drift report is reported as a failure.
+ */
+type LiveProjection =
+  | { kind: "clean" }
+  | { kind: "drift"; report: string }
+  | { kind: "unusable"; report: string };
+
+function liveSelfInstallCheck(): LiveProjection {
+  const result = spawnSync("bun", [join(REPO_ROOT, "scripts", "promote-self.ts"), "--check"], {
+    cwd: REPO_ROOT,
+    encoding: "utf-8",
+  });
+  const report = `${result.stdout ?? ""}${result.stderr ?? ""}`.trim();
+  if (result.status === 0) return { kind: "clean" };
+  // The drift verdict is the one `--check` prints per problem; every other
+  // nonzero exit (including a spawn that produced no status at all) is a broken
+  // probe, not a dirty projection.
+  const drift = result.status === 1 && /^\s*(MISSING|DIFFERS|ORPHAN|MISPLACED):/m.test(report);
+  return drift ? { kind: "drift", report } : { kind: "unusable", report };
+}
+
+// Evaluated once, before registration, so the runner can show the case as
+// skipped rather than as a silently returning pass.
+const liveProjection: LiveProjection = liveSelfInstallCheck();
+
 function trackedStatus(): string {
   const result = spawnSync("git", ["status", "--porcelain", "--untracked-files=no"], {
     cwd: REPO_ROOT,
@@ -199,51 +233,64 @@ describe("doctor self-install projection freshness", () => {
     }
   });
 
-  test("should detect an older projected tool generation and leave repository surfaces unchanged", () => {
-    const projectDir = healthyProject();
-    writePromoteSelfFixture(projectDir, repositoryCheckFixture());
-    for (const root of PROJECTED_ROOTS) {
-      expect(existsSync(join(REPO_ROOT, root, "scripts", "promote-self.ts"))).toBe(false);
-    }
-    const projectedTool = join(REPO_ROOT, ".claude", "tools", "amadeus-version.ts");
-    const currentBytes = readFileSync(projectedTool);
-    const olderBytes = Buffer.from(
-      currentBytes.toString("utf-8").replace(
-        /export const AMADEUS_VERSION = "\d+\.\d+\.\d+";/,
-        'export const AMADEUS_VERSION = "0.0.0";',
-      ),
-      "utf-8",
-    );
-    expect(olderBytes.equals(currentBytes)).toBe(false);
-    const cleanDigest = projectionDigest();
-    const cleanStatus = trackedStatus();
+  test.skipIf(liveProjection.kind === "drift")(
+    "should detect an older projected tool generation and leave repository surfaces unchanged",
+    () => {
+      if (liveProjection.kind === "unusable") {
+        throw new Error(
+          [
+            "the live promote-self --check baseline could not be established:",
+            "the probe neither passed nor reported projection drift.",
+            liveProjection.report,
+          ].join("\n"),
+        );
+      }
+      const projectDir = healthyProject();
+      writePromoteSelfFixture(projectDir, repositoryCheckFixture());
+      for (const root of PROJECTED_ROOTS) {
+        expect(existsSync(join(REPO_ROOT, root, "scripts", "promote-self.ts"))).toBe(false);
+      }
+      const projectedTool = join(REPO_ROOT, ".claude", "tools", "amadeus-version.ts");
+      const currentBytes = readFileSync(projectedTool);
+      const olderBytes = Buffer.from(
+        currentBytes.toString("utf-8").replace(
+          /export const AMADEUS_VERSION = "\d+\.\d+\.\d+";/,
+          'export const AMADEUS_VERSION = "0.0.0";',
+        ),
+        "utf-8",
+      );
+      expect(olderBytes.equals(currentBytes)).toBe(false);
+      const cleanDigest = projectionDigest();
+      const cleanStatus = trackedStatus();
 
-    const cleanResult = handleDoctor(resolveDoctorContext(projectDir));
-    expect(cleanResult.exitCode).toBe(0);
-    for (const diagnostic of DRIFT_DIAGNOSTICS) {
-      expect(cleanResult.output).not.toContain(diagnostic);
-    }
-    expect(projectionDigest()).toBe(cleanDigest);
-    expect(trackedStatus()).toBe(cleanStatus);
+      const cleanResult = handleDoctor(resolveDoctorContext(projectDir));
+      expect(cleanResult.exitCode).toBe(0);
+      for (const diagnostic of DRIFT_DIAGNOSTICS) {
+        expect(cleanResult.output).not.toContain(diagnostic);
+      }
+      expect(projectionDigest()).toBe(cleanDigest);
+      expect(trackedStatus()).toBe(cleanStatus);
 
-    writeFileSync(projectedTool, olderBytes);
-    const staleDigest = projectionDigest();
-    let result: ReturnType<typeof handleDoctor>;
-    let digestAfterDoctor: string;
-    let statusAfterDoctor: string;
-    try {
-      result = handleDoctor(resolveDoctorContext(projectDir));
-      digestAfterDoctor = projectionDigest();
-      statusAfterDoctor = trackedStatus();
-    } finally {
-      writeFileSync(projectedTool, currentBytes);
-    }
+      writeFileSync(projectedTool, olderBytes);
+      const staleDigest = projectionDigest();
+      let result: ReturnType<typeof handleDoctor>;
+      let digestAfterDoctor: string;
+      let statusAfterDoctor: string;
+      try {
+        result = handleDoctor(resolveDoctorContext(projectDir));
+        digestAfterDoctor = projectionDigest();
+        statusAfterDoctor = trackedStatus();
+      } finally {
+        writeFileSync(projectedTool, currentBytes);
+      }
 
-    expect(result.exitCode).toBe(1);
-    expect(result.output).toContain("DIFFERS: .claude/tools/amadeus-version.ts");
-    expect(digestAfterDoctor).toBe(staleDigest);
-    expect(statusAfterDoctor).toBe(cleanStatus);
-    expect(projectionDigest()).toBe(cleanDigest);
-    expect(trackedStatus()).toBe(cleanStatus);
-  }, scaleTestTime(300_000));
+      expect(result.exitCode).toBe(1);
+      expect(result.output).toContain("DIFFERS: .claude/tools/amadeus-version.ts");
+      expect(digestAfterDoctor).toBe(staleDigest);
+      expect(statusAfterDoctor).toBe(cleanStatus);
+      expect(projectionDigest()).toBe(cleanDigest);
+      expect(trackedStatus()).toBe(cleanStatus);
+    },
+    scaleTestTime(300_000),
+  );
 });

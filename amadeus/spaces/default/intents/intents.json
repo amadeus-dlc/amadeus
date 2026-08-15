@@ -1238,6 +1238,13 @@
     "status": "in-flight"
   },
   {
+    "uuid": "01a00282-0af2-74e2-91d5-e30058ba5862",
+    "slug": "priority-bug-batch",
+    "dirName": "260814-priority-bug-batch",
+    "scope": "self-fix",
+    "status": "in-flight"
+  },
+  {
     "uuid": "01a0028a-aefd-72b7-9e1b-53bb13e5f452",
     "slug": "open-bug-batch-6",
     "dirName": "260814-open-bug-batch-6",

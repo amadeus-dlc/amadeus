@@ -1,6 +1,6 @@
 # API ドキュメント
 
-## Lifecycle Guard Runtime の公開契約と新設リファレンス（260814-fmc-macos-provider、現在、observed `5f6b5bf97`）
+## Lifecycle Guard Runtime の公開契約と新設リファレンス（260814-fmc-macos-provider、履歴、observed `5f6b5bf97`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: observed = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`、差分 base = `89532174c30ef9cc7ff29496cd6916586fdda00a`（9 commits）。正本は `re-scans/260814-fmc-macos-provider.md`。
 
@@ -1900,7 +1900,7 @@ Store の読み取り API は次の単問 shape を返す。
 
 後方読み取りは「旧 definition を新 canonical model の1問へ decode」する API 境界で実現し、新形式専用 parser へ即時置換して既存 `election.json` を読めなくすることはできない。`readTally` の raw JSON cast と `JSON.stringify` 同士の tally equality は、多問 schema 導入時に typed parser / canonical equality へ置き換える必要がある。
 
-## PR convergence 契約（現在、Issue #2985、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
+## PR convergence 契約（履歴、Issue #2985、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 ### CLI
 
@@ -2011,3 +2011,75 @@ Unit "<unit>" failed during <stageSlug> (attempt <n>, batch <b>; siblings: <unit
 ```
 
 型面は `:94`（`soloElection: Readonly<{...}>`）、解決は `:771-775`（`mode: value("solo-election.trigger.mode") as SoloElectionTriggerMode`）。`ALL_LAYERS` により project / space / intent の 3 層で解決される。
+
+## 選挙 CLI の多問化とプラグイン設定の公開契約（260814-priority-bug-batch、現在、observed `d64fd7cac`）
+
+**観測 ref**: base `1d08374cd7e4ef89637b4a8000bab3fcf1a0f780` → observed `d64fd7cac049d7c2cda7dd7dc7d9d0a652ff02d7`。本節は本区間で API 断面が変わった 3 系統（選挙 / plugin.settings / プラグインパスの rename）をシグネチャ水準で記録する。全エクスポート面は `grep -n "^export " <file>` の出力から転記した。
+
+### プラグインパスの rename（PR #3051）
+
+`plugins/pr-convergence/` → `plugins/github-pr-convergence/`。CLI の起動パスは `bun plugins/github-pr-convergence/tools/pr-convergence-cli.ts <verb>` になる。ツール内のファイル名（`pr-convergence-cli.ts` / `-gh-runner.ts` / `-predicate.ts` / `-ledger.ts` / `-provenance.ts` / `-presentation.ts` / `-attestation.ts` / `-git-runner.ts` / `amadeus-sensor-pr-convergence-report-format.ts`）と sensor manifest 名（`sensors/amadeus-pr-convergence-report-format.md`）、verb 集合（`create` / `status` / `report` / `override`）はいずれも不変で、変わったのは第 1 階層のディレクトリ名だけである。本ファイル内の旧パス表記は、それを宣言する観測断面が rename 以前である**履歴節に限って**保存されている（本節より前の `## PR 収束 CLI の外部境界と内部契約`、`## PR convergence 契約` の 2 節）。
+
+### 選挙 CLI（`packages/framework/core/tools/amadeus-election.ts`、804 行）
+
+verb 集合は 9 個で不変（USAGE 逐語、`:42-43`）:
+
+```
+Usage: bun <harness-dir>/tools/amadeus-election.ts <open|next|status|vote|notify|tally|render|verify|report> [--election <id>] [--file <path>] [--trigger manual|auto] [--project <dir>]
+```
+
+変わったのは戻り値の形である。schemaVersion は 2 に固定され、指令・エラー・集計がすべて**問(question)単位**の識別子を持つ。
+
+| エクスポート | シグネチャ（要約） | 多問化での変化 |
+|---|---|---|
+| `ElectionCliErrorCategory` | `"decode" \| "store" \| "config" \| "invalid-transition" \| "stale-directive" \| "coverage" \| "preservation" \| "verification" \| "transport"` | `stale-directive` / `coverage` / `preservation` が新設。問ごとの成立を壊す遷移を型で分離する |
+| `ElectionCliError` | `{ category; electionId; questionId?; runId?; nextAction }` | `questionId` / `runId` を追加。どの問のどの集計回で失敗したかを呼び出し側が識別できる |
+| `ElectionDirective` | `DirectiveBase & { kind }` の判別ユニオン。`kind` は `distribute` / `collect-wait` / `tally-ready` / `hold` / `render` / `verify` / `done` | `DirectiveBase` が `targetQuestionIds: readonly string[]`、`preservedResultDigest: string \| null`、`expectedRunId: string \| null` を持つ。`hold` は `held: { questionId; reason: HoldReason }[]` を返し、**保留は問ごと**になった |
+| `nextElection(root, electionId)` | `ElectionCliResult<ElectionDirective>` | 再実行対象は「保留中の問だけ」に絞られる（`currentTargets`: 現行 tally に hold があればその問 ID 集合、なければ `targetQuestionIds`） |
+| `statusElection` / `openElection` / `triggeredOpenElection` / `voteElection` / `notifyElection` / `tallyElection` / `renderElection` / `verifyElection` / `reportElection` | いずれも `ElectionCliResult<T>` | verb 名と引数の形は維持。`triggeredOpenElection` が `--trigger manual\|auto` を受ける |
+| `main(argv, projectDir?)` | `number`（exit code） | `--project` は repo 外 scratch へ store を向けるための override |
+
+### 新規モジュール 1: `amadeus-election-codec.ts`（908 行、新規）
+
+schemaVersion 2 の canonical schema と legacy decoder を持つ。旧 `amadeus-election-model.ts` のデータモデル責務がここへ移った。
+
+- 型: `CanonicalElectionChoice` / `CanonicalElectionQuestion` / `CanonicalElectionDefinition` / `CanonicalBallotResponse` / `CanonicalBallotRef` / `CanonicalBallot` / `CanonicalGoaCounts` / `CanonicalChoiceCount` / `CanonicalQuestionResult` / `CanonicalTally` / `BallotDecodeContext`
+- エラー: `ElectionCodecErrorCategory` / `ElectionCodecError` / `ElectionCodecResult<T>`（判別ユニオン、例外を投げない）
+- コンパニオン: `ElectionDefinitionCodec`（`:279`）/ `BallotCodec`（`:543`）/ `TallyCodec`（`:804`）
+
+### 新規モジュール 2: `amadeus-election-question-tally.ts`（386 行、新規）
+
+問ごとの集計方針を持つ純粋モジュール。
+
+- 型: `QuestionId` / `ResolvedResponse` / `LateResponse` / `LateResponseClassification` / `TallyErrorCategory` / `TallyError` / `TallyPolicyResult<T>` / `ElectionTallyDraft`
+- 関数: `resolveResponses`（`:77`、voter×question の解決）/ `classifyLateResponses`（`:127`）/ `canEarlyTally`（`:190`）/ `deriveLifecycle`（`:334`）/ `tallyQuestions`（`:340`）
+
+### 縮小: `amadeus-election-model.ts`（32 行）
+
+共有語彙だけを残す。`Result<T, E>` / `ok` / `err` / `VoterKind`（`"member" \| "subagent"`）/ `HoldReason`（`"tie" \| "block" \| "quorum-short" \| "discussion-needed" \| "split"`）。ファイル冒頭コメントが逐語で「The election data model itself — definitions, ballots, tallies — lives in amadeus-election-codec.ts as the canonical schemaVersion 2 shapes.」と宣言する。
+
+### `amadeus-election-store.ts`（1232 行）
+
+- `ElectionState`: `"draft" \| "open" \| "collecting" \| "partial" \| "tallied" \| "rendered" \| "recorded"`。**`partial` が新設**され、一部の問だけが成立した状態を型で表す
+- `ElectionSnapshot`: `{ definition; state; pending; ledger; materialized; currentTally: CanonicalTally \| null; history: readonly CanonicalTally[]; timeline }`。集計は 1 件ではなく履歴を持つ
+- `TallyDurableStep`: `"history" \| "current" \| "state" \| "registry" \| "timeline"`。`TallyCommitResult` は失敗時も `durable` に到達済みステップを載せ、部分書込を呼び出し側へ可視化する
+- `ElectionStore` コンパニオン（`:971`）の面: `create` / `load` / `readSnapshot` / `setState` / `appendPending` / `integratePending` / `readTallyHistory` / `establishedResultsDigest` / `commitTally` / `verify`。`establishedResultsDigest` と `commitTally` が、既に成立した問の結果を再実行で壊さないこと（preservation）を担う
+- パス: `electionsRoot(projectDir, space = "default")` = `<projectDir>/amadeus/spaces/<space>/elections`
+
+### `amadeus-election-record.ts`（651 行）
+
+- 配布ビュー: `DistributionChoice`（`CanonicalElectionChoice` を継承）/ `DistributionQuestion` / `DistributionView` / `buildDistributionView`（`:74`）— 投票者へ渡す blind view が問の配列を持つ
+- 記録: `ElectionRecordInput` / `ElectionRecordLateResponse` / `ElectionRecordTimelineEvent` / `ElectionRecordLifecycle`（`"partial" \| "tallied"`）
+- 検証: `ElectionRecordFindingKind` / `ElectionRecordFinding` / `ElectionRecordVerificationInput` / `ElectionRecordVerificationResult` = `Result<void, readonly ElectionRecordFinding[]>`
+- 関数: `renderElectionRecord`（`:251`）/ `verifyElectionRecord`（`:637`）
+
+### 新規モジュール 3: `amadeus-plugin-settings.ts`（274 行、新規、PR #3052）
+
+プラグインが宣言し、利用者が config で上書きする設定の型と解決。
+
+- 制約: `SETTINGS_KEY_RE = /^[a-z][a-z0-9-]{0,63}$/`、`SECRET_KEY_RE = /token|password|secret|credential|apikey|api-key/`（秘匿値をこの経路へ載せさせない）
+- 型: `SettingType`（`"string" \| "number" \| "boolean" \| "enum"`）/ `SettingScalar` / `SettingDeclaration` / `PluginSettingsDeclaration` / `PluginSettingsOverrides` / `ResolvedSettings` / `SettingsResolution`
+- 関数: `parseSettingsDeclaration`（`:54`）/ `collectSettingsMisspellings`（`:92`）/ `settingsKeyViolation`（`:120`）/ `valueMatchesType`（`:193`）/ `resolvePluginSettings`（`:240`）
+- `resolvePluginSettings(plugin, declaration, overrides)` は `{ ok: true; settings }` か `{ ok: false; error: { code: "unknown-key" \| "type-mismatch" \| "enum-out-of-range"; plugin; key; detail } }` を返す。**既定値へ落とすフォールバックはない** — 実装コメントが逐語で「it refuses rather than defaulting: a plugin running on a default the operator did not ask for is a silent misconfiguration.」と述べる
+- 消費面: `amadeus-sensor.ts:291` `resolvePluginSettingsForSensor(sensorId, hostRoot, projectDir, deps)` → `SettingsResolution | null`（宣言を持たないプラグインでは `null` = 不在であり fallback ではない）、`amadeus-sensor.ts:324` `pluginSettingsOverrides(projectDir, resolveConfig)`、`amadeus-plugin-compose.ts:362-363`（compose 時の宣言検査）
+- config 面: `amadeus-config.ts` の registry entry `plugin.settings`（`:649-655`、`layers: ALL_LAYERS` = project / space / intent、`merge: "plugin-settings"` でプラグイン別・キー別にマージ）
