@@ -2316,7 +2316,12 @@ export function compileStageGraph(): {
   // the same directory as sensorsDir(), so the merge is a no-op there; on a
   // packages/dist run it is the only place a plugin-supplied manifest exists
   // (#3026: without this, a declared plugin sensor fails UNKNOWN_SENSOR).
-  mergeSensorsFromDir(join(pluginHost, "sensors"), sensorsById);
+  // Gated on the explicit env override: a default host resolves to the same
+  // tree as sensorsDir() (self-install), and the AMADEUS_SENSORS_DIR test
+  // seam must keep isolating the registry when no composed host is named.
+  if (process.env.AMADEUS_PLUGINS_HOST_ROOT) {
+    mergeSensorsFromDir(join(pluginHost, "sensors"), sensorsById);
+  }
   for (const { file, data } of readTrustedPluginStageIndex(pluginHost)) {
     const slug = data.slug;
     const plugin = file.path.split("/")[1] ?? file.path;

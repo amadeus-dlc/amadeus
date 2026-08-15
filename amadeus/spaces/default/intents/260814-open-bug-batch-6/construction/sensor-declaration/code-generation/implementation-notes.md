@@ -28,3 +28,7 @@
 - fixture 是正3種: lifecycle/t450 の hostSnapshot が `sensors/` を walk(owned sensor path が drift 誤判定されていた)、discovery テストはセンサー manifest を host へ併置(実 compose の配送の写像)
 - `t3026` の size 注釈 small→medium(実測 drift guard 指摘)
 - 再実測: 対象5ファイル **42 pass / 0 fail**(bun test、本 worktree)。allowlist audit exit 0 / coverage registry --check OK / model-map に amadeus-graph の実装ピンなし(grep 0)/ typecheck exit 0 / 0-plugin byte-identity 復元を含む
+
+### 追補(同日): 隔離シーム保全
+
+初回是正のマージが `AMADEUS_SENSORS_DIR` テスト隔離シームを汚染し t89 の 4 テストが赤化(cid:code-generation:c2-env-isolation-seam-inventory の失敗様式)。マージを `AMADEUS_PLUGINS_HOST_ROOT` が明示された場合のみに限定(既定 host は sensorsDir と同一ツリーのため不要、明示 composed host だけが独自 sensors を持ち込む)。再実測: t89 + 対象5ファイル **65 pass / 0 fail**。
