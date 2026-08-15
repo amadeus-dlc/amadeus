@@ -2,7 +2,8 @@
 > This file is maintained by the orchestrator during stage execution. Add observations at the gate ritual, not by editing here directly.
 
 ## Interpretations
-- 2026-08-15T01:50:00Z — 本体ワークフロー側の実行: tla-authoring の not-applicable 終端を受け NOT_APPLICABLE を記録、TLC 非起動(stage 条件どおり)。advisory 由来の single 実行(全4モデル NOT_DETECTED)は本日実施済みで別記録
+- 2026-08-15T01:20:00Z — remote-first に従いフルスイートは CI を正とし、ローカルは targeted+advisory に留めた。perf/security 指示書は適用 NFR 不在の判定文書として作成(検証劇場回避)
+- 2026-08-15T01:20:00Z — 相対 coverage ゲート赤の一次原因を「巨大ファイルの in-process import による母集団膨張」と特定し、テスト都合の waiver でなく実装側の小モジュール切り出しで是正した
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations
