@@ -46,6 +46,7 @@ import {
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 
@@ -374,6 +375,13 @@ describe("t212 optional_produces per-unit routing and coverage", () => {
     REPO_ROOT,
     "dist/claude/.claude/tools/data/scope-grid.json",
   );
+
+  // Each case builds its own fixture project, and the canonical emit path
+  // registers a Logger Provider for one workspace per process — so the
+  // registration is dropped between cases, as the sibling engine suites do.
+  beforeEach(() => {
+    resetOtelPerProject();
+  });
 
   afterEach(() => {
     while (projects.length > 0) cleanupTestProject(projects.pop());

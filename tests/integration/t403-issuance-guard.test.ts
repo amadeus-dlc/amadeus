@@ -15,7 +15,7 @@
 // new branches stay honest under the coverage gate. A spawned CLI would run the
 // same code uninstrumented.
 
-import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -39,13 +39,15 @@ process.env.AMADEUS_SKIP_ARTIFACT_GUARD ??= "1";
 process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD ??= "1";
 resetAidlcEnv();
 
+// Each case builds its own fixture project, and the canonical emit path
+// registers a Logger Provider for one workspace per process — so the
+// registration is dropped between cases, as the sibling engine suites do.
+beforeEach(() => {
+  resetOtelPerProject();
+});
+
 const tempDirs: string[] = [];
 afterEach(() => {
-  // Each case mints its own project and drives production code that bootstraps
-  // OTel on the way to an audit emit (the per-unit outcome a Construction
-  // iteration settles). One workspace per process is the production invariant,
-  // so the per-process records are dropped between cases.
-  resetOtelPerProject();
   while (tempDirs.length) cleanupTestProject(tempDirs.pop());
 });
 
