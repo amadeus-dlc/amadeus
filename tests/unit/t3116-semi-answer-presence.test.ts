@@ -135,9 +135,30 @@ describe("R-21: the answer-path presence carve-out follows the declared mode", (
     expect(answers(proj)).toBe(0);
   });
 
-  // The projection alone must not open the carve-out: a record whose scheduling
-  // field says autonomous with no declaration behind it is exactly the
-  // out-of-band write the divergence check refuses elsewhere.
+  // Fail-closed (election E-260816-R21-PRESENCE-BYPASS, binding reservation 1):
+  // the carve-out opens on a READ mode of `full` and on nothing else. A record
+  // the predicate cannot read a mode from — the row missing, the value empty, the
+  // value hand-edited to something outside the domain — keeps the presence guard.
+  // Each of these carries an `autonomous` projection, so under the retired
+  // predicate (which read the projection) every one of them would have bypassed.
+  test("a mode the predicate cannot read keeps the guard, whatever the projection says", () => {
+    for (const row of ["- **Intent Autonomy Mode**:", "- **Intent Autonomy Mode**:   ", "- **Intent Autonomy Mode**: Full"]) {
+      cleanupTestProject(proj);
+      proj = createTestProject();
+      seedStateFile(proj, MID_IDEATION);
+      const sf = seededStateFile(proj);
+      writeFileSync(sf, `${readFileSync(sf, "utf-8")}\n${row}\n- **Construction Autonomy Mode**: autonomous\n`, "utf-8");
+      seedLedger(proj);
+      const r = guardedLog(proj, ["answer", "--stage", "feasibility", "--details", "my answer"]);
+      expect(r.rc).not.toBe(0);
+      expect(r.out).toContain("a real human has not acted");
+      expect(answers(proj)).toBe(0);
+    }
+  });
+
+  // The projection alone must not open the carve-out either: a record whose
+  // scheduling field says autonomous with no declaration row behind it at all is
+  // exactly the out-of-band write the divergence check refuses elsewhere.
   test("an autonomous projection with no declared mode does NOT exempt the answer", () => {
     const sf = seededStateFile(proj);
     writeFileSync(sf, `${readFileSync(sf, "utf-8")}\n- **Construction Autonomy Mode**: autonomous\n`, "utf-8");
