@@ -9,6 +9,7 @@ import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 
 import {
+  ALL_INTERACTION_KINDS,
   autonomyDigest,
   autonomyScopeFingerprint,
   authorizeInteraction,
@@ -81,18 +82,11 @@ import {
   writeStateFile,
 } from "./amadeus-lib.ts";
 
-const ALL_INTERACTIONS: readonly InteractionKind[] = [
-  "stage-gate",
-  "phase-gate",
-  "walking-skeleton",
-  "question",
-];
-
 // What a mode auto-decides. Derived from the two existing constants rather than
 // restated, so the pair a semi Intent leaves to the human moves whenever
 // SEMI_ROUTINE_INTERACTIONS moves (FR-2b, BR-U1-7).
 function autoDecidedKinds(mode: AutonomyMode): readonly InteractionKind[] {
-  if (mode === "full") return ALL_INTERACTIONS;
+  if (mode === "full") return ALL_INTERACTION_KINDS;
   if (mode === "semi") return SEMI_ROUTINE_INTERACTIONS;
   return [];
 }
@@ -101,7 +95,7 @@ function autoDecidedKinds(mode: AutonomyMode): readonly InteractionKind[] {
 // is how a human sees, before granting, which gates stay theirs.
 export function nonAutoDecidedKinds(mode: AutonomyMode): readonly InteractionKind[] {
   const decided = autoDecidedKinds(mode);
-  return ALL_INTERACTIONS.filter((kind) => !decided.includes(kind));
+  return ALL_INTERACTION_KINDS.filter((kind) => !decided.includes(kind));
 }
 
 // Exported so a caller that builds its own option effects can prove, in a test
@@ -519,7 +513,7 @@ function grantScope(input: GrantScopeInput): GrantScopeDescriptor {
     intentUuid: input.projection.intentUuid,
     scopeId,
     ...fingerprints,
-    allowedInteractionKinds: ALL_INTERACTIONS,
+    allowedInteractionKinds: ALL_INTERACTION_KINDS,
     permissionBoundaryFingerprint: autonomyDigest("native-host-permission-boundary-v1"),
     prohibitedEffects: PROHIBITED_EFFECTS,
   };

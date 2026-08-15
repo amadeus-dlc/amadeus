@@ -21,6 +21,16 @@ export type AutonomyMode = "none" | "semi" | "full";
 export type WorkflowExecutionState = "running" | "suspended" | null;
 export type IntentGrantState = "active" | "revoked" | "completed";
 export type InteractionKind = "stage-gate" | "phase-gate" | "walking-skeleton" | "question";
+// The kind universe, next to the union it enumerates so widening one without the
+// other fails typecheck here. Lives in the pure layer because the semi
+// permission set is derived from it (SEMI_ROUTINE_INTERACTIONS below) and the
+// dependency only ever runs production -> pure.
+export const ALL_INTERACTION_KINDS: readonly InteractionKind[] = [
+  "stage-gate",
+  "phase-gate",
+  "walking-skeleton",
+  "question",
+];
 export type StopReason = "AWAITING_HUMAN" | "REPAIR_STALLED" | "NORM_CONFLICT" | "USER_PARKED";
 
 // C3 / FR-2 (RFC-0001) — the single read-only effective-interactivity port.
@@ -628,9 +638,15 @@ export function createInteractionOccurrence(input: Omit<InteractionOccurrence, "
   };
 }
 
-// The interaction kinds semi decides on its own. Milestones (walking skeleton,
-// phase gates) are absent by construction, which is what keeps them human.
-export const SEMI_ROUTINE_INTERACTIONS: readonly InteractionKind[] = ["stage-gate", "question"];
+// The milestones semi always leaves to the human (RFC-0001 FR-5). This is the
+// only place the pair is named; the permission set below is its complement, so
+// a new InteractionKind becomes semi-decidable without touching either list.
+const SEMI_HUMAN_MILESTONES: readonly InteractionKind[] = ["phase-gate", "walking-skeleton"];
+
+// The interaction kinds semi decides on its own. Milestones are absent by
+// construction, which is what keeps them human.
+export const SEMI_ROUTINE_INTERACTIONS: readonly InteractionKind[] =
+  ALL_INTERACTION_KINDS.filter((kind) => !SEMI_HUMAN_MILESTONES.includes(kind));
 
 export interface SemiAuthorityScope {
   readonly intentUuid: string;
@@ -685,10 +701,15 @@ export const SemiAuthority = {
       }),
     };
   },
+  // The third term is scope-independent on purpose: a caller that hands semi a
+  // scope listing a milestone still does not get the milestone decided. The
+  // retired form compared occurrence.phase against "phase-boundary", a sentinel
+  // production never supplies (it passes the lifecycle phase), so the milestone
+  // line rested on the kind list alone.
   allowsOccurrence(authority: SemiAuthority, occurrence: InteractionOccurrence): boolean {
     return authority.scope.intentUuid === occurrence.intentUuid &&
       authority.scope.allowedInteractionKinds.includes(occurrence.kind) &&
-      occurrence.phase !== "phase-boundary";
+      !SEMI_HUMAN_MILESTONES.includes(occurrence.kind);
   },
   // The authority is the receiver, not a predicate input: scope was already
   // settled at the first gate (allowsOccurrence), so the effect arm only has to
