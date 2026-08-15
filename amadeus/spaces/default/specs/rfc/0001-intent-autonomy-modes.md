@@ -2,12 +2,12 @@
 feature: intent-autonomy-modes
 start-date: 2026-08-15
 rfc-pr: https://github.com/amadeus-dlc/amadeus/pull/3083
-tracking-issue: (承認後に記入)
-status: draft
+tracking-issue: (実装 intent のミラー Issue — intent 開始時に engine が生成した番号を記入)
+status: approved
 version: 1
-approved-by: (未承認)
-approved-at: (未承認)
-approval-ref: 裁定素材 = 2026-08-15 セッションの実 HUMAN_TURN 7 件(逐語は付録 A。指示 5〜7 は Q1/Q3/Q17 と UI 真実性の裁定)。RFC 自体の承認はこれから
+approved-by: j5ik2o(ユーザー)
+approved-at: 2026-08-15
+approval-ref: 2026-08-15 セッション実 HUMAN_TURN(付録 A 指示 8 — 承認と Q16 裁定)。裁定素材は同セッションの指示 1〜8(指示 5〜7 は Q1/Q3/Q17 と UI 真実性の裁定)。承認記入 PR は本ファイルの git 履歴参照
 bound-surfaces: |
   packages/framework/core/amadeus-common/protocols/stage-protocol.md(:131,:135,:137,:139-152,:286,:1064-1075,:1224-1236)
   packages/framework/core/tools/amadeus-intent-autonomy.ts / -production.ts / -runtime.ts
@@ -168,6 +168,7 @@ Q1・Q3・Q17 の裁定(2026-08-15、付録 A 指示 5〜7)で棄却した代替
 - Q1=A: 判別ユニオン `RecommendationOutcome`(Reference-level「主要な実装面」参照。提示様式・頻度予算の UX 契約込み)
 - Q3=A′: セッション単位の対話判定(Guide-level「対話モードと非対話モード」参照。鮮度ウィンドウは棄却)
 - Q17=A: `solo-election.trigger.mode` は mode へ従属・キー廃止、mirror / finding は consent 軸として独立維持+常時可視(Reference-level D2/D11 参照)。あわせて「UI 真実性の契約」(Guide-level)を採用
+- Q16=単一 intent(付録 A 指示 8): 実装は分割せず 1 つの intent(Intent Autonomy Mode = full)で実行する。ノルム改定 3 レイヤーと機構改修も同一 intent に載せる。project.md「大規模 initiative を規模だけを理由に複数 intent へ分割しない」(1 intent = 監査・trace の anchor)と整合し、並行化は Units / Bolt で行う。1 intent = 1 unit 原則は degrade スコープの制約であり、units-generation を EXECUTE する本実装には適用されない
 
 **実装までに裁定すべき**:
 
@@ -182,7 +183,6 @@ Q1・Q3・Q17 の裁定(2026-08-15、付録 A 指示 5〜7)で棄却した代替
 - Q11: Stop hook の継続上限・ターン返却抑止の semi/full 再定義への追随(D10 の質問・compose carveout 再定義 — 対話モードではターンを返す — を含む)
 - Q14: 修復不能停止(REPAIR_STALLED)と非対話 park を同じ park 表現に載せるか分けるか
 - Q15: grant ceremony の簡素化と、相互必須不変量・発効前プレビュー(nonAutoDecidedKinds 提示)の扱い
-- Q16: 実装 intent の分割方針(ノルム改定 3 レイヤーと機構改修の載せ方。1 intent = 1 unit 原則との整合)
 - Q18: consent 軸キーの語彙分離 — 設定キー名から「mode」の語を外す改名の要否と互換面(旧キー loud fail の設計込み。Q17 裁定の派生)
 - Q19: Q1 の contested 発火率の受け入れ基準 — 実装後にどの母数・閾値で「頻発していない」を実測判定するか(頻度予算の機械化)
 
@@ -206,8 +206,9 @@ Q1・Q3・Q17 の裁定(2026-08-15、付録 A 指示 5〜7)で棄却した代替
 5. (UX 視点の要求)「UXがあるところあるとまずいです」「UX視点で考えましたか?」— Q3 初案(HUMAN_TURN 鮮度ウィンドウ)の棄却とセッション単位判定(A′)への修正を駆動した
 6. (UI 真実性)「変に隠蔽しないでね。設定ファイルやプロンプトで指示できる見えるものはUIです。UX都合をいいことに変に隠蔽されると、UI上にある情報と辻褄があわなきなるので。この点は問題ない?」— Guide-level「UI 真実性の契約」の直接根拠
 7. (Q 裁定)起草側が提示した選択肢(候補+推奨+棄却理由)に対する明示選択で、Q1=A / Q3=A′ / Q17=A と UI 真実性の契約を採用。採択対象の提案全文は本文の該当節(選択のターン自体は選択肢番号の指定)
+8. (承認と Q16 裁定)「承認するとして、まるごとfull intentでやったほうが良さそう」「変分けるとよくない」— RFC 本体の承認(選択肢採択との複合ターン)と、実装を単一の full intent で行う Q16 の裁定
 
-起草過程で AI が「semi = 全ゲート人間」と誤解釈した版があり、指示 3 で棄却された。AskUserQuestion による確認はユーザーが明示拒否(「askするな」)。**裁定として確定しているのは指示 1〜7 のみ**(1〜6 は逐語、7 は提示済み選択肢の採択)であり、本文はその正規化・敷衍である。逐語にない拡張は Unresolved questions で裁定を得る。
+起草過程で AI が「semi = 全ゲート人間」と誤解釈した版があり、指示 3 で棄却された。AskUserQuestion による確認はユーザーが明示拒否(「askするな」)。**裁定として確定しているのは指示 1〜8 のみ**(1〜6・8 は逐語、7 は提示済み選択肢の採択)であり、本文はその正規化・敷衍である。逐語にない拡張は Unresolved questions で裁定を得る。
 
 ## 付録 B: 現行仕様(as-is)— 確認ポイント × mode の実挙動
 
