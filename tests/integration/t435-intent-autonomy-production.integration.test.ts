@@ -88,7 +88,10 @@ function auditEvents(projectDir: string): string[] {
 function selectFullAutonomy(projectDir: string): { readonly status: number; readonly output: string } {
   const preview = run(projectDir, "amadeus-bolt.ts", ["preview-autonomy"]);
   expect(preview.status).toBe(0);
-  const digest = (JSON.parse(preview.output.trim()) as { displayDigest: string }).displayDigest;
+  // Line 1 is the JSON preview; line 2 (grant-ceremony R-2) is a paste-ready
+  // set-autonomy command, not JSON.
+  const previewJsonLine = preview.output.trim().split("\n")[0] as string;
+  const digest = (JSON.parse(previewJsonLine) as { displayDigest: string }).displayDigest;
   appendLedgerEvent(projectDir, "HUMAN_TURN");
   return run(
     projectDir,
@@ -351,6 +354,18 @@ describe("Intent-scoped autonomy production path", () => {
       principalId: "human-owner",
       policies,
       confirmedDisplayDigest: `sha256:${"0".repeat(64)}`,
+    })).toEqual({ ok: false, error: "CONFIRMATION_REQUIRED" });
+    expect(readProductionAutonomyProjection(projectDir)?.mode).toBe("none");
+
+    // An omitted digest is not the same failure mode as a wrong one — pin it
+    // separately (grant-ceremony R-4) rather than relying on the wrong-digest
+    // case above to cover it.
+    expect(applyProductionAutonomyMode({
+      projectDir,
+      stateContent,
+      mode: "full",
+      principalId: "human-owner",
+      policies,
     })).toEqual({ ok: false, error: "CONFIRMATION_REQUIRED" });
     expect(readProductionAutonomyProjection(projectDir)?.mode).toBe("none");
 
