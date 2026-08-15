@@ -37,6 +37,10 @@
 | `amadeus-model-completeness.md` | TLA モデルとその正典実装ファイル | `FormalElection` TLA モデルと選挙実装との乖離 |
 | `amadeus-self-scope-consistency.md` | Amadeus の自己スコープファイルとコンパイル済みグリッド | 自己開発専用: 5つのドッグフード用ハーネス間で4つの `self-*` スコープが一致すること |
 | `amadeus-pr-convergence-report-format.md` | ユニットの `pr-convergence-report.md` | オプトインの `github-pr-convergence` プラグインステージが宣言する: 収束レポートが CLI の書く必須フィールドを備えていること |
+| `amadeus-nfr-budget.md` | NFR ユニットの要件成果物 | 宣言済み要件 id 1件あたりのバイト数をステージ別上限と照合し、id 宣言の欠落・kind が要求する成果物の不在・測定可能な閾値を持たない performance id を報告する — advisory |
+| `amadeus-question-budget.md` | ステージの `*-questions.md` | 質問数を §8 Depth-Level Contract の深度別上限と照合する — advisory |
+| `amadeus-scope-sizing.md` | scope-definition 成果物 | スコープが列挙した capability 数を解決済み深度とともに記録し、深度対規模のバンド較正に備える — advisory |
+| `amadeus-git-drift.md` | 作業ツリーと origin の対比 | オプトインの `git-drift` プラグインが宣言する: 現在の作業が触れるファイルで origin が先行したことを報告する — advisory |
 
 そのすべてが `matches:` グロブ(詳細は下記)でゲートされます。最初の2つのドキュメント形状チェックは成果物ツリーにスコープし(同梱マニフェストは `**/{amadeus-docs,intents}/**` を持ちます — intent ごとのレコードツリーで、移行前のプロジェクト向けにレガシーの `amadeus-docs/` アームを残しています)、2つのコード品質チェックはそれぞれの言語グロブ(`**/*.{ts,js}`、`**/*.{ts,tsx}`)に、answer-evidence チェックは questions ファイル(`**/*-questions.md`)に、event-registry ドリフトチェックは比較対象のレジストリと監査ツールに、モデルチェックは比較対象の spec と実装のパスにスコープします。自己スコープチェックは通常のプロジェクトでは休止し、`self-*` スコープが存在するときだけ有効になります。自分のものを記述する前に、`amadeus-required-sections.md` を最初から最後まで読んでください — 同梱の中で最も小さく、フロントマターと散文本文という全体の形を示しています。
 

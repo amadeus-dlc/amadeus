@@ -70,6 +70,10 @@ These manifests ship under `.claude/sensors/`, each prefixed `amadeus-`:
 | `amadeus-model-completeness.md` | the TLA model and its canonical implementation files | Drift between the `FormalElection` TLA model and the election implementation |
 | `amadeus-self-scope-consistency.md` | Amadeus self-scope files and compiled grids | Self-development only: parity of the four `self-*` scopes across the five dogfood harnesses |
 | `amadeus-pr-convergence-report-format.md` | a unit's `pr-convergence-report.md` | Declared by the opt-in `github-pr-convergence` plugin stage: the convergence report carries the fields its CLI would have written |
+| `amadeus-nfr-budget.md` | an NFR unit's requirements artifacts | Bytes per declared requirement id against the per-stage ceiling, missing id declarations, absent kind-required artifacts, and performance ids with no measurable threshold — advisory |
+| `amadeus-question-budget.md` | a stage's `*-questions.md` | The number of questions asked against the depth's ceiling from the §8 Depth-Level Contract — advisory |
+| `amadeus-scope-sizing.md` | the scope-definition artifact | How many capabilities the scope enumerated, recorded alongside the resolved depth so the depth-versus-size band can be calibrated — advisory |
+| `amadeus-git-drift.md` | the working tree against origin | Declared by the opt-in `git-drift` plugin: reports when origin has moved ahead of this checkout in files the current work also holds — advisory |
 
 Every one of them is gated by a `matches:` glob (more on that below): the first two
 document-shape checks scope to the artifact tree (the shipped manifests carry
