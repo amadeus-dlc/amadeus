@@ -19,6 +19,7 @@ import {
   consumeMigrationStopLatch,
   isMigrationExecutionCommand,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
+import { normalizeGitOutcome } from "../../packages/framework/core/tools/amadeus-migrate.ts";
 import { handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import { runUtilityMain } from "../../packages/framework/core/tools/amadeus-utility.ts";
 
@@ -281,5 +282,64 @@ describe("migration utility dispatch runs in process", () => {
     } finally {
       rmSync(project, { recursive: true, force: true });
     }
+  });
+});
+
+// #3065: the migrator's git runner derived `ok` from the exit status alone. bun pairs `status: 0`
+// with an `error` when a child overflows maxBuffer and still exits on its own, so a truncated
+// stdout arrived under a success verdict and every downstream migration decision was taken on
+// partial output. The spawn failure is not reproducible on demand, so the verdict is driven
+// through the exported normaliser with the outcome shape spawnSync actually returns.
+describe("migration git runner fails closed on a reported spawn error", () => {
+  function enobufs(): Error {
+    const error = new Error(
+      "SystemError: spawnSync git ENOBUFS (stdout or stderr buffer reached maxBuffer size limit)",
+    );
+    (error as Error & { code: string }).code = "ENOBUFS";
+    return error;
+  }
+
+  test("an exit-0 spawn that reports an error is not ok", () => {
+    const outcome = normalizeGitOutcome({
+      status: 0,
+      stdout: "partial",
+      stderr: "",
+      error: enobufs(),
+    });
+
+    expect(outcome.ok).toBe(false);
+    expect(outcome.stderr).toContain("ENOBUFS");
+    // The partial stdout is still handed back — the verdict changes, the evidence is not hidden.
+    expect(outcome.stdout).toBe("partial");
+  });
+
+  test("the error detail joins the stderr the child already wrote", () => {
+    const outcome = normalizeGitOutcome({
+      status: 0,
+      stdout: "",
+      stderr: "fatal: not a git repository\n",
+      error: enobufs(),
+    });
+
+    expect(outcome.ok).toBe(false);
+    expect(outcome.stderr).toContain("fatal: not a git repository");
+    expect(outcome.stderr).toContain("ENOBUFS");
+  });
+
+  test("a clean exit-0 spawn stays ok and keeps its streams verbatim", () => {
+    expect(normalizeGitOutcome({ status: 0, stdout: "out", stderr: "warning\n" })).toEqual({
+      ok: true,
+      stdout: "out",
+      stderr: "warning\n",
+    });
+  });
+
+  test("a nonzero exit stays not ok", () => {
+    expect(normalizeGitOutcome({ status: 128, stdout: "", stderr: "fatal\n" }).ok).toBe(false);
+    expect(normalizeGitOutcome({ status: null, stdout: null, stderr: null })).toEqual({
+      ok: false,
+      stdout: "",
+      stderr: "",
+    });
   });
 });
