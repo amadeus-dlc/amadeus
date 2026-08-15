@@ -16,11 +16,11 @@ depth Minimal。調査ユニットのため箇条書きのみ。
 ## 主要実測値
 
 - 測定 ref: HEAD `a49f9e9fdbd19fd40e9374feba77e9360771d173`。再現環境は repo 外 scratch `…/scratchpad/u5-repro/`(出力 `out/current2.json` / `out/wip.json`)
-- 着地2行の時刻 `2026-08-07T11:20:09Z` は、main コミット `4a3da7d62`(09:24:51Z)と PR #2413 のブランチコミット `d4f0513c5`(11:47:53Z)の**間** — 実装作業のさなか
-- 選択性の一致: t214 の 3 テストのうち env 段のみに依存する 2 件(`seam: something went wrong` / `seam: no state`)だけが着地。argv 段の 1 件は不着地(`grep -rn "seam: argv project-dir" amadeus/spaces/default/intents/` → 0 行・**exit 1**)
+- 着地2行の時刻 `2026-08-07T11:20:09Z` は、`git log --all` が当該時間帯に返す **5 件**(main の squash 3 件 + squash 前ブランチ 2 件)のうち、直前の `4a3da7d62`(09:24:51Z)と直後の `d4f0513c5`(11:47:53Z)の**間** — 実装作業のさなか。5 件すべてで `resolveProjectDir` の段順は env が marker の上(または marker 段未導入)であり、WIP バイトはコミットされていない
+- 選択性の一致: t214 の 3 テストのうち env 段のみに依存する 2 件(`seam: something went wrong` / `seam: no state`)だけが着地。argv 段の 1 件は不着地(`grep -rn --exclude-dir=260814-open-bug-batch-6 "seam: argv project-dir" amadeus/spaces/default/intents/` → 0 行・**exit 1**。除外は本 intent の record ディレクトリ — 本ファイルと `investigation-log.md` が needle を含むため)
 - 現行バイト実測: A を先にピン → env=B で `recordEngineError` → **A にも B にも 0 行**(RE §2.5 の経路読解どおり)。cwd=A(marker)/ env=B では解決先 = **B**(env 段が上であることの pin)
 - WIP 段順バイト実測: 同条件で A へ 2 行着地。属性 4 種(`Command:""` / `Error` / `Event:"ERROR_LOGGED"` / `Tool:"amadeus-orchestrate"`)・順序・連番・同一秒まで観測行と一致
-- 実 record 無汚染の機械確認: 着地シャードは調査前後とも **393 行**、needle 件数不変(各 1 行)、プローブ文字列は repo 内 0 hit(exit 1)
+- 実 record 無汚染の機械確認(すべて `--exclude-dir=260814-open-bug-batch-6` で再実測): 着地シャードは調査前後とも **393 行**、needle 件数不変(`seam: something went wrong` / `seam: no state` 各 1 行・exit 0)、プローブ文字列は 0 行・**exit 1**、`git status --porcelain -- amadeus/spaces/default/intents/260807-projectdir-worktree-fix/` は **0 行**。除外条件を付けない述語は本ファイルと `investigation-log.md` 自身にヒットして再導出できないため、全述語に除外を付けて実行し直した(詳細は `investigation-log.md` §5)
 
 ## 変更ファイル
 

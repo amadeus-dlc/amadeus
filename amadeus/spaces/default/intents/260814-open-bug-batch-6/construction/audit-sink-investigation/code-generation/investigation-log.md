@@ -9,15 +9,21 @@
 
 ## 1. Step 1 — 当時断面の特定
 
-着地2行の `timestamp` は 2 行とも `2026-08-07T11:20:09Z`(= 20:20:09 JST)。この時刻を挟む main のコミットは以下2件(取得コマンド: `TZ=UTC git log --since=2026-08-07T09:00:00Z --until=2026-08-07T13:00:00Z --format='%H %cI %s' --all`)。
+着地2行の `timestamp` は 2 行とも `2026-08-07T11:20:09Z`(= 20:20:09 JST)。
 
-| commit | committer date | subject |
-| --- | --- | --- |
-| `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0` | 2026-08-07T09:24:51Z | chore(record): sync 260807-failclosed-recovery-path workflow record (completed) (#2404) |
-| `d4f0513c531bc8af75c26435f693def5e0316f16` | 2026-08-07T11:47:53Z | fix: add a cwd workspace-marker rung to resolveProjectDir below the env rung(PR #2413 のブランチコミット、squash 前) |
-| `6b3dbca725a232d0c7bfd3caaf8091b60b455695` | 2026-08-07T12:48:52Z | 同上(#2413 の squash マージ) |
+取得コマンド: `TZ=UTC git log --since=2026-08-07T09:00:00Z --until=2026-08-07T13:00:00Z --format='%H %cI %s' --all`(対象: 全 ref。除外条件なし)。**出力 5 行・exit 0**(件数は `grep -c ''` で転記)。以下は出力の全数であり、`%cI` は commit 自身の TZ で出るため生の値(+09:00)をそのまま載せる。UTC 列は `+09:00` から 9 時間を引いた**派生値**である。
 
-すなわち着地時刻 11:20:09Z は、**PR #2413(intent `260807-projectdir-worktree-fix`)の実装作業のさなか**であり、ブランチコミット `d4f0513c5` の 27 分前である。
+| commit | 生の `%cI` 出力 | UTC(派生) | subject(生の出力) |
+| --- | --- | --- | --- |
+| `5f2ad9195d9ce3ea55d6bf3d34509f2c5ca2c12b` | 2026-08-07T21:49:33+09:00 | 12:49:33Z | chore(record): sync 260807-projectdir-worktree-fix workflow record (completed) (#2416) |
+| `6b3dbca725a232d0c7bfd3caaf8091b60b455695` | 2026-08-07T21:48:52+09:00 | 12:48:52Z | fix: add a cwd workspace-marker rung to resolveProjectDir below the env rung (#2413) |
+| `b9aaf6e139e04c0ca92e4d03c681fa5d87e8552a` | 2026-08-07T21:44:19+09:00 | 12:44:19Z | chore(record): sync 260807-projectdir-worktree-fix workflow record (completed) |
+| `d4f0513c531bc8af75c26435f693def5e0316f16` | 2026-08-07T20:47:53+09:00 | 11:47:53Z | fix: add a cwd workspace-marker rung to resolveProjectDir below the env rung |
+| `4a3da7d62c3cc3dadda2dfb6225d30cfa985a8d0` | 2026-08-07T18:24:51+09:00 | 09:24:51Z | chore(record): sync 260807-failclosed-recovery-path workflow record (completed) (#2404) |
+
+内訳: 5 件のうち `5f2ad9195` / `6b3dbca72` / `4a3da7d62` の 3 件が main 上の squash コミット、`b9aaf6e13` / `d4f0513c5` の 2 件は squash 前のブランチコミット(`--all` が拾う。`6b3dbca72` / `5f2ad9195` の squash 元)。
+
+着地時刻 11:20:09Z は、この 5 件のうち直前の `4a3da7d62`(09:24:51Z)と直後の `d4f0513c5`(11:47:53Z)の**間**にある。すなわち **PR #2413(intent `260807-projectdir-worktree-fix`)の実装作業のさなか**であり、ブランチコミット `d4f0513c5` の 27 分前である。
 
 着地2行の逐語(`sed -n '155,156p' amadeus/spaces/default/intents/260807-projectdir-worktree-fix/audit/j5ik2o-mac-studio-lan-d13e4f0ca2c0.jsonl`):
 
@@ -32,17 +38,24 @@
 | #2 `seam: argv project-dir` | env を delete し `process.argv` に `--project-dir proj` | 段1(explicit) |
 | #3 `seam: no state` | `process.env.CLAUDE_PROJECT_DIR = proj`(record は削除済み) | 段2(env) |
 
-**着地したのは #1 と #3 のちょうど 2 件、#2 は着地していない。** 不在の反証確認: `grep -rn "seam: argv project-dir" amadeus/spaces/default/intents/` → 出力 0 行・**exit 1**(対照: 同形の `grep -rn "seam: no state" …` → 1 行・exit 0)。この選択性が「段2(env)だけが破れていた」ことを指す。
+**着地したのは #1 と #3 のちょうど 2 件、#2 は着地していない。**
+
+不在の反証確認(再実測。本ログ自身が needle を含むため**本 intent の record ディレクトリを除外**する — 除外なしでは本ログと `code-summary.md` の 2 ファイルにヒットして再導出できない):
+
+- 述語 `grep -rn --exclude-dir=260814-open-bug-batch-6 "seam: argv project-dir" amadeus/spaces/default/intents/` → 出力 **0 行・exit 1**
+- 対照(同形・同除外) `grep -rn --exclude-dir=260814-open-bug-batch-6 "seam: no state" amadeus/spaces/default/intents/` → **1 行・exit 0**(`…/260807-projectdir-worktree-fix/audit/j5ik2o-mac-studio-lan-d13e4f0ca2c0.jsonl:156`)
+
+対象集合は `amadeus/spaces/default/intents/` 配下の全ファイル、除外条件は `--exclude-dir=260814-open-bug-batch-6`(本 intent の record ディレクトリ = 本ログと `code-summary.md` の所在)。この選択性が「段2(env)だけが破れていた」ことを指す。
 
 ## 2. 一次証拠 — 当時の WIP 段順(文書証拠)
 
-PR #2413 本文(`gh pr view 2413 --json body`)の逐語:
+PR #2413 本文の逐語(取得コマンド: `gh pr view 2413 --json body -q .body | grep -n "marker 段より"` → 1 行・`:8`)。以下は原文どおりで、全角括弧・強調記号を改変していない:
 
-> `CLAUDE_PROJECT_DIR` は marker 段より**上**を維持 — 「cwd と別の workspace を指す」のが env の文書化された契約であり、既存テスト fixture が広く依存(**当初「env より上」で実装したところ state 系テストの隔離 seam が破れ実 record 汚染が発生** → ソロ選挙 E-PWF-CGDEV2 で 2-0 再裁定。intent record の選挙記録参照)
+> - `CLAUDE_PROJECT_DIR` は marker 段より**上**を維持 — 「cwd と別の workspace を指す」のが env の文書化された契約であり、既存テスト fixture が広く依存（当初「env より上」で実装したところ state 系テストの隔離 seam が破れ実 record 汚染が発生 → ソロ選挙 E-PWF-CGDEV2 で 2-0 再裁定。intent record の選挙記録参照）
 
-選挙記録 `amadeus/spaces/default/elections/260807-e-pwf-cgdev2/record.md` の question 逐語(抜粋):
+選挙記録 `amadeus/spaces/default/elections/260807-e-pwf-cgdev2/record.md` の question 逐語(抜粋。`…` は本ログでの中略を示し、それ以外は原文どおり):
 
-> 実測インシデント: builder が marker 段を env 段の上に実装して検証を実行したところ、既存テスト群(state 系)の隔離 seam が破れた — それらのテストは CLAUDE_PROJECT_DIR=<temp fixture> を設定し cwd=repo(worktree root、marker 保有)で state ツールを spawn するため、新段が env を上書きして書込が実 record へ流れた。実害: 実 worktree の amadeus-state.md(…)、memory/team.md(…)、memory/project.md(…)、**audit へ rogue イベント多数**(…)。conductor が前進修復済み(… **audit は append-only のまま保持**)
+> 実測インシデント: builder が marker 段を env 段の上に実装して検証を実行したところ、既存テスト群（state 系）の隔離 seam が破れた — それらのテストは CLAUDE_PROJECT_DIR=<temp fixture> を設定し cwd=repo（worktree root、marker 保有）で state ツールを spawn するため、新段が env を上書きして書込が実 record へ流れた。実害: 実 worktree の amadeus-state.md（…）、memory/team.md（…）、memory/project.md（…）、audit へ rogue イベント多数（PRACTICES_AFFIRMED 12件・別 grant mint 含む）。conductor が前進修復済み（team.md 復元・project.md 汚染行除去・state フィールド復旧・audit は append-only のまま保持）
 
 同記録の票タイムラインは「配信 2026-08-07T11:31:17Z → … → 開票 2026-08-07T11:35:19Z」。**着地2行(11:20:09Z)は、この選挙が開かれる 11 分前**にあたる。したがって着地2行は、選挙記録がすでに「audit へ rogue イベント多数」と記していた当該インシデントの残渣そのものである。
 
@@ -94,13 +107,32 @@ A に着地した 2 行の逐語(`out/wip.json` の `A_landedRows`):
 
 **Issue の仮説の帰結**: OTel の per-process ピンは宛先を決めていない。ピンは `assertSameProject` による**不一致の検出器**であり、不一致時の効果は「別 workspace への着地」ではなく「行の消失」(S1・S2 の実測)。宛先は一貫して `resolveProjectDir` の解決結果である。
 
-**現行バイトへの残存欠陥**: なし。段順は PR #2413 の裁定(選挙 E-PWF-CGDEV2、2-0)どおり env が marker の上に確定しており、S3 でその pin を実測した。WIP バイトは main に着地していない(`git log` 上の当該時間帯のコミットは §1 の 3 件のみで、いずれも段順は env が上)。
+**現行バイトへの残存欠陥**: なし。段順は PR #2413 の裁定(選挙 E-PWF-CGDEV2、2-0)どおり env が marker の上に確定しており、S3 でその pin を実測した。
+
+**WIP バイトはどのコミットにも着地していない**(実測)。§1 の 5 件すべてについて `resolveProjectDir` 本体の段順を実測した。述語: `git show <sha>:packages/framework/core/tools/amadeus-lib.ts | awk '/^export function resolveProjectDir\(/,/^}/' | grep -n "CLAUDE_PROJECT_DIR)\|findWorkspaceMarkerAncestor(process.cwd())"`(関数本体に限定して 2 段の出現行番号を取る)。
+
+| commit | env 段の相対行 | marker 段の相対行 | 段順 |
+| --- | --- | --- | --- |
+| `4a3da7d62` | 6 | (出現なし) | marker 段そのものが未導入 |
+| `d4f0513c5` | 10 | 19 | env が上 |
+| `b9aaf6e13` | 6 | (出現なし) | marker 段そのものが未導入 |
+| `6b3dbca72` | 10 | 19 | env が上 |
+| `5f2ad9195` | 10 | 19 | env が上 |
+
+5 件のいずれにも「marker 段が env 段より上」の形は現れない。したがって当該バイトは作業ツリー上にのみ存在した WIP であり、コミットされていない。
 
 ## 5. 実 record 無汚染の機械確認
 
-- 着地シャード `amadeus/spaces/default/intents/260807-projectdir-worktree-fix/audit/j5ik2o-mac-studio-lan-d13e4f0ca2c0.jsonl` の行数は調査前後とも **393 行**(`grep -c "" <path>`)
-- `grep -rn "seam: something went wrong" amadeus/spaces/default/intents/` → **1 行**、`"seam: no state"` → **1 行**(調査前と同数)
-- 調査で用いたプローブ文字列の不在: `grep -rn "probe: pin A" amadeus/spaces/default/` → 出力 0 行・**exit 1**。同様に `"seam: cwd-marker-A env-B"` / `"seam: argv project-dir"` は repo 内 0 hit
+**述語の自己参照について**: 本ログと `code-summary.md` は調査で用いた needle 文字列そのものを本文に含むため、除外条件のない述語は**自分自身にヒットして再導出できない**。実測(除外なし `grep -rl <needle> amadeus/spaces/default/`): `"seam: argv project-dir"` → 2 ファイル(本ログ + `code-summary.md`)、`"probe: pin A"` → 1 ファイル(本ログ)、`"seam: cwd-marker-A env-B"` → 1 ファイル(本ログ)。以下はすべて**本 intent の record ディレクトリを除外して再実行した確定値**である。
+
+- 共通の除外条件: `--exclude-dir=260814-open-bug-batch-6`(本 intent の record ディレクトリ = 本ログと `code-summary.md` の所在)
+- 着地シャード `amadeus/spaces/default/intents/260807-projectdir-worktree-fix/audit/j5ik2o-mac-studio-lan-d13e4f0ca2c0.jsonl` の行数は調査前後とも **393 行**(`grep -c "" <path>`。単一ファイル指定のため自己参照なし)
+- `grep -rn --exclude-dir=260814-open-bug-batch-6 "seam: something went wrong" amadeus/spaces/default/intents/` → **1 行・exit 0**(上記シャード `:155`)
+- `grep -rn --exclude-dir=260814-open-bug-batch-6 "seam: no state" amadeus/spaces/default/intents/` → **1 行・exit 0**(同シャード `:156`)
+- `grep -rn --exclude-dir=260814-open-bug-batch-6 "probe: pin A" amadeus/spaces/default/` → **0 行・exit 1**
+- `grep -rn --exclude-dir=260814-open-bug-batch-6 "seam: cwd-marker-A env-B" amadeus/spaces/default/` → **0 行・exit 1**
+- `grep -rn --exclude-dir=260814-open-bug-batch-6 "seam: argv project-dir" amadeus/spaces/default/intents/` → **0 行・exit 1**
+- `git status --porcelain -- amadeus/spaces/default/intents/260807-projectdir-worktree-fix/` → **0 行**(着地シャードを含む当該 record に差分なし)
 - 全再現は `TMPDIR` を scratch へ、cwd を marker 非保有の scratch dir へ固定して実行した
 
 ## 6. Step 6 — Issue #3032 のクローズ提案と申し送り

@@ -38,7 +38,7 @@
 - 受け入れ: requirements FR-4 (a)/(b)/(c)
 - 規模: ~40 行(覆う場合 0 行+record 記録)
 - テスト所有: 同 unit(対象は既存テストファイルそのもの)
-- record 成果物: 一次証跡判定と対称面棚卸し(検索述語併記)を `construction/<slug>/code-generation/issue-3031-worktree-gc/` 配下へ記録(FR-4 (a)/(c))
+- record 成果物: 一次証跡判定と対称面棚卸し(検索述語併記)を `construction/worktree-gc-determinism/code-generation/` 配下へ記録(FR-4 (a)/(c))。(2026-08-15 訂正: 同上 — engine 正準パスへ統一)
 
 ## U-5: audit-sink-investigation(FR-5 / #3032 / C-5)
 
@@ -48,7 +48,7 @@
 - 受け入れ: requirements FR-5(証跡は record へ)
 - 規模: 是正時 ~60 行(非再現時 0 行)。調査スクリプトは repo 外 scratch(~100 行、使い捨て — 成果は record への実測記録)
 - テスト所有: 同 unit(是正時の回帰テストは U-5 が所有)
-- record 成果物: 再現試行の実測ログ・機序判定・クローズ準備文面を `construction/<slug>/code-generation/issue-3032-audit-sink/` 配下へ記録(FR-5 受け入れ)
+- record 成果物: 再現試行の実測ログ・機序判定・クローズ準備文面を `construction/audit-sink-investigation/code-generation/` 配下へ記録(FR-5 受け入れ)。(2026-08-15 訂正: 当初 `issue-3032-audit-sink/` サブディレクトリ案で起草したが、engine の per-unit 成果物正準パスは unit スラッグ直下 — §12a レビュー指摘により engine 正準へ統一)
 
 ## Review — Iteration 2
 
