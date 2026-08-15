@@ -475,13 +475,15 @@ The four `SENSOR_*` events are emitted by the sensor dispatcher; `GUARDRAIL_LOAD
 
 ### Learning loop
 
-`MEMORY_EMPTY` is emitted by `amadeus-runtime.ts compile`. The §13 Learnings Ritual writes a per-stage memory.md during execution; on stage approval, the runtime-graph compile reads memory.md and emits `MEMORY_EMPTY` for any stage with zero non-blank entries under the four standard headings. The learning-gate tool (`amadeus-learnings.ts persist`) emits `RULE_LEARNED` when a kept learning lands as a dated practice entry in `amadeus/spaces/<space>/memory/{project,team}.md`, and `SENSOR_PROPOSED` when a learning installs a sensor binding (manifest + originating stage `sensors:` frontmatter). Doctor reads these rows for diary-discipline observability.
+`MEMORY_EMPTY` is emitted by `amadeus-runtime.ts compile`. The §13 Learnings Ritual writes a per-stage memory.md during execution; on stage approval, the runtime-graph compile reads memory.md and emits `MEMORY_EMPTY` for any stage with zero non-blank entries under the four standard headings. The learning-gate tool (`amadeus-learnings.ts persist`) emits `RULE_LEARNED` when a kept learning lands as a dated practice entry in `amadeus/spaces/<space>/memory/{project,team}.md`, and `SENSOR_PROPOSED` when a learning installs a sensor binding (manifest + originating stage `sensors:` frontmatter). Doctor reads these rows for diary-discipline observability. `LEARNING_ZERO_CONFIRMED` and `LEARNING_CANDIDATE_ADDED` (unit s13-zero, ADR-6) machine-bind a §13 "0 件" confirmation to the surface run's digest instead of the conductor's self-report: `amadeus-learnings.ts confirm-zero` emits `LEARNING_ZERO_CONFIRMED` only when candidates is empty AND the surface JSON's own `surfaceDigest` recomputes from its candidates + parked_open_questions; `amadeus-learnings.ts add-candidate` emits `LEARNING_CANDIDATE_ADDED` when it accepts an additive, disk-evidence-gated conductor candidate.
 
 | Event | Emitter | Trigger |
 |---|---|---|
 | `MEMORY_EMPTY` | `tools/amadeus-runtime.ts` | Stage approval's runtime-graph compile found memory.md missing or with zero non-blank entries under §13's four headings |
 | `RULE_LEARNED` | `tools/amadeus-learnings.ts` | The learning gate persisted a kept learning as a dated practice entry to `amadeus/spaces/<space>/memory/{project,team}.md` |
 | `SENSOR_PROPOSED` | `tools/amadeus-learnings.ts` | The learning gate scaffolded a project-tier sensor manifest and bound it to the originating stage's `sensors:` frontmatter |
+| `LEARNING_ZERO_CONFIRMED` | `tools/amadeus-learnings.ts` | `confirmZeroCandidates` minted a ZeroReceipt: candidates was empty and the surfaceDigest recomputed from the same surface output |
+| `LEARNING_CANDIDATE_ADDED` | `tools/amadeus-learnings.ts` | `addConductorCandidate` accepted a conductor-observed candidate whose disk evidence path existed and corresponded to the claim |
 
 ### Loop monitor and quality repair
 

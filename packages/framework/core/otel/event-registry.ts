@@ -77,7 +77,10 @@ export type EventDef = {
 
 // The canonical cardinality (#1672). The drift guard pins this so an emptied
 // or truncated registry fails instead of passing vacuously.
-export const EXPECTED_CANONICAL_COUNT = 94;
+// +LEARNING_ZERO_CONFIRMED +LEARNING_CANDIDATE_ADDED (unit s13-zero, ADR-6:
+// digest-bound §13 zero-candidate confirmation + additive conductor
+// candidates) on top of the delegated-merge provenance pin takes it to 96.
+export const EXPECTED_CANONICAL_COUNT = 96;
 
 // The OTel semantic-convention span event name produced by recordException().
 // Registered as telemetry (FR-EVT-7): it rides the span record, never the
@@ -972,6 +975,30 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "learning",
     requiredAttributes: ["Stage", "Candidate-ID", "Sensor ID", "Manifest path", "Matches", "Destinations", "Source"],
+    optionalAttributes: [],
+    schemaVersion: 1,
+  },
+  {
+    // unit s13-zero (ADR-6, R-1/R-2/R-5): the sole machine-checkable basis
+    // for a §13 "0 件" confirmation — the surfaceDigest bound at surface
+    // time. Emitted only when confirmZeroCandidates mints a ZeroReceipt.
+    name: "amadeus.learning.zero_confirmed",
+    auditEvent: "LEARNING_ZERO_CONFIRMED",
+    durability: "canonical",
+    category: "learning",
+    requiredAttributes: ["Stage", "Surface Digest", "Confirmed At"],
+    optionalAttributes: [],
+    schemaVersion: 1,
+  },
+  {
+    // unit s13-zero (ADR-6, R-3/R-4/R-5): the conductor's additive-only
+    // candidate, gated on disk evidence. "Surface Digest" ties the addition
+    // to the surface snapshot it was layered on top of.
+    name: "amadeus.learning.candidate_added",
+    auditEvent: "LEARNING_CANDIDATE_ADDED",
+    durability: "canonical",
+    category: "learning",
+    requiredAttributes: ["Stage", "Candidate-ID", "Disk Evidence Path", "Surface Digest"],
     optionalAttributes: [],
     schemaVersion: 1,
   },

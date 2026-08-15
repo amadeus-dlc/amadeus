@@ -80,8 +80,9 @@ const AUDIT_MD = join(AMADEUS_SRC, "knowledge", "amadeus-shared", "audit-format.
 // +AUTO_DECISION_REVIEWED (#2067 review surface) takes it to 89;
 // +INTENT_COMPLETION_TRANSACTION_COMMITTED (#2067 completion seal) takes it to 90.
 // +UNIT_OUTCOME_SETTLED (#3099 per-unit dispatch outcome ledger) takes it to 93.
-// +DELEGATED_MERGE_RECORDED (C11/FR-9 delegated-merge provenance) takes it to 94.
-const CANONICAL_COUNT = 94;
+// +DELEGATED_MERGE_RECORDED (C11/FR-9) then +LEARNING_ZERO_CONFIRMED
+// +LEARNING_CANDIDATE_ADDED (unit s13-zero, ADR-6) takes it to 96.
+const CANONICAL_COUNT = 96;
 
 /** Slice the lines of `text` BETWEEN the first line matching `start` and the
  *  next line matching `end` (inclusive of both), reproducing `sed -n
