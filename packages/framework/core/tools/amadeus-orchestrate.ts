@@ -21,7 +21,12 @@
 //
 // Subcommand dispatch table:
 //   next   — read-only. Resolve scope (state > flag > env > default), find the
-//            workflow's position, and emit one directive. LIVE.
+//            workflow's position, and emit one directive. LIVE. "Read-only"
+//            means it never moves the workflow: it births nothing, advances
+//            nothing, pivots no pointer. It does RECORD what it observes — the
+//            intent-lifecycle preflight rows, and the per-unit outcome a
+//            Construction iteration settles (#3099) — appends of facts the read
+//            just established, never edits of state.
 //   report — commit a transition after the conductor acted on a directive.
 //            LIVE. A stage-aware dispatcher: it shells out to amadeus-state.ts
 //            transitions so the next `next` reads fresh state. Explicit
