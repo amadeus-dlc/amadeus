@@ -77,10 +77,9 @@ export type EventDef = {
 
 // The canonical cardinality (#1672). The drift guard pins this so an emptied
 // or truncated registry fails instead of passing vacuously.
-// +LEARNING_ZERO_CONFIRMED +LEARNING_CANDIDATE_ADDED (unit s13-zero, ADR-6:
-// digest-bound §13 zero-candidate confirmation + additive conductor
-// candidates) on top of the delegated-merge provenance pin takes it to 96.
-export const EXPECTED_CANONICAL_COUNT = 96;
+// +LEARNING_ZERO_CONFIRMED +LEARNING_CANDIDATE_ADDED (unit s13-zero, ADR-6)
+// +DELEGATED_MERGE_RECORDED (unit merge-provenance, ADR-10) take it to 96.
+export const EXPECTED_CANONICAL_COUNT = 98;
 
 // The OTel semantic-convention span event name produced by recordException().
 // Registered as telemetry (FR-EVT-7): it rides the span record, never the
@@ -134,6 +133,29 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "workflow-lifecycle",
     requiredAttributes: [],
+    optionalAttributes: ["Timestamp"],
+    schemaVersion: 1,
+  },
+  // RFC-0001 FR-3 / ADR-4 — waiting is a terminal of its own, so it gets
+  // markers of its own rather than borrowing park's. Both carry identifiers
+  // only: `Transaction Id` points at the Intent autonomy transaction that holds
+  // the WaitingCause, and the cause never appears here (a second copy of it
+  // could disagree with the ledger, and the ledger is the truth).
+  {
+    name: "amadeus.workflow.waiting.entered",
+    auditEvent: "WORKFLOW_WAITING_ENTERED",
+    durability: "canonical",
+    category: "workflow-lifecycle",
+    requiredAttributes: ["Stage", "Occurrence Id", "Basis Fingerprint", "Transaction Id"],
+    optionalAttributes: ["Timestamp"],
+    schemaVersion: 1,
+  },
+  {
+    name: "amadeus.workflow.waiting.resumed",
+    auditEvent: "WORKFLOW_WAITING_RESUMED",
+    durability: "canonical",
+    category: "workflow-lifecycle",
+    requiredAttributes: ["Stage", "Transaction Id"],
     optionalAttributes: ["Timestamp"],
     schemaVersion: 1,
   },

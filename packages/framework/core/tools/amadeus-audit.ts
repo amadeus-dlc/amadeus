@@ -58,7 +58,7 @@ export type AppendAuditResult =
   | { appended: true; event: string; timestamp: string }
   | { appended: false; reason: "intent-complete" | "fatal-latch"; event: string; timestamp: string };
 
-// --- Canonical event types (94) ---
+// --- Canonical event types (98) ---
 // See docs/reference/12-state-machine.md for the state transitions that emit each event.
 
 const VALID_EVENT_TYPES = new Set([
@@ -81,6 +81,8 @@ const VALID_EVENT_TYPES = new Set([
   "WORKFLOW_COMPLETED",
   "WORKFLOW_PARKED",
   "WORKFLOW_UNPARKED",
+  "WORKFLOW_WAITING_ENTERED",
+  "WORKFLOW_WAITING_RESUMED",
   "INTENT_ARCHIVED",
   "INTENT_UNARCHIVED",
   "GOAL_CHANGE_PROPOSED",
@@ -243,6 +245,8 @@ export const EVENT_HEADINGS: Record<string, string> = {
   WORKFLOW_COMPLETED: "Workflow Completion",
   WORKFLOW_PARKED: "Workflow Parked",
   WORKFLOW_UNPARKED: "Workflow Unparked",
+  WORKFLOW_WAITING_ENTERED: "Workflow Waiting Entered",
+  WORKFLOW_WAITING_RESUMED: "Workflow Waiting Resumed",
   INTENT_ARCHIVED: "Intent Archived",
   INTENT_UNARCHIVED: "Intent Unarchived",
   GOAL_CHANGE_PROPOSED: "Goal Change Proposed",
