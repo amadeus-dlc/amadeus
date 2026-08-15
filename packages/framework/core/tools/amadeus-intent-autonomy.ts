@@ -575,7 +575,20 @@ export type ProhibitedEffectClassification =
   | "scope-out"
   | "norm-waiver"
   | "quality-waiver";
-export type EffectClassification = "workflow-reversible" | ProhibitedEffectClassification;
+// `advisory-deferral` is the one classification RFC-0001 ADR-2 added to the
+// autonomous ceiling: deferring past a plugin-declared advisory, with the risk
+// recorded and the advisory re-raisable. It is deliberately NOT a prohibited
+// classification and deliberately NOT `workflow-reversible` — keeping it
+// distinct is what lets the ceiling admit advisory deferral without admitting
+// quality waivers in general.
+export type EffectClassification = "workflow-reversible" | "advisory-deferral" | ProhibitedEffectClassification;
+
+// What an autonomous authority (semi's authority, or a full grant) may act on.
+// Both arms read this one list so the ceiling cannot drift between them.
+const AUTONOMOUS_EFFECT_CLASSIFICATIONS: readonly EffectClassification[] = [
+  "workflow-reversible",
+  "advisory-deferral",
+];
 
 export interface DecisionOptionEffectRegistry {
   readonly revision: string;
@@ -719,7 +732,7 @@ export const SemiAuthority = {
     effect: DecisionOptionEffect | null,
     currentNormFingerprint: string,
   ): SemiEffectAuthorization {
-    if (effect === null || effect.classification !== "workflow-reversible" ||
+    if (effect === null || !AUTONOMOUS_EFFECT_CLASSIFICATIONS.includes(effect.classification) ||
       effect.applicableNormFingerprint !== currentNormFingerprint) {
       return { ok: false, reason: "semi-gate-effect-not-authorized" };
     }
@@ -1140,7 +1153,7 @@ export function authorizeDecisionEffect(input: AuthorizeDecisionEffectInput): Ef
   const effect = input.registry.resolve(input.selectedOptionId);
   if (effect === null) return { ok: false, reason: "UNKNOWN_EFFECT" };
   if (effect.payloadFingerprint !== autonomyDigest(effect.payload)) return { ok: false, reason: "PAYLOAD_MISMATCH" };
-  if (effect.classification !== "workflow-reversible") {
+  if (!AUTONOMOUS_EFFECT_CLASSIFICATIONS.includes(effect.classification)) {
     return { ok: false, reason: "PROHIBITED_EFFECT" };
   }
   if (effect.requiredScopeFingerprint !== input.grant.scope.scopeFingerprint) return { ok: false, reason: "SCOPE_OUT" };
