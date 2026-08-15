@@ -84,8 +84,14 @@ Biome `2.5.5` は formatter 無効、cognitive complexity 15超を warning と�
 - **選挙 CLI が多問(multi-question)化した**（PR #3036）。モジュール構成の実測行数（`wc -l packages/framework/core/tools/amadeus-election*.ts`）: `amadeus-election-codec.ts` 908（新規）/ `amadeus-election-store.ts` 1232 / `amadeus-election.ts` 804 / `amadeus-election-record.ts` 651 / `amadeus-election-question-tally.ts` 386（新規）/ `amadeus-election-transport.ts` 301 / `amadeus-election-model.ts` 32。前区間の「model 550行、store 719行、CLI 853行、migration 580行」は失効している — `amadeus-election-model.ts` は `Result` / `VoterKind` / `HoldReason` だけを持つ 32 行の共有語彙へ縮小し、データモデルは codec（schemaVersion 2）へ、集計は question-tally へ移った。`scripts/amadeus-election-migrate.ts` は削除済み。
 - Biome `2.5.5`（formatter 無効、cognitive complexity 15 超を warning）と `tsc --noEmit` の検査構成は不変。
 
-## 区間の技術スタック（260815-per-unit-outcome、現在、observed `78146f435a`）
+## 区間の技術スタック（260815-per-unit-outcome、履歴、observed `78146f435a`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-stale-epoch-landed の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **本差分での変化なし。** base `9ba8170bb` → observed `78146f435a` で依存宣言は 1 バイトも動いていない — `git diff --stat 9ba8170bb 78146f435 -- package.json bun.lock '**/package.json'` の**出力は空**（exit 0）。ランタイム（Bun / TypeScript / ESM）、リンター（Biome、フォーマッタ無効）、型検査（`tsc --noEmit`）、テストランナー（`tests/run-tests.sh` の 4 層）の構成はいずれも不変。
 
 本 intent の患部（per-unit consume の母集団取得と unit pool 監査イベント）は既存スタック内に閉じており、新しいランタイム依存・新しい検証系を必要としない。
+
+## 区間の技術スタック（260815-stale-epoch-landed、現在、observed `83e1dbeef`）
+
+**本差分での変化なし。** base `78146f435a` → observed `83e1dbeef` で依存宣言は 1 バイトも動いていない — `git diff --stat 78146f435a 83e1dbeef -- package.json bun.lock '**/package.json'` の**出力は空**。ランタイム（Bun / TypeScript / ESM）、リンター（Biome、フォーマッタ無効）、型検査（`tsc --noEmit`）、テストランナー（`tests/run-tests.sh` の 4 層）の構成はいずれも不変。
+
+本 intent の患部（`plugins/github-pr-convergence/` の CLI・sensor・stage 文書）は既存スタック内に閉じており、外部依存として使うのは `gh` CLI のみ（optional dependency として既存の扱いのまま）。新しいランタイム依存・新しい検証系を必要としない。

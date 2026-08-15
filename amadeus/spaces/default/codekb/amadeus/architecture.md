@@ -5396,7 +5396,7 @@ plugin.json の settings 宣言          amadeus/config.json の plugin.settings
 
 **設計判断（エスカレーション対象）**: swarm 軸を要件が必須とする場合、それを `assertRecomposeAllowed` の中で解決してはならない。呼び出し側 `assertRecomposeStateAllowed` が監査から導出して第 3 引数として渡す形にすれば境界は保たれるが、これは「純射影に何を渡すか」の設計変更であり、実装者が単独で決める事項ではない。**phase 軸のみを足す**案は既存の層構造に完全に収まるため、要件が phase だけを求めるなら追加裁定は要らない。
 
-## Construction outcome の読み口が 2 系統に割れている非対称（260815-per-unit-outcome、現在、observed `78146f435a`）
+## Construction outcome の読み口が 2 系統に割れている非対称（260815-per-unit-outcome、履歴、observed `78146f435a`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-stale-epoch-landed の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: base `9ba8170bb03996fb98b497cfcbac3d207795018d` → observed `78146f435a66680055a24144937b5aa03d48bfb4`（祖先性 `git merge-base --is-ancestor 9ba8170bb 78146f435` → **exit 0**、距離 `git rev-list --count 9ba8170bb..78146f435` → **12**）。区間規模は `git diff --shortstat 9ba8170bb 78146f435` → **103 files / +3091 −182**、うち非 record 面は `git diff --shortstat 9ba8170bb 78146f435 -- ':!amadeus/' ':!metrics/'` → **40 files / +874 −97**。
 
@@ -5448,3 +5448,56 @@ degrade スコープ（units-generation SKIP）は `:2451` の早期 return（ru
 ### 消費者エッジの契約面
 
 per-unit consume の消費者側契約は `amadeus-per-unit-consume-fanout.ts:90-110` の `EXPECTED_PER_UNIT_CONSUMER_EDGES` に閉じている（**7 consumer / 19 edge**。件数の述語は `awk 'NR>=91 && NR<=109' <file> | grep -c '^\s*\['` → **19**、consumer 名は同範囲へ `grep -oE '^\s*\["[a-z-]+' | grep -oE '[a-z-]+$' | sort -u | wc -l` → **7**）。`assertConsumerEdgeInventory`（`:144-168`）が `consumer-edge-inventory-mismatch` で fail-closed するため、**この表と実グラフの乖離は無音では通らない**。是正がエッジ集合を変えないなら、この在庫は触らずに済む。
+
+## stale created attestation × MERGED PR に最終化経路がない — 拒否順序が `created → landed` 遷移を到達不能にしている（260815-stale-epoch-landed、現在、observed `83e1dbeef`）
+
+**観測 ref**: base `78146f435a66680055a24144937b5aa03d48bfb4` → observed `83e1dbeefb3278a00e86f69d3c79071a35ccf043`（`git merge-base --is-ancestor 78146f435a 83e1dbeef` → **exit 0**、`git rev-list --count 78146f435a..83e1dbeef` → **4**）。対象は [Issue #3110](https://github.com/amadeus-dlc/amadeus/issues/3110)（P2 / S3-MAJOR、格上げは FOLLOW-UP）。
+
+**患部は区間内で 1 バイトも動いていない。** `git diff --quiet 78146f435a 83e1dbeef -- plugins/github-pr-convergence/` → **exit 0**。したがって本節の file:line は observed 断面の値であり、区間の変更（intent 260815-per-unit-outcome の着地）とは独立である。
+
+**機序の一次記録は Issue #3110 の 2 件のクロスレビューコメント**（reviewer-1: CONFIRMED / reviewer-2: CONFIRMED_WITH_REFINEMENTS、いずれも `review-run-id: xrev-3110-20260815T114717Z`、`target-sha: 920790ba7fbaea5f58b5637268782df89e496cc2`）である。本節はそこで確定した機序を observed 断面で再照合したうえで要約する（**再導出はしない** — 一次記録は Issue コメント）。
+
+### 1. 拒否順序が `created → landed` を構造的な dead code にしている
+
+`transitionAllowed`（`plugins/github-pr-convergence/tools/pr-convergence-cli.ts:597-604`）は #3062 で `created → landed` を明示的に許可している（`:602` 逐語 `if (current === "created") return next === "converged" || next === "override" || next === "landed";`、直上のコメント `:598-601` が「merge-queue finalisation」と説明）。しかし `runCli` の評価順序は次のとおりである。
+
+| 順 | 位置 | 内容 |
+|---|---|---|
+| 1 | `pr-convergence-cli.ts:1370` | `const selfContext = selfContextFor(options, evaluation.value, seams);` |
+| 2 | `:614-624` → `:627` | `selfContextFor` は `currentSelfContext` へ委譲 |
+| 3 | `:669` | `!attestationBindsIdentity(receipt, work, heads, options.ref)` で拒否（`attestationBindsIdentity` の定義は `:714`） |
+| 4 | `:1398` | `if (options.verb === "report") return reportOutcome(...)` — **verb 分岐はここで初めて評価される** |
+
+`attestationBindsIdentity` は `receipt.prHead === heads.prHead` を要求するため、create 後に head が前進した self record では **手順 3 で拒否が確定し、手順 4 の verb 分岐へ到達しない**。結果として `created → landed` の正規経路は「create 後に head が一切動かない」場合にのみ機能する。拒否文言は `:746-748`（逐語 `report attestation is stale: the PR head advanced to ${heads.prHead} since this report was attested at ${receipt.prHead}. ` + `"Push the current HEAD, then run the create verb again for this pull request to open a new created epoch; "` + `"the existing pull request is reused, never closed and reopened.\n"`）。
+
+**この拒否順序は verb に依らない**ため、`override` も report と同一の stale 文言で返る（reviewer-1 の精度注記）。すなわち 4 verb すべてが self record ではデッドエンドになる。
+
+### 2. read-back の欠落 — 指示どおりの `create` 再実行が MERGED PR を reuse しない
+
+`:747` が指示する「create 再実行」は、`fetchOpenPrForHead`（`pr-convergence-gh-runner.ts:322`）が `"--state", "open"` のみを検索するため MERGED/CLOSED PR を read-back せず、**新規 PR を開いてしまう**（Issue 本文の実測: PR #3109 の誤作成）。エラーメッセージが指示する回復手順が、その手順自身の前提（PR が open であること）を満たさない状態で発行されている点が構造的欠陥である。
+
+### 3. blocking sensor と stage 文書の自己言及が閉路を閉じる
+
+- `plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts:391-393` — `stage === "pr-convergence" && kind === "created"` のとき逐語 `created proves PR delivery only; final convergence requires converged or override` を finding として出す。あわせて `:289` が `{ field: "local head", reason: "does not match the current checkout" }` を出す。**この fail-closed 動作自体は正しい**（record が created のまま最終化されていない事実を正確に報告している）。
+- `plugins/github-pr-convergence/stages/pr-convergence.md:344-346` — 逐語 `A merged pull request needs no ruling — `report` records it as `landed`.` が override 経路を明示的に閉じる。つまり「override は使うな、report を使え」と指示する一方、その report は機序 1 で拒否される。
+
+3 者が合わさり、当該 intent の pr-convergence ステージは**完了不能**になる（実測: intent 260814-open-bug-batch-6 の park。唯一の脱出路は `AMADEUS_SKIP_BLOCKING_SENSOR_GUARD` という緊急バイパス）。
+
+### 4. 根 — 未検討の交差、および運用ノルムとの規範衝突
+
+reviewer-2 の帰属によれば、根は PR #3081 の実装逸脱ではなく、**#3062 の選挙（E-260815-3062-LANDED-FINALIZATION）の設問スコープが head-integrity ゲートとの交差を含んでいなかった**ことにある。当時の設問は「self × landed で全 verb が拒否される」の解消であり、self record にもとから存在する `currentSelfContext` の head 束縛との相互作用は検討されていない。
+
+これに重なる形で、reviewer-1 が **規範衝突**を FOLLOW-UP として提起している —
+
+| 側 | 規範 | 要求 |
+|---|---|---|
+| 運用ノルム | `team.md` Way of Working（E-260813-RECORD-BUNDLING-NORM 2-0） | 自 intent の record checkpoint は Bolt PR へ**同梱可** |
+| CLI 契約 | `pr-convergence-cli.ts:669` の head 束縛 | create 後に head を**前進させてはならない**（暗黙） |
+
+record checkpoint を同梱すれば head は必ず前進するため、両者は構造的に両立しない。**是正設計はこの衝突をどちらの側で解消するかを明示する必要がある**（選挙事項）。なお reviewer-2 の一般化により、原因は「record checkpoint 同梱」に限定されず **create 後の任意の追加 push（理由不問）** である（監査シャード一次証拠: obb6 audit shard seq1→seq4 で PR #3092 の attested head が 2 つの create epoch 間で実際に前進）。
+
+### 5. 同一クラスの残余
+
+`260814-plugins-rename-drift` の 3 unit（PR #3051 / #3052 / #3055 — 各 unit の convergence-outcome.md が MERGED と実測記録済み）は record 上 `kind: created` のまま恒久残置している。workflow は completed 済みのため停止はしていないが、**record drift として同クラスの残留物**である。`260813-remove-team-up`（#2975）と `260814-autonomy-stop-fixes`（#3037）は候補（record 内では確定できず）。是正の受け入れ条件を設計する際、この既存残置を「修正後に最終化できるか」の観点で扱うかは要判断。
+
+配置と patch surface は `code-structure.md`、テスト空白と台帳は `code-quality-assessment.md` の各対応節を参照。

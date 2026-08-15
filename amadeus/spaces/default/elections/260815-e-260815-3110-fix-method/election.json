@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 2,
+  "electionId": "E-260815-3110-FIX-METHOD",
+  "kind": "design-deviation",
+  "questions": [
+    {
+      "questionId": "q-3110-method",
+      "text": "Issue #3110: created attestation が stale 化した(create 後に head が前進した)MERGED self PR に pr-convergence の正規最終化経路がない。根本は team.md『record checkpoint 同梱可』ノルムと CLI『create 後 head 前進禁止』(currentSelfContext の attestationBindsIdentity が verb 分岐より先に評価)の規範衝突。修正方式を選定する。共通制約: fail-closed ゲートの無音バイパス禁止 / attestation 偽装禁止 / head 不変ケースの既存 created→landed 経路(#3062/t3062)無退行 / MERGED head での create 誤 PR 作成防止(#3109)を同時に閉じる。",
+      "choices": [
+        {
+          "internalNo": 1,
+          "label": "A: landed 側で head 前進を許容 — report の self 経路で、PR が MERGED の場合は attested prHead が merged head の祖先であることを実測して landed record を書く(landed の束縛は merge commit SHA + mergedAt。head-integrity ゲートは未マージ経路では不変)。checkpoint 同梱ノルムは不変"
+        },
+        {
+          "internalNo": 2,
+          "label": "B: 運用側で stale を作らせない — CLI は不変とし、create 後の同一ブランチ追加 push を検知した時点で created epoch の再 mint を必須化する機械ガード(pre-push/収束ループの deterministic check)を追加。既に stale 化した merged record は override 系の新 verb(人間 ruling 必須)で個別最終化"
+        },
+        {
+          "internalNo": 3,
+          "label": "C: 混合 — A の祖先実測つき landed 最終化を主経路にしつつ、create の MERGED-head 誤作成防止(loud 拒否)と、stage 文書・ノルムの規範衝突記述の是正を同一変更で行う(A + #3109 防止 + 文書整合)"
+        }
+      ]
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

@@ -2136,7 +2136,7 @@ schemaVersion 2 の canonical schema と legacy decoder を持つ。旧 `amadeus
 - 消費面: `amadeus-sensor.ts:291` `resolvePluginSettingsForSensor(sensorId, hostRoot, projectDir, deps)` → `SettingsResolution | null`（宣言を持たないプラグインでは `null` = 不在であり fallback ではない）、`amadeus-sensor.ts:324` `pluginSettingsOverrides(projectDir, resolveConfig)`、`amadeus-plugin-compose.ts:362-363`（compose 時の宣言検査）
 - config 面: `amadeus-config.ts` の registry entry `plugin.settings`（`:649-655`、`layers: ALL_LAYERS` = project / space / intent、`merge: "plugin-settings"` でプラグイン別・キー別にマージ）
 
-## 区間の公開契約の変化（260815-per-unit-outcome、現在、observed `78146f435a`）
+## 区間の公開契約の変化（260815-per-unit-outcome、履歴、observed `78146f435a`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-stale-epoch-landed の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 base `9ba8170bb` → observed `78146f435a`（`git diff --shortstat` → 103 files / +3091 −182、非 record 面 40 files / +874 −97）で動いた契約は **2 件**であり、いずれも本 intent の患部（per-unit consume の母集団取得）とは独立している。
 
@@ -2144,3 +2144,11 @@ base `9ba8170bb` → observed `78146f435a`（`git diff --shortstat` → 103 file
 - `amadeus-graph.ts` の内部関数 `loadSensors` が `mergeSensorsFromDir(dir, out, pathBase?)` へ改称し、plugin host 側の sensor をマージするようになった（#3026 の着地。plugin 側は `plugins/formal-model-check/plugin.json` と stage frontmatter で sensor を宣言する）。
 
 **本 intent の患部側の契約は無変更。** `readPerUnitConsumePopulation` / `EXPECTED_PER_UNIT_CONSUMER_EDGES` / `UNIT_POOL_EVENT_SET_COMMITTED` / `CONSTRUCTION_AUDIT_EVENTS` を含む 5 ファイルへ `git diff --quiet 9ba8170bb 78146f435 -- <path>` を適用し**全件 exit 0**。fail-closed の失敗コード（`producer-outcome-pending` / `producer-outcome-failed` / `producer-outcome-unknown` / `consumer-edge-inventory-mismatch`）も同断面のまま。
+
+## 区間の公開契約の変化（260815-stale-epoch-landed、現在、observed `83e1dbeef`）
+
+base `78146f435a` → observed `83e1dbeef`。区間で動いた公開契約は **audit イベント 1 件の追加のみ** — intent 260815-per-unit-outcome（PR #3105）が `UNIT_OUTCOME_SETTLED` を新設し、`packages/framework/core/otel/event-registry.ts` の登録数が **92 → 93** になった（`git diff --numstat 78146f435a 83e1dbeef -- packages/framework/core/otel/event-registry.ts` → **+16 / −2**、observed 側の基数は `tests/integration/event-registry-drift.test.ts:50-54` が **93** に pin。併せて `packages/framework/core/knowledge/amadeus-shared/audit-format.md` と `docs/reference/12-state-machine{,.ja}.md` を同期）。
+
+**本 intent（Issue #3110）の患部側の公開契約は本差分で変化なし。** `git diff --quiet 78146f435a 83e1dbeef -- plugins/github-pr-convergence/` → **exit 0**。`pr-convergence` CLI の 4 verb（`create` / `report` / `override` / `status`）、report の `kind` 語彙（`created` / `converged` / `override` / `landed`）、attestation の `local head` フィールド（`pr-convergence-attestation.ts:82` / `:115` / `:166`）、blocking sensor の finding スキーマはいずれも observed 断面のまま。
+
+是正が公開契約に触れうる面は 2 つあり、いずれも方式選択に依存する — (1) `:746-748` の stale 拒否文言（ユーザー可視のエラー contract。現行文言は誤った回復手順を指示している）(2) `report` が MERGED × stale created で `kind: landed` を書けるようになる場合の verb 挙動。詳細は `architecture.md` / `code-quality-assessment.md` の各対応節を参照。
