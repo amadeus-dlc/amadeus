@@ -11,7 +11,7 @@
 - **Harness Version**: {"state":"unavailable","reason":"native-harness-version-not-exposed"}
 - **Model**: {"state":"unavailable","reason":"native-model-not-exposed"}
 - **Worktree Path**:
-- **Bolt Refs**: [empty list]
+- **Bolt Refs**: [docs-norms]
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration
