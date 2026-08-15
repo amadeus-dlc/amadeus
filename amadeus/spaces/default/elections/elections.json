@@ -1636,5 +1636,11 @@
     "dirName": "260814-e-260814-cgb-ra-s13",
     "createdAt": "2026-08-14T07:29:14Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-260815-3062-LANDED-FINALIZATION",
+    "dirName": "260815-e-260815-3062-landed-fin",
+    "createdAt": "2026-08-15T00:20:29Z",
+    "status": "recorded"
   }
 ]

@@ -1,5 +1,6 @@
 # コード構造
 
+## Focus Area: undefined 形の回帰テストが要求するシーム（260814-ambient-error-sink、履歴、observed `6e94189de`）
 ## Focus Area: undefined 形の回帰テストが要求するシーム（260814-ambient-error-sink、履歴、observed `6e94189de`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 対象: [Issue #3004](https://github.com/amadeus-dlc/amadeus/issues/3004)。測定 ref = observed `6e94189dec9e8e2bd0aaeb53bcff7cf9cba27440`。本節は**落ちる実証を成立させるために必要なテスト構造**を記録する（テストの設計自体は build-and-test / code-generation の所掌）。
@@ -205,6 +206,7 @@ tests/harness/fixtures.ts
 
 実装順の依存は `canonical model + legacy decoder` → `question tally + mixed/preservation` → `store/CLI/directive/record/skill/transport` → `migration/TLA/model-map/norm` → `build/test/CI` である。generated `dist/` と self-install surface は編集元にせず、正本変更後に build で同期する。
 
+## Issue #2985 の患部配置（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
 ## Issue #2985 の患部配置（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 | パス | 責務 | #2985 との関係 |
@@ -251,6 +253,40 @@ tests/harness/fixtures.ts
 ### base..observed で構造は動いていない
 
 base `d7ffaa544` → observed `cd64486a6` の 4 コミットは `packages/` を 1 行も変更していない。したがって上表の構造は前回スキャン断面から不変であり、クロスレビュー target-sha `52f1f1b25` 以後に患部 4 ファイルへ触れたのは `d7ffaa544`（Bolt PR attestation、`amadeus-orchestrate.ts` のみ 167 insertions / 8 deletions）の 1 件だけである。分岐構造は保たれ、行番号のみ移動した（クロスレビュー時の `:4063-4068` → HEAD `:4069-4075`）。
+
+## Focus Area: オープンバグ5件の患部配置（260814-open-bug-batch-6、現在、observed `a49f9e9fd`）
+
+### 本区間で動いた構造 — プラグイン rename
+
+`plugins/pr-convergence/` は `plugins/github-pr-convergence/` へ rename された（PR #3051、コミット `a4196f191`）。ツール 9 件は `R100`（内容バイト一致）であり**行番号は不変**、変わったのは配置パスと `plugin.json` の `name` のみ。**stage slug は `pr-convergence` のまま**である。
+
+`plugins/` 直下の現行構成（`ls plugins/` の転記）: `coverage-patch-quick` / `formal-model-check` / `git-drift` / `github-pr-convergence` の 4 プラグイン。`git-drift` は本区間の新設（PR #3055）。
+
+### 患部ファイルと役割
+
+| Issue | 患部 | 役割 |
+| --- | --- | --- |
+| #3062 | `plugins/github-pr-convergence/tools/pr-convergence-cli.ts` | `landed` 拒否ガード 3 層（`:823` `writeSelfReport` / `:1260` `reportOutcome` / `:1364` `runConvergence`） |
+| #3062 | `plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts` | `:368-372` landed の stage 非依存拒否、`:378-380` created の stage 条件付き拒否 |
+| #3062 | `plugins/github-pr-convergence/tools/pr-convergence-predicate.ts` | `:262` verdict 三値、`:281` `landedVerdict` |
+| #3026 | `plugins/formal-model-check/plugin.json` | `sensors` キーが不在（トップレベルは `name` / `stages` / `seams` / `fragments` / `tools` / `advisories` の 6 キー） |
+| #3026 | `packages/framework/core/tools/amadeus-plugin-compose.ts` | `:361` `parseSensors`、`:554` / `:956` / `:992` / `:1023` の `?? []` フォールバック（無音化の機構） |
+| #3028 | `docs/harness-engineering/06-sensors.md` / `.ja.md` | 固定 10 行のセンサー表（`:63-72`） |
+| #3031 | `tests/integration/t-worktree-gc.test.ts` | `:14-27` git ヘルパ（retry 追加済み）、`:172-188` 対象テスト、`:180` 失敗点の `worktree add --detach` |
+| #3032 | `tests/unit/t214-engine-error-logged-seam.test.ts` | `:131` / `:158` の呼出行（着地リテラルの一意帰属先） |
+| #3032 | `packages/framework/core/tools/amadeus-lib.ts` | `:8066` `emitErrorAuditRow`、`:8087` `emitError`、`:8102-8105` の握り潰し catch |
+| #3032 | `packages/framework/core/otel/audit-emit.ts` / `otel/bootstrap.ts` | `:48` `emitAuditEvent` → `:88` `ensureOtelBootstrap` → `:45` `assertSameProject` |
+
+### 層の制約
+
+- #3026 の是正面は `plugins/formal-model-check/plugin.json` のデータ（宣言）であり、`amadeus-plugin-compose.ts` のコード変更は「不一致を検出する検査」を新設する場合にのみ発生する（Issue 受け入れ条件 3 の判定次第）
+- #3028 の是正面は docs 2 言語。件数フリー契約へ書き換える場合は docs を読むテスト側も射程に入る
+- #3031 の患部はテスト自身であり本番コードに非接触
+- #3032 は現行断面の読解では機序が確定しないため、患部の確定自体が調査の成果物になる
+
+### 行番号 drift の記録
+
+Issue #3031 は `:160-175` / `:169` を引くが、observed 断面では対象テストが `:172-188`、失敗点が `:180`。本区間の PR #3056 が git ヘルパへ 12 行追加したことによる drift である。
 
 ## 差分リフレッシュで観測した構造変化（260814-priority-bug-batch、現在、observed `d64fd7cac`）
 

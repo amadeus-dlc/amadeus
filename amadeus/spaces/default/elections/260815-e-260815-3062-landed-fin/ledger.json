@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 2,
+  "ballots": [
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260815-3062-LANDED-FINALIZATION",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-3062-method",
+          "choiceInternalNo": 1,
+          "goa": 4,
+          "reservation": "landed report の合格条件に checkRollupState を硬い必須条件として課さないこと — マージ後の rollup は merge commit の check-runs を読むため無関係な post-merge workflow の失敗で偽 FAILURE 化する既知事象がある(project.md Learnings Inbox cid:code-generation:c1-landed-rollup-attribution)。合格は merge commit SHA と mergedAt の事実束縛を核とし、rollup は記録項目に留めるべき。",
+          "rationale": "A のみが FR-1(3) の対称性回復を満たす: 非 self record は既に landed を exit 0 で report 書込しており(pr-convergence-cli.ts:1392-1393 writeReport kind landed、merge commit SHA/mergedAt/checkRollupState 束縛)、self だけが :823/:1260/:1364 の 3 層で拒否される構造的非対称であり、predicate 層の landedVerdict(pr-convergence-predicate.ts:262-289「a merged pull request is a fact to record」)が既に landed を第一級として定義済みだから、CLI/センサー側の拒否を事実書込へ置換するのは新規互換レイヤーの追加ではなく既存契約への収束である; B は override が「人間が収束なしで前進を裁定する」経路(stage 文書 :320-328 は override が already-merged PR を拒否すると明記)であり、CI green で正常着地した最良ケースを例外裁定として記録して意味を歪め、非 self の exit 0 landed との対称性も回復せず、merge queue 着地のたびに HUMAN_TURN を要求する運用負荷を恒久化する; C は AMADEUS_SKIP_BLOCKING_SENSOR_GUARD の正規化が stage 文書 :328「There is no environment variable, flag, or state field that skips the guard」と正面衝突し、ゲート緩和を常態化する点で org.md Forbidden の検証劇場禁止に触れ、かつ merge queue の着地タイミングは非同期で提出側が制御できないため順序契約ではレース自体を解けず、project.md CI/CD の Merge Queue 必須ノルムと両立しない"
+        }
+      ],
+      "submittedAt": "2026-08-15T00:22:48Z",
+      "receivedAt": "2026-08-15T00:24:24Z"
+    },
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260815-3062-LANDED-FINALIZATION",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-3062-method",
+          "choiceInternalNo": 1,
+          "goa": 4,
+          "reservation": "A の実装は landed report を実測 merge fact(mergeCommitOid / mergedAt / checkRollupState — 非 self 経路 pr-convergence-cli.ts:1365-1374 が既に書いている値)へ束縛し、converged:false を維持すること(pr-convergence-predicate.ts:281 の『no consumer of converged gains a new way to advance』を壊さない)。マージ後は merge 時点の未解決レビュースレッドを事後再導出できないため、stage 文書には『landed はスレッド閉包の証明ではなく、既に起きたマージの記録である』と明記し、収束証拠と記録事実の区別を残す。旧 self×landed 拒否は削除して置換し、二重経路を残さない(org.md Forbidden)。",
+          "rationale": "A のみが受け入れ条件『非 self の landed 扱いとの対称性回復』を直接満たす — pr-convergence-cli.ts:1392-1393 は非 self で『A landed pull request is a settled fact: exit 0, like convergence』としつつ :1364 の self ガードがその分岐を self で到達不能にしており、predicate の landed 第一級定義(pr-convergence-predicate.ts:262 verdict:'landed'、:281 landedVerdict『a fact to record, not a state to converge』)とも自己矛盾する; B は :1364 が verb 分岐(:1378 status / :1397 report)より手前の包括ガードのため status/report の非対称が残り、かつ override は stage 文書 pr-convergence.md:328-330 が実在の human turn と非空 reason を要求する人間裁定の器具で、既に機械的に着地した事実へ毎回人間裁定を強制するのは記録の意味を歪め Merge Queue 必須(project.md CI/CD)と摩擦する; C は stage 文書 pr-convergence.md:330 が『There is no environment variable, flag, or state field that skips the guard』と宣言する逃がしを正規化するもので blocking gate の実質無効化(team.md Forbidden のゲート弱体化・検証劇場)にあたり、かつ merge queue は必須 check green 後の任意時点でマージするため『auto-merge 有効化前に report』の順序契約は競合を構造的に排除できない。"
+        }
+      ],
+      "submittedAt": "2026-08-15T00:23:40Z",
+      "receivedAt": "2026-08-15T00:24:24Z"
+    },
+    {
+      "kind": "amend",
+      "ref": {
+        "electionId": "E-260815-3062-LANDED-FINALIZATION",
+        "voter": "subagent-1",
+        "submittedAt": "2026-08-15T00:22:48Z"
+      },
+      "schemaVersion": 2,
+      "electionId": "E-260815-3062-LANDED-FINALIZATION",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-3062-method",
+          "choiceInternalNo": 1,
+          "goa": 3,
+          "reservation": "landed report の合格条件に checkRollupState を硬い必須条件として課さないこと — マージ後の rollup は merge commit の check-runs を読むため無関係な post-merge workflow の失敗で偽 FAILURE 化する既知事象がある(project.md Learnings Inbox cid:code-generation:c1-landed-rollup-attribution)。合格は merge commit SHA と mergedAt の事実束縛を核とし、rollup は記録項目に留めるべき。",
+          "rationale": "A のみが FR-1(3) の対称性回復を満たす: 非 self record は既に landed を exit 0 で report 書込しており(pr-convergence-cli.ts:1392-1393 writeReport kind landed、merge commit SHA/mergedAt/checkRollupState 束縛)、self だけが :823/:1260/:1364 の 3 層で拒否される構造的非対称であり、predicate 層の landedVerdict(pr-convergence-predicate.ts:262-289「a merged pull request is a fact to record」)が既に landed を第一級として定義済みだから、CLI/センサー側の拒否を事実書込へ置換するのは新規互換レイヤーの追加ではなく既存契約への収束である; B は override が「人間が収束なしで前進を裁定する」経路(stage 文書 :320-328 は override が already-merged PR を拒否すると明記)であり、CI green で正常着地した最良ケースを例外裁定として記録して意味を歪め、非 self の exit 0 landed との対称性も回復せず、merge queue 着地のたびに HUMAN_TURN を要求する運用負荷を恒久化する; C は AMADEUS_SKIP_BLOCKING_SENSOR_GUARD の正規化が stage 文書 :328「There is no environment variable, flag, or state field that skips the guard」と正面衝突し、ゲート緩和を常態化する点で org.md Forbidden の検証劇場禁止に触れ、かつ merge queue の着地タイミングは非同期で提出側が制御できないため順序契約ではレース自体を解けず、project.md CI/CD の Merge Queue 必須ノルムと両立しない"
+        }
+      ],
+      "submittedAt": "2026-08-15T00:25:30Z",
+      "receivedAt": "2026-08-15T00:25:57Z"
+    },
+    {
+      "kind": "amend",
+      "ref": {
+        "electionId": "E-260815-3062-LANDED-FINALIZATION",
+        "voter": "subagent-2",
+        "submittedAt": "2026-08-15T00:23:40Z"
+      },
+      "schemaVersion": 2,
+      "electionId": "E-260815-3062-LANDED-FINALIZATION",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-3062-method",
+          "choiceInternalNo": 1,
+          "goa": 3,
+          "reservation": "A の実装は landed report を実測 merge fact(mergeCommitOid / mergedAt / checkRollupState — 非 self 経路 pr-convergence-cli.ts:1365-1374 が既に書いている値)へ束縛し、converged:false を維持すること(pr-convergence-predicate.ts:281 の『no consumer of converged gains a new way to advance』を壊さない)。マージ後は merge 時点の未解決レビュースレッドを事後再導出できないため、stage 文書には『landed はスレッド閉包の証明ではなく、既に起きたマージの記録である』と明記し、収束証拠と記録事実の区別を残す。旧 self×landed 拒否は削除して置換し、二重経路を残さない(org.md Forbidden)。",
+          "rationale": "A のみが受け入れ条件『非 self の landed 扱いとの対称性回復』を直接満たす — pr-convergence-cli.ts:1392-1393 は非 self で『A landed pull request is a settled fact: exit 0, like convergence』としつつ :1364 の self ガードがその分岐を self で到達不能にしており、predicate の landed 第一級定義(pr-convergence-predicate.ts:262 verdict:'landed'、:281 landedVerdict『a fact to record, not a state to converge』)とも自己矛盾する; B は :1364 が verb 分岐(:1378 status / :1397 report)より手前の包括ガードのため status/report の非対称が残り、かつ override は stage 文書 pr-convergence.md:328-330 が実在の human turn と非空 reason を要求する人間裁定の器具で、既に機械的に着地した事実へ毎回人間裁定を強制するのは記録の意味を歪め Merge Queue 必須(project.md CI/CD)と摩擦する; C は stage 文書 pr-convergence.md:330 が『There is no environment variable, flag, or state field that skips the guard』と宣言する逃がしを正規化するもので blocking gate の実質無効化(team.md Forbidden のゲート弱体化・検証劇場)にあたり、かつ merge queue は必須 check green 後の任意時点でマージするため『auto-merge 有効化前に report』の順序契約は競合を構造的に排除できない。"
+        }
+      ],
+      "submittedAt": "2026-08-15T00:25:47Z",
+      "receivedAt": "2026-08-15T00:25:57Z"
+    }
+  ]
+}
