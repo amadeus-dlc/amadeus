@@ -15,10 +15,74 @@ import {
   type RecommendationBasisSource,
 } from "./amadeus-recommendation.ts";
 import type { VerifiedHumanTurn } from "./amadeus-loop-monitor-runtime.ts";
-import { auditShardDir, auditShardName, findAllEvents } from "./amadeus-lib.ts";
+import { auditShardDir, auditShardName, findAllEvents, getField } from "./amadeus-lib.ts";
 
 export type AutonomyMode = "none" | "semi" | "full";
 export type WorkflowExecutionState = "running" | "suspended" | null;
+
+// --- The Construction scheduling projection (RFC-0001 FR-6) -----------------
+//
+// `Construction Autonomy Mode` is DERIVED from the declared Intent mode; it is
+// not an independent setting. One rule, used by the writer that records it and
+// by the reader that schedules off it, is what makes the record's two fields
+// impossible to disagree about on purpose.
+export type ConstructionProjection = "autonomous" | "gated";
+
+// The state-file field names the projection spans. Named here so the divergence
+// detector and its consumers cannot read one field under two spellings.
+export const INTENT_AUTONOMY_MODE_FIELD = "Intent Autonomy Mode";
+export const CONSTRUCTION_AUTONOMY_MODE_FIELD = "Construction Autonomy Mode";
+
+// The value the state template seeds before any mode is declared. Legal only
+// next to an undeclared (`none`) Intent mode — see detectProjectionDivergence.
+const UNPROJECTED = "unset";
+
+export function projectConstructionAutonomy(mode: AutonomyMode): ConstructionProjection {
+  return mode === "none" ? "gated" : "autonomous";
+}
+
+// What a record says about itself, when the two halves disagree. `recorded` is
+// the RAW field value so a reason line can name a typo or an absence instead of
+// flattening both into "not what I expected".
+export interface DivergenceReport {
+  readonly declared: AutonomyMode;
+  readonly recorded: string | null;
+  readonly expected: ConstructionProjection;
+}
+
+// The declared Intent mode, or null when the record declares none this module
+// recognises. Null is not "mode none": it is "no declaration to project from",
+// which is why the divergence check and the scheduling read both fail closed on
+// it rather than assuming a default.
+export function declaredIntentAutonomyMode(stateContent: string | null): AutonomyMode | null {
+  const raw = stateContent === null ? null : getField(stateContent, INTENT_AUTONOMY_MODE_FIELD)?.trim();
+  return raw === "none" || raw === "semi" || raw === "full" ? raw : null;
+}
+
+// Non-null means the record disagrees with itself and the caller must fail loud
+// (RFC-0001 D3/D9: the pre-RFC reader degraded silently, so an operator saw a
+// declared mode next to a swarm that never started and nothing said why).
+//
+// Exactly one pair is exempt: the initialization pair the state template writes
+// — Intent mode `none` (nothing declared yet) next to an unwritten projection.
+// A DECLARED mode next to `unset` is a divergence like any other; exempting it
+// too would silence the one skew the pre-RFC code already warned about.
+export function detectProjectionDivergence(stateContent: string | null): DivergenceReport | null {
+  const declared = declaredIntentAutonomyMode(stateContent);
+  if (declared === null) return null;
+  const raw = stateContent === null ? undefined : getField(stateContent, CONSTRUCTION_AUTONOMY_MODE_FIELD)?.trim();
+  const recorded = raw === undefined ? null : raw;
+  if (declared === "none" && recorded === UNPROJECTED) return null;
+  const expected = projectConstructionAutonomy(declared);
+  return recorded === expected ? null : { declared, recorded, expected };
+}
+
+// The refusal line a loud caller prints. Kept next to the detector so the reason
+// text and the report it describes cannot drift.
+export function describeProjectionDivergence(report: DivergenceReport): string {
+  const observed = report.recorded === null || report.recorded === "" ? "(absent)" : report.recorded;
+  return `AUTONOMY_PROJECTION_DIVERGENCE ${INTENT_AUTONOMY_MODE_FIELD}: ${report.declared} projects to ${CONSTRUCTION_AUTONOMY_MODE_FIELD}: ${report.expected}, but the record says ${observed}. Re-run the mode declaration to converge the projection (RFC-0001 FR-6).`;
+}
 export type IntentGrantState = "active" | "revoked" | "completed";
 export type InteractionKind = "stage-gate" | "phase-gate" | "walking-skeleton" | "question";
 // The kind universe, next to the union it enumerates so widening one without the

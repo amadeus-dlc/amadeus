@@ -10,6 +10,7 @@ import { basename } from "node:path";
 
 import {
   ALL_INTERACTION_KINDS,
+  CONSTRUCTION_AUTONOMY_MODE_FIELD,
   autonomyDigest,
   autonomyScopeFingerprint,
   authorizeInteraction,
@@ -20,6 +21,7 @@ import {
   grantIssuanceDisplayDigest,
   nonFullCommandDisplayDigest,
   normalizeDecisionPolicies,
+  projectConstructionAutonomy,
   SEMI_ROUTINE_INTERACTIONS,
   type AutonomyMode,
   type AutonomyProjection,
@@ -712,7 +714,7 @@ function writeAutonomyStateProjection(
     withAuditLock(projectDir, () => {
       let updated = setOrInsertField(readStateFile(projectDir), "## Current Status", "Intent Autonomy Mode", mode);
       updated = setOrInsertField(updated, "## Current Status", "Intent Grant", projection.currentGrant?.grantId ?? "none");
-      updated = setFieldStrict(updated, "Construction Autonomy Mode", mode === "full" ? "autonomous" : "gated");
+      updated = setFieldStrict(updated, CONSTRUCTION_AUTONOMY_MODE_FIELD, projectConstructionAutonomy(mode));
       writeStateFile(projectDir, updated);
     });
   } catch (cause) {
