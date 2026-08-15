@@ -419,7 +419,7 @@ Issue #3031 は `:160-175` / `:169` を引くが、observed 断面では対象�
 
 機序の解説は `architecture.md` の対応節、テスト面と台帳は `code-quality-assessment.md` の対応節を参照。
 
-## 差分リフレッシュで観測した構造変化（260815-stale-epoch-landed、現在、observed `83e1dbeef`）
+## 差分リフレッシュで観測した構造変化（260815-stale-epoch-landed、履歴、observed `83e1dbeef`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-rfc-autonomy-modes の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する。主題は PR #3113 着地で解消済み））
 
 **観測 ref**: base `78146f435a66680055a24144937b5aa03d48bfb4` → observed `83e1dbeefb3278a00e86f69d3c79071a35ccf043`（`git merge-base --is-ancestor 78146f435a 83e1dbeef` → **exit 0**、`git rev-list --count 78146f435a..83e1dbeef` → **4**）。
 
@@ -452,3 +452,8 @@ patch surface のファイル規模（`wc -l`、observed 断面）: `pr-converge
 **sensor のファイル名に注意** — manifest は `plugins/github-pr-convergence/sensors/amadeus-pr-convergence-report-format.md`（`sensors/` 直下、`amadeus-` プレフィックス）、実装は `plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts`（`tools/` 直下、`amadeus-sensor-` プレフィックス）で、`sensors/` に `.ts` は存在しない（`ls plugins/github-pr-convergence/sensors/` → 1 エントリ、md のみ）。
 
 機序の解説は `architecture.md` の対応節、テスト空白と台帳は `code-quality-assessment.md` の対応節を参照。
+
+## 差分リフレッシュで観測した構造変化（260815-rfc-autonomy-modes、現在、observed `2eb94f1e39e`）
+
+- 区間 `83e1dbeef..2eb94f1e39e`: 3 コミット、71 files +3187/−131（非 record/metrics 面は 8 files +1166/−73 — すべて `plugins/github-pr-convergence/` の #3113 修正 + t3110 + allowlist）。新規パッケージ・ディレクトリ移動・新規 core モジュール: **ゼロ**。新規テストファイルは `tests/integration/t3110-pr-convergence-stale-epoch-landed.integration.test.ts` の 1 件（coverage-registry は #3113 内で regen 済み）
+- `packages/framework/core/` の変更: **0 file** — RFC-0001 bound-surfaces は前回 observed から不動
