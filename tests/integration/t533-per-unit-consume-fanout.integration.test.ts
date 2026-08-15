@@ -92,10 +92,13 @@ afterEach(() => {
   resetOtelBootstrapForTests();
 });
 
-function projectWithOutcomes(
+// Seed a runtime population (two Units in batch 1) with every per-unit producer
+// artifact on disk and NO Unit-pool coordinator behind it — the per-unit
+// `run-stage` path of a units-generation EXECUTE scope (#3099). The pool-seeded
+// fixture below builds on top of this.
+function seedPerUnitProject(
   missing?: { unit: string; artifact: string },
-  stage: keyof typeof consumerEdges = "build-and-test",
-  outcomeOverrides: Readonly<Record<string, "succeeded" | "failed" | "cancelled">> = {},
+  stage: keyof typeof consumerEdges | "code-generation" = "build-and-test",
 ): string {
   const project = setupIntegrationProject({ withState: "state-brownfield-feature.md" });
   projects.push(project);
@@ -147,6 +150,36 @@ function projectWithOutcomes(
     "```",
     "",
   ].join("\n"));
+  const artifacts = new Map(
+    Object.values(consumerEdges).flat().map(([artifact, producer]) => [artifact, producer]),
+  );
+  for (const unit of ["unit-z", "unit-a"]) {
+    for (const [artifact, producer] of artifacts) {
+      if (missing?.unit === unit && missing.artifact === artifact) continue;
+      const directory = join(record, "construction", unit, producer);
+      mkdirSync(directory, { recursive: true });
+      writeFileSync(join(directory, `${artifact}.md`), `${unit}:${artifact}\n`);
+    }
+  }
+  return project;
+}
+
+// The pool-seeded fixture: the same population, settled through the C2
+// single-writer Unit pool (the swarm path).
+function projectWithOutcomes(
+  missing?: { unit: string; artifact: string },
+  stage: keyof typeof consumerEdges = "build-and-test",
+  outcomeOverrides: Readonly<Record<string, "succeeded" | "failed" | "cancelled">> = {},
+): string {
+  const project = seedPerUnitProject(missing, stage);
+  settleThroughPool(project, outcomeOverrides);
+  return project;
+}
+
+function settleThroughPool(
+  project: string,
+  outcomeOverrides: Readonly<Record<string, "succeeded" | "failed" | "cancelled">> = {},
+): void {
   const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(project));
   expect(pool.initialEnqueue({
     idempotencyKey: "init",
@@ -175,18 +208,18 @@ function projectWithOutcomes(
       outcome,
     }).ok).toBe(true);
   }
-  const artifacts = new Map(
-    Object.values(consumerEdges).flat().map(([artifact, producer]) => [artifact, producer]),
+}
+
+// Move the cursor onto a consumer stage the way the code-generation approval
+// would, so the next `next` reads the per-unit consume population.
+function moveCursorTo(project: string, stage: keyof typeof consumerEdges): void {
+  const state = seededStateFile(project);
+  sedReplaceInFile(state, /^- \*\*Current Stage\*\*:.*$/m, `- **Current Stage**: ${stage}`);
+  sedReplaceInFile(
+    state,
+    new RegExp(`^- \\[.\\] ${stage} — .*$`, "m"),
+    `- [-] ${stage} — EXECUTE`,
   );
-  for (const unit of ["unit-z", "unit-a"]) {
-    for (const [artifact, producer] of artifacts) {
-      if (missing?.unit === unit && missing.artifact === artifact) continue;
-      const directory = join(record, "construction", unit, producer);
-      mkdirSync(directory, { recursive: true });
-      writeFileSync(join(directory, `${artifact}.md`), `${unit}:${artifact}\n`);
-    }
-  }
-  return project;
 }
 
 function next(project: string) {
@@ -319,6 +352,31 @@ describe("t533 orchestrator per-unit consume fan-out", () => {
       `amadeus/spaces/default/intents/${DEFAULT_RECORD_DIR}/construction/${tail}`
     ));
     expect(directive.consumes_absent).toBeUndefined();
+  });
+
+  // #3099 — the per-unit `run-stage` path never went through the Unit pool, so
+  // a Construction that completed unit by unit left the outcome ledger empty and
+  // every per-unit consumer refused with producer-outcome-pending. The engine
+  // now settles each Unit's outcome at its coverage boundary, on the same
+  // `next` path that iterates the units.
+  test("settles per-unit Construction outcomes so a pool-free population fans out", () => {
+    const project = seedPerUnitProject(undefined, "code-generation");
+
+    const construction = next(project);
+    expect(construction.status, construction.stderr).toBe(0);
+
+    moveCursorTo(project, "build-and-test");
+    const result = next(project);
+
+    expect(result.status, result.stderr).toBe(0);
+    const directive = JSON.parse(result.stdout);
+    expect(directive.kind, JSON.stringify(directive)).toBe("run-stage");
+    expect(directive.stage).toBe("build-and-test");
+    expect(directive.consumes).toEqual(["unit-z", "unit-a"].flatMap((unit) =>
+      ["code-generation-plan", "code-summary"].map((artifact) =>
+        `amadeus/spaces/default/intents/${DEFAULT_RECORD_DIR}/construction/${unit}/code-generation/${artifact}.md`
+      )
+    ));
   });
 
   test("ignores terminal outcomes from a batch outside the current runtime population", () => {

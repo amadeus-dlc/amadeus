@@ -58,7 +58,7 @@ export type AppendAuditResult =
   | { appended: true; event: string; timestamp: string }
   | { appended: false; reason: "intent-complete" | "fatal-latch"; event: string; timestamp: string };
 
-// --- Canonical event types (85) ---
+// --- Canonical event types (93) ---
 // See docs/reference/12-state-machine.md for the state transitions that emit each event.
 
 const VALID_EVENT_TYPES = new Set([
@@ -158,7 +158,11 @@ const VALID_EVENT_TYPES = new Set([
   // Error/Recovery
   "ERROR_LOGGED",
   "RECOVERY_COMPLETED",
-  // Construction Bolt execution
+  // Construction Bolt execution — UNIT_OUTCOME_SETTLED is the per-unit
+  // `run-stage` path's outcome row (#3099), emitted by the engine at a Unit's
+  // coverage boundary. It is a SEPARATE stream from the swarm path's
+  // UNIT_POOL_EVENT_SET_COMMITTED, which keeps its C2 single-writer contract.
+  "UNIT_OUTCOME_SETTLED",
   "BOLT_STARTED",
   "BOLT_COMPLETED",
   "BOLT_FAILED",
@@ -276,6 +280,7 @@ export const EVENT_HEADINGS: Record<string, string> = {
   RECOMPOSED: "Plan Recomposed",
   ERROR_LOGGED: "Error Logged",
   RECOVERY_COMPLETED: "Recovery Completed",
+  UNIT_OUTCOME_SETTLED: "Unit Outcome Settled",
   BOLT_STARTED: "Bolt Started",
   BOLT_COMPLETED: "Bolt Completed",
   BOLT_FAILED: "Bolt Failed",

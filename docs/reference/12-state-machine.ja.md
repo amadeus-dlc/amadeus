@@ -323,6 +323,7 @@ bun .claude/tools/amadeus-advisory-choice.ts recover-schema-1 \
 
 | Event | Emitter | Notes |
 |---|---|---|
+| `UNIT_OUTCOME_SETTLED` | `tools/amadeus-orchestrate.ts` | エンジン自身の per-unit dispatch 経路が、Unit の coverage 成立境界でその outcome を確定した。stage・Unit・batch を鍵とするため再入しても行は増えず、Unit pool ストリームにその Unit の terminal が無い場合にのみ読まれる |
 | `BOLT_STARTED` | `tools/amadeus-bolt.ts` | 並列バッチ用の CSV bolt 名を受け付ける |
 | `BOLT_COMPLETED` | `tools/amadeus-bolt.ts` | 先行する `BOLT_STARTED` とペア |
 | `BOLT_FAILED` | `tools/amadeus-bolt.ts`(`fail` + `abort`) | `--succeeded-siblings` が並列バッチの生存者を捕捉。`abort` はサブ分類のため `Reason: aborted` フィールドを追加 |
