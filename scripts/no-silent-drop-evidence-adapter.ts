@@ -132,6 +132,12 @@ export type TreeCommandContext = {
   stderr: string;
 };
 
+// #3065: `git ls-tree -z` has been observed to exit 0 with its stdout cut short under parallel
+// load. The tree itself is intact - only that read of it was - so an incomplete read is worth
+// re-reading. The bound keeps a genuinely unterminated output on the fail-closed path in
+// `parseTree` rather than looping on it.
+export const TREE_READ_ATTEMPTS = 3;
+
 const FORENSIC_EDGE_BYTES = 16;
 const FORENSIC_STDERR_BYTES = 200;
 
@@ -161,6 +167,13 @@ function treeForensics(output: string, context: TreeCommandContext): string {
     `status=${context.status}`,
     `stderr=${JSON.stringify(context.stderr.slice(0, FORENSIC_STDERR_BYTES))}`,
   ].join(" ");
+}
+
+// A `-z` tree is complete when its last record is terminated, and an empty tree has nothing to
+// terminate. Only a read that succeeded is worth re-reading: a non-zero exit is the command's own
+// verdict and belongs to the caller's fail-closed path.
+function isIncompleteTreeRead(result: CommandResult): boolean {
+  return result.status === 0 && result.stdout !== "" && !result.stdout.endsWith("\0");
 }
 
 function parseTree(output: string, revision: string, context: TreeCommandContext): string[] {
@@ -437,7 +450,10 @@ export class NoSilentDropEvidenceAdapter {
   }
 
   private recursiveTree(revision: string): string[] {
-    const result = this.run(["git", "ls-tree", "-r", "-z", "--full-tree", revision]);
+    let result = this.run(["git", "ls-tree", "-r", "-z", "--full-tree", revision]);
+    for (let attempt = 1; attempt < TREE_READ_ATTEMPTS && isIncompleteTreeRead(result); attempt += 1) {
+      result = this.run(["git", "ls-tree", "-r", "-z", "--full-tree", revision]);
+    }
     if (result.status !== 0) throw new EvidenceRebindError("REBIND_GIT_TREE_INVALID", `cannot read ${revision} tree: ${commandDetail(result)}`);
     return parseTree(result.stdout, revision, { status: result.status, stderr: result.stderr });
   }
