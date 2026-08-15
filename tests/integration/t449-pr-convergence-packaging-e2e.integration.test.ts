@@ -76,6 +76,7 @@ import {
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { projectDeliveryBoltPlan } from "../../packages/framework/core/tools/amadeus-delivery-bolts.ts";
 
 function deliveryRefusal(
@@ -316,6 +317,11 @@ afterEach(() => {
   }
   _resetStageGraphForTests();
   __resetGraphCache();
+  // Cases mint their own projects and drive production code that bootstraps
+  // OTel on the way to an audit emit (the per-unit outcome a Construction
+  // iteration settles). One workspace per process is the production invariant,
+  // so the per-process records are dropped between cases.
+  resetOtelPerProject();
   while (projects.length > 0) cleanupTestProject(projects.pop());
   rmSync(host, { recursive: true, force: true });
 });

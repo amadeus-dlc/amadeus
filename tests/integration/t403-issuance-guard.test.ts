@@ -26,6 +26,7 @@ import {
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import {
   GUARD_EXIT_MARKER,
@@ -40,6 +41,11 @@ resetAidlcEnv();
 
 const tempDirs: string[] = [];
 afterEach(() => {
+  // Each case mints its own project and drives production code that bootstraps
+  // OTel on the way to an audit emit (the per-unit outcome a Construction
+  // iteration settles). One workspace per process is the production invariant,
+  // so the per-process records are dropped between cases.
+  resetOtelPerProject();
   while (tempDirs.length) cleanupTestProject(tempDirs.pop());
 });
 
