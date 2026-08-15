@@ -334,7 +334,10 @@ describe("t414 complete --merge partial-success recovery", () => {
     appendEvidence(projectDir, "HUMAN_TURN", "direct-lifecycle");
     const preview = directCommand(projectDir, "preview-autonomy", []);
     expect(preview.status, preview.out).toBe(0);
-    const displayDigest = (JSON.parse(preview.out) as { displayDigest: string }).displayDigest;
+    // Line 1 is the JSON preview; line 2 (grant-ceremony R-2) is a paste-ready
+    // set-autonomy command, not JSON.
+    const previewJsonLine = preview.out.trim().split("\n")[0] as string;
+    const displayDigest = (JSON.parse(previewJsonLine) as { displayDigest: string }).displayDigest;
     const autonomy = directCommand(projectDir, "set-autonomy", [
       "--mode",
       "full",

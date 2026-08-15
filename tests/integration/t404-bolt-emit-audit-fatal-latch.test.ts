@@ -78,7 +78,10 @@ function corruptAuditShard(proj: string): void {
 function prepareFullAutonomy(proj: string): string {
   const preview = run(proj, "amadeus-bolt.ts", ["preview-autonomy"]);
   expect(preview.status).toBe(0);
-  const digest = (JSON.parse(preview.out.trim()) as { displayDigest: string }).displayDigest;
+  // Line 1 is the JSON preview; line 2 (grant-ceremony R-2) is a paste-ready
+  // set-autonomy command, not JSON.
+  const previewJsonLine = preview.out.trim().split("\n")[0] as string;
+  const digest = (JSON.parse(previewJsonLine) as { displayDigest: string }).displayDigest;
   const auditDir = join(recordDirOf(proj), "audit");
   appendFileSync(join(auditDir, "t404-human.jsonl"), `${JSON.stringify({
     schemaVersion: 1,
