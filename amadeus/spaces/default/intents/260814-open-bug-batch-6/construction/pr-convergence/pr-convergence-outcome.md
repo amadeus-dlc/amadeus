@@ -29,3 +29,21 @@
 
 - 検証済み: 5 Bolt の配送(MERGED・CI green・着地面 grep)— 本ステージの実体条件
 - 未検証(構造的不成立・申し送り): report ファイルの landed 最終化。record 上は created(stale attestation)のまま残り、本文書がその帰属と経緯の一次記録
+
+## 解消(2026-08-15 resume — #3110 修正着地後の landed 最終化)
+
+#3110 の修正(intent 260815-stale-epoch-landed / PR #3113、MERGED `8ceeb2dc182`)が実装した merged arm(attested prHead が merged headRefOid の祖先であることを `refs/pull/<n>/head` fetch + `merge-base --is-ancestor` で実測し、merge commit SHA + mergedAt に束縛)により、5 unit の report を正規 CLI で landed へ最終化した:
+
+| unit | PR | kind | merge commit / merged at |
+|---|---|---|---|
+| audit-sink-investigation | #3080 | landed | `d697e2c6cc5` / 2026-08-15T02:34:55Z |
+| worktree-gc-determinism | #3089 | landed | `c80c6eb6459` / 2026-08-15T02:39:51Z |
+| sensor-declaration | #3086 | landed | `8409dc5db75` / 2026-08-15T03:59:59Z |
+| landed-finalization | #3062 系 #3081 | landed | `6ff5352ba83` / 2026-08-15T04:35:06Z |
+| docs-sensors-sync | #3092 | landed | `7a9e362de24` / 2026-08-15T04:48:11Z |
+
+- 実行形: unit ごとに `report` verb → record checkpoint commit の直列(先行 unit の report 更新が次 unit の foreign-dirty 判定に入るため — fail-closed が正しく作動した実測)
+- blocking sensor `pr-convergence-report-format` は 5 unit すべて再 fire で exit 0(pass)
+- pool・attestation の捏造ゼロ: すべて CLI の attestation 経路で mint(audit shard に ARTIFACT_ATTESTED receipt)。merge commit / mergedAt は GitHub 実測値の転記(取得: report verb 内の merged read-back)
+
+「未検証(構造的不成立)」としていた landed 最終化はこれで解消 — 本ステージの実体条件はすべて成立。

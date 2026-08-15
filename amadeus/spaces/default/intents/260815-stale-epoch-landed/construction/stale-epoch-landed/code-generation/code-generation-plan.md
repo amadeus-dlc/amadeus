@@ -36,3 +36,32 @@
 
 - push-first。blocking はリモート CI。worktree `bolt-stale-epoch-landed`(base origin/main)
 - FR-5(obb6 実適用)は着地後に conductor が実施(受け入れ基準の実測)
+
+## Review — Iteration 1
+
+- **Verdict:** NOT-READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-15T13:21:52Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+5/6 binding reservations traced cleanly, but reservation #3's mandated evidence-source disclosure is absent from code-summary and the TDD Red verbatims were deferred rather than delivered at this gate.
+
+### Findings
+
+- BLOCKER | code-summary.md | evidence-source selection (refs/pull/<n>/head vs gh compare API) and rationale required by election reservation 3 are missing from the artifact
+- BLOCKER | code-summary.md | Red verbatims deferred to a later addendum contradicts the TDD NFR and the falling-proof mandate at this gate
+
+## Review — Iteration 2
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-15T13:23:28Z
+- **Iteration:** 2
+- **Scope decision:** none
+
+Both iteration-1 BLOCKERs resolved: reservation #3's ancestry-proof selection recorded with rationale, and TDD Red verbatims for all five arms transcribed in place; nothing regressed.
+
+### Findings
+
+- FOLLOW-UP | code-summary.md | FR-2 narrowing properly disclosed with rationale and ladder ruling id auto-decision-c2b3dc09044c0023b3d8c13c22f468f6 — traceability note only

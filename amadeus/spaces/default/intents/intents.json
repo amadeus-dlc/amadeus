@@ -1249,7 +1249,7 @@
     "slug": "open-bug-batch-6",
     "dirName": "260814-open-bug-batch-6",
     "scope": "self-fix",
-    "status": "in-flight"
+    "status": "complete"
   },
   {
     "uuid": "01a00368-5780-706f-ae7f-1445b9748390",
@@ -1270,6 +1270,6 @@
     "slug": "stale-epoch-landed",
     "dirName": "260815-stale-epoch-landed",
     "scope": "self-fix",
-    "status": "in-flight"
+    "status": "complete"
   }
 ]
