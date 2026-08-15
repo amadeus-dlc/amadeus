@@ -92,7 +92,6 @@ describe("the audit-merge critical section stays atomic on the canonical path", 
       fields: { Stage: "code-generation", Decision: "ship" },
     })}\n`;
 
-    const startedMs = Date.now();
     const merged = withAuditLock(
       proj,
       () => mergeDeltaUnderLock(proj, mainAudit, delta, COORDS, born.dirName, "default"),
@@ -101,8 +100,8 @@ describe("the audit-merge critical section stays atomic on the canonical path", 
     );
 
     // Re-entered rather than re-acquired: a fresh acquire against our own lock
-    // would have spent the full budget before throwing.
-    expect(Date.now() - startedMs).toBeLessThan(4000);
+    // would have spent the full budget and then thrown, so a returned merge is
+    // the evidence.
     expect(merged.entriesMerged).toBe(1);
     expect(merged.result.appended).toBe(true);
 

@@ -113,7 +113,6 @@ amadeus-election/SKILL.md
 
 外部依存は Bun、local filesystem、agmsg send script、subagent spawn、形式検証時の TLC toolchain に限られる。選挙の集計自体に network service はなく、後方読み取りのための新サービスやdatabaseを導入する必要はない。
 
-## Issue #2985 依存グラフ（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
 ## Issue #2985 依存グラフ（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 ```text
@@ -135,7 +134,7 @@ delivery-planning bolt-plan -X-> runtime DAG / PR convergence identity
 
 外部依存は Bun、Git、GitHub CLI / API、filesystem、Node crypto であり、新規外部依存は要求されていない。内部 coupling は、Delivery Bolt が複数 Unit、runtime batch が topological Unit 集合、PR evidence が単数 Unit という cardinality と、state sensor guard が各 Unit path、one-Bolt-one-PR が共有 PR を owner とする ownership の2点にある。候補Aでは plan/runtime/CLI/sensor/state に共通 Bolt identity edge を追加し、候補Bでは Delivery Planning の出力制約を単数へ合わせる。選択は requirements に保留する。
 
-## 260814-open-bug-batch-6 の依存グラフ（現在、observed `a49f9e9fd`）
+## 260814-open-bug-batch-6 の依存グラフ（履歴、observed `a49f9e9fd`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-priority-bug-batch-2 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 ### 外部依存
 
@@ -176,7 +175,7 @@ predicate は landed を第一級 verdict として表現できるのに、そ�
 
 `amadeus-lib.ts:8066 emitErrorAuditRow` → （遅延 `require`）→ `otel/audit-emit.ts:48 emitAuditEvent` → `otel/bootstrap.ts:88 ensureOtelBootstrap` → `:45 assertSameProject`。lib ↔ otel の循環を `require` で切っている（`amadeus-lib.ts:8061-8065` のコメントが根拠）。この循環回避が、宛先決定の追跡を静的に難しくしている一因である。
 
-## 差分リフレッシュでの依存変化（260814-priority-bug-batch、現在、observed `d64fd7cac`）
+## 差分リフレッシュでの依存変化（260814-priority-bug-batch、履歴、observed `d64fd7cac`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-priority-bug-batch-2 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: base `1d08374cd7e4ef89637b4a8000bab3fcf1a0f780` → observed `d64fd7cac049d7c2cda7dd7dc7d9d0a652ff02d7`（23 コミット、`git rev-list --count 1d08374cd..HEAD`）。
 

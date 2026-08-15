@@ -7,6 +7,7 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
@@ -1581,9 +1582,13 @@ describe("t224 upstream-v2 migration public CLI", () => {
         "utf-8",
       );
 
+      // The lock here is held by an owner that never releases, so the acquire
+      // is meant to fail. At the 200 x 100ms default that costs 20s of real
+      // waiting for a failure the test already knows is coming; the retry seam
+      // buys the same failure in half a second.
       const collided = migrateWithEnv(
         project,
-        { AMADEUS_LOCK_BASE_DIR: sharedLockBase },
+        { AMADEUS_LOCK_BASE_DIR: sharedLockBase, AMADEUS_AUDIT_LOCK_RETRIES: "5" },
         "--apply",
       );
       expectMigrationExit(collided, 1, {
@@ -1617,7 +1622,7 @@ describe("t224 upstream-v2 migration public CLI", () => {
       rmSync(sharedLockBase, { recursive: true, force: true });
       rmSync(collisionRoot, { recursive: true, force: true });
     }
-  });
+  }, scaleTestTime(15_000));
 
   test("a real doctor failure rolls the workspace and Git index back", () => {
     const project = fixture();

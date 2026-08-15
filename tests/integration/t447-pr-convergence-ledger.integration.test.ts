@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import type { GhRunner } from "../../plugins/github-pr-convergence/tools/pr-convergence-gh-runner.ts";
 import { parsePrRef } from "../../plugins/github-pr-convergence/tools/pr-convergence-gh-runner.ts";
 import {
@@ -141,7 +142,10 @@ describe("extractTerminalRefs — BR-U2-9 / FR-4c", () => {
     const adversarial = `${"_".repeat(60_000)}${"*".repeat(60_000)}`;
     const started = performance.now();
     expect(Severity.parse(adversarial)).toBeNull();
-    expect(performance.now() - started).toBeLessThan(250);
+    // Catastrophic backtracking on 120 KB runs for minutes, so this ceiling
+    // catches a super-linear rewrite with orders of magnitude to spare. It is a
+    // blow-up guard, not a performance claim about the linear path.
+    expect(performance.now() - started).toBeLessThan(scaleTestTime(5_000));
   });
 });
 

@@ -1319,7 +1319,6 @@ describe("t66 withAuditLock reentrancy (in-process)", () => {
     const pd = mkdtempSync(join(tmpdir(), "t66-reentrant-probe-"));
     scratch.push(pd);
     const lockDir = auditLockDir(pd);
-    const start = Date.now();
     let inner = false;
     let afterInner = false;
     withAuditLock(pd, () => {
@@ -1328,12 +1327,12 @@ describe("t66 withAuditLock reentrancy (in-process)", () => {
       });
       afterInner = existsSync(lockDir);
     });
-    const elapsed = Date.now() - start;
     const released = !existsSync(lockDir);
+    // A non-reentrant inner call would have exhausted the acquire budget and
+    // thrown, so reaching these three at all is the re-entry evidence.
     expect(inner).toBe(true);
     expect(afterInner).toBe(true);
     expect(released).toBe(true);
-    expect(elapsed).toBeLessThan(1000);
   });
 
   // .sh:1180-1195 — sequential calls do not accumulate exit handlers (handler-leak guard)

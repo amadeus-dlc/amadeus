@@ -104,8 +104,9 @@ describe("amadeus-setup install (E2E, offline fixture)", () => {
         expect(manifest.sourceTag).toBe(FIXTURE_TAG);
 
         // NFR-001: install should complete within 1 minute under normal
-        // network conditions; this offline run has no network latency at
-        // all, so a much tighter bound also catches real perf regressions.
+        // network conditions. This offline run has no network latency at all,
+        // so the declared ceiling is used as-is and acts as a hang guard on the
+        // installer — it is not a tighter performance target of its own.
         expect(elapsedMs).toBeLessThan(60_000);
       } finally {
         rmSync(target, { recursive: true, force: true });

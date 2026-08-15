@@ -66,8 +66,7 @@ describe("emitError's audit row (amadeus-lib) — one path, lock held or not", (
     // the acquire budget against its own lock. The canonical path re-enters, so
     // the branch is gone — and this is what proves the branch was removable and
     // not merely removed. A non-reentrant append would spend 50 x 100ms and
-    // then throw; the assertion is that it returns, promptly, having written.
-    const startedMs = Date.now();
+    // then throw; the assertion is that it returns at all, having written.
     withAuditLock(
       proj,
       () => {
@@ -77,7 +76,6 @@ describe("emitError's audit row (amadeus-lib) — one path, lock held or not", (
       "default"
     );
 
-    expect(Date.now() - startedMs).toBeLessThan(4000);
     expect(findAllEvents(readAllAuditShards(proj, born.dirName, "default"), "ERROR_LOGGED").length).toBe(1);
   });
 

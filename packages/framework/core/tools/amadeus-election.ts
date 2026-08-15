@@ -408,6 +408,23 @@ function repairTallyRun(
     : storeError(directive.electionId, repaired.error);
 }
 
+// The digest a tally run must carry, on the store's terms: it names the prior
+// results the run leaves standing. A first run has no prior results, and a run
+// whose target covers every question leaves none standing — both write null.
+// The store enforces exactly this (verifyPreservation), so producing the digest
+// anyway (a single-question election always re-tallies its whole definition)
+// makes the commit structurally impossible.
+function runPreservedDigest(
+  directive: Extract<ElectionDirective, { kind: "tally-ready" }>,
+  definition: CanonicalElectionDefinition,
+): string | null {
+  const coversEveryQuestion =
+    new Set(directive.targetQuestionIds).size === definition.questions.length;
+  return directive.expectedRunId === null || coversEveryQuestion
+    ? null
+    : directive.preservedResultDigest;
+}
+
 function isCommittedRun(
   directive: Extract<ElectionDirective, { kind: "tally-ready" }>,
   snapshot: ElectionSnapshot,
@@ -416,8 +433,7 @@ function isCommittedRun(
     snapshot.currentTally?.runId === directive.candidateRunId &&
     (snapshot.state === "partial" || snapshot.state === "tallied") &&
     sameIds(snapshot.currentTally.targetQuestionIds, directive.targetQuestionIds) &&
-    snapshot.currentTally.preservedResultDigest ===
-      (directive.expectedRunId === null ? null : directive.preservedResultDigest)
+    snapshot.currentTally.preservedResultDigest === runPreservedDigest(directive, snapshot.definition)
   );
 }
 
@@ -448,7 +464,7 @@ export function tallyElection(
     runId: directive.candidateRunId,
     targetQuestionIds: directive.targetQuestionIds,
     results: draft.value.results,
-    preservedResultDigest: checked.value.currentTally === null ? null : directive.preservedResultDigest,
+    preservedResultDigest: runPreservedDigest(directive, checked.value.definition),
     talliedAt,
   };
   const committed = ElectionStore.commitTally(root, directive.electionId, tally, {
@@ -559,8 +575,8 @@ function matchesReportExpectation(
   observed: ObservedReportFacts,
   expectedRunId: string | null,
 ): boolean {
-  const expectedPreserved = directive.kind === "tally-ready" && directive.expectedRunId === null
-    ? null
+  const expectedPreserved = directive.kind === "tally-ready"
+    ? runPreservedDigest(directive, snapshot.definition)
     : directive.preservedResultDigest;
   return (
     REPORT_EXPECTED_STATES[report].includes(snapshot.state) &&

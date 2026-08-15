@@ -552,7 +552,7 @@ export function inspectComposeMarker(
 
 export type ConstructionAutonomy = "autonomous" | "gated" | "unset";
 export type RecomposeGuardResult =
-  | { kind: "allowed"; autonomy: "gated" | "unset" }
+  | { kind: "allowed"; autonomy: ConstructionAutonomy }
   | {
       kind: "denied";
       autonomy: "autonomous";
@@ -560,9 +560,21 @@ export type RecomposeGuardResult =
       remediation: "switch-to-gated-or-wait-for-swarm";
     };
 
-/** Pure policy projection; callers own user-visible refusal and mutation ordering. */
-export function assertRecomposeAllowed(autonomy: ConstructionAutonomy): RecomposeGuardResult {
-  return autonomy === "autonomous"
+/**
+ * Pure policy projection; callers own user-visible refusal and mutation ordering.
+ *
+ * The gate is a running Construction swarm: re-shaping the plan under it would
+ * move work no human is watching. Autonomy is a Construction-phase setting, so
+ * every earlier phase — where recompose is the point — reads it as inert.
+ * `lifecyclePhase` is the raw `Lifecycle Phase` state field; a value this guard
+ * cannot read is not proof of Construction.
+ */
+export function assertRecomposeAllowed(
+  autonomy: ConstructionAutonomy,
+  lifecyclePhase: string | null | undefined,
+): RecomposeGuardResult {
+  const inConstruction = lifecyclePhase?.trim().toLowerCase() === "construction";
+  return autonomy === "autonomous" && inConstruction
     ? {
         kind: "denied",
         autonomy,

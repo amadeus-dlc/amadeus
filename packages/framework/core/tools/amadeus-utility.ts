@@ -5799,7 +5799,7 @@ function assertRecomposeStateAllowed(content: string): void {
       : refuseWithoutAudit(
           `Unknown Construction Autonomy Mode: "${rawAutonomy}". Expected autonomous, gated, or unset.`,
         );
-  const recomposeGuard = assertRecomposeAllowed(autonomy);
+  const recomposeGuard = assertRecomposeAllowed(autonomy, getField(content, "Lifecycle Phase"));
   if (recomposeGuard.kind === "denied") {
     refuseWithoutAudit(
       "Cannot recompose during autonomous Construction: a human gate is required. Switch to gated mode or wait for the swarm to finish.",
