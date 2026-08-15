@@ -11,12 +11,19 @@
 // presenting the gate (the engine's compose dispatch print instructs it) and
 // deletes on approve/reject.
 //
+// ADR-5 (RFC-0001 FR-4) replaced the carve-out's autonomy guard with session
+// interactivity: a compose approval is the human's in every mode, so what the
+// hook has to establish is that there IS a human in this session (>=1 HUMAN_TURN
+// in this clone's own shard). A non-interactive run blocks here and the engine
+// takes it into waiting instead.
+//
 // Cases (the t121 mock-engine pattern - the hook spawns the project's own
 // .claude/tools/amadeus-orchestrate.ts, which here is a one-line mock):
-//   1. marker present + pending run-stage        -> ALLOW (the carve-out)
+//   1. marker + interactive session              -> ALLOW (the carve-out)
 //   2. marker ABSENT + pending run-stage         -> BLOCK (nothing weakened)
-//   3. marker present + AUTONOMOUS construction  -> BLOCK (autonomy guard)
-//   4. marker deleted after the gate resolves    -> BLOCK again (one-shot)
+//   3. marker + interactive `full` + grant       -> ALLOW (D10 corrected)
+//   4. marker + NON-interactive session          -> BLOCK (the engine waits)
+//   5. marker deleted after the gate resolves    -> BLOCK again (one-shot)
 //
 // Mechanism: cli - stdin JSON + env + stdout decision, exactly t121's seam.
 
@@ -114,13 +121,19 @@ function seedActive(proj: string, opts: { intentAutonomy?: string } = {}): void 
   );
 }
 
-function seedFullIntentGrant(proj: string): void {
-  resetOtelPerProject();
+/** A real HUMAN_TURN in this clone's own shard is what makes the session
+ *  interactive for resolveSessionInteractivity (RFC-0001 C3). */
+function seedHumanTurn(proj: string): void {
   writeFileSync(
     pinnedShardPath(proj),
     `${readFileSync(pinnedShardPath(proj), "utf-8")}${auditRow(2, "HUMAN_TURN")}\n`,
     "utf-8",
   );
+}
+
+function seedFullIntentGrant(proj: string): void {
+  resetOtelPerProject();
+  seedHumanTurn(proj);
   const stateContent = readFileSync(seededStateFile(proj), "utf-8");
   const preview = previewProductionAutonomyGrant({ projectDir: proj, stateContent });
   if (!preview.ok) throw new Error(preview.error);
@@ -150,9 +163,10 @@ function runHook(proj: string): { rc: number; out: string } {
 }
 
 describe("t195 pending-compose Stop-hook carve-out (tier 2b)", () => {
-  test("1: marker present + pending run-stage -> ALLOW (the turn ends at the compose gate)", () => {
+  test("1: marker present in an interactive session -> ALLOW (the turn ends at the compose gate)", () => {
     const proj = makeProject();
     seedActive(proj);
+    seedHumanTurn(proj);
     writeFileSync(markerPath(proj), "pending\n", "utf-8");
     const r = runHook(proj);
     expect(r.rc).toBe(0);
@@ -166,18 +180,30 @@ describe("t195 pending-compose Stop-hook carve-out (tier 2b)", () => {
     expect(r.out).toContain('"decision":"block"');
   });
 
-  test("3: marker present under full Intent autonomy -> BLOCK (autonomy guard)", () => {
+  test("3: marker present under an INTERACTIVE full grant -> ALLOW (D10 corrected)", () => {
+    // The case this carve-out used to refuse on the mode alone. The grant is
+    // real and active; what decides is that a human is in this session to
+    // answer the gate.
     const proj = makeProject();
     seedActive(proj, { intentAutonomy: "full" });
     seedFullIntentGrant(proj);
     writeFileSync(markerPath(proj), "pending\n", "utf-8");
     const r = runHook(proj);
+    expect(r.out).not.toContain('"decision":"block"');
+  });
+
+  test("4: marker present in a NON-interactive session -> BLOCK (the engine waits instead)", () => {
+    const proj = makeProject(); // shard holds STAGE_STARTED only
+    seedActive(proj);
+    writeFileSync(markerPath(proj), "pending\n", "utf-8");
+    const r = runHook(proj);
     expect(r.out).toContain('"decision":"block"');
   });
 
-  test("4: marker deleted after the gate resolves -> BLOCK again (one-shot signal)", () => {
+  test("5: marker deleted after the gate resolves -> BLOCK again (one-shot signal)", () => {
     const proj = makeProject();
     seedActive(proj);
+    seedHumanTurn(proj);
     writeFileSync(markerPath(proj), "pending\n", "utf-8");
     expect(runHook(proj).out).not.toContain('"decision":"block"');
     unlinkSync(markerPath(proj));
