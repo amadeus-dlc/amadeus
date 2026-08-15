@@ -45,6 +45,7 @@ export type EventCategory =
   | "worktree"
   | "practices"
   | "merge-dispatch"
+  | "merge-provenance"
   | "sensor"
   | "learning"
   | "swarm"
@@ -76,7 +77,7 @@ export type EventDef = {
 
 // The canonical cardinality (#1672). The drift guard pins this so an emptied
 // or truncated registry fails instead of passing vacuously.
-export const EXPECTED_CANONICAL_COUNT = 93;
+export const EXPECTED_CANONICAL_COUNT = 94;
 
 // The OTel semantic-convention span event name produced by recordException().
 // Registered as telemetry (FR-EVT-7): it rides the span record, never the
@@ -885,6 +886,18 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "merge-dispatch",
     requiredAttributes: ["Bolt slug", "Fallback reason", "Defaults applied"],
+    optionalAttributes: [],
+    schemaVersion: 1,
+  },
+  // --- Delegated Merge Provenance (1) --- (C11/FR-9: record-only fact that a
+  // team.md standing-ruling-delegated merge happened; NOT a merge-dispatch
+  // strategy selection and NOT a Bolt-internal worktree merge.)
+  {
+    name: "amadeus.delegated.merge",
+    auditEvent: "DELEGATED_MERGE_RECORDED",
+    durability: "canonical",
+    category: "merge-provenance",
+    requiredAttributes: ["Standing Ruling Ref", "CI Conclusion", "Converged Digest"],
     optionalAttributes: [],
     schemaVersion: 1,
   },

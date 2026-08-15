@@ -58,7 +58,7 @@ export type AppendAuditResult =
   | { appended: true; event: string; timestamp: string }
   | { appended: false; reason: "intent-complete" | "fatal-latch"; event: string; timestamp: string };
 
-// --- Canonical event types (93) ---
+// --- Canonical event types (94) ---
 // See docs/reference/12-state-machine.md for the state transitions that emit each event.
 
 const VALID_EVENT_TYPES = new Set([
@@ -187,6 +187,10 @@ const VALID_EVENT_TYPES = new Set([
   "MERGE_DISPATCH_INVOKED",
   "MERGE_DISPATCH_RETURNED",
   "MERGE_DISPATCH_FALLBACK",
+  // Delegated merge provenance (C11/FR-9): a record-only fact, distinct from
+  // the Bolt-internal *_MERGED trio and from MERGE_DISPATCH_* (see business-
+  // logic-model.md reality-check — none of those cover a GitHub PR merge).
+  "DELEGATED_MERGE_RECORDED",
   // Sensors (emitters wired by sensor dispatcher for SENSOR_*; doctor for
   // GUARDRAIL_LOADED)
   "SENSOR_FIRED",
@@ -299,6 +303,7 @@ export const EVENT_HEADINGS: Record<string, string> = {
   MERGE_DISPATCH_INVOKED: "Merge Dispatch Invoked",
   MERGE_DISPATCH_RETURNED: "Merge Dispatch Returned",
   MERGE_DISPATCH_FALLBACK: "Merge Dispatch Fallback",
+  DELEGATED_MERGE_RECORDED: "Delegated Merge Recorded",
   SENSOR_FIRED: "Sensor Fired",
   SENSOR_PASSED: "Sensor Passed",
   SENSOR_FAILED: "Sensor Failed",
@@ -1250,6 +1255,73 @@ function orphanDeltaDetail(entriesMerged: number, mainAuditPath: string): string
     return `empty delta: nothing was appended to ${mainAuditPath}, and no AUDIT_MERGED row landed`;
   }
   return `orphan delta (${entriesMerged} record(s)) is in ${mainAuditPath} with no AUDIT_MERGED row`;
+}
+
+// --- Subcommand: record-delegated-merge (C11, FR-9) ---
+//
+// team.md's standing merge-approval norm (cid:ci-pipeline:standing-merge-
+// approval-ci-green) is the sole source of truth for the DELEGATION
+// CONDITION (required CI green AND pr-convergence converged:true). This
+// function does not decide or perform a merge — it records, after the fact,
+// that a delegated merge whose condition the caller already verified took
+// place. Record-only (R-2/R-3): no git/GitHub side effect ever happens here.
+export type DelegatedMergeEvidence = {
+  readonly standingRulingRef: string;
+  readonly ciConclusion: string;
+  readonly convergedDigest: string;
+};
+
+export type AuditReceipt = {
+  readonly eventId: string;
+  readonly committedAt: string;
+};
+
+export type RecordDelegatedMergeRefusal =
+  | { readonly kind: "evidence-incomplete"; readonly missingField: keyof DelegatedMergeEvidence }
+  // Defensive insurance only: DELEGATED_MERGE_RECORDED is registered by this
+  // same unit, so registeredAuditEventTypes() always contains it in practice.
+  | { readonly kind: "event-unregistered" };
+
+export type RecordDelegatedMergeResult =
+  | { readonly ok: true; readonly receipt: AuditReceipt }
+  | { readonly ok: false; readonly error: RecordDelegatedMergeRefusal };
+
+// Evidence field -> its audit row label, in emission order.
+const DELEGATED_MERGE_FIELDS: ReadonlyArray<readonly [keyof DelegatedMergeEvidence, string]> = [
+  ["standingRulingRef", "Standing Ruling Ref"],
+  ["ciConclusion", "CI Conclusion"],
+  ["convergedDigest", "Converged Digest"],
+];
+
+export function recordDelegatedMerge(
+  evidence: DelegatedMergeEvidence,
+  projectDir: string,
+  intent?: string,
+  space?: string
+): RecordDelegatedMergeResult {
+  for (const [key] of DELEGATED_MERGE_FIELDS) {
+    if (evidence[key].trim().length === 0) {
+      return { ok: false, error: { kind: "evidence-incomplete", missingField: key } };
+    }
+  }
+  if (unregisteredEventRejection("DELEGATED_MERGE_RECORDED") !== null) {
+    return { ok: false, error: { kind: "event-unregistered" } };
+  }
+  const fields: Record<string, string> = {};
+  for (const [key, label] of DELEGATED_MERGE_FIELDS) fields[label] = evidence[key];
+
+  // Same fail-closed-on-latch pattern as handleAuditFork/handleAuditMerge:
+  // refuse before the emit rather than let a suppressed row silently mint a
+  // "committed" receipt for nothing.
+  assertMutationAllowed();
+  const result = emitCanonicalAuditEvent("DELEGATED_MERGE_RECORDED", fields, projectDir, intent, space);
+  if (result.appended === false) {
+    if (result.reason === "fatal-latch") assertMutationAllowed();
+    throw new Error(
+      `recordDelegatedMerge: DELEGATED_MERGE_RECORDED emit dropped (reason=${result.reason}) — no audit row landed`
+    );
+  }
+  return { ok: true, receipt: { eventId: result.event, committedAt: result.timestamp } };
 }
 
 // --- Presence/provenance CLI minting guard ---
