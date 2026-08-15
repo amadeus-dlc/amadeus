@@ -240,15 +240,43 @@ describe("t1241 waiting is engine-issued (R-6)", () => {
   // A CLI verb would make "stop and wait for a ruling" something the agent can
   // invoke at will, which is the self-park threat the rate constraint is built
   // to detect. The engine issues it or nobody does.
-  test("no state or bolt subcommand spells waiting", async () => {
-    const sources = await Promise.all(
-      ["amadeus-state.ts", "amadeus-bolt.ts"].map(async (name) =>
-        Bun.file(`${import.meta.dir}/../../packages/framework/core/tools/${name}`).text()
-      ),
-    );
-    for (const source of sources) {
-      expect(source).not.toMatch(/case\s+"(enter-)?waiting"/);
-      expect(source).not.toMatch(/case\s+"resume-waiting"/);
-    }
+  //
+  // The two tools dispatch differently — amadeus-state.ts switches on `case
+  // "<verb>":` and amadeus-bolt.ts looks the verb up in a handler map — so each
+  // vocabulary is extracted the way that tool actually declares it. Both
+  // extractions are asserted non-empty and asserted to contain a verb that
+  // really exists, or an absence claim here would pass on a regex that stopped
+  // matching anything at all.
+  async function toolSource(name: string): Promise<string> {
+    return Bun.file(`${import.meta.dir}/../../packages/framework/core/tools/${name}`).text();
+  }
+
+  test("amadeus-state.ts has no waiting verb in its switch", async () => {
+    const source = await toolSource("amadeus-state.ts");
+    const verbs = [...source.matchAll(/case\s+"([a-z][a-z0-9-]*)":/g)].map((match) => match[1]);
+    expect(verbs.length).toBeGreaterThan(10);
+    expect(verbs).toContain("park");
+    expect(verbs).toContain("unpark");
+    expect(verbs.filter((verb) => verb?.includes("waiting"))).toEqual([]);
+  });
+
+  // amadeus-bolt.ts dispatches in two places — a switch for the Bolt verbs and
+  // a lookup map for the autonomy-support ones — so both are read.
+  test("amadeus-bolt.ts has no waiting verb in either dispatch", async () => {
+    const source = await toolSource("amadeus-bolt.ts");
+    const map = source.match(/const handlers[\s\S]*?= \{([\s\S]*?)\n {2}\};/)?.[1] ?? "";
+    const verbs = [
+      ...[...map.matchAll(/"([a-z][a-z0-9-]*)":/g)].map((match) => match[1]),
+      ...[...source.matchAll(/case\s+"([a-z][a-z0-9-]*)":/g)].map((match) => match[1]),
+    ];
+    expect(verbs.length).toBeGreaterThan(10);
+    expect(verbs).toContain("resume-quality"); // from the map
+    expect(verbs).toContain("approve-batch"); // from the switch
+    expect(verbs.filter((verb) => verb?.includes("waiting"))).toEqual([]);
+    // The usage line is the same vocabulary restated for humans; a verb hidden
+    // from both dispatches but advertised there would still be an invitation.
+    const usage = source.match(/Valid: [^`"]*/)?.[0] ?? "";
+    expect(usage).toContain("resume-quality");
+    expect(usage).not.toContain("waiting");
   });
 });
