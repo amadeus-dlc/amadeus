@@ -29,7 +29,7 @@ tools read them from. Neither lists the record envelope — every record carries
 (the park pair, the practices events) show it in the table as the attribute it
 is.
 
-## Event Registry (90 events, 21 categories)
+## Event Registry (93 events, 21 categories)
 
 ### Workflow Lifecycle (7 events)
 
@@ -198,12 +198,15 @@ drop unmatched rows rather than inventing an interval.
 | `ERROR_LOGGED` | Tool CLI exited non-zero via `error()` | Tool, Command, Error | — | `tools/amadeus-lib.ts emitError` (called by every tool's `error()` helper) |
 | `RECOVERY_COMPLETED` | User answered the compaction-awareness prompt, or a human-confirmed session takeover repaired a stale caller carrier | Choice, Current Stage | Reason | `tools/amadeus-state.ts acknowledge-compaction` / `session-takeover` |
 
-### Construction Bolt Events (4 events)
+### Construction Bolt Events (5 events)
 
 Emitted only during Phase 3 (Construction). A Bolt is one execution of stages 3.1–3.5 for a Unit or small group of dependency-linked Units. See `stage-protocol.md` Glossary. Note: this deviates intentionally from AI-DLC v1, where a Bolt is a sprint-like time-box (a Unit of Work spans multiple Bolts). This implementation repurposes "Bolt" to mean a deployable slice that wraps one or more Units of Work.
 
+`UNIT_OUTCOME_SETTLED` is the per-unit `run-stage` path's outcome ledger. A units-generation scope that does not swarm dispatches its Units through the engine's own for_each loop, and there is no Unit pool behind that route — so the engine records the outcome itself, at the coverage boundary the loop already observes. The row is keyed by stage, Unit and batch, so re-entering `next` re-derives coverage without appending a second row. Consumers read it only where the pool stream has no terminal for that Unit: a pool-settled Unit keeps its pool outcome (#3099).
+
 | Event | When | Required | Optional | Emitter |
 |-------|------|----------|----------|---------|
+| `UNIT_OUTCOME_SETTLED` | A per-unit Construction stage observes a Unit's required artifacts covered on the engine's own dispatch path | Stage, Unit, Batch, Outcome, Idempotency Key | — | `tools/amadeus-orchestrate.ts` |
 | `BOLT_STARTED` | Orchestrator begins a Bolt (or parallel batch of Bolts) | Bolt names, Batch number, Walking skeleton | Bolt slug | `tools/amadeus-bolt.ts start` |
 | `BOLT_COMPLETED` | All Bolts in the batch finished successfully | Bolt names, Batch number | Bolt slug | `tools/amadeus-bolt.ts complete` |
 | `BOLT_FAILED` | A Bolt failed during code-generation, or was explicitly aborted by the user | Failed Bolt, Error summary | Bolt slug, Reason, Succeeded siblings | `tools/amadeus-bolt.ts fail` and `tools/amadeus-bolt.ts abort` |

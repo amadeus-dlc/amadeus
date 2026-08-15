@@ -1,0 +1,22 @@
+{
+  "electionId": "E-260815-3099-C-FORM",
+  "voter": "subagent-2",
+  "questions": [
+    {
+      "questionId": "q-3099-c-form",
+      "text": "E-260815-3099-FIX-METHOD で方式 C(per-unit run-stage の unit 完了時に engine が unit outcome を監査へ記録し fanout が読めるようにする)が 2-0 成立したが、両票の留保が実装形で矛盾した。実装形を選定する。共通制約(両票合意分・拘束): 発行は冪等(intent+stage+unit+batch 鍵、next 再入で重複せず producer-outcome-ambiguous を誘発しない)/ 発行点は unit の coverage 成立境界(unitCovered true 遷移時)/ 過去時刻の後付け生成禁止(append-only)/ readPerUnitConsumePopulation:2459-2463 の currentUnits 所属フィルタ(数値 batch id join)を逐語保存 / FR-6 台帳同期。",
+      "ordered": [
+        {
+          "internalNo": 2,
+          "label": "C2: 別イベント新設 — event-set リポジトリ様式(digest 束縛・idempotencyKey・重複無視)を写した新監査イベントを per-unit 経路が発行し、readPerUnitConsumePopulation の読み口をそのイベントへ最小拡張する。pool の単一 writer 契約は不変。トレードオフ: event registry regen・読み口変更・台帳同期面が増える",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 1,
+          "label": "C1: 既存 pool writer 再利用 — createAuditUnitPoolRepository(amadeus-unit-pool-runtime.ts:143-168)を per-unit 経路からも呼び、UNIT_POOL_EVENT_SET_COMMITTED として unit-settled terminal を commit する。新規イベント型なし(event-registry / CONSTRUCTION_AUDIT_EVENTS / fanout 読み口は不変)。トレードオフ: pool の『swarm ライフサイクル単一 writer』という現行の所有境界コメント(amadeus-audit.ts:198-203)の意味が変わる",
+          "displayNo": 2
+        }
+      ]
+    }
+  ]
+}

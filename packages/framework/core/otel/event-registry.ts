@@ -76,7 +76,7 @@ export type EventDef = {
 
 // The canonical cardinality (#1672). The drift guard pins this so an emptied
 // or truncated registry fails instead of passing vacuously.
-export const EXPECTED_CANONICAL_COUNT = 92;
+export const EXPECTED_CANONICAL_COUNT = 93;
 
 // The OTel semantic-convention span event name produced by recordException().
 // Registered as telemetry (FR-EVT-7): it rides the span record, never the
@@ -696,7 +696,21 @@ export const REGISTERED_EVENTS = [
     optionalAttributes: ["Reason"],
     schemaVersion: 1,
   },
-  // --- Construction Bolt Events (4) ---
+  // --- Construction Bolt Events (5) ---
+  {
+    // The per-unit `run-stage` path's own outcome row (#3099). The Unit pool
+    // stream is the swarm path's ledger; a units-generation scope that never
+    // swarms dispatches unit by unit through the engine, and this is where that
+    // route records a Unit's settled outcome. Deliberately NOT folded into the
+    // pool's batchId namespace: the pool keeps its single-writer contract.
+    name: "amadeus.unit.outcome.settled",
+    auditEvent: "UNIT_OUTCOME_SETTLED",
+    durability: "canonical",
+    category: "bolt",
+    requiredAttributes: ["Stage", "Unit", "Batch", "Outcome", "Idempotency Key"],
+    optionalAttributes: [],
+    schemaVersion: 1,
+  },
   {
     name: "amadeus.bolt.started",
     auditEvent: "BOLT_STARTED",

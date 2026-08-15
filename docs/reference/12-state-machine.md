@@ -384,6 +384,7 @@ route is numbered by is derived from the `run-now` receipts now gone.
 
 | Event | Emitter | Notes |
 |---|---|---|
+| `UNIT_OUTCOME_SETTLED` | `tools/amadeus-orchestrate.ts` | The engine's own per-unit dispatch path settled a covered, non-cancelled Unit's outcome at its coverage boundary; keyed by stage, Unit and batch so re-entry appends nothing, and read only where the Unit pool stream has no terminal for that Unit |
 | `BOLT_STARTED` | `tools/amadeus-bolt.ts` | Accepts CSV bolt names for parallel batches |
 | `BOLT_COMPLETED` | `tools/amadeus-bolt.ts` | Paired with a prior `BOLT_STARTED` |
 | `BOLT_FAILED` | `tools/amadeus-bolt.ts` (`fail` + `abort`) | `--succeeded-siblings` captures parallel-batch survivors; `abort` adds `Reason: aborted` field for sub-classification |

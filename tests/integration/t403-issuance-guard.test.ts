@@ -15,7 +15,7 @@
 // new branches stay honest under the coverage gate. A spawned CLI would run the
 // same code uninstrumented.
 
-import { afterEach, describe, expect, spyOn, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -26,6 +26,7 @@ import {
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import {
   GUARD_EXIT_MARKER,
@@ -37,6 +38,13 @@ process.env.AMADEUS_STAGE_GRAPH ??= join(AMADEUS_SRC, "tools", "data", "stage-gr
 process.env.AMADEUS_SKIP_ARTIFACT_GUARD ??= "1";
 process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD ??= "1";
 resetAidlcEnv();
+
+// Each case builds its own fixture project, and the canonical emit path
+// registers a Logger Provider for one workspace per process — so the
+// registration is dropped between cases, as the sibling engine suites do.
+beforeEach(() => {
+  resetOtelPerProject();
+});
 
 const tempDirs: string[] = [];
 afterEach(() => {

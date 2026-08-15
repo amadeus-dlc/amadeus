@@ -21,7 +21,12 @@
 //
 // Subcommand dispatch table:
 //   next   — read-only. Resolve scope (state > flag > env > default), find the
-//            workflow's position, and emit one directive. LIVE.
+//            workflow's position, and emit one directive. LIVE. "Read-only"
+//            means it never moves the workflow: it births nothing, advances
+//            nothing, pivots no pointer. It does RECORD what it observes — the
+//            intent-lifecycle preflight rows, and the per-unit outcome a
+//            Construction iteration settles (#3099) — appends of facts the read
+//            just established, never edits of state.
 //   report — commit a transition after the conductor acted on a directive.
 //            LIVE. A stage-aware dispatcher: it shells out to amadeus-state.ts
 //            transitions so the next `next` reads fresh state. Explicit
@@ -68,6 +73,7 @@
 // invert the whole thesis).
 
 import { createHash, randomUUID } from "node:crypto";
+import { emitAuditEventGuarded } from "../otel/audit-emit.ts";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
 import {
   closeSync,
@@ -2444,6 +2450,59 @@ export interface PerUnitConsumePopulation {
   readonly outcomes: readonly PerUnitConsumeOutcome[];
 }
 
+// One UNIT_OUTCOME_SETTLED row: the outcome the ENGINE settled for a Unit on
+// its own per-unit dispatch path (#3099). Separate from the swarm path's Unit
+// pool stream in every respect — its own event type, its own batch field, no
+// entry in the pool's batchId namespace.
+interface SettledUnitOutcome {
+  readonly batch: string;
+  readonly unit: string;
+  readonly outcome: typeof SETTLED_UNIT_OUTCOME;
+  readonly key: string;
+}
+
+// The one outcome the engine settles: coverage on disk is what it observes, and
+// a covered Unit succeeded. The emitter writes this value and the reader accepts
+// no other — a closed vocabulary, as the pool projection keeps for its own
+// terminals — so an edited ledger cannot decide whether a consumer runs.
+const SETTLED_UNIT_OUTCOME = "succeeded";
+
+// Refusal for a row that does not carry the shape the emitter writes: a missing
+// join key, or an outcome outside the vocabulary above.
+const INVALID_SETTLED_ROW = "invalid-unit-outcome-audit-row: not the shape the engine writes";
+
+// The idempotency key of one settled per-unit outcome. The intent is implicit —
+// the row lands in the active intent's own audit shard — so the key spans the
+// remaining three axes. Re-entering `next` re-derives the same key and finds the
+// row already there, which is what keeps the emission append-once.
+function perUnitOutcomeKey(stage: string, unit: string, batch: string): string {
+  return `${stage} ${unit} ${batch}`;
+}
+
+// Stage is read for its PRESENCE only. Outcomes collapse across the per-unit
+// stages a Unit clears, so the value is not a join key — but the emitter writes
+// it on every row, and a row without it is not a row the engine produced.
+//
+// Every settled row carries all five keys — emitEvent refuses an emit that omits
+// a required attribute — so a row missing one, or carrying an outcome the
+// emitter never writes, was edited after the fact. Reading it anyway would let
+// the edit decide a consumer's fate; skipping it would drop a Unit from the
+// population and surface as producer-outcome-pending, a diagnosis pointing at
+// the wrong thing entirely. Both are worse than refusing.
+function readSettledUnitOutcomes(projectDir: string): SettledUnitOutcome[] {
+  return findAllEvents(readAllAuditShards(projectDir), "UNIT_OUTCOME_SETTLED")
+    .map(({ block }) => {
+      const batch = auditBlockField(block, "Batch");
+      const unit = auditBlockField(block, "Unit");
+      const outcome = auditBlockField(block, "Outcome");
+      const key = auditBlockField(block, "Idempotency Key");
+      const stage = auditBlockField(block, "Stage");
+      if (batch === null || unit === null || key === null || stage === null) throw new Error(INVALID_SETTLED_ROW);
+      if (outcome !== SETTLED_UNIT_OUTCOME) throw new Error(INVALID_SETTLED_ROW);
+      return { batch, unit, outcome, key };
+    });
+}
+
 export function readPerUnitConsumePopulation(
   projectDir: string,
 ): PerUnitConsumePopulation | undefined {
@@ -2454,6 +2513,7 @@ export function readPerUnitConsumePopulation(
     return typeof name === "string" && name.trim() !== "" ? [name] : [];
   });
   const eventSets = readUnitPoolEventSetsFromAudit(projectDir);
+  const settled = readSettledUnitOutcomes(projectDir);
   const outcomes: PerUnitConsumeOutcome[] = [];
   const batches = loadRuntimeUnitBatches(projectDir) ?? [];
   for (const [index, units] of batches.entries()) {
@@ -2468,6 +2528,22 @@ export function readPerUnitConsumePopulation(
           : "failed",
       });
     }
+    // The engine-settled outcomes of the per-unit dispatch path (#3099), for the
+    // Units the pool says nothing about. Pool precedence is what keeps a Unit
+    // that travelled BOTH routes to a single row: two rows for one Unit is
+    // producer-outcome-ambiguous downstream. Several settle rows for one Unit
+    // (one per per-unit Construction stage it cleared) collapse the same way —
+    // the population carries a Unit's outcome, not a Unit-and-stage's. The
+    // batch join is the SAME currentUnits membership the pool loop applies, so a
+    // Unit outside the current runtime population stays ignored.
+    const pooled = new Set(projection.terminal.map((terminal) => terminal.unitId));
+    const engineSettled = new Map<string, string>();
+    for (const row of settled) {
+      if (row.batch !== String(index + 1)) continue;
+      if (!currentUnits.has(row.unit) || pooled.has(row.unit)) continue;
+      engineSettled.set(row.unit, row.outcome);
+    }
+    for (const [unit, outcome] of engineSettled) outcomes.push({ unit, outcome });
   }
   return { declaredUnits, outcomes };
 }
@@ -4564,6 +4640,48 @@ function reviewerRecoveryForCoveredUnit(
   );
 }
 
+// Append the engine's own outcome row for every Unit of this stage whose
+// required artifacts are on disk and that is not cancelled (#3099). Emission is
+// keyed by stage + Unit + batch and reads the existing rows first, so re-running
+// `next` over an already-covered stage appends nothing. A Unit outside the
+// compiled batches has no batch identity to record under and is skipped: the
+// consume population joins on that identity, and a row it cannot join is a row
+// no reader can use.
+function settlePerUnitOutcomes(
+  projectDir: string,
+  node: GraphStage,
+  units: string[],
+  cancelledUnits: ReadonlySet<string>,
+  recordPrefix: string | null,
+  codekbCtx: CodekbCtx,
+  unitKinds: ReadonlyMap<string, UnitKind>,
+): void {
+  const batches = loadRuntimeUnitBatches(projectDir);
+  if (batches === null) return;
+  const batchOf = new Map<string, string>();
+  for (const [index, batchUnits] of batches.entries()) {
+    for (const unit of batchUnits) {
+      if (!batchOf.has(unit)) batchOf.set(unit, String(index + 1));
+    }
+  }
+  const appended = new Set(readSettledUnitOutcomes(projectDir).map((row) => row.key));
+  for (const unit of units) {
+    const batch = batchOf.get(unit);
+    if (batch === undefined || cancelledUnits.has(unit)) continue;
+    if (!unitCovered(projectDir, node, unit, recordPrefix, codekbCtx, unitKinds.get(unit))) {
+      continue;
+    }
+    const key = perUnitOutcomeKey(node.slug, unit, batch);
+    if (appended.has(key)) continue;
+    emitAuditEventGuarded(
+      "UNIT_OUTCOME_SETTLED",
+      { Stage: node.slug, Unit: unit, Batch: batch, Outcome: SETTLED_UNIT_OUTCOME, "Idempotency Key": key },
+      projectDir,
+    );
+    appended.add(key);
+  }
+}
+
 // Emit ONE iteration of a per-unit Construction stage. The engine owns the
 // for_each loop here: it resolves the next uncovered unit, substitutes the real
 // unit name for {unit-name} in every path, and suppresses the gate for EVERY
@@ -4660,6 +4778,18 @@ function emitPerUnitRunStage(
     );
     return;
   }
+
+  // Settle the outcome of every Unit this stage has already covered (#3099).
+  // The per-unit path is the ONLY dispatch route for a units-generation scope
+  // that does not swarm, and it used to leave no outcome behind: the per-unit
+  // consume population reads terminal outcomes, so every downstream consumer
+  // refused a completed Construction with producer-outcome-pending. The
+  // coverage boundary this loop already observes is where the outcome becomes a
+  // fact, so that is where it is recorded — forward, at the moment it is
+  // observed, never back-dated onto the ledger.
+  settlePerUnitOutcomes(
+    projectDir, node, units, cancelledUnits, recordPrefix, codekbCtx, unitKinds,
+  );
 
   // Delegate the next-unit selection to the canonical construction-iteration
   // seam (selectNextUnitForStage → nextConstructionStep, FR-2 item 8). The

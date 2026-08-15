@@ -3723,7 +3723,7 @@ Issue の受け入れ条件 1（「再発時に exit 128 の本文が assert メ
 
 [#3034](https://github.com/amadeus-dlc/amadeus/issues/3034) だけは別クラスで、テスト隔離の破れである。`tests/integration/t2851-doctor-self-install-freshness.serial.test.ts:78-87` の `repositoryCheckFixture` が live repo の `scripts/promote-self.ts --check` を spawn する薄いラッパであるため、`cwd: projectDir` では隔離できない（`scripts/promote-self.ts:57` が自ファイル位置から `REPO_ROOT` を解決する）。同ファイル `:66-76` の `strictCheckFixture` は exit code をハードコードした自己完結スクリプトで正しく隔離されており、壊れているのは最終ケース 1 件のみである。是正方向のうち「`promote-self.ts` に repo root の明示指定を足す」案は、construction.md § Testing Standards の「テストダブル・fixture 専用の分岐やモードを本番コードに置かない」に触れうるため、採るなら port として設計する必要がある。
 
-## テスト信号の偽陽性クラス — 壁時計予算アサーションの全数と構造（260815-priority-bug-batch-2、現在、observed `9ba8170bb`）
+## テスト信号の偽陽性クラス — 壁時計予算アサーションの全数と構造（260815-priority-bug-batch-2、履歴、observed `9ba8170bb`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-per-unit-outcome の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: observed `9ba8170bb03996fb98b497cfcbac3d207795018d`（base `a49f9e9fd`）。本 intent の 4 Issue（#3077 / #3074 / #3075 / #3079）のうち 3 件（#3075 / #3079 と、直前区間で着地した #3035 / #3040）は同一の債務クラスに属する — **本番の欠陥ではなく、テストが実時間を信号に使っているために負荷下で偽陽性を出す**面である。#3077 / #3074 は本番ロジックの欠陥であり別クラスに属する。
 
@@ -3778,3 +3778,50 @@ Issue #3075 が「単位要確認」と留保したまま B 群へ置いた箇�
 - 契約由来定数型 3 件は撤去対象ではない。撤去すると timeout 機構そのものの検証が消える。
 - 絶対壁時計型 20 件の是正方針は、`cid:build-and-test:bt-timeout-verification-shape`（長い本番 timeout は実時間の負荷試験でなく短縮可能なタイミングシームとカウンタ検証で構成する）が既に定めている。#3079 はその適用例で、`amadeus-audit.ts:1011-1014` の `AMADEUS_AUDIT_LOCK_RETRIES` が**既存のシームとして用意済み**である（コメント `:1009-1010` が逐語でテスト用途を宣言する）。`tests/integration/t224-upstream-v2-migration-cli.test.ts:1586` の env にこれを足すだけで、失敗経路の意味を保ったまま実待ちが 20 秒から 0.5 秒へ落ちる。
 - **未検証**: 各予算が実際の負荷下でどれだけの倍率で危ういかは本スキャンで測っていない。上表の分類は構造（相対/契約由来/絶対、係数適用の有無、単位）の実読のみに基づく。
+
+## per-unit outcome 経路のテスト空白と、是正時に同期を要する台帳（260815-per-unit-outcome、現在、observed `78146f435a`）
+
+**観測 ref**: observed `78146f435a66680055a24144937b5aa03d48bfb4`（base `9ba8170bb03996fb98b497cfcbac3d207795018d`）。
+
+### 既存のテスト面
+
+| テスト | 層 | ケース数 | 何を拘束しているか |
+|---|---|---|---|
+| `tests/unit/t533-per-unit-consume-fanout.test.ts` | unit | **8** | 純関数としての fanout。`:112` の `fails closed for pending, unknown, or ambiguous producer outcomes` が `producer-outcome-pending` を、`:203` がエッジ在庫 drift（`consumer-edge-inventory-mismatch`）を固定 |
+| `tests/integration/t533-per-unit-consume-fanout.integration.test.ts` | integration | **14** | 実プロジェクト上の母集団取得（`readPerUnitConsumePopulation` を `:208` で駆動） |
+| `tests/harness/per-unit-consumer-graph-fixture.ts` | harness | — | 7 consumer / 19 edge のグラフ fixture（97 行） |
+| `tests/unit/t425-unit-pool.test.ts` / `tests/integration/t425-unit-pool-harness-parity.integration.test.ts` | unit / integration | — | unit pool の decode・fold・ハーネス parity |
+| `tests/unit/t-construction-outcome-projection.test.ts` | unit | — | 正準射影の 5 イベント正規化 |
+| swarm ガード `t207-swarm-guards` / `t211-swarm-batch-progress` / `t135-invoke-swarm` / `t379-swarm-canonical-emit` / `t251-swarm-and-next-stage`、degrade 経路 `t367-degrade-unitname-resolution` / `t480-degrade-unit-declaration` | 各層 | — | pool 変異源側と degrade 免疫側（実在は `find tests -name "<id>-*"` で確認。同一 id 接頭辞に別主題のファイルが併存するため主題入りの名前で参照する） |
+
+ケース数の述語: `grep -c 'test("\|it("' <file>`（unit **8** / integration **14**）。上流の Developer scan 報告は「9 / 15」だったが、同一述語の再実測では 8 / 14 である。**件数は本再実測を正とする**（`cid:requirements-analysis:numbers-from-command-output-only`）。
+
+### 空白 — 非 pool 由来の母集団を張るテストが 1 件も無い
+
+`grep -rln "readPerUnitConsumePopulation" tests/` → **1 ファイルのみ**（`tests/integration/t533-per-unit-consume-fanout.integration.test.ts`）。そのファイル内で母集団を張る経路を全数列挙すると（`grep -n "createUnitPoolCoordinator\|readPerUnitConsumePopulation" <file>`）、seeding は `:150` / `:326` / `:363` / `:411` の **4 箇所すべてが `createUnitPoolCoordinator(createAuditUnitPoolRepository(project))`**、すなわち swarm と同じ pool 経路である。
+
+したがって:
+
+1. **`readPerUnitConsumePopulation` を pool 以外の起点で駆動するテストはゼロ件。** 「pool イベントが 1 件も無いまま Construction が完走した」という状態は、テストスイートのどこでも再現されていない。
+2. **Issue #3099 のシナリオ（units-generation EXECUTE + per-unit dispatch → build-and-test）に対応する再現テストが存在しない。** 既存の 22 ケースはすべて pool イベントが存在する前提の上に建っており、母集団が空になる経路には触れない。
+
+これは「テストが弱い」のではなく、**テストが検証している世界（swarm 経路）と欠陥が起きる世界（per-unit 経路）が交わっていない**という被覆の構造的な穴である。是正の落ちる実証は、この穴を埋める形（per-unit dispatch を実際に通して build-and-test の consume 解決まで到達させる）でしか成立しない（`memory/team.md` § 検証・実測規律「落ちる実証は不可分の1セット」）。
+
+### 是正 PR が同時に同期すべき台帳
+
+| 台帳 | 患部との関係 | 実測 |
+|---|---|---|
+| `amadeus/spaces/default/specs/tla/model-map.json` | `amadeus-orchestrate.ts` が **2 箇所**でハッシュピンされている。`readPerUnitConsumePopulation` を触るなら resync が必要（`bun plugins/formal-model-check/tools/amadeus-sensor-model-completeness.ts updateModelMap --impl-only`、モデル・cfg 不変時） | `grep -c "amadeus-orchestrate.ts" <file>` → **2** |
+| 同上 | `amadeus-unit-pool-runtime.ts` / `amadeus-per-unit-consume-fanout.ts` / `amadeus-construction-outcome-projection.ts` は**ピン 0 件** | `grep -c "unit-pool-runtime\|per-unit-consume-fanout\|construction-outcome-projection" <file>` → **0**（exit 1） |
+| `tests/.coverage-patch-allowlist.json` | 全 **448** エントリ中、患部関数を指すセレクタは **1 件のみ** — `amadeus-unit-pool-runtime.ts` の `readUnitPoolEventSetsFromAudit`（`class: "catch-arm"`、`anchorLines: 3`、`targetLines: "1-3"`）。この関数の署名行や catch アームがずれる変更をすると fingerprint 不一致で赤化するため、gate 自身の `createSemanticSelector` で再アンカーする | エントリ総数と該当は Python の `json.load` による全走査 |
+| `tests/.coverage-registry.json` | regen の鍵は**ソース側のユニット**（export 関数・監査イベント等）であり、**テストファイル名ではない**。本区間で新規テスト 4 件が入ったが registry は無変更（`git log -1 9ba8170bb..78146f435 -- tests/.coverage-registry.json` → 出力なし、最終更新は `7711246fd`（2026-08-14、#3036））。ただし是正が**新しい export を足す**なら regen が要る | 上記 git log |
+
+**ノルムの訂正申し送り**: `memory/project.md` Learnings Inbox の `cid:build-and-test:c1` は「新規テストファイルを追加する PR は `tests/.coverage-registry.json` の regen を同梱する」と読める文面だが、本区間の実測（テスト 4 件追加・registry 無変更）は registry の鍵がソース側ユニットであることを示す。次回蒸留ラウンドで文面を訂正すべき候補である。
+
+### coverage 母集団への注意
+
+是正が `amadeus-orchestrate.ts`（**7088 行**、`wc -l`）や `amadeus-lib.ts`（**9061 行**）を新たに in-process import するテストを足すと、Project Coverage Gate の相対条件（許容 0.02pp）が構造的に赤化しうる（`cid:build-and-test:bt-coverage-universe-inflation`）。前例どおり、被検関数を小モジュールへ切り出してテストはそれだけを import する形が正しい閉じ方である。**なお `amadeus-per-unit-consume-fanout.ts`（272 行）は既に t533 unit が in-process import 済みで、この面は母集団に入っている。**
+
+### 是正様式の前例
+
+本区間の PR #3101 が `amadeus-election.ts` に `runPreservedDigest()` を新設し、digest 生産の 3 呼び出し点を 1 つの純関数へ統一している（+21/−5）。**「N 個の読み口／書き口を 1 つの純関数へ寄せる」形は本リポジトリの直近の前例を持つ**（Issue #3099 の是正方式のうち「fanout 側で正準射影を読む」案と同型）。方式の選択自体は後続の裁定事項であり、本節は前例の存在のみを記録する。

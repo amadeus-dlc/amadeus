@@ -1,6 +1,31 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260815-priority-bug-batch-2）
+## 実行メタデータ（現在: 260815-per-unit-outcome）
+
+- Date: `2026-08-15`
+- Intent: `260815-per-unit-outcome`
+- Repository: `amadeus`（単一 repo）
+- Scope / depth / project type: `self-fix` / Minimal / Brownfield
+- Base commit: `9ba8170bb03996fb98b497cfcbac3d207795018d`（前回 observed = 260815-priority-bug-batch-2。祖先性 `git merge-base --is-ancestor 9ba8170bb 78146f435` → **exit 0**）
+- Observed commit: `78146f435a66680055a24144937b5aa03d48bfb4`（`origin/main` tip。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Distance: **12** コミット（`git rev-list --count 9ba8170bb..78146f435`）
+- 差分規模: `git diff --shortstat 9ba8170bb 78146f435` → **103 files changed, 3091 insertions(+), 182 deletions(-)**。非 record 面は `-- ':!amadeus/' ':!metrics/'` で **40 files / +874 −97**（内訳: 非テスト 12 + テスト 28。テストは新規 4 / 変更 24）
+- Scope of scan: **差分リフレッシュ**（#3099 の患部面に焦点、加えて base..observed 全域の棚卸し）
+- Focus: [Issue #3099](https://github.com/amadeus-dlc/amadeus/issues/3099)（P1）— per-unit run-stage で完走した Construction が `producer-outcome-pending` で build-and-test へ到達不能
+- 構造変化: **なし**。新規パッケージ・新規モジュール・ディレクトリ移動はゼロ。コア実装の変更は PR #3101 の 4 ファイル（`amadeus-election.ts` +21/−5、`amadeus-graph.ts` +30/−6、`amadeus-lib.ts` +16/−4、`amadeus-utility.ts` +1/−1）のみ
+- 患部の可動性: 患部 5 ファイル（`amadeus-orchestrate.ts` / `amadeus-construction-outcome-projection.ts` / `amadeus-unit-pool-runtime.ts` / `amadeus-per-unit-consume-fanout.ts` / `amadeus-swarm.ts`）へ `git diff --quiet 9ba8170bb 78146f435 -- <path>` を個別適用し、**全 5 件 exit 0**（区間内で無変更）
+- 中核知見: **Construction 成果の読み口が 2 系統に割れている**。正準射影 `amadeus-construction-outcome-projection.ts:222-228` は 5 イベント（`UNIT_POOL_EVENT_SET_COMMITTED` / `BOLT_STARTED` / `BOLT_COMPLETED` / `BOLT_FAILED` / `SWARM_BATON_RETURNED`）を読み、`amadeus-orchestrate.ts` の 4 消費点が使う。対して per-unit fanout の母集団取得 `readPerUnitConsumePopulation`（`:2447-2473`）は `UNIT_POOL_EVENT_SET_COMMITTED` **1 種のみ**を読む。pool の単一 writer は `amadeus-unit-pool-runtime.ts:152-161` で、変異源は `amadeus-swarm.ts` の 9 call site と `amadeus-orchestrate.ts:6586` のみ。**per-unit dispatch 経路（`emitPerUnitRunStage` `:4574-4725`）は pool へ一切書かない**（同範囲 `grep -n "UnitPool\|unitPool\|UNIT_POOL"` → exit 1 / 0 hit）ため、母集団が空のまま `amadeus-per-unit-consume-fanout.ts:224-228` が `producer-outcome-pending` で fail-closed する
+- 新規に確定した再現条件: `amadeus-lib.ts:8416` 逐語 `if (pendingBatch === null || pendingBatch.units.length < 2) return { kind: "ok" };` — **幅 1 のバッチは autonomy に関わらず plan-integrity redirect を素通り**するため、直列な Unit 計画は必ず per-unit dispatch へ落ちる。受け入れ基準はこの条件を符号化する必要がある
+- 保存すべき不変量: `amadeus-orchestrate.ts:2461-2463` 逐語 `if (!currentUnits.has(terminal.unitId)) continue;`（バッチ所属フィルタ）
+- テスト空白: `grep -rln "readPerUnitConsumePopulation" tests/` → **1 ファイルのみ**で、その中の seeding 4 箇所（`:150` / `:326` / `:363` / `:411`）は**すべて pool 経路**。非 pool 由来の母集団を張るテストはゼロ件であり、#3099 のシナリオに対応する再現テストは存在しない
+- 上流報告からの訂正（申し送り）: (a) t533 のケース数は unit **8** / integration **14**（`grep -c 'test("\|it("'`）であり、上流報告の「9 / 15」と一致しない (b) 区間の変更テストは 23 ではなく **24**（`git diff --name-only --diff-filter=M -- 'tests/**' | wc -l`） (c) `planIntegrityVerdict` の定義行は `:8412`（幅判定は `:8416`）
+- 未検証面: 是正方式（(a) fanout 側で正準射影を読む / (b) per-unit 経路から pool イベントを発行する / (c) 折衷）の選択は**本スキャンでは決めていない** — 後続の裁定事項（`memory/team.md` P1）。フルスイート・coverage・build はいずれも未実行（本スキャンは読取専用）
+- Verification: git 状態変更（commit / branch / checkout / stash / merge）・GitHub 書込・engine/state ツール実行・`bun run build` は**すべてゼロ**。書き込みは `codekb/amadeus/` 配下のみ
+- Updated artifacts: `re-scans/260815-per-unit-outcome.md`（新規）/ `reverse-engineering-timestamp.md`（本節）/ 本体 8 面すべてに本 intent の節を追記（`architecture.md` / `code-structure.md` / `component-inventory.md` / `code-quality-assessment.md` は実質内容、`api-documentation.md` / `dependencies.md` / `technology-stack.md` / `business-overview.md` は差分デルタの短節）
+- 構造補修: 直前 intent `260815-priority-bug-batch-2` の現在時制マーカー **4 件**を履歴へ降格（`architecture.md:5353` / `code-structure.md:343` / `component-inventory.md:2776` / `code-quality-assessment.md:3726`。本文と行番号は保持、`cid:reverse-engineering:c1` / `c3-relabel`）
+- Per-intent record: `re-scans/260815-per-unit-outcome.md`
+
+## 実行メタデータ（履歴: 260815-priority-bug-batch-2）
 
 - Date: `2026-08-15`
 - Base commit: `a49f9e9fdbd19fd40e9374feba77e9360771d173`（observed の祖先で距離**最小**。`git merge-base --is-ancestor a49f9e9fd HEAD` → **exit 0**、`git rev-list --count a49f9e9fd..HEAD` → **9**。対抗候補 `d64fd7cac`（直前 intent の observed）は距離 **10** で劣る。`cid:reverse-engineering:rescan-base-ancestry`）

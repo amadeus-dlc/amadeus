@@ -340,7 +340,7 @@ Issue #3031 は `:160-175` / `:169` を引くが、observed 断面では対象�
 | #3040 | `tests/integration/t-pi-child-driver.integration.test.ts`（:177-185）/ `packages/framework/harness/pi/drivers/amadeus-pi-driver.ts`（:541-558、`CLEANUP_WAIT_MS` :30）/ `amadeus-pi-guardian.ts`（:82-87、:321）/ `tests/fixtures/pi-driver/fake-pi.ts:60` |
 | #3035 | `tests/unit/t07-hook-audit-logger.serial.test.ts`（:401-406）。Issue 本文の `:395-400` から 6 行ずれている（`05da1758c` が `amadeus-plugin-settings.ts` の fixture コピー 6 行を追加、`git show --numstat 05da1758c -- <file>` → `6 0`） |
 
-## 差分リフレッシュで観測した構造変化（260815-priority-bug-batch-2、現在、observed `9ba8170bb`）
+## 差分リフレッシュで観測した構造変化（260815-priority-bug-batch-2、履歴、observed `9ba8170bb`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-per-unit-outcome の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: base `a49f9e9fdbd19fd40e9374feba77e9360771d173` → observed `9ba8170bb03996fb98b497cfcbac3d207795018d`（9 コミット、`git rev-list --count a49f9e9fd..HEAD`。10 files / +332 −67、`git diff --stat a49f9e9fd HEAD -- ':!amadeus/' ':!metrics/'`）。
 
@@ -381,3 +381,40 @@ Issue #3031 は `:160-175` / `:169` を引くが、observed 断面では対象�
 | #3074 | `packages/framework/core/tools/amadeus-lib.ts`（`assertRecomposeAllowed` `:564-573`）/ `amadeus-utility.ts`（唯一の呼び出し `assertRecomposeStateAllowed` `:5793`、呼出行 `:5802`、拒否文言 `:5805`。phase 取得イディオムは同ファイル `:391` の `getField(content, "Lifecycle Phase")`） |
 | #3075 | `tests/unit/` / `tests/integration/` / `tests/e2e/` の **19 ファイル 24 行**（内訳は `code-quality-assessment.md` の対応節） |
 | #3079 | `tests/integration/t224-upstream-v2-migration-cli.test.ts`（ケース `:1553` = `symlink clone-id migration isolates distinct fixture identities that share a lock path`、ロック占有 `:1577-1582`、`migrateWithEnv` `:1584`、env `:1586`、期待 `:1597`）/ `packages/framework/core/tools/amadeus-audit.ts`（リトライ予算のコメント `:1008-1010` と `lockRetries` `:1011-1014`） |
+
+## 差分リフレッシュで観測した構造変化（260815-per-unit-outcome、現在、observed `78146f435a`）
+
+**観測 ref**: base `9ba8170bb03996fb98b497cfcbac3d207795018d` → observed `78146f435a66680055a24144937b5aa03d48bfb4`（`git merge-base --is-ancestor 9ba8170bb 78146f435` → **exit 0**、`git rev-list --count 9ba8170bb..78146f435` → **12**）。
+
+**構造変化はゼロである。** 新規パッケージ・新規モジュール・ディレクトリ移動はいずれも無い。区間規模は `git diff --shortstat 9ba8170bb 78146f435` → **103 files / +3091 −182**、非 record 面（`-- ':!amadeus/' ':!metrics/'`）は **40 files / +874 −97** で、残る 63 ファイルは record / metrics スナップショットである。
+
+### 区間で動いたコア実装 4 ファイル（`git diff --numstat 9ba8170bb 78146f435 -- 'packages/framework/core/tools/*.ts'` からの転記）
+
+| ファイル | ± | 内容 |
+|---|---|---|
+| `packages/framework/core/tools/amadeus-election.ts` | +21 / −5 | `runPreservedDigest()` を新設し、digest 生産の 3 呼び出し点を 1 つへ統一（#3077 の着地） |
+| `packages/framework/core/tools/amadeus-graph.ts` | +30 / −6 | `loadSensors` → `mergeSensorsFromDir` へ改称し、plugin host の sensor をマージ（#3026 の着地） |
+| `packages/framework/core/tools/amadeus-lib.ts` | +16 / −4 | `assertRecomposeAllowed` が `lifecyclePhase` 引数を取り、`autonomous && CONSTRUCTION` のときだけ拒否（#3074 の着地） |
+| `packages/framework/core/tools/amadeus-utility.ts` | +1 / −1 | 上記へ `Lifecycle Phase` を渡す 1 行 |
+
+非 record 面 40 ファイルの内訳は、**非テスト 12 + テスト 28**（`git diff --name-only 9ba8170bb 78146f435 -- ':!amadeus/' ':!metrics/' ':!tests/'` → 12 行、`--diff-filter=A -- 'tests/**'` → **4**、`--diff-filter=M -- 'tests/**' | wc -l` → **24**）。非テスト 12 は上記コア 4 に加え、plugin 6（`formal-model-check` の `plugin.json` / `stages/formal-model-check.md` への sensor 宣言 = #3026 系、`github-pr-convergence` の `sensors/` / `stages/` / `tools/` landed-report = #3062）と docs 2（`docs/harness-engineering/06-sensors.md` / `06-sensors.ja.md` を実在コーパスへ同期 = #3028）である。新規テスト 4 は `t3026-plugin-sensor-declaration` / `t3028-sensors-docs-sync` / `t3062-pr-convergence-landed-finalization` / `t3077-election-full-retally`（`--diff-filter=A` の出力そのまま）。`amadeus/` 側では RFC-0001 intent-autonomy-modes が approved へ（+52/−17）、`specs/tla/model-map.json` が実装ハッシュピン 1 行の resync を受けている。
+
+### 本 intent の患部配置 — 区間内で 1 バイトも動いていない
+
+`git diff --quiet 9ba8170bb 78146f435 -- <path>` を患部ファイルへ個別適用し、**全 5 件 exit 0**（差分なし）を実測した。
+
+| 患部 | ファイル / 行 | 役割 |
+|---|---|---|
+| 狭い読み口 | `packages/framework/core/tools/amadeus-orchestrate.ts:2447-2473` `readPerUnitConsumePopulation` | `declaredUnits` は `loadRuntimeUnitRows`（`:2450`、`bolt_dag.units`）、outcome は `readUnitPoolEventSetsFromAudit`（`:2456`）＋ `foldUnitPoolEventSets`（`:2460`）のみ。runtime unit row 不在時は `:2451` で早期 return（degrade スコープは免疫） |
+| 保存すべき不変量 | 同 `:2461-2463` | 逐語 `if (!currentUnits.has(terminal.unitId)) continue;` — バッチ所属フィルタ |
+| 正準射影（豊かな読み口） | `packages/framework/core/tools/amadeus-construction-outcome-projection.ts:222-228` | `CONSTRUCTION_AUDIT_EVENTS` = 5 イベント |
+| 正準射影の消費点 | `amadeus-orchestrate.ts:3830-3832` / `:4006-4013` / `:4088-4113` / `:6574-6579` | `normalizeConstructionOutcomeAudit` + `projectConstructionOutcomes`（import は `:253-254`） |
+| 単一 writer | `packages/framework/core/tools/amadeus-unit-pool-runtime.ts:152-161` | `UNIT_POOL_EVENT_SET_COMMITTED` の唯一の発行点（読み側 `:122-141`） |
+| pool 生成点の全数 | `amadeus-swarm.ts` **9 call site**（import 除く）/ `amadeus-orchestrate.ts:3812`（読取専用）/ `:6586`（`handleFailureRuling` 変異） | 述語: `grep -rn "createAuditUnitPoolRepository" packages/framework/core/tools/*.ts`（14 行 − import/定義 3 行） |
+| pool へ書かない経路 | `amadeus-orchestrate.ts:4574-4725` `emitPerUnitRunStage` | 同範囲へ `grep -n "UnitPool\|unitPool\|UNIT_POOL"` → **exit 1（0 hit）** |
+| 症状の発火点 | `packages/framework/core/tools/amadeus-per-unit-consume-fanout.ts:224-228` | `pending` 判定 → `throwForUnits("producer-outcome-pending", …)` |
+| 配線 | `amadeus-orchestrate.ts:4259-4261`（`emitRunStageForSlug`、関数頭 `:4232`）→ `:2518-2532`（`resolveConsumes`） | 母集団の受け渡し |
+| 再現条件 | `packages/framework/core/tools/amadeus-lib.ts:8416` | 逐語 `if (pendingBatch === null \|\| pendingBatch.units.length < 2) return { kind: "ok" };` — 幅 1 バッチは plan-integrity redirect を素通り |
+| 消費者エッジ在庫 | `amadeus-per-unit-consume-fanout.ts:90-110`（ガード `:144-168`） | 7 consumer / 19 edge、`consumer-edge-inventory-mismatch` で fail-closed |
+
+機序の解説は `architecture.md` の対応節、テスト面と台帳は `code-quality-assessment.md` の対応節を参照。
