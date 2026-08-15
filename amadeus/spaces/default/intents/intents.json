@@ -1243,5 +1243,12 @@
     "dirName": "260814-priority-bug-batch",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "01a0028a-aefd-72b7-9e1b-53bb13e5f452",
+    "slug": "open-bug-batch-6",
+    "dirName": "260814-open-bug-batch-6",
+    "scope": "self-fix",
+    "status": "in-flight"
   }
 ]

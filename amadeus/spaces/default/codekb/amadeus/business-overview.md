@@ -76,6 +76,7 @@ Issue を解決したと判断できる最小条件は次のとおりである�
 
 ノルムの鮮度として、旧 bundled workaround `E-SRA-RAS13` / `election-cli-canonical` の長文は commit `bd567fd1b78bbde8a524b2cc767bd176dfbfe95f` で削除済みである。現行 `team.md` には `cid:requirements-analysis:always-elect` の「1選挙1質問」が残り、実装着地後に多問契約へ更新する必要がある。
 
+## Issue #2985 multi-Unit Bolt の PR 証跡断面（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
 ## Issue #2985 multi-Unit Bolt の PR 証跡断面（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 [Issue #2985](https://github.com/amadeus-dlc/amadeus/issues/2985) は、Delivery Planning が複数 Unit を1つの Bolt に束ねられる一方、Construction の実行・PR convergence・完了証跡が「1 Unit = 1実行単位 = 1 PR identity」を前提とするため、code-generation が正規証跡を作れず停止する self-fix である。
@@ -92,6 +93,7 @@ Issue を解決したと判断できる最小条件は次のとおりである�
 
 Reverse Engineering では、(A) Bolt identity が `units[]` を所有し1つの PR evidence を各 Unit 完了へ正規投影する、(B) Delivery Planning・runtime・PR convergence を 1 Unit = 1 Bolt = 1 PR に統一する、の2案を記録するだけで決定しない。後続 requirements で one-Bolt-one-PR、既存単一 Unit 正常経路、fail-closed completion を同時に満たす条件として選択する。
 
+## auto 設定が無人実行に反映されない面（260814-unit-failure-autoelectio、履歴、observed `cd64486a6`）
 ## auto 設定が無人実行に反映されない面（260814-unit-failure-autoelectio、履歴、observed `cd64486a6`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: observed = `cd64486a68c6a1144db50fbe3fde8273f5e18455`、差分 base = `d7ffaa5442266508d8e67babc3e0b947fb4c1637`（4 commits）。
@@ -101,6 +103,29 @@ Reverse Engineering では、(A) Bolt identity が `units[]` を所有し1つの
 業務影響は 2 つある。(1) auto を設定しても Construction の失敗ごとに人間の介在が必要となり、無人実行の連続性が失われる。(2) フレームワークが文書（stage-protocol）で約束した挙動と実装が食い違うため、ユーザーから見て設定が効いていない不整合になる。
 
 本欠陥は仕様変更ではなく仕様への回復であり、intent scope は `self-fix` である。ただし「engine が election を open できない」という構造制約から、ask 抑止の実現方式（新種 directive を出すか、既存 ask にメタを載せるか）は engine / conductor の責務境界に触る設計判断であり、requirements-analysis / application-design の所掌として本 RE では確定しない。
+
+## オープンバグ5件の業務課題（260814-open-bug-batch-6、現在、observed `a49f9e9fd`）
+
+本 intent は業務価値ではなく**既存契約への回復**を扱う 5 件のオープンバグを対象とする（scope `self-fix`）。5 件は独立な欠陥だが、業務影響の観点では 2 つの束にまとまる。
+
+### 束 A: ワークフローが完了不能になる（#3062）
+
+merge queue + auto-merge を使う運用で、PR が `report` 実行より先に着地すると pr-convergence ステージを閉じる経路が存在しない。逃がしは `AMADEUS_SKIP_BLOCKING_SENSOR_GUARD=1` のみであり、escape hatch の常用化はゲートの信頼性そのものを毀損する。**5 件のうち唯一、運用を止めるクラス**。
+
+### 束 B: 検証面・記録面が黙って欠ける（#3026 / #3028 / #3031 / #3032）
+
+- #3026 — formal-model-check の完全性検査が投影に到達せず、宣言されているつもりで一切発火しない。検証面の無音欠落
+- #3028 — ハーネスエンジニアリングガイドのセンサー表が実在集合から drift し、開発者が誤った全数を得る。#3026 のような宣言漏れの発見も遅れる
+- #3031 — CI の偽陽性赤による再実行コスト。収束ループが余計に1周する
+- #3032 — 実 record の監査純度（P2）。テストが env 隔離を守っても実 record を汚しうるクラスが残っているかの判定
+
+### 成功条件
+
+束 A は「マージ済み PR に対する最終化経路が定義され、落ちる実証を伴って動く」こと。束 B は各 Issue の受け入れ条件に加え、**#3026 と #3028 が同一の構造的原因（宣言・文書が実在集合から fail-open で乖離する）を共有する**ため、個別修正だけでなく再発検出の要否判定を成果物に残すことを条件とする。
+
+### 本区間で分母が動いた点（実装時の注意）
+
+`git-drift` プラグインの着地により、#3026 の期待投影件数は Issue 本文の「12 → 13」ではなく **13 → 14**、#3028 の docs 表欠落は「3 件」ではなく **4 件**である。詳細は `re-scans/260814-open-bug-batch-6.md` §2.2 / §2.3。
 
 ## 優先バグ 4 件の業務影響（260814-priority-bug-batch、現在、observed `d64fd7cac`）
 
