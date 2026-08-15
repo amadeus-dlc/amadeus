@@ -22,8 +22,9 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { outstandingHumanTurns } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import {
   applyProductionAutonomyMode,
   previewProductionAutonomyGrant,
@@ -216,20 +217,23 @@ describe("t3016 park under production `full` autonomy", () => {
   // FR-3's "resume" step runs through the engine's `--resume` ladder, the same
   // route FR-4 names — not a bare unpark that would leave the real re-entry
   // path unexercised.
-  test("the park consumes the turn - the same turn cannot park twice", () => {
+  // RFC-0001 FR-3 removed the guard, so the park verdict no longer depends on
+  // presence. What survives is the accounting: the accepted park is itself the
+  // resolution that spends the outstanding turn, which is read here off the
+  // production ledger predicate rather than off a refusal that no longer fires.
+  test("the park consumes the turn it was granted under", () => {
     fullAutonomyProject();
+    expect(outstandingHumanTurns(proj)).toHaveLength(1);
     expect(runState(["park"]).status).toBe(0);
+    expect(outstandingHumanTurns(proj)).toHaveLength(0);
     resumeThroughEngine();
-    const second = runState(["park"]);
-    expect(second.status).not.toBe(0);
-    expect(second.stderr.toLowerCase()).toContain("human_turn");
-    expect(stateText()).not.toContain("- **Parked**:");
 
-    // A NEW human turn re-opens it: the guard tracks presence, not a one-shot
-    // permission the record burns for good.
-    mintTurn();
-    expect(runState(["park"]).status).toBe(0);
+    // Unattended now — and parking anyway is the point of FR-3.
+    const second = runState(["park"]);
+    expect(second.stderr).toBe("");
+    expect(second.status).toBe(0);
     expect(stateText()).toContain("- **Parked**:");
+    expect(outstandingHumanTurns(proj)).toHaveLength(0);
   });
 });
 
@@ -272,19 +276,37 @@ describe("t3016 the engine passes the park verdict through", () => {
     expect(field("Construction Autonomy Mode")).toBe("autonomous");
   });
 
-  test("engine park emits `error` naming the refusal when the run is unattended", () => {
+  // The refusal this used to pin is gone (FR-3). The pass-through it was
+  // testing is not: the engine still relays whatever the state tool decides, so
+  // the unattended case now relays an acceptance. The refusing half of the
+  // pass-through is still covered above by the `Completed` workflow, which is a
+  // refusal the state tool kept.
+  test("engine park emits `parked` even when the run is unattended", () => {
     fullAutonomyProject();
     // Spend the declaration's turn, then resume: the record is back to a
     // running autonomous workflow with nobody at the keyboard.
     expect(runState(["park"]).status).toBe(0);
     resumeThroughEngine();
+    expect(outstandingHumanTurns(proj)).toHaveLength(0);
 
+    const res = runEngine(["park"]);
+    expect(res.status).toBe(0);
+    expect(directiveOf(res.stdout).kind).toBe("parked");
+    expect(stateText()).toContain("- **Parked**:");
+  });
+
+  test("engine park relays the state tool's surviving refusals", () => {
+    fullAutonomyProject();
+    writeFileSync(
+      seededStateFile(proj),
+      readFileSync(seededStateFile(proj), "utf-8").replace("- **Status**: Running", "- **Status**: Completed"),
+      "utf-8",
+    );
     const res = runEngine(["park"]);
     expect(res.status).toBe(0); // the engine reports refusals as a directive
     const directive = directiveOf(res.stdout);
     expect(directive.kind).toBe("error");
     expect(String(directive.message)).toContain("Cannot park the workflow");
-    expect(String(directive.message)).toContain("HUMAN_TURN");
     expect(stateText()).not.toContain("- **Parked**:");
   });
 });
