@@ -333,6 +333,7 @@ describe("t246 autonomous recompose atomicity", () => {
       "- **Status**: Running",
       "- **Scope**: feature",
       "- **Current Stage**: intent-capture",
+      "- **Lifecycle Phase**: CONSTRUCTION",
       "- **Construction Autonomy Mode**: autonomous",
       "- [x] state-init — EXECUTE",
       "- [ ] market-research — EXECUTE",
@@ -373,6 +374,25 @@ describe("t246 autonomous recompose atomicity", () => {
       ]);
       expect(afterGuard.code).toBe(1);
       expect(afterGuard.output).not.toMatch(/autonomous Construction/i);
+      expect(readFileSync(statePath, "utf-8")).toBe(variant);
+    }
+
+    // Autonomy is a Construction setting. Before Construction there is no swarm
+    // to interrupt and re-shaping the plan is what recompose is for, so an
+    // autonomous mode must land on the same refusal a gated one would — the
+    // unknown stage above — and never on the human gate.
+    for (const phase of ["IDEATION", "INCEPTION"]) {
+      const variant = state.replace("CONSTRUCTION", phase);
+      writeFileSync(statePath, variant, "utf-8");
+      const beforeConstruction = utilityInProcess([
+        "recompose",
+        "--skip",
+        "definitely-unknown",
+        "--project-dir",
+        root,
+      ]);
+      expect(beforeConstruction.code).toBe(1);
+      expect(beforeConstruction.output).not.toMatch(/autonomous Construction|human gate/i);
       expect(readFileSync(statePath, "utf-8")).toBe(variant);
     }
   });

@@ -98,7 +98,7 @@
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election.ts",
-          "sha256": "40ea32060aa9a30ff15736f25efbf391e0a2e4cbab09969cc36aa94ad6da52c7"
+          "sha256": "29a030d4d7a84f8c1ea965883c2a29fcd3186c0e8bc0f3d1cfc59dd62a6e1c2d"
         }
       ],
       "vocabulary": {

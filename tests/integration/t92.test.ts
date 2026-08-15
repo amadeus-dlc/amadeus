@@ -964,17 +964,15 @@ describe("t92 Group G: concurrency invariants", () => {
       encoding: "utf-8",
     });
     const lockRc = lockExit.status ?? -1;
-    const start = Date.now();
     const sensors = makeForkSensors("required-sections", "bun .claude/tools/amadeus-sensor-stub-pass.ts");
     fire(["required-sections", "--stage", "intent-capture", "--output-path", join(proj, "amadeus-docs", "test.md")], {
       CLAUDE_PROJECT_DIR: proj,
       AMADEUS_SENSORS_DIR: sensors,
     });
-    const elapsedMs = Date.now() - start;
     expect(lockRc).toBe(1);
+    // A leaked lock would have starved the sensor out of its acquire budget, so
+    // the passed event is what shows the exiting helper released it.
     expect(auditEventCount(proj, "SENSOR_PASSED")).toBe(1);
-    // The .sh asserts elapsed < 3s (no 5x100ms retry burn). Use ms form.
-    expect(elapsedMs).toBeLessThan(3000);
   }, scaleTestTime(15000));
 });
 

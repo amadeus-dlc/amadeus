@@ -6,6 +6,7 @@ import { cpus, tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { currentGitSha } from "../harness/git-sha.ts";
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 
 const ROOT = join(import.meta.dir, "../..");
 const UTILITY = join(ROOT, "packages/framework/core/tools/amadeus-utility.ts");
@@ -215,8 +216,10 @@ describe("guard integration falling proofs", () => {
       expect(allowed.every((sample) => sample.correct)).toBe(true);
       expect(archived.every((sample) => sample.correct)).toBe(true);
       expect(new Set([...allowed, ...archived].map((sample) => sample.fixtureSha256)).size).toBe(2);
+      // A difference between two series measured in the same run: load lands on
+      // both, so this bounds what the guard adds, not how fast the box is.
       expect(p95(archived.map((sample) => sample.elapsedMs))
-        - p95(allowed.map((sample) => sample.elapsedMs))).toBeLessThanOrEqual(100);
+        - p95(allowed.map((sample) => sample.elapsedMs))).toBeLessThanOrEqual(scaleTestTime(100));
       expect(p95(archived.map((sample) => sample.rssDeltaBytes))
         - p95(allowed.map((sample) => sample.rssDeltaBytes))).toBeLessThanOrEqual(16 * 1024 * 1024);
       console.log("GUARD_INTEGRATION_BENCHMARK", JSON.stringify({

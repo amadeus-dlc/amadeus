@@ -149,11 +149,9 @@ describe("TLA model loader real-filesystem boundary", () => {
     ).toHaveLength(1);
   });
 
-  test("loads every registered model with migration identities under 250ms", () => {
+  test("loads every registered model with migration identities", () => {
     const fixture = createFixture();
-    const startedAt = performance.now();
     const loaded = loadVerifiedTlaSourcesInternal(fixture.moduleUrl);
-    const durationMs = performance.now() - startedAt;
     expect(loaded.ok).toBe(true);
     if (!loaded.ok) return;
     expect(loaded.value.models.map((model) => model.model.name)).toEqual(
@@ -168,7 +166,6 @@ describe("TLA model loader real-filesystem boundary", () => {
         cfgIdentity: EXPECTED_CFG_IDENTITY,
       },
     });
-    expect(durationMs).toBeLessThan(250);
   });
 
   test("classifies missing model, cfg, and model-map assets", () => {

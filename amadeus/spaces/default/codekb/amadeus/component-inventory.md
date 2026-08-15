@@ -1,6 +1,5 @@
 # コンポーネント棚卸し
 
-## core/tools の増減と formal-model-check patient 面の構成要素（260814-fmc-macos-provider、履歴、observed `5f6b5bf97`）
 ## core/tools の増減と formal-model-check patient 面の構成要素（260814-fmc-macos-provider、履歴、observed `5f6b5bf97`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: すべて observed = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`。差分 base = `89532174c30ef9cc7ff29496cd6916586fdda00a`（9 commits）。全数列挙と検索述語は `re-scans/260814-fmc-macos-provider.md` を正本とする。
@@ -2589,7 +2588,6 @@ Issue #2785（grilling depth を質問数予算から frontier 駆動の枝刈�
 
 所有境界は維持する。question schema と tally business rule は model、永続形式と dual decoder は store、判断を含まない配送は transport、human-facing state transition は CLI、監査 prose と完全性検査は record、有限状態の安全性は TLA+ が所有する。これらをCLI単一ファイルへ寄せる設計は責務境界を崩すため避ける。
 
-## Issue #2985 コンポーネント一覧（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
 ## Issue #2985 コンポーネント一覧（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 | コンポーネント | 責務 | 入力 / 出力 | 状態 |
@@ -2678,7 +2676,7 @@ tests/unit/t452-authorize-interaction-semi.test.ts
 - `tests/e2e/t-exec-codex-autosolo-s13.serial.test.ts` と `tests/harness/autosolo-s13-fixture.ts` は grep によるファイル特定のみ（§13 学習選定の auto 発動面であり本 Issue の halt-and-ask 面とは別類型）
 - `constructionFailureTransition` / `projectConstructionOutcomes` の射影ロジック（`amadeus-construction-outcome*.ts` 系）は患部外として未読
 
-## 260814-open-bug-batch-6 のコンポーネント棚卸し（現在、observed `a49f9e9fd`）
+## 260814-open-bug-batch-6 のコンポーネント棚卸し（履歴、observed `a49f9e9fd`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-priority-bug-batch-2 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 ### プラグイン一覧（本区間で 3 → 4 へ増加）
 
@@ -2724,7 +2722,7 @@ core 正本 11 件（`packages/framework/core/sensors/`、`ls` 出力の転記�
 
 本 intent の Focus はこれらに非接触。
 
-## 区間内のコンポーネント増減（260814-priority-bug-batch、現在、observed `d64fd7cac`）
+## 区間内のコンポーネント増減（260814-priority-bug-batch、履歴、observed `d64fd7cac`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-priority-bug-batch-2 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: base `1d08374cd7e4ef89637b4a8000bab3fcf1a0f780` → observed `d64fd7cac049d7c2cda7dd7dc7d9d0a652ff02d7`。増減の列挙元は `git diff --name-status -M 1d08374cd HEAD -- ':!amadeus/' ':!metrics/' | grep -E '^(A|D)'`（A 31 件 / D 9 件）。`packages/framework/core/tools/` の総数は 166（`git ls-files packages/framework/core/tools | wc -l`）。
 
@@ -2774,3 +2772,33 @@ core 正本 11 件（`packages/framework/core/sensors/`、`ls` 出力の転記�
 ### その他の新規テストコンポーネント
 
 `tests/integration/t2996-pr-convergence-scope-grid.integration.test.ts`（rename 後の scope grid 固定）、`tests/integration/t3016-park-provenance.integration.test.ts`（PR #3053、autonomous park の human-turn provenance）、`tests/fixtures/coverage-registry/unit/fixture.none.test.ts`、`tests/no-silent-drop/events/01M008DFEFXTFBWM3T9FZRHKAZ.json`（追記型 ULID イベント台帳への 1 件追加）。
+
+## 新規モジュール 1 件と、選挙 7 モジュールの責務分担（260815-priority-bug-batch-2、現在、observed `9ba8170bb`）
+
+**観測 ref**: base `a49f9e9fdbd19fd40e9374feba77e9360771d173` → observed `9ba8170bb03996fb98b497cfcbac3d207795018d`。増減の列挙元は `git diff --name-status a49f9e9fd HEAD -- ':!amadeus/' ':!metrics/'`（A **1 件** / D **0 件** / M 9 件）。`packages/framework/core/tools/` の総数は **167**（`git ls-files packages/framework/core/tools | wc -l`。前区間 166 から +1）。
+
+### 新規コンポーネント（1 件）
+
+| コンポーネント | 行数 | 責務 | エクスポート |
+|---|---|---|---|
+| `packages/framework/core/tools/amadeus-migrate-git.ts` | **32** | migration ツールの git spawn 判定。`error` が立った spawn を exit code に関わらず ok にしない fail-closed 正規化と、その stderr への逐語追記 | `GitSpawnOutcome`（`:7`、`status` / `stdout` / `stderr` / `error` の 4 面）/ `normalizeGitOutcome`（`:19`） |
+
+消費者は 2 面のみである — `packages/framework/core/tools/amadeus-migrate.ts:32`（import）と `:452`（`git()` からの委譲）、および `tests/integration/t226-migration-routing-in-process.test.ts:22`（in-process 検証）。**32 行という粒度は設計判断であり偶然ではない**: 3847 行の `amadeus-migrate.ts` を in-process import すると lcov 母集団が膨張して Project Coverage Gate の相対条件を構造的に割るため、被検関数だけを切り出してテストはそれだけを import する（`cid:build-and-test:bt-coverage-universe-inflation`）。冒頭コメントがこの意図を逐語で述べる — `in its own module so a test can drive it without importing the migration tool itself`。
+
+削除コンポーネントはない。
+
+### 選挙サブシステム 7 モジュールの責務分担
+
+#3077 の患部が `amadeus-election.ts`（生産）と `amadeus-election-store.ts`（検証）の 2 ファイルに割れているため、どの責務がどこにあるかを棚卸しする。行数はいずれも `wc -l` の転記で、合計 **4314 行**。本区間ではこの 7 ファイルに変更はない（前区間 PR #3036 の v2 移行が最後の変更）。
+
+| コンポーネント | 行数 | 責務 | #3077 との関係 |
+|---|---|---|---|
+| `amadeus-election-codec.ts` | 908 | schemaVersion 2 の canonical schema と legacy decoder。純粋、例外を投げない | **digest の定義元**。`establishedResultsDigest`（`:840`）が established 結果のみを payload 化してハッシュする（`:868`）。established 0 件でも非 null を返す点が不整合の起点 |
+| `amadeus-election-store.ts` | 1232 | election / ledger / pending / tally / registry の永続化と、書込時の不変条件検査 | **検証側の患部**。`verifyPreservation`（`:716`）の全 question 分岐（`:728-729`）が `null` を要求する |
+| `amadeus-election.ts` | 804 | CLI 9 verb と directive loop。snapshot から次の指令を導出し、store へ commit する | **生産側の患部**。`directiveFromSnapshot`（`:148`）が digest を決め（`:154-159`）、`tallyElection`（`:424`）が `:451` で書く。`isCommittedRun`（`:419-420`）のリペア期待も同じ非対称を持つ |
+| `amadeus-election-record.ts` | 651 | question 別 ruling / GoA / 留保 / timeline の render・verify | 非接触。`buildDistributionView`（`:74`）ほか |
+| `amadeus-election-question-tally.ts` | 386 | 問ごとの集計方針。voter×question 解決、遅延回答分類、early tally 可否、lifecycle 導出 | 非接触だが隣接 — hold を生むのはこの層の判定であり、hold が `currentTargets` を経て不整合の入口条件を作る |
+| `amadeus-election-transport.ts` | 301 | agmsg / subagent への通知 port | 非接触 |
+| `amadeus-election-model.ts` | 32 | `Result` / `ok` / `err` / `VoterKind` / `HoldReason` の共有語彙のみ | 非接触 |
+
+**責務境界としての要点**: digest の**定義**（codec）、**生産**（CLI）、**検証**（store）が 3 モジュールに分かれており、生産と検証が互いの述語を参照していない。#3077 はこの分散が生んだ不整合であり、是正は「述語を 1 か所に持ち、生産と検証の双方がそれを呼ぶ」形が構造的な再発防止になる（詳細は `architecture.md` の対応節）。
