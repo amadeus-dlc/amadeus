@@ -1,0 +1,89 @@
+{
+  "schema": "amadeus.model-check-manifest.v1",
+  "runId": "ea5e3060-836b-48f7-bece-af5d30bb9468",
+  "outcome": "NOT_DETECTED",
+  "exitCode": 0,
+  "startedAt": "2026-08-15T11:31:08.197Z",
+  "finishedAt": "2026-08-15T11:31:15.202Z",
+  "expectedArtifacts": [
+    "env-receipt.json",
+    "tlc-stdout.bin",
+    "tlc-stderr.bin",
+    "completion-marker.json"
+  ],
+  "artifacts": [
+    {
+      "path": "env-receipt.json",
+      "sha256": "cf3696f637e50e6c4b73e7a6e672e77439752265317cc20a732b02b7edb2f261",
+      "bytes": 1421
+    },
+    {
+      "path": "tlc-stdout.bin",
+      "sha256": "fc3f5acd291921528e6c77072506b48d5ccc1ff285ac7a639f2868fb5ed28a8e",
+      "bytes": 3478
+    },
+    {
+      "path": "tlc-stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "completion-marker.json",
+      "sha256": "579fb37a8e8d36c38016a0b5831ee9563e788afa6a8c2000e3ea31cdabf5730a",
+      "bytes": 162
+    }
+  ],
+  "partial": false,
+  "errorCode": null,
+  "errorDetail": null,
+  "advisory": null,
+  "sourceProvenance": {
+    "modelPath": "amadeus/spaces/default/specs/tla/MirrorLifecycle.tla",
+    "cfgPath": "amadeus/spaces/default/specs/tla/MirrorLifecycle.cfg",
+    "modelIdentity": "02a3cceed93bbcc04929e65a48517fec9bbf38a8b8532cedd477b7d2fd8b0d98",
+    "moduleIdentity": "57ed76c6896a44a92f7a6db8048804fd17e5c5adbafd78eab6a7812faa0399d3",
+    "cfgIdentity": "e1f6f75f3b4761b9b056ae4830c9e7bc3999349e46ea4d998da79a68cbc3cb42",
+    "moduleSha256": "6729c83131c43a3393d36bb4da7a9d01a3bf7172b32f09c51d7289111410880e",
+    "cfgSha256": "1d4e0dea907e0b0b11256fdc383fa4eb9d5876877694334ad16ed1f13044b35e",
+    "auxiliaries": [
+      {
+        "path": "amadeus/spaces/default/specs/tla/MirrorLifecycleCore.tla",
+        "identity": "f40f216f415c00fcb5dce366859f80009844f3bf1bceac91871cdbd55fb73cec"
+      }
+    ],
+    "implementations": [
+      {
+        "path": "packages/framework/core/tools/amadeus-mirror-coordinator.ts",
+        "identity": "452a279d41dacc55923e1792cadb857e29a07cf91d5c412f502b1e5a6a17d5cf"
+      },
+      {
+        "path": "packages/framework/core/tools/amadeus-mirror-project-reconciliation-reducer.ts",
+        "identity": "f9efa901839fd1a011291b2afb1995eb432dd8495e43b1c99e1f5b64b00ba0e6"
+      },
+      {
+        "path": "packages/framework/core/tools/amadeus-mirror-state-reducer.ts",
+        "identity": "2e189dc5af7f15bfeb7706297ed61753f938bd2e399208adb6743fdc440eaec8"
+      },
+      {
+        "path": "packages/framework/core/tools/amadeus-mirror-types.ts",
+        "identity": "3eff5a05b2db137bdb441f6f471407610777e2fc221ed885897267fe3ce44b46"
+      }
+    ],
+    "constants": [
+      "MaxReceipts=3"
+    ],
+    "sourceIdentity": "8e324b430ea9f2d07eb91476c3843678327d1fb9e0b87ccb5b064d252f858114"
+  },
+  "verification": {
+    "toolchainVersion": "TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)",
+    "constants": [
+      "MaxReceipts=3"
+    ],
+    "completionMarker": "Model checking completed. No error has been found.",
+    "generatedStates": 208628,
+    "distinctStates": 89099,
+    "statesLeftOnQueue": 0,
+    "searchDepth": 18,
+    "sourceIdentity": "8e324b430ea9f2d07eb91476c3843678327d1fb9e0b87ccb5b064d252f858114"
+  }
+}
