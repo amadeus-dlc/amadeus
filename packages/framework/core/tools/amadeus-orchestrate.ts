@@ -208,6 +208,7 @@ import {
 import type {
   AutonomyMode as IntentAutonomyMode,
   AutonomyProjection,
+  SkeletonStance,
 } from "./amadeus-intent-autonomy.ts";
 import {
   admitProductionStageFailure,
@@ -2001,7 +2002,6 @@ function isFirstRunStageOfWorkflow(
 // `report --skeleton-stance`, read by the next `next`). One of the three stance
 // values, or absent before the round-trip completes.
 const SKELETON_STANCE_FIELD = "Skeleton Stance";
-type SkeletonStance = "on" | "off" | "scope-dependent";
 const VALID_SKELETON_STANCES: ReadonlySet<string> = new Set([
   "on",
   "off",

@@ -20,6 +20,22 @@ import { auditShardDir, auditShardName, findAllEvents, getField } from "./amadeu
 export type AutonomyMode = "none" | "semi" | "full";
 export type WorkflowExecutionState = "running" | "suspended" | null;
 
+// --- The walking-skeleton ceremony (RFC-0001 FR-10 / ADR-10) ---------------
+//
+// The recorded stance for the walking-skeleton ceremony. `scope-dependent` is
+// resolved against the canonical greenfield scope set by the caller that can
+// read state; this module only decides what a resolved stance means.
+export type SkeletonStance = "on" | "off" | "scope-dependent";
+
+// Whether the first Construction stage is a walking-skeleton MILESTONE rather
+// than an ordinary stage gate. Only an explicit `off` retires the ceremony:
+// everything else — including a stance nobody resolved — keeps the acceptance
+// point with the human, because wrongly firing costs one approval while wrongly
+// skipping loses the acceptance point altogether.
+export function firesWalkingSkeletonGate(stance: SkeletonStance): boolean {
+  return stance !== "off";
+}
+
 // --- The Construction scheduling projection (RFC-0001 FR-6) -----------------
 //
 // `Construction Autonomy Mode` is DERIVED from the declared Intent mode; it is
