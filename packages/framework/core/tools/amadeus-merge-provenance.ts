@@ -31,11 +31,10 @@ function main(): void {
   const args = process.argv.slice(2);
   const projectDir = resolveProjectDir(flag(args, "--project-dir"));
 
-  try {
-    initProcessObservability("tool:amadeus-merge-provenance:record", projectDir);
-  } catch {
-    // no resolvable workflow -> nothing to observe
-  }
+  // Telemetry process span (opt-in). initProcessObservability is fail-soft by
+  // construction: config resolution falls back to DISABLED internally, so no
+  // catch is needed here (and the no-silent-drop gate forbids one).
+  initProcessObservability("tool:amadeus-merge-provenance:record", projectDir);
 
   if (args[0] !== "record") {
     jsonError(
