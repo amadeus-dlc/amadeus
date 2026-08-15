@@ -376,11 +376,11 @@ function applyKindRules(
     }
     return;
   }
+  // #3062: the merge queue can land the pull request before `report` runs.
+  // At `pr-convergence` the verified merge fact IS the stage's final record;
+  // anywhere else a landed report still proves nothing that stage asked for.
   if (kind === "landed") {
     checkLanded(body, converged, findings);
-    // #3062: the merge queue can land the pull request before `report` runs.
-    // At `pr-convergence` the verified merge fact IS the stage's final record;
-    // anywhere else a landed report still proves nothing that stage asked for.
     if (stage !== "pr-convergence") {
       findings.push({ field: "kind", reason: "landed finalises the pr-convergence stage only" });
     }
