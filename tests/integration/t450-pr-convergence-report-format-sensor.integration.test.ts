@@ -154,9 +154,17 @@ describe("t450 predicate accepts both canonical shapes (ADR-3)", () => {
     expect(result.reason).toBe("override");
   });
 
-  test("a landed report is not convergence evidence", () => {
+  test("a landed report outside pr-convergence is not evidence that stage asked for", () => {
     const result = evaluateReportFormat(reportAt(landedReport()));
     expect(result.pass).toBe(false);
+    expect(result.reason).toBe("landed");
+    expect(result.findings.map((finding) => finding.field)).toContain("kind");
+  });
+
+  test("a landed report finalises the pr-convergence stage (#3062)", () => {
+    const result = evaluateReportFormat(reportAt(landedReport()), "pr-convergence");
+    expect(result.findings).toEqual([]);
+    expect(result.pass).toBe(true);
     expect(result.reason).toBe("landed");
   });
 
@@ -361,6 +369,17 @@ describe("t450 falling evidence — each missing required field goes red", () =>
     const result = evaluateReportFormat(reportAt(body));
     expect(result.pass).toBe(false);
     expect(result.findings.map((f) => f.field)).toContain("merge commit");
+  });
+
+  // The finalisation the pr-convergence stage accepts is the VERIFIED merge
+  // fact (#3062): a merge commit that is not an object id records no merge, so
+  // the stage that would otherwise pass on it goes red.
+  test("a landed report whose merge commit is not an object id is a finding (#3062)", () => {
+    const body = landedReport().replace(/^- merge commit: .*$/m, "- merge commit: HEAD~1");
+    const result = evaluateReportFormat(reportAt(body), "pr-convergence");
+    expect(result.pass).toBe(false);
+    const finding = result.findings.find((f) => f.field === "merge commit");
+    expect(finding?.reason).toContain("not a commit object id");
   });
 
   test("an unknown kind is a finding, never a silent pass", () => {
