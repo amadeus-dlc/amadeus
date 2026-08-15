@@ -741,9 +741,21 @@ const SENSOR_FILE_REGEX = /^amadeus-([a-z][a-z0-9-]*)\.md$/;
  *  sort is the determinism contract the canonical JSON emitter relies
  *  on (mirrors loadRules above). */
 export function loadSensors(): Map<string, SensorFile> {
-  const dir = sensorsDir();
   const out = new Map<string, SensorFile>();
-  if (!existsSync(dir)) return out;
+  mergeSensorsFromDir(sensorsDir(), out, toPosix(join(harnessDir(), "sensors")));
+  return out;
+}
+
+/** Load sensor manifests from `dir` into `out`, skipping ids that are already
+ *  present. The skip keeps the canonical sensors dir authoritative when a
+ *  second source (a plugin-composed host `sensors/` dir) is merged on top —
+ *  and makes the merge a no-op on self-install hosts, where both sources
+ *  resolve to the same directory. Duplicate ids WITHIN one directory still
+ *  fail loud (two files in the same dir claiming one id is an authoring
+ *  error, not a projection echo). */
+function mergeSensorsFromDir(dir: string, out: Map<string, SensorFile>, pathBase?: string): void {
+  if (!existsSync(dir)) return;
+  const seenHere = new Set<string>();
 
   for (const f of readdirSync(dir).sort()) {
     const m = f.match(SENSOR_FILE_REGEX);
@@ -764,24 +776,24 @@ export function loadSensors(): Map<string, SensorFile> {
     // the same id surface the duplicate error, not a downstream
     // id↔filename mismatch on the second file. The check uses the parsed
     // id (which the schema later cross-validates against the filename).
-    if (typeof manifest.id === "string" && out.has(manifest.id)) {
+    if (typeof manifest.id === "string" && seenHere.has(manifest.id)) {
       const previous = mustGet(out, manifest.id, "sensor-manifest dup");
       throw new Error(
         `${filePath}: duplicate sensor id "${manifest.id}" — also declared ` +
           `in ${previous.path}. Rename one of them.`,
       );
     }
+    if (typeof manifest.id === "string" && out.has(manifest.id)) continue;
 
     validateSensorManifest(manifest, filePath, filenameId);
 
+    seenHere.add(manifest.id);
     out.set(manifest.id, {
       id: manifest.id,
-      path: toPosix(join(harnessDir(), "sensors", f)),
+      path: toPosix(join(pathBase ?? dir, f)),
       manifest,
     });
   }
-
-  return out;
 }
 
 /** Resolve a stage's `sensors:` imports against the manifest registry.
@@ -2298,6 +2310,13 @@ export function compileStageGraph(): {
   // in the same loop. The trusted index already guarantees unique plugin
   // slugs, avoiding a second all-stage walk and plugin-path lookup map.
   const sensorsById = loadSensors();
+  // Plugin-composed hosts deliver plugin-declared sensor manifests into the
+  // host `sensors/` dir (amadeus-plugin-compose sensorCopies). Resolve plugin
+  // stage sensor imports against that dir too — on a self-install host it is
+  // the same directory as sensorsDir(), so the merge is a no-op there; on a
+  // packages/dist run it is the only place a plugin-supplied manifest exists
+  // (#3026: without this, a declared plugin sensor fails UNKNOWN_SENSOR).
+  mergeSensorsFromDir(join(pluginHost, "sensors"), sensorsById);
   for (const { file, data } of readTrustedPluginStageIndex(pluginHost)) {
     const slug = data.slug;
     const plugin = file.path.split("/")[1] ?? file.path;

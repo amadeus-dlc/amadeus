@@ -1,6 +1,6 @@
 // covers: file:plugins/formal-model-check/plugin.json
 // covers: file:packages/framework/core/tools/amadeus-plugin-compose.ts
-// size: small
+// size: medium
 //
 // t3026 (integration) — every sensor manifest shipped inside a plugin bundle is
 // declared in that bundle's `plugin.json`.
