@@ -2,10 +2,10 @@
 
 depth Minimal。詳細実測は `implementation-notes.md`(測定 ref: worktree bolt-docs-sensors、origin/main 0901182c7 断面)。
 
-## 変更ファイル(git diff --stat origin/main..HEAD の転記)
+## 変更ファイル(PR #3092 の gh pr diff --name-only 対象。行数は各コミット時点の実測)
 
 - `docs/harness-engineering/06-sensors.md` / `.ja.md`(各 +4 行 → 14 行。model-completeness 行へプラグイン由来注記を追加)
-- 新設 `tests/integration/t3028-sensors-docs-sync.integration.test.ts`(件数フリー集合契約。実 filesystem 走査のため integration tier / size: medium — unit tier size purity ゲート適合)
+- 新設 `tests/integration/t3028-sensors-docs-sync.integration.test.ts`(件数フリー集合契約。実 filesystem 走査のため integration tier / size: medium — integration tier / size: medium 注釈で size purity ゲートに適合(unit tier からの移設))
 - record: implementation-notes / plan / 本ファイル / pr-convergence-report(PR #3092)
 
 ## 検証

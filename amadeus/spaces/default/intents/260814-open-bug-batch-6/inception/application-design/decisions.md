@@ -18,6 +18,7 @@
 
 - **Decision**: 梯子 AUTO_DECIDED(`auto-decision-d6e7700a…`)。(a) センサー資産 vs plugin.json 宣言の突合を既存 conformance/unit 系テストへ、(b) docs センサー表 vs 実在集合の突合を既存 docs 検証テストへ追加。新規 CI ジョブは作らない。両検査とも落ちる実証(欠落注入 → 赤 → revert)を経て完成扱い。
 - **Alternatives Rejected**: 検査なし(根拠記録のみ)— 起票後の実区間で drift が 3→4 件へ拡大した実測があり、再発クラスと実証済み。
+- **追補(2026-08-15、選挙 `E-260815-U3-NEWFILE-DEVIATION` 2-0 ESTABLISHED)**: 「既存 docs 検証テストへの追加」は「**既存スイート内への追加(1ファイル1主題の既存様式に従う)**」へ精密化する。U-3 の drift 検査は新規ファイル `tests/integration/t3028-sensors-docs-sync.integration.test.ts` として実装してよい — 06-sensors 面には既存検査ファイルが存在せず(drift の実在理由)、既存 docs 検証テスト群は1ファイル1主題様式であり、実 filesystem 走査の検査を unit 常駐の既存ファイルへ統合する案は `cid:code-generation:c2-doctor-seam`(medium test は integration へ)と非両立(両投票者の一致理由)。D-3 の operative な判断根拠(新規 CI ジョブなし・既存スイート再利用)は不変。
 
 ## D-4: FR-4 は判定分岐先行(是正は条件付き)
 
