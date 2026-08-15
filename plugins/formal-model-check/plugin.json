@@ -12,6 +12,9 @@
   ],
   "seams": [],
   "fragments": [],
+  "sensors": [
+    "sensors/amadeus-model-completeness.md"
+  ],
   "tools": [
     "tools/amadeus-formal-verif-model-map.ts",
     "tools/amadeus-sensor-model-completeness.ts",
