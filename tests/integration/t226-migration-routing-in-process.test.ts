@@ -313,17 +313,32 @@ describe("migration git runner fails closed on a reported spawn error", () => {
     expect(outcome.stdout).toBe("partial");
   });
 
-  test("the error detail joins the stderr the child already wrote", () => {
+  test("the error detail joins the stderr the child already wrote, verbatim", () => {
+    const error = enobufs();
     const outcome = normalizeGitOutcome({
       status: 0,
       stdout: "",
-      stderr: "fatal: not a git repository\n",
-      error: enobufs(),
+      stderr: "  fatal: not a git repository\n",
+      error,
     });
 
     expect(outcome.ok).toBe(false);
-    expect(outcome.stderr).toContain("fatal: not a git repository");
-    expect(outcome.stderr).toContain("ENOBUFS");
+    // The child's stderr is carried through unreshaped — leading whitespace and
+    // the trailing newline included — with the error text appended after it.
+    expect(outcome.stderr).toBe(`  fatal: not a git repository\n${String(error)}`);
+  });
+
+  test("a stderr that did not end in a newline still separates from the error text", () => {
+    const error = enobufs();
+    const outcome = normalizeGitOutcome({ status: 0, stderr: "fatal: bad object", error });
+
+    expect(outcome.stderr).toBe(`fatal: bad object\n${String(error)}`);
+  });
+
+  test("an empty stderr carries the error text alone", () => {
+    const error = enobufs();
+
+    expect(normalizeGitOutcome({ status: 0, stderr: "", error }).stderr).toBe(String(error));
   });
 
   test("a clean exit-0 spawn stays ok and keeps its streams verbatim", () => {

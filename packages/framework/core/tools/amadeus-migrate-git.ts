@@ -14,7 +14,8 @@ export interface GitSpawnOutcome {
 // A spawn that sets `error` did not deliver what the caller asked for, whatever exit code came
 // back: bun returns `status: 0` together with `error: ENOBUFS` when a child overflows maxBuffer and
 // still exits on its own, so reading `status` alone hands the caller a truncated stdout under a
-// success verdict. The error text joins stderr so the reason survives into the diagnostic.
+// success verdict. The error text is appended to the stderr the child already wrote, verbatim, so
+// the reason survives into the diagnostic without reshaping what git said.
 export function normalizeGitOutcome(
   result: GitSpawnOutcome,
 ): { ok: boolean; stdout: string; stderr: string } {
@@ -22,9 +23,10 @@ export function normalizeGitOutcome(
   if (result.error === undefined) {
     return { ok: result.status === 0, stdout: result.stdout || "", stderr };
   }
+  const prefix = stderr === "" || stderr.endsWith("\n") ? stderr : `${stderr}\n`;
   return {
     ok: false,
     stdout: result.stdout || "",
-    stderr: [stderr.trim(), String(result.error)].filter(Boolean).join("\n"),
+    stderr: prefix + String(result.error),
   };
 }
