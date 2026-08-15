@@ -378,7 +378,6 @@ function applyKindRules(
   }
   if (kind === "landed") {
     checkLanded(body, converged, findings);
-    // #3062: only at pr-convergence is the verified merge fact the stage's final record.
     if (stage !== "pr-convergence") {
       findings.push({ field: "kind", reason: "landed finalises the pr-convergence stage only" });
     }
