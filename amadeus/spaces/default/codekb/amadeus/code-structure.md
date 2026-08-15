@@ -1,6 +1,6 @@
 # コード構造
 
-## Focus Area: undefined 形の回帰テストが要求するシーム（260814-ambient-error-sink、現在、observed `6e94189de`）
+## Focus Area: undefined 形の回帰テストが要求するシーム（260814-ambient-error-sink、履歴、observed `6e94189de`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 対象: [Issue #3004](https://github.com/amadeus-dlc/amadeus/issues/3004)。測定 ref = observed `6e94189dec9e8e2bd0aaeb53bcff7cf9cba27440`。本節は**落ちる実証を成立させるために必要なテスト構造**を記録する（テストの設計自体は build-and-test / code-generation の所掌）。
 
@@ -122,7 +122,10 @@ tests/harness/fixtures.ts
 |---|---|---|
 | `packages/framework/core/` | 正本 core | stage graph、orchestration、state/audit、protocol、sensor、共通知識 |
 | `packages/framework/harness/<name>/` | host adapter | claude、codex、cursor、kimi、kiro、kiro-ide、opencode、pi 向け投影 |
-| `plugins/pr-convergence/` | plugin bundle | stage、sensor、GitHub adapter、predicate、ledger、CLI |
+| `plugins/github-pr-convergence/` | plugin bundle | stage、sensor、GitHub adapter、predicate、ledger、CLI |
+| `plugins/coverage-patch-quick/` | plugin bundle（tool-only、`stages: []`） | push 前 patch coverage の advisory 判定 CLI |
+| `plugins/formal-model-check/` | plugin bundle | TLA+ モデルと実装の identity 検査 stage / sensor |
+| `plugins/git-drift/` | plugin bundle（tool-only、`stages: []`） | origin drift の早期 advisory sensor |
 | `scripts/` | build/distribution | `dist/<harness>/` 生成、self promotion、distribution verification |
 | `tests/` | verification | smoke、unit、integration、e2e、conformance、formal-verif、fixtures |
 | `amadeus/spaces/` | workflow records | Intent state、audit、stage artifacts、共有 CodeKB |
@@ -133,16 +136,16 @@ tests/harness/fixtures.ts
 | ファイル | 主な要素 |
 |---|---|
 | `amadeus/config.json` | plugin activation と4 self-* scope binding |
-| `plugins/pr-convergence/plugin.json` | stage bundle、code-generation produces seam、tool inventory |
-| `plugins/pr-convergence/stages/pr-convergence.md` | convergence loop と手動 sensor fire の運用契約 |
-| `plugins/pr-convergence/tools/pr-convergence-cli.ts` | `create/status/report/override` dispatcher、report renderer/writer |
-| `plugins/pr-convergence/tools/pr-convergence-gh-runner.ts` | `gh` process adapter、GraphQL snapshot parser |
-| `plugins/pr-convergence/tools/pr-convergence-predicate.ts` | merge/lifecycle/convergence の純粋判定 |
-| `plugins/pr-convergence/tools/pr-convergence-ledger.ts` | paged review thread の分類と集計 |
-| `plugins/pr-convergence/tools/pr-convergence-provenance.ts` | PR title/body の Intent/Bolt/Unit provenance 検証 |
-| `plugins/pr-convergence/tools/pr-convergence-presentation.ts` | canonical PR title/body の生成 |
-| `plugins/pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts` | report shape の独立 parser |
-| `plugins/pr-convergence/sensors/amadeus-pr-convergence-report-format.md` | advisory sensor manifest |
+| `plugins/github-pr-convergence/plugin.json` | stage bundle、code-generation produces seam、tool inventory |
+| `plugins/github-pr-convergence/stages/pr-convergence.md` | convergence loop と手動 sensor fire の運用契約 |
+| `plugins/github-pr-convergence/tools/pr-convergence-cli.ts` | `create/status/report/override` dispatcher、report renderer/writer |
+| `plugins/github-pr-convergence/tools/pr-convergence-gh-runner.ts` | `gh` process adapter、GraphQL snapshot parser |
+| `plugins/github-pr-convergence/tools/pr-convergence-predicate.ts` | merge/lifecycle/convergence の純粋判定 |
+| `plugins/github-pr-convergence/tools/pr-convergence-ledger.ts` | paged review thread の分類と集計 |
+| `plugins/github-pr-convergence/tools/pr-convergence-provenance.ts` | PR title/body の Intent/Bolt/Unit provenance 検証 |
+| `plugins/github-pr-convergence/tools/pr-convergence-presentation.ts` | canonical PR title/body の生成 |
+| `plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts` | report shape の独立 parser |
+| `plugins/github-pr-convergence/sensors/amadeus-pr-convergence-report-format.md` | advisory sensor manifest |
 | `packages/framework/core/tools/amadeus-graph.ts` | plugin scope binding の additive overlay |
 | `packages/framework/core/tools/amadeus-plugin.ts` | plugin compose/drop と stage seam materialization |
 | `packages/framework/core/tools/amadeus-orchestrate.ts` | per-unit required artifact coverage と approval routing |
@@ -202,7 +205,7 @@ tests/harness/fixtures.ts
 
 実装順の依存は `canonical model + legacy decoder` → `question tally + mixed/preservation` → `store/CLI/directive/record/skill/transport` → `migration/TLA/model-map/norm` → `build/test/CI` である。generated `dist/` と self-install surface は編集元にせず、正本変更後に build で同期する。
 
-## Issue #2985 の患部配置（現在、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
+## Issue #2985 の患部配置（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 | パス | 責務 | #2985 との関係 |
 |---|---|---|
@@ -248,3 +251,57 @@ tests/harness/fixtures.ts
 ### base..observed で構造は動いていない
 
 base `d7ffaa544` → observed `cd64486a6` の 4 コミットは `packages/` を 1 行も変更していない。したがって上表の構造は前回スキャン断面から不変であり、クロスレビュー target-sha `52f1f1b25` 以後に患部 4 ファイルへ触れたのは `d7ffaa544`（Bolt PR attestation、`amadeus-orchestrate.ts` のみ 167 insertions / 8 deletions）の 1 件だけである。分岐構造は保たれ、行番号のみ移動した（クロスレビュー時の `:4063-4068` → HEAD `:4069-4075`）。
+
+## 差分リフレッシュで観測した構造変化（260814-priority-bug-batch、現在、observed `d64fd7cac`）
+
+**観測 ref**: base `1d08374cd7e4ef89637b4a8000bab3fcf1a0f780` → observed `d64fd7cac049d7c2cda7dd7dc7d9d0a652ff02d7`（23 コミット、`git rev-list --count 1d08374cd..HEAD`。185 files / +14769 −6942、`git diff --stat 1d08374cd HEAD -- ':!amadeus/'`）。
+
+### プラグイン配置（4 プラグイン）
+
+`ls plugins/` は 4 ディレクトリを返し、`amadeus/config.json` の `plugin.activation.names` も同じ 4 要素（順序一致）である。
+
+| パス | 形態 | 責務 |
+|---|---|---|
+| `plugins/coverage-patch-quick/` | tool-only（`stages: []`） | push 前 patch coverage の advisory 判定 CLI |
+| `plugins/formal-model-check/` | stage + sensor | TLA+ モデルと実装の identity 検査 |
+| `plugins/git-drift/` | tool-only（`stages: []`） | origin drift の早期 advisory sensor（新規、PR #3055） |
+| `plugins/github-pr-convergence/` | stage + sensor | PR 収束ループ（旧 `plugins/pr-convergence/` から rename、PR #3051） |
+
+**rename の性質**（PR #3051）: `plugins/pr-convergence/` → `plugins/github-pr-convergence/` の 13 ファイルまるごとの移動（`git diff --name-status -M` が `R080`〜`R100`）。ツール内のファイル名（`pr-convergence-cli.ts` ほか）とディレクトリ内構造は不変で、変わったのは第 1 階層のディレクトリ名だけである。
+
+**`plugins/git-drift/` の内訳**（`git ls-files plugins/git-drift` = 4 ファイル）: `plugin.json` / `sensors/amadeus-git-drift.md` / `tools/amadeus-sensor-git-drift.ts` / `tools/git-drift-detect.ts`。`plugin.json` は `code-generation` と `build-and-test` の `sensors` seam に `git-drift` を追加し、`settings` に `fetch-throttle-seconds`（number、default 600）を 1 件宣言する。
+
+### 選挙サブシステムの再配置（PR #3036）
+
+正本側（`packages/framework/core/tools/`、実測は `wc -l`）:
+
+| ファイル | 行数 | 本区間での変化 |
+|---|---|---|
+| `amadeus-election-codec.ts` | 908 | **新規**。schemaVersion 2 の canonical schema（definition / ballot / tally）と legacy decoder |
+| `amadeus-election-store.ts` | 1232 | 改修。election / ledger / pending / tally / registry の永続化 |
+| `amadeus-election.ts` | 804 | 改修。9 verb（`open` / `next` / `status` / `vote` / `notify` / `tally` / `render` / `verify` / `report`）と directive loop |
+| `amadeus-election-record.ts` | 651 | 改修。question 別 ruling / GoA / 留保 / timeline の render・verify |
+| `amadeus-election-question-tally.ts` | 386 | **新規**。voter×question 解決、遅延回答分類、early tally 可否、lifecycle 導出 |
+| `amadeus-election-transport.ts` | 301 | 改修。agmsg / subagent の通知 port |
+| `amadeus-election-model.ts` | 32 | **縮小**。`Result` / `ok` / `err` / `VoterKind` / `HoldReason` だけの共有語彙。データモデルは codec へ移動 |
+
+`scripts/amadeus-election-migrate.ts` は削除された（`git diff --name-status -M 1d08374cd HEAD` が `D`）。
+
+**テスト面の再計数**: 選挙に直接関係するテストファイルは **30 件（unit 9 / integration 20 / e2e 1）**。述語は `git ls-files 'tests/**' | grep -E '/[^/]*election' | grep -vE 'selection'`（基底名に `election` を含み、`selection` の部分一致を除外する。除外により落ちるのは `tests/integration/t415-plugin-optin-selection.integration.test.ts` と `tests/unit/t171-intent-selection.test.ts` の 2 件で、いずれも選挙とは無関係）。層別の内訳は同出力を `tests/<layer>/` 前置で `grep -c` した値である。
+
+前区間の「既存 21 ファイル（unit 7、integration 13、e2e 1）」は失効している。本区間の増減（`git diff --name-status -M 1d08374cd HEAD -- 'tests/**'` から転記）は削除 8 件（`tests/unit/t234-election-model` / `t238-election-record` / `t244-election-choice-resolution` / `t262-elections-migration` / `t416-election-model-roundtrip.pbt`、`tests/integration/t244-election-tie-choice` / `t262-elections-migration`、`tests/helpers/arbitraries/election.ts`）、新規 13 件（unit 6 = `t547` / `t548` / `t549` / `t550` / `t551` / `t552`、integration 7 = `t549-election-v2-store` / `t553` / `t554` / `t555` / `t557` / `t558` / `t559`）である。なお前区間の 21 という値は述語が記録されていないため、30 との差は実際の増減と述語差の合成であり、単純な増分としては読めない。
+
+### plugin.settings（PR #3052）
+
+`packages/framework/core/tools/amadeus-plugin-settings.ts`（274 行、新規）が宣言の parse と解決を持つ。配置上の要点は、**plugin は core を import しない**（ADR-6）境界を保ったまま設定を渡すために、解決を core 側の 1 点に閉じ、結果を process boundary で sensor スクリプトへ手渡す形にしたことである。消費側は `amadeus-sensor.ts:291` の `resolvePluginSettingsForSensor` と `amadeus-plugin-compose.ts:362-363`（compose 時の宣言検査）。
+
+### 本 intent の患部 4 件の所在
+
+いずれもモジュール移動ではなく既存ファイル内の欠陥であり、本区間でこれらのファイルに構造変化はない。
+
+| Issue | 患部ファイル |
+|---|---|
+| #3065 | `scripts/no-silent-drop-evidence-adapter.ts`（`systemCommandRunner` :62-76、NUL 終端ガード :166-172）/ `packages/framework/core/tools/amadeus-migrate.ts`（`git()` :439-455）。検証面は `tests/integration/t427-no-silent-drop-evidence-reconcile.integration.test.ts` と `tests/integration/t224-upstream-v2-migration-cli.test.ts` |
+| #3034 | `tests/integration/t2851-doctor-self-install-freshness.serial.test.ts`（`repositoryCheckFixture` :78-87）/ `packages/framework/core/tools/amadeus-utility.ts`（`selfInstallProjectionDoctorChecks` :1589-1602、`isSelfDevWorkspace` :1017-1019）/ `scripts/promote-self.ts`（`REPO_ROOT` :57） |
+| #3040 | `tests/integration/t-pi-child-driver.integration.test.ts`（:177-185）/ `packages/framework/harness/pi/drivers/amadeus-pi-driver.ts`（:541-558、`CLEANUP_WAIT_MS` :30）/ `amadeus-pi-guardian.ts`（:82-87、:321）/ `tests/fixtures/pi-driver/fake-pi.ts:60` |
+| #3035 | `tests/unit/t07-hook-audit-logger.serial.test.ts`（:401-406）。Issue 本文の `:395-400` から 6 行ずれている（`05da1758c` が `amadeus-plugin-settings.ts` の fixture コピー 6 行を追加、`git show --numstat 05da1758c -- <file>` → `6 0`） |

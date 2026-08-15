@@ -1,6 +1,6 @@
 # コンポーネント棚卸し
 
-## core/tools の増減と formal-model-check patient 面の構成要素（260814-fmc-macos-provider、現在、observed `5f6b5bf97`）
+## core/tools の増減と formal-model-check patient 面の構成要素（260814-fmc-macos-provider、履歴、observed `5f6b5bf97`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: すべて observed = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`。差分 base = `89532174c30ef9cc7ff29496cd6916586fdda00a`（9 commits）。全数列挙と検索述語は `re-scans/260814-fmc-macos-provider.md` を正本とする。
 
@@ -2588,7 +2588,7 @@ Issue #2785（grilling depth を質問数予算から frontier 駆動の枝刈�
 
 所有境界は維持する。question schema と tally business rule は model、永続形式と dual decoder は store、判断を含まない配送は transport、human-facing state transition は CLI、監査 prose と完全性検査は record、有限状態の安全性は TLA+ が所有する。これらをCLI単一ファイルへ寄せる設計は責務境界を崩すため避ける。
 
-## Issue #2985 コンポーネント一覧（現在、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
+## Issue #2985 コンポーネント一覧（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 | コンポーネント | 責務 | 入力 / 出力 | 状態 |
 |---|---|---|---|
@@ -2675,3 +2675,54 @@ tests/unit/t452-authorize-interaction-semi.test.ts
 - `amadeus-election.ts:137` `handleNext` / `:186` `handleReport` の内部指令生成ロジックは概要把握に留め、逐行未読
 - `tests/e2e/t-exec-codex-autosolo-s13.serial.test.ts` と `tests/harness/autosolo-s13-fixture.ts` は grep によるファイル特定のみ（§13 学習選定の auto 発動面であり本 Issue の halt-and-ask 面とは別類型）
 - `constructionFailureTransition` / `projectConstructionOutcomes` の射影ロジック（`amadeus-construction-outcome*.ts` 系）は患部外として未読
+
+## 区間内のコンポーネント増減（260814-priority-bug-batch、現在、observed `d64fd7cac`）
+
+**観測 ref**: base `1d08374cd7e4ef89637b4a8000bab3fcf1a0f780` → observed `d64fd7cac049d7c2cda7dd7dc7d9d0a652ff02d7`。増減の列挙元は `git diff --name-status -M 1d08374cd HEAD -- ':!amadeus/' ':!metrics/' | grep -E '^(A|D)'`（A 31 件 / D 9 件）。`packages/framework/core/tools/` の総数は 166（`git ls-files packages/framework/core/tools | wc -l`）。
+
+### 新規コンポーネント — 選挙（PR #3036）
+
+| コンポーネント | 行数 | 責務 | 主なエクスポート |
+|---|---|---|---|
+| `packages/framework/core/tools/amadeus-election-codec.ts` | 908 | schemaVersion 2 の canonical schema と legacy decoder。純粋、例外を投げない | 型 `Canonical*`（choice / question / definition / ballot / tally 系 11 種）、`ElectionCodecResult<T>`、コンパニオン `ElectionDefinitionCodec`（`:279`）/ `BallotCodec`（`:543`）/ `TallyCodec`（`:804`） |
+| `packages/framework/core/tools/amadeus-election-question-tally.ts` | 386 | 問ごとの集計方針。voter×question 解決、遅延回答分類、early tally 可否、lifecycle 導出 | `resolveResponses`（`:77`）/ `classifyLateResponses`（`:127`）/ `canEarlyTally`（`:190`）/ `deriveLifecycle`（`:334`）/ `tallyQuestions`（`:340`）、型 `ResolvedResponse` / `LateResponseClassification` / `TallyPolicyResult<T>` / `ElectionTallyDraft` |
+
+### 削除・縮小したコンポーネント（履歴へ降格）
+
+| コンポーネント | 状態 | 備考 |
+|---|---|---|
+| `scripts/amadeus-election-migrate.ts` | **削除** | 旧 direct-path 選挙の承認付き migration。多問化にあたり dual-read 前提ごと退役 |
+| `tests/helpers/arbitraries/election.ts` | **削除** | 単問 Election/ElectionFile の arbitrary。PBT は `t548` / `t550` / `t552` / `t554` の各ファイルへ移った |
+| `packages/framework/core/tools/amadeus-election-model.ts` | **32 行へ縮小** | データモデル責務を codec へ、集計を question-tally へ移譲。残るのは `Result` / `ok` / `err` / `VoterKind` / `HoldReason` の共有語彙のみ |
+| 旧選挙テスト 7 件 | **削除** | `tests/unit/t234-election-model` / `t238-election-record` / `t244-election-choice-resolution` / `t262-elections-migration` / `t416-election-model-roundtrip.pbt`、`tests/integration/t244-election-tie-choice` / `t262-elections-migration` |
+
+置換となる新規テストは 13 件（unit 6 = `t547` / `t548` / `t549` / `t550` / `t551` / `t552`、integration 7 = `t549-election-v2-store` / `t553` / `t554` / `t555` / `t557` / `t558` / `t559`）。
+
+### 新規コンポーネント — plugin.settings（PR #3052）
+
+| コンポーネント | 行数 | 責務 | 主なエクスポート |
+|---|---|---|---|
+| `packages/framework/core/tools/amadeus-plugin-settings.ts` | 274 | 設定宣言の parse と、宣言 × override の fail-closed 解決 | `parseSettingsDeclaration`（`:54`）/ `collectSettingsMisspellings`（`:92`）/ `settingsKeyViolation`（`:120`）/ `valueMatchesType`（`:193`）/ `resolvePluginSettings`（`:240`）、定数 `SETTINGS_KEY_RE`（`:20`）/ `SECRET_KEY_RE`（`:24`） |
+
+既存コンポーネントへの追加面: `amadeus-sensor.ts` に `resolvePluginSettingsForSensor`（`:291`）と `pluginSettingsOverrides`（`:324`）、`amadeus-plugin-compose.ts:362-363` に compose 時の宣言検査、`amadeus-config.ts:649-655` に registry entry `plugin.settings`。検証面は `tests/unit/t2997-plugin-settings.test.ts` / `t2997-plugin-settings-config.test.ts` / `tests/integration/t2997-plugin-settings.integration.test.ts` / `t2997-sensor-plugin-settings.integration.test.ts`。
+
+### 新規コンポーネント — git-drift プラグイン（PR #3055）
+
+`plugins/git-drift/` の 4 ファイル（`git ls-files plugins/git-drift`）。`stages: []` の tool-only プラグインで、`code-generation` と `build-and-test` の `sensors` seam へ `git-drift` を追加する。
+
+| コンポーネント | 行数 | 責務 | 主なエクスポート |
+|---|---|---|---|
+| `plugins/git-drift/tools/git-drift-detect.ts` | 249 | drift 判定の純粋ロジックと port 定義 | `detectDrift`（`:109`）/ `renderDriftResult`（`:228`）、port 型 `GitPort` / `ClockPort` / `ThrottleStore`、`DriftReport` / `DriftDetection` / `SensorResult`、定数 `FETCH_TIMEOUT_MS = 10_000`（`:77`） |
+| `plugins/git-drift/tools/amadeus-sensor-git-drift.ts` | 147 | port の実装と sensor エントリポイント | `nodeGitPort`（`:33`）/ `systemClock`（`:50`）/ `fileThrottleStore`（`:55`）/ `parseSettings`（`:107`）/ `evaluateGitDrift`（`:122`）/ `main`（`:134`）、`THROTTLE_REL_PATH`（`:30` = `amadeus/.amadeus-sessions/git-drift-fetch.json`） |
+| `plugins/git-drift/sensors/amadeus-git-drift.md` | — | sensor manifest。`default_severity` を宣言せず advisory | — |
+| `plugins/git-drift/plugin.json` | — | seam 宣言 + `settings.fetch-throttle-seconds`（number、default 600） | — |
+
+構造上の要点は、判定ロジック（`git-drift-detect.ts`）と I/O adapter（`amadeus-sensor-git-drift.ts`）を port 境界で分離し、`GitPort` / `ClockPort` / `ThrottleStore` の 3 port を注入可能にしたことである。throttle は fetch の頻度のみを絞り、drift 判定自体は毎回走る（`plugin.json` の description 逐語: `Minimum seconds between origin fetches; the drift verdict itself runs on every fire`）。検証面は `tests/unit/t2997-git-drift-detect.test.ts` / `tests/integration/t2997-git-drift-sensor.integration.test.ts` / `t2997-git-drift-conformance.integration.test.ts`。
+
+### プラグイン bundle の rename（PR #3051）
+
+`plugins/pr-convergence/` → `plugins/github-pr-convergence/` の 13 ファイル移動。コンポーネントの追加・削除ではなく、bundle ディレクトリ名の変更である。ツールのファイル名・責務・エクスポート面はいずれも不変。本ファイル内の旧パス表記は、それを宣言する観測断面が rename 以前である**履歴節に限って**保存されている。
+
+### その他の新規テストコンポーネント
+
+`tests/integration/t2996-pr-convergence-scope-grid.integration.test.ts`（rename 後の scope grid 固定）、`tests/integration/t3016-park-provenance.integration.test.ts`（PR #3053、autonomous park の human-turn provenance）、`tests/fixtures/coverage-registry/unit/fixture.none.test.ts`、`tests/no-silent-drop/events/01M008DFEFXTFBWM3T9FZRHKAZ.json`（追記型 ULID イベント台帳への 1 件追加）。
