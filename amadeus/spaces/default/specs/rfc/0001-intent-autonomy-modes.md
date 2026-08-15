@@ -7,7 +7,7 @@ status: draft
 version: 1
 approved-by: (未承認)
 approved-at: (未承認)
-approval-ref: 裁定素材 = 2026-08-15 セッションの実 HUMAN_TURN 4 件(逐語は付録 A)。RFC 自体の承認はこれから
+approval-ref: 裁定素材 = 2026-08-15 セッションの実 HUMAN_TURN 7 件(逐語は付録 A。指示 5〜7 は Q1/Q3/Q17 と UI 真実性の裁定)。RFC 自体の承認はこれから
 bound-surfaces: |
   packages/framework/core/amadeus-common/protocols/stage-protocol.md(:131,:135,:137,:139-152,:286,:1064-1075,:1224-1236)
   packages/framework/core/tools/amadeus-intent-autonomy.ts / -production.ts / -runtime.ts
@@ -18,6 +18,7 @@ bound-surfaces: |
   packages/framework/core/tools/amadeus-bolt.ts(D7 — approve-batch presence)
   packages/framework/core/tools/amadeus-lib.ts(D8 — presence 検査 fail-open)
   packages/framework/core/tools/amadeus-finding.ts / amadeus-mirror-policy.ts(D11/Q17 — mode 外軸)
+  packages/framework/core/tools/amadeus-config.ts(Q17 — solo-election.trigger.mode 廃止・旧キー loud fail)
   amadeus/spaces/default/memory/{org,team,project}.md(該当ノルム)
   (digest ピンは #2396 実装時に付与 — 本 RFC 時点ではパス列挙のみ)
 related: "#2253(現行 semi 定義 — 本 RFC が上書き), #2067(autonomy 初版 — 同), #1241(非対話中断の実装先), #2396(RFC ストア構想 — 本ファイルは配置の先取り), #1437(ライフサイクル様式の借用元), #1647, #2899, #2974, #3016"
@@ -61,6 +62,23 @@ semi/full 運用の実測(母数: intent record 179、選挙 441。付録 B に�
 3. 推奨が一意でない(複数・計算不能)→ 対話なら聞かれ、非対話なら中断
 4. 機構故障・ノルム矛盾 → 停止(これは裁定ではなく欠陥)
 
+### 対話モードと非対話モード(Q3=A′ 裁定)
+
+対話/非対話の区別は「今この瞬間タイプしているか」ではなく「**この実行は、質問を出せば人間がいずれ見るセッションか**」で決める。判定単位はセッション:
+
+- **対話** = 本セッションに実 HUMAN_TURN が 1 件以上ある(人間が対話的に起動・介入した)。質問はターンを返して画面に残し、人間が戻ったときに答えればよい — busy-wait しない
+- **非対話** = harness が headless を明示する信号があればそれを優先。信号が不明・読めない場合も**非対話へ fail-closed**(誤って聞けず走り続けるより、誤って中断する方がコンセプト適合)
+- 鮮度ウィンドウ(直近 N 分)は採らない — 在席中の誤中断と、直前タイプ後離席の空振りを両方生む(Rationale 参照)
+- 判定結果と根拠(どの HUMAN_TURN / headless 信号)は使用のたび監査へ記録し、現在の判定を `--status` / statusline に表示する。中断を駆動した場合は park 理由に判定根拠を含め、誤判定を利用者が反証・是正できる形にする
+
+### UI 真実性の契約(ユーザー裁定 — 付録 A 指示 6・7)
+
+設定ファイル・state・プロンプトで見える宣言は UI であり、実効挙動と常に一致する:
+
+1. 宣言と実効の乖離は loud fail する(D3/D9 の是正はこの契約の特例)
+2. 廃止した設定キーは無視せず loud fail する — 「書いてあるのに効かない」状態を作らない
+3. 内部判定(対話/非対話・実効 mode・有効 consent)は表示可能な実効値として `--status` / statusline に公開し、判定根拠を監査へ記録する
+
 ### 確認ポイントごとの挙動(ToBe)
 
 番号は付録 B の as-is 表と対応する。
@@ -80,7 +98,7 @@ semi/full 運用の実測(母数: intent record 179、選挙 441。付録 B に�
 | 11 | code-gen 失敗 | 停止して裁定 | 停止 → 復旧方針を裁定順序で決定 | 同左 |
 | 12 | 品質修復ループ | 現行維持 | 自動修復(修復不能は停止。Q14) | 同左 |
 | 13 | Grill me | 提供 | 未決(Q12) | 同左 |
-| 14 | GitHub ミラー・finding 起票 | 設定に従う | 未決(Q17 — mode への従属可否) | 同左 |
+| 14 | GitHub ミラー・finding 起票 | consent 軸の設定に従う(mode 非従属 — Q17 裁定。実効 consent は常時可視) | 同左 | 同左 |
 | 15 | park | いつでも可 | いつでも可 | **非対話でも理由付きで可**(Q7・Q8) |
 | 16 | swarm バッチ終端 | 人間 | **自動**(Bolt 自律維持) | 自動 |
 | 17 | advisory(実行/延期) | 人間 | 延期も自動裁定可 | 同左 |
@@ -93,17 +111,17 @@ semi/full 運用の実測(母数: intent record 179、選挙 441。付録 B に�
 ### 是正するコンセプト逸脱(付録 C の D1〜D11)
 
 - **D1/D5**: park guard の「無人 run は走り続けろ」前提を廃棄し、#1241 の一級待ち状態(理由付き park または wait directive)を非対話中断の一般機構として採用する
-- **D2**: 自律性の軸を mode 一本にする(`solo-election.trigger.mode`・`intent-mirror.github.issue.mode` の従属可否は Q17)
+- **D2/D11**(Q17=A で裁定): `solo-election.trigger.mode` は mode へ従属し**キー自体を廃止**する(none→manual 相当、semi/full→auto 相当を mode から導出。旧キーの残存は UI 真実性の契約 2 により loud fail — `intent-mirror.github.issue.mode` の boolean 拒否と同じ流儀)。mirror(`intent-mirror.github.issue.mode`)と finding(`finding.github.issue.creation.mode`)の 2 軸は autonomy 軸ではなく**外部書込への consent 軸**と再分類して独立維持し、実効 consent を `--status` / statusline で常時可視にする(consent 軸キーの語彙分離は Q18)
 - **D3/D9**: full 宣言と projection の乖離を loud fail 化(現行は full 限定・stderr のみの silent 検出、semi/none は検出ゼロ)
 - **D4**: 梯子⑤(エージェント推奨)の「決められなくても進む」縮退を、裁定順序 3(不一意 → 人間 / 中断)へ置き換える
 - **D6**: semi milestone の空振り承認は実装前に原因調査。欠陥なら別 Issue
 - **D7/D8**: `approve-batch` の presence 無検証、ゲート presence 検査の active-scope fail-open を塞ぐ
-- **D10**: full = 無人という同一視を解体する — Q3 の対話/非対話検出を導入し、対話モードでは質問・compose 保留でターンを返す(Stop hook の carveout 再定義は Q11)。非対話モードは D1/D5 と同じ非対話中断機構へ倒す
-- **D11**: finding の Issue 起票軸を D2 と同じ扱いとし、Q17(mode への従属可否)の裁定対象へ含める
+- **D10**: full = 無人という同一視を解体する — Q3=A′ の対話/非対話検出(Guide-level の節)を導入し、対話モードでは質問・compose 保留でターンを返す(Stop hook の carveout 再定義は Q11)。非対話モードは D1/D5 と同じ非対話中断機構へ倒す
 
 ### 主要な実装面と順序制約
 
-- **「推奨が複数」を表現する型が現行に存在しない**(推奨導出は常に 1 件を返す型。ゲートは定数 approve — `amadeus-intent-autonomy-production.ts:833-838`)。新規型設計が実装の起点(Q1・Q2)
+- **「推奨が複数」の表現(Q1=A で裁定)**: 判別ユニオン `RecommendationOutcome` — `unique(optionId, basis)` / `contested(候補列挙, 事由)` / `none(事由)` — を梯子全段の共通戻り型とする。選挙 hold は contested/none へ写像し、エージェント推奨(⑤)にも contested を返す自由を与える。終端が unique 以外なら裁定順序 3(対話 → 人間、非対話 → 中断)へ。**UX 契約**: contested の提示は候補+各候補の根拠+一意に決まらなかった理由+推奨順で行い、非対話中断時も同内容を park 理由へ記録して復帰時にその場で裁定できる形で再提示する(Q7 と接続)。**頻度予算**: contested は導出(ノルム・過去裁定・選挙)を尽くした後にのみ返せる — 頻発すれば full が「よく聞いてくるモード」になり #2974 が再発するため、実装後に発火率を実測する受け入れ基準を持つ。(現行は推奨導出が常に 1 件を返す型・ゲートは定数 approve — `amadeus-intent-autonomy-production.ts:833-838`。ノルム段の conflict 検出のみ既存 — `amadeus-intent-autonomy.ts:930-974`。ゲート側の導出器は Q2)
+- **対話/非対話検出の実装シーム(Q3=A′)**: 一次信号は既存の HUMAN_TURN 造幣パイプライン(`amadeus-presence-reservation.ts` の `mintHumanPresence` — 機械注入ターンの偽装検出 #755 を通過済み)を再利用し、新しい検出面を最小化する。Stop hook の transcript 分類(`transcriptIsConversational` — `amadeus-stop.ts:569`)は Stop 時点限定・harness 形式依存のため補助信号として現行位置に残す
 - semi の権限範囲変更は、許可列挙 `SEMI_ROUTINE_INTERACTIONS`(`amadeus-intent-autonomy.ts:581`)の差し替えに加え、フェーズ境界を種類と独立に拒む第 2 ガード(`allowsOccurrence` 同 :636-640)の改修を要する
 - **semi の Bolt 自律化(投影 autonomous 化)は park guard 廃棄が先行依存** — park 制限の実述語は Construction 投影(`amadeus-state.ts:1599`)なので、順序を誤ると semi が park 能力を失う。読取側の semi→gated ハードコード(`amadeus-orchestrate.ts:2040`)・書込投影(`production.ts:713`)・乖離判定(現在 full 限定)の 3 面同時改修
 - advisory 延期の自動化は効果分類(quality-waiver)まわり 4 箇所(`amadeus-advisory-choice.ts:300-303`、`amadeus-intent-autonomy.ts:510-516`、`production.ts:99-106`、効果認可 2 箇所)。semi の grant-less 設計を維持する場合、semi 側の効果認可上限(`workflow-reversible` のみ)の拡張も必要(Q4)
@@ -115,7 +133,7 @@ semi/full 運用の実測(母数: intent record 179、選挙 441。付録 B に�
 - full の事後検収点が消える: 現行設計は milestone で unreviewed キューを人間が検収する前提だった。full は milestone も無人になるため、自動裁定の検収機会を別途設計しないと未検収が蓄積する(Q5)
 - マージの条件付き自動化は P4(不可逆・外部境界には人間)の緩和であり、誤マージの取り消しコストは高い。委任条件の厳密化と失効設計が前提(Q6)
 - §13 の 0 件確認廃止は、「候補が空」の自己申告で儀式が消える検証劇場リスクを生む(Q10 で機械化を裁定)
-- 非対話中断の導入は対話/非対話の検出という新しい判定面を持ち込み、harness 差(検出信号の有無)が移植性の負担になる(Q3)
+- 非対話中断の導入は対話/非対話の検出という新しい判定面を持ち込み、harness 差(検出信号の有無)が移植性の負担になる(Q3=A′ で既存 HUMAN_TURN 造幣パイプラインの再利用により最小化したが、headless 明示信号の有無は harness 依存のまま)
 
 ## Rationale and alternatives(理由と代替案)
 
@@ -123,6 +141,17 @@ semi/full 運用の実測(母数: intent record 179、選挙 441。付録 B に�
 - **semi = 全ゲート人間(起草過程の誤解釈案)**: ゲート数が最も多い phase 内ゲートを人間化すると停止が激増する。ユーザーが明示棄却(付録 A 指示 3)
 - **milestone 自動化を semi の設定オプションにする(中間段の追加)**: 段が増えるほど「どの mode で何が止まるか」の説明可能性が落ちる。2 段(人間ゲート 2 つの有無)が最も説明しやすい。棄却
 - **何もしない**: #2899・#2974 の指摘が再発し続け、full の看板(無人完走)が実態と乖離したままになる
+
+Q1・Q3・Q17 の裁定(2026-08-15、付録 A 指示 5〜7)で棄却した代替案:
+
+- **Q1-B: NORM_CONFLICT park の事由拡張で不一意を表現** — 「推奨が複数ある」(裁定可能・候補提示可)と「機構が壊れた」(park)の区別が潰れ、裁定順序 3 と 4 を実装できない。棄却
+- **Q1-C: エージェント推奨に confidence 閾値** — 連続値の閾値根拠が検証劇場化し、候補の列挙も返せない。棄却
+- **Q3 初案: HUMAN_TURN 鮮度ウィンドウ(直近 N 分)** — 在席して見ているだけの利用者を「非対話」と誤判定して park し(「そこにいるのに止まった」)、直前にタイプして離席した場合は「対話」と誤判定して空振り質問(D6 と同じ体験)を再生産する。UX 視点のユーザー指摘(付録 A 指示 5)で棄却
+- **Q3-B: TTY / harness 種別で判定** — hooks は非対話シェルで走るため TTY は不安定で、harness 移植性が最悪。棄却
+- **Q3-C: 対話/非対話の明示フラグ** — 宣言忘れが常態化し「full なのに聞いてこない/中断しない」(#2974 型)が再発する。棄却
+- **Q17-B: 3 軸すべて mode へ従属** — mirror auto の「none でも record 投影は無人で回す」という裁定済みの正当運用を壊し、より大きな仕様再裁定を要する。棄却
+- **Q17-C: 3 軸すべて独立のまま維持** — D2 の実測逸脱(full + manual の人間停止)が残り、本 RFC の動機と矛盾。棄却
+- **Q17 で旧キーを残して mode が上書きする形** — config は manual と表示しながら実挙動は auto という UI と実態の乖離(D3 と同じ欠陥クラス)を新設する。UI 真実性の契約(付録 A 指示 6)で棄却
 
 ## Prior art(先行事例)
 
@@ -134,11 +163,11 @@ semi/full 運用の実測(母数: intent record 179、選挙 441。付録 B に�
 
 ## Unresolved questions(未解決の問題)
 
-**承認までに裁定すべき(設計の土台)**:
+**裁定済み(2026-08-15 ユーザー裁定 — 付録 A 指示 5〜7、本文へ反映済み)**:
 
-- Q1: 「推奨が複数」を表現する型と導出経路の設計(現行に存在しない — 最大の実装欠落)
-- Q3: 対話 / 非対話の検出信号(TTY・transcript・HUMAN_TURN 鮮度・harness 種別)と移植性。既存隣接機構(機械注入ターン分類・Stop hook の transcript 走査・route binding)の再利用可否
-- Q17: mode 外の自律性軸(`solo-election.trigger.mode`・`intent-mirror.github.issue.mode`・`finding.github.issue.creation.mode`)を autonomy mode に従属させるか、独立の軸として残すか(付録 C D2・D11)
+- Q1=A: 判別ユニオン `RecommendationOutcome`(Reference-level「主要な実装面」参照。提示様式・頻度予算の UX 契約込み)
+- Q3=A′: セッション単位の対話判定(Guide-level「対話モードと非対話モード」参照。鮮度ウィンドウは棄却)
+- Q17=A: `solo-election.trigger.mode` は mode へ従属・キー廃止、mirror / finding は consent 軸として独立維持+常時可視(Reference-level D2/D11 参照)。あわせて「UI 真実性の契約」(Guide-level)を採用
 
 **実装までに裁定すべき**:
 
@@ -154,6 +183,8 @@ semi/full 運用の実測(母数: intent record 179、選挙 441。付録 B に�
 - Q14: 修復不能停止(REPAIR_STALLED)と非対話 park を同じ park 表現に載せるか分けるか
 - Q15: grant ceremony の簡素化と、相互必須不変量・発効前プレビュー(nonAutoDecidedKinds 提示)の扱い
 - Q16: 実装 intent の分割方針(ノルム改定 3 レイヤーと機構改修の載せ方。1 intent = 1 unit 原則との整合)
+- Q18: consent 軸キーの語彙分離 — 設定キー名から「mode」の語を外す改名の要否と互換面(旧キー loud fail の設計込み。Q17 裁定の派生)
+- Q19: Q1 の contested 発火率の受け入れ基準 — 実装後にどの母数・閾値で「頻発していない」を実測判定するか(頻度予算の機械化)
 
 **スコープ外としてよいか要確認**: Q12(Grill me の semi/full 非提示維持)/ Q13(intent birth / compose 承認の人間専権維持)
 
@@ -172,8 +203,11 @@ semi/full 運用の実測(母数: intent record 179、選挙 441。付録 B に�
 2. (是正 1)「あのー、noneとsemiの違いがほとんどない。僕はfullからステージゲートとWSだけを抜いたものがsemiだよって言ったはずですよ。fullからちょっとだけ引き算したものがsemiと言ったはずなのに。全然理解していない」「それから、fullも半分が人間裁定が入っているのがおかしい。それfullじゃないだろ」
 3. (是正 2・定義の確定)「まずfullとsemiの定義を理解しろ / fullはすべて推奨選択です。推奨が複数の場合は人間裁定でよい。ただし対話モードのときだけ人間裁定。非対話モードのときはワークフローを中断しろ / semiはfullからフェーズゲート、WSゲートを入れたもの、Boltの自律モードも残す。」
 4. (コンセプトの言語化)「none -> semi -> full / AIの自律性が高まる / ただし、不測の事態は止まる / というコンセプトの想定です。」
+5. (UX 視点の要求)「UXがあるところあるとまずいです」「UX視点で考えましたか?」— Q3 初案(HUMAN_TURN 鮮度ウィンドウ)の棄却とセッション単位判定(A′)への修正を駆動した
+6. (UI 真実性)「変に隠蔽しないでね。設定ファイルやプロンプトで指示できる見えるものはUIです。UX都合をいいことに変に隠蔽されると、UI上にある情報と辻褄があわなきなるので。この点は問題ない?」— Guide-level「UI 真実性の契約」の直接根拠
+7. (Q 裁定)起草側が提示した選択肢(候補+推奨+棄却理由)に対する明示選択で、Q1=A / Q3=A′ / Q17=A と UI 真実性の契約を採用。採択対象の提案全文は本文の該当節(選択のターン自体は選択肢番号の指定)
 
-起草過程で AI が「semi = 全ゲート人間」と誤解釈した版があり、指示 3 で棄却された。AskUserQuestion による確認はユーザーが明示拒否(「askするな」)。**裁定として確定しているのはこの逐語 4 点のみ**であり、本文はその正規化・敷衍である。逐語にない拡張は Unresolved questions で裁定を得る。
+起草過程で AI が「semi = 全ゲート人間」と誤解釈した版があり、指示 3 で棄却された。AskUserQuestion による確認はユーザーが明示拒否(「askするな」)。**裁定として確定しているのは指示 1〜7 のみ**(1〜6 は逐語、7 は提示済み選択肢の採択)であり、本文はその正規化・敷衍である。逐語にない拡張は Unresolved questions で裁定を得る。
 
 ## 付録 B: 現行仕様(as-is)— 確認ポイント × mode の実挙動
 
