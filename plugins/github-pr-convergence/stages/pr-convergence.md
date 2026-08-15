@@ -302,10 +302,25 @@ verdict bookkeeping cannot be bypassed.
 Announce convergence with the report's own counts. Do not paraphrase them and
 do not round them.
 
-**Already merged?** A pull request whose state is `MERGED` is not convergence
-evidence. For self-development records both `status` and `report` refuse it,
-and no `landed` report can satisfy the blocking sensor. A merge performed
-outside this loop earns no retroactive convergence verdict.
+**Already merged?** A pull request whose state is `MERGED` is a merge that
+already happened — a record fact, kept distinct from convergence evidence. It
+earns no retroactive convergence verdict: the `landed` report the CLI writes
+carries `converged: false` and no verdict or ledger at all, because the
+convergence predicate never ran.
+
+Recording it is how this stage finalises. `main` requires the merge queue, so
+auto-merge can land the pull request before `report` runs, and the loop cannot
+control that ordering. When `status` answers `landed` (exit 0, like
+convergence), run `report`: it writes and attests a `landed` record carrying
+the merge instant and the merge commit. Self-development records take the same
+path as every other record — the identity, epoch, and attestation
+prerequisites are unchanged, so finalisation still binds to the `created`
+epoch this delivery opened. The blocking sensor accepts that record at this
+stage, and only this stage, when the merge instant parses and the merge commit
+is a real object id; a `created` report, or a `landed` report missing either
+merge fact, still fails. The check rollup is recorded but never a pass
+condition: a merge commit picks up post-merge workflow runs the pull request
+never carried.
 
 ## When GitHub is unreachable
 
@@ -325,10 +340,11 @@ bun {{HARNESS_DIR}}/plugins/github-pr-convergence/tools/pr-convergence-cli.ts ov
 
 `override` requires a linked PR, an existing valid `created` attestation, a
 real human turn in the record's audit shards, and a non-blank reason. It
-refuses to override an already-converged or merged pull request, records the
-ruling, then writes and attests an `override` report with `converged: false`.
-There is no environment variable, flag, or state field that skips the guard
-silently: a bypass that leaves no record is not offered.
+refuses to override an already-converged pull request, records the ruling, then
+writes and attests an `override` report with `converged: false`. A merged pull
+request needs no ruling — `report` records it as `landed`. There is no
+environment variable, flag, or state field that skips the guard silently: a
+bypass that leaves no record is not offered.
 
 ## CI observation and local validation ordering
 
