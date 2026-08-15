@@ -267,6 +267,14 @@ describe("compileStageGraph plugin merge (U2)", () => {
         readFileSync(join(FORMAL_MODEL_STAGES, file), "utf8"),
       );
     }
+    // The real stage imports the plugin-declared model-completeness sensor;
+    // compose delivers that manifest into the host sensors/ dir, so the
+    // fixture mirrors that delivery for the compile's host-sensor resolution.
+    mkdirSync(join(host, "sensors"), { recursive: true });
+    writeFileSync(
+      join(host, "sensors", "amadeus-model-completeness.md"),
+      readFileSync(join(REPO_ROOT, "plugins", "formal-model-check", "sensors", "amadeus-model-completeness.md")),
+    );
 
     const compiled = compileWithPluginHost(host);
     const grid = JSON.parse(compiled.gridJson) as Record<string, { stages: Record<string, string> }>;

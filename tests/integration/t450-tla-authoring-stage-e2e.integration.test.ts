@@ -87,6 +87,10 @@ function hostSnapshot(root: string, backend: WorkspaceBackend): HostSnapshot {
   };
   const composed = join(root, "plugins");
   if (existsSync(composed)) walk(composed);
+  // Plugins may own host `sensors/` paths (plugin.json sensorCopies), so the
+  // snapshot must cover that dir too or an owned sensor reads as drift.
+  const sensors = join(root, "sensors");
+  if (existsSync(sensors)) walk(sensors);
   return { stages: new Map(), paths, files, composition: backend.readComposition() };
 }
 
