@@ -90,6 +90,10 @@ interface Fixture {
   merged: boolean;
   /** The merge queue deleted the head branch and the checkout moved off it. */
   branchGone: boolean;
+  /** The pull-request list answers with something that is not a list. */
+  listBroken: boolean;
+  /** The boundary returns the same row whatever `--state` asked for. */
+  listIgnoresState: boolean;
 }
 
 function seedDeliveryAuthority(record: string): void {
@@ -182,6 +186,7 @@ function makeFixture(): Fixture {
   return {
     root, work, record, bodyFile, oldHead, newHead, localOnly,
     calls: [], prNumber: PR_NUMBER, attested: oldHead, merged: false, branchGone: false,
+    listBroken: false, listIgnoresState: false,
   };
 }
 
@@ -221,6 +226,7 @@ function prSummary(f: Fixture, head: string): string {
     url: `https://github.com/${REPO}/pull/${f.prNumber}`,
     headRefName: BRANCH,
     headRefOid: head,
+    state: f.merged ? "MERGED" : "OPEN",
     ...PROVENANCE,
   }]);
 }
@@ -236,9 +242,10 @@ function ghSpawn(f: Fixture): GhSpawn {
       return ok(`https://github.com/${REPO}/pull/${f.prNumber}\n`);
     }
     if (text.includes("pr list")) {
+      if (f.listBroken) return ok("{}");
       // The real `--state` semantics: a merged pull request is not an open one.
       const state = argv[argv.indexOf("--state") + 1];
-      const visible = state === "merged" ? f.merged : state === "open" && !f.merged;
+      const visible = f.listIgnoresState || (state === "merged" ? f.merged : state === "open" && !f.merged);
       return ok(visible ? prSummary(f, head) : "[]");
     }
     const lifecycle = f.merged
@@ -366,6 +373,60 @@ describe("#3110 — a stale created epoch finalises as landed on the merged head
     expect(result.findings).toEqual([]);
     expect(result.pass).toBe(true);
     expect(result.reason).toBe("landed");
+  });
+});
+
+describe("#3109 — create refuses a head whose pull request already merged", () => {
+  test("no second pull request is opened, and the refusal names the finalisation path", async () => {
+    const f = await staleAndMerged();
+    const before = readFileSync(reportPathFor(f.record, UNIT), "utf-8");
+    f.calls.length = 0;
+
+    const out = await runCli(createArgs(f), seams(f));
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain(`#${f.prNumber}`);
+    expect(out.stderr).toContain("merged");
+    expect(out.stderr).toContain("report");
+    expect(f.calls.some((call) => call.includes("pr create"))).toBe(false);
+    expect(readFileSync(reportPathFor(f.record, UNIT), "utf-8")).toBe(before);
+  });
+
+  test("a merged-list answer that cannot be read stops the create loudly", async () => {
+    const f = await staleAndMerged();
+    f.listBroken = true;
+    f.calls.length = 0;
+
+    const out = await runCli(createArgs(f), seams(f));
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain("could not be read");
+    expect(f.calls.some((call) => call.includes("pr create"))).toBe(false);
+  });
+
+  test("a row that does not declare MERGED is not evidence of a merge", async () => {
+    // The refusal reads the pull request's own state, never the query filter:
+    // a boundary that answers every filter with the same open row must not
+    // refuse a delivery that has not merged.
+    const f = await delivered();
+    f.attested = f.newHead;
+    f.listIgnoresState = true;
+
+    const out = await runCli(createArgs(f), seams(f));
+    expect(out.stderr).toBe("");
+    expect(out.exitCode).toBe(0);
+  });
+
+  test("an open pull request on the same head still re-mints the created epoch", async () => {
+    // The merged read-back must not swallow the ordinary resume path: the same
+    // head, still open, keeps opening a new created epoch on the same PR.
+    const f = await delivered();
+    f.attested = f.newHead;
+
+    const out = await runCli(createArgs(f), seams(f));
+    expect(out.stderr).toBe("");
+    expect(out.exitCode).toBe(0);
+    const body = readFileSync(reportPathFor(f.record, UNIT), "utf-8");
+    expect(body).toContain("- kind: created");
+    expect(body).toContain(`- pr head: ${f.newHead}`);
   });
 });
 

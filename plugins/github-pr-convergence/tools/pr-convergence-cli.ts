@@ -33,6 +33,7 @@ import { spawn } from "node:child_process";
 import { join, resolve } from "node:path";
 import {
   createGhRunner,
+  fetchMergedPrForHead,
   fetchOpenPrForHead,
   fetchRawPrState,
   type GhError,
@@ -1126,11 +1127,46 @@ function existingWorkMismatch(pr: OpenPrSummary, work: DeliveryWork): string | n
   return null;
 }
 
+/**
+ * The refusal when this head's pull request has already merged (#3109), or null
+ * when it has not.
+ *
+ * Asked only of a delivery that already recorded a `created` epoch for this
+ * Unit — the shape #3109 measured, and the only shape in which `create` is
+ * re-opening an epoch rather than opening one. A merged delivery has no epoch
+ * left to re-open, so pushing its head again and running `create` opened a
+ * SECOND pull request for work that was already on the trunk. The remedy is to
+ * record the merge, so the refusal names it. An unreadable answer is a loud
+ * failure, never a licence to create.
+ */
+async function refuseMergedHead(gh: GhRunner, repo: string, head: string): Promise<CliOutcome | null> {
+  const merged = await fetchMergedPrForHead(gh, repo, head);
+  if (!merged.ok) {
+    return {
+      exitCode: 2,
+      stdout: "",
+      stderr: `the merged pull requests for ${head} could not be read: ${describeGhError(merged.error)}\n`,
+    };
+  }
+  if (merged.value === null) return null;
+  return {
+    exitCode: 1,
+    stdout: "",
+    stderr:
+      `create refused: pull request #${merged.value.number} for head ${head} has already merged (${merged.value.url}). ` +
+      "A merged delivery is finalised by the report verb, which records it as landed; " +
+      "opening a second pull request for work already on the trunk is not a delivery path.\n",
+  };
+}
+
 async function createPullRequest(options: CreateOptions, seams: CliSeams): Promise<CliOutcome> {
   let title = options.title;
   let body: string;
   let linkedWork: DeliveryWork | null = null;
   let prerequisite: ReturnType<typeof verifyCreatePrerequisites> | null = null;
+  // Whether this Unit already carries a `created` epoch — the delivery whose
+  // pull request may since have merged.
+  let priorEpoch = false;
   try {
     body = readFileSync(options.bodyFile, "utf-8");
   } catch (err) {
@@ -1170,11 +1206,16 @@ async function createPullRequest(options: CreateOptions, seams: CliSeams): Promi
       if (!prerequisite.ok) {
         return { exitCode: 1, stdout: "", stderr: `create prerequisite failed: ${prerequisite.message}\n` };
       }
+      priorEpoch = existingReportKind(reportPathFor(options.record, options.unit)) !== null;
     }
   }
   const runner = await createGhRunner(seams.ghSpawn);
   if (!runner.ok) {
     return { exitCode: 2, stdout: "", stderr: `gh unavailable: ${runner.error.kind}\n` };
+  }
+  if (priorEpoch) {
+    const landed = await refuseMergedHead(runner.value, options.repo, options.head);
+    if (landed !== null) return landed;
   }
   const argv = [
     "gh",
