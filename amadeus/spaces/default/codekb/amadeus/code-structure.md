@@ -382,7 +382,7 @@ Issue #3031 は `:160-175` / `:169` を引くが、observed 断面では対象�
 | #3075 | `tests/unit/` / `tests/integration/` / `tests/e2e/` の **19 ファイル 24 行**（内訳は `code-quality-assessment.md` の対応節） |
 | #3079 | `tests/integration/t224-upstream-v2-migration-cli.test.ts`（ケース `:1553` = `symlink clone-id migration isolates distinct fixture identities that share a lock path`、ロック占有 `:1577-1582`、`migrateWithEnv` `:1584`、env `:1586`、期待 `:1597`）/ `packages/framework/core/tools/amadeus-audit.ts`（リトライ予算のコメント `:1008-1010` と `lockRetries` `:1011-1014`） |
 
-## 差分リフレッシュで観測した構造変化（260815-per-unit-outcome、現在、observed `78146f435a`）
+## 差分リフレッシュで観測した構造変化（260815-per-unit-outcome、履歴、observed `78146f435a`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-stale-epoch-landed の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: base `9ba8170bb03996fb98b497cfcbac3d207795018d` → observed `78146f435a66680055a24144937b5aa03d48bfb4`（`git merge-base --is-ancestor 9ba8170bb 78146f435` → **exit 0**、`git rev-list --count 9ba8170bb..78146f435` → **12**）。
 
@@ -418,3 +418,37 @@ Issue #3031 は `:160-175` / `:169` を引くが、observed 断面では対象�
 | 消費者エッジ在庫 | `amadeus-per-unit-consume-fanout.ts:90-110`（ガード `:144-168`） | 7 consumer / 19 edge、`consumer-edge-inventory-mismatch` で fail-closed |
 
 機序の解説は `architecture.md` の対応節、テスト面と台帳は `code-quality-assessment.md` の対応節を参照。
+
+## 差分リフレッシュで観測した構造変化（260815-stale-epoch-landed、現在、observed `83e1dbeef`）
+
+**観測 ref**: base `78146f435a66680055a24144937b5aa03d48bfb4` → observed `83e1dbeefb3278a00e86f69d3c79071a35ccf043`（`git merge-base --is-ancestor 78146f435a 83e1dbeef` → **exit 0**、`git rev-list --count 78146f435a..83e1dbeef` → **4**）。
+
+**構造変化はゼロである。** 新規パッケージ・新規モジュール・ディレクトリ移動はいずれも無い。区間規模は `git diff --shortstat 78146f435a 83e1dbeef` → **110 files / +4856 −59**、非 record 面（`-- ':!amadeus/' ':!metrics/'`）は **17 files / +565 −37** で、残る 93 ファイルは record / metrics スナップショットである。
+
+### 区間の内容は intent 260815-per-unit-outcome へ全量帰属する
+
+区間の 4 コミットは PR #3105（`fix(#3099)`: settle 経路 + `UNIT_OUTCOME_SETTLED` イベント + テスト t533/t81/t28/t403/t449/t212 + docs troubleshooting / 12-state-machine + event-registry 92→93 + coverage 台帳）、record checkpoint #3107 / #3111、metrics #3102 / #3108 である。非 record 17 ファイルの内訳は **非テスト 8 + テスト 9**（`git diff --name-only 78146f435a 83e1dbeef -- ':!amadeus/' ':!metrics/' ':!tests/'` → **8** 行、`--diff-filter=A -- 'tests/**'` → **0**、`--diff-filter=M -- 'tests/**'` → **9**）。**新規テストファイルはゼロ**（すべて既存ファイルへの追記）。
+
+### 本 intent の patch surface — 区間内で 1 バイトも動いていない
+
+`git diff --quiet 78146f435a 83e1dbeef -- plugins/github-pr-convergence/` → **exit 0**（ディレクトリ全域が無変更）。個別パスへも同述語を適用し全件 exit 0 を実測した。行番号はいずれも observed `83e1dbeef` 断面の値である。
+
+| 役割 | ファイル / 行 | 内容 |
+|---|---|---|
+| 拒否の発火点 | `plugins/github-pr-convergence/tools/pr-convergence-cli.ts:669` | `!attestationBindsIdentity(receipt, work, heads, options.ref)` — `currentSelfContext`（`:627`）内。**verb 分岐より先に評価される** |
+| head 束縛の定義 | 同 `:714` | `attestationBindsIdentity`（`receipt.prHead === heads.prHead` を要求） |
+| 拒否文言 | 同 `:746-748` | `report attestation is stale: the PR head advanced to …`（Issue #3110 本文の引用と一致） |
+| 到達不能な遷移 | 同 `:597-604`（許可の arm は `:602`） | `transitionAllowed` の `created → landed`（#3062 の着地） |
+| 評価順序の起点 | 同 `:1370` / `:1398` | `selfContextFor(...)` → その後に `if (options.verb === "report") return reportOutcome(...)` |
+| read-back の欠落 | `plugins/github-pr-convergence/tools/pr-convergence-gh-runner.ts:322` | `"--state", "open"` — MERGED/CLOSED PR を read-back しない |
+| blocking sensor | `plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts:391-393` | `created proves PR delivery only; final convergence requires converged or override` |
+| 同 sensor の head 検査 | 同 `:289` | `{ field: "local head", reason: "does not match the current checkout" }` |
+| 自己言及の閉路 | `plugins/github-pr-convergence/stages/pr-convergence.md:344-346` | `A merged pull request needs no ruling — report records it as landed.` |
+| attestation の書式 | `plugins/github-pr-convergence/tools/pr-convergence-attestation.ts:82` / `:115` / `:166` | `local head` フィールドの生成・型・parse |
+| 収束述語 | `plugins/github-pr-convergence/tools/pr-convergence-predicate.ts` | `converged` / `landed` の判定（区間内無変更） |
+
+patch surface のファイル規模（`wc -l`、observed 断面）: `pr-convergence-cli.ts` **1468** 行 / `pr-convergence-gh-runner.ts` **354** 行 / `amadeus-sensor-pr-convergence-report-format.ts` **432** 行 / `pr-convergence.md` **431** 行。
+
+**sensor のファイル名に注意** — manifest は `plugins/github-pr-convergence/sensors/amadeus-pr-convergence-report-format.md`（`sensors/` 直下、`amadeus-` プレフィックス）、実装は `plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts`（`tools/` 直下、`amadeus-sensor-` プレフィックス）で、`sensors/` に `.ts` は存在しない（`ls plugins/github-pr-convergence/sensors/` → 1 エントリ、md のみ）。
+
+機序の解説は `architecture.md` の対応節、テスト空白と台帳は `code-quality-assessment.md` の対応節を参照。

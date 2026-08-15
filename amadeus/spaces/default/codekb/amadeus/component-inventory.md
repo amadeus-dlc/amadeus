@@ -2803,7 +2803,7 @@ core 正本 11 件（`packages/framework/core/sensors/`、`ls` 出力の転記�
 
 **責務境界としての要点**: digest の**定義**（codec）、**生産**（CLI）、**検証**（store）が 3 モジュールに分かれており、生産と検証が互いの述語を参照していない。#3077 はこの分散が生んだ不整合であり、是正は「述語を 1 か所に持ち、生産と検証の双方がそれを呼ぶ」形が構造的な再発防止になる（詳細は `architecture.md` の対応節）。
 
-## per-unit consume / unit pool / construction outcome の 3 コンポーネント（260815-per-unit-outcome、現在、observed `78146f435a`）
+## per-unit consume / unit pool / construction outcome の 3 コンポーネント（260815-per-unit-outcome、履歴、observed `78146f435a`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-stale-epoch-landed の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: observed `78146f435a66680055a24144937b5aa03d48bfb4`（base `9ba8170bb03996fb98b497cfcbac3d207795018d` からの差分リフレッシュ）。**区間で本節のコンポーネントはいずれも無変更**（`git diff --quiet 9ba8170bb 78146f435 -- <path>` を 5 パスへ適用し全件 **exit 0**）。行数は `wc -l`、export 数は `grep -c "^export "` の実測。
 
@@ -2836,3 +2836,20 @@ core 正本 11 件（`packages/framework/core/sensors/`、`ls` 出力の転記�
 Issue #3099 が名指す到達不能は `build-and-test`（2 edge、producer = `code-generation`）で発生する。**在庫はガードで fail-closed のため、是正がエッジ集合を変えるなら在庫の更新が同時に必要**であり、変えないなら触れてはならない。
 
 機序は `architecture.md`、配置は `code-structure.md`、テスト面と台帳は `code-quality-assessment.md` の各対応節を参照。
+
+## pr-convergence の 4 コンポーネントと、拒否の所在（260815-stale-epoch-landed、現在、observed `83e1dbeef`）
+
+**本差分でのコンポーネント変化なし。** base `78146f435a` → observed `83e1dbeef` で新規モジュール・責務移動はゼロ。`git diff --quiet 78146f435a 83e1dbeef -- plugins/github-pr-convergence/` → **exit 0**。
+
+[Issue #3110](https://github.com/amadeus-dlc/amadeus/issues/3110) の患部にあたる 4 コンポーネントの責務分担は次のとおり（行数は observed 断面の `wc -l`）。
+
+| コンポーネント | ファイル | 規模 | 責務 | 本件での役割 |
+|---|---|---|---|---|
+| CLI（4 verb） | `plugins/github-pr-convergence/tools/pr-convergence-cli.ts` | 1468 行 | `create` / `report` / `override` / `status` の駆動、attestation の検証と書込 | **拒否の所在**。`:669` の head 束縛が verb 分岐（`:1398`）より先に走り、4 verb すべてを塞ぐ |
+| GitHub runner | `plugins/github-pr-convergence/tools/pr-convergence-gh-runner.ts` | 354 行 | `gh` CLI の readiness 検査と呼び出し（optional dependency 扱い） | `fetchOpenPrForHead`（`:322`）が `--state open` のみ引き、MERGED PR の read-back 経路を持たない |
+| blocking sensor | `plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts` | 432 行 | report ファイルの形式と最終性を record 直読で判定 | `:391-393` が `created` を非最終と報告し、`:289` が local head 不一致を報告。**CLI に依存しない独立判定** |
+| stage 文書 | `plugins/github-pr-convergence/stages/pr-convergence.md` | 431 行 | ステージ契約の正本 | `:344-346` が「merged PR に ruling は不要、report が landed を書く」と定め、override 経路を閉じる |
+
+補助として `pr-convergence-attestation.ts`（`local head` フィールドの生成 `:82` / 型 `:115` / parse `:166`）と `pr-convergence-predicate.ts`（`converged` / `landed` の判定）が関わる。**sensor manifest（`sensors/amadeus-pr-convergence-report-format.md`）と sensor 実装（`tools/amadeus-sensor-pr-convergence-report-format.ts`）はファイル名プレフィックスもディレクトリも異なる**ため、参照時に取り違えない（`sensors/` 配下に `.ts` は存在しない）。
+
+**責務分担から見た是正の制約**: sensor は record を直読する独立コンポーネントであるため、CLI 側の挙動だけを変えても record が `created` のままなら赤は消えない。閉路の解消は「record へ `landed` を書けるようにする」側でしか成立しない。機序は `architecture.md` の対応節を参照。

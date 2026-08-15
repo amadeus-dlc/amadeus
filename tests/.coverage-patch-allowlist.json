@@ -4398,17 +4398,6 @@
   {
     "file": "plugins/github-pr-convergence/tools/pr-convergence-cli.ts",
     "selector": {
-      "function": "selfReportLifecycle",
-      "fingerprint": "sha256:d9b7a286e90243e67a17979cf5fe1c89a7cda24d5a1d3dded034b42f85945438",
-      "anchorLines": 5,
-      "targetLines": "4-4"
-    },
-    "reason": "Defensive residual arm: a non-created verb only reaches selfReportLifecycle through currentSelfContext, whose attestationBindsIdentity already requires receipt.prHead === heads.prHead and refuses a mismatch with exit 1 first, while a created-kind caller takes the write arm above; the refuse is kept as fail-closed defence rather than deleted.",
-    "expiry": "remove if the lifecycle is ever callable without the currentSelfContext head binding"
-  },
-  {
-    "file": "plugins/github-pr-convergence/tools/pr-convergence-cli.ts",
-    "selector": {
       "function": "<module>",
       "fingerprint": "sha256:9e100e2a9f31f0af2377daff5cb4d350d3ede750b0458fe2734550cc3e2a51e8",
       "anchorLines": 4,

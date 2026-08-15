@@ -3779,7 +3779,7 @@ Issue #3075 が「単位要確認」と留保したまま B 群へ置いた箇�
 - 絶対壁時計型 20 件の是正方針は、`cid:build-and-test:bt-timeout-verification-shape`（長い本番 timeout は実時間の負荷試験でなく短縮可能なタイミングシームとカウンタ検証で構成する）が既に定めている。#3079 はその適用例で、`amadeus-audit.ts:1011-1014` の `AMADEUS_AUDIT_LOCK_RETRIES` が**既存のシームとして用意済み**である（コメント `:1009-1010` が逐語でテスト用途を宣言する）。`tests/integration/t224-upstream-v2-migration-cli.test.ts:1586` の env にこれを足すだけで、失敗経路の意味を保ったまま実待ちが 20 秒から 0.5 秒へ落ちる。
 - **未検証**: 各予算が実際の負荷下でどれだけの倍率で危ういかは本スキャンで測っていない。上表の分類は構造（相対/契約由来/絶対、係数適用の有無、単位）の実読のみに基づく。
 
-## per-unit outcome 経路のテスト空白と、是正時に同期を要する台帳（260815-per-unit-outcome、現在、observed `78146f435a`）
+## per-unit outcome 経路のテスト空白と、是正時に同期を要する台帳（260815-per-unit-outcome、履歴、observed `78146f435a`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-stale-epoch-landed の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: observed `78146f435a66680055a24144937b5aa03d48bfb4`（base `9ba8170bb03996fb98b497cfcbac3d207795018d`）。
 
@@ -3825,3 +3825,50 @@ Issue #3075 が「単位要確認」と留保したまま B 群へ置いた箇�
 ### 是正様式の前例
 
 本区間の PR #3101 が `amadeus-election.ts` に `runPreservedDigest()` を新設し、digest 生産の 3 呼び出し点を 1 つの純関数へ統一している（+21/−5）。**「N 個の読み口／書き口を 1 つの純関数へ寄せる」形は本リポジトリの直近の前例を持つ**（Issue #3099 の是正方式のうち「fanout 側で正準射影を読む」案と同型）。方式の選択自体は後続の裁定事項であり、本節は前例の存在のみを記録する。
+
+## head 前進後の stale created 経路のテスト空白と、是正時に同期を要する台帳（260815-stale-epoch-landed、現在、observed `83e1dbeef`）
+
+**観測 ref**: base `78146f435a66680055a24144937b5aa03d48bfb4` → observed `83e1dbeefb3278a00e86f69d3c79071a35ccf043`。対象は [Issue #3110](https://github.com/amadeus-dlc/amadeus/issues/3110)。
+
+### テスト空白 — 「create 後に head が前進した」ケースを 1 本も踏んでいない
+
+`grep -rn "attestation is stale" tests/` → **出力 0 行・exit 1**（grep の exit 1 は「エラーなく不一致」。エラーは exit 2）。すなわち `pr-convergence-cli.ts:746-748` の stale 拒否文言は**どのテストからもアサートされていない**。
+
+pr-convergence 系の既存テスト 4 本へ `grep -c "stale"` を適用した結果は次のとおりで、唯一の hit は無関係である。
+
+| テスト | `stale` hit | 判定 |
+|---|---|---|
+| `tests/integration/t447-pr-convergence-ledger.integration.test.ts` | 0 | 空白 |
+| `tests/integration/t448-pr-convergence-cli.integration.test.ts` | 0 | 空白（in-process の verb surface 全域を駆動するが stale は踏まない） |
+| `tests/integration/t449-pr-convergence-packaging-e2e.integration.test.ts` | 3 | **無関係** — `:254` の `mode: … "stale" …`、`:273` の `bolt-plan.md` 改竄、`:490` の `["stale", "STALE"]` はいずれも **bolt-plan の staleness** であり attestation の stale ではない |
+| `tests/integration/t3062-pr-convergence-landed-finalization.integration.test.ts` | 0 | 空白 |
+
+**t3062 が landed 最終化を覆っているのに #3110 を捕らえられない理由**は、そのフィクスチャが head を前進させないことにある。`:123-124` で 1 度だけ seed commit を作って `const head = git(["rev-parse", "HEAD"], root);` を取り、`:134` の gh スタブが `"rev-parse HEAD": { code: 0, stdout: \`${f.head}\n\` }` を**全呼び出しで同一値**として返す。したがって create 時と report 時の head が構造的に一致し、`attestationBindsIdentity` を常に通過する。t3062 の冒頭コメント（`:6-11`）も想定シナリオを「auto-merge が report より先に landed した」ケースと明記しており、head 前進は射程外である（ファイル全体 **285** 行）。
+
+**落ちる実証の形**: 是正の受け入れテストは、create 後に **head を前進させてから** report を走らせ、修正前は `:746-748` の stale 文言で拒否、修正後は landed record が書かれることを 1 セットで示す必要がある。t3062 のスタブは head を単一値に固定しているため、既存フィクスチャの流用ではなく **head を 2 値で返すスタブ**（create 時 = 旧 head、report 時 = merged head）が要る。
+
+### 是正時に同期を要する台帳 — 3 種のうち 1 種は確実に、2 種は条件付き
+
+| 台帳 | 本 patch surface への係り | 判定 |
+|---|---|---|
+| `amadeus/spaces/default/specs/tla/model-map.json` | `grep -c "github-pr-convergence"` → **0**（exit 1） | **resync 不要**。実装ハッシュピンが本 plugin を 1 件も持たない |
+| `tests/.coverage-patch-allowlist.json` | `grep -c "pr-convergence-cli.ts"` → **3** | **要 re-anchor 判定**（下記） |
+| `tests/.coverage-registry.json` | `grep -c "pr-convergence"` → **2**（いずれも `tests/integration/t2996-pr-convergence-scope-grid.integration.test.ts`） | 新規テストファイル追加時のみ regen（`bun tests/gen-coverage-registry.ts`、`cid:build-and-test:c1`） |
+
+allowlist の 3 セレクタ（`tests/.coverage-patch-allowlist.json:4388` / `:4399` / `:4410` の `file` フィールド）は次のとおり。**`anchorLines` を含む行が動けば fingerprint 不一致で赤化する**ため、是正が触る関数との重なりを事前に確認する。
+
+| セレクタ `function` | `anchorLines` / `targetLines` | 是正との関係 |
+|---|---|---|
+| `nodeDecisionEmitter` | 17 / `1-17` | 本 patch surface とは無関係（audit tool の spawn 配線） |
+| `selfReportLifecycle` | 5 / `4-4` | **直撃しうる** — reason が逐語で `a non-created verb only reaches selfReportLifecycle through currentSelfContext, whose attestationBindsIdentity already requires receipt.prHead === heads.prHead and refuses a mismatch with exit 1 first` と述べ、免除の根拠を**まさに本件で緩める予定の head 束縛**に置いている |
+| `<module>` | 4 / `1-4` | `import.meta.main` エントリポイント（`bun-coverage-spawn-blindspot`） |
+
+**`selfReportLifecycle` エントリは設計上の警報である。** その `expiry` は逐語 `remove if the lifecycle is ever callable without the currentSelfContext head binding` であり、#3110 の是正が「stale head でも landed を書けるようにする」方向なら、この免除は **expiry 条件が成立して削除対象になる**（＝防御的 residual arm が到達可能になり、テストで覆う必要が生じる）。逆に是正を `create` 側の read-back（機序 2）だけに閉じるなら head 束縛は不変で、このエントリは据え置きでよい。**どちらの是正方式を採るかが、この台帳エントリの去就を決める** — 方式選択（選挙事項）の判断材料として扱う。
+
+### 品質面の付随所見
+
+- **重大度の再検討（FOLLOW-UP）**: reviewer-2 が `bug.yml` の S1-FATAL 定義（「ワークフロー停止」を明示基準に含む）と実測 park を突き合わせ、現行 S3-MAJOR の格上げを人間裁定事項として提起している。唯一の脱出路が `AMADEUS_SKIP_BLOCKING_SENSOR_GUARD` という緊急バイパスである点が、S3 の想定する「通常の回避策あり」と性質を異にする。
+- **エラーメッセージの自己不整合**: `:747` が指示する回復手順（create 再実行）が、その前提（PR が open）を満たさない状態で発行されている。是正では文言も同時に直さないと、修正後も誤った誘導が残る。
+- **fail-closed 自体は健全**: sensor の拒否（`:391-393`）は record が created のまま最終化されていない事実を正確に報告しており、これを緩める方向の是正は検証劇場になる。閉路の解消は「report が landed を書けるようにする」側で行う必要がある。
+
+機序は `architecture.md`、patch surface の配置は `code-structure.md` の各対応節を参照。一次記録は Issue #3110 の 2 件のクロスレビューコメント。

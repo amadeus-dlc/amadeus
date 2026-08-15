@@ -139,7 +139,7 @@ merge queue + auto-merge を使う運用で、PR が `report` 実行より先に
 - **プラグイン設定が宣言型になった**（PR #3052）。プラグインが `plugin.json` で型付きの設定項目と既定値を宣言し、利用者は `amadeus/config.json` の `plugin.settings` を project / space / intent の 3 レイヤで上書きする。宣言にないキーや型違いは既定値へ落とさず**拒否**するため、設定の書き損じが黙って無視されることがない。
 - **選挙 CLI が多問(multi-question)化した**（PR #3036）。1 回の選挙で複数の問を扱い、問ごとに成立（established）と保留（hold）が混在してよく、再実行は保留中の問だけを対象にできる。これは team.md が既に前提としている運用（「definition は複数 question を持てる。回答は question 単位」）に実装が追いついた形である。
 
-## Construction が完走しても後段へ渡らない業務影響（260815-per-unit-outcome、現在、observed `78146f435a`）
+## Construction が完走しても後段へ渡らない業務影響（260815-per-unit-outcome、履歴、observed `78146f435a`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-stale-epoch-landed の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 対象: [Issue #3099](https://github.com/amadeus-dlc/amadeus/issues/3099)（P1）。base `9ba8170bb` → observed `78146f435a`。
 
@@ -148,3 +148,13 @@ merge queue + auto-merge を使う運用で、PR が `report` 実行より先に
 適用範囲は限定的だが構造的である — degrade スコープ（`self-fix` / `self-refactor` / `self-document` のように units-generation を SKIP する運用）は早期 return により影響を受けない一方、**直列（幅 1）の Unit 計画は autonomy の設定に関わらず必ずこの経路へ落ちる**（`amadeus-lib.ts:8416`）。すなわち「Unit を正式に切って計画的に進める」ほど踏みやすい。
 
 **本差分での業務境界そのものの変化はなし**（区間の非 record 変更 40 ファイルはいずれもエンジン内部の修正・plugin sensor 宣言・docs 同期であり、製品の対象ユーザー・提供価値・スコープ境界を動かしていない）。詳細な機序は `architecture.md`、患部配置は `code-structure.md` の各対応節を参照。
+
+## record が最終化できず intent が恒久停止する業務影響（260815-stale-epoch-landed、現在、observed `83e1dbeef`）
+
+**業務境界そのものの変化なし。** base `78146f435a` → observed `83e1dbeef` の非 record 17 ファイルはいずれもエンジン内部の修正・テスト・docs 同期であり、対象ユーザー・提供価値・スコープ境界を動かしていない。
+
+[Issue #3110](https://github.com/amadeus-dlc/amadeus/issues/3110) の業務上の損失は「**PR が正常にマージされたのに、その事実を record へ書き残せない**」ことである。verdict 後に record checkpoint を積んだ PR が merge queue で着地すると、以後 `report` は attestation の stale を理由に拒否し続け、当該 intent の pr-convergence ステージが恒久停止する（実測: intent 260814-open-bug-batch-6 が park）。
+
+**踏みやすさが運用ノルムと結びついている**点が本件の性質である — チームのノルムは自 intent の record checkpoint を Bolt PR へ同梱してよいと定めており、同梱すれば head は必ず前進する。すなわち**ノルムどおりに運用するほど本欠陥を踏む**。原因は同梱に限らず create 後の任意の追加 push（レビュー指摘対応の修正コミット、main 取込など理由不問）である。
+
+回復には `AMADEUS_SKIP_BLOCKING_SENSOR_GUARD` という緊急バイパスしかなく、これは record に「escape hatch」として自己認識される性質の操作である。加えて既に `260814-plugins-rename-drift` の 3 unit が `kind: created` のまま恒久残置しており、**過去の完了済み intent にも record drift として残留している**。機序は `architecture.md`、テスト空白と台帳は `code-quality-assessment.md` の各対応節を参照。

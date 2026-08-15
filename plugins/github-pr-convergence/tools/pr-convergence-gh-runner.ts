@@ -293,7 +293,7 @@ function lifecycleFields(pullRequest: Record<string, unknown>): RawLifecycleFiel
 // The open pull request already published for a head branch
 // ---------------------------------------------------------------------------
 
-/** The slice of an existing pull request a create recovery needs. */
+/** The slice of an existing pull request a create decision needs. */
 export interface OpenPrSummary {
   readonly number: number;
   readonly url: string;
@@ -342,6 +342,58 @@ export async function fetchOpenPrForHead(
     return { ok: false, error: malformedResponse(out.value) };
   }
   return { ok: true, value: { number, url, headRefName, headRefOid, title, body } };
+}
+
+// ---------------------------------------------------------------------------
+// The merged pull request already published for a head branch
+// ---------------------------------------------------------------------------
+
+/** The slice of a merged pull request a create refusal names (#3109). */
+export interface MergedPrSummary {
+  readonly number: number;
+  readonly url: string;
+}
+
+export const MERGED_PR_LIST_FIELDS = "number,url,state";
+
+/**
+ * The merged pull request for `head`, or null when there is none.
+ *
+ * The answer is taken from the row's own `state`, never from the query filter
+ * alone: a row that does not declare `MERGED` evidences no merge, whichever
+ * filter returned it. Reading the fact rather than trusting the argv is what
+ * makes this a merge check instead of a duplicate-head check.
+ */
+export async function fetchMergedPrForHead(
+  gh: GhRunner,
+  repo: string,
+  head: string,
+): Promise<Result<MergedPrSummary | null, GhError>> {
+  const out = await gh([
+    "gh", "pr", "list",
+    "--repo", repo,
+    "--head", head,
+    "--state", "merged",
+    "--json", MERGED_PR_LIST_FIELDS,
+    "--limit", "1",
+  ]);
+  if (!out.ok) return out;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(out.value);
+  } catch {
+    return { ok: false, error: malformedResponse(out.value) };
+  }
+  if (!Array.isArray(parsed)) return { ok: false, error: malformedResponse(out.value) };
+  const first = parsed[0];
+  if (first === undefined) return { ok: true, value: null };
+  if (!isRecord(first)) return { ok: false, error: malformedResponse(out.value) };
+  if (first.state !== "MERGED") return { ok: true, value: null };
+  const { number, url } = first;
+  if (typeof number !== "number" || typeof url !== "string") {
+    return { ok: false, error: malformedResponse(out.value) };
+  }
+  return { ok: true, value: { number, url } };
 }
 
 /**
