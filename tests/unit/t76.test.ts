@@ -519,12 +519,10 @@ describe("t76 amadeus-state fork (migrated from t76-state-fork-merge.sh, plan 16
       // Lock dir released after the failing fork — the PER-INTENT bucket the
       // fork actually held (the fixture's active intent), not the sentinel.
       expect(existsSync(auditLockDir(proj, DEFAULT_RECORD_DIR, DEFAULT_SPACE))).toBe(false);
-      // A follow-up fork must succeed WITHOUT hitting the ~5s acquire budget.
-      const start = Date.now();
+      // A follow-up fork against a leaked lock exhausts the acquire budget and
+      // fails, so a clean exit is the release evidence.
       const followup = state(proj, "fork", "--slug", "alpha2");
-      const elapsed = Date.now() - start;
       expect(followup.status).toBe(0);
-      expect(elapsed).toBeLessThan(3000);
     },
     scaleTestTime(30000),
   );

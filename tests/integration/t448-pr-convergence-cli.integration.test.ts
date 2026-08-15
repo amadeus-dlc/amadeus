@@ -1914,6 +1914,9 @@ describe("git runner — an unresponsive remote expires instead of blocking fore
     const elapsed = Date.now() - started;
     expect(result.code).not.toBe(0);
     expect(result.stderr).toContain("timed out");
+    // The `sleep 30` would run for 30s if the deadline never fired: this
+    // ceiling detects that hang, and is not a claim about the deadline's
+    // precision (the budget under test is 300ms).
     expect(elapsed).toBeLessThan(scaleTestTime(15_000));
   });
 

@@ -163,8 +163,12 @@ describe("O-L1 — withAuditLock retry budget is a parameter", () => {
     } finally {
       releaseAuditLock(proj);
     }
-    // The 50x100ms default would take ~5s; a honoured 0x0ms budget is instant.
-    expect(performance.now() - startedAt).toBeLessThan(1_000);
+    // Both budgets throw the same error, so elapsed time is the only thing that
+    // tells them apart: the 50x100ms default takes ~5s, a honoured 0x0ms budget
+    // is instant. The ceiling sits between the two observed modes and must stay
+    // under the ~5s default for the discrimination to hold — it is not a
+    // latency target for the honoured path.
+    expect(performance.now() - startedAt).toBeLessThan(scaleTestTime(1_000));
   });
 
   test("runs the section normally when a budget is supplied and the lock is free", () => {
@@ -239,16 +243,15 @@ describe("O-L1 — the mirror store port re-enters through the same counter", ()
     });
     let acquired = false;
     let heldAfterRelease = false;
-    const startedAt = performance.now();
     withAuditLock(proj, () => {
       acquired = ports.acquireLock();
       ports.releaseLock();
       heldAfterRelease = holdsAuditLock(proj);
     });
+    // A bare acquire would have collided with our own lock and thrown; landing
+    // inside the section at all is what proves the port re-entered.
     expect(acquired).toBe(true);
     expect(heldAfterRelease).toBe(true);
-    // A bare acquire would have collided with our own lock and burned ~5s.
-    expect(performance.now() - startedAt).toBeLessThan(1_000);
     expect(existsSync(auditLockDir(proj))).toBe(false);
   });
 

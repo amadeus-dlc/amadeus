@@ -119,6 +119,8 @@ describe("t221 snapshot writer and real CLI", () => {
   });
   test("real --write runs all collectors under 10 seconds and two runs create distinct files", () => {
     const root = fixture(); const first = cli(root, "--write"); const second = cli(root, "--write");
+    // The elapsed ceiling is a hang guard on a collector run that finishes in
+    // well under a second, not a performance budget.
     expect(first.status).toBe(0); expect(first.stdout.trim()).toMatch(/^OK 6 collectors \(skipped: bugs\) .+\.json$/); expect(first.elapsed).toBeLessThan(10_000);
     expect(second.status).toBe(0); expect(readdirSync(join(root, "metrics")).filter((name) => name.endsWith(".json"))).toHaveLength(2);
   }, scaleTestTime(20_000));

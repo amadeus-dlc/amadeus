@@ -275,6 +275,10 @@ describe("credential scrubbing over the whole stack (FR-DST-5)", () => {
   });
 });
 
+// The elapsed ceilings in this block are super-linear blow-up guards, not
+// performance claims: catastrophic backtracking on these fixtures runs for
+// minutes, so the bound catches a regressed pattern with orders of magnitude to
+// spare while leaving the linear path all the headroom a loaded box needs.
 describe("linearity on adversarial input (regex-linearity-untrusted-input)", () => {
   // The fixture is the shape that actually discriminates: a long run of
   // separator-delimited segments inside a frame that never closes its paren.
@@ -314,7 +318,7 @@ describe("linearity on adversarial input (regex-linearity-untrusted-input)", () 
         const startedAt = performance.now();
         const out = redactStacktrace(input, REPO);
         const elapsedMs = performance.now() - startedAt;
-        expect(elapsedMs).toBeLessThanOrEqual(2_000);
+        expect(elapsedMs).toBeLessThanOrEqual(scaleTestTime(2_000));
         expect(out).toContain("<external>");
       }
     });
@@ -328,7 +332,7 @@ describe("linearity on adversarial input (regex-linearity-untrusted-input)", () 
           const startedAt = performance.now();
           const out = redactStacktrace(input, REPO);
           const elapsedMs = performance.now() - startedAt;
-          expect(elapsedMs).toBeLessThanOrEqual(2_000);
+          expect(elapsedMs).toBeLessThanOrEqual(scaleTestTime(2_000));
           expect(out).toContain("<external>");
         }
       }
@@ -345,7 +349,7 @@ describe("linearity on adversarial input (regex-linearity-untrusted-input)", () 
         const startedAt = performance.now();
         const out = redactStacktrace(input, REPO);
         const elapsedMs = performance.now() - startedAt;
-        expect(elapsedMs).toBeLessThanOrEqual(2_000);
+        expect(elapsedMs).toBeLessThanOrEqual(scaleTestTime(2_000));
         expect(out).toBe(input);
       }
     });
@@ -358,7 +362,7 @@ describe("linearity on adversarial input (regex-linearity-untrusted-input)", () 
       const startedAt = performance.now();
       const out = redactStacktrace(`Error: boom\n${frame.repeat(lines)}`, REPO);
       const elapsedMs = performance.now() - startedAt;
-      expect(elapsedMs).toBeLessThanOrEqual(2_000);
+      expect(elapsedMs).toBeLessThanOrEqual(scaleTestTime(2_000));
       expect(out).not.toContain(HOME);
       expect(out.split("<home>").length - 1).toBe(lines);
     });
