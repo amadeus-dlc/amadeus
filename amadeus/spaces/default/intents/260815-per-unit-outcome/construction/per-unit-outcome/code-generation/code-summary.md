@@ -32,11 +32,22 @@
 
 event-registry(EXPECTED_CANONICAL_COUNT 92→93)/ amadeus-audit.ts(VALID_EVENT_TYPES・EVENT_HEADINGS・stale 85→93 是正)/ audit-format.md 正本(90→93 是正 + Construction Bolt Events 4→5)/ 12-state-machine.md + .ja / t28 ピン 92→93 / event-registry-drift ピン 6 箇所 / coverage-registry regen(--check 1→0)/ coverage-ratchet audit 44→45 / model-map impl ピン resync(`f3c8d32d5d68`)。allowlist 再アンカーは不要(t534/t535/t537 Green)
 
+## FR-4(全 per-unit consumer への構造的帰結 — 受け入れ確認の実測)
+
+- `amadeus-per-unit-consume-fanout.ts` は**無改変**(`git diff --name-only 78146f435a..HEAD -- packages/framework/core/tools/amadeus-per-unit-consume-fanout.ts` → 空出力・exit 0)— `EXPECTED_PER_UNIT_CONSUMER_EDGES`(19 edge)と `assertConsumerEdgeInventory` の突合は定義・消費とも不変
+- edge 横断の担保(fanout 単体層): `bun test tests/unit/t533-per-unit-consume-fanout.test.ts` → **8 pass / 0 fail** exit 0(edge drift ケースを含む・conductor 再実測 2026-08-15)
+- 修正は読み口(orchestrate.ts の母集団構築)のみのため、19 edge すべてが同一の新母集団を経由する — build-and-test 固有分岐なし
+
 ## FR-5(回復手順)
 
-`docs/guide/15-troubleshooting.md` + `.ja.md` に「Construction Finished but the Next Stage Refuses (producer-outcome-pending)」節。回復 = `/amadeus --stage code-generation` でカーソルを戻し `/amadeus` で前向き settle(pool 捏造なし)。`--single` は settle しない(isolated 契約)ことをテストで実測固定
+- docs 面: `docs/guide/15-troubleshooting.md` + `.ja.md` に「Construction Finished but the Next Stage Refuses (producer-outcome-pending)」節。回復 = `/amadeus --stage code-generation` でカーソルを戻し `/amadeus` で前向き settle(pool 捏造なし)。`--single` は settle しない(isolated 契約)ことをテストで実測固定
+- record 面: 本ディレクトリの `recovery-application-plan.md` に 260814-open-bug-batch-6 への適用計画(手順・検証点・既知の限界)を記載 — FR-5 受け入れ確認の両面が実在
+
+## NFR(coverage 母集団)
+
+新規テストファイルは **0 件**(`git diff --stat` にテストの新規追加なし — t533 integration の既存ファイル内拡張のみ)。t533 integration は修正前から orchestrator seam を in-process import 済みのため、lcov 母集団への大型ソース初回混入なし(cid:build-and-test:bt-coverage-universe-inflation 非該当)
 
 ## 検証済み面 / 未検証面(verdict 用の書き分け)
 
-- 検証済み: fanout 到達性(FR-1/2)・pool 優先 de-dup(留保4)・batch join 保存(FR-3)・冪等(留保1)・swarm 無退行(FR-7 対象スイート)・台帳同期(FR-6)・配送 3 面
-- 未検証(受け入れ基準の外・申し送り): (1) **cancelled unit は per-unit 経路で settle 行を持たず pending が残る**(裁定 attributes が Outcome=succeeded のため設計逸脱を避けて未実装 — 別途裁定事項) (2) 回復手順中の `amadeus-jump.ts execute` 実駆動(テストはカーソル pivot を直接再現) (3) ローカルフルスイート・coverage(リモート CI 所有)
+- 検証済み: fanout 到達性(FR-1/2)・batch join 保存(FR-3)・**全 consumer 構造帰結(FR-4 — 上記実測)**・回復手順文書の両面(FR-5)・台帳同期(FR-6)・swarm 無退行(FR-7 対象スイート)・pool 優先 de-dup(留保4)・冪等(留保1、INJ3 = 冪等読取削除で settle 行が unit あたり 2 行になる row-count assertion の Red → revert で 1 行)・配送 3 面・NFR coverage 母集団
+- 未検証(受け入れ基準の外・申し送り): (1) **cancelled unit は per-unit 経路で settle 行を持たず pending が残る**(裁定 attributes が Outcome=succeeded のため設計逸脱を避けて未実装。FR-1 の前提「全 unit の成果着地・approve 済み」の外 — ゲートで別途裁定へ回付) (2) 回復手順中の `amadeus-jump.ts execute` 実駆動(テストはカーソル pivot を直接再現。record 側適用計画の既知の限界に明記) (3) ローカルフルスイート・coverage(リモート CI 所有 — push-first)

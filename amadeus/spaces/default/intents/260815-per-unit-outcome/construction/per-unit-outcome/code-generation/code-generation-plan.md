@@ -45,3 +45,19 @@
 ## FR-5(回復手順文書)
 
 - `docs/guide/` に「per-unit 完走後に producer-outcome-pending で停止した intent の回復」節を追加: 修正着地後の engine では `next` が新イベントの遡及 emit なしで前進すること(unitCovered は成果物断面から再導出されるため、pool 捏造は不要)を確認する手順。record 側には 260814-open-bug-batch-6 への適用計画を記す
+
+## Review — Iteration 2
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-15T09:35:01Z
+- **Iteration:** 2
+- **Scope decision:** none
+
+Both prior BLOCKERs resolved with measured evidence (FR-4 non-touch + 8/8 edge-drift pass; FR-5 record-side recovery-application-plan.md); plan/summary now cover all seven FRs and five binding reservations without silent gaps or unrequested compat layers.
+
+### Findings
+
+- FOLLOW-UP | code-generation produces list | recovery-application-plan.md is a fourth artifact beyond the declared produces triple; conductor to confirm downstream tooling treats the extra file safely
+- FOLLOW-UP | recovery-application-plan.md | step-3 cursor rewind is not test-driven; the first live application to 260814-open-bug-batch-6 is the closing verification for that facet
+- NIT | code-summary.md FR-4 | provenance mix noted: builder-transcribed evidence vs conductor re-measured 8/8 fanout run
