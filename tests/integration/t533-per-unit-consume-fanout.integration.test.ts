@@ -549,6 +549,36 @@ describe("t533 orchestrator per-unit consume fan-out", () => {
     expect(readFileSync(statePath, "utf8")).toBe(before);
   });
 
+  test("refuses a settled-outcome row whose Stage was stripped", () => {
+    const project = seedPerUnitProject(undefined, "code-generation");
+    expect(next(project).status).toBe(0);
+    // Stage is not a join key — outcomes collapse across the per-unit stages a
+    // Unit clears — but the emitter writes it on every row, so a row without it
+    // is not a row the engine produced. Accepting one because Unit and Batch
+    // still match would let an edited ledger past the shape contract.
+    const shard = seededAuditShard(project);
+    writeFileSync(shard, readFileSync(shard, "utf8")
+      .split("\n")
+      .map((line) => {
+        if (!line.includes("UNIT_OUTCOME_SETTLED")) return line;
+        const record = JSON.parse(line);
+        delete record.attributes?.Stage;
+        delete record.fields?.Stage;
+        return JSON.stringify(record);
+      })
+      .join("\n"));
+    moveCursorTo(project, "build-and-test");
+    const statePath = seededStateFile(project);
+    const before = readFileSync(statePath, "utf8");
+
+    const result = next(project);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("invalid-unit-outcome-audit-row");
+    expect(readFileSync(statePath, "utf8")).toBe(before);
+  });
+
   test("refuses a settled-outcome row carrying an outcome the engine never writes", () => {
     const project = seedPerUnitProject(undefined, "code-generation");
     expect(next(project).status).toBe(0);

@@ -2479,7 +2479,11 @@ function perUnitOutcomeKey(stage: string, unit: string, batch: string): string {
   return `${stage} ${unit} ${batch}`;
 }
 
-// Every settled row carries all four keys — emitEvent refuses an emit that omits
+// Stage is read for its PRESENCE only. Outcomes collapse across the per-unit
+// stages a Unit clears, so the value is not a join key — but the emitter writes
+// it on every row, and a row without it is not a row the engine produced.
+//
+// Every settled row carries all five keys — emitEvent refuses an emit that omits
 // a required attribute — so a row missing one, or carrying an outcome the
 // emitter never writes, was edited after the fact. Reading it anyway would let
 // the edit decide a consumer's fate; skipping it would drop a Unit from the
@@ -2492,7 +2496,8 @@ function readSettledUnitOutcomes(projectDir: string): SettledUnitOutcome[] {
       const unit = auditBlockField(block, "Unit");
       const outcome = auditBlockField(block, "Outcome");
       const key = auditBlockField(block, "Idempotency Key");
-      if (batch === null || unit === null || key === null) throw new Error(INVALID_SETTLED_ROW);
+      const stage = auditBlockField(block, "Stage");
+      if (batch === null || unit === null || key === null || stage === null) throw new Error(INVALID_SETTLED_ROW);
       if (outcome !== SETTLED_UNIT_OUTCOME) throw new Error(INVALID_SETTLED_ROW);
       return { batch, unit, outcome, key };
     });
