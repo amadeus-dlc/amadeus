@@ -26,3 +26,10 @@ depth Minimal。詳細な実測は `implementation-notes.md`(builder 起草、ba
 ## 逸脱
 
 - なし(計画 Step 1-7 どおり。Step 8 の push/PR は conductor 実施)
+
+## FR-1 受け入れ (3)(4) の実測(iteration 1 レビュー指摘対応、測定 ref: worktree bolt-landed-finalization HEAD = PR #3081 head、2026-08-15)
+
+- (3) 対称性回復: 旧拒否メッセージの全域不在 — `grep -rln "landed is not convergence evidence" plugins/` → 出力 0 行・**exit 1**(エラーなし不一致)。self/非 self の landed 判定は単一述語 `const settled = verdict.converged || evaluation.value.kind === "landed";`(`pr-convergence-cli.ts:1394`、`git grep -n` 転記)に収束し、self 専用分岐は report 書込先(`writeSelfReport`)のみ。t3062 テスト1(status settled exit 0)・テスト2(report が merge fact 束縛で書込)が self 側の同値挙動を実測
+- (4) stage 文書の契約検査: 旧文言 `landed is not convergence evidence` は `plugins/github-pr-convergence/stages/` で 0 行・exit 1、全ハーネス投影 `dist/` で該当ファイル 0 件(`grep -rln | wc -l` → 0)。新契約節は `grep -n "Already merged" plugins/github-pr-convergence/stages/pr-convergence.md` → `:305` に 1 hit、順序契約は `grep -c "auto-merge"` → 1(「auto-merge can land the pull request before `report` runs」節)
+- `transitionAllowed` への `created -> landed` 追加の帰属: D-1 の「CLI 3層の self×landed 拒否を landed 事実の report 書込へ置換」の直接の帰結 — created epoch の report が存在する self record に landed report を書くには created→landed 遷移の許可が必要条件であり、これなしでは裁定 A は実装不能(設計射程内。final state からの遷移追加はなし)
+- 変更ファイル数値の測定 ref: `git diff --stat origin/main..HEAD`(origin/main = 8b36a0ad0)の転記。テスト実測値(220 pass 等)は implementation-notes.md §Step 2-5 の bun test 出力転記
