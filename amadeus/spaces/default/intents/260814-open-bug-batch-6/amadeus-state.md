@@ -83,7 +83,7 @@ Per unit: [TBD]
 - [ ] nfr-requirements — SKIP
 - [ ] nfr-design — SKIP
 - [ ] infrastructure-design — SKIP
-- [-] code-generation — EXECUTE
+- [?] code-generation — EXECUTE
 - [ ] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
 - [ ] tla-authoring — EXECUTE
@@ -107,7 +107,7 @@ Per unit: [TBD]
 - **Intent Autonomy Mode**: full
 - **Intent Grant**: intent-grant-9c648ea11210c53198c6a9365b93f961
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-08-15T00:49:16Z
+- **Last Updated**: 2026-08-15T04:49:22Z
 
 ## Session Resume Point
 - **Last Completed Stage**: delivery-planning

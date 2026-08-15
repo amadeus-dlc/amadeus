@@ -19,3 +19,5 @@
 - 2026-08-15T (Interpretation): U-2 完了(PR #3086、READY iteration 1)。builder がセッション上限で停止したため conductor が完成・検証を直接実施。FOLLOW-UP 申し送り: 発火面(コンパイル解決 sensors_applicable)の実測は build-and-test で閉じる。テストの covers 行(plugin-compose 参照)は次回 push で是正。
 - 2026-08-15T (Tradeoff): 並行 intent の連続着地で intents.json が繰り返し競合。各 bolt branch で「main 版+自エントリ」の集合再構成を機械化(reledger.py)し、3 PR を auto-merge(queue)へ投入(ユーザー承認: CI green でマージ可)。
 - 2026-08-15T (Interpretation): U-4 完了(READY iteration 1、PR #3089)— 判定「覆う」を独立再実行で確認、是正0件、対称面8箇所は #3088 起票。FOLLOW-UP 申し送り: 述語2 の複数行呼出盲点(レビュアー指摘)は #3088 側の完了条件で拾う。
+- 2026-08-15T (Interpretation): U-3 完了(PR #3092 queue 投入済み、head ad60b8afa)。§12a は i1 NOT-READY(size purity・registry 申告)→ i2 NOT-READY(新規ファイル逸脱)→ 選挙 E-260815-U3-NEWFILE-DEVIATION(A 2-0)+D-3 追補+observe-quality repair → 最終パス READY(invocation 29563cc5、iteration 2 として確定)。07-sensor-system の同類 drift は #3093 系として起票。
+- 2026-08-15T (Deviation): PR queue 投入後はブランチ更新不可(GH006 実測)のため、summary provenance 是正と再 mint report は conductor record を正とし、最終 record checkpoint で本線へ届ける。

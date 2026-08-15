@@ -5,7 +5,7 @@
 ## 変更
 
 - `docs/harness-engineering/06-sensors.md` / `.ja.md` — 欠落4行(`amadeus-nfr-budget` / `amadeus-question-budget` / `amadeus-scope-sizing` / `amadeus-git-drift`)を追加、各 10→**14 行**。`amadeus-model-completeness` 行は U-2(#3086)着地により実際に投影・出荷されるため保持し、プラグイン由来注記(Declared by the opt-in formal-model-check plugin)を追記(幽霊状態は解消済み)
-- 新設 `tests/integration/t3028-sensors-docs-sync.integration.test.ts`(実 filesystem 走査のため integration tier / size: medium。§12a 指摘による移設 — unit tier の size purity ゲート適合) — 件数フリー契約: 導出コーパス(core sensors dir ∪ 全 plugin.json の sensors 宣言)と両言語の表の行集合の一致を検査(FR-3 (3) / D-3 (b))。en/ja 同数は「両方が同一集合と一致」で担保
+- 新設 `tests/integration/t3028-sensors-docs-sync.integration.test.ts`(実 filesystem 走査のため integration tier / size: medium。§12a 指摘による移設 — size purity ゲート適合(integration tier / size: medium)) — 件数フリー契約: 導出コーパス(core sensors dir ∪ 全 plugin.json の sensors 宣言)と両言語の表の行集合の一致を検査(FR-3 (3) / D-3 (b))。en/ja 同数は「両方が同一集合と一致」で担保
 
 ## 実測
 
