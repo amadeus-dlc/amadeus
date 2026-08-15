@@ -396,14 +396,14 @@ function reattest(
   mutate: (
     payload: string,
     receipt: ReportAttestation,
-  ) => { readonly payload: string; readonly receipt: Omit<ReportAttestation, "id" | "contentDigest"> },
+  ) => { readonly payload: string; readonly receipt: ReportAttestation },
 ): void {
   const path = reportPathFor(f.record, UNIT);
   const body = readFileSync(path, "utf-8");
   const current = parseAttestation(body);
   if (current === null) throw new Error("fixture report carries no attestation");
   const next = mutate(reportPayload(body), current);
-  const { id: _signature, contentDigest: _digest, ...fields } = next.receipt as ReportAttestation;
+  const { id: _signature, contentDigest: _digest, ...fields } = next.receipt;
   const unsigned = { ...fields, contentDigest: reportPayloadDigest(next.payload) };
   const receipt: ReportAttestation = { id: attestationId(unsigned), ...unsigned };
   writeFileSync(path, `${next.payload}${renderAttestation(receipt)}`, "utf-8");
