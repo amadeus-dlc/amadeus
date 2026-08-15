@@ -1672,5 +1672,11 @@
     "dirName": "260815-e-260815-rfc0001-design",
     "createdAt": "2026-08-15T15:51:06Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-260816-R21-PRESENCE-BYPASS",
+    "dirName": "260815-e-260816-r21-presence-by",
+    "createdAt": "2026-08-15T20:13:53Z",
+    "status": "recorded"
   }
 ]

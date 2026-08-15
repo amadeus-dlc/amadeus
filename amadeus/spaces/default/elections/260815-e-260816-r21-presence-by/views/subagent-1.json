@@ -1,0 +1,27 @@
+{
+  "electionId": "E-260816-R21-PRESENCE-BYPASS",
+  "voter": "subagent-1",
+  "questions": [
+    {
+      "questionId": "q-r21-log278",
+      "text": "U5 semi-authority-projection の R-21: amadeus-log.ts:278 の QUESTION_ANSWERED 人間 presence ガード迂回(現行 `isAutonomousMode(content)` = Construction 投影が autonomous なら迂回)は、semi の投影 autonomous 化で semi へ広がってはならない(FR-12 と逆行)。迂回の判定入力を何に付け替えるか。制約: 新しい検出面を増やさない(RFC Q3=A′ の最小化方針)、full の既存挙動(無人での回答記録)は保存、semi の回答記録は presence ガード下へ戻す。",
+      "ordered": [
+        {
+          "internalNo": 1,
+          "label": "A: 宣言 Intent Autonomy Mode が full のときのみ迂回(state の宣言フィールド直読 — mode 意味論と一致、検出面追加なし)",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 3,
+          "label": "C: 当該 answer に対応する AUTO_DECIDED 記録の実在で迂回(自動裁定由来の回答のみ無人記録可)— 最も厳密だが log 経路から decision 台帳への新しい読取結合を作る",
+          "displayNo": 2
+        },
+        {
+          "internalNo": 2,
+          "label": "B: 対話性判定(resolveSessionInteractivity)で迂回を決める(非対話なら迂回)— mode 非依存だが、対話 full の回答記録が presence 要求へ変わる(full の挙動変更)",
+          "displayNo": 3
+        }
+      ]
+    }
+  ]
+}
