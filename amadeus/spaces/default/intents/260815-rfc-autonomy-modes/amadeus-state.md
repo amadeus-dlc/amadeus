@@ -6,12 +6,12 @@
 - **Scope**: self-feature
 - **Start Date**: 2026-08-15T15:22:07Z
 - **State Version**: 7
-- **Active Agent**: amadeus-architect-agent
+- **Active Agent**: amadeus-developer-agent
 - **Harness**: claude-code
 - **Harness Version**: {"state":"unavailable","reason":"native-harness-version-not-exposed"}
 - **Model**: {"state":"unavailable","reason":"native-model-not-exposed"}
 - **Worktree Path**:
-- **Bolt Refs**:
+- **Bolt Refs**: [completion-report, waiting-interruption]
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration
@@ -28,8 +28,8 @@
 
 ## Execution Plan Summary
 - **Total Stages**: 17
-- **Completed**: 11
-- **In Progress**: nfr-design
+- **Completed**: 12
+- **In Progress**: code-generation
 
 ## Runtime State
 - **Revision Count**: 0
@@ -80,9 +80,9 @@
 Per unit: [TBD]
 - [x] functional-design — EXECUTE
 - [ ] nfr-requirements — SKIP
-- [-] nfr-design — EXECUTE
+- [x] nfr-design — EXECUTE
 - [ ] infrastructure-design — SKIP
-- [ ] code-generation — EXECUTE
+- [-] code-generation — EXECUTE
 - [ ] build-and-test — EXECUTE
 - [ ] ci-pipeline — SKIP
 - [ ] tla-authoring — EXECUTE
@@ -100,17 +100,17 @@ Per unit: [TBD]
 
 ## Current Status
 - **Lifecycle Phase**: CONSTRUCTION
-- **Current Stage**: nfr-design
-- **Next Stage**: code-generation
+- **Current Stage**: code-generation
+- **Next Stage**: build-and-test
 - **Status**: Running
 - **Intent Autonomy Mode**: full
 - **Intent Grant**: intent-grant-18ad0820d326a34e0ac06546c44a57dd
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-08-15T18:01:30Z
+- **Last Updated**: 2026-08-15T18:07:34Z
 
 ## Session Resume Point
-- **Last Completed Stage**: functional-design
-- **Next Action**: Execute Nfr Design
+- **Last Completed Stage**: nfr-design
+- **Next Action**: Execute Code Generation
 - **Pending Artifacts**: none
 
 <!-- amadeus:mirror-state:v1:start -->
