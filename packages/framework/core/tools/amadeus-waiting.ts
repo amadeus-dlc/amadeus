@@ -217,6 +217,96 @@ export function waitingEntriesOfEvents(events: readonly WaitingEventLike[]): rea
   return entries;
 }
 
+// What resume found, and therefore which path it takes. Three terminals, three
+// discriminants — plus `none` for a run that never stopped.
+export type ResumeDispatch =
+  | { readonly kind: "park"; readonly stage: string }
+  | { readonly kind: "waiting"; readonly presentation: RulingPresentation; readonly cause: WaitingCause }
+  | { readonly kind: "repair-stalled"; readonly requiresRemediationEvidence: true }
+  | { readonly kind: "none" };
+
+// Structural views again, for the same reason: the suspension envelope and the
+// transaction ledger are shaped by other modules, and this one only reads them.
+interface InterruptionEnvelopeLike {
+  readonly parkTransactionId: string;
+  readonly reason: string;
+  readonly resumeCondition: { readonly identity: string };
+}
+
+interface WaitingTransactionLike {
+  readonly transactionId: string;
+  readonly events: readonly WaitingEventLike[];
+}
+
+export interface InterruptionRecord {
+  // The state-layer park marker (`Parked` / `Parked At Stage`).
+  readonly parked: boolean;
+  readonly parkedAtStage: string | null;
+  // The autonomy-layer suspension, if any. It wins over the marker: a run can
+  // carry both, and the envelope is the one that says WHY.
+  readonly envelope: InterruptionEnvelopeLike | null;
+  readonly transactions: readonly WaitingTransactionLike[];
+  readonly remediationEvidence?: string;
+}
+
+// Stop reasons whose resume goes back through a human re-entering the workflow.
+// Waiting is deliberately absent: it resumes on a RULING, which is a different
+// act from re-entering, and REPAIR_STALLED is absent because it resumes on
+// evidence that the defect was addressed.
+const HUMAN_REENTRY_REASONS = new Set(["USER_PARKED", "AWAITING_HUMAN", "NORM_CONFLICT"]);
+
+function notSuspendable(detail: string): Result<never, WaitingRefusal> {
+  return { ok: false, error: { reason: "not-suspendable", detail } };
+}
+
+function dispatchWaiting(record: InterruptionRecord, envelope: InterruptionEnvelopeLike): Result<ResumeDispatch, WaitingRefusal> {
+  const transaction = record.transactions.find((candidate) => candidate.transactionId === envelope.parkTransactionId);
+  if (transaction === undefined) {
+    // The identifiers alone would let us render SOMETHING, and that is exactly
+    // the temptation to refuse: a partial re-presentation is a different ruling
+    // from the one the run stopped on.
+    return notSuspendable(`waiting transaction ${envelope.parkTransactionId} is not in the ledger`);
+  }
+  const entered = transaction.events.find(
+    (event) => event.type === "WORKFLOW_WAITING_ENTERED" && event.waitingId === envelope.parkTransactionId,
+  );
+  if (entered?.cause === undefined) {
+    return notSuspendable(`waiting transaction ${envelope.parkTransactionId} carries no cause`);
+  }
+  const cause = WaitingCause.parse(WaitingCause.serialize(entered.cause));
+  if (!cause.ok) return notSuspendable(`waiting cause is unreadable: ${cause.error.detail}`);
+  return {
+    ok: true,
+    value: { kind: "waiting", presentation: WaitingCause.presentationOf(cause.value), cause: cause.value },
+  };
+}
+
+// The single resume entrance (R-16). Which terminal a record belongs to is read
+// off the record, never inferred from what is convenient: an unrecognised stop
+// reason refuses rather than degrading to a park, because resuming a broken run
+// as a healthy one is the failure the three-way split exists to prevent.
+export function resumeInterruption(record: InterruptionRecord): Result<ResumeDispatch, WaitingRefusal> {
+  const envelope = record.envelope;
+  if (envelope !== null) {
+    if (envelope.reason === "AWAITING_RULING") return dispatchWaiting(record, envelope);
+    if (envelope.reason === "REPAIR_STALLED") {
+      if ((record.remediationEvidence ?? "").trim().length === 0) {
+        return notSuspendable("a repair-stalled resume requires remediation evidence");
+      }
+      return { ok: true, value: { kind: "repair-stalled", requiresRemediationEvidence: true } };
+    }
+    if (!HUMAN_REENTRY_REASONS.has(envelope.reason)) {
+      return notSuspendable(`unrecognised stop reason ${envelope.reason}`);
+    }
+    return { ok: true, value: { kind: "park", stage: record.parkedAtStage ?? "" } };
+  }
+  if (!record.parked) return { ok: true, value: { kind: "none" } };
+  if (record.parkedAtStage === null || record.parkedAtStage.trim().length === 0) {
+    return notSuspendable("the park marker names no stage");
+  }
+  return { ok: true, value: { kind: "park", stage: record.parkedAtStage } };
+}
+
 export interface AdmitWaitingInput {
   readonly cause: WaitingCause;
   readonly prior: readonly WaitingLedgerEntry[];

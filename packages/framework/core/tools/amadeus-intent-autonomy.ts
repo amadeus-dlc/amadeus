@@ -111,7 +111,12 @@ export const ALL_INTERACTION_KINDS: readonly InteractionKind[] = [
   "walking-skeleton",
   "question",
 ];
-export type StopReason = "AWAITING_HUMAN" | "REPAIR_STALLED" | "NORM_CONFLICT" | "USER_PARKED";
+// AWAITING_RULING is waiting (RFC-0001 FR-3, ADR-4): a non-interactive run
+// reached a ruling it may not make. Distinct from AWAITING_HUMAN (an
+// authorization the run lacks), from REPAIR_STALLED (a defect stopped it) and
+// from USER_PARKED (somebody chose to stop) - conflating any two of the four
+// makes "broken" and "waiting for an answer" resume the same way.
+export type StopReason = "AWAITING_HUMAN" | "REPAIR_STALLED" | "NORM_CONFLICT" | "USER_PARKED" | "AWAITING_RULING";
 
 // C3 / FR-2 (RFC-0001) — the single read-only effective-interactivity port.
 // "Interactive" means this clone's own audit shard holds at least one
@@ -1337,7 +1342,11 @@ export type ResumeCondition =
   | { readonly kind: "human-or-capability"; readonly identity: string; readonly status: "pending" | "satisfied"; readonly evidenceFingerprint: string | null }
   | { readonly kind: "quality-evidence-or-human"; readonly identity: string; readonly status: "pending" | "satisfied"; readonly evidenceFingerprint: string }
   | { readonly kind: "norm-change"; readonly identity: string; readonly status: "pending" | "satisfied"; readonly evidenceFingerprint: string }
-  | { readonly kind: "human-unpark"; readonly identity: string; readonly status: "pending" | "satisfied"; readonly evidenceFingerprint: null };
+  | { readonly kind: "human-unpark"; readonly identity: string; readonly status: "pending" | "satisfied"; readonly evidenceFingerprint: null }
+  // Waiting resumes on a ruling. The fingerprint is the basis the run stopped
+  // on, which is also the second half of the rate key, so the condition and the
+  // repeat check read the same value.
+  | { readonly kind: "ruling-or-human"; readonly identity: string; readonly status: "pending" | "satisfied"; readonly evidenceFingerprint: string };
 
 export function validateResumeCondition(reason: StopReason, condition: ResumeCondition): void {
   const expected: Record<StopReason, ResumeCondition["kind"]> = {
@@ -1345,6 +1354,7 @@ export function validateResumeCondition(reason: StopReason, condition: ResumeCon
     REPAIR_STALLED: "quality-evidence-or-human",
     NORM_CONFLICT: "norm-change",
     USER_PARKED: "human-unpark",
+    AWAITING_RULING: "ruling-or-human",
   };
   if (condition.kind !== expected[reason] || !SAFE_ID.test(condition.identity) ||
     (condition.evidenceFingerprint !== null && !SHA256.test(condition.evidenceFingerprint))) {
