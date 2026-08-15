@@ -132,6 +132,7 @@ import { assertToolResultContains } from "../harness/assert.ts";
 import {
   cleanupTestProject,
   sedReplaceInFile,
+  seededAuditShard,
   seededStateFile,
   setupIntegrationProject,
 } from "../harness/fixtures.ts";
@@ -144,6 +145,29 @@ import { driveAidlc } from "../harness/sdk-drive.ts";
 // DriveResult rather than an opaque hang. Direct hook invocations are bounded
 // at 60s each (the hook spawns the real engine once).
 // ---------------------------------------------------------------------------
+/** ADR-5: the bound carve-outs read this clone's own shard for a HUMAN_TURN.
+ *  The shipped audit sample carries none, so a case that needs an interactive
+ *  session says so explicitly. */
+function appendHumanTurn(proj: string): void {
+  const shard = seededAuditShard(proj);
+  const rows = readFileSync(shard, "utf-8").trimEnd().split("\n");
+  const last = JSON.parse(rows[rows.length - 1]) as { seq: number; cloneId: string; intentId: string };
+  writeFileSync(
+    shard,
+    `${rows.join("\n")}\n${JSON.stringify({
+      schemaVersion: 1,
+      seq: last.seq + 1,
+      cloneId: last.cloneId,
+      intentId: last.intentId,
+      timestamp: "2026-06-26T00:00:00Z",
+      heading: "Human Turn",
+      event: "HUMAN_TURN",
+      fields: {},
+    })}\n`,
+    "utf-8",
+  );
+}
+
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "420", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 420) * 1000;
 const DRIVE_TIMEOUT_MS = Math.max(120_000, TEST_TIMEOUT_MS - 15_000);
@@ -414,6 +438,10 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
           "# Questions\n\n## Q1\nWhich rollback threshold?\n[Answer]:\n",
           "utf-8",
         );
+        // ADR-5 binds the carve-out to a session a human is in, so the shard
+        // this clone reads has to hold a HUMAN_TURN for the question to be
+        // askable at all.
+        appendHumanTurn(proj);
         const r = runRealHook(proj, '{"stop_hook_active":false}');
         // [-] stage => real engine emits a pending run-stage (test 4 proved it
         // BLOCKS without a question); the blank [Answer]: now releases it.
@@ -519,8 +547,11 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
           "## Runtime State\n- **Revision Count**: 0\n- **Construction Autonomy Mode**: autonomous",
         );
 
-        // The REAL state-tool park refuses this unattended run: non-zero exit,
-        // stderr names the autonomous refusal (handlePark's autonomy guard).
+        // RFC-0001 D1/D5 removed the park autonomy guard outright: a run that
+        // reaches a stop it may not pass has to be able to park, unattended or
+        // not. The state tool now accepts it (t1241-park-guard-removal owns the
+        // decision table); what this case still proves is the half that did not
+        // change - the emitted `parked` directive safely ends the turn.
         const park = spawnSync(
           BUN,
           [
@@ -531,8 +562,7 @@ describe("t122 Stop hook end-to-end — real hook, real engine (sdk+cli)", () =>
           ],
           { encoding: "utf-8", timeout: HOOK_SPAWN_TIMEOUT_MS },
         );
-        expect(park.status).not.toBe(0);
-        expect((park.stderr ?? "").toLowerCase()).toContain("autonomous");
+        expect(park.status).toBe(0);
 
         // Inject the markers by hand to represent an authorised abnormal-stop
         // projection. The real engine re-emits `parked` and the hook allows it.
