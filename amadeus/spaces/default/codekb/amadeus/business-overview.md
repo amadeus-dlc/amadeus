@@ -77,7 +77,6 @@ Issue を解決したと判断できる最小条件は次のとおりである�
 ノルムの鮮度として、旧 bundled workaround `E-SRA-RAS13` / `election-cli-canonical` の長文は commit `bd567fd1b78bbde8a524b2cc767bd176dfbfe95f` で削除済みである。現行 `team.md` には `cid:requirements-analysis:always-elect` の「1選挙1質問」が残り、実装着地後に多問契約へ更新する必要がある。
 
 ## Issue #2985 multi-Unit Bolt の PR 証跡断面（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
-## Issue #2985 multi-Unit Bolt の PR 証跡断面（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 [Issue #2985](https://github.com/amadeus-dlc/amadeus/issues/2985) は、Delivery Planning が複数 Unit を1つの Bolt に束ねられる一方、Construction の実行・PR convergence・完了証跡が「1 Unit = 1実行単位 = 1 PR identity」を前提とするため、code-generation が正規証跡を作れず停止する self-fix である。
 
@@ -94,7 +93,6 @@ Issue を解決したと判断できる最小条件は次のとおりである�
 Reverse Engineering では、(A) Bolt identity が `units[]` を所有し1つの PR evidence を各 Unit 完了へ正規投影する、(B) Delivery Planning・runtime・PR convergence を 1 Unit = 1 Bolt = 1 PR に統一する、の2案を記録するだけで決定しない。後続 requirements で one-Bolt-one-PR、既存単一 Unit 正常経路、fail-closed completion を同時に満たす条件として選択する。
 
 ## auto 設定が無人実行に反映されない面（260814-unit-failure-autoelectio、履歴、observed `cd64486a6`）
-## auto 設定が無人実行に反映されない面（260814-unit-failure-autoelectio、履歴、observed `cd64486a6`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: observed = `cd64486a68c6a1144db50fbe3fde8273f5e18455`、差分 base = `d7ffaa5442266508d8e67babc3e0b947fb4c1637`（4 commits）。
 
@@ -126,17 +124,3 @@ merge queue + auto-merge を使う運用で、PR が `report` 実行より先に
 ### 本区間で分母が動いた点（実装時の注意）
 
 `git-drift` プラグインの着地により、#3026 の期待投影件数は Issue 本文の「12 → 13」ではなく **13 → 14**、#3028 の docs 表欠落は「3 件」ではなく **4 件**である。詳細は `re-scans/260814-open-bug-batch-6.md` §2.2 / §2.3。
-
-## 優先バグ 4 件の業務影響（260814-priority-bug-batch、現在、observed `d64fd7cac`）
-
-**観測 ref**: base `1d08374cd7e4ef89637b4a8000bab3fcf1a0f780` → observed `d64fd7cac049d7c2cda7dd7dc7d9d0a652ff02d7`（23 コミット、`git rev-list --count 1d08374cd..HEAD`）。
-
-本 intent は [#3065](https://github.com/amadeus-dlc/amadeus/issues/3065) / [#3034](https://github.com/amadeus-dlc/amadeus/issues/3034) / [#3040](https://github.com/amadeus-dlc/amadeus/issues/3040) / [#3035](https://github.com/amadeus-dlc/amadeus/issues/3035) の 4 件を扱う。いずれも現行 HEAD で成立しており、既修正のものはない。
-
-業務価値の観点では 4 件は 2 クラスに分かれる。#3065 / #3040 / #3035 は「負荷下のプロセス境界イベントを実時間の固定予算で待つ」形が壊れており、CI の赤が変更の欠陥ではなくマシンの空き具合を反映する。これは検証の信頼性そのものを損なう — 赤を無視する習慣が育てば、本物の退行も同じ扱いを受ける。#3034 だけは性質が異なり、テスト fixture が live repo を検査するため、ローカルで build / plugin compose した直後に無関係な赤が出る。開発者が自分の作業ツリーの状態でテスト結果を左右される点で、隔離の破れである。
-
-### 本区間で変わったフレームワーク側の断面
-
-- **有効プラグインが 3 から 4 へ**。`git-drift`（origin drift の早期 advisory sensor、PR #3055）が加わり、`pr-convergence` は `github-pr-convergence` へ rename された（PR #3051）。利用者から見た振る舞いは変わらないが、プラグインを指すパスの表記が変わる。
-- **プラグイン設定が宣言型になった**（PR #3052）。プラグインが `plugin.json` で型付きの設定項目と既定値を宣言し、利用者は `amadeus/config.json` の `plugin.settings` を project / space / intent の 3 レイヤで上書きする。宣言にないキーや型違いは既定値へ落とさず**拒否**するため、設定の書き損じが黙って無視されることがない。
-- **選挙 CLI が多問(multi-question)化した**（PR #3036）。1 回の選挙で複数の問を扱い、問ごとに成立（established）と保留（hold）が混在してよく、再実行は保留中の問だけを対象にできる。これは team.md が既に前提としている運用（「definition は複数 question を持てる。回答は question 単位」）に実装が追いついた形である。

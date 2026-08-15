@@ -1642,5 +1642,11 @@
     "dirName": "260815-e-260815-3062-landed-fin",
     "createdAt": "2026-08-15T00:20:29Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-260815-U3-NEWFILE-DEVIATION",
+    "dirName": "260815-e-260815-u3-newfile-devi",
+    "createdAt": "2026-08-15T04:28:55Z",
+    "status": "recorded"
   }
 ]
