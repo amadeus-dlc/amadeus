@@ -540,6 +540,10 @@ async function runGuardian(
   });
 
   const timeout = setTimeout(() => {
+    // A child that has already settled its RPC is not hung: what is still outstanding is its
+    // close, and the cleanup deadline below is the budget for that. Racing a settled child against
+    // timeoutMs reported a completed run as timed out whenever the close lagged under load.
+    if (collector.observation().settled) return;
     termination = "timed-out";
     failFirst("pi-timeout");
     sendTerminate("timed-out");

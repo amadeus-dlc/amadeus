@@ -26,6 +26,7 @@ import {
   NoSilentDropEvidenceAdapter,
   normalizeSpawnOutcome,
   systemCommandRunner,
+  TREE_READ_ATTEMPTS,
 } from "../../scripts/no-silent-drop-evidence-adapter.ts";
 
 const NUL = String.fromCharCode(0);
@@ -73,6 +74,21 @@ function treeRunner(treeStdout: string): CommandRunner {
   return {
     run(args) {
       return handlers[`${args[0] ?? ""} ${args[1] ?? ""}`]?.() ?? commandResult();
+    },
+  };
+}
+
+// Same shape as `treeRunner`, except the first `shortReads` tree reads come back cut under exit 0 -
+// the #3065 flake - and every later read is complete. `calls` makes the retry count observable.
+function flakyTreeRunner(complete: string, shortReads: number): CommandRunner & { calls: () => number } {
+  let treeReads = 0;
+  const base = treeRunner(complete);
+  return {
+    calls: () => treeReads,
+    run(args, options) {
+      if (args[0] !== "git" || args[1] !== "ls-tree") return base.run(args, options);
+      treeReads += 1;
+      return commandResult(0, treeReads <= shortReads ? complete.slice(0, -1) : complete);
     },
   };
 }
@@ -193,5 +209,47 @@ describe("t499 tree parse failures are diagnosable", () => {
     expect(message).toContain("endsNul=true");
     expect(message).toContain("bytesAfterLastNul=0");
     expect(message).toContain("status=0");
+  });
+});
+
+// #3065: a truncated read under exit 0 is a transient the reader can recover from - the tree is
+// still there, only this read of it was cut. Failing the whole rebind on the first short read
+// turned that transient into a red gate, so an incomplete read is re-read a bounded number of
+// times and only an output that never completes reaches the fail-closed throw above.
+describe("t499 an incomplete tree read is retried before it fails closed", () => {
+  const complete = `${treeEntry("packages/framework/core/tools/fixture.ts")}${NUL}`;
+
+  function prove(runner: CommandRunner) {
+    return new NoSilentDropEvidenceAdapter("/nonexistent", runner)
+      .proveIdentityOnlyRebind(MOCK_EVENT, MOCK_BINDING, "amadeus-dlc/amadeus");
+  }
+
+  test("a short read is re-read instead of reported as a broken tree", () => {
+    const runner = flakyTreeRunner(complete, 1);
+
+    expect(prove(runner).pullRequestNumber).toBe(7);
+    // The binding tree costs a retry; the pull request head reads clean the first time.
+    expect(runner.calls()).toBe(3);
+  });
+
+  test("a tree that never completes still fails closed with the forensics", () => {
+    const runner = flakyTreeRunner(complete, Number.POSITIVE_INFINITY);
+
+    expect(() => prove(runner)).toThrow("tree output is not NUL terminated");
+    expect(runner.calls()).toBe(TREE_READ_ATTEMPTS);
+  });
+
+  test("a complete read is taken as it comes", () => {
+    const runner = flakyTreeRunner(complete, 0);
+
+    expect(prove(runner).pullRequestNumber).toBe(7);
+    expect(runner.calls()).toBe(2);
+  });
+
+  test("an empty tree is complete, not truncated", () => {
+    const runner = flakyTreeRunner("", 0);
+
+    expect(prove(runner).pullRequestNumber).toBe(7);
+    expect(runner.calls()).toBe(2);
   });
 });

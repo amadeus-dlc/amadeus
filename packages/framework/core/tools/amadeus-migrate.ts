@@ -29,6 +29,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "nod
 import { fileURLToPath } from "node:url";
 import { isHarnessType } from "./amadeus-harness.ts";
 import { parseDoctorAuditSuffix } from "./amadeus-journal.ts";
+import { normalizeGitOutcome } from "./amadeus-migrate-git.ts";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
 
 const UPSTREAM_NAMESPACE = "aidlc";
@@ -448,11 +449,7 @@ function git(projectDir: string, args: readonly string[]): {
       env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" },
     }),
   );
-  return {
-    ok: result.status === 0,
-    stdout: result.stdout || "",
-    stderr: result.stderr || "",
-  };
+  return normalizeGitOutcome(result);
 }
 
 function canonicalExisting(path: string): string {

@@ -1,6 +1,6 @@
 # コード品質評価
 
-## ガードの適用境界が原理を持たない — 契約が doc 止まりで違反を検出できない（260814-copytree-guard-boundary、現在、observed `f60b3f4c8`）
+## ガードの適用境界が原理を持たない — 契約が doc 止まりで違反を検出できない（260814-copytree-guard-boundary、履歴、observed `f60b3f4c8`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 対象: [Issue #3014](https://github.com/amadeus-dlc/amadeus/issues/3014)（`copyTreeWithRetry` のガード適用境界が非対称）。測定 ref = observed `f60b3f4c868f3b7608a06f08393b8e2f10287fad`（`git rev-parse HEAD`。`origin/main` 系譜上のコミットであり `git merge-base HEAD origin/main` = 同一 SHA。ローカル `origin/main` は本 scan 時点で 2 commits 先行 = `cd64486a6`、いずれも患部非交差）、差分 base = `5b12d96e99cbf46711acd3dc2b8c103be1b0f801`。正本は `re-scans/260814-copytree-guard-boundary.md`。以下の file:line は Architect が observed 断面で `sed` / `git grep` により verbatim 再照合した。
 
@@ -3575,7 +3575,7 @@ PR CI は build、typecheck、Biome lint、complexity ratchet、control-byte、n
 
 本 reverse-engineering ではテスト、build、coverage、TLC を実行していない。したがって現行 HEAD の pass/fail、coverage、state-space 規模、性能は未測定であり、コードと設定の静的観測だけを品質評価へ使った。
 
-## Issue #2985 品質評価（現在、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
+## Issue #2985 品質評価（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 ### 実測テスト
 
@@ -3596,7 +3596,7 @@ repository test files は実測 **1119**（unit 422 / integration 568 / e2e 100�
 
 #2473 は head binding、#2791 は provenance enforcement、#2358 は gate 再発行、#2359 は review 復旧、#2836 は gate:false reviewer、#2976 は solo election を扱う。#2989 は本 Intent mirror である。open implementation PR は観測されていない。Issue #2985 の Reviewer A / B comments は訂正後 CONFIRMED である。
 
-## 契約文書とエンジン実装の齟齬を拘束しないテスト面（260814-unit-failure-autoelectio、現在、observed `cd64486a6`）
+## 契約文書とエンジン実装の齟齬を拘束しないテスト面（260814-unit-failure-autoelectio、履歴、observed `cd64486a6`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 ### 所見 1: 文言検査が挙動検査を代替している
 
@@ -3615,3 +3615,54 @@ repository test files は実測 **1119**（unit 422 / integration 568 / e2e 100�
 ### 所見 4: 修正が触る投影面
 
 `stage-protocol.md` を変更する場合、t369 が `dist/<harness>/amadeus-common/` と self-install ツリーを走査するため `bun run build` による全ハーネス投影の再生成が同一変更に必要である。ソース断面のみの green では配送先の退行を隠す（`project.md` の `cid:requirements-analysis:c2-acceptance-at-delivery-tree`）。
+
+## blocking sensor の在庫と fail-closed 化、および実時間予算に依存する検証面（260814-priority-bug-batch、現在、observed `d64fd7cac`）
+
+**観測 ref**: base `1d08374cd7e4ef89637b4a8000bab3fcf1a0f780` → observed `d64fd7cac049d7c2cda7dd7dc7d9d0a652ff02d7`。
+
+### blocking sensor の在庫（再実測）
+
+述語（再実行可能）: `for f in $(git ls-files | grep -E '(^|/)sensors/.*\.md$') tests/fixtures/blocking-sensor/amadeus-blocking-probe.md; do grep -m1 '^default_severity:' "$f"; done`。対象集合は追跡済みの sensor manifest 全 14 件 + blocking fixture 1 件。
+
+**shipped の blocking sensor は 2 件**で、前区間から件数は不変である。ただし**パスが 1 件変わった**。
+
+| manifest | `default_severity` | 位置づけ |
+|---|---|---|
+| `plugins/github-pr-convergence/sensors/amadeus-pr-convergence-report-format.md:5` | `blocking` | 本ワークスペースで活性な実配布（旧 `plugins/pr-convergence/sensors/...`、PR #3051 で rename） |
+| `tests/fixtures/blocking-sensor/amadeus-blocking-probe.md:5` | `blocking` | fixture |
+
+残る 13 件（core 11 + `plugins/formal-model-check/sensors/amadeus-model-completeness.md` + `plugins/git-drift/sensors/amadeus-git-drift.md`）はすべて `advisory` である。**新設の git-drift sensor は blocking ではない** — origin drift の早期通知は助言であり、赤でマージを止める性質のものではないという設計判断である。
+
+### blocking sensor の script-error が fail-closed になった（PR #3045、`c064f9705`）
+
+前区間で「blocking sensor の判定が 2 形しかなく、スクリプト自体のエラーが素通りする」とされていた面が閉じた。`packages/framework/core/tools/amadeus-state.ts` の `evaluateBlockingSensors` は拒否形を **2 形から 4 形へ**拡張している（実装コメント逐語: `Four refusal shapes, all fail-closed:`）。
+
+| 拒否形 | 意味 |
+|---|---|
+| `never-fired` | この stage に対する `SENSOR_FIRED` が 1 件もない。「走らなかった」は「通ったはず」の証拠にならない |
+| `unresolved` | 発火した出力の最新 terminal が `SENSOR_PASSED` でない |
+| `stale` | 現在の artifact バイトが terminal receipt と食い違う |
+| `script-error`（**新設**） | `SENSOR_PASSED` が script-error 診断を伴う、または `Note` フィールドがこの reader に安全に解釈できない形で存在する |
+
+品質上の要点は 2 つある。
+
+1. **「読めない」を通さない**。`sensorAuditNote`（`amadeus-state.ts`）は `Note` が文字列でない場合に `SENSOR_NOTE_UNREADABLE = "script-error: note-unreadable"` を返し、`isScriptErrorNote` がこれを拒否側へ落とす。未知の形を無視して通す fail-open ではなく、解釈できない時点で止める。
+2. **判定式に条件が編み込まれている**。`latestOutputPassed` の合成条件へ `&& !isScriptErrorNote(latest.note)` が入っており、独立した後付けチェックではない。消費されない検証フィールドではない。
+
+検証面は `tests/unit/t511-blocking-sensor-severity.test.ts`（新規 114 行）と `tests/integration/t511-blocking-sensor-gate.integration.test.ts`（+89）。`amadeus-sensor-schema.ts` のヘッダコメントも `verifyBlockingSensors` → `evaluateBlockingSensors` へ同期されており、正本と散文の drift はない。
+
+### 本 intent が扱う品質債務 — 実時間の固定予算に依存する検証面
+
+4 件のうち 3 件（[#3065](https://github.com/amadeus-dlc/amadeus/issues/3065) / [#3040](https://github.com/amadeus-dlc/amadeus/issues/3040) / [#3035](https://github.com/amadeus-dlc/amadeus/issues/3035)）は同一クラスの債務である: **負荷下のプロセス境界イベントを実時間の固定予算で待っている**。これは project.md § Testing Posture の `bt-timeout-verification-shape`（「長い本番タイムアウトを持つ性能要件は、実時間の負荷試験ではなく、同じ制御経路を通る短縮可能なタイミングシームとカウンタ検証で構成する」）に照らして構造的な逸脱であり、症状は「フルスイート並行実行時にのみ稀に赤くなる」という最も帰属の難しい形で現れる。
+
+| Issue | 予算 | `scaleTestTime` の適用 | 実測された振れ |
+|---|---|---|---|
+| #3035 | 300ms（`tests/unit/t07-hook-audit-logger.serial.test.ts:401-406`） | **なし**（同ファイルの `grep -c "test-time-factor"` = 0。同ファイル `:393-399` の 500ms 側も同様に生の定数） | 324ms |
+| #3040 | `scaleTestTime(1_000)`（`tests/integration/t-pi-child-driver.integration.test.ts:177-184`） | あり。ただし競合相手の `CLEANUP_WAIT_MS = 2_000`（`amadeus-pi-driver.ts:30`）は**定数で `scaleTestTime` を通らない** | 2133ms |
+| #3065 | — | — | stdout が exit 0 のまま 8192 バイトで切れる |
+
+品質上の含意は、これらの赤が「変更の欠陥」ではなく「CI マシンの空き具合」を反映する点にある。赤を無視する運用が育てば、本物の退行も同じ扱いを受ける。project.md § Forbidden の「既存テストの赤を『自分と無関係』を理由に無視して続行したり、赤いスイートをグリーン・完了として報告したりしない」という規範が実効を保つためには、赤が意味を持ち続けることが前提である。
+
+なお #3065 の患部には**契約の非対称**という別種の債務も含まれる。同じ「git を spawn して stdout を読む」責務に対し、`scripts/no-silent-drop-evidence-adapter.ts` の `systemCommandRunner`（`:62-76`）は `normalizeSpawnOutcome`（`:45-60`）で `result.error` を見て非ゼロへ潰す fail-closed 正規化を持つのに対し、`packages/framework/core/tools/amadeus-migrate.ts` の `git()`（`:439-455`）は `result.status === 0` だけで ok を決め `error` を一切見ない。後者では負荷時の spawn エラー（status = null）が無音で `ok: false` になり、preflight checks が全 pass のまま migration が失敗判定 → rollback → 非ゼロ exit という t224 の観測（`tests/integration/t224-upstream-v2-migration-cli.test.ts:301` の逐語 `"migration subprocess exit status mismatch"`）に整合する。
+
+[#3034](https://github.com/amadeus-dlc/amadeus/issues/3034) だけは別クラスで、テスト隔離の破れである。`tests/integration/t2851-doctor-self-install-freshness.serial.test.ts:78-87` の `repositoryCheckFixture` が live repo の `scripts/promote-self.ts --check` を spawn する薄いラッパであるため、`cwd: projectDir` では隔離できない（`scripts/promote-self.ts:57` が自ファイル位置から `REPO_ROOT` を解決する）。同ファイル `:66-76` の `strictCheckFixture` は exit code をハードコードした自己完結スクリプトで正しく隔離されており、壊れているのは最終ケース 1 件のみである。是正方向のうち「`promote-self.ts` に repo root の明示指定を足す」案は、construction.md § Testing Standards の「テストダブル・fixture 専用の分岐やモードを本番コードに置かない」に触れうるため、採るなら port として設計する必要がある。
