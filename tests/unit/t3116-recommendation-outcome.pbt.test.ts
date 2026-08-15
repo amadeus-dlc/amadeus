@@ -63,7 +63,6 @@ describe("R-5 property: parse ∘ serialize is the identity on every valid outco
   test("the restored value presents identically, so a resumed ruling asks the same question", () => {
     fc.assert(
       fc.property(fc.oneof(contestedArb, noneArb), (outcome) => {
-        if (outcome.kind === "unique") throw new Error("non-unique expected");
         const restored = RecommendationOutcome.parse(RecommendationOutcome.serialize(outcome));
         expect(restored.ok).toBe(true);
         if (!restored.ok || restored.value.kind === "unique") return;

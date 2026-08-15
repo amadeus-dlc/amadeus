@@ -12,6 +12,7 @@ import {
   autonomyDigest,
   autonomyScopeFingerprint,
   authorizeInteraction,
+  recommendationBasisFingerprint,
   createAutonomyProjection,
   createDecisionOptionEffectRegistry,
   createInteractionOccurrence,
@@ -37,6 +38,13 @@ import {
   type IntentAutonomyCoordinator,
 } from "./amadeus-intent-autonomy-runtime.ts";
 import { createAuditIntentAutonomyRepository } from "./amadeus-intent-autonomy-replay.ts";
+import {
+  RecommendationOutcome,
+  type Candidate,
+  type NonUniqueOutcome,
+  type UniqueOutcome,
+} from "./amadeus-recommendation.ts";
+import type { HoldReason } from "./amadeus-election-model.ts";
 import {
   createFirstPartyQualityContribution,
   emptyQualityPluginProjection,
@@ -781,6 +789,50 @@ export function applyProductionAutonomyMode(input: ApplyProductionAutonomyModeIn
   return writeAutonomyStateProjection(input.projectDir, input.mode, coordinator.readProjection());
 }
 
+export interface GateRecommendationContext {
+  readonly stage: string;
+  readonly approvalOptionId: string;
+  readonly walkingSkeleton: boolean;
+  readonly scopeFingerprint: string;
+  readonly normFingerprint: string;
+}
+
+// A stage gate offers no alternative to approval: the states that must not pass
+// (an unresolved blocking sensor, a norm conflict) are refused upstream by the
+// existing fail-closed paths, never presented here as a rival candidate. So the
+// derivation is total and always unique — which is exactly what the type says.
+export function deriveGateRecommendation(context: GateRecommendationContext): UniqueOutcome {
+  return RecommendationOutcome.unique(context.approvalOptionId, {
+    source: "norm",
+    fingerprint: recommendationBasisFingerprint({
+      source: "norm",
+      selector: `stage-gate:${context.stage}`,
+      optionIds: [context.approvalOptionId],
+      evidence: [
+        context.scopeFingerprint,
+        context.normFingerprint,
+        `walking-skeleton:${context.walkingSkeleton}`,
+      ],
+    }),
+  });
+}
+
+export interface ElectionHold {
+  readonly hold: HoldReason;
+  readonly candidates: readonly Candidate[];
+}
+
+// RFC-0001 Q1=A: an election that did not settle is never rounded up into a
+// choice. Four of the five hold reasons still leave live positions on the
+// table and are contested; a short quorum leaves no supported position at all,
+// so it degrades to `none` — as does any hold whose candidates could not be
+// enumerated.
+export function electionHoldOutcome(hold: ElectionHold): NonUniqueOutcome {
+  const reason = `election-${hold.hold}`;
+  if (hold.hold === "quorum-short" || hold.candidates.length < 2) return RecommendationOutcome.none(reason);
+  return RecommendationOutcome.contested(hold.candidates, reason);
+}
+
 interface CommitProductionStageGateDecisionInput {
   readonly projectDir: string;
   readonly stateContent: string;
@@ -822,6 +874,13 @@ export function commitProductionStageGateDecision(input: CommitProductionStageGa
     revision: autonomyDigest(effect),
     effects: [effect],
   });
+  const gateRecommendation = deriveGateRecommendation({
+    stage: input.stage,
+    approvalOptionId: "approve",
+    walkingSkeleton: input.walkingSkeleton,
+    scopeFingerprint,
+    normFingerprint,
+  });
   const result = coordinator.decide({
     occurrence: target,
     actorId: "amadeus-engine",
@@ -832,8 +891,8 @@ export function commitProductionStageGateDecision(input: CommitProductionStageGa
     pastHumanRulings: [],
     capability: {
       soloElectionAvailable: false,
-      elect: () => ({ optionId: "approve", evidenceFingerprint: autonomyDigest("unreachable-election") }),
-      recommend: () => ({ optionId: "approve", evidenceFingerprint: autonomyDigest("stage-gate-default") }),
+      elect: () => gateRecommendation,
+      recommend: () => gateRecommendation,
       unavailableReason: "stage-gate-is-deterministic",
     },
     semiScope: semiAuthorityScope(projection.intentUuid, scopeId),
@@ -855,7 +914,15 @@ export interface ProductionQuestionDecisionInput {
   readonly recommendedOptionId: string;
   readonly applicableNormFacts?: readonly DecisionFact[];
   readonly pastHumanRulings?: readonly DecisionFact[];
-  readonly election?: { readonly optionId: string; readonly evidenceFingerprint: string };
+  // A solo election either settled on one option or held. Both are results;
+  // only the first can be adopted without a human.
+  readonly election?:
+    | { readonly optionId: string; readonly evidenceFingerprint: string }
+    | ElectionHold;
+  // An agent that could not single out one option says so here, in the same
+  // wire shape `RecommendationOutcome.parse` reads, instead of being forced to
+  // name `recommendedOptionId` as though it were sure.
+  readonly recommendation?: unknown;
   // Per-option effect classification. A question whose options are all ordinary
   // workflow moves needs none — the default is `workflow-reversible`, which is
   // what every caller before #2253 relied on. A caller whose option space
@@ -898,6 +965,10 @@ export function commitProductionQuestionDecision(input: ProductionQuestionDecisi
     };
   });
   const registry = createDecisionOptionEffectRegistry({ revision: autonomyDigest(effects), effects });
+  const recommendation = questionRecommendation(input);
+  if (recommendation === null) {
+    return { kind: "human-required", reason: "invalid-recommendation-input", result: null };
+  }
   return coordinator.decide({
     occurrence: target,
     actorId: "amadeus-conductor",
@@ -908,18 +979,41 @@ export function commitProductionQuestionDecision(input: ProductionQuestionDecisi
     pastHumanRulings: input.pastHumanRulings ?? [],
     capability: {
       soloElectionAvailable: input.election !== undefined,
-      elect: () => input.election ?? {
-        optionId: input.recommendedOptionId,
-        evidenceFingerprint: autonomyDigest("unavailable-election"),
-      },
-      recommend: () => ({
-        optionId: input.recommendedOptionId,
-        evidenceFingerprint: autonomyDigest({ questionId: input.questionId, optionId: input.recommendedOptionId }),
-      }),
+      elect: () => questionElection(input),
+      recommend: () => recommendation,
       unavailableReason: input.election === undefined ? "native-solo-election-result-unavailable" : null,
     },
     semiScope: semiAuthorityScope(projection.intentUuid, "intent"),
   });
+}
+
+function questionElection(input: ProductionQuestionDecisionInput): RecommendationOutcome {
+  if (input.election === undefined) {
+    return RecommendationOutcome.unique(input.recommendedOptionId, {
+      source: "election",
+      fingerprint: autonomyDigest("unavailable-election"),
+    });
+  }
+  return "hold" in input.election
+    ? electionHoldOutcome(input.election)
+    : RecommendationOutcome.unique(input.election.optionId, {
+      source: "election",
+      fingerprint: input.election.evidenceFingerprint,
+    });
+}
+
+// A supplied recommendation arrives as untrusted JSON, so it is parsed rather
+// than trusted; a malformed one refuses the whole decision instead of quietly
+// falling back to the single-option shape.
+function questionRecommendation(input: ProductionQuestionDecisionInput): RecommendationOutcome | null {
+  if (input.recommendation === undefined) {
+    return RecommendationOutcome.unique(input.recommendedOptionId, {
+      source: "agent",
+      fingerprint: autonomyDigest({ questionId: input.questionId, optionId: input.recommendedOptionId }),
+    });
+  }
+  const parsed = RecommendationOutcome.parse(input.recommendation);
+  return parsed.ok ? parsed.value : null;
 }
 
 export interface ProductionQualityObservationInput {

@@ -151,7 +151,6 @@ describe("R-5 serialize and parse are inverse on examples", () => {
 describe("R-4 the presentation carries all four required elements", () => {
   test("contested presents candidates, rationales, the non-unique reason and the order", () => {
     const outcome = RecommendationOutcome.contested(candidates(), "past-rulings-conflict");
-    if (outcome.kind === "unique") throw new Error("non-unique expected");
     const presentation = RecommendationOutcome.presentationOf(outcome);
     expect(presentation.kind).toBe("contested");
     expect(presentation.nonUniqueReason).toBe("past-rulings-conflict");
@@ -161,7 +160,6 @@ describe("R-4 the presentation carries all four required elements", () => {
 
   test("none presents no candidate but still names why", () => {
     const outcome = RecommendationOutcome.none("election-quorum-short");
-    if (outcome.kind === "unique") throw new Error("non-unique expected");
     const presentation = RecommendationOutcome.presentationOf(outcome);
     expect(presentation).toEqual({ kind: "none", candidates: [], nonUniqueReason: "election-quorum-short" });
   });

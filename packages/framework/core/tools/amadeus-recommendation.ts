@@ -32,6 +32,7 @@ export type RecommendationOutcome =
 // The two terminals that must be ruled on by someone else. Narrowing to this
 // type is what makes "ask a human about a unique outcome" unrepresentable.
 export type NonUniqueOutcome = Extract<RecommendationOutcome, { readonly kind: "contested" | "none" }>;
+export type UniqueOutcome = Extract<RecommendationOutcome, { readonly kind: "unique" }>;
 
 export interface RulingPresentation {
   readonly kind: "contested" | "none";
@@ -169,16 +170,16 @@ function build(construct: () => RecommendationOutcome, path: string): Result<Rec
 }
 
 export const RecommendationOutcome = {
-  unique(optionId: string, basis: RecommendationBasis): RecommendationOutcome {
+  unique(optionId: string, basis: RecommendationBasis): UniqueOutcome {
     if (typeof optionId !== "string" || optionId.trim().length === 0) throw new Error("unique-requires-option");
     return { kind: "unique", optionId, basis: requireBasis(basis) };
   },
 
-  contested(candidates: readonly Candidate[], reason: string): RecommendationOutcome {
+  contested(candidates: readonly Candidate[], reason: string): NonUniqueOutcome {
     return { kind: "contested", candidates: requireCandidates(candidates), reason: requireReason(reason) };
   },
 
-  none(reason: string): RecommendationOutcome {
+  none(reason: string): NonUniqueOutcome {
     return { kind: "none", reason: requireReason(reason) };
   },
 

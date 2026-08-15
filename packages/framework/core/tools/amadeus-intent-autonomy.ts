@@ -8,6 +8,12 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import {
+  RecommendationOutcome,
+  type Candidate,
+  type NonUniqueOutcome,
+  type RecommendationBasisSource,
+} from "./amadeus-recommendation.ts";
 import type { VerifiedHumanTurn } from "./amadeus-loop-monitor-runtime.ts";
 import { auditShardDir, auditShardName, findAllEvents } from "./amadeus-lib.ts";
 
@@ -841,20 +847,79 @@ export interface DecisionFact {
 
 export interface DecisionCapabilityPort {
   readonly soloElectionAvailable: boolean;
-  elect(occurrence: InteractionOccurrence): { readonly optionId: string; readonly evidenceFingerprint: string };
-  recommend(occurrence: InteractionOccurrence): { readonly optionId: string; readonly evidenceFingerprint: string };
+  elect(occurrence: InteractionOccurrence): RecommendationOutcome;
+  recommend(occurrence: InteractionOccurrence): RecommendationOutcome;
   readonly unavailableReason: string | null;
 }
 
 export type AutoDecisionResolution =
   | { readonly kind: "decided"; readonly record: AutoDecisionRecord }
+  | { readonly kind: "escalate"; readonly outcome: NonUniqueOutcome }
   | { readonly kind: "park"; readonly reason: "NORM_CONFLICT" }
   | { readonly kind: "invalid"; readonly reason: string };
+
+// The canonical form a basis fingerprint is taken over (ADR-11). Whitespace and
+// ordering are presentation, not derivation, so perturbing them must not mint a
+// fresh fingerprint — otherwise a caller could re-enter a rate-limited decision
+// point by reindenting the same evidence.
+export interface RecommendationBasisFacts {
+  readonly source: RecommendationBasisSource;
+  readonly selector: string;
+  readonly optionIds: readonly string[];
+  readonly evidence: readonly string[];
+}
+
+function canonicalText(value: string): string {
+  return value.normalize("NFC").trim().replace(/\s+/gu, " ");
+}
+
+function canonicalSet(values: readonly string[]): readonly string[] {
+  return [...new Set(values.map(canonicalText))].sort(bytewise);
+}
+
+export function recommendationBasisFingerprint(facts: RecommendationBasisFacts): string {
+  return autonomyDigest({
+    source: facts.source,
+    selector: canonicalText(facts.selector),
+    optionIds: canonicalSet(facts.optionIds),
+    evidence: canonicalSet(facts.evidence),
+  });
+}
 
 function uniqueOption(facts: readonly DecisionFact[]): DecisionFact | null | "conflict" {
   if (facts.length === 0) return null;
   const options = new Set(facts.map((fact) => fact.optionId));
   return options.size === 1 ? facts[0]! : "conflict";
+}
+
+// A conflict is a ruling in its own right: the options that were actually
+// argued for, each with the evidence that argued for it.
+function contestedFromFacts(facts: readonly DecisionFact[], reason: string): NonUniqueOutcome {
+  const byOption = new Map<string, DecisionFact>();
+  for (const fact of facts) if (!byOption.has(fact.optionId)) byOption.set(fact.optionId, fact);
+  const candidates: readonly Candidate[] = [...byOption.entries()]
+    .sort(([left], [right]) => bytewise(left, right))
+    .map(([optionId, fact], index) => ({
+      optionId,
+      rationale: `${reason}:${fact.evidenceFingerprint}`,
+      rank: index + 1,
+    }));
+  return RecommendationOutcome.contested(candidates, reason);
+}
+
+// A capability port is a boundary: its outcome is checked here rather than
+// trusted, so a misbehaving elector cannot name an option the occurrence never
+// offered nor hand back an unattributable fingerprint.
+function portOutcomeIsValid(outcome: RecommendationOutcome, occurrence: InteractionOccurrence): boolean {
+  switch (outcome.kind) {
+    case "unique":
+      return occurrence.optionIds.includes(outcome.optionId) && SHA256.test(outcome.basis.fingerprint);
+    case "contested":
+      return outcome.reason.trim().length > 0 && outcome.candidates.length >= 2 &&
+        outcome.candidates.every((candidate) => occurrence.optionIds.includes(candidate.optionId));
+    case "none":
+      return outcome.reason.trim().length > 0;
+  }
 }
 
 interface DecisionRecordInput {
@@ -966,6 +1031,10 @@ interface ResolveAutoDecisionInput {
   readonly applicableNormFacts: readonly DecisionFact[];
   readonly pastHumanRulings: readonly DecisionFact[];
   readonly capability: DecisionCapabilityPort;
+  // Ruling order 1: a decision point reserved to a human is settled before any
+  // derivation runs, so no basis — however unanimous — can auto-decide it. The
+  // predicate itself belongs to the mode authority (U5); the ladder only asks.
+  readonly humanReservedDecision?: (occurrence: InteractionOccurrence) => string | null;
 }
 
 export function resolveAutoDecision(input: ResolveAutoDecisionInput): AutoDecisionResolution {
@@ -974,6 +1043,8 @@ export function resolveAutoDecision(input: ResolveAutoDecisionInput): AutoDecisi
   if (!SHA256.test(input.scopeLineageFingerprint) || !SHA256.test(input.currentNormFingerprint)) {
     return { kind: "invalid", reason: "invalid-decision-context" };
   }
+  const reserved = input.humanReservedDecision?.(occurrence) ?? null;
+  if (reserved !== null) return { kind: "escalate", outcome: RecommendationOutcome.none(reserved) };
   const policy = resolveConfirmedPolicy({ projection, occurrence, authority, actorId: input.actorId });
   if (policy !== null) return policy;
   const applicableNorms = input.applicableNormFacts.filter((fact) =>
@@ -986,30 +1057,39 @@ export function resolveAutoDecision(input: ResolveAutoDecisionInput): AutoDecisi
     projection, occurrence, selectedOptionId: norm.optionId, decider: "deterministic-engine", basisKind: "norm",
     basisFingerprint: norm.evidenceFingerprint, actorId: input.actorId,
   }) };
-  const history = uniqueOption(input.pastHumanRulings.filter((fact) =>
+  const applicableRulings = input.pastHumanRulings.filter((fact) =>
     fact.selector === occurrence.selector && fact.scopeLineageFingerprint === input.scopeLineageFingerprint &&
     fact.normFingerprint === input.currentNormFingerprint && occurrence.optionIds.includes(fact.optionId)
-  ));
-  if (history !== null && history !== "conflict") return { kind: "decided", record: decisionRecord({
+  );
+  const history = uniqueOption(applicableRulings);
+  // Past rulings that disagree are the state most in need of a ruling, so they
+  // terminate here rather than being handed down to the election or the agent.
+  if (history === "conflict") {
+    return { kind: "escalate", outcome: contestedFromFacts(applicableRulings, "past-rulings-conflict") };
+  }
+  if (history !== null) return { kind: "decided", record: decisionRecord({
     projection, occurrence, selectedOptionId: history.optionId, decider: "deterministic-engine", basisKind: "history",
     basisFingerprint: history.evidenceFingerprint, actorId: input.actorId,
   }) };
   if (input.capability.soloElectionAvailable) {
     const elected = input.capability.elect(occurrence);
-    if (!occurrence.optionIds.includes(elected.optionId) || !SHA256.test(elected.evidenceFingerprint)) {
-      return { kind: "invalid", reason: "invalid-election-result" };
-    }
+    if (!portOutcomeIsValid(elected, occurrence)) return { kind: "invalid", reason: "invalid-election-result" };
+    if (elected.kind !== "unique") return { kind: "escalate", outcome: elected };
     return { kind: "decided", record: decisionRecord({
       projection, occurrence, selectedOptionId: elected.optionId, decider: "solo-election", basisKind: "solo-election",
-      basisFingerprint: elected.evidenceFingerprint, actorId: input.actorId,
+      basisFingerprint: elected.basis.fingerprint, actorId: input.actorId,
     }) };
   }
   const recommended = input.capability.recommend(occurrence);
-  if (!occurrence.optionIds.includes(recommended.optionId) || !SHA256.test(recommended.evidenceFingerprint) ||
-    !input.capability.unavailableReason) return { kind: "invalid", reason: "invalid-recommendation-result" };
+  if (!portOutcomeIsValid(recommended, occurrence) || !input.capability.unavailableReason) {
+    return { kind: "invalid", reason: "invalid-recommendation-result" };
+  }
+  // Reaching the last rung is not a decision. An agent that cannot single out
+  // an option says so, and the ruling goes to a human.
+  if (recommended.kind !== "unique") return { kind: "escalate", outcome: recommended };
   return { kind: "decided", record: decisionRecord({
     projection, occurrence, selectedOptionId: recommended.optionId, decider: "agent-recommendation",
-    basisKind: "agent-recommendation", basisFingerprint: recommended.evidenceFingerprint, actorId: input.actorId,
+    basisKind: "agent-recommendation", basisFingerprint: recommended.basis.fingerprint, actorId: input.actorId,
     degradedCapability: { capability: "solo-election", reason: input.capability.unavailableReason },
   }) };
 }
