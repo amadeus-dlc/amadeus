@@ -37,6 +37,7 @@ import {
   runCli,
 } from "../../plugins/github-pr-convergence/tools/pr-convergence-cli.ts";
 import type { GitSpawn } from "../../plugins/github-pr-convergence/tools/pr-convergence-git-runner.ts";
+import { evaluateReportFormat } from "../../plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts";
 import { projectDeliveryBoltPlan } from "../../packages/framework/core/tools/amadeus-delivery-bolts.ts";
 
 const BRANCH = "bolt/3110";
@@ -303,8 +304,9 @@ const verbArgs = (verb: string, f: Fixture) => [
 
 /** The delivery as it stands after `create`: a `created` epoch attested at the
  *  head of the moment, pull request still open. */
-async function delivered(): Promise<Fixture> {
+async function delivered(setup: (f: Fixture) => void = () => undefined): Promise<Fixture> {
   const f = makeFixture();
+  setup(f);
   const created = await runCli(createArgs(f), seams(f));
   expect(created.stderr).toBe("");
   expect(created.exitCode).toBe(0);
@@ -316,8 +318,8 @@ async function delivered(): Promise<Fixture> {
 
 /** The two axes at once: the head advanced past the created epoch, and only
  *  then did the queue merge it. */
-async function staleAndMerged(): Promise<Fixture> {
-  const f = await delivered();
+async function staleAndMerged(setup: (f: Fixture) => void = () => undefined): Promise<Fixture> {
+  const f = await delivered(setup);
   f.merged = true;
   return f;
 }
@@ -337,5 +339,62 @@ describe("#3110 — a stale created epoch finalises as landed on the merged head
     // was attested at.
     expect(body).toContain(`- pr head: ${f.newHead}`);
     expect(body).not.toContain(f.oldHead);
+  });
+
+  test("the merge queue having deleted the head branch does not block the record", async () => {
+    const f = await staleAndMerged();
+    f.branchGone = true;
+
+    const out = await runCli(verbArgs("report", f), seams(f));
+    expect(out.stderr).toBe("");
+    expect(out.exitCode).toBe(0);
+    expect(readFileSync(reportPathFor(f.record, UNIT), "utf-8")).toContain("- kind: landed");
+    // The ancestry came from the pull request's own ref, never from the branch
+    // the queue removed.
+    expect(f.calls.some((call) => call.includes("ls-remote"))).toBe(false);
+  });
+
+  test("the blocking sensor accepts the landed record the merged arm wrote", async () => {
+    const f = await staleAndMerged();
+    f.branchGone = true;
+    expect((await runCli(verbArgs("report", f), seams(f))).exitCode).toBe(0);
+    // The conductor's checkout is on its own commit, not on the merged head:
+    // the record answers for the merge, not for a checkout.
+    expect(git(["rev-parse", "HEAD"], f.work)).toBe(f.localOnly);
+
+    const result = evaluateReportFormat(reportPathFor(f.record, UNIT), "pr-convergence");
+    expect(result.findings).toEqual([]);
+    expect(result.pass).toBe(true);
+    expect(result.reason).toBe("landed");
+  });
+});
+
+describe("#3110 — an ancestry that cannot be measured is never assumed", () => {
+  test("an epoch attested on a commit the merge never carried is refused", async () => {
+    // The conductor's own commit: a real object, present locally, and no part
+    // of what the pull request merged.
+    const f = await staleAndMerged((fixture) => {
+      fixture.attested = fixture.localOnly;
+    });
+    const before = readFileSync(reportPathFor(f.record, UNIT), "utf-8");
+
+    const out = await runCli(verbArgs("report", f), seams(f));
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain("is not an ancestor of the merged head");
+    expect(out.stderr).toContain(f.newHead);
+    // Fail-closed: the refusal never rewrites the evidence it refused.
+    expect(readFileSync(reportPathFor(f.record, UNIT), "utf-8")).toBe(before);
+  });
+
+  test("a pull request ref that cannot be fetched fails loudly, with no second source", async () => {
+    const f = await staleAndMerged((fixture) => {
+      fixture.prNumber = PR_NUMBER + 1; // no refs/pull/<n>/head published for it
+    });
+    const before = readFileSync(reportPathFor(f.record, UNIT), "utf-8");
+
+    const out = await runCli(verbArgs("report", f), seams(f));
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain(`cannot fetch refs/pull/${f.prNumber}/head`);
+    expect(readFileSync(reportPathFor(f.record, UNIT), "utf-8")).toBe(before);
   });
 });
