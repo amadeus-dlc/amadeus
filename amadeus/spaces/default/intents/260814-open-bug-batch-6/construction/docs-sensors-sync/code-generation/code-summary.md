@@ -4,9 +4,8 @@ depth Minimal。詳細実測は `implementation-notes.md`(測定 ref: worktree b
 
 ## 変更ファイル(git diff --stat origin/main..HEAD の転記)
 
-- `docs/harness-engineering/06-sensors.md` / `.ja.md`(各 +4 行 → 14 行)
-- 新設 `tests/unit/t3028-sensors-docs-sync.test.ts`(件数フリー集合契約)
-- `tests/.coverage-registry.json`(regen)
+- `docs/harness-engineering/06-sensors.md` / `.ja.md`(各 +4 行 → 14 行。model-completeness 行へプラグイン由来注記を追加)
+- 新設 `tests/integration/t3028-sensors-docs-sync.integration.test.ts`(件数フリー集合契約。実 filesystem 走査のため integration tier / size: medium — unit tier size purity ゲート適合)
 - record: implementation-notes / plan / 本ファイル / pr-convergence-report(PR #3092)
 
 ## 検証

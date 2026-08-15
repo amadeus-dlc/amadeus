@@ -1,8 +1,8 @@
 // covers: file:docs/harness-engineering/06-sensors.md
 // covers: file:docs/harness-engineering/06-sensors.ja.md
-// size: small
+// size: medium
 //
-// t3028 — the sensor tables in docs/harness-engineering/06-sensors(.ja).md stay
+// t3028 (integration: real-filesystem corpus walk) — the sensor tables in docs/harness-engineering/06-sensors(.ja).md stay
 // in sync with the real sensor corpus. #3028 measured the hand-maintained table
 // drifting from 10 rows to a 14-manifest reality across two intents; a
 // count-free set contract keeps the docs honest as sensors come and go.
