@@ -47,6 +47,7 @@ import {
   emitError,
   errorMessage,
   getField,
+  harnessDir,
   loadStageGraph,
   parseApprovedSwarmBatches,
   relativeRecordDir,
@@ -1014,6 +1015,14 @@ function handlePreviewAutonomy(args: string[], explicitProjectDir?: string): voi
   });
   if (!result.ok) error(`Intent autonomy preview failed: ${result.error}`);
   console.log(JSON.stringify(result.preview));
+  // Paste-ready confirmation command (grant-ceremony R-2). Full mode is the
+  // only mode where confirmedDisplayDigest is checked (prepareFullGrantCommand
+  // :617 in amadeus-intent-autonomy-production.ts) — semi/none ignore it
+  // (ADR-2's grant-less semi), so this echoes the mode the digest actually
+  // confirms rather than a mode the caller could choose.
+  console.log(
+    `bun ${harnessDir()}/tools/amadeus-bolt.ts set-autonomy --mode full --confirmed-display-digest ${result.preview.displayDigest}`,
+  );
 }
 
 function handleDecideQuestion(args: string[], explicitProjectDir?: string): void {
