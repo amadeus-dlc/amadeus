@@ -1257,5 +1257,12 @@
     "dirName": "260815-priority-bug-batch-2",
     "scope": "self-fix",
     "status": "in-flight"
+  },
+  {
+    "uuid": "01a00473-38f9-7786-804b-55615fb0c0b9",
+    "slug": "per-unit-outcome",
+    "dirName": "260815-per-unit-outcome",
+    "scope": "self-fix",
+    "status": "in-flight"
   }
 ]

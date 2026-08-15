@@ -2135,3 +2135,12 @@ schemaVersion 2 の canonical schema と legacy decoder を持つ。旧 `amadeus
 - `resolvePluginSettings(plugin, declaration, overrides)` は `{ ok: true; settings }` か `{ ok: false; error: { code: "unknown-key" \| "type-mismatch" \| "enum-out-of-range"; plugin; key; detail } }` を返す。**既定値へ落とすフォールバックはない** — 実装コメントが逐語で「it refuses rather than defaulting: a plugin running on a default the operator did not ask for is a silent misconfiguration.」と述べる
 - 消費面: `amadeus-sensor.ts:291` `resolvePluginSettingsForSensor(sensorId, hostRoot, projectDir, deps)` → `SettingsResolution | null`（宣言を持たないプラグインでは `null` = 不在であり fallback ではない）、`amadeus-sensor.ts:324` `pluginSettingsOverrides(projectDir, resolveConfig)`、`amadeus-plugin-compose.ts:362-363`（compose 時の宣言検査）
 - config 面: `amadeus-config.ts` の registry entry `plugin.settings`（`:649-655`、`layers: ALL_LAYERS` = project / space / intent、`merge: "plugin-settings"` でプラグイン別・キー別にマージ）
+
+## 区間の公開契約の変化（260815-per-unit-outcome、現在、observed `78146f435a`）
+
+base `9ba8170bb` → observed `78146f435a`（`git diff --shortstat` → 103 files / +3091 −182、非 record 面 40 files / +874 −97）で動いた契約は **2 件**であり、いずれも本 intent の患部（per-unit consume の母集団取得）とは独立している。
+
+- `assertRecomposeAllowed`（`packages/framework/core/tools/amadeus-lib.ts`）が引数を 1 → 2 へ拡張し、第 2 引数 `lifecyclePhase: string \| null \| undefined` を取るようになった。拒否条件は `autonomy === "autonomous"` 単独から **`autonomous` かつ Lifecycle Phase が `construction`** の合成へ狭まった（#3074 の着地。唯一の呼び出しは `amadeus-utility.ts` の 1 行変更）。
+- `amadeus-graph.ts` の内部関数 `loadSensors` が `mergeSensorsFromDir(dir, out, pathBase?)` へ改称し、plugin host 側の sensor をマージするようになった（#3026 の着地。plugin 側は `plugins/formal-model-check/plugin.json` と stage frontmatter で sensor を宣言する）。
+
+**本 intent の患部側の契約は無変更。** `readPerUnitConsumePopulation` / `EXPECTED_PER_UNIT_CONSUMER_EDGES` / `UNIT_POOL_EVENT_SET_COMMITTED` / `CONSTRUCTION_AUDIT_EVENTS` を含む 5 ファイルへ `git diff --quiet 9ba8170bb 78146f435 -- <path>` を適用し**全件 exit 0**。fail-closed の失敗コード（`producer-outcome-pending` / `producer-outcome-failed` / `producer-outcome-unknown` / `consumer-edge-inventory-mismatch`）も同断面のまま。

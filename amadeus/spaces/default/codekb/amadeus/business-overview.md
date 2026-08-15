@@ -138,3 +138,13 @@ merge queue + auto-merge を使う運用で、PR が `report` 実行より先に
 - **有効プラグインが 3 から 4 へ**。`git-drift`（origin drift の早期 advisory sensor、PR #3055）が加わり、`pr-convergence` は `github-pr-convergence` へ rename された（PR #3051）。利用者から見た振る舞いは変わらないが、プラグインを指すパスの表記が変わる。
 - **プラグイン設定が宣言型になった**（PR #3052）。プラグインが `plugin.json` で型付きの設定項目と既定値を宣言し、利用者は `amadeus/config.json` の `plugin.settings` を project / space / intent の 3 レイヤで上書きする。宣言にないキーや型違いは既定値へ落とさず**拒否**するため、設定の書き損じが黙って無視されることがない。
 - **選挙 CLI が多問(multi-question)化した**（PR #3036）。1 回の選挙で複数の問を扱い、問ごとに成立（established）と保留（hold）が混在してよく、再実行は保留中の問だけを対象にできる。これは team.md が既に前提としている運用（「definition は複数 question を持てる。回答は question 単位」）に実装が追いついた形である。
+
+## Construction が完走しても後段へ渡らない業務影響（260815-per-unit-outcome、現在、observed `78146f435a`）
+
+対象: [Issue #3099](https://github.com/amadeus-dlc/amadeus/issues/3099)（P1）。base `9ba8170bb` → observed `78146f435a`。
+
+業務上の損失は「実装が終わっているのにワークフローが前へ進めない」ことである。units-generation を EXECUTE した intent が per-unit dispatch で全 Unit を完走させても、後段の build-and-test が `producer-outcome-pending` で fail-closed するため、**成果物は存在するのにステージが到達不能**になる。ユーザーから見れば完了した作業が宙に浮き、回復には手作業の介入が要る。
+
+適用範囲は限定的だが構造的である — degrade スコープ（`self-fix` / `self-refactor` / `self-document` のように units-generation を SKIP する運用）は早期 return により影響を受けない一方、**直列（幅 1）の Unit 計画は autonomy の設定に関わらず必ずこの経路へ落ちる**（`amadeus-lib.ts:8416`）。すなわち「Unit を正式に切って計画的に進める」ほど踏みやすい。
+
+**本差分での業務境界そのものの変化はなし**（区間の非 record 変更 40 ファイルはいずれもエンジン内部の修正・plugin sensor 宣言・docs 同期であり、製品の対象ユーザー・提供価値・スコープ境界を動かしていない）。詳細な機序は `architecture.md`、患部配置は `code-structure.md` の各対応節を参照。

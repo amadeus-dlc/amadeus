@@ -5350,7 +5350,7 @@ plugin.json の settings 宣言          amadeus/config.json の plugin.settings
 - **#3035 — 性能 assert の測定境界**。`tests/unit/t07-hook-audit-logger.serial.test.ts:401-406` の 300ms 予算は `Bun.spawnSync` を挟んだ壁時計であり、bun のコールドスタートを含む（同ファイル `:396-397` のコメントが逐語で `The .sh measured bun cold-start + the logging path` と述べる）。skip path の実処理は数 ms であるため、この assert は実質 CI マシンの空き具合を測っている。
 - **#3034 — テスト隔離の境界破れ**。`tests/integration/t2851-doctor-self-install-freshness.serial.test.ts:78-87` の fixture が live repo の `scripts/promote-self.ts --check` を spawn する薄いラッパであり、`scripts/promote-self.ts:57` の `REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")` が自ファイル位置から repo root を解決するため、`packages/framework/core/tools/amadeus-utility.ts:1589-1602` が渡す `cwd: projectDir` は構造的に無効である。`isSelfDevWorkspace`（同 `:1017-1019`）が `scripts/promote-self.ts` の存在だけを見るため、fixture を置いた瞬間に live 検査経路へ入る。
 
-## 選挙の保存 digest 契約の不整合と、recompose ガードの層境界（260815-priority-bug-batch-2、現在、observed `9ba8170bb`）
+## 選挙の保存 digest 契約の不整合と、recompose ガードの層境界（260815-priority-bug-batch-2、履歴、observed `9ba8170bb`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-per-unit-outcome の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: observed `9ba8170bb03996fb98b497cfcbac3d207795018d`（base `a49f9e9fd`）。本区間にアーキテクチャ変更はない。本節が記録するのは、既存構造の中に確定した**不変条件違反 1 件**と、修正方向を規定する**層境界 1 件**である。
 
@@ -5395,3 +5395,56 @@ plugin.json の settings 宣言          amadeus/config.json の plugin.settings
 | **swarm in-flight** | 追加すると層が反転する | state ファイルに swarm のフィールドが**存在しない**（`git grep -nE "[Ss]warm" -- packages/framework/core/tools/amadeus-state.ts` → 5 hit がすべてコメント行）。一次記録は監査イベント（`SWARM_UNIT_STARTED` / `SWARM_UNIT_CONVERGED`）側にあり、これを純射影から読むには lib → audit の依存を新設することになる |
 
 **設計判断（エスカレーション対象）**: swarm 軸を要件が必須とする場合、それを `assertRecomposeAllowed` の中で解決してはならない。呼び出し側 `assertRecomposeStateAllowed` が監査から導出して第 3 引数として渡す形にすれば境界は保たれるが、これは「純射影に何を渡すか」の設計変更であり、実装者が単独で決める事項ではない。**phase 軸のみを足す**案は既存の層構造に完全に収まるため、要件が phase だけを求めるなら追加裁定は要らない。
+
+## Construction outcome の読み口が 2 系統に割れている非対称（260815-per-unit-outcome、現在、observed `78146f435a`）
+
+**観測 ref**: base `9ba8170bb03996fb98b497cfcbac3d207795018d` → observed `78146f435a66680055a24144937b5aa03d48bfb4`（祖先性 `git merge-base --is-ancestor 9ba8170bb 78146f435` → **exit 0**、距離 `git rev-list --count 9ba8170bb..78146f435` → **12**）。区間規模は `git diff --shortstat 9ba8170bb 78146f435` → **103 files / +3091 −182**、うち非 record 面は `git diff --shortstat 9ba8170bb 78146f435 -- ':!amadeus/' ':!metrics/'` → **40 files / +874 −97**。
+
+**本 intent の患部は区間内で 1 バイトも動いていない。** `git diff --quiet 9ba8170bb 78146f435 -- <path>` を患部 5 ファイル（`amadeus-orchestrate.ts` / `amadeus-construction-outcome-projection.ts` / `amadeus-unit-pool-runtime.ts` / `amadeus-per-unit-consume-fanout.ts` / `amadeus-swarm.ts`）へ適用し、**全件 exit 0**（差分なし）を実測した。したがって以下の機序はすべて observed 断面の現況である。
+
+### 中核機序 — 同じ「Construction の Unit 成果」に読み口が 2 系統ある
+
+Issue [#3099](https://github.com/amadeus-dlc/amadeus/issues/3099)（per-unit run-stage で完走した Construction が `producer-outcome-pending` で build-and-test へ到達できない）の根は、単一の欠落ではなく**読み口の分裂**である。Construction が「どの Unit がどう終わったか」を後段へ渡す経路が 2 本あり、一方だけが極端に狭い。
+
+| 系統 | 実装 | 読むイベント | 用途 |
+|---|---|---|---|
+| **正準射影** | `amadeus-construction-outcome-projection.ts` の `CONSTRUCTION_AUDIT_EVENTS`（`:222-228`） | `UNIT_POOL_EVENT_SET_COMMITTED` / `BOLT_STARTED` / `BOLT_COMPLETED` / `BOLT_FAILED` / `SWARM_BATON_RETURNED` の **5 種** | `amadeus-orchestrate.ts` の 4 消費点（`:3830-3832` `cancelledConstructionUnits`、`:4006-4013`、`:4088-4113`、`:6574-6579`） |
+| **per-unit fanout の母集団取得** | `amadeus-orchestrate.ts` の `readPerUnitConsumePopulation`（`:2447-2473`） | `readUnitPoolEventSetsFromAudit`（`:2456`）＋ `foldUnitPoolEventSets`（`:2460`）— 実質 `UNIT_POOL_EVENT_SET_COMMITTED` の **1 種のみ** | `emitRunStageForSlug`（`:4259-4261`）→ `resolveConsumes`（`:2518-2532`）→ `amadeus-per-unit-consume-fanout.ts` |
+
+正準射影のほうが**豊か**で、後発の狭い読み口だけが 5 イベント中 1 イベントしか見ない。これは「情報が存在しない」問題ではなく、**同じ事実に対する 2 つの読み取り規約が同期していない**という層境界の欠陥である（`memory/project.md` § Code Style の「既存 API の戻り値が実検出値と fallback を同じ表現へ潰す場合…」と同族の、provenance を失う読み口の問題）。
+
+### 単一 writer と、per-unit 経路がそこへ書かないこと
+
+`UNIT_POOL_EVENT_SET_COMMITTED` の**書き手は 1 箇所だけ**である — `amadeus-unit-pool-runtime.ts:152-161`、`createAuditUnitPoolRepository` のトランザクション内（読み側は同ファイル `:122-141` の `readUnitPoolEventSetsFromAudit`）。pool を生成する箇所を全数列挙すると（`grep -rn "createAuditUnitPoolRepository" packages/framework/core/tools/*.ts`、出現 14 行のうち import/定義 3 行を除く）:
+
+- `amadeus-swarm.ts` — **9 call site**（同ファイル出現 10 行 − import 1 行、`grep -c` 実測）。pool の唯一の変異源。
+- `amadeus-orchestrate.ts:3812` — 読み取り専用の合成。
+- `amadeus-orchestrate.ts:6586` — `handleFailureRuling`（retry / skip）での変異。
+
+一方 **per-unit dispatch 経路（`emitPerUnitRunStage`、`amadeus-orchestrate.ts:4574-4725`）は pool へ一切書かない** — 同範囲へ `grep -n "UnitPool\|unitPool\|UNIT_POOL"` を適用して **exit 1（0 hit）** を実測した。つまり swarm 経路を通らずに per-unit で完走した Construction は、pool イベントを 1 件も残さない。
+
+### 症状の発火点
+
+`amadeus-per-unit-consume-fanout.ts:224-228` が `declaredUnits` のうち outcome を持たない Unit を `pending` に落とし、`throwForUnits("producer-outcome-pending", pending)` で fail-closed する。`declaredUnits` は `loadRuntimeUnitRows`（`amadeus-orchestrate.ts:2450`、`bolt_dag.units` 由来）から来るので、**Unit は宣言されているのに outcome が空**という組み合わせが構造的に成立する。
+
+degrade スコープ（units-generation SKIP）は `:2451` の早期 return（runtime unit row が無ければ `undefined`）により影響を受けない。患部は **units-generation を EXECUTE した intent が per-unit dispatch へ落ちた場合**に限られる。
+
+### 再発条件 — width-1 バッチが plan-integrity redirect を素通りする
+
+本スキャンで新たに確定した条件。`amadeus-lib.ts:8416` が逐語で:
+
+> `if (pendingBatch === null || pendingBatch.units.length < 2) return { kind: "ok" };`
+
+**幅 1 のバッチは autonomy に関わらず plan-integrity の redirect を通らない**。したがって直列（linear）な Unit 計画は per-unit dispatch へ落ち、pool イベントが 0 件になり、構造的に `producer-outcome-pending` に至る。幅 2 以上かつ autonomy 未設定なら ask へ redirect されるため、この経路には入らない。**受け入れ基準はこの width-1 条件を明示的に符号化する必要がある。**
+
+### 是正方式の構造的評価（方式選択は後続の裁定事項）
+
+- **(a) fanout 側で正準射影を読む** — 既存構造との整合が最も高い。読み口を 1 本へ寄せる方向であり、直近の前例（PR #3101 の `runPreservedDigest`: 3 つの呼び出し点を 1 つの純関数へ統一）と同じ形をとる。
+- **(b) per-unit 経路から pool イベントを発行する** — 単一 writer 契約（`amadeus-unit-pool-runtime.ts:152-161`）へ 2 つ目の変異源を追加することになり、pool の所有境界を弱める。
+- **(c) 両者の折衷 / 別の第三案**。
+
+**本節は方式を決定しない**（`memory/team.md` P1 — 判断は独立検証された合意で行う）。いずれの方式でも保存すべき不変量として、`amadeus-orchestrate.ts:2461-2463` の逐語 `if (!currentUnits.has(terminal.unitId)) continue;` — **バッチ所属フィルタの意味論**を挙げる。バッチをまたいだ terminal outcome を現行バッチの母集団へ混ぜない性質であり、読み口を差し替えるときに落としやすい。
+
+### 消費者エッジの契約面
+
+per-unit consume の消費者側契約は `amadeus-per-unit-consume-fanout.ts:90-110` の `EXPECTED_PER_UNIT_CONSUMER_EDGES` に閉じている（**7 consumer / 19 edge**。件数の述語は `awk 'NR>=91 && NR<=109' <file> | grep -c '^\s*\['` → **19**、consumer 名は同範囲へ `grep -oE '^\s*\["[a-z-]+' | grep -oE '[a-z-]+$' | sort -u | wc -l` → **7**）。`assertConsumerEdgeInventory`（`:144-168`）が `consumer-edge-inventory-mismatch` で fail-closed するため、**この表と実グラフの乖離は無音では通らない**。是正がエッジ集合を変えないなら、この在庫は触らずに済む。

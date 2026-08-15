@@ -200,3 +200,23 @@ amadeus-plugin-compose.ts (:362-363)
 このエッジは既存の「plugin は core implementation を import しない」方向を壊さない。宣言は plugin 側、override は config レイヤ、突き合わせは core の 1 点（`resolvePluginSettings`）に閉じており、未宣言キー・型不一致・enum 範囲外はいずれも `ok: false` で**拒否**する（default へ落とさない fail-closed）。
 
 - **git-drift の依存**: `plugins/git-drift/plugin.json` は `stages: []` の tool-only プラグインで、`code-generation` と `build-and-test` の `sensors` seam に `git-drift` を追加する。settings は `fetch-throttle-seconds`（number、default 600）1 件で、上記 plugin.settings 機構の最初の実消費者である。外部依存として `git`（origin fetch）を使う。
+
+## 区間の依存エッジ変化と、患部まわりの依存方向（260815-per-unit-outcome、現在、observed `78146f435a`）
+
+**外部依存の変化なし**（`git diff --stat 9ba8170bb 78146f435 -- package.json bun.lock '**/package.json'` の出力は空）。内部エッジで動いたのは 1 本 — `amadeus-graph.ts` が plugin host ディレクトリの sensor をマージする読み取りエッジを獲得した（`mergeSensorsFromDir`、#3026 の着地）。
+
+患部まわりの依存方向は区間内で無変更（`git diff --quiet` を 5 パスへ適用し全件 exit 0）。方向は次のとおりで、**`amadeus-orchestrate.ts` だけが 2 つの読み口の両方に依存している**のが本 intent の構造的争点である。
+
+```
+amadeus-orchestrate.ts
+  ├─ import :237  foldUnitPoolEventSets        ← amadeus-unit-pool.ts
+  ├─ import :238  readUnitPoolEventSetsFromAudit ← amadeus-unit-pool-runtime.ts   … 狭い読み口（1 イベント）
+  ├─ import :250  createAuditUnitPoolRepository / createUnitPoolCoordinator ← amadeus-unit-pool-runtime.ts
+  ├─ import :253-254 normalizeConstructionOutcomeAudit / projectConstructionOutcomes
+  │                                            ← amadeus-construction-outcome-projection.ts … 正準射影（5 イベント）
+  └─ → amadeus-per-unit-consume-fanout.ts（母集団を渡す消費側）
+
+amadeus-swarm.ts → amadeus-unit-pool-runtime.ts（pool の唯一の変異源、9 call site）
+```
+
+テキストフォールバック: `amadeus-orchestrate.ts` は unit pool 系（`amadeus-unit-pool.ts` / `amadeus-unit-pool-runtime.ts`）と正準射影（`amadeus-construction-outcome-projection.ts`）の**両方**を import し、前者だけを per-unit fanout の母集団に使っている。`amadeus-swarm.ts` は pool runtime の唯一の変異源。`amadeus-per-unit-consume-fanout.ts` は母集団を受け取るだけで、どちらの読み口にも直接依存しない（＝**是正で依存方向を増やさずに読み口を差し替えられる位置にある**）。
