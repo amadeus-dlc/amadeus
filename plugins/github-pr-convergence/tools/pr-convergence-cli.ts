@@ -595,7 +595,11 @@ function existingReportKind(path: string): ExistingReport | null {
 }
 
 function transitionAllowed(current: string, next: string): boolean {
-  if (current === "created") return next === "converged" || next === "override";
+  // `created -> landed` is the merge-queue finalisation (#3062): auto-merge
+  // landed the pull request before `report` ran, so the epoch closes on the
+  // merge fact instead of a convergence verdict. Nothing transitions OUT of a
+  // final state, and no final state is rewritten as another.
+  if (current === "created") return next === "converged" || next === "override" || next === "landed";
   return current === "override" && next === "converged";
 }
 
@@ -820,7 +824,6 @@ async function writeSelfReport(
   seams: CliSeams,
   stage: "code-generation" | "pr-convergence",
 ): Promise<CliOutcome> {
-  if (report.kind === "landed") return { exitCode: 1, stdout: "", stderr: "landed is not convergence evidence\n" };
   const paths: string[] = [];
   for (const ownerUnit of work.units) {
     const ownerWork = { ...work, unit: ownerUnit };
@@ -1257,16 +1260,17 @@ async function reportOutcome(
   self: Extract<SelfContext, { ok: true }> | null,
 ): Promise<CliOutcome> {
   if (evaluation.kind === "landed") {
-    if (self !== null) return { exitCode: 1, stdout: "", stderr: "landed is not convergence evidence\n" };
     const facts = evaluation.facts;
-    const path = writeReport(options, {
+    const landed: ConvergenceReport = {
       kind: "landed",
       prRef: refValue(options.ref),
       mergedAt: facts.mergedAt,
       mergeCommitOid: facts.mergeCommitOid,
       checkRollupState: facts.checkRollupState,
       generatedAt: seams.now(),
-    });
+    };
+    if (self !== null) return writeSelfReport(options.record, landed, self.work, self.heads, seams, "pr-convergence");
+    const path = writeReport(options, landed);
     return { exitCode: 0, stdout: `${path}\n`, stderr: "" };
   }
   const { verdict, summary } = evaluation;
@@ -1361,9 +1365,6 @@ async function runConvergence(options: ConvergenceOptions, seams: CliSeams): Pro
   }
   if (!evaluation.ok) return { exitCode: 2, stdout: "", stderr: `${evaluation.message}\n` };
   const { verdict, summary } = evaluation.value;
-  if (isSelfRecord(options.record) && evaluation.value.kind === "landed") {
-    return { exitCode: 1, stdout: "", stderr: "landed is not convergence evidence\n" };
-  }
   const provenanceFailure = provenanceOutcome(options, evaluation.value);
   if (provenanceFailure !== null) return provenanceFailure;
   const selfContext = selfContextFor(options, evaluation.value, seams);

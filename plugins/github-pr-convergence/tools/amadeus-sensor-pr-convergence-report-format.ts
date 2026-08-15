@@ -11,6 +11,11 @@
 //   override   — a human ruled the Bolt forward without convergence (FR-7b).
 //                The human-turn id, the timestamp, and the reason are the
 //                whole point of that record, so their absence is a finding.
+//   landed     — the merge queue landed the pull request before the loop could
+//                report (#3062). Accepted at the `pr-convergence` stage only,
+//                and only with the merge instant and a well-formed merge
+//                commit: it records a merge that happened, it does not claim
+//                convergence.
 //
 // Deliberately does NOT import the plugin's renderReport. Core ships to every
 // harness whether or not the plugin is installed, and a core->plugin import
@@ -138,7 +143,11 @@ function checkOverride(body: string, findings: ReportFormatFinding[]): void {
 /** The landed record (#2401): the merge instant and the merge commit are what
  *  make it a factual record rather than a bare claim, and a landed report that
  *  says converged: true would smuggle a convergence claim through a merge
- *  fact. The check rollup is informational and deliberately not checked. */
+ *  fact. Since #3062 this record finalises the pr-convergence stage, so the
+ *  merge commit is checked for the object-id shape gh returns rather than
+ *  merely for presence — a "merge commit" that is not one records nothing. The
+ *  check rollup stays informational and deliberately unchecked: a post-merge
+ *  workflow can fail a rollup the pull request never carried. */
 function checkLanded(body: string, converged: string | null, findings: ReportFormatFinding[]): void {
   if (converged === "true") {
     findings.push({ field: "converged", reason: "a landed report is converged: false by construction" });
@@ -149,6 +158,8 @@ function checkLanded(body: string, converged: string | null, findings: ReportFor
       findings.push({ field: label, reason: `missing — a landed report records the ${label}` });
     } else if (label === "merged at" && Number.isNaN(Date.parse(value))) {
       findings.push({ field: label, reason: `unparseable timestamp "${value}"` });
+    } else if (label === "merge commit" && !/^[0-9a-f]{40}$/.test(value)) {
+      findings.push({ field: label, reason: `not a commit object id "${value}"` });
     }
   }
 }
@@ -367,7 +378,12 @@ function applyKindRules(
   }
   if (kind === "landed") {
     checkLanded(body, converged, findings);
-    findings.push({ field: "kind", reason: "landed is a merge fact, not convergence evidence" });
+    // #3062: the merge queue can land the pull request before `report` runs.
+    // At `pr-convergence` the verified merge fact IS the stage's final record;
+    // anywhere else a landed report still proves nothing that stage asked for.
+    if (stage !== "pr-convergence") {
+      findings.push({ field: "kind", reason: "landed finalises the pr-convergence stage only" });
+    }
     return;
   }
   if (kind === "converged" && converged === "false") {
