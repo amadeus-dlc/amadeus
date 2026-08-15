@@ -1,6 +1,5 @@
 # アーキテクチャ
 
-## park の provenance 境界: 拒否点・受理材料・承認境界の切り分け（260814-park-provenance、履歴、observed `1d08374cd`）
 ## park の provenance 境界: 拒否点・受理材料・承認境界の切り分け（260814-park-provenance、履歴、observed `1d08374cd`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: observed = `1d08374cd7e4ef89637b4a8000bab3fcf1a0f780`（`origin/main`、PR #3037 着地）。差分 base = `cd64486a68c6a1144db50fbe3fde8273f5e18455`（observed の祖先で距離 **6**）。本 worktree HEAD は observed を merge した conductor tree で、非 `amadeus/` ツリーは observed とバイト等価（`git diff --stat 1d08374cd HEAD -- ':!amadeus/'` 空 / exit 0）。検索述語と全数列挙は `re-scans/260814-park-provenance.md` を正本とし、本節は構造だけを転記する。
@@ -5060,7 +5059,6 @@ flowchart LR
 
 「`questions[]` を1選挙へ直接持たせる」か「子選挙を親 ID 配下で束ねる」かは後続設計の判断事項である。ただし、現行 store と transport を最小変更にし、1 voter file に response 配列を持てる前者は観測された構造との適合度が高い。これは RE 時点の候補評価であり ADR 決定ではない。
 
-## Issue #2985 Bolt / Unit / PR 証跡アーキテクチャ（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
 ## Issue #2985 Bolt / Unit / PR 証跡アーキテクチャ（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 ### 現行スタイルと責務境界
@@ -5203,7 +5201,7 @@ engine は階層 config を読む能力と fail-closed の作法を既に持つ�
 
 区間 4 コミット（`cd64486a6` / `fb1939dfd` / `f60b3f4c8` / `da0acecdd`）、`89 files changed, 3129 insertions(+), 4 deletions(-)`。着地面は `amadeus/spaces/default/`・`metrics/`・`tests/harness/fixtures.ts`・`tests/integration/t-fixtures-copy-tree-retry.integration.test.ts`・`amadeus/spaces/default/memory/project.md` のみで、**`packages/` 配下の変更は 0 件**。本節の患部にこの区間は一切触れていない。
 
-## オープンバグ5件のアーキテクチャ上の位置づけ（260814-open-bug-batch-6、現在、observed `a49f9e9fd`）
+## オープンバグ5件のアーキテクチャ上の位置づけ（260814-open-bug-batch-6、履歴、observed `a49f9e9fd`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-priority-bug-batch-2 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 ### 横断パターン — 「表現できるのに受理しない」と「実在するのに宣言されない」
 
@@ -5284,7 +5282,7 @@ engine は階層 config を読む能力と fail-closed の作法を既に持つ�
 
 `pr-convergence` → `github-pr-convergence` の rename で、**プラグイン名と stage slug が独立した鍵として機能している**ことが確認できた。`amadeus/config.json` の `scope-bindings` は外側がプラグイン名、内側が stage slug という二段構造を持ち、rename では外側だけが追随した。プラグイン名を鍵にする消費者の棚卸しは、stage slug を鍵にする消費者と別軸で行う必要がある（`cid:application-design:dual-key-consumer-inventory` の適用例）。
 
-## plugin 設定のレイヤ解決と、plugin 投影経路の現況（260814-priority-bug-batch、現在、observed `d64fd7cac`）
+## plugin 設定のレイヤ解決と、plugin 投影経路の現況（260814-priority-bug-batch、履歴、observed `d64fd7cac`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-priority-bug-batch-2 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: base `1d08374cd7e4ef89637b4a8000bab3fcf1a0f780` → observed `d64fd7cac049d7c2cda7dd7dc7d9d0a652ff02d7`。
 
@@ -5351,3 +5349,49 @@ plugin.json の settings 宣言          amadeus/config.json の plugin.settings
 - **#3040 — settle 済み child を timeout として分類する状態遷移**。`packages/framework/harness/pi/drivers/amadeus-pi-driver.ts:541-546` の timeout と `:554-557` の `cleanupTimer`（`CLEANUP_WAIT_MS = 2_000`、`:30`）が `:558` の `Promise.race` で競合する。guardian が `agent_settled` を観測して child の stdin を閉じる（`amadeus-pi-guardian.ts:321`）以降は「正常終了待ち」であり、それを timeout 予算の下に置く現行の分類は意味論として正しくない。テスト予算の調整ではなく driver の状態遷移側の是正が筋の通る方向である。
 - **#3035 — 性能 assert の測定境界**。`tests/unit/t07-hook-audit-logger.serial.test.ts:401-406` の 300ms 予算は `Bun.spawnSync` を挟んだ壁時計であり、bun のコールドスタートを含む（同ファイル `:396-397` のコメントが逐語で `The .sh measured bun cold-start + the logging path` と述べる）。skip path の実処理は数 ms であるため、この assert は実質 CI マシンの空き具合を測っている。
 - **#3034 — テスト隔離の境界破れ**。`tests/integration/t2851-doctor-self-install-freshness.serial.test.ts:78-87` の fixture が live repo の `scripts/promote-self.ts --check` を spawn する薄いラッパであり、`scripts/promote-self.ts:57` の `REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")` が自ファイル位置から repo root を解決するため、`packages/framework/core/tools/amadeus-utility.ts:1589-1602` が渡す `cwd: projectDir` は構造的に無効である。`isSelfDevWorkspace`（同 `:1017-1019`）が `scripts/promote-self.ts` の存在だけを見るため、fixture を置いた瞬間に live 検査経路へ入る。
+
+## 選挙の保存 digest 契約の不整合と、recompose ガードの層境界（260815-priority-bug-batch-2、現在、observed `9ba8170bb`）
+
+**観測 ref**: observed `9ba8170bb03996fb98b497cfcbac3d207795018d`（base `a49f9e9fd`）。本区間にアーキテクチャ変更はない。本節が記録するのは、既存構造の中に確定した**不変条件違反 1 件**と、修正方向を規定する**層境界 1 件**である。
+
+### 既知の不変条件違反: `preservedResultDigest` を生産側と検証側が逆に定義している（#3077）
+
+選挙の再 tally は「前回の tally で established になった結果を保存し、hold だった question だけを取り直す」設計である。その保存の証明が `preservedResultDigest` であり、**生産（CLI 側）と検証（store 側）が同じフィールドに互いに矛盾する要求を課している。**
+
+| 側 | 所在 | 要求 |
+|---|---|---|
+| 生産 | `packages/framework/core/tools/amadeus-election.ts:451`（`tallyElection`） | `currentTally === null` のときだけ `null`。それ以外は directive の値をそのまま書く |
+| 検証 | `packages/framework/core/tools/amadeus-election-store.ts:728-729`（`verifyPreservation`、`commitTally` から呼ばれる） | `targets.size === definition.questions.length` のとき **`null` であること**。非 null なら `history-mismatch` |
+
+2 つの条件は独立であり、**全 question を再 tally する run**（前者の枝は「currentTally 非 null」なので通り、後者は「null であれ」を要求する）で必ず衝突する。以下の連鎖はすべて実読で確定した:
+
+1. `directiveFromSnapshot`（`:148`、digest の決定は `:154-159`）は `snapshot.currentTally !== null` のとき `digest = ElectionStore.establishedResultsDigest(...)` を入れる。この関数（`amadeus-election-codec.ts:840`）は established 結果だけを payload に集めて `canonicalContractValueDigest`（`:868`）でハッシュするため、**established が 0 件でも空 payload のハッシュ文字列が返り、`null` にはならない**。
+2. `currentTargets`（`:119-127`）は `currentTally !== null` のとき hold の question 集合を targets にする。**question が 1 件の選挙でその 1 件が hold になると、targets は必然的に全 question を覆う。**
+3. `tallyElection`（`:424`）は `:451` で 1. の非 null 値を書き、`commitTally` → `verifyPreservation` が 2. により `null` を要求して `history-mismatch` を返す。
+4. リペア経路も救わない。`isCommittedRun`（`:419-420`）は `expectedRunId !== null`（再 tally では `base` `:144` が `currentTally.runId` を入れる）のとき**非 null の digest 一致**を期待するため、store が求める `null` とは両立しない。
+
+したがって不能は確率的ではなく構造的である。**単一 question の選挙は「hold が出た瞬間に以後 tally を commit できない」**が帰結で、これは Issue の主張より広い — 単一 question に限らず、**全 question を再 tally するすべての run**が同じ経路に入る。
+
+**修正方向の設計上の帰結**: 意味論の側から見ると正しいのは store 側である。全 question を再 tally する run には保存すべき established 結果が存在しないので、`preservedResultDigest` は `null` であるべきである。したがって最小の是正は生産側 `:451` の条件を「`currentTally === null` **または** targets が全 question を覆う」へ広げることであり、`isCommittedRun` `:419-420` の期待式も同じ述語へ揃える必要がある（2 箇所を別々に直すと、commit は通るがリペア経路が落ちる）。**述語を 1 か所へ括り出して両者から呼ぶ形が、この不整合の再発を構造的に防ぐ。**
+
+### 層境界: `assertRecomposeAllowed` は state/audit を読めない側にいる（#3074）
+
+`assertRecomposeAllowed`（`packages/framework/core/tools/amadeus-lib.ts:564-573`）は autonomy 一値だけを見る純射影で、doc コメントが逐語でその位置づけを宣言する:
+
+> Pure policy projection; callers own user-visible refusal and mutation ordering.
+
+拒否メッセージ（`amadeus-utility.ts:5805`）は "Cannot recompose during autonomous Construction" と Construction を名指すが、判定材料に phase が入っていないため、**Construction 以外の phase でも autonomous というだけで recompose が拒否される**。修正材料の可否は層境界で決まる。
+
+**依存方向の実測**（`amadeus-lib.ts` は 9049 行、`wc -l`）:
+
+- `amadeus-state.ts` と `amadeus-audit.ts` は `amadeus-lib.ts` を **import する側**である（`amadeus-audit.ts:31` の `} from "./amadeus-lib.ts";`）。逆向きの import 文は存在しない — `git grep -n "amadeus-state\.ts\|amadeus-audit\.ts" -- amadeus-lib.ts` のヒットはすべて散文コメント中の言及である。
+- 唯一の実行時の抜け道は `emitErrorAuditRow`（`:8066-8076`）の遅延 `require("../otel/audit-emit.ts")`（`:8074`）で、コメント `:8060-8065` が「top-level import は lib.ts ↔ otel の循環を module-init 時に閉じてしまうため lazy にする」と逐語で理由を述べる。これは**エラー行の emit 専用の一方向出口**であり、読取面ではない。
+
+この境界から、#3074 の 2 つの判定軸は非対称である:
+
+| 軸 | 可否 | 根拠 |
+|---|---|---|
+| **phase** | 追加できる（層を壊さない） | 呼び出し側 `assertRecomposeStateAllowed`（`amadeus-utility.ts:5793`）が state ファイルの全文 `content` を既に受け取っており、同ファイル `:391` に `getField(content, "Lifecycle Phase")` の既存イディオムがある。純関数に引数を 1 つ足すだけで、新しい読取面は生じない |
+| **swarm in-flight** | 追加すると層が反転する | state ファイルに swarm のフィールドが**存在しない**（`git grep -nE "[Ss]warm" -- packages/framework/core/tools/amadeus-state.ts` → 5 hit がすべてコメント行）。一次記録は監査イベント（`SWARM_UNIT_STARTED` / `SWARM_UNIT_CONVERGED`）側にあり、これを純射影から読むには lib → audit の依存を新設することになる |
+
+**設計判断（エスカレーション対象）**: swarm 軸を要件が必須とする場合、それを `assertRecomposeAllowed` の中で解決してはならない。呼び出し側 `assertRecomposeStateAllowed` が監査から導出して第 3 引数として渡す形にすれば境界は保たれるが、これは「純射影に何を渡すか」の設計変更であり、実装者が単独で決める事項ではない。**phase 軸のみを足す**案は既存の層構造に完全に収まるため、要件が phase だけを求めるなら追加裁定は要らない。

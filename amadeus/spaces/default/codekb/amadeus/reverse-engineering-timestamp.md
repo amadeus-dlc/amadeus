@@ -1,6 +1,25 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260814-open-bug-batch-6）
+## 実行メタデータ（現在: 260815-priority-bug-batch-2）
+
+- Date: `2026-08-15`
+- Base commit: `a49f9e9fdbd19fd40e9374feba77e9360771d173`（observed の祖先で距離**最小**。`git merge-base --is-ancestor a49f9e9fd HEAD` → **exit 0**、`git rev-list --count a49f9e9fd..HEAD` → **9**。対抗候補 `d64fd7cac`（直前 intent の observed）は距離 **10** で劣る。`cid:reverse-engineering:rescan-base-ancestry`）
+- Observed commit: `9ba8170bb03996fb98b497cfcbac3d207795018d`（本 worktree HEAD = `git rev-parse HEAD` → 同一値。`origin/main` 系譜のコミット。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、depth `Minimal`、build `bun`
+- Focus: 優先バグ 4 件 — [#3077](https://github.com/amadeus-dlc/amadeus/issues/3077)（単一 question 選挙の hold 再 tally が構造的に commit 不能）/ [#3074](https://github.com/amadeus-dlc/amadeus/issues/3074)（`assertRecomposeAllowed` が phase・swarm を見ない）/ [#3075](https://github.com/amadeus-dlc/amadeus/issues/3075)（時間予算アサーションの全数棚卸し）/ [#3079](https://github.com/amadeus-dlc/amadeus/issues/3079)（t224 symlink ケースの timeout 未宣言）+ base..observed の差分全域
+- Scan mode: **通常の差分リフレッシュ**（xrev differential 不採用。理由は `re-scans/260815-priority-bug-batch-2.md` §1）
+- 差分規模: `git rev-list --count a49f9e9fd..HEAD` → **9** コミット。`git diff --stat a49f9e9fd HEAD -- ':!amadeus/' ':!metrics/'` → **10 files changed, 332 insertions(+), 67 deletions(-)**
+- 構造変化: **なし**。非 `amadeus/` の実体変化は PR [#3076](https://github.com/amadeus-dlc/amadeus/pull/3076)（test-signal バグ 4 件の修正）と PR #3072（autonomy 修正）の 2 本のみで、残る 7 コミットは record / RFC / metrics / ノルム文書である。パッケージ境界・エンジン・state 機械はいずれも無変更。唯一の新規コンポーネントは `packages/framework/core/tools/amadeus-migrate-git.ts`（**32 行**、`wc -l` および `git log --numstat --diff-filter=A` がともに 32）
+- 中核知見: **#3077** — 生産側 `amadeus-election.ts:451` と検証側 `amadeus-election-store.ts:728-729` が `preservedResultDigest` に**逆の真理値を要求**する。全 question を再 tally する run では store が `null` を要求し、生産側は `currentTally !== null` の枝で必ず非 null を書くため commit が決定的に `history-mismatch` で落ちる。単一 question 選挙は「hold → 再 tally」が必然的にこの条件へ入るため恒常的に不能。**#3074** — `amadeus-lib.ts:564-573` は autonomy 一値のみの純射影で、拒否文言が Construction を名指すのに phase を判定材料に持たない。phase は呼び出し側（`amadeus-utility.ts:5793` が state 全文 `content` を保持）から渡せるが、swarm in-flight は **state に一切フィールドが無い**（`git grep -nE "[Ss]warm" -- amadeus-state.ts` → 5 hit がすべてコメント）ため監査シャード走査という新しい読取面を要する。**#3075** — 現存 **24 行**（述語は `re-scans` §3）。ただし Issue が「単位要確認」と留保した `t487-stage-stats.integration.test.ts:426` は **ミリ秒ではなく秒**である（`:424` で `/1000` 済み = 60 秒の上限）。**#3079** — 主因は migrate CLI の spawn 回数ではなく**監査ロック取得予算**（`amadeus-audit.ts:1011-1014` の既定 200×100ms = 20 秒）で、既存の `AMADEUS_AUDIT_LOCK_RETRIES` env がそのまま短縮シームになる
+- 上流報告からの訂正（申し送り）: (a) `amadeus-migrate-git.ts` は 31 行ではなく **32 行** (b) t487:426 の 60 は ms ではなく**秒**であり、A 群（最短 250ms）への再分類は成立しない — 実際には最も余裕のある C 群側の値である (c) 患部の行ピン 2 件がずれている — `amadeus-election.ts` の digest 生産は `:450` ではなく **`:451`**、`amadeus-election-store.ts` の全 question 分岐は `:727-729` ではなく **`:728-729`**（いずれも `grep -n` で再取得） (d) observed は本スキャン時点で `origin/main`（`0901182c7`）と**同一ではない**（祖先、距離 3。非 `amadeus/` の差分 7 ファイル）。詳細と帰属は `re-scans/260815-priority-bug-batch-2.md` §2 / §4
+- 未検証面: #3075 の A/B/C 再分類のうち「負荷下実測の倍率」は未測定（本スキャンは現存箇所の列挙と件数、および t487 の単位のみを実測）/ #3074 の swarm in-flight を監査シャードから導出できるかは、イベント名を持つファイルの特定までで実際の可読性は未確認 / 既存テストスイートのベースライン（本スキャンは読取専用でフルスイート未実行）
+- Verification: git 状態変更（commit / branch / checkout / stash / merge）・GitHub 書込・engine/state ツール実行（`amadeus-orchestrate` / `-state` / `-log` / `-bolt`）・`bun run build` は**すべてゼロ**。書き込みは `codekb/amadeus/` 配下のみで、`amadeus/spaces/default/intents/` へは一切書き込んでいない
+- Updated artifacts: `re-scans/260815-priority-bug-batch-2.md`（新規）/ `reverse-engineering-timestamp.md`（本節）/ `code-structure.md` / `code-quality-assessment.md` / `architecture.md` / `component-inventory.md`（各 1 節を追記）
+- Reviewed-and-unchanged artifacts: `api-documentation.md` / `business-overview.md` / `dependencies.md` / `technology-stack.md`（区間に公開契約・業務境界・依存エッジ・技術スタックの変化がないため本文無変更。見出し行のみ後述の降格・重複削除の対象。実測は `re-scans` §6）。**これら 4 面は本 intent の節を持たないため、後続ステージが本 intent の事実の出典として引くことはできない**（`cid:requirements-analysis:c4-consume-header-is-not-citable-content`）
+- 構造補修: 旧 intent 節の現在時制マーカー **18 件**を履歴へ降格（`cid:reverse-engineering:c1`）。あわせて直前リフレッシュが残した**重複 H2 見出し 15 件**を削除した（詳細は `re-scans/260815-priority-bug-batch-2.md` §5）
+- Per-intent record: `re-scans/260815-priority-bug-batch-2.md`
+
+## 実行メタデータ（履歴: 260814-open-bug-batch-6）
 
 - Date: `2026-08-15`
 - Base commit: `1d08374cd7e4ef89637b4a8000bab3fcf1a0f780`（本 intent に先行スキャンが無いため、`re-scans/` 中で**最も新しい observed commit** を採る規則に従い `260814-park-provenance.md` の observed を base とした。祖先性の実測: `git merge-base --is-ancestor 1d08374cd7e4ef89637b4a8000bab3fcf1a0f780 a49f9e9fdbd19fd40e9374feba77e9360771d173` → **exit 0**。`cid:reverse-engineering:rescan-base-ancestry`）
@@ -18,7 +37,7 @@
 - Updated artifacts: `re-scans/260814-open-bug-batch-6.md`（新規）/ `reverse-engineering-timestamp.md`（本節）/ 本体 8 点すべてに本 intent の現在節を追記（`business-overview.md` / `architecture.md` / `code-structure.md` / `api-documentation.md` / `component-inventory.md` / `technology-stack.md` / `dependencies.md` / `code-quality-assessment.md`）。旧 intent 節の現在時制マーカー **15 件**を履歴へ降格（本文は保持、`cid:reverse-engineering:c1` / `c3-relabel`。降格後の残存を `grep -c '、現在、observed\|（現在、observed\|（現在、Issue'` で **全 8 ファイル 0 件**と実測）
 - Reviewed-and-unchanged artifacts: なし（本 intent は 8 本体すべてに節を持つ）
 - Per-intent record: `re-scans/260814-open-bug-batch-6.md`
-## 実行メタデータ（現在: 260814-priority-bug-batch）
+## 実行メタデータ（履歴: 260814-priority-bug-batch）
 
 - Date: `2026-08-15`
 - Base commit: `1d08374cd7e4ef89637b4a8000bab3fcf1a0f780`（`reverse-engineering-timestamp.md` + `re-scans/*.md` の全 40-hex トークン **168 件**のうち、**observed の祖先で距離最小**。`git merge-base --is-ancestor 1d08374cd d64fd7cac` = **exit 0**、`git rev-list --count 1d08374cd..d64fd7cac` = **23**。対抗は `cd64486a6` で距離 **29**。トークン集合は追記前の committed tree（`git show HEAD:<path>`）から採取したため、本節の追記による自己参照はない。`cid:reverse-engineering:rescan-base-ancestry`）

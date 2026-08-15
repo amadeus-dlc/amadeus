@@ -1,6 +1,5 @@
 # API ドキュメント
 
-## Lifecycle Guard Runtime の公開契約と新設リファレンス（260814-fmc-macos-provider、履歴、observed `5f6b5bf97`）
 ## Lifecycle Guard Runtime の公開契約と新設リファレンス（260814-fmc-macos-provider、履歴、observed `5f6b5bf97`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: observed = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`、差分 base = `89532174c30ef9cc7ff29496cd6916586fdda00a`（9 commits）。正本は `re-scans/260814-fmc-macos-provider.md`。
@@ -1901,7 +1900,6 @@ Store の読み取り API は次の単問 shape を返す。
 
 後方読み取りは「旧 definition を新 canonical model の1問へ decode」する API 境界で実現し、新形式専用 parser へ即時置換して既存 `election.json` を読めなくすることはできない。`readTally` の raw JSON cast と `JSON.stringify` 同士の tally equality は、多問 schema 導入時に typed parser / canonical equality へ置き換える必要がある。
 
-## PR convergence 契約（履歴、Issue #2985、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
 ## PR convergence 契約（履歴、Issue #2985、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 ### CLI
@@ -2014,7 +2012,7 @@ Unit "<unit>" failed during <stageSlug> (attempt <n>, batch <b>; siblings: <unit
 
 型面は `:94`（`soloElection: Readonly<{...}>`）、解決は `:771-775`（`mode: value("solo-election.trigger.mode") as SoloElectionTriggerMode`）。`ALL_LAYERS` により project / space / intent の 3 層で解決される。
 
-## 260814-open-bug-batch-6 の契約断面（現在、observed `a49f9e9fd`）
+## 260814-open-bug-batch-6 の契約断面（履歴、observed `a49f9e9fd`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-priority-bug-batch-2 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 ### `pr-convergence-cli.ts` の verb 契約（#3062）
 
@@ -2066,7 +2064,7 @@ Issue #3062 は landed 拒否を stage 条件付きと記すが、**実装は st
 
 `otel/bootstrap.ts:45 assertSameProject` の契約: 登録済み workspace と要求 workspace の不一致で throw（メッセージ末尾 `invariant violation (one workspace per process)`）。**この throw は `emitError` の catch に握り潰されるため、呼び出し側からは no-op と区別がつかない。**
 
-## 選挙 CLI の多問化とプラグイン設定の公開契約（260814-priority-bug-batch、現在、observed `d64fd7cac`）
+## 選挙 CLI の多問化とプラグイン設定の公開契約（260814-priority-bug-batch、履歴、observed `d64fd7cac`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-priority-bug-batch-2 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: base `1d08374cd7e4ef89637b4a8000bab3fcf1a0f780` → observed `d64fd7cac049d7c2cda7dd7dc7d9d0a652ff02d7`。本節は本区間で API 断面が変わった 3 系統（選挙 / plugin.settings / プラグインパスの rename）をシグネチャ水準で記録する。全エクスポート面は `grep -n "^export " <file>` の出力から転記した。
 

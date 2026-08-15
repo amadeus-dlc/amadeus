@@ -1,6 +1,5 @@
 # コード構造
 
-## Focus Area: undefined 形の回帰テストが要求するシーム（260814-ambient-error-sink、履歴、observed `6e94189de`）
 ## Focus Area: undefined 形の回帰テストが要求するシーム（260814-ambient-error-sink、履歴、observed `6e94189de`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 対象: [Issue #3004](https://github.com/amadeus-dlc/amadeus/issues/3004)。測定 ref = observed `6e94189dec9e8e2bd0aaeb53bcff7cf9cba27440`。本節は**落ちる実証を成立させるために必要なテスト構造**を記録する（テストの設計自体は build-and-test / code-generation の所掌）。
@@ -206,7 +205,6 @@ tests/harness/fixtures.ts
 
 実装順の依存は `canonical model + legacy decoder` → `question tally + mixed/preservation` → `store/CLI/directive/record/skill/transport` → `migration/TLA/model-map/norm` → `build/test/CI` である。generated `dist/` と self-install surface は編集元にせず、正本変更後に build で同期する。
 
-## Issue #2985 の患部配置（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
 ## Issue #2985 の患部配置（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 | パス | 責務 | #2985 との関係 |
@@ -254,7 +252,7 @@ tests/harness/fixtures.ts
 
 base `d7ffaa544` → observed `cd64486a6` の 4 コミットは `packages/` を 1 行も変更していない。したがって上表の構造は前回スキャン断面から不変であり、クロスレビュー target-sha `52f1f1b25` 以後に患部 4 ファイルへ触れたのは `d7ffaa544`（Bolt PR attestation、`amadeus-orchestrate.ts` のみ 167 insertions / 8 deletions）の 1 件だけである。分岐構造は保たれ、行番号のみ移動した（クロスレビュー時の `:4063-4068` → HEAD `:4069-4075`）。
 
-## Focus Area: オープンバグ5件の患部配置（260814-open-bug-batch-6、現在、observed `a49f9e9fd`）
+## Focus Area: オープンバグ5件の患部配置（260814-open-bug-batch-6、履歴、observed `a49f9e9fd`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-priority-bug-batch-2 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 ### 本区間で動いた構造 — プラグイン rename
 
@@ -288,7 +286,7 @@ base `d7ffaa544` → observed `cd64486a6` の 4 コミットは `packages/` を 
 
 Issue #3031 は `:160-175` / `:169` を引くが、observed 断面では対象テストが `:172-188`、失敗点が `:180`。本区間の PR #3056 が git ヘルパへ 12 行追加したことによる drift である。
 
-## 差分リフレッシュで観測した構造変化（260814-priority-bug-batch、現在、observed `d64fd7cac`）
+## 差分リフレッシュで観測した構造変化（260814-priority-bug-batch、履歴、observed `d64fd7cac`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-priority-bug-batch-2 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: base `1d08374cd7e4ef89637b4a8000bab3fcf1a0f780` → observed `d64fd7cac049d7c2cda7dd7dc7d9d0a652ff02d7`（23 コミット、`git rev-list --count 1d08374cd..HEAD`。185 files / +14769 −6942、`git diff --stat 1d08374cd HEAD -- ':!amadeus/'`）。
 
@@ -341,3 +339,45 @@ Issue #3031 は `:160-175` / `:169` を引くが、observed 断面では対象�
 | #3034 | `tests/integration/t2851-doctor-self-install-freshness.serial.test.ts`（`repositoryCheckFixture` :78-87）/ `packages/framework/core/tools/amadeus-utility.ts`（`selfInstallProjectionDoctorChecks` :1589-1602、`isSelfDevWorkspace` :1017-1019）/ `scripts/promote-self.ts`（`REPO_ROOT` :57） |
 | #3040 | `tests/integration/t-pi-child-driver.integration.test.ts`（:177-185）/ `packages/framework/harness/pi/drivers/amadeus-pi-driver.ts`（:541-558、`CLEANUP_WAIT_MS` :30）/ `amadeus-pi-guardian.ts`（:82-87、:321）/ `tests/fixtures/pi-driver/fake-pi.ts:60` |
 | #3035 | `tests/unit/t07-hook-audit-logger.serial.test.ts`（:401-406）。Issue 本文の `:395-400` から 6 行ずれている（`05da1758c` が `amadeus-plugin-settings.ts` の fixture コピー 6 行を追加、`git show --numstat 05da1758c -- <file>` → `6 0`） |
+
+## 差分リフレッシュで観測した構造変化（260815-priority-bug-batch-2、現在、observed `9ba8170bb`）
+
+**観測 ref**: base `a49f9e9fdbd19fd40e9374feba77e9360771d173` → observed `9ba8170bb03996fb98b497cfcbac3d207795018d`（9 コミット、`git rev-list --count a49f9e9fd..HEAD`。10 files / +332 −67、`git diff --stat a49f9e9fd HEAD -- ':!amadeus/' ':!metrics/'`）。
+
+**構造変化は実質ゼロである。** パッケージ境界（`packages/framework/core/` / `packages/framework/harness/<name>/`）、エンジン、state 機械、プラグイン集合（4 プラグイン）はいずれも無変更で、9 コミットのうち非 `amadeus/` の実体を動かしたのは PR #3076（test-signal バグ 4 件の修正）と PR #3072（autonomy 修正）の 2 本だけである。残る 7 コミットは record / RFC / metrics / ノルム文書に閉じる。
+
+### 区間で動いた 10 ファイル（`git diff --numstat` からの転記）
+
+| ファイル | ± | 役割 |
+|---|---|---|
+| `packages/framework/core/tools/amadeus-migrate-git.ts` | **+32 / −0（新規）** | migrate の git spawn 判定を単独モジュールへ切り出し |
+| `packages/framework/core/tools/amadeus-migrate.ts` | +2 / −5 | `git()`（`:452`）が判定を新モジュールへ委譲。`:32` で `normalizeGitOutcome` を import |
+| `scripts/no-silent-drop-evidence-adapter.ts` | +17 / −1 | `git ls-tree` の部分読みに対するリトライ |
+| `packages/framework/harness/pi/drivers/amadeus-pi-driver.ts` | +4 / −0 | settled child の判定 |
+| `tests/fixtures/pi-driver/fake-pi.ts` | +10 / −2 | 上記に対応する fixture |
+| `tests/unit/t07-hook-audit-logger.serial.test.ts` | +24 / −15 | 壁時計予算 2 件の撤去（#3035 の着地） |
+| `tests/integration/t2851-doctor-self-install-freshness.serial.test.ts` | +91 / −44 | clean-checkout ゲート（#3034 の着地） |
+| `tests/integration/t226-migration-routing-in-process.test.ts` | +75 / −0 | `normalizeGitOutcome` の直接検証（`:22` で import） |
+| `tests/integration/t499-no-silent-drop-spawn-failclosed.integration.test.ts` | +58 / −0 | spawn fail-closed の固定 |
+| `tests/integration/t-pi-child-driver.integration.test.ts` | +19 / −0 | settled child ケース（#3040 の着地） |
+
+### 新規モジュール `amadeus-migrate-git.ts` — 切り出しの理由が coverage 母集団にある
+
+**32 行**（`wc -l` = 32、`git log --numstat --diff-filter=A` = `32 0`。上流スキャン報告の「31 行」は本スキャンの実測と一致しない）。エクスポートは `GitSpawnOutcome`（`:7`）と `normalizeGitOutcome`（`:19`）の 2 面のみで、判定内容は「`error` が立った spawn は exit code に関わらず ok にしない」である。
+
+配置上の要点は、**この 32 行が `amadeus-migrate.ts`（3847 行）から切り出された理由がテスト容易性だけでなく coverage 母集団の制御にある**ことである。ファイル冒頭のコメントが逐語でテスト側の動機を述べる:
+
+> The Git spawn verdict used by the migration tool, in its own module so a test can drive it without importing the migration tool itself.
+
+`amadeus-migrate.ts` 全体を in-process import すると、CLI として spawn 実行されるだけの大型ファイルが lcov の母集団へ丸ごと入り、未カバー行が分母を膨張させて Project Coverage Gate の相対条件（許容 0.02pp）を構造的に赤くする。この失敗様式と是正（waiver ではなく小モジュールへの切り出し）は既にノルム `cid:build-and-test:bt-coverage-universe-inflation` として蒸留されており、本モジュールはその適用例である。**同種の切り出し判断の前例として参照できる。**
+
+### 本 intent の患部 4 件の所在
+
+いずれも本区間で無変更のファイル内にあり、モジュール移動を伴わない。
+
+| Issue | 患部ファイル |
+|---|---|
+| #3077 | `packages/framework/core/tools/amadeus-election.ts`（`tallyElection` `:424`、digest 生産 `:451`、`isCommittedRun` の期待式 `:419-420`）/ `amadeus-election-store.ts`（`verifyPreservation` `:716`、全 question 分岐 `:728-729`。`commitTally` から呼ばれる） |
+| #3074 | `packages/framework/core/tools/amadeus-lib.ts`（`assertRecomposeAllowed` `:564-573`）/ `amadeus-utility.ts`（唯一の呼び出し `assertRecomposeStateAllowed` `:5793`、呼出行 `:5802`、拒否文言 `:5805`。phase 取得イディオムは同ファイル `:391` の `getField(content, "Lifecycle Phase")`） |
+| #3075 | `tests/unit/` / `tests/integration/` / `tests/e2e/` の **19 ファイル 24 行**（内訳は `code-quality-assessment.md` の対応節） |
+| #3079 | `tests/integration/t224-upstream-v2-migration-cli.test.ts`（ケース `:1553` = `symlink clone-id migration isolates distinct fixture identities that share a lock path`、ロック占有 `:1577-1582`、`migrateWithEnv` `:1584`、env `:1586`、期待 `:1597`）/ `packages/framework/core/tools/amadeus-audit.ts`（リトライ予算のコメント `:1008-1010` と `lockRetries` `:1011-1014`） |

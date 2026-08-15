@@ -1,6 +1,5 @@
 # コード品質評価
 
-## ガードの適用境界が原理を持たない — 契約が doc 止まりで違反を検出できない（260814-copytree-guard-boundary、履歴、observed `f60b3f4c8`）
 ## ガードの適用境界が原理を持たない — 契約が doc 止まりで違反を検出できない（260814-copytree-guard-boundary、履歴、observed `f60b3f4c8`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 対象: [Issue #3014](https://github.com/amadeus-dlc/amadeus/issues/3014)（`copyTreeWithRetry` のガード適用境界が非対称）。測定 ref = observed `f60b3f4c868f3b7608a06f08393b8e2f10287fad`（`git rev-parse HEAD`。`origin/main` 系譜上のコミットであり `git merge-base HEAD origin/main` = 同一 SHA。ローカル `origin/main` は本 scan 時点で 2 commits 先行 = `cd64486a6`、いずれも患部非交差）、差分 base = `5b12d96e99cbf46711acd3dc2b8c103be1b0f801`。正本は `re-scans/260814-copytree-guard-boundary.md`。以下の file:line は Architect が observed 断面で `sed` / `git grep` により verbatim 再照合した。
@@ -3576,7 +3575,6 @@ PR CI は build、typecheck、Biome lint、complexity ratchet、control-byte、n
 
 本 reverse-engineering ではテスト、build、coverage、TLC を実行していない。したがって現行 HEAD の pass/fail、coverage、state-space 規模、性能は未測定であり、コードと設定の静的観測だけを品質評価へ使った。
 
-## Issue #2985 品質評価（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
 ## Issue #2985 品質評価（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 ### 実測テスト
@@ -3598,7 +3596,6 @@ repository test files は実測 **1119**（unit 422 / integration 568 / e2e 100�
 
 #2473 は head binding、#2791 は provenance enforcement、#2358 は gate 再発行、#2359 は review 復旧、#2836 は gate:false reviewer、#2976 は solo election を扱う。#2989 は本 Intent mirror である。open implementation PR は観測されていない。Issue #2985 の Reviewer A / B comments は訂正後 CONFIRMED である。
 
-## 契約文書とエンジン実装の齟齬を拘束しないテスト面（260814-unit-failure-autoelectio、履歴、observed `cd64486a6`）
 ## 契約文書とエンジン実装の齟齬を拘束しないテスト面（260814-unit-failure-autoelectio、履歴、observed `cd64486a6`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 ### 所見 1: 文言検査が挙動検査を代替している
@@ -3619,7 +3616,7 @@ repository test files は実測 **1119**（unit 422 / integration 568 / e2e 100�
 
 `stage-protocol.md` を変更する場合、t369 が `dist/<harness>/amadeus-common/` と self-install ツリーを走査するため `bun run build` による全ハーネス投影の再生成が同一変更に必要である。ソース断面のみの green では配送先の退行を隠す（`project.md` の `cid:requirements-analysis:c2-acceptance-at-delivery-tree`）。
 
-## オープンバグ5件の品質評価（260814-open-bug-batch-6、現在、observed `a49f9e9fd`）
+## オープンバグ5件の品質評価（260814-open-bug-batch-6、履歴、observed `a49f9e9fd`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-priority-bug-batch-2 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 ### 現状の確定事項（実測に基づく成立判定）
 
@@ -3675,7 +3672,7 @@ Issue の受け入れ条件 1（「再発時に exit 128 の本文が assert メ
 - `tests/.coverage-patch-allowlist.json` — `amadeus-plugin-compose.ts` などの署名行が動く場合は意味的セレクタの再アンカーが必要
 - `amadeus/spaces/default/specs/tla/model-map.json` — 本 Focus は選挙系に非接触のため通常は不要だが、`amadeus-orchestrate.ts` を触る場合は実装ハッシュピンの resync が要る
 
-## blocking sensor の在庫と fail-closed 化、および実時間予算に依存する検証面（260814-priority-bug-batch、現在、observed `d64fd7cac`）
+## blocking sensor の在庫と fail-closed 化、および実時間予算に依存する検証面（260814-priority-bug-batch、履歴、observed `d64fd7cac`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-priority-bug-batch-2 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: base `1d08374cd7e4ef89637b4a8000bab3fcf1a0f780` → observed `d64fd7cac049d7c2cda7dd7dc7d9d0a652ff02d7`。
 
@@ -3725,3 +3722,59 @@ Issue の受け入れ条件 1（「再発時に exit 128 の本文が assert メ
 なお #3065 の患部には**契約の非対称**という別種の債務も含まれる。同じ「git を spawn して stdout を読む」責務に対し、`scripts/no-silent-drop-evidence-adapter.ts` の `systemCommandRunner`（`:62-76`）は `normalizeSpawnOutcome`（`:45-60`）で `result.error` を見て非ゼロへ潰す fail-closed 正規化を持つのに対し、`packages/framework/core/tools/amadeus-migrate.ts` の `git()`（`:439-455`）は `result.status === 0` だけで ok を決め `error` を一切見ない。後者では負荷時の spawn エラー（status = null）が無音で `ok: false` になり、preflight checks が全 pass のまま migration が失敗判定 → rollback → 非ゼロ exit という t224 の観測（`tests/integration/t224-upstream-v2-migration-cli.test.ts:301` の逐語 `"migration subprocess exit status mismatch"`）に整合する。
 
 [#3034](https://github.com/amadeus-dlc/amadeus/issues/3034) だけは別クラスで、テスト隔離の破れである。`tests/integration/t2851-doctor-self-install-freshness.serial.test.ts:78-87` の `repositoryCheckFixture` が live repo の `scripts/promote-self.ts --check` を spawn する薄いラッパであるため、`cwd: projectDir` では隔離できない（`scripts/promote-self.ts:57` が自ファイル位置から `REPO_ROOT` を解決する）。同ファイル `:66-76` の `strictCheckFixture` は exit code をハードコードした自己完結スクリプトで正しく隔離されており、壊れているのは最終ケース 1 件のみである。是正方向のうち「`promote-self.ts` に repo root の明示指定を足す」案は、construction.md § Testing Standards の「テストダブル・fixture 専用の分岐やモードを本番コードに置かない」に触れうるため、採るなら port として設計する必要がある。
+
+## テスト信号の偽陽性クラス — 壁時計予算アサーションの全数と構造（260815-priority-bug-batch-2、現在、observed `9ba8170bb`）
+
+**観測 ref**: observed `9ba8170bb03996fb98b497cfcbac3d207795018d`（base `a49f9e9fd`）。本 intent の 4 Issue（#3077 / #3074 / #3075 / #3079）のうち 3 件（#3075 / #3079 と、直前区間で着地した #3035 / #3040）は同一の債務クラスに属する — **本番の欠陥ではなく、テストが実時間を信号に使っているために負荷下で偽陽性を出す**面である。#3077 / #3074 は本番ロジックの欠陥であり別クラスに属する。
+
+### 債務: 壁時計予算に依存する検証面が 19 ファイル 24 行に残存する
+
+述語（worktree ルート、再実行可能。exit 0）:
+
+```sh
+git grep -n -E "toBeLessThan(OrEqual)?\(" -- 'tests/unit/*.ts' 'tests/integration/*.ts' 'tests/e2e/*.ts' \
+  | grep -E "elapsed|duration|Ms\)|journeyMs|performance" | grep -v indexOf
+```
+
+→ **24 行 / 19 ファイル**（`wc -l` と `cut -d: -f1 | sort -u | wc -l` からの転記）。層別は unit 6 / integration 16 / e2e 2。ファイル別に複数行を持つのは `tests/unit/t-otel-stacktrace-redaction.test.ts`（4 行: `:317` `:331` `:348` `:361`）、`tests/integration/t370-canonical-lock-target.integration.test.ts`（2 行: `:167` `:251`）、`tests/integration/book-pack-verify.serial.test.ts`（2 行: `:117` `:118`）の 3 ファイルのみで、残る 16 ファイルは各 1 行である。
+
+直前区間（PR #3076）で `tests/unit/t07-hook-audit-logger.serial.test.ts` の 2 行が撤去されており（現行の `grep -c "toBeLessThan"` → **0**）、24 は撤去後の値である。Issue #3075 本文が測定 tree `d64fd7cac` で記す集計値「27」は、Issue 自身の A/B/C 列挙（26 行）とも一致せず、本スキャンの実測とも一致しない。**現存箇所の集合は Issue の列挙と一致しており、ずれているのは Issue 本文の集計値だけである。**
+
+### 構造による下位分類 — 24 行は一様ではない
+
+Issue の A/B/C は「NFR trace の有無」と「負荷下実測の倍率」で分類するが、後者は本スキャンで**未測定**である。代わりに、実読で機械的に確定する構造の違いを記録する。是正方式が分類ごとに異なるため、A/B/C 確定作業の入力として使える。
+
+| 型 | 件数 | 該当 | 性質 |
+|---|---|---|---|
+| **差分型**（相対比較） | 1 | `tests/integration/t259-guard-integration.test.ts:218-219`（`p95(archived) − p95(allowed) ≤ 100`） | baseline 系列と対象系列を**同一実行内で**測っているため、負荷は両系列に等しく乗る。絶対予算とは失敗様式が異なり、`cid:code-generation:c1-threshold-inside-observed-range` が警告する「空ウィンドウ baseline による絶対判定への無音退化」には該当しない |
+| **契約由来定数型** | 3 | `book-pack-verify.serial.test.ts:117`（`PROBE_VERIFIER_TIMEOUT_MS` = 1_000、定義 `:41`）/ `:118`（`PROBE_TEST_TIMEOUT_MS` = 1_500、定義 `:43`）/ `t448-pr-convergence-cli.integration.test.ts:1917` | 検証対象そのものが宣言する timeout を上限に使う。すなわち「timeout 機構が働いたこと」の検証であり、無関係な性能目標ではない。t448 は `sleep 30` を budget で打ち切れたことを固定する形（`:1913-1917`） |
+| **絶対壁時計型** | 20 | 上記以外 | 実行環境の速度が合否を決める。負荷下の偽陽性はこの型に集中する |
+
+### 最も重い所見: 24 行のうち `scaleTestTime` を通るのは 1 行だけ
+
+`TEST_TIME_FACTOR` を `tests/lib/test-time-factor.ts` の `scaleTestTime` 経由で適用するのはプロジェクトの明示ノルム（`cid:requirements-analysis:test-time-factor-c1`。「timeout の成立と検証に対応する sleep・poll・settle にも同じ係数を適用する」）だが、**24 行のうち `scaleTestTime` を含むのは `t448-pr-convergence-cli.integration.test.ts:1917` の 1 行のみ**で、残る 23 行は生の定数である（述語: 上記 24 行に対する `grep -c scaleTestTime`）。
+
+これは「そのファイルが `scaleTestTime` を知らないから」ではない。**同じファイルが per-test timeout には係数を適用しながら、テスト本体の壁時計予算には適用していない**ケースが多数を占める:
+
+| ファイル | ファイル内の `scaleTestTime` 使用数 | 当該予算行 | 予算 |
+|---|---|---|---|
+| `tests/integration/t92.test.ts` | 14 | `:977` | 生の `3000` |
+| `tests/unit/t76.test.ts` | 11 | `:527` | 生の `3000` |
+| `tests/integration/t46-parallel-bolt.test.ts` | 6 | `:176` | 生の `10_000` |
+| `tests/unit/t-otel-stacktrace-redaction.test.ts` | 5 | `:317` `:331` `:348` `:361` | 生の `2_000` ×4 |
+| `tests/integration/t487-stage-stats.integration.test.ts` | 5 | `:426` | 生の `60`（**秒**） |
+
+すなわち債務の本体は「係数機構の不在」ではなく**適用面の非対称**であり、`TEST_TIME_FACTOR` を上げても本体予算は縮まないまま per-test timeout だけが伸びる。負荷下では、timeout に守られた状態で本体の予算アサーションが先に落ちる。
+
+### 単位の訂正: `t487-stage-stats.integration.test.ts:426` は 60 ミリ秒ではなく 60 秒
+
+Issue #3075 が「単位要確認」と留保したまま B 群へ置いた箇所である。実読では `:424` が `const elapsed = (Date.now() - started) / 1000;` で**秒へ換算済み**であり、`:426` の `expect(elapsed).toBeLessThan(60)` は **60 秒**の上限を課す。テスト名も逐語で `scanning the real workspace stays well inside the sixty-second ceiling` と宣言している。
+
+したがって「60ms は A 群の最短（250ms）より一桁厳しいので A へ再分類すべき」という上流スキャン報告の判断は成立しない。**実際には 24 行中で最も余裕のある部類**であり、C 群側の値である。単位を読み違えたまま是正すると、正当に余裕のある上限を不要に撤去することになる。
+
+### 是正の設計制約（申し送り）
+
+- Issue #3075 の AC3（新規流入を防ぐガード）を作る場合、対象集合から `tests/perf/` を除外しないと perf スイートの正当な予算を巻き添えにする。ガードの述語はパス限定にする必要がある。
+- 契約由来定数型 3 件は撤去対象ではない。撤去すると timeout 機構そのものの検証が消える。
+- 絶対壁時計型 20 件の是正方針は、`cid:build-and-test:bt-timeout-verification-shape`（長い本番 timeout は実時間の負荷試験でなく短縮可能なタイミングシームとカウンタ検証で構成する）が既に定めている。#3079 はその適用例で、`amadeus-audit.ts:1011-1014` の `AMADEUS_AUDIT_LOCK_RETRIES` が**既存のシームとして用意済み**である（コメント `:1009-1010` が逐語でテスト用途を宣言する）。`tests/integration/t224-upstream-v2-migration-cli.test.ts:1586` の env にこれを足すだけで、失敗経路の意味を保ったまま実待ちが 20 秒から 0.5 秒へ落ちる。
+- **未検証**: 各予算が実際の負荷下でどれだけの倍率で危ういかは本スキャンで測っていない。上表の分類は構造（相対/契約由来/絶対、係数適用の有無、単位）の実読のみに基づく。
