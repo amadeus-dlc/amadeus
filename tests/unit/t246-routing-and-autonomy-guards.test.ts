@@ -120,8 +120,8 @@ describe("t246 inspectComposeMarker boundaries", () => {
 });
 
 describe("t246 assertRecomposeAllowed", () => {
-  test("autonomous denies with the recorded remediation", () => {
-    expect(assertRecomposeAllowed("autonomous")).toEqual({
+  test("autonomous inside Construction denies with the recorded remediation", () => {
+    expect(assertRecomposeAllowed("autonomous", "CONSTRUCTION")).toEqual({
       kind: "denied",
       autonomy: "autonomous",
       reason: "human-gate-required",
@@ -129,7 +129,29 @@ describe("t246 assertRecomposeAllowed", () => {
     });
   });
 
-  test.each(["gated", "unset"] as const)("%s remains allowed", (autonomy) => {
-    expect(assertRecomposeAllowed(autonomy)).toEqual({ kind: "allowed", autonomy });
+  // The gate exists for a running Construction swarm. Every earlier phase is
+  // still shaping the plan, which is what recompose is for.
+  test.each(["INITIALIZATION", "IDEATION", "INCEPTION", "OPERATION"])(
+    "autonomous in %s stays allowed",
+    (phase) => {
+      expect(assertRecomposeAllowed("autonomous", phase)).toEqual({
+        kind: "allowed",
+        autonomy: "autonomous",
+      });
+    },
+  );
+
+  test.each([undefined, null, "", "not-a-phase"])(
+    "a phase this guard cannot read (%p) is not Construction",
+    (phase) => {
+      expect(assertRecomposeAllowed("autonomous", phase)).toEqual({
+        kind: "allowed",
+        autonomy: "autonomous",
+      });
+    },
+  );
+
+  test.each(["gated", "unset"] as const)("%s remains allowed inside Construction", (autonomy) => {
+    expect(assertRecomposeAllowed(autonomy, "CONSTRUCTION")).toEqual({ kind: "allowed", autonomy });
   });
 });
