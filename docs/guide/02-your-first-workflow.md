@@ -164,8 +164,8 @@ The walking skeleton has a real gate, resolved according to the Intent autonomy 
 ```text
 Intent autonomy
   ▸ none — humans decide every gate and question
-  ▸ semi — pre-approve in-phase gates and auto-decide questions; ask at milestones (phase boundaries, walking skeleton, Intent completion)
-  ▸ full — decide authorised gates and questions through Intent completion
+  ▸ full — decide every gate and question whose derivation is unique; ask (or wait) when it is not
+  ▸ semi — full, minus two human milestones: the phase boundary and the walking skeleton
 ```
 
 The selection is recorded in the Intent audit and projected to `amadeus-state.md`; `full` is activated only after you confirm the displayed grant scope, policies, and principal. Stage 3.5 (Code Generation) runs as a subagent for each Unit inside the Bolt; the per-Unit gate in that stage file is suppressed — a single Bolt-level (or batch-level) gate replaces it.

@@ -216,7 +216,7 @@ flowchart TD
 
 ### Why Construction works the way it does
 
-Construction runs **Bolt by Bolt** — the middle path between a gate after every stage per [unit of work](glossary.md) and one review at the very end. Each [Bolt](glossary.md) is one pass through stages 3.1–3.5 for a Unit (or small group of dependency-linked Units). The first Bolt is the **walking skeleton**, the smallest end-to-end slice that proves the architecture. Its gate follows the Intent-wide `none|semi|full` autonomy table; only `full` may decide it within a human-confirmed Intent grant. Stages 3.6 (Build and Test) and 3.7 (CI Pipeline) run once at the end across everything.
+Construction runs **Bolt by Bolt** — the middle path between a gate after every stage per [unit of work](glossary.md) and one review at the very end. Each [Bolt](glossary.md) is one pass through stages 3.1–3.5 for a Unit (or small group of dependency-linked Units). The first Bolt is the **walking skeleton**, the smallest end-to-end slice that proves the architecture; its ceremony fires where the Skeleton Stance resolves `on` (the greenfield scopes), and elsewhere the first Bolt runs like any other. Where it fires, its gate follows the Intent-wide `none|semi|full` autonomy table; only `full` may decide it within a human-confirmed Intent grant. Stages 3.6 (Build and Test) and 3.7 (CI Pipeline) run once at the end across everything.
 
 The shape gives you an early confidence checkpoint and a deliberate autonomy choice, with reviewable slices sized to the Bolts 2.8 already planned.
 

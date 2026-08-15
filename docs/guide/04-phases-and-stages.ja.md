@@ -212,7 +212,7 @@ flowchart TD
 
 ### Construction が現在の形になっている理由
 
-Construction は **Bolt ごと**に実行されます — [作業単位](glossary.ja.md)ごとに各ステージの後で承認ゲートを設ける形と、最後に 1 回だけレビューする形の中間です。各 [Bolt](glossary.ja.md) は、あるユニット(または依存関係でつながった小さなユニット群)に対するステージ 3.1〜3.5 の 1 回の通過です。最初の Bolt は **walking skeleton** で、アーキテクチャを実証する最小のend-to-endスライスです。そのgateはIntent全体の`none|semi|full`自律レベル表に従い、人間が確認したIntent grantを持つ`full`だけが自動裁定できます。ステージ3.6(Build and Test)と3.7(CI Pipeline)は、最後にすべてに対して1回だけ実行されます。
+Construction は **Bolt ごと**に実行されます — [作業単位](glossary.ja.md)ごとに各ステージの後で承認ゲートを設ける形と、最後に 1 回だけレビューする形の中間です。各 [Bolt](glossary.ja.md) は、あるユニット(または依存関係でつながった小さなユニット群)に対するステージ 3.1〜3.5 の 1 回の通過です。最初の Bolt は **walking skeleton** で、アーキテクチャを実証する最小のend-to-endスライスです。この儀式が発火するのは Skeleton Stance が `on` に解決される場合(greenfield scope)で、それ以外では最初の Bolt も他と同様に実行されます。発火する場合、そのgateはIntent全体の`none|semi|full`自律レベル表に従い、人間が確認したIntent grantを持つ`full`だけが自動裁定できます。ステージ3.6(Build and Test)と3.7(CI Pipeline)は、最後にすべてに対して1回だけ実行されます。
 
 この形により、早期の信頼チェックポイントと意図的な自律性の選択が得られ、2.8 ですでに計画された Bolt に合わせたサイズのレビュー可能なスライスが提供されます。
 
