@@ -58,6 +58,7 @@
 Biome `2.5.5` は formatter 無効、cognitive complexity 15超を warning とする。model 550行、store 719行、CLI 853行、migration 580行であり、多問化を理由に新ロジックをCLIへ集中させないことが保守性上の制約である。
 
 ## Issue #2985 技術制約（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
+## Issue #2985 技術制約（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 - Runtime / language は Bun `1.3.13` と TypeScript ESM。focused test 実測も Bun `1.3.13` で行われた。
 - 永続化は Markdown artifact、JSON runtime graph、append-only audit shard、Git/GitHub PR で構成され、長時間稼働 service や database はない。
@@ -72,3 +73,14 @@ Biome `2.5.5` は formatter 無効、cognitive complexity 15超を warning と�
 - センサー機構の構成（実測、`ls` 出力の転記）: core 正本 **11** 件（`packages/framework/core/sensors/`）、プラグイン供給 **3** 件（`formal-model-check` / `git-drift` / `github-pr-convergence` 各 1）、投影 `.claude/sensors/` は **13** 件。実在 14 に対し投影 13 の差分 1 件が `amadeus-model-completeness.md`（#3026）
 - 選挙系は v2 へ移行（PR #3036）。`amadeus-election-codec.ts` / `amadeus-election-question-tally.ts` / `amadeus-election-transport.ts` が新設され、`scripts/amadeus-election-migrate.ts` は削除。本 intent の Focus 5 件はいずれもこの面に非接触
 - 構成規模（observed 断面、`ls | wc -l` の転記）: `packages/framework/core/tools/*.ts` = **136**、`plugins/*/tools/*.ts` = **49**、テストファイル（unit + integration + e2e + smoke）= **1110**
+
+## 差分リフレッシュ時点のスタック（260814-priority-bug-batch、現在、observed `d64fd7cac`）
+
+**観測 ref**: base `1d08374cd7e4ef89637b4a8000bab3fcf1a0f780` → observed `d64fd7cac049d7c2cda7dd7dc7d9d0a652ff02d7`。
+
+- ランタイム・言語・lint・テストの構成に変化はない（`git diff --name-only 1d08374cd..HEAD -- package.json bun.lock` が空出力）。Bun は `1.3.13`（`bun --version`）。
+- ハーネス配布面の総数は 8（`ls -d packages/framework/harness/*/ | wc -l`）で不変。
+- **有効プラグインは 4**: `coverage-patch-quick` / `formal-model-check` / `git-drift` / `github-pr-convergence`。取得コマンドは 2 系統で一致する — `ls plugins/` が返す 4 ディレクトリと、`amadeus/config.json` の `plugin.activation.names` の 4 要素。前区間の記述（3 プラグイン、うち `pr-convergence`）からの差分は、`git-drift` の新設（PR #3055）と `pr-convergence` → `github-pr-convergence` の rename（PR #3051、13 ファイルの `R080`〜`R100` 移動でツール名とディレクトリ内構造は不変）である。
+- **プラグイン設定の宣言型機構が加わった**（PR #3052）。`plugin.json` の `settings` が型付き宣言（`string` / `number` / `boolean` / `enum` と default）を持ち、`amadeus/config.json` の `plugin.settings` が 3 レイヤ（project → space → intent）で override する。突き合わせは `packages/framework/core/tools/amadeus-plugin-settings.ts:240` の `resolvePluginSettings` 1 点に閉じ、未宣言キー / 型不一致 / enum 範囲外は default へ落とさず拒否する。実装は 274 行（`wc -l`）で、新規 runtime dependency は不要。
+- **選挙 CLI が多問(multi-question)化した**（PR #3036）。モジュール構成の実測行数（`wc -l packages/framework/core/tools/amadeus-election*.ts`）: `amadeus-election-codec.ts` 908（新規）/ `amadeus-election-store.ts` 1232 / `amadeus-election.ts` 804 / `amadeus-election-record.ts` 651 / `amadeus-election-question-tally.ts` 386（新規）/ `amadeus-election-transport.ts` 301 / `amadeus-election-model.ts` 32。前区間の「model 550行、store 719行、CLI 853行、migration 580行」は失効している — `amadeus-election-model.ts` は `Result` / `VoterKind` / `HoldReason` だけを持つ 32 行の共有語彙へ縮小し、データモデルは codec（schemaVersion 2）へ、集計は question-tally へ移った。`scripts/amadeus-election-migrate.ts` は削除済み。
+- Biome `2.5.5`（formatter 無効、cognitive complexity 15 超を warning）と `tsc --noEmit` の検査構成は不変。
