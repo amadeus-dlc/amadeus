@@ -140,6 +140,8 @@ engine は現在、per-unit ステージを反復する中で Unit の必須成�
 
 手順 2〜4 は成果物を追加せず履歴も書き換えません。増えるのは、観測した時点のタイムスタンプを持つ確定済み outcome の行だけです。
 
+**cancel された Unit は確定されません。** engine が outcome を確定させるのは covered **かつ** cancel されていない Unit だけです。したがって cancel された Unit を含むバッチでは、上記の手順の後もその Unit について `producer-outcome-pending` が残ります。swarm 経路はこの点が異なり(Unit pool が cancelled の terminal を記録します)、この非対称の解消は follow-up issue として追跡します。
+
 > `/amadeus --stage code-generation --single` ではこの回復はできません。single 実行は契約上 isolated であり、そのステージの directive を1つ出すだけで engine の per-unit ループに入らないため、何も確定させません。
 
 ---

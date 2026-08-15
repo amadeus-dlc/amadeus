@@ -140,6 +140,8 @@ The engine now settles each Unit's outcome itself, at the moment it observes the
 
 Steps 2–4 add no artifacts and rewrite no history; the only new rows are the settled outcomes, stamped when they are observed.
 
+**Cancelled Units are not settled.** The engine settles a Unit only when it is covered *and* not cancelled, so a batch containing a cancelled Unit still reports `producer-outcome-pending` for that Unit after the steps above. The swarm path differs here — its Unit pool records a cancelled terminal — and closing that asymmetry is tracked as a follow-up issue.
+
 > `/amadeus --stage code-generation --single` does **not** work here. A single-stage run is isolated by contract — it emits one directive for the stage and never enters the engine's per-unit loop — so it settles nothing.
 
 ---

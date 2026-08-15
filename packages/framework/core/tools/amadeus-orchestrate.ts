@@ -2457,9 +2457,19 @@ export interface PerUnitConsumePopulation {
 interface SettledUnitOutcome {
   readonly batch: string;
   readonly unit: string;
-  readonly outcome: string;
+  readonly outcome: typeof SETTLED_UNIT_OUTCOME;
   readonly key: string;
 }
+
+// The one outcome the engine settles: coverage on disk is what it observes, and
+// a covered Unit succeeded. The emitter writes this value and the reader accepts
+// no other — a closed vocabulary, as the pool projection keeps for its own
+// terminals — so an edited ledger cannot decide whether a consumer runs.
+const SETTLED_UNIT_OUTCOME = "succeeded";
+
+// Refusal for a row that does not carry the shape the emitter writes: a missing
+// join key, or an outcome outside the vocabulary above.
+const INVALID_SETTLED_ROW = "invalid-unit-outcome-audit-row: not the shape the engine writes";
 
 // The idempotency key of one settled per-unit outcome. The intent is implicit —
 // the row lands in the active intent's own audit shard — so the key spans the
@@ -2470,9 +2480,11 @@ function perUnitOutcomeKey(stage: string, unit: string, batch: string): string {
 }
 
 // Every settled row carries all four keys — emitEvent refuses an emit that omits
-// a required attribute — so a row missing one was edited after the fact.
-// Skipping it would drop a Unit's outcome from the population and surface as
-// producer-outcome-pending, a diagnosis pointing at the wrong thing entirely.
+// a required attribute — so a row missing one, or carrying an outcome the
+// emitter never writes, was edited after the fact. Reading it anyway would let
+// the edit decide a consumer's fate; skipping it would drop a Unit from the
+// population and surface as producer-outcome-pending, a diagnosis pointing at
+// the wrong thing entirely. Both are worse than refusing.
 function readSettledUnitOutcomes(projectDir: string): SettledUnitOutcome[] {
   return findAllEvents(readAllAuditShards(projectDir), "UNIT_OUTCOME_SETTLED")
     .map(({ block }) => {
@@ -2480,11 +2492,8 @@ function readSettledUnitOutcomes(projectDir: string): SettledUnitOutcome[] {
       const unit = auditBlockField(block, "Unit");
       const outcome = auditBlockField(block, "Outcome");
       const key = auditBlockField(block, "Idempotency Key");
-      if (batch === null || unit === null || outcome === null || key === null) {
-        throw new Error(
-          "invalid-unit-outcome-audit-row: missing Batch, Unit, Outcome or Idempotency Key",
-        );
-      }
+      if (batch === null || unit === null || key === null) throw new Error(INVALID_SETTLED_ROW);
+      if (outcome !== SETTLED_UNIT_OUTCOME) throw new Error(INVALID_SETTLED_ROW);
       return { batch, unit, outcome, key };
     });
 }
@@ -4661,7 +4670,7 @@ function settlePerUnitOutcomes(
     if (appended.has(key)) continue;
     emitAuditEventGuarded(
       "UNIT_OUTCOME_SETTLED",
-      { Stage: node.slug, Unit: unit, Batch: batch, Outcome: "succeeded", "Idempotency Key": key },
+      { Stage: node.slug, Unit: unit, Batch: batch, Outcome: SETTLED_UNIT_OUTCOME, "Idempotency Key": key },
       projectDir,
     );
     appended.add(key);

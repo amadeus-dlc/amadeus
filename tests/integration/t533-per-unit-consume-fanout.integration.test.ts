@@ -412,30 +412,27 @@ describe("t533 orchestrator per-unit consume fan-out", () => {
 
   test("ignores an engine-settled outcome from a batch outside the current runtime population", () => {
     const project = seedPerUnitProject(undefined, "code-generation");
-    const construction = next(project);
-    expect(construction.status, construction.stderr).toBe(0);
-    // A declared Unit, settled FAILED under a batch identity the current
-    // runtime population does not carry: joined on batch, it is not this
-    // population's row. Counted anyway it would stop `next` outright with
-    // producer-outcome-failed.
-    emitAuditEventGuarded("UNIT_OUTCOME_SETTLED", {
-      Stage: "code-generation",
-      Unit: "unit-z",
-      Batch: "99",
-      Outcome: "failed",
-      "Idempotency Key": "code-generation unit-z 99",
-    }, project);
+    // Both declared Units, settled under a batch identity the current runtime
+    // population does not carry — a previous run's rows. The current batch has
+    // settled nothing, so the population is empty and the consumer waits.
+    // Counted anyway, these rows would satisfy the consumer with an outcome the
+    // current batch never produced.
+    for (const unit of ["unit-z", "unit-a"]) {
+      emitAuditEventGuarded("UNIT_OUTCOME_SETTLED", {
+        Stage: "code-generation",
+        Unit: unit,
+        Batch: "99",
+        Outcome: "succeeded",
+        "Idempotency Key": `code-generation ${unit} 99`,
+      }, project);
+    }
 
     moveCursorTo(project, "build-and-test");
     const result = next(project);
 
-    expect(result.status, result.stderr).toBe(0);
-    const directive = JSON.parse(result.stdout);
-    expect(directive.consumes).toEqual(["unit-z", "unit-a"].flatMap((unit) =>
-      ["code-generation-plan", "code-summary"].map((artifact) =>
-        `amadeus/spaces/default/intents/${DEFAULT_RECORD_DIR}/construction/${unit}/code-generation/${artifact}.md`
-      )
-    ));
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("producer-outcome-pending");
   });
 
   test("settles each Unit once across re-entry and across per-unit stages", () => {
@@ -537,6 +534,35 @@ describe("t533 orchestrator per-unit consume fan-out", () => {
         const record = JSON.parse(line);
         delete record.attributes.Batch;
         delete record.fields?.Batch;
+        return JSON.stringify(record);
+      })
+      .join("\n"));
+    moveCursorTo(project, "build-and-test");
+    const statePath = seededStateFile(project);
+    const before = readFileSync(statePath, "utf8");
+
+    const result = next(project);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("invalid-unit-outcome-audit-row");
+    expect(readFileSync(statePath, "utf8")).toBe(before);
+  });
+
+  test("refuses a settled-outcome row carrying an outcome the engine never writes", () => {
+    const project = seedPerUnitProject(undefined, "code-generation");
+    expect(next(project).status).toBe(0);
+    // The engine settles one outcome and one only. A row claiming anything else
+    // did not come from the emitter, and reading it as a verdict would let an
+    // edited ledger decide whether a consumer runs.
+    const shard = seededAuditShard(project);
+    writeFileSync(shard, readFileSync(shard, "utf8")
+      .split("\n")
+      .map((line) => {
+        if (!line.includes("UNIT_OUTCOME_SETTLED")) return line;
+        const record = JSON.parse(line);
+        if (record.attributes !== undefined) record.attributes.Outcome = "bogus";
+        if (record.fields !== undefined) record.fields.Outcome = "bogus";
         return JSON.stringify(record);
       })
       .join("\n"));
