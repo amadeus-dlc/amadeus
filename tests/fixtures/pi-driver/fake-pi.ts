@@ -8,14 +8,22 @@ if (process.argv.includes("--version")) {
   process.exit(0);
 }
 
+// `linger:<ms>` settles the RPC and then holds the process open for <ms> after the guardian closes
+// its stdin, which is the shape of a child that has answered and is merely slow to go away.
+let lingerMs = 0;
+
 const lines = createInterface({ input: process.stdin, crlfDelay: Number.POSITIVE_INFINITY });
-lines.on("close", () => process.exit(0));
+lines.on("close", () => {
+  if (lingerMs > 0) setTimeout(() => process.exit(0), lingerMs);
+  else process.exit(0);
+});
 lines.on("line", (line) => {
   const command = JSON.parse(line) as { type?: string; id?: string; message?: string };
   if (command.type === "abort") return;
   if (command.type !== "prompt" || typeof command.id !== "string" || typeof command.message !== "string") return;
   const countPath = command.message.startsWith("success:") ? command.message.slice("success:".length) : null;
   if (countPath) appendFileSync(countPath, "spawned\n");
+  if (command.message.startsWith("linger:")) lingerMs = Number(command.message.slice("linger:".length));
   process.stdout.write(`${JSON.stringify({ id: command.id, type: "response", command: "prompt", success: true })}\n`);
   if (command.message === "hang" || command.message === "cancel") {
     process.on("SIGTERM", () => {});
@@ -57,5 +65,5 @@ lines.on("line", (line) => {
   })}\n`);
   process.stdout.write(`${JSON.stringify({ type: "agent_end", willRetry: false })}\n`);
   process.stdout.write(`${JSON.stringify({ type: "agent_settled" })}\n`);
-  if (command.message !== "wait-for-eof") setTimeout(() => process.exit(0), 10);
+  if (command.message !== "wait-for-eof" && lingerMs === 0) setTimeout(() => process.exit(0), 10);
 });
