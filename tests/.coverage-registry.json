@@ -20,10 +20,10 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 629,
+    "total": 631,
     "enumeratedByClass": {
       "function": 352,
-      "audit": 96,
+      "audit": 98,
       "scope": 15,
       "stage": 32,
       "hook": 15,
@@ -32,7 +32,7 @@
     },
     "coveredByClass": {
       "function": 186,
-      "audit": 46,
+      "audit": 48,
       "scope": 15,
       "stage": 8,
       "hook": 15,
@@ -937,6 +937,10 @@
       "minMechanism": "none",
       "coveredBy": [
         {
+          "file": "tests/unit/t1241-park-guard-removal.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t17.test.ts",
           "mechanism": "cli"
         }
@@ -967,6 +971,30 @@
         {
           "file": "tests/unit/t17.test.ts",
           "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "WORKFLOW_WAITING_ENTERED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t1241-waiting-audit-vocabulary.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "WORKFLOW_WAITING_RESUMED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t1241-waiting-audit-vocabulary.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
@@ -6921,6 +6949,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/unit/t1241-park-guard-removal.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/unit/t17.test.ts",
           "mechanism": "cli"
         }
@@ -7110,6 +7142,10 @@
         },
         {
           "file": "tests/integration/t3016-park-provenance.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
+          "file": "tests/unit/t1241-park-guard-removal.test.ts",
           "mechanism": "cli"
         },
         {
