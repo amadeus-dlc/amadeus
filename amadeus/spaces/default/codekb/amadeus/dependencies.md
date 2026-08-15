@@ -113,6 +113,7 @@ amadeus-election/SKILL.md
 
 外部依存は Bun、local filesystem、agmsg send script、subagent spawn、形式検証時の TLC toolchain に限られる。選挙の集計自体に network service はなく、後方読み取りのための新サービスやdatabaseを導入する必要はない。
 
+## Issue #2985 依存グラフ（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
 ## Issue #2985 依存グラフ（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 ```text
@@ -133,6 +134,47 @@ delivery-planning bolt-plan -X-> runtime DAG / PR convergence identity
 `bolt-plan.md` から runtime execution identity への依存 edge がないことが欠落 seam の起点である。runtime は Unit dependency DAG を読み、PR convergence は caller が渡す単一 `bolt` / `unit` を検証するが、その `bolt` が plan 上の `units[]` を所有することを保持・検証しない。
 
 外部依存は Bun、Git、GitHub CLI / API、filesystem、Node crypto であり、新規外部依存は要求されていない。内部 coupling は、Delivery Bolt が複数 Unit、runtime batch が topological Unit 集合、PR evidence が単数 Unit という cardinality と、state sensor guard が各 Unit path、one-Bolt-one-PR が共有 PR を owner とする ownership の2点にある。候補Aでは plan/runtime/CLI/sensor/state に共通 Bolt identity edge を追加し、候補Bでは Delivery Planning の出力制約を単数へ合わせる。選択は requirements に保留する。
+
+## 260814-open-bug-batch-6 の依存グラフ（現在、observed `a49f9e9fd`）
+
+### 外部依存
+
+変化なし。`git diff 1d08374cd..a49f9e9fd -- package.json` は**空**。
+
+### プラグイン境界の依存（本区間で動いた面）
+
+`plugins/pr-convergence/` → `plugins/github-pr-convergence/` の rename により、プラグイン名を鍵にする消費者が同一変更で追随している。実測した追随先:
+
+- `amadeus/config.json` — `plugin.activation.names` の要素と `scope-bindings` のキー（`pr-convergence` → `github-pr-convergence`。`git-drift` も同時に names へ追加）
+- `docs/harness-engineering/06-sensors.md` / `.ja.md` — センサー表の説明文中のプラグイン名
+
+**stage slug `pr-convergence` は不変**であるため、slug を鍵にする面（`scope-bindings` の内側のキー、ステージグラフ）は追随不要だった。プラグイン名と stage slug が別々の鍵として機能している点は、rename 系の変更を設計する際の前提になる。
+
+### #3062 の依存エッジ
+
+```
+pr-convergence-cli.ts  ──(evaluate)──>  pr-convergence-predicate.ts
+        │                                    │ landedVerdict: converged=false, verdict="landed"
+        │ :823/:1260/:1364 で landed を拒否
+        ▼
+  self report 書込 (なし)
+        │
+        ▼
+amadeus-sensor-pr-convergence-report-format.ts
+        │ :368-372 kind==="landed" を stage 非依存で拒否
+        ▼
+  blocking sensor 未解決 → amadeus-state.ts approve 拒否
+```
+
+predicate は landed を第一級 verdict として表現できるのに、その下流の CLI とセンサーが揃って拒否する**表現力の非対称**が本 Issue の依存構造上の核である。
+
+### #3026 の依存エッジ
+
+`plugins/formal-model-check/plugin.json`（宣言）→ `amadeus-plugin-compose.ts` の `parseSensors`(`:361`) → `ownedPaths`(`:956`) / 投影(`:992` / `:1023`) → `.claude/sensors/`。宣言側のエッジが欠けており、`?? []` フォールバック 4 箇所が欠落を無音化している。**データ（宣言）が依存グラフの起点である**ため、コード側に欠陥はない。
+
+### #3032 の依存エッジ
+
+`amadeus-lib.ts:8066 emitErrorAuditRow` → （遅延 `require`）→ `otel/audit-emit.ts:48 emitAuditEvent` → `otel/bootstrap.ts:88 ensureOtelBootstrap` → `:45 assertSameProject`。lib ↔ otel の循環を `require` で切っている（`amadeus-lib.ts:8061-8065` のコメントが根拠）。この循環回避が、宛先決定の追跡を静的に難しくしている一因である。
 
 ## 差分リフレッシュでの依存変化（260814-priority-bug-batch、現在、observed `d64fd7cac`）
 

@@ -1,0 +1,27 @@
+{
+  "electionId": "E-260815-3062-LANDED-FINALIZATION",
+  "voter": "subagent-1",
+  "questions": [
+    {
+      "questionId": "q-3062-method",
+      "text": "Issue #3062: merge queue の auto-merge が report(converged)より先に着地すると、self record の pr-convergence ステージ完了が構造的に不可能になる(CLI 3層 :823/:1260/:1364 の self×landed 全 verb 拒否 × センサーの landed 拒否)。この行き止まりは stage 文書に明記された意図的設計だが、Merge Queue 必須ノルム(project.md CI/CD)・landed 第一級 verdict(pr-convergence-predicate.ts :262/:281)と契約衝突している(クロスレビュー2名一致、xrev-260815-3062)。是正方式を選定せよ。制約: 要求されない後方互換レイヤー禁止(org.md Forbidden)、非 self record の landed 扱い(exit 0)との対称性回復が受け入れ条件(requirements FR-1 (3))、検証劇場禁止。",
+      "ordered": [
+        {
+          "internalNo": 2,
+          "label": "B: override 許可方式 — self×landed の拒否は維持しつつ override verb のみ landed 到達を許し、override 報告(根拠必須)で最終化する。センサーは override を従来どおり合格にする。landed の第一級性は predicate 層に留める",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 3,
+          "label": "C: 順序契約方式 — ツールは無変更とし、stage 文書へ「auto-merge 有効化前に report(converged)を実行する」順序契約を明記して運用で回避する。デッドエンド到達時は AMADEUS_SKIP_BLOCKING_SENSOR_GUARD の手動逃がしを正規化",
+          "displayNo": 2
+        },
+        {
+          "internalNo": 1,
+          "label": "A: landed 記録方式 — self record でも landed を第一級の最終記録として許可する。CLI 3層の self×landed 拒否を landed 事実の report 書込(kind: landed、merge commit SHA 束縛)へ置換し、センサーは pr-convergence ステージで landed+merge commit 検証付き report を最終収束として合格にする。stage 文書の「landed は収束証拠でない」契約を「landed は record すべき事実」へ改訂",
+          "displayNo": 3
+        }
+      ]
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 ---
 feature: intent-autonomy-modes
 start-date: 2026-08-15
-rfc-pr: (未マージ — 起草ブランチ autonomy-refactor)
+rfc-pr: https://github.com/amadeus-dlc/amadeus/pull/3083
 tracking-issue: (承認後に記入)
 status: draft
 version: 1
