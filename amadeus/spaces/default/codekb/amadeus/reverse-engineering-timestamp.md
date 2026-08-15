@@ -1,6 +1,38 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260814-park-provenance）
+## 実行メタデータ（現在: 260814-open-bug-batch-6）
+
+- Date: `2026-08-15`
+- Base commit: `1d08374cd7e4ef89637b4a8000bab3fcf1a0f780`（本 intent に先行スキャンが無いため、`re-scans/` 中で**最も新しい observed commit** を採る規則に従い `260814-park-provenance.md` の observed を base とした。祖先性の実測: `git merge-base --is-ancestor 1d08374cd7e4ef89637b4a8000bab3fcf1a0f780 a49f9e9fdbd19fd40e9374feba77e9360771d173` → **exit 0**。`cid:reverse-engineering:rescan-base-ancestry`）
+- Observed commit: `a49f9e9fdbd19fd40e9374feba77e9360771d173`（`origin/main` 系譜、PR #3069 の着地コミット。本 worktree HEAD = `git rev-parse HEAD` → 同一値。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、depth `Minimal`、build `bun`
+- Focus: オープンバグ5件 — [#3062](https://github.com/amadeus-dlc/amadeus/issues/3062)（merge queue 着地後に self record の収束 report を最終化できない）/ [#3026](https://github.com/amadeus-dlc/amadeus/issues/3026)（`amadeus-model-completeness.md` が plugin.json 未宣言で投影欠落）/ [#3028](https://github.com/amadeus-dlc/amadeus/issues/3028)（06-sensors のセンサー表が実在集合から drift）/ [#3031](https://github.com/amadeus-dlc/amadeus/issues/3031)（t-worktree-gc の transient 赤）/ [#3032](https://github.com/amadeus-dlc/amadeus/issues/3032)（t214-seam 由来 ERROR_LOGGED の実 record 着地）
+- Scan mode: **通常の差分リフレッシュ**（xrev differential 不採用 — 対象 5 Issue の**いずれにもクロスレビュー verdict コメントが存在しない**。述語 `gh issue view <n> --json comments -q '.comments[]...'` を 5 番号へ適用しいずれも**出力 0 行**。凍結された review 断面が無いため currency 判定以前に適用対象外。加えて `cid:reverse-engineering:c5-xrev-currency-schema-migration` が扱う「患部の表現形式を変える移行」が本区間で実在する — 後述の plugin rename）
+- 差分規模: `git rev-list --count 1d08374cd..a49f9e9fd` → **24** コミット。`git diff --stat 1d08374cd..a49f9e9fd` 末尾 → **570 files changed, 34878 insertions(+), 7339 deletions(-)**
+- 構造変化 4 点: (a) **プラグイン rename** `pr-convergence` → `github-pr-convergence`（PR #3051。ツール 9 件は `R100` = 内容バイト一致で**行番号不変**、stage slug は `pr-convergence` のまま）(b) **新規プラグイン `git-drift`**（PR #3055。センサー 1 件を宣言・投影し、実在集合を 13→14 / 投影を 12→13 へ動かした）(c) `plugin.settings` 機構の新設（PR #3052、`amadeus-plugin-settings.ts` +274 行）(d) 選挙 v2 移行（PR #3036。`amadeus-election-codec/question-tally/transport.ts` 新設、`scripts/amadeus-election-migrate.ts` 削除。**本 Focus は非接触**）
+- Focus 患部の差分: `pr-convergence-cli.ts` / センサー実装は**内容不変**（rename のみ）、`plugins/formal-model-check/plugin.json` は**無変更**、`otel/bootstrap.ts` と `otel/audit-emit.ts` と t214 テスト 2 件も**無変更**。変化したのは `docs/harness-engineering/06-sensors(.ja).md`（各 1 行 = rename 追随のみ）、`tests/integration/t-worktree-gc.test.ts`（**+13/-1** = #3031 の部分緩和が着地）、`amadeus-lib.ts`（+19/-6 だが park の presence 分類のみで **emit 経路に非接触**）
+- 中核知見: **#3062** — 拒否は `plugins/github-pr-convergence/tools/pr-convergence-cli.ts` の **3 層**（`:823` `writeSelfReport` / `:1260` `reportOutcome` / `:1364` `runConvergence`）に分散し、Issue が引く `:1364` のみの是正では残り 2 層で落ちる。センサー側の `landed` 拒否（`amadeus-sensor-pr-convergence-report-format.ts:368-372`）は Issue の記述と異なり **stage 非依存**で、`created` の拒否のみが `stage === "pr-convergence"` 条件付き（`:378-380`）。非 self record では `:1392-1393` が landed を exit 0 とするため、**self / 非 self で同一事実の扱いが反転**している。**#3026** — `plugin.json` を全文実読し `sensors` キー不在を確定（トップレベルは `name` / `stages` / `seams` / `fragments` / `tools` / `advisories` の 6 キー）。無音化の機構は `amadeus-plugin-compose.ts` の `?? []` フォールバック **4 箇所**（`:554` / `:956` / `:992` / `:1023`）。**#3028** — 表 10 行に対し実在 14 件、欠落は起票時 3 件 → **4 件**（`git-drift` が加わった）。本区間の 06-sensors への唯一の変更が rename 追随 1 行のみで、同一区間に追加された `git-drift` に追随していないことが**固定表 fail-open の再発の実例**。**#3031** — PR #3056 が git ヘルパへ narrow retry を追加済み（発火条件は stderr が `/locked' for writing: No such file or directory` を含むこと）だが、Issue が観測した失敗の stderr は未特定のため**覆うか不明**。受け入れ条件 1（再発時の stderr 捕捉）はむしろ後退した可能性（retry 後のアサーションは 2 回目の stderr を載せる）。**#3032** — 着地 2 行は `amadeus/spaces/default/intents/260807-projectdir-worktree-fix/audit/j5ik2o-mac-studio-lan-d13e4f0ca2c0.jsonl:155-156` に**現存**、リテラルは `tests/unit/t214-engine-error-logged-seam.test.ts:131` / `:158` へ一意帰属。ただし現行バイトでは `assertSameProject` の throw を `emitError` の catch（`amadeus-lib.ts:8102-8105`）が握り潰すため「不一致なら書かれない」が帰結で、**仮説どおりの無音着地は成立しにくい**。当時断面（2026-08-07）での再現が機序特定の必須条件
+- 実装時の分母訂正（申し送り）: #3026 の期待投影件数は Issue 本文の「12 → 13」ではなく **13 → 14**、#3028 の docs 表欠落は「3 件」ではなく **4 件**（`amadeus-nfr-budget` / `amadeus-question-budget` / `amadeus-scope-sizing` / `amadeus-git-drift`、各 `grep -c` → 0）。#3031 の行ピンは `:160-175` → **`:172-188`**、失敗点 `:169` → **`:180`**
+- 未検証面: integration tier の並列度（`tests/run-tests.ts` への述語 `grep -n "\-P 4\|concurrency\|maxParallel"` → **0 hit**、Issue #3031 の「4 並列」仮説は未確定）/ #3062 の波及範囲（`pr-convergence-attestation.ts` / `-ledger.ts` / `-provenance.ts`）/ `.github/workflows/ci.yml` `pbt.yml` の差分詳細 / 既存テストスイートのベースライン（本スキャンは読取専用でフルスイート未実行）
+- Verification: git 状態変更・GitHub 書込・engine/state ツール実行（`amadeus-orchestrate` / `-state` / `-log` / `-bolt`）・`bun run build` は**すべてゼロ**（`gh` は `issue view` の読取のみ）。書き込みは `codekb/amadeus/` 配下のみで、`amadeus/spaces/default/intents/` へは一切書き込んでいない
+- Updated artifacts: `re-scans/260814-open-bug-batch-6.md`（新規）/ `reverse-engineering-timestamp.md`（本節）/ 本体 8 点すべてに本 intent の現在節を追記（`business-overview.md` / `architecture.md` / `code-structure.md` / `api-documentation.md` / `component-inventory.md` / `technology-stack.md` / `dependencies.md` / `code-quality-assessment.md`）。旧 intent 節の現在時制マーカー **15 件**を履歴へ降格（本文は保持、`cid:reverse-engineering:c1` / `c3-relabel`。降格後の残存を `grep -c '、現在、observed\|（現在、observed\|（現在、Issue'` で **全 8 ファイル 0 件**と実測）
+- Reviewed-and-unchanged artifacts: なし（本 intent は 8 本体すべてに節を持つ）
+- Per-intent record: `re-scans/260814-open-bug-batch-6.md`
+## 実行メタデータ（現在: 260814-priority-bug-batch）
+
+- Date: `2026-08-15`
+- Base commit: `1d08374cd7e4ef89637b4a8000bab3fcf1a0f780`（`reverse-engineering-timestamp.md` + `re-scans/*.md` の全 40-hex トークン **168 件**のうち、**observed の祖先で距離最小**。`git merge-base --is-ancestor 1d08374cd d64fd7cac` = **exit 0**、`git rev-list --count 1d08374cd..d64fd7cac` = **23**。対抗は `cd64486a6` で距離 **29**。トークン集合は追記前の committed tree（`git show HEAD:<path>`）から採取したため、本節の追記による自己参照はない。`cid:reverse-engineering:rescan-base-ancestry`）
+- Observed commit: `d64fd7cac049d7c2cda7dd7dc7d9d0a652ff02d7`（= 本 worktree HEAD。`origin/main` = `a49f9e9fd` の**祖先で距離 1** であり、その 1 コミット `a49f9e9fd`（PR #3069、ノルム変更）が触るのは `amadeus/spaces/default/memory/project.md` のみ — `git diff --name-only d64fd7cac origin/main -- ':!amadeus/' ':!metrics/'` = **0 件**。したがって非 `amadeus/` ツリーは observed と `origin/main` でバイト等価。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Scope: `self-fix`、Brownfield、単一 repo `amadeus`、depth `Minimal`、build `bun`
+- Focus: 優先バグ 4 件 — [#3065](https://github.com/amadeus-dlc/amadeus/issues/3065)（subprocess stdout の 8192B 読み取り境界、P2/S3）/ [#3034](https://github.com/amadeus-dlc/amadeus/issues/3034)（t2851 の clean doctor が live repo を検査、P2/S3）/ [#3040](https://github.com/amadeus-dlc/amadeus/issues/3040)（t-pi-child-driver の settled one-shot RPC close、P3/S4）/ [#3035](https://github.com/amadeus-dlc/amadeus/issues/3035)（t07 skip-path の 300ms 予算、P3/S4）。加えて base..observed の差分全域
+- Scan mode: **通常の差分リフレッシュ**（xrev differential 不採用 — 対象 4 Issue はいずれもクロスレビュー凍結 SHA を持たず、xrev の形式要件を満たさない）
+- 区間規模: 23 コミット / 185 files / +14769 −6942（`git rev-list --count 1d08374cd..HEAD`、`git diff --stat 1d08374cd HEAD -- ':!amadeus/'`）
+- 患部の現行成立: **4 件すべて成立**（既修正のものはない）。患部ファイルは base..observed で無変更。ただし #3035 の行参照だけ Issue 本文の `:395-400` から `:401-406` へ 6 行ずれている（`05da1758c` が `tests/unit/t07-hook-audit-logger.serial.test.ts` へ fixture コピー 6 行を追加、`git show --numstat 05da1758c -- <file>` → `6 0`）
+- 区間の主な構造変化: 選挙 CLI の多問化（PR #3036、新規 `amadeus-election-codec.ts` 908 行 / `amadeus-election-question-tally.ts` 386 行、`amadeus-election-model.ts` は 32 行へ縮小、`scripts/amadeus-election-migrate.ts` 削除）/ プラグイン rename `plugins/pr-convergence/` → `plugins/github-pr-convergence/`（PR #3051）/ 新規プラグイン `git-drift`（PR #3055）/ `plugin.settings` 機構（PR #3052、`amadeus-plugin-settings.ts` 274 行）/ blocking sensor の script-error fail-closed 化（PR #3045）
+- 更新 artifact: 9 面すべて（`business-overview` / `technology-stack` / `dependencies` / `code-structure` / `api-documentation` / `architecture` / `component-inventory` / `code-quality-assessment` / 本ファイル）。詳細は `re-scans/260814-priority-bug-batch.md`
+- 現在時制マーカーの降格: 本追記に先立ち、observed が `d64fd7cac` でない `## …（現在…）` 節 **17 件**を `履歴` へ降格した（本ファイルの 2 件を含む）。`cid:reverse-engineering:c1`
+
+## 実行メタデータ（履歴: 260814-park-provenance）
 
 - Date: `2026-08-14`
 - Base commit: `cd64486a68c6a1144db50fbe3fde8273f5e18455`（`reverse-engineering-timestamp.md` + `re-scans/*.md` の全 40-hex トークン **162 件**のうち、**observed の祖先で距離最小**。`git merge-base --is-ancestor cd64486a6 1d08374cd` = **exit 0**、`git rev-list --count cd64486a6..1d08374cd` = **6**。`cid:reverse-engineering:rescan-base-ancestry`）
@@ -17,7 +49,7 @@
 - Reviewed-and-unchanged artifacts: `business-overview.md` / `code-structure.md` / `api-documentation.md` / `component-inventory.md` / `technology-stack.md` / `dependencies.md` / `code-quality-assessment.md` の **7 点** — いずれも本 intent の節を持たない。後続ステージはこれらから**本 intent の事実を引かない**（`cid:requirements-analysis:c4-consume-header-is-not-citable-content`）
 - Per-intent record: `re-scans/260814-park-provenance.md`
 
-## 実行メタデータ（現在: 260814-autonomy-stop-fixes）
+## 実行メタデータ（履歴: 260814-autonomy-stop-fixes）
 
 - Date: `2026-08-14`
 - Base commit: `d7ffaa5442266508d8e67babc3e0b947fb4c1637`（`reverse-engineering-timestamp.md` + `re-scans/*.md` の全 40-hex トークン **159 件**のうち、**HEAD の祖先で距離最小**。`git merge-base --is-ancestor d7ffaa544 HEAD` = **exit 0**、`git rev-list --count d7ffaa544..HEAD` = **4**。`cid:reverse-engineering:rescan-base-ancestry`）

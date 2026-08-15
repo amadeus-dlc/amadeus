@@ -64,8 +64,11 @@ The canonical CLI kinds are accepted:
 - **override** — the same four fields with `converged: false`, plus the human
   ruling record that makes FR-7b auditable: `human turn`, `recorded at`, and a
   non-blank `reason`.
-
-`landed` is rejected: merge is not convergence evidence.
+- **landed** — only when `--stage pr-convergence`. The merge that already
+  happened, recorded rather than converged: `converged: false`, a `merged at`
+  that parses, and a `merge commit` that is a commit object id. The check
+  rollup is recorded but never a pass condition. At any other stage a `landed`
+  report is rejected.
 
 Timestamps must parse, `pull request` must read `<repo>#<number>`, and `kind`
 must agree with `converged` — a report claiming `kind: override` while also

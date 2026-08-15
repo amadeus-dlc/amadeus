@@ -185,6 +185,25 @@ describe("Pi child driver process boundary", () => {
     expect(result.kind).toBe("succeeded");
   });
 
+  // #3040: the timeout raced every run, settled or not, so a child that had already answered and
+  // was merely slow to close came back as timed-out. The close has its own deadline
+  // (timeoutMs + the cleanup wait); the linger below lands between the two.
+  test("a settled child whose close lags past the timeout is not timed out", async () => {
+    const { root, fakePi, lifecycle, base } = fixture();
+    // The child settles as soon as it starts and then holds itself open for a further timeoutMs,
+    // so its close lands after the timeout has fired and inside the cleanup budget.
+    const result = await executePiChild(
+      {
+        ...base,
+        deliveryKey: "settled-late-close-1",
+        prompt: `linger:${base.timeoutMs}`,
+      },
+      { runtimeDir: join(root, "runtime"), piExecutable: fakePi, lifecycle },
+    );
+
+    expect(result).toMatchObject({ kind: "succeeded", output: "OK" });
+  }, scaleTestTime(30_000));
+
   test("timeout remains a terminal failure and reaps the guardian group", async () => {
     const timed = fixture();
     const timedResult = await executePiChild(

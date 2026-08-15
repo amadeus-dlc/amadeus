@@ -2162,14 +2162,18 @@ describe("CLI self record — the identity a verdict is bound to", () => {
     expect(out.stderr).toContain("does not match the active Intent");
   });
 
-  test("a merged pull request is not convergence evidence for a self record", async () => {
+  // #3062 replaced the self-record refusal of a merged pull request with the
+  // landed record (t3062 pins that path). What did NOT move is the epoch
+  // prerequisite: finalising still binds to a created report, so a merged pull
+  // request with no created epoch is refused exactly like any other verb.
+  test("a merged pull request still needs the created epoch to finalise", async () => {
     const f = makeSelfFixture();
     const out = await invokeCli(
       reportArgs(f),
       selfSeams(f.record, { gh: selfGh({ provenance: SELF_PROVENANCE, merged: true }) }),
     );
     expect(out.exitCode).toBe(1);
-    expect(out.stderr).toContain("landed is not convergence evidence");
+    expect(out.stderr).toContain("created report is missing");
   });
 
   test("the report verb refuses when the branch is published at another commit", async () => {

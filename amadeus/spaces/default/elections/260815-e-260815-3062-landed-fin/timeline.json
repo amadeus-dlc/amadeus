@@ -1,0 +1,14 @@
+[
+  {
+    "schemaVersion": 2,
+    "kind": "tallied",
+    "runId": "run-1",
+    "at": "2026-08-15T00:24:29Z"
+  },
+  {
+    "schemaVersion": 2,
+    "kind": "tallied",
+    "runId": "run-2",
+    "at": "2026-08-15T00:29:27Z"
+  }
+]

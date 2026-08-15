@@ -1,6 +1,7 @@
 # アーキテクチャ
 
-## park の provenance 境界: 拒否点・受理材料・承認境界の切り分け（260814-park-provenance、現在、observed `1d08374cd`）
+## park の provenance 境界: 拒否点・受理材料・承認境界の切り分け（260814-park-provenance、履歴、observed `1d08374cd`）
+## park の provenance 境界: 拒否点・受理材料・承認境界の切り分け（260814-park-provenance、履歴、observed `1d08374cd`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: observed = `1d08374cd7e4ef89637b4a8000bab3fcf1a0f780`（`origin/main`、PR #3037 着地）。差分 base = `cd64486a68c6a1144db50fbe3fde8273f5e18455`（observed の祖先で距離 **6**）。本 worktree HEAD は observed を merge した conductor tree で、非 `amadeus/` ツリーは observed とバイト等価（`git diff --stat 1d08374cd HEAD -- ':!amadeus/'` 空 / exit 0）。検索述語と全数列挙は `re-scans/260814-park-provenance.md` を正本とし、本節は構造だけを転記する。
 
@@ -5059,7 +5060,8 @@ flowchart LR
 
 「`questions[]` を1選挙へ直接持たせる」か「子選挙を親 ID 配下で束ねる」かは後続設計の判断事項である。ただし、現行 store と transport を最小変更にし、1 voter file に response 配列を持てる前者は観測された構造との適合度が高い。これは RE 時点の候補評価であり ADR 決定ではない。
 
-## Issue #2985 Bolt / Unit / PR 証跡アーキテクチャ（現在、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
+## Issue #2985 Bolt / Unit / PR 証跡アーキテクチャ（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
+## Issue #2985 Bolt / Unit / PR 証跡アーキテクチャ（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 ### 現行スタイルと責務境界
 
@@ -5200,3 +5202,152 @@ engine は階層 config を読む能力と fail-closed の作法を既に持つ�
 ### base..observed の差分が患部に与えた影響
 
 区間 4 コミット（`cd64486a6` / `fb1939dfd` / `f60b3f4c8` / `da0acecdd`）、`89 files changed, 3129 insertions(+), 4 deletions(-)`。着地面は `amadeus/spaces/default/`・`metrics/`・`tests/harness/fixtures.ts`・`tests/integration/t-fixtures-copy-tree-retry.integration.test.ts`・`amadeus/spaces/default/memory/project.md` のみで、**`packages/` 配下の変更は 0 件**。本節の患部にこの区間は一切触れていない。
+
+## オープンバグ5件のアーキテクチャ上の位置づけ（260814-open-bug-batch-6、現在、observed `a49f9e9fd`）
+
+### 横断パターン — 「表現できるのに受理しない」と「実在するのに宣言されない」
+
+5 件は独立した欠陥だが、アーキテクチャ上は 2 つの構造的パターンに割れる。
+
+**パターン P1: 下流が上流の表現力を受理しない（#3062）**
+
+`pr-convergence-predicate.ts` は verdict を三値 `"converged" | "not-converged" | "landed"` で持ち、`landedVerdict`(`:281`) がマージ済みという事実を第一級で表現する。ところがその下流 2 系統が揃って landed を拒否する:
+
+```
+                    pr-convergence-predicate.ts
+                    verdict: converged | not-converged | landed
+                              │  (landed を表現できる)
+              ┌───────────────┴───────────────┐
+              ▼                               ▼
+   pr-convergence-cli.ts            amadeus-sensor-pr-convergence-
+   :823  writeSelfReport            report-format.ts
+   :1260 reportOutcome              :368-372 kind==="landed" を
+   :1364 runConvergence                      stage 非依存で拒否
+   （self record のとき一律拒否）
+              │                               │
+              └───────────────┬───────────────┘
+                              ▼
+                  self record では landed を
+                  最終記録にする経路が存在しない
+                              │
+                              ▼
+                  amadeus-state.ts approve
+                  （blocking sensor 未解決で拒否）
+```
+
+テキスト代替: predicate が landed を第一級 verdict として生成できる一方、CLI（3 層）とセンサー（stage 非依存）がともに拒否するため、self record では landed に到達した時点で前進手段が消える。非 self record では CLI `:1392-1393` が landed を exit 0 として扱うため、**self かどうかで同じ事実の扱いが反転する**。
+
+**パターン P2: 実在集合と宣言・文書が fail-open で乖離する（#3026 / #3028）**
+
+```
+  ディスク上の実在              宣言（plugin.json）        投影（.claude/sensors/）      文書（06-sensors）
+  ─────────────────            ──────────────────         ────────────────────         ──────────────
+  core 11 件         ─────────────────────────────────>   11 件                  ───>  7 件が表に載る
+  git-drift 1 件      ──> sensors 宣言あり ──────────>    1 件                   ───>  0 件（欠落）
+  pr-conv 1 件        ──> sensors 宣言あり ──────────>    1 件                   ───>  1 件
+  model-completeness  ──> 宣言なし ──✕（?? [] で無音）    0 件                   ───>  1 件（幽霊記載）
+  ─────────────────                                       ────────────────────         ──────────────
+  計 14                                                    計 13                        計 10
+```
+
+テキスト代替: 実在 14 件 / 投影 13 件 / 文書 10 件が三者とも不一致。`amadeus-plugin-compose.ts` の `?? []` フォールバック（`:554` / `:956` / `:992` / `:1023`）が宣言欠落を無音化し、docs の固定表が件数変化に追随しない。両者は独立の Issue として起票されているが、**「正本集合を機械導出しない面が fail-open で乖離する」という同一クラス**である。
+
+`git-drift` プラグインの着地はこの構造を実例で再現した — 同一 PR がセンサーを追加し、`.claude/sensors/` への投影と `amadeus/config.json` の activation は追随したが、docs の表は追随していない（本区間の 06-sensors への唯一の変更は rename 追随 1 行）。
+
+### #3032 の emit 経路（機序未確定）
+
+```
+  recordEngineError / emitError  (amadeus-lib.ts:8087)
+        │  existsSync(stateFilePath(projectDir)) ガード
+        ▼
+  emitErrorAuditRow (:8066)
+        │  require("../otel/audit-emit.ts")   ← lib↔otel の循環を遅延解決で切る
+        ▼
+  emitAuditEvent (otel/audit-emit.ts:48)
+        │
+        ▼
+  ensureOtelBootstrap (otel/bootstrap.ts:88)
+        │  :90-91 assertSameProject(registeredFor, projectDir, "logs")
+        │         assertSameProject(logsSideEffectsFor, projectDir, "logs")
+        ▼
+  不一致 → throw (:45-53 "one workspace per process")
+        │
+        ▼
+  emitError の catch (:8102-8105) が握り潰す  →  呼び出し側からは no-op と区別不能
+```
+
+テキスト代替: 宛先 workspace の不一致は `assertSameProject` が throw で検出するが、その throw は `emitError` の握り潰し catch に吸収される。したがって**不一致が起きた場合は「書かれない」のが現行バイトの帰結**であり、Issue #3032 の仮説（先にピンされた別 workspace へ着地する）を現行断面で成立させるには、`assertSameProject` を通過したうえで `projectDir` 自体が実 record を指す経路が要る。この非対称（検出機構は存在するが、その診断が呼び出し側へ届かない）は、機序特定を難しくしている構造そのものである。
+
+なお `otel/bootstrap.ts` と `otel/audit-emit.ts` は base..observed で無変更、`amadeus-lib.ts` の変更は park の presence 分類（`res: "park"` / `WORKFLOW_PARKED`）のみで emit 経路に非接触。**#3032 の機序は本区間で動いていない。**
+
+### プラグイン境界の構造変化（背景）
+
+`pr-convergence` → `github-pr-convergence` の rename で、**プラグイン名と stage slug が独立した鍵として機能している**ことが確認できた。`amadeus/config.json` の `scope-bindings` は外側がプラグイン名、内側が stage slug という二段構造を持ち、rename では外側だけが追随した。プラグイン名を鍵にする消費者の棚卸しは、stage slug を鍵にする消費者と別軸で行う必要がある（`cid:application-design:dual-key-consumer-inventory` の適用例）。
+
+## plugin 設定のレイヤ解決と、plugin 投影経路の現況（260814-priority-bug-batch、現在、observed `d64fd7cac`）
+
+**観測 ref**: base `1d08374cd7e4ef89637b4a8000bab3fcf1a0f780` → observed `d64fd7cac049d7c2cda7dd7dc7d9d0a652ff02d7`。
+
+### plugin.settings — 宣言はプラグイン、override は config、突き合わせは core の 1 点（PR #3052）
+
+プラグインは core を import しない（ADR-6）。この境界を保ったままプラグインへ設定を渡すために、機構は「宣言」「override」「解決」を別々の所有者へ置き、解決だけを core の 1 関数へ集約する。
+
+```
+plugin.json の settings 宣言          amadeus/config.json の plugin.settings
+（型 + default、プラグインが所有）      （3 レイヤ project → space → intent）
+        │                                        │
+        │                          amadeus-config.ts registry entry :649-655
+        │                          layers: ALL_LAYERS / merge: "plugin-settings"
+        │                          （プラグイン別・キー別マージ。上位レイヤが leaf 単位で勝つ）
+        │                                        │
+        │                          amadeus-sensor.ts:324 pluginSettingsOverrides
+        │                          （config が invalid なら dispatchError で停止）
+        ▼                                        ▼
+        └──────► amadeus-plugin-settings.ts:240 resolvePluginSettings ◄──────┘
+                                    │
+                                    ├─ ok:    ResolvedSettings（default に override を畳んだ結果）
+                                    └─ error: unknown-key / type-mismatch / enum-out-of-range
+                                    │
+                       amadeus-sensor.ts:291 resolvePluginSettingsForSensor
+                                    │
+                       process boundary（spawn argv）で sensor スクリプトへ手渡し
+```
+
+テキストフォールバック: 設定の型と既定値はプラグインの `plugin.json` が宣言し、利用者の上書きは `amadeus/config.json` の `plugin.settings` に project / space / intent の 3 レイヤで書く。config 側の読み取りは `amadeus-config.ts` の registry entry（`:649-655`）が担い、`merge: "plugin-settings"` によりプラグイン別・キー別にマージする。宣言と override が出会う唯一の点が `amadeus-plugin-settings.ts:240` の `resolvePluginSettings` で、ここが未宣言キー・型不一致・enum 範囲外を拒否する。解決結果は sensor dispatcher が process boundary 越しに渡すため、プラグイン側は core を import しない。
+
+アーキテクチャ上の要点は 3 つある。
+
+1. **fail-closed が構造で担保される**。突き合わせ点が 1 箇所しかないため、「宣言にないキーが黙って無視される」経路が存在しない。実装コメントが逐語で `it refuses rather than defaulting: a plugin running on a default the operator did not ask for is a silent misconfiguration.` と述べる。
+2. **不在と失敗を区別する**。`resolvePluginSettingsForSensor` は「所有プラグインがない」「宣言がない」場合に `null` を返す。これは fallback ではなく不在であり、この場合の spawn argv は本機能の導入前とバイト同一である（実装コメント逐語: `That is an absence, not a fallback`）。
+3. **両シームが注入可能**。`SensorSettingsDeps = { fs?; readOverrides? }` により、実配線とテストが同じ経路を通る。
+4. **秘匿値をこの経路へ載せない**。`SECRET_KEY_RE = /token|password|secret|credential|apikey|api-key/`（`amadeus-plugin-settings.ts:24`）がキー名で弾く。config は git 共有レイヤであり、そこに credential を置かせない構造的な拒否である。
+
+最初の実消費者は `plugins/git-drift/plugin.json` の `fetch-throttle-seconds`（number、default 600）1 件である。
+
+### plugin 投影 2 経路の現況 — 履歴節の PROVEN 所見はいずれも解消している
+
+本ファイルの `## plugin 配布の二経路と非対称なトークン置換器（260810-plugin-harness-dir-token、履歴、observed df1c874cf）` が N-1 / N-2 / N-4 として記録した所見を、rename 後のパスで再実測した。**結論は当時と逆になっている**。
+
+| 述語（再実行可能） | 当時（observed `df1c874cf`） | 本スキャン（observed `d64fd7cac`） |
+|---|---|---|
+| `diff -r plugins/github-pr-convergence dist/plugins/github-pr-convergence/<h>/plugins/github-pr-convergence` を 8 harness へ適用 | 旧パスで 8/8 IDENTICAL（= `transform()` が no-op） | **8/8 DIFFERS** |
+| `grep -rn "amadeus-sensor.ts\|bun plugins/\|bun \.claude" plugins/ --include="*.md"` | 12 行 | **0 行**（exit 1 = エラーなく不一致） |
+| `grep -rln "{{HARNESS_DIR}}" plugins/` | — | **8 ファイル**（token 総数 21、`grep -rn ... \| wc -l`） |
+| `find dist/<h> -maxdepth 3 -name plugins` を 8 harness へ適用 | 8/8 で 0 hit | claude / codex / cursor / kimi / kiro / kiro-ide / pi は 0、**opencode のみ 1**（`dist/opencode/.opencode/plugins`） |
+
+すなわち、散文中のツール呼び出しは `{{HARNESS_DIR}}` トークン形へ移行済みで、経路A の `transform()` は plugins コーパスに対して実際に発火している。DIFFERS の中身は当該トークンの harness 別展開であり（例: `plugins/github-pr-convergence/sensors/amadeus-pr-convergence-report-format.md:4` の `bun {{HARNESS_DIR}}/plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts` が claude 導入バンドルでは `bun .claude/plugins/...` になる）、drift ではない。
+
+**測定条件の明示**: `dist/` と self-install ツリー（`.claude/plugins/` ほか）は gitignore 対象のローカル生成物であり、上表はスキャン時点の作業ツリーに存在する build 出力を対象とした実測である。追跡ファイルからは再導出できない。self-install 5 面（`.claude` / `.codex` / `.cursor` / `.opencode` / `.kimi-code`）はいずれも 4 プラグイン（`coverage-patch-quick` / `formal-model-check` / `git-drift` / `github-pr-convergence`）を持つ。
+
+### plugin パスの rename が触る面（PR #3051）
+
+`plugins/pr-convergence/` → `plugins/github-pr-convergence/` は 13 ファイルの移動（`R080`〜`R100`）で、アーキテクチャ上の境界・依存方向・投影経路はいずれも変わらない。変わるのは (a) plugin bundle のディレクトリ名、(b) `amadeus/config.json` の `plugin.activation.names` の要素、(c) 散文・sensor manifest 中のパス literal、(d) composed / self-install ツリーのディレクトリ名の 4 点である。本ファイル内の旧パス表記は、それを宣言する観測断面が rename 以前である**履歴節に限って**保存されている。
+
+### 本 intent の患部 4 件が触るアーキテクチャ境界
+
+いずれも「子プロセス境界の観測」という同一のアーキテクチャ面に集まる（#3034 のみ別）。
+
+- **#3065 — 子プロセス stdout の完全性契約が 2 実装で非対称**。`scripts/no-silent-drop-evidence-adapter.ts` の `systemCommandRunner`（`:62-76`）は `normalizeSpawnOutcome`（`:45-60`）で `result.error` を見て非ゼロ status へ潰す fail-closed 正規化を持つが、`packages/framework/core/tools/amadeus-migrate.ts` の `git()`（`:439-455`）は `result.status === 0` だけで ok を決め `error` を一切見ない。同じ「git を spawn して stdout を読む」責務に対して 2 つの異なる契約が並存しており、後者に fail-closed 面が欠けている。なお `parseTree`（`:166-172`）の NUL 終端ガードは**読み取り側の欠陥を検出する**役割は果たしており、欠けているのは検出後の回復（リトライまたは drain 保証）である。`COMMAND_MAX_BUFFER_BYTES = 8 * 1024 * 1024`（`:26`）であり、観測された 8192 バイト境界は maxBuffer ではない（`git grep -n "8192" -- '*.ts'` → 0 行、exit 1）。
+- **#3040 — settle 済み child を timeout として分類する状態遷移**。`packages/framework/harness/pi/drivers/amadeus-pi-driver.ts:541-546` の timeout と `:554-557` の `cleanupTimer`（`CLEANUP_WAIT_MS = 2_000`、`:30`）が `:558` の `Promise.race` で競合する。guardian が `agent_settled` を観測して child の stdin を閉じる（`amadeus-pi-guardian.ts:321`）以降は「正常終了待ち」であり、それを timeout 予算の下に置く現行の分類は意味論として正しくない。テスト予算の調整ではなく driver の状態遷移側の是正が筋の通る方向である。
+- **#3035 — 性能 assert の測定境界**。`tests/unit/t07-hook-audit-logger.serial.test.ts:401-406` の 300ms 予算は `Bun.spawnSync` を挟んだ壁時計であり、bun のコールドスタートを含む（同ファイル `:396-397` のコメントが逐語で `The .sh measured bun cold-start + the logging path` と述べる）。skip path の実処理は数 ms であるため、この assert は実質 CI マシンの空き具合を測っている。
+- **#3034 — テスト隔離の境界破れ**。`tests/integration/t2851-doctor-self-install-freshness.serial.test.ts:78-87` の fixture が live repo の `scripts/promote-self.ts --check` を spawn する薄いラッパであり、`scripts/promote-self.ts:57` の `REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")` が自ファイル位置から repo root を解決するため、`packages/framework/core/tools/amadeus-utility.ts:1589-1602` が渡す `cwd: projectDir` は構造的に無効である。`isSelfDevWorkspace`（同 `:1017-1019`）が `scripts/promote-self.ts` の存在だけを見るため、fixture を置いた瞬間に live 検査経路へ入る。

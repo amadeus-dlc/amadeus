@@ -14,7 +14,8 @@ requires_stage:
   - tla-authoring
 inputs: all externalised TLA+ model + config pairs declared by amadeus/spaces/<space>/specs/tla/model-map.json and the model-check CLIs under {{HARNESS_DIR}}/plugins/formal-model-check/tools/.
 outputs: the TLC exhaustive-exploration verdict (exit 0 not-detected / 1 detected / 2 harness-error) plus the report/artifacts written under the chosen --out directory.
-sensors: []
+sensors:
+  - model-completeness
 scopes: []
 ---
 
@@ -77,9 +78,12 @@ spec changes, the existing spec-hash advisory remains an additional trigger.
 
 ## Sensors
 
-The plugin owns its model-completeness checker. Run it from the plugin tool
-directory when the stage changes a model registration; core carries no
-plugin-specific sensor or implementation.
+The plugin owns its model-completeness manifest and checker; core carries
+neither. The bundle declares the manifest in `plugin.json`, so composing the
+plugin projects it into `<host>/sensors/`, and this stage declares the
+`model-completeness` id above so the compiler resolves it into
+`sensors_applicable`. Run the checker from the plugin tool directory when the
+stage changes a model registration.
 
 ## Host-assigned lifecycle
 
