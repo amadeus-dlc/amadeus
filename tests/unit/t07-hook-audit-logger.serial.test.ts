@@ -393,9 +393,17 @@ describe("t07 audit-logger PostToolUse hook (mechanism cli — spawned hook + st
   // cases pin is the path taken, not the time it took.
   test("logging path exits 0 and records the write [.sh test 13]", () => {
     const { auditDir, recordRoot } = seedIntentShard(proj);
-    const r = fire(writeJson(join(recordRoot, "test.md")), proj);
+    const artifact = join(recordRoot, "test.md");
+    const r = fire(writeJson(artifact), proj);
     expect(r.exitCode).toBe(0);
-    expect(readRecords(auditDir).map((rec) => rec.event)).toEqual(["ARTIFACT_CREATED"]);
+    // One record, and the payload the hook promises on it: the tool that wrote,
+    // the file it wrote, and the record-relative breadcrumb.
+    const records = readRecords(auditDir);
+    expect(records).toHaveLength(1);
+    expect(records[0]?.event).toBe("ARTIFACT_CREATED");
+    expect(records[0]?.fields?.Tool).toBe("Write");
+    expect(records[0]?.fields?.File).toBe(artifact.replace(/\\/g, "/"));
+    expect(records[0]?.fields?.Context).toBe("test.md");
   });
 
   test("skip path exits 0 and leaves the audit trail untouched [.sh test 14]", () => {
