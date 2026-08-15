@@ -27,6 +27,7 @@ This chapter covers common issues and their solutions, organized by symptom.
 | Statusline shows "ready" | Check `amadeus-state.md` has a `**Lifecycle Phase**` field |
 | Statusline not appearing | Verify `bun` is on PATH and `settings.json` `statusLine.command` references `amadeus-statusline.ts` |
 | Subagent timed out | Run `/amadeus` to retry or run the stage inline |
+| `producer-outcome-pending` after Construction | Jump back to `code-generation` with `/amadeus --stage code-generation`, run `/amadeus`, approve the gate |
 
 ---
 
@@ -117,6 +118,29 @@ After 3 revision cycles on the same stage, a third option appears: **Accept as-i
 ### Skipping a stage
 
 Use `/amadeus --stage <target>` to jump to a different stage. Intervening stages will be marked `[S]` (skipped) in the state file.
+
+---
+
+## Construction Finished but the Next Stage Refuses (`producer-outcome-pending`)
+
+**Symptom**: every Unit's Construction artifacts are on disk and approved, but `next` stops with `producer-outcome-pending: <unit>, <unit>` instead of emitting the `build-and-test` (or another per-unit consumer's) directive.
+
+### What happened
+
+A stage that consumes per-unit artifacts reads the outcome each producer Unit settled. Before this fix, only the swarm path wrote those outcomes; a workflow whose Units were dispatched one at a time by the engine itself left the ledger empty, so the consumer had nothing to read and refused (#3099).
+
+The engine now settles each Unit's outcome itself, at the moment it observes the Unit's required artifacts on disk, while iterating the per-unit stage. Nothing is back-dated: the rows are appended forward, from the coverage the record already carries, and no Unit-pool event is fabricated.
+
+### How to recover an intent that is already parked
+
+1. Update the engine so it carries the fix (pull, then `bun run build` if you develop against a source checkout).
+2. Put the cursor back on the per-unit Construction stage the consumer reads from — usually `code-generation`: run `/amadeus --stage code-generation`, then run the `amadeus-jump.ts execute` command it prints.
+3. Run `/amadeus`. The engine re-derives coverage from the record, settles every covered Unit's outcome, and — since all Units are already covered — presents the stage gate again. Approve it.
+4. Run `/amadeus`. The consumer stage now fans out over the Units and the workflow continues.
+
+Steps 2–4 add no artifacts and rewrite no history; the only new rows are the settled outcomes, stamped when they are observed.
+
+> `/amadeus --stage code-generation --single` does **not** work here. A single-stage run is isolated by contract — it emits one directive for the stage and never enters the engine's per-unit loop — so it settles nothing.
 
 ---
 

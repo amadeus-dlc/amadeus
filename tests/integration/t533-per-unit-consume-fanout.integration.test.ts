@@ -1,4 +1,4 @@
-// covers: subcommand:amadeus-orchestrate:next
+// covers: subcommand:amadeus-orchestrate:next, audit:UNIT_OUTCOME_SETTLED
 // size: large
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
@@ -214,7 +214,10 @@ function settleThroughPool(
 
 // Move the cursor onto a consumer stage the way the code-generation approval
 // would, so the next `next` reads the per-unit consume population.
-function moveCursorTo(project: string, stage: keyof typeof consumerEdges): void {
+function moveCursorTo(
+  project: string,
+  stage: keyof typeof consumerEdges | "code-generation",
+): void {
   const state = seededStateFile(project);
   sedReplaceInFile(state, /^- \*\*Current Stage\*\*:.*$/m, `- **Current Stage**: ${stage}`);
   sedReplaceInFile(
@@ -466,6 +469,57 @@ describe("t533 orchestrator per-unit consume fan-out", () => {
       { unit: "unit-a", outcome: "succeeded" },
       { unit: "unit-z", outcome: "succeeded" },
     ]);
+  });
+
+  // The recovery path for an intent whose Construction ran unit by unit under an
+  // engine that recorded no outcome: its cursor already sits on the consumer
+  // stage, so nothing settles until the per-unit stage is re-entered. Documented
+  // in docs/guide/15-troubleshooting.md.
+  test("recovers a cursor parked on producer-outcome-pending by re-entering the per-unit stage", () => {
+    const project = seedPerUnitProject(undefined, "build-and-test");
+
+    const parked = next(project);
+    expect(parked.status).toBe(1);
+    expect(parked.stderr).toContain("producer-outcome-pending");
+
+    // A single-stage run is isolated by contract: it emits one directive for the
+    // stage and never enters the engine's per-unit loop, so it settles nothing.
+    const single = spawnSync(process.execPath, [
+      join(project, ".claude/tools/amadeus-orchestrate.ts"),
+      "next",
+      "--stage",
+      "code-generation",
+      "--single",
+      "--project-dir",
+      project,
+    ], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        AMADEUS_SKIP_HUMAN_PRESENCE_GUARD: "1",
+        AMADEUS_STAGE_GRAPH: join(project, ".claude/tools/data/stage-graph.json"),
+      },
+    });
+    expect(single.status, single.stderr).toBe(0);
+    expect(
+      parseAuditRecords(readFileSync(seededAuditShard(project), "utf8"))
+        .filter((record) => record.event === "UNIT_OUTCOME_SETTLED"),
+    ).toEqual([]);
+
+    // Pivoting the cursor back onto the per-unit stage is what `amadeus-jump.ts
+    // execute` does to state; from there the engine's own `next` observes the
+    // coverage already on disk and settles each Unit forward.
+    moveCursorTo(project, "code-generation");
+    expect(next(project).status).toBe(0);
+
+    moveCursorTo(project, "build-and-test");
+    const recovered = next(project);
+    expect(recovered.status, recovered.stderr).toBe(0);
+    expect(JSON.parse(recovered.stdout).consumes).toEqual(["unit-z", "unit-a"].flatMap((unit) =>
+      ["code-generation-plan", "code-summary"].map((artifact) =>
+        `amadeus/spaces/default/intents/${DEFAULT_RECORD_DIR}/construction/${unit}/code-generation/${artifact}.md`
+      )
+    ));
   });
 
   test("refuses a settled-outcome row whose join keys were stripped", () => {
