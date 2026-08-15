@@ -4398,17 +4398,6 @@
   {
     "file": "plugins/github-pr-convergence/tools/pr-convergence-cli.ts",
     "selector": {
-      "function": "selfReportLifecycle",
-      "fingerprint": "sha256:c95945fd5c2da5e079e7bed9a16baa4171ad907654c4015f1919668011acd84f",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "Defensive residual arm, re-measured after #3110: no caller reaches this refuse. A live-head report or override enters through activeSelfContext, whose attestationBindsIdentity already requires receipt.prHead === heads.prHead and refuses a mismatch with exit 1 first; a landed report enters through landedSelfContext, which returns the write arm above on the measured epoch ancestry; and a created-kind caller takes the write arm beside it. The refuse is kept as fail-closed defence rather than deleted. Measured DA:0 at pr-convergence-cli.ts:907 over t3110/t448/t541/t3062/t534.",
-    "expiry": "remove if the lifecycle is ever callable without the currentSelfContext head binding or the landed epoch proof"
-  },
-  {
-    "file": "plugins/github-pr-convergence/tools/pr-convergence-cli.ts",
-    "selector": {
       "function": "<module>",
       "fingerprint": "sha256:9e100e2a9f31f0af2377daff5cb4d350d3ede750b0458fe2734550cc3e2a51e8",
       "anchorLines": 4,

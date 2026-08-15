@@ -573,16 +573,13 @@ interface SelfDelivery {
 }
 
 type SelfContext =
-  | {
+  | (SelfDelivery & {
       readonly ok: true;
-      readonly work: DeliveryWork;
-      readonly heads: DeliveryHeads;
-      readonly epoch: LandedEpochProof | null;
       // The receipt of an existing report whose bytes and identity check out but
       // whose audit line never landed — an interrupted earlier run. The caller
       // completes that emission instead of refusing the record forever.
       readonly pendingReceipt: ReportAttestation | null;
-    }
+    })
   | { readonly ok: false; readonly outcome: CliOutcome };
 
 function projectRootForRecord(record: string): string {
@@ -876,6 +873,16 @@ type SelfReportLifecycle =
   | { readonly kind: "resume"; readonly attestation: ReportAttestation }
   | { readonly kind: "refuse"; readonly outcome: CliOutcome };
 
+/** Whether the ancestry proof is about THIS epoch and THIS merge, rather than
+ *  another Unit's. A proof is evidence only for the pair it measured. */
+function measuredBy(
+  epoch: LandedEpochProof | null,
+  attestedPrHead: string,
+  mergedHead: string,
+): boolean {
+  return epoch !== null && epoch.attestedPrHead === attestedPrHead && epoch.mergedHead === mergedHead;
+}
+
 /** What the state already on disk allows this run to do. */
 function selfReportLifecycle(
   path: string,
@@ -900,8 +907,12 @@ function selfReportLifecycle(
   if (previous.attestation.prHead !== heads.prHead) {
     // An epoch attested at an earlier head is not stale when the pull request
     // merged that head: the merge closed the epoch, and the ancestry that says
-    // so was measured against the merged head before this call (#3110).
-    if (report.kind === "landed" && delivery.epoch !== null) return { kind: "write" };
+    // so was measured against the merged head before this call (#3110). The
+    // proof speaks for the two heads it measured and no others — a member Unit
+    // left attested at some third head was never measured, so it is stale.
+    if (report.kind === "landed" && measuredBy(delivery.epoch, previous.attestation.prHead, heads.prHead)) {
+      return { kind: "write" };
+    }
     return report.kind === "created"
       ? { kind: "write" }
       : refuse("report lifecycle stale: PR head changed; run create to begin a new created epoch");
@@ -1152,10 +1163,7 @@ async function refuseMergedHead(gh: GhRunner, repo: string, head: string): Promi
   return {
     exitCode: 1,
     stdout: "",
-    stderr:
-      `create refused: pull request #${merged.value.number} for head ${head} has already merged (${merged.value.url}). ` +
-      "A merged delivery is finalised by the report verb, which records it as landed; " +
-      "opening a second pull request for work already on the trunk is not a delivery path.\n",
+    stderr: `create refused: pull request #${merged.value.number} for head ${head} has already merged (${merged.value.url}). A merged delivery is finalised by the report verb, which records it as landed; opening a second pull request for work already on the trunk is not a delivery path.\n`,
   };
 }
 
