@@ -33,7 +33,7 @@ describe("amadeus-finding create-github-issue", () => {
     mkdirSync(join(root, "amadeus"), { recursive: true });
     writeFileSync(
       join(root, "amadeus", "config.json"),
-      `${JSON.stringify({ finding: { github: { issue: { creation: { mode: "prompt" } } } } })}\n`,
+      `${JSON.stringify({ finding: { github: { issue: { creation: { consent: "prompt" } } } } })}\n`,
       "utf-8",
     );
     const bodyFile = join(root, "finding.md");
@@ -76,7 +76,7 @@ describe("amadeus-finding create-github-issue", () => {
     mkdirSync(join(root, "amadeus"), { recursive: true });
     writeFileSync(
       join(root, "amadeus", "config.json"),
-      `${JSON.stringify({ finding: { github: { issue: { creation: { mode: "prompt" } } } } })}\n`,
+      `${JSON.stringify({ finding: { github: { issue: { creation: { consent: "prompt" } } } } })}\n`,
       "utf-8",
     );
     writeFileSync(join(root, "finding.md"), "Observed evidence.", "utf-8");

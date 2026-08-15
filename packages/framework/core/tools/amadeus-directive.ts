@@ -255,11 +255,13 @@ export interface ExecuteAdvisoryHandoffDirective {
   advisories: AdvisoryChoiceDirectiveAdvisory[];
 }
 
-// execute-failure-election — Construction Unit failure under
-// solo-election.trigger.mode=auto. Not a question: the conductor opens an
-// election with Retry/Skip/Abort and commits the ruling through the existing
-// report --user-input retry|skip|abort path. Absent/manual config still emits
-// ask; invalid config fails closed.
+// execute-failure-election — Construction Unit failure when
+// deriveSoloElectionTrigger(mode) derives "auto" (RFC-0001 ADR-8: the active
+// Intent's Autonomy Mode is semi or full — no config leaf involved). Not a
+// question: the conductor opens an election with Retry/Skip/Abort and commits
+// the ruling through the existing report --user-input retry|skip|abort path.
+// A derived "manual" (mode none, or no active Intent projection) still emits
+// ask.
 export interface ExecuteFailureElectionDirective {
   kind: "execute-failure-election";
   stage: string;

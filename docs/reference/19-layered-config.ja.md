@@ -29,13 +29,12 @@ leaf がなければ継承し、空 object は何も変更せず、`null` は不
 {
   "intent-mirror": {
     "github": {
-      "issue": { "mode": "prompt" },
+      "issue": { "consent": "prompt" },
       "project": { "targets": [] }
     }
   },
-  "solo-election": { "trigger": { "mode": "manual" } },
   "finding": {
-    "github": { "issue": { "creation": { "mode": "prompt" } } }
+    "github": { "issue": { "creation": { "consent": "prompt" } } }
   },
   "swarm": { "unit": { "concurrency": { "limit": 4 } } },
   "plugin": {
@@ -48,19 +47,26 @@ leaf がなければ継承し、空 object は何も変更せず、`null` は不
 
 | パス | 値と既定値 | layer |
 |------|------------|-------|
-| `intent-mirror.github.issue.mode` | `off \| prompt \| auto`、`prompt` | Project、Space、Intent |
+| `intent-mirror.github.issue.consent` | `off \| prompt \| auto`、`prompt` | Project、Space、Intent |
 | `intent-mirror.github.project.targets` | target 配列、`[]` | Project、Space、Intent |
-| `solo-election.trigger.mode` | `manual \| auto`、`manual` | Project、Space、Intent |
-| `finding.github.issue.creation.mode` | `off \| prompt \| auto`、`prompt` | Project、Space、Intent |
+| `finding.github.issue.creation.consent` | `off \| prompt \| auto`、`prompt` | Project、Space、Intent |
 | `swarm.unit.concurrency.limit` | 整数 `1..4`、`4` | Project、Space、Intent |
 | `plugin.activation.names` | 昇順で一意な plugin 名配列、`[]` | Project のみ |
 | `plugin.scope-bindings` | plugin から stage、重複のない scope 配列への対応表、`{}` | Project のみ |
 | `plugin.settings` | plugin から設定キー、string / number / boolean 値への対応表、`{}` | Project、Space、Intent |
 | `subagent.dispatch.enforced-models` | 空でない一意なモデル名配列、`["opus","sonnet"]` | Project, Space, Intent |
 
-未知のパスと旧フラットキーはエラーです。旧キーの診断には移行先を示しますが、alias や
-自動移行は行いません。`observability` は既存リゾルバーへ委譲したままなので、ルートでは
-許容しますが、このレジストリの対象には含めません。
+`solo-election.trigger.mode` という leaf はありません(RFC-0001 ADR-8)。ソロ選挙の
+自動発動は `deriveSoloElectionTrigger(mode)` — アクティブな Intent の Autonomy Mode
+のみを入力に取る純関数(`none` → `"manual"`、`semi`/`full` → `"auto"`)であり、設定値
+ではありません。
+
+未知のパスと旧フラットキーはエラーです。**改名**された旧キーの診断(上表の consent 系、
+`.mode` → `.consent`)は新しい構造化パスを示しますが、**廃止**された
+`solo-election.trigger.mode` の診断は Intent Autonomy Mode から導出される旨を説明する
+だけで、置換先パスは示しません。いずれの場合も alias や自動移行は行いません。
+`observability` は既存リゾルバーへ委譲したままなので、ルートでは許容しますが、この
+レジストリの対象には含めません。
 
 ## Project target と plugin
 
@@ -76,7 +82,9 @@ plugin 名は一意な1〜64文字で、
 ## CLI との統合
 
 - 自動選挙は `open --trigger auto`、手動選挙は既定の `--trigger manual` を使います。
-  解決値が `manual` の場合、自動要求は
+  `deriveSoloElectionTrigger(mode)` が `"manual"` を導出する場合(アクティブな Intent
+  の投影が存在しない場合も、退役した config leaf と同じ保守的な既定として `"manual"`
+  を導出します)、自動要求は
   `{"opened":null,"reason":"solo-election-manual-trigger-required"}` を返します。
 - finding の起票には `create-github-issue` subcommand を使います。
 - swarm の引数は解決済み上限を縮小できますが、拡大はできません。

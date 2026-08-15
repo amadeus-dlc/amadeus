@@ -19,7 +19,8 @@ import {
   type CanonicalTally,
   ElectionDefinitionCodec,
 } from "./amadeus-election-codec.ts";
-import { type AmadeusConfigIssue, resolveAmadeusConfig } from "./amadeus-config.ts";
+import { deriveSoloElectionTrigger } from "./amadeus-config.ts";
+import { readProductionAutonomyProjection } from "./amadeus-intent-autonomy-production.ts";
 import type { HoldReason } from "./amadeus-election-model.ts";
 import { resolveResponses, tallyQuestions } from "./amadeus-election-question-tally.ts";
 import {
@@ -239,20 +240,16 @@ export function openElection(
     : storeError(decoded.value.electionId, opened.error);
 }
 
-function configIssueSummary(issue: AmadeusConfigIssue): string {
-  return issue.kind === "read-failure"
-    ? `${issue.layer} (${issue.path}): ${issue.summary}`
-    : `${issue.layer} (${issue.path}): ${issue.key} expected ${issue.expected}, got ${issue.actualType}`;
-}
-
 export type TriggeredOpen =
   | { readonly electionId: string; readonly views: number }
   | { readonly opened: null; readonly reason: "solo-election-manual-trigger-required" };
 
 // `--trigger auto` is the opt-in solo auto-election entrance: the election is
-// opened only when the resolved configuration enables automatic triggering, so
-// an auto-fired election in a manual workspace is refused (loudly, exit 0 with a
-// typed reason) instead of being created.
+// opened only when the active Intent's Autonomy Mode derives an automatic
+// trigger (RFC-0001 ADR-8 — `none` -> manual, `semi`/`full` -> auto), so an
+// auto-fired election under `none` is refused (loudly, exit 0 with a typed
+// reason) instead of being created. No active intent projection derives the
+// same conservative "none" default the retired config leaf carried.
 export function triggeredOpenElection(
   projectDir: string,
   root: string,
@@ -263,15 +260,8 @@ export function triggeredOpenElection(
   if (trigger !== "auto") {
     return cliError("decode", "unknown", 'use --trigger manual or --trigger auto');
   }
-  const resolved = resolveAmadeusConfig(projectDir);
-  if (resolved.kind === "invalid") {
-    return cliError(
-      "config",
-      "unknown",
-      `fix the configuration: ${resolved.issues.map(configIssueSummary).join(" | ")}`,
-    );
-  }
-  if (resolved.config.soloElection.trigger.mode !== "auto") {
+  const mode = readProductionAutonomyProjection(projectDir)?.mode ?? "none";
+  if (deriveSoloElectionTrigger(mode) !== "auto") {
     return ok({ opened: null, reason: "solo-election-manual-trigger-required" });
   }
   return openElection(root, raw);

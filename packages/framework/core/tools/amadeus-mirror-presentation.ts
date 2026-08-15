@@ -143,7 +143,7 @@ export const MIRROR_USER_CONTRACT = {
       'array of { project: "<owner>/<number>", phase-field?: string, status-names?: { <phase>: string } }',
     phaseKeys: ["ideation", "inception", "construction", "operation", "done"],
     layerResolution: "last-layer-with-a-value-replaces",
-    independentOf: "intent-mirror.github.issue.mode",
+    independentOf: "intent-mirror.github.issue.consent",
     phaseField: {
       key: "phase-field",
       default: MIRROR_PROJECT_FIELD_CONTRACT.lifecycle.defaultField,

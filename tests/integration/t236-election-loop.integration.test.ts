@@ -7,14 +7,26 @@
 // the fail-closed reads around it. The loop AFTER open (distribute → collect →
 // tally → render → verify → done) is pinned by the mixed-lifecycle CLI suites.
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { main } from "../../packages/framework/core/tools/amadeus-election";
 import {
   electionsRoot,
   resolveElectionDir,
 } from "../../packages/framework/core/tools/amadeus-election-store";
+import type { AutonomyMode } from "../../packages/framework/core/tools/amadeus-intent-autonomy.ts";
+import { applyProductionAutonomyMode } from "../../packages/framework/core/tools/amadeus-intent-autonomy-production.ts";
+import { mintHumanPresence } from "../../packages/framework/core/tools/amadeus-presence-reservation.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
+import {
+  cleanupTestProject,
+  createTestProject,
+  FIXTURES_DIR,
+  seededStateFile,
+  seedStateFile,
+} from "../harness/fixtures.ts";
+
+const CONSTRUCTION = join(FIXTURES_DIR, "state-construction.md");
 
 const DEF = {
   schemaVersion: 2,
@@ -51,7 +63,7 @@ function lastError(): Record<string, unknown> {
 }
 
 beforeEach(() => {
-  projectDir = mkdtempSync(join(tmpdir(), "election-loop-"));
+  projectDir = createTestProject();
   mkdirSync(join(projectDir, "amadeus", "spaces", "default", "elections"), { recursive: true });
   console.log = (line: string) => {
     logs.push(String(line));
@@ -64,7 +76,7 @@ beforeEach(() => {
 afterEach(() => {
   console.log = origLog;
   console.error = origErr;
-  rmSync(projectDir, { recursive: true, force: true });
+  cleanupTestProject(projectDir);
 });
 
 function writeJson(name: string, value: unknown): string {
@@ -73,11 +85,23 @@ function writeJson(name: string, value: unknown): string {
   return path;
 }
 
-function writeConfig(mode: string): void {
-  writeFileSync(
-    join(projectDir, "amadeus", "config.json"),
-    JSON.stringify({ "solo-election": { trigger: { mode } } }),
-  );
+// RFC-0001 ADR-8: the automatic-open gate is DERIVED from the active Intent's
+// declared Autonomy Mode (deriveSoloElectionTrigger), not read from config —
+// there is no config leaf to write any more. Declares a real mode through the
+// same production API applyProductionAutonomyMode uses in normal operation.
+function declareMode(mode: AutonomyMode): void {
+  seedStateFile(projectDir, CONSTRUCTION);
+  resetOtelPerProject();
+  mintHumanPresence({
+    projectDir,
+    capability: { kind: "unavailable", reason: "in-process test driver" },
+  });
+  const applied = applyProductionAutonomyMode({
+    projectDir,
+    stateContent: readFileSync(seededStateFile(projectDir), "utf-8"),
+    mode,
+  });
+  if (!applied.ok) throw new Error(`${mode} declaration failed: ${applied.error}`);
 }
 
 function registryPath(): string {
@@ -100,7 +124,8 @@ describe("t236 election open entrance", () => {
     });
     expect(existsSync(registryPath())).toBe(false);
 
-    // (2) no configuration at all: automatic firing is NOT the default
+    // (2) no active Intent projection at all: automatic firing is NOT the
+    // default (deriveSoloElectionTrigger falls closed to "none" -> "manual").
     expect(run(["open", "--trigger", "auto", "--file", definition])).toBe(0);
     expect(lastJson()).toEqual({
       opened: null,
@@ -108,8 +133,8 @@ describe("t236 election open entrance", () => {
     });
     expect(existsSync(registryPath())).toBe(false);
 
-    // (3) explicitly manual: same refusal, still no store write
-    writeConfig("manual");
+    // (3) Intent Autonomy Mode declared "none": same refusal, still no store write
+    declareMode("none");
     expect(run(["open", "--trigger", "auto", "--file", definition])).toBe(0);
     expect(lastJson()).toEqual({
       opened: null,
@@ -117,25 +142,33 @@ describe("t236 election open entrance", () => {
     });
     expect(existsSync(registryPath())).toBe(false);
 
-    // (4) opted in: the election is created and every voter gets a blind view
-    writeConfig("auto");
+    // (4) Intent Autonomy Mode declared "semi": the election is created and
+    // every voter gets a blind view.
+    declareMode("semi");
     expect(run(["open", "--trigger", "auto", "--file", definition])).toBe(0);
     expect(lastJson()).toEqual({ electionId: "E-AUTO-OPTIN", views: 2 });
     expect(existsSync(resolveElectionDir(electionsRoot(projectDir), "E-AUTO-OPTIN"))).toBe(true);
   });
 
-  test("invalid automatic solo-election config stops automatic open without writes", () => {
-    const definition = writeJson("invalid-auto-def.json", {
+  // R-1/R-8 (config-visibility, RFC-0001 ADR-8): there is no longer a
+  // "solo-election.trigger.mode" config leaf to be invalid, so this scenario
+  // is replaced by its structural analogue — an active Intent whose state
+  // file exists but carries no declared Autonomy Mode (a pre-declaration
+  // state, the same shape a freshly-birthed intent has). The gate must still
+  // fail closed to manual rather than crash or silently default to auto.
+  test("an active Intent with an undeclared Autonomy Mode stops automatic open without writes", () => {
+    const definition = writeJson("undeclared-auto-def.json", {
       ...DEF,
-      electionId: "E-AUTO-INVALID",
+      electionId: "E-AUTO-UNDECLARED",
       voters: ["subagent-1", "subagent-2"],
     });
-    writeConfig("true");
+    seedStateFile(projectDir, CONSTRUCTION);
 
-    expect(run(["open", "--trigger", "auto", "--file", definition])).toBe(1);
-    const error = lastError();
-    expect(error.category).toBe("config");
-    expect(String(error.nextAction)).toContain("solo-election.trigger.mode expected manual | auto");
+    expect(run(["open", "--trigger", "auto", "--file", definition])).toBe(0);
+    expect(lastJson()).toEqual({
+      opened: null,
+      reason: "solo-election-manual-trigger-required",
+    });
     expect(existsSync(registryPath())).toBe(false);
   });
 

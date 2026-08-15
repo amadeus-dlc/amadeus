@@ -80,7 +80,7 @@ Pull requests, releases, deployment, daemons, and polling are outside Intent
 Mirror.
 
 <!-- amadeus-topic:projects -->
-<!-- amadeus-contract:projects {"key":"intent-mirror.github.project.targets","shape":"array of { project: \"<owner>/<number>\", phase-field?: string, status-names?: { <phase>: string } }","phaseKeys":["ideation","inception","construction","operation","done"],"layerResolution":"last-layer-with-a-value-replaces","independentOf":"intent-mirror.github.issue.mode","phaseField":{"key":"phase-field","default":"Intent Phase"},"authoritativeField":"phase-field","auxiliaryStatus":{"field":"Status","active":"In progress","complete":"Done","parked":"keep","archived":"keep","failureMode":"non-blocking"}} -->
+<!-- amadeus-contract:projects {"key":"intent-mirror.github.project.targets","shape":"array of { project: \"<owner>/<number>\", phase-field?: string, status-names?: { <phase>: string } }","phaseKeys":["ideation","inception","construction","operation","done"],"layerResolution":"last-layer-with-a-value-replaces","independentOf":"intent-mirror.github.issue.consent","phaseField":{"key":"phase-field","default":"Intent Phase"},"authoritativeField":"phase-field","auxiliaryStatus":{"field":"Status","active":"In progress","complete":"Done","parked":"keep","archived":"keep","failureMode":"non-blocking"}} -->
 ## Project boards
 
 `intent-mirror.github.project.targets` lists the GitHub Project boards this Intent syncs to. Each
@@ -112,7 +112,7 @@ unknown key is an error rather than an ignored entry.
 The key resolves per layer: the last layer that carries a value replaces the
 previous layer's list outright instead of merging into it, so a Space or Intent
 layer states the complete set of boards it wants. `intent-mirror.github.project.targets` is
-independent of `intent-mirror.github.issue.mode` — the mode decides whether a mirror operation runs,
+independent of `intent-mirror.github.issue.consent` — the mode decides whether a mirror operation runs,
 this key decides which boards that operation touches.
 
 The authoritative lifecycle value is written to the single-select field named

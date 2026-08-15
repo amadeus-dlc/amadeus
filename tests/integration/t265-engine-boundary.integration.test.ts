@@ -247,8 +247,7 @@ function seedBoundary(
       JSON.stringify({
         "intent-mirror": {
           github: {
-            issue: {
-              mode: options.mode ?? (options.auto ? "auto" : "prompt"),
+            issue: { consent: options.mode ?? (options.auto ? "auto" : "prompt"),
             },
           },
         },
@@ -314,7 +313,7 @@ function directCompletionFailure(args: string[]): string {
 }
 
 function seedFinalCompletionProject(
-  config: unknown = { "intent-mirror": { github: { issue: { mode: "auto" } } } },
+  config: unknown = { "intent-mirror": { github: { issue: { consent: "auto" } } } },
 ): string {
   project = createTestProject();
   seedStateFile(
@@ -750,7 +749,7 @@ describe("t265 receipt recovery and reports", () => {
 
   test("invalid config fails closed without changing state", () => {
     seedBoundary("inception", { mirror: true });
-    writeFileSync(join(project, "amadeus", "config.json"), '{"intent-mirror":{"github":{"issue":{"mode":"yes"}}}}');
+    writeFileSync(join(project, "amadeus", "config.json"), '{"intent-mirror":{"github":{"issue":{"consent":"yes"}}}}');
     const before = readFileSync(seededStateFile(project), "utf-8");
     const result = run(ENGINE, ["next"]);
     expect(result.stdout).toContain('"kind":"error"');
@@ -956,7 +955,7 @@ describe("t265 in-process completion and carrier boundaries", () => {
   });
 
   test("final report refuses an invalid completion mirror configuration before mutation", () => {
-    const statePath = seedFinalCompletionProject({ "intent-mirror": { github: { issue: { mode: true } } } });
+    const statePath = seedFinalCompletionProject({ "intent-mirror": { github: { issue: { consent: true } } } });
     const before = readFileSync(statePath, "utf-8");
 
     const directive = finalReport(project);
@@ -985,7 +984,7 @@ describe("t265 in-process completion and carrier boundaries", () => {
     const { statePath } = prepareWorkflowCompletion();
     writeFileSync(
       join(project, "amadeus", "config.json"),
-      '{"intent-mirror":{"github":{"issue":{"mode":"off"}}}}',
+      '{"intent-mirror":{"github":{"issue":{"consent":"off"}}}}',
     );
     const before = readFileSync(statePath, "utf-8");
 
@@ -1100,7 +1099,7 @@ describe("t265 in-process completion and carrier boundaries", () => {
     const { completionInstance } = prepareWorkflowCompletion();
     writeFileSync(
       join(project, "amadeus", "config.json"),
-      '{"intent-mirror":{"github":{"issue":{"mode":true}}}}',
+      '{"intent-mirror":{"github":{"issue":{"consent":true}}}}',
     );
 
     expect(

@@ -25,7 +25,7 @@ function project(): { root: string; body: string } {
   mkdirSync(join(root, "amadeus"), { recursive: true });
   writeFileSync(
     join(root, "amadeus", "config.json"),
-    `${JSON.stringify({ finding: { github: { issue: { creation: { mode: "prompt" } } } } })}\n`,
+    `${JSON.stringify({ finding: { github: { issue: { creation: { consent: "prompt" } } } } })}\n`,
     "utf-8",
   );
   const body = join(root, "finding.md");
@@ -82,7 +82,7 @@ describe("runFindingCli", () => {
 
     writeFileSync(
       join(root, "amadeus", "config.json"),
-      `${JSON.stringify({ finding: { github: { issue: { creation: { mode: "sometimes" } } } } })}\n`,
+      `${JSON.stringify({ finding: { github: { issue: { creation: { consent: "sometimes" } } } } })}\n`,
       "utf-8",
     );
     expect(defaultFindingDependencies.resolveConfig(root)).toEqual({

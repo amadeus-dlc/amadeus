@@ -5,6 +5,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   type AmadeusConfigLayerInput,
+  deriveSoloElectionTrigger,
   parseAmadeusConfigLayers,
 } from "../../packages/framework/core/tools/amadeus-config.ts";
 
@@ -44,13 +45,12 @@ describe("t431 structured config", () => {
       config: {
         intentMirror: {
           github: {
-            issue: { mode: "prompt" },
+            issue: { consent: "prompt" },
             project: { targets: [] },
           },
         },
-        soloElection: { trigger: { mode: "manual" } },
         finding: {
-          github: { issue: { creation: { mode: "prompt" } } },
+          github: { issue: { creation: { consent: "prompt" } } },
         },
         swarm: { unit: { concurrency: { limit: 4 } } },
         plugin: { activation: { names: [] }, scopeBindings: {}, settings: {} },
@@ -103,13 +103,13 @@ describe("t431 structured config", () => {
   test("merges leaves by project, space, then intent and replaces arrays", () => {
     const outcome = parseAmadeusConfigLayers([
       present("intent", {
-        "intent-mirror": { github: { issue: { mode: "auto" } } },
+        "intent-mirror": { github: { issue: { consent: "auto" } } },
         swarm: { unit: { concurrency: { limit: 1 } } },
       }),
       present("project", {
         "intent-mirror": {
           github: {
-            issue: { mode: "off" },
+            issue: { consent: "off" },
             project: {
               targets: [{ project: "amadeus-dlc/5" }],
             },
@@ -118,10 +118,9 @@ describe("t431 structured config", () => {
         plugin: { activation: { names: ["zeta", "alpha"] } },
       }),
       present("space", {
-        "intent-mirror": { github: { issue: { mode: "prompt" } } },
-        "solo-election": { trigger: { mode: "auto" } },
+        "intent-mirror": { github: { issue: { consent: "prompt" } } },
         finding: {
-          github: { issue: { creation: { mode: "off" } } },
+          github: { issue: { creation: { consent: "off" } } },
         },
       }),
     ]);
@@ -131,7 +130,7 @@ describe("t431 structured config", () => {
     expect(outcome.config).toEqual({
       intentMirror: {
         github: {
-          issue: { mode: "auto" },
+          issue: { consent: "auto" },
           project: {
             targets: [
               {
@@ -143,8 +142,7 @@ describe("t431 structured config", () => {
           },
         },
       },
-      soloElection: { trigger: { mode: "auto" } },
-      finding: { github: { issue: { creation: { mode: "off" } } } },
+      finding: { github: { issue: { creation: { consent: "off" } } } },
       swarm: { unit: { concurrency: { limit: 1 } } },
       plugin: { activation: { names: ["alpha", "zeta"] }, scopeBindings: {}, settings: {} },
       subagent: { dispatch: { enforcedModels: ["opus", "sonnet"] } },
@@ -156,17 +154,14 @@ describe("t431 structured config", () => {
     ]);
   });
 
-  test("rejects every legacy key at every layer and explains value conversion", () => {
+  test("rejects every renamed legacy key at every layer and explains value conversion", () => {
+    // R-2/R-4: the consent-axis keys were renamed (.mode -> .consent) but the
+    // value vocabulary (off/prompt/auto) is unchanged, so the flat legacy
+    // aliases still resolve to a *renamed* replacement path.
     const legacy = [
-      ["auto-mirror", "auto", "intent-mirror.github.issue.mode", "unchanged"],
+      ["auto-mirror", "auto", "intent-mirror.github.issue.consent", "unchanged"],
       ["mirror-projects", [], "intent-mirror.github.project.targets", "unchanged"],
-      [
-        "auto-solo-election",
-        true,
-        "solo-election.trigger.mode",
-        "false -> manual; true -> auto",
-      ],
-      ["auto-file-findings", "auto", "finding.github.issue.creation.mode", "unchanged"],
+      ["auto-file-findings", "auto", "finding.github.issue.creation.consent", "unchanged"],
       ["max-parallel-units", 4, "swarm.unit.concurrency.limit", "unchanged"],
       ["plugins", [], "plugin.activation.names", "unchanged"],
     ] as const;
@@ -190,17 +185,75 @@ describe("t431 structured config", () => {
     }
   });
 
-  test("rejects a legacy key even when its structured replacement is present", () => {
+  // R-1/R-2/R-3: solo-election.trigger.mode was ABOLISHED (no replacement
+  // path — it's derived from Intent Autonomy Mode, not read from config), so
+  // both its structured spelling and its flat legacy alias must loud-fail
+  // with an `expected` message that does NOT name a new config path.
+  test("rejects the abolished solo-election key (structured, flat-dotted, and legacy alias forms) without naming a replacement path", () => {
+    for (const layer of ["project", "space", "intent"] as const) {
+      // Nested structured form: `solo-election` is the first unrecognized
+      // segment (no registry entry carries that prefix any more), so the
+      // issue surfaces at that top segment rather than at `...trigger.mode`.
+      const structured = parseAmadeusConfigLayers([
+        present(layer, { "solo-election": { trigger: { mode: "auto" } } }),
+      ]);
+      expect(structured.kind).toBe("invalid");
+      if (structured.kind === "invalid") {
+        expect(structured.issues).toContainEqual({
+          kind: "invalid-value",
+          layer,
+          path: `amadeus/${layer}.json`,
+          key: "intent-mirror.github.issue.consent",
+          actualType: "legacy key solo-election",
+          expected: expect.stringContaining("Autonomy Mode") as unknown as string,
+        });
+        const issue = structured.issues.find(
+          (candidate) => candidate.kind === "invalid-value" && candidate.actualType === "legacy key solo-election",
+        );
+        expect(issue?.expected).not.toContain(".trigger.mode");
+      }
+
+      const flatDotted = parseAmadeusConfigLayers([
+        present(layer, { "solo-election.trigger.mode": "auto" }),
+      ]);
+      expect(flatDotted.kind).toBe("invalid");
+      if (flatDotted.kind === "invalid") {
+        expect(flatDotted.issues).toContainEqual({
+          kind: "invalid-value",
+          layer,
+          path: `amadeus/${layer}.json`,
+          key: "intent-mirror.github.issue.consent",
+          actualType: "legacy key solo-election.trigger.mode",
+          expected: expect.stringContaining("Autonomy Mode") as unknown as string,
+        });
+      }
+
+      const legacyAlias = parseAmadeusConfigLayers([
+        present(layer, { "auto-solo-election": true }),
+      ]);
+      expect(legacyAlias.kind).toBe("invalid");
+      if (legacyAlias.kind === "invalid") {
+        const issue = legacyAlias.issues[0];
+        expect(issue?.kind).toBe("invalid-value");
+        if (issue?.kind === "invalid-value") {
+          expect(issue.actualType).toBe("legacy key auto-solo-election");
+          expect(issue.expected).toContain("Autonomy Mode");
+        }
+      }
+    }
+  });
+
+  test("rejects a legacy key even when its renamed structured replacement is present", () => {
     const outcome = parseAmadeusConfigLayers([
       present("project", {
         "auto-mirror": "auto",
-        "intent-mirror": { github: { issue: { mode: "auto" } } },
+        "intent-mirror": { github: { issue: { consent: "auto" } } },
       }),
     ]);
     expect(outcome.kind).toBe("invalid");
   });
 
-  test("rejects flat dotted keys instead of silently using defaults", () => {
+  test("rejects the old .mode spelling (flat-dotted) with a message naming the new .consent path", () => {
     const outcome = parseAmadeusConfigLayers([
       present("project", { "intent-mirror.github.issue.mode": "auto" }),
     ]);
@@ -210,10 +263,53 @@ describe("t431 structured config", () => {
       kind: "invalid-value",
       layer: "project",
       path: "amadeus/project.json",
-      key: "intent-mirror.github.issue.mode",
-      actualType: "unknown key intent-mirror.github.issue.mode",
+      key: "intent-mirror.github.issue.consent",
+      actualType: "legacy key intent-mirror.github.issue.mode",
+      expected: "use intent-mirror.github.issue.consent; value conversion: unchanged",
+    });
+  });
+
+  test("rejects the old finding .mode spelling (nested) with a message naming the new .consent path", () => {
+    const outcome = parseAmadeusConfigLayers([
+      present("project", {
+        finding: { github: { issue: { creation: { mode: "auto" } } } },
+      }),
+    ]);
+    expect(outcome.kind).toBe("invalid");
+    if (outcome.kind !== "invalid") return;
+    expect(outcome.issues).toContainEqual({
+      kind: "invalid-value",
+      layer: "project",
+      path: "amadeus/project.json",
+      key: "finding.github.issue.creation.consent",
+      actualType: "legacy key mode",
+      expected: "use finding.github.issue.creation.consent; value conversion: unchanged",
+    });
+  });
+
+  test("still rejects a genuinely unknown flat dotted key with the generic message", () => {
+    const outcome = parseAmadeusConfigLayers([
+      present("project", { "unexpected.flat.dotted.key": "auto" }),
+    ]);
+    expect(outcome.kind).toBe("invalid");
+    if (outcome.kind !== "invalid") return;
+    expect(outcome.issues).toContainEqual({
+      kind: "invalid-value",
+      layer: "project",
+      path: "amadeus/project.json",
+      key: "intent-mirror.github.issue.consent",
+      actualType: "unknown key unexpected.flat.dotted.key",
       expected: "documented structured configuration path",
     });
+  });
+
+  // R-5: deriveSoloElectionTrigger is a pure function of AutonomyMode — no
+  // config, no I/O. The absence of any mock/hook argument is itself the
+  // structural proof of purity.
+  test("deriveSoloElectionTrigger derives manual/auto from AutonomyMode alone", () => {
+    expect(deriveSoloElectionTrigger("none")).toBe("manual");
+    expect(deriveSoloElectionTrigger("semi")).toBe("auto");
+    expect(deriveSoloElectionTrigger("full")).toBe("auto");
   });
 
   test("normalizes project targets and rejects duplicate identities", () => {
@@ -333,7 +429,7 @@ describe("t431 structured config", () => {
     expect(
       parseAmadeusConfigLayers([
         present("intent", {
-          "intent-mirror": { github: { issue: { mode: null } } },
+          "intent-mirror": { github: { issue: { consent: null } } },
         }),
       ]).kind,
     ).toBe("invalid");
@@ -353,7 +449,7 @@ describe("t431 structured config", () => {
       kind: "invalid-value",
       layer: "project",
       path: "amadeus/project.json",
-      key: "intent-mirror.github.issue.mode",
+      key: "intent-mirror.github.issue.consent",
       actualType: "boolean",
       expected: "object",
     });
@@ -363,7 +459,7 @@ describe("t431 structured config", () => {
     const outcome = parseAmadeusConfigLayers([
       present("project", {
         unexpected: true,
-        finding: { github: { issue: { creation: { mode: "sometimes" } } } },
+        finding: { github: { issue: { creation: { consent: "sometimes" } } } },
         swarm: { unit: { concurrency: { limit: 5 } } },
       }),
     ]);

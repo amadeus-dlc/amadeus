@@ -34,6 +34,7 @@ import {
   readProductionAutonomyProjection,
 } from "./amadeus-intent-autonomy-production.ts";
 import { projectIntentAutonomyStatus } from "./amadeus-intent-autonomy-runtime.ts";
+import { statusAutonomyFacet } from "./amadeus-autonomy-status-facet.ts";
 import {
   findCycles,
   frameworkMemorySeedDir,
@@ -349,8 +350,13 @@ function readStatusAutonomy(
   }
 }
 
+// FR-8 UI truthfulness: `facet` is resolved independently of `autonomy` (it
+// also depends on config, which can be invalid even when the audit projection
+// is fine), so its unavailability is reported separately rather than assumed
+// to track `autonomy === null`. Never a guessed value on either side (R-7).
 function renderAutonomyStatus(
   autonomy: ReturnType<typeof projectIntentAutonomyStatus> | null,
+  facet: ReturnType<typeof statusAutonomyFacet>,
 ): string {
   if (autonomy === null) return "Autonomy:       unavailable (audit projection unavailable)";
   return [
@@ -362,6 +368,9 @@ function renderAutonomyStatus(
     `Unreviewed:     ${autonomy.unreviewedAutoDecisionCount}`,
     `Stop Reason:    ${autonomy.suspendedReason ?? "none"}`,
     `Resume:         ${autonomy.resumeCondition === null ? "none" : JSON.stringify(autonomy.resumeCondition)}`,
+    `Interactive:    ${facet === null ? "unavailable" : facet.interactive}`,
+    `Mirror Consent: ${facet === null ? "unavailable" : facet.mirrorConsent}`,
+    `Finding Consent: ${facet === null ? "unavailable" : facet.findingConsent}`,
   ].join("\n");
 }
 
@@ -395,6 +404,7 @@ To get started:
   const lastCompleted = getField(content, "Last Completed Stage") || "None";
   const nextStage = getField(content, "Next Stage") || "None";
   const autonomy = readStatusAutonomy(projectDir, flags.intent, flags.space);
+  const autonomyFacet = statusAutonomyFacet(projectDir, flags.intent, flags.space);
 
   // Find current stage number
   const currentEntry = graph.find((s) => s.slug === currentStage);
@@ -506,7 +516,7 @@ To get started:
     return;
   }
 
-  const autonomyLines = renderAutonomyStatus(autonomy);
+  const autonomyLines = renderAutonomyStatus(autonomy, autonomyFacet);
 
   const output = `AI-DLC Workflow Status
 ==============================
