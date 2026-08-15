@@ -53,13 +53,13 @@
 //      conductor must write a `<slug>-questions.md` with blank [Answer]: tags
 //      before asking (stage-protocol.md §3); an unanswered tag is a positive
 //      signal that a question is pending, so we ALLOW the stop then too
-//      (isPendingQuestionStop below). Strictly gated: it never fires for an
-//      Intent that holds the QUESTION CARVE-OUT — autonomy `full` with an
-//      active grant, or `semi` declared by a human command, both of which may
-//      rule on the question themselves and so must keep running (#2253) — and
-//      any miss — no file, all answered, carve-out held, or a read error —
+//      (isPendingQuestionStop below). Strictly gated: it fires only when this
+//      session has a human in it to answer, and — under `semi`/`full`, where
+//      the ladder rules on questions — only when the ladder actually handed
+//      this one back (RFC-0001 ADR-5). Any miss — no file, all answered, a
+//      non-interactive run, an auto-decidable question, or a read error —
 //      falls through to the cap-bounded block, so a genuine mid-stage quit is
-//      still nudged.
+//      still nudged and an unattended run keeps moving.
 //   4. A CONVERSATIONAL turn ends with the human's last prompt answered and NO
 //      workflow-engine engagement (the conductor ran neither amadeus-orchestrate
 //      nor amadeus-state since that prompt). Issue #365's broader reading: a human
@@ -194,10 +194,10 @@ function isFullyAutonomousIntent(
 //
 // The human-wait and conversational carve-outs are NOT bound: neither axis is
 // applied to them, because both already allow stops that these axes would turn
-// into blocks (R-11 / R-12).
+// into blocks.
 
 // Why a bound carve-out fired, recorded on the allow so a misclassification can
-// be contested rather than guessed at (R-15). Constructed only on the allow
+// be contested rather than guessed at. Constructed only on the allow
 // path, so its existence IS "this carve-out returned the turn".
 type BoundCarveoutBasis = {
   readonly carveout: "pending-question" | "pending-compose";
@@ -216,10 +216,10 @@ export function describeBoundCarveout(basis: BoundCarveoutBasis): string {
   return `${basis.carveout} carve-out; interactivity=${basis.interactivity.source}; ruling=${basis.outcomeKind}`;
 }
 
-// C3's port is the ONLY interactivity judgment in this hook (R-1) — a second
+// C3's port is the ONLY interactivity judgment in this hook — a second
 // reading here is how the displayed verdict and the acted-on verdict drift
 // apart. The port is itself fail-closed; this wrapper covers the case where it
-// cannot even be reached, which is the same answer for the same reason (R-2).
+// cannot even be reached, which is the same answer for the same reason.
 function sessionInteractivity(resolvedProjectDir: string): SessionInteractivitySignal {
   try {
     const verdict = resolveSessionInteractivity(resolvedProjectDir);
@@ -231,13 +231,13 @@ function sessionInteractivity(resolvedProjectDir: string): SessionInteractivityS
 
 // The ruling-order terminal of the decision point this record is stopped at, or
 // null when there is none to read. `null` closes the carve-out rather than
-// opening it (R-5 / R-10): a terminal that cannot be read is not evidence that a
+// opening it: a terminal that cannot be read is not evidence that a
 // human is owed a ruling, and the budget-bounded block is the safe side.
 //
 // The envelope is U3's waiting record — the one durable place a non-unique
 // terminal is written (amadeus-waiting.ts WaitingCause.outcome). A `unique`
 // terminal never lands here at all, which is what keeps an auto-decidable
-// decision point from firing the carve-out (R-6).
+// decision point from firing the carve-out.
 function pendingRulingTerminal(resolvedProjectDir: string): "contested" | "none" | null {
   try {
     return readProductionWaitingStop(resolvedProjectDir)?.cause.outcome.kind ?? null;
@@ -496,7 +496,7 @@ function hasPendingQuestion(slug: string, phase: string, resolvedProjectDir: str
 // `none`) the ladder handed the ruling back rather than making it.
 //
 // Mode `none` does not run the ladder — every question is the human's by
-// definition — so the unanswered tag remains the whole signal there (R-7).
+// definition — so the unanswered tag remains the whole signal there.
 /** @internal */
 export function questionCarveoutBasis(
   stateContent: string,
@@ -510,7 +510,7 @@ export function questionCarveoutBasis(
     const phase = getField(stateContent, "Lifecycle Phase") ?? "";
     if (!hasPendingQuestion(slug, phase, resolvedProjectDir)) return null;
     const interactivity = sessionInteractivity(resolvedProjectDir);
-    if (!interactivity.interactive) return null; // R-8: the engine waits instead
+    if (!interactivity.interactive) return null; // the engine waits instead
     const mode = intentAutonomyMode(stateContent);
     if (mode !== "semi" && mode !== "full") {
       return { carveout: "pending-question", interactivity, outcomeKind: "not-required" };
@@ -581,9 +581,9 @@ export function composeCarveoutBasis(
   try {
     interactivity = deps.interactivity();
   } catch {
-    interactivity = { interactive: false, source: "undetermined" }; // R-2
+    interactivity = { interactive: false, source: "undetermined" };
   }
-  if (!interactivity.interactive) return null; // R-8: the engine waits instead
+  if (!interactivity.interactive) return null; // the engine waits instead
   return { carveout: "pending-compose", interactivity, outcomeKind: "human-prerogative" };
 }
 
@@ -612,7 +612,10 @@ export function isPendingComposeStop(
 // releases a chatting human after one nudge instead of eight.
 //
 // Two strict gates make this safe (it can still only ever ALLOW, never block
-// more), mirroring isPendingQuestionStop:
+// more). The mode guard stays here after ADR-5 moved the question and compose
+// sites off it: a chat turn is not a ruling, so there is no terminal to bind to,
+// and binding it to interactivity instead would turn stops this already allows
+// under `semi` into blocks.
 //   1. POSITIVE-CONFIRMATION: allow only on a transcript we could read that
 //      shows a genuine human prompt answered with zero engine calls. A missing
 //      path, unreadable file, no human prompt found, or ANY engine call in the
