@@ -19,7 +19,7 @@ import {
   consumeMigrationStopLatch,
   isMigrationExecutionCommand,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
-import { normalizeGitOutcome } from "../../packages/framework/core/tools/amadeus-migrate.ts";
+import { normalizeGitOutcome } from "../../packages/framework/core/tools/amadeus-migrate-git.ts";
 import { handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import { runUtilityMain } from "../../packages/framework/core/tools/amadeus-utility.ts";
 

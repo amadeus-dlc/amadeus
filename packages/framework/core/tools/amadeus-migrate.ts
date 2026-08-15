@@ -29,6 +29,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "nod
 import { fileURLToPath } from "node:url";
 import { isHarnessType } from "./amadeus-harness.ts";
 import { parseDoctorAuditSuffix } from "./amadeus-journal.ts";
+import { normalizeGitOutcome } from "./amadeus-migrate-git.ts";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
 
 const UPSTREAM_NAMESPACE = "aidlc";
@@ -435,32 +436,6 @@ function sha256(path: string): string {
 
 function md5(path: string): string {
   return createHash("md5").update(readFileSync(path)).digest("hex");
-}
-
-// The subset of a `spawnSync` return this reads, named so the verdict below can be driven from a
-// synthesised outcome: a spawn failure severe enough to set `error` is not reproducible on demand
-// through a real child.
-export interface GitSpawnOutcome {
-  status: number | null;
-  stdout?: string | null;
-  stderr?: string | null;
-  error?: Error;
-}
-
-// A spawn that sets `error` did not deliver what the caller asked for, whatever exit code came
-// back: bun returns `status: 0` together with `error: ENOBUFS` when a child overflows maxBuffer and
-// still exits on its own, so reading `status` alone hands the caller a truncated stdout under a
-// success verdict. The error text joins stderr so the reason survives into the diagnostic.
-export function normalizeGitOutcome(result: GitSpawnOutcome): { ok: boolean; stdout: string; stderr: string } {
-  const stderr = result.stderr || "";
-  if (result.error === undefined) {
-    return { ok: result.status === 0, stdout: result.stdout || "", stderr };
-  }
-  return {
-    ok: false,
-    stdout: result.stdout || "",
-    stderr: [stderr.trim(), String(result.error)].filter(Boolean).join("\n"),
-  };
 }
 
 function git(projectDir: string, args: readonly string[]): {
