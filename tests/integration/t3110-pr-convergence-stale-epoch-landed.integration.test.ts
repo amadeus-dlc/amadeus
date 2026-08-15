@@ -38,6 +38,15 @@ import {
 } from "../../plugins/github-pr-convergence/tools/pr-convergence-cli.ts";
 import type { GitSpawn } from "../../plugins/github-pr-convergence/tools/pr-convergence-git-runner.ts";
 import { evaluateReportFormat } from "../../plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts";
+import {
+  ATTESTATION_EVENT,
+  attestationId,
+  parseAttestation,
+  renderAttestation,
+  type ReportAttestation,
+  reportPayload,
+  reportPayloadDigest,
+} from "../../plugins/github-pr-convergence/tools/pr-convergence-attestation.ts";
 import { projectDeliveryBoltPlan } from "../../packages/framework/core/tools/amadeus-delivery-bolts.ts";
 
 const BRANCH = "bolt/3110";
@@ -373,6 +382,97 @@ describe("#3110 — a stale created epoch finalises as landed on the merged head
     expect(result.findings).toEqual([]);
     expect(result.pass).toBe(true);
     expect(result.reason).toBe("landed");
+  });
+});
+
+/**
+ * Rewrites a report the way a forger who knows the algorithm would: the payload
+ * and the receipt are both re-derived and the audit gains the matching receipt
+ * line, so the digest, the receipt id and the audit carriage all agree. What
+ * such a rewrite cannot repair is a binding the sensor checks between the two.
+ */
+function reattest(
+  f: Fixture,
+  mutate: (
+    payload: string,
+    receipt: ReportAttestation,
+  ) => { readonly payload: string; readonly receipt: Omit<ReportAttestation, "id" | "contentDigest"> },
+): void {
+  const path = reportPathFor(f.record, UNIT);
+  const body = readFileSync(path, "utf-8");
+  const current = parseAttestation(body);
+  if (current === null) throw new Error("fixture report carries no attestation");
+  const next = mutate(reportPayload(body), current);
+  const { id: _signature, contentDigest: _digest, ...fields } = next.receipt as ReportAttestation;
+  const unsigned = { ...fields, contentDigest: reportPayloadDigest(next.payload) };
+  const receipt: ReportAttestation = { id: attestationId(unsigned), ...unsigned };
+  writeFileSync(path, `${next.payload}${renderAttestation(receipt)}`, "utf-8");
+  writeFileSync(
+    join(f.record, "audit", "attestation.jsonl"),
+    `${JSON.stringify({ attributes: { Event: ATTESTATION_EVENT, "Attestation Id": receipt.id } })}\n`,
+    { flag: "a" },
+  );
+}
+
+function findingFields(path: string, stage: string): string[] {
+  return evaluateReportFormat(path, stage).findings.map((finding) => finding.field);
+}
+
+describe("#3110 — a landed record answers for its merge, and only for it", () => {
+  const OTHER_COMMIT = "fedcba9876543210fedcba9876543210fedcba98";
+
+  test("a merge commit edited in the record is refused", async () => {
+    const f = await staleAndMerged();
+    expect((await runCli(verbArgs("report", f), seams(f))).exitCode).toBe(0);
+    const path = reportPathFor(f.record, UNIT);
+    writeFileSync(path, readFileSync(path, "utf-8").replace(MERGE_COMMIT, OTHER_COMMIT), "utf-8");
+
+    const result = evaluateReportFormat(path, "pr-convergence");
+    expect(result.pass).toBe(false);
+    expect(result.findings.length).toBeGreaterThan(0);
+  });
+
+  test("a merge instant edited in the record is refused", async () => {
+    const f = await staleAndMerged();
+    expect((await runCli(verbArgs("report", f), seams(f))).exitCode).toBe(0);
+    const path = reportPathFor(f.record, UNIT);
+    writeFileSync(path, readFileSync(path, "utf-8").replace(MERGED_AT, "2026-08-15T23:59:00Z"), "utf-8");
+
+    const result = evaluateReportFormat(path, "pr-convergence");
+    expect(result.pass).toBe(false);
+    expect(result.findings.length).toBeGreaterThan(0);
+  });
+
+  test("a re-derived record whose merge commit no longer matches its receipt is refused", async () => {
+    // Digest, receipt id and audit carriage all agree here: the merge binding
+    // is the only check left standing between the record and the merge it
+    // claims.
+    const f = await staleAndMerged();
+    expect((await runCli(verbArgs("report", f), seams(f))).exitCode).toBe(0);
+    const path = reportPathFor(f.record, UNIT);
+    reattest(f, (payload, receipt) => ({
+      payload: payload.replace(MERGE_COMMIT, OTHER_COMMIT),
+      receipt,
+    }));
+
+    expect(findingFields(path, "pr-convergence")).toEqual(["merge commit"]);
+  });
+
+  test("a record that is not landed may not attest merge facts", async () => {
+    // Merge facts must not be smuggled into a live record: they would let it
+    // claim a binding it does not have while the checkout binding still applies.
+    const f = await delivered();
+    const path = reportPathFor(f.record, UNIT);
+    const before = evaluateReportFormat(path, "code-generation").findings;
+    reattest(f, (payload, receipt) => ({
+      payload,
+      receipt: { ...receipt, mergeCommit: MERGE_COMMIT, mergedAt: MERGED_AT },
+    }));
+
+    const after = evaluateReportFormat(path, "code-generation");
+    expect(after.pass).toBe(false);
+    expect(after.findings.filter((finding) => !before.some((was) => was.field === finding.field)))
+      .toEqual([{ field: "attestation", reason: "only a landed record attests merge facts" }]);
   });
 });
 
