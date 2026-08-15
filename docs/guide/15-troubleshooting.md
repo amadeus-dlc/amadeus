@@ -135,7 +135,7 @@ The engine now settles each Unit's outcome itself, at the moment it observes the
 
 1. Update the engine so it carries the fix (pull, then `bun run build` if you develop against a source checkout).
 2. Put the cursor back on the per-unit Construction stage the consumer reads from — usually `code-generation`: run `/amadeus --stage code-generation`, then run the `amadeus-jump.ts execute` command it prints.
-3. Run `/amadeus`. The engine re-derives coverage from the record, settles every covered Unit's outcome, and — since all Units are already covered — presents the stage gate again. Approve it.
+3. Run `/amadeus`. The engine re-derives coverage from the record, settles every covered, non-cancelled Unit's outcome, and — since all Units are already covered — presents the stage gate again. Approve it.
 4. Run `/amadeus`. The consumer stage now fans out over the Units and the workflow continues.
 
 Steps 2–4 add no artifacts and rewrite no history; the only new rows are the settled outcomes, stamped when they are observed.

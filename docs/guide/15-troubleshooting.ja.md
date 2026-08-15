@@ -135,7 +135,7 @@ engine は現在、per-unit ステージを反復する中で Unit の必須成�
 
 1. 修正を含む engine へ更新します(pull し、ソースチェックアウトで開発している場合は `bun run build`)。
 2. consumer が読む per-unit Construction ステージ(通常は `code-generation`)へカーソルを戻します: `/amadeus --stage code-generation` を実行し、表示された `amadeus-jump.ts execute` コマンドを実行します。
-3. `/amadeus` を実行します。engine が record から coverage を再導出して covered な Unit すべての outcome を確定させ、全 Unit が既に covered であるためステージゲートを再提示します。承認してください。
+3. `/amadeus` を実行します。engine が record から coverage を再導出して covered かつ未キャンセルの Unit すべての outcome を確定させ、全 Unit が既に covered であるためステージゲートを再提示します。承認してください。
 4. `/amadeus` を実行します。consumer ステージが Unit 群へファンアウトし、ワークフローが継続します。
 
 手順 2〜4 は成果物を追加せず履歴も書き換えません。増えるのは、観測した時点のタイムスタンプを持つ確定済み outcome の行だけです。
