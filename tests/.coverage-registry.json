@@ -6011,6 +6011,10 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
+          "file": "tests/integration/t3120-grant-ceremony-preview-command.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/integration/t483-preview-non-auto-kinds.integration.test.ts",
           "mechanism": "cli"
         }
@@ -6052,6 +6056,10 @@
       "unitId": "amadeus-bolt set-autonomy",
       "minMechanism": "cli",
       "coveredBy": [
+        {
+          "file": "tests/integration/t3120-grant-ceremony-preview-command.integration.test.ts",
+          "mechanism": "cli"
+        },
         {
           "file": "tests/integration/t393-birth-autonomy-field.integration.test.ts",
           "mechanism": "cli"
