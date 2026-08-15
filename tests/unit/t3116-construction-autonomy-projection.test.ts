@@ -10,6 +10,7 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { assertRecomposeAllowed } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import {
   detectProjectionDivergence,
   projectConstructionAutonomy,
@@ -109,5 +110,27 @@ describe("R-13 / R-14 / R-25: divergence detection over the declared x recorded 
     expect(detectProjectionDivergence(stateWith(null, "autonomous"))).toBeNull();
     expect(detectProjectionDivergence(stateWith("bogus", "gated"))).toBeNull();
     expect(detectProjectionDivergence(null)).toBeNull();
+  });
+});
+
+// R-24: an intended consequence, pinned so it is not mistaken for a regression.
+// The recompose guard refuses to re-shape a plan under a running Construction
+// swarm; semi now runs one, so semi's Construction inherits the refusal.
+describe("R-24: semi's Construction inherits the recompose refusal", () => {
+  test("the projection semi now writes is the one the guard denies", () => {
+    const projection = projectConstructionAutonomy("semi");
+    expect(assertRecomposeAllowed(projection, "CONSTRUCTION")).toEqual({
+      kind: "denied",
+      autonomy: "autonomous",
+      reason: "human-gate-required",
+      remediation: "switch-to-gated-or-wait-for-swarm",
+    });
+  });
+
+  test("none's projection still allows it, and every earlier phase is inert", () => {
+    expect(assertRecomposeAllowed(projectConstructionAutonomy("none"), "CONSTRUCTION"))
+      .toEqual({ kind: "allowed", autonomy: "gated" });
+    expect(assertRecomposeAllowed(projectConstructionAutonomy("semi"), "INCEPTION"))
+      .toEqual({ kind: "allowed", autonomy: "autonomous" });
   });
 });
