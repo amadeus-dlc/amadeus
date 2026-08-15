@@ -2461,18 +2461,26 @@ interface SettledUnitOutcome {
 // remaining three axes. Re-entering `next` re-derives the same key and finds the
 // row already there, which is what keeps the emission append-once.
 function perUnitOutcomeKey(stage: string, unit: string, batch: string): string {
-  return `${stage} ${unit} ${batch}`;
+  return `${stage} ${unit} ${batch}`;
 }
 
+// Every settled row carries all four keys — emitEvent refuses an emit that omits
+// a required attribute — so a row missing one was edited after the fact.
+// Skipping it would drop a Unit's outcome from the population and surface as
+// producer-outcome-pending, a diagnosis pointing at the wrong thing entirely.
 function readSettledUnitOutcomes(projectDir: string): SettledUnitOutcome[] {
   return findAllEvents(readAllAuditShards(projectDir), "UNIT_OUTCOME_SETTLED")
-    .flatMap(({ block }) => {
+    .map(({ block }) => {
       const batch = auditBlockField(block, "Batch");
       const unit = auditBlockField(block, "Unit");
       const outcome = auditBlockField(block, "Outcome");
       const key = auditBlockField(block, "Idempotency Key");
-      if (batch === null || unit === null || outcome === null || key === null) return [];
-      return [{ batch, unit, outcome, key }];
+      if (batch === null || unit === null || outcome === null || key === null) {
+        throw new Error(
+          "invalid-unit-outcome-audit-row: missing Batch, Unit, Outcome or Idempotency Key",
+        );
+      }
+      return { batch, unit, outcome, key };
     });
 }
 

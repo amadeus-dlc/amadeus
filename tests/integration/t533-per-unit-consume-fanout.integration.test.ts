@@ -32,6 +32,8 @@ import { resetTracerProviderForTests } from "../../packages/framework/core/otel/
 import {
   cleanupTestProject,
   DEFAULT_RECORD_DIR,
+  parseAuditRecords,
+  seededAuditShard,
   seededRecordDir,
   seededStateFile,
   sedReplaceInFile,
@@ -377,6 +379,123 @@ describe("t533 orchestrator per-unit consume fan-out", () => {
         `amadeus/spaces/default/intents/${DEFAULT_RECORD_DIR}/construction/${unit}/code-generation/${artifact}.md`
       )
     ));
+  });
+
+  // A Unit that travelled BOTH routes — settled by the engine's per-unit path
+  // and again by the Unit pool — must still produce exactly one outcome row.
+  // Two rows for one Unit is producer-outcome-ambiguous, and the pool's verdict
+  // is the one that stands.
+  test("keeps the pool's verdict when a Unit carries both a pool terminal and an engine outcome", () => {
+    const project = seedPerUnitProject(undefined, "code-generation");
+    const construction = next(project);
+    expect(construction.status, construction.stderr).toBe(0);
+    settleThroughPool(project, { "unit-z": "cancelled" });
+
+    moveCursorTo(project, "build-and-test");
+    const result = next(project);
+
+    expect(result.status, result.stderr).toBe(0);
+    const directive = JSON.parse(result.stdout);
+    expect(directive.kind, JSON.stringify(directive)).toBe("run-stage");
+    // unit-z was settled "succeeded" by the engine and "cancelled" by the pool:
+    // the pool wins, so unit-z contributes no consume paths at all.
+    expect(directive.consumes).toEqual([
+      "code-generation-plan",
+      "code-summary",
+    ].map((artifact) =>
+      `amadeus/spaces/default/intents/${DEFAULT_RECORD_DIR}/construction/unit-a/code-generation/${artifact}.md`
+    ));
+  });
+
+  test("ignores an engine-settled outcome from a batch outside the current runtime population", () => {
+    const project = seedPerUnitProject(undefined, "code-generation");
+    const construction = next(project);
+    expect(construction.status, construction.stderr).toBe(0);
+    // A declared Unit, settled FAILED under a batch identity the current
+    // runtime population does not carry: joined on batch, it is not this
+    // population's row. Counted anyway it would stop `next` outright with
+    // producer-outcome-failed.
+    emitAuditEventGuarded("UNIT_OUTCOME_SETTLED", {
+      Stage: "code-generation",
+      Unit: "unit-z",
+      Batch: "99",
+      Outcome: "failed",
+      "Idempotency Key": "code-generation unit-z 99",
+    }, project);
+
+    moveCursorTo(project, "build-and-test");
+    const result = next(project);
+
+    expect(result.status, result.stderr).toBe(0);
+    const directive = JSON.parse(result.stdout);
+    expect(directive.consumes).toEqual(["unit-z", "unit-a"].flatMap((unit) =>
+      ["code-generation-plan", "code-summary"].map((artifact) =>
+        `amadeus/spaces/default/intents/${DEFAULT_RECORD_DIR}/construction/${unit}/code-generation/${artifact}.md`
+      )
+    ));
+  });
+
+  test("settles each Unit once across re-entry and across per-unit stages", () => {
+    const project = seedPerUnitProject(undefined, "code-generation");
+    expect(next(project).status).toBe(0);
+    // Re-entry: the coverage boundary is observed again, the rows are already
+    // there, and nothing is appended.
+    expect(next(project).status).toBe(0);
+    const settled = parseAuditRecords(readFileSync(seededAuditShard(project), "utf8"))
+      .filter((record) => record.event === "UNIT_OUTCOME_SETTLED");
+    expect(settled.map((record) => record.fields.Unit).sort()).toEqual(["unit-a", "unit-z"]);
+    expect(settled.map((record) => record.fields["Idempotency Key"]).sort()).toEqual([
+      "code-generation unit-a 1",
+      "code-generation unit-z 1",
+    ]);
+
+    // A second per-unit Construction stage settles the same Unit under its own
+    // key. The population carries a Unit's outcome, not a Unit-and-stage's, so
+    // the extra row must not become a second outcome for unit-z.
+    emitAuditEventGuarded("UNIT_OUTCOME_SETTLED", {
+      Stage: "functional-design",
+      Unit: "unit-z",
+      Batch: "1",
+      Outcome: "succeeded",
+      "Idempotency Key": "functional-design unit-z 1",
+    }, project);
+
+    const outcomes = [...(readPerUnitConsumePopulation(project)?.outcomes ?? [])]
+      .sort((a, b) => a.unit.localeCompare(b.unit));
+    expect(outcomes).toEqual([
+      { unit: "unit-a", outcome: "succeeded" },
+      { unit: "unit-z", outcome: "succeeded" },
+    ]);
+  });
+
+  test("refuses a settled-outcome row whose join keys were stripped", () => {
+    const project = seedPerUnitProject(undefined, "code-generation");
+    expect(next(project).status).toBe(0);
+    // A row that lost its Batch cannot be joined to a runtime population, and a
+    // reader that skipped it would quietly count one Unit fewer than the ledger
+    // claims. The engine writes every key (emitEvent refuses a missing required
+    // attribute), so a row without one has been tampered with: fail loudly.
+    const shard = seededAuditShard(project);
+    writeFileSync(shard, readFileSync(shard, "utf8")
+      .split("\n")
+      .map((line) => {
+        if (!line.includes("UNIT_OUTCOME_SETTLED")) return line;
+        const record = JSON.parse(line);
+        delete record.attributes.Batch;
+        delete record.fields?.Batch;
+        return JSON.stringify(record);
+      })
+      .join("\n"));
+    moveCursorTo(project, "build-and-test");
+    const statePath = seededStateFile(project);
+    const before = readFileSync(statePath, "utf8");
+
+    const result = next(project);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("invalid-unit-outcome-audit-row");
+    expect(readFileSync(statePath, "utf8")).toBe(before);
   });
 
   test("ignores terminal outcomes from a batch outside the current runtime population", () => {
