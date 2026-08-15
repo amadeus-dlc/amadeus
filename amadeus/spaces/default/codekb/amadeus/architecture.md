@@ -1,6 +1,6 @@
 # アーキテクチャ
 
-## park の provenance 境界: 拒否点・受理材料・承認境界の切り分け（260814-park-provenance、現在、observed `1d08374cd`）
+## park の provenance 境界: 拒否点・受理材料・承認境界の切り分け（260814-park-provenance、履歴、observed `1d08374cd`）
 
 **観測 ref**: observed = `1d08374cd7e4ef89637b4a8000bab3fcf1a0f780`（`origin/main`、PR #3037 着地）。差分 base = `cd64486a68c6a1144db50fbe3fde8273f5e18455`（observed の祖先で距離 **6**）。本 worktree HEAD は observed を merge した conductor tree で、非 `amadeus/` ツリーは observed とバイト等価（`git diff --stat 1d08374cd HEAD -- ':!amadeus/'` 空 / exit 0）。検索述語と全数列挙は `re-scans/260814-park-provenance.md` を正本とし、本節は構造だけを転記する。
 
@@ -5059,7 +5059,7 @@ flowchart LR
 
 「`questions[]` を1選挙へ直接持たせる」か「子選挙を親 ID 配下で束ねる」かは後続設計の判断事項である。ただし、現行 store と transport を最小変更にし、1 voter file に response 配列を持てる前者は観測された構造との適合度が高い。これは RE 時点の候補評価であり ADR 決定ではない。
 
-## Issue #2985 Bolt / Unit / PR 証跡アーキテクチャ（現在、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
+## Issue #2985 Bolt / Unit / PR 証跡アーキテクチャ（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
 
 ### 現行スタイルと責務境界
 
@@ -5200,3 +5200,84 @@ engine は階層 config を読む能力と fail-closed の作法を既に持つ�
 ### base..observed の差分が患部に与えた影響
 
 区間 4 コミット（`cd64486a6` / `fb1939dfd` / `f60b3f4c8` / `da0acecdd`）、`89 files changed, 3129 insertions(+), 4 deletions(-)`。着地面は `amadeus/spaces/default/`・`metrics/`・`tests/harness/fixtures.ts`・`tests/integration/t-fixtures-copy-tree-retry.integration.test.ts`・`amadeus/spaces/default/memory/project.md` のみで、**`packages/` 配下の変更は 0 件**。本節の患部にこの区間は一切触れていない。
+
+## オープンバグ5件のアーキテクチャ上の位置づけ（260814-open-bug-batch-6、現在、observed `a49f9e9fd`）
+
+### 横断パターン — 「表現できるのに受理しない」と「実在するのに宣言されない」
+
+5 件は独立した欠陥だが、アーキテクチャ上は 2 つの構造的パターンに割れる。
+
+**パターン P1: 下流が上流の表現力を受理しない（#3062）**
+
+`pr-convergence-predicate.ts` は verdict を三値 `"converged" | "not-converged" | "landed"` で持ち、`landedVerdict`(`:281`) がマージ済みという事実を第一級で表現する。ところがその下流 2 系統が揃って landed を拒否する:
+
+```
+                    pr-convergence-predicate.ts
+                    verdict: converged | not-converged | landed
+                              │  (landed を表現できる)
+              ┌───────────────┴───────────────┐
+              ▼                               ▼
+   pr-convergence-cli.ts            amadeus-sensor-pr-convergence-
+   :823  writeSelfReport            report-format.ts
+   :1260 reportOutcome              :368-372 kind==="landed" を
+   :1364 runConvergence                      stage 非依存で拒否
+   （self record のとき一律拒否）
+              │                               │
+              └───────────────┬───────────────┘
+                              ▼
+                  self record では landed を
+                  最終記録にする経路が存在しない
+                              │
+                              ▼
+                  amadeus-state.ts approve
+                  （blocking sensor 未解決で拒否）
+```
+
+テキスト代替: predicate が landed を第一級 verdict として生成できる一方、CLI（3 層）とセンサー（stage 非依存）がともに拒否するため、self record では landed に到達した時点で前進手段が消える。非 self record では CLI `:1392-1393` が landed を exit 0 として扱うため、**self かどうかで同じ事実の扱いが反転する**。
+
+**パターン P2: 実在集合と宣言・文書が fail-open で乖離する（#3026 / #3028）**
+
+```
+  ディスク上の実在              宣言（plugin.json）        投影（.claude/sensors/）      文書（06-sensors）
+  ─────────────────            ──────────────────         ────────────────────         ──────────────
+  core 11 件         ─────────────────────────────────>   11 件                  ───>  7 件が表に載る
+  git-drift 1 件      ──> sensors 宣言あり ──────────>    1 件                   ───>  0 件（欠落）
+  pr-conv 1 件        ──> sensors 宣言あり ──────────>    1 件                   ───>  1 件
+  model-completeness  ──> 宣言なし ──✕（?? [] で無音）    0 件                   ───>  1 件（幽霊記載）
+  ─────────────────                                       ────────────────────         ──────────────
+  計 14                                                    計 13                        計 10
+```
+
+テキスト代替: 実在 14 件 / 投影 13 件 / 文書 10 件が三者とも不一致。`amadeus-plugin-compose.ts` の `?? []` フォールバック（`:554` / `:956` / `:992` / `:1023`）が宣言欠落を無音化し、docs の固定表が件数変化に追随しない。両者は独立の Issue として起票されているが、**「正本集合を機械導出しない面が fail-open で乖離する」という同一クラス**である。
+
+`git-drift` プラグインの着地はこの構造を実例で再現した — 同一 PR がセンサーを追加し、`.claude/sensors/` への投影と `amadeus/config.json` の activation は追随したが、docs の表は追随していない（本区間の 06-sensors への唯一の変更は rename 追随 1 行）。
+
+### #3032 の emit 経路（機序未確定）
+
+```
+  recordEngineError / emitError  (amadeus-lib.ts:8087)
+        │  existsSync(stateFilePath(projectDir)) ガード
+        ▼
+  emitErrorAuditRow (:8066)
+        │  require("../otel/audit-emit.ts")   ← lib↔otel の循環を遅延解決で切る
+        ▼
+  emitAuditEvent (otel/audit-emit.ts:48)
+        │
+        ▼
+  ensureOtelBootstrap (otel/bootstrap.ts:88)
+        │  :90-91 assertSameProject(registeredFor, projectDir, "logs")
+        │         assertSameProject(logsSideEffectsFor, projectDir, "logs")
+        ▼
+  不一致 → throw (:45-53 "one workspace per process")
+        │
+        ▼
+  emitError の catch (:8102-8105) が握り潰す  →  呼び出し側からは no-op と区別不能
+```
+
+テキスト代替: 宛先 workspace の不一致は `assertSameProject` が throw で検出するが、その throw は `emitError` の握り潰し catch に吸収される。したがって**不一致が起きた場合は「書かれない」のが現行バイトの帰結**であり、Issue #3032 の仮説（先にピンされた別 workspace へ着地する）を現行断面で成立させるには、`assertSameProject` を通過したうえで `projectDir` 自体が実 record を指す経路が要る。この非対称（検出機構は存在するが、その診断が呼び出し側へ届かない）は、機序特定を難しくしている構造そのものである。
+
+なお `otel/bootstrap.ts` と `otel/audit-emit.ts` は base..observed で無変更、`amadeus-lib.ts` の変更は park の presence 分類（`res: "park"` / `WORKFLOW_PARKED`）のみで emit 経路に非接触。**#3032 の機序は本区間で動いていない。**
+
+### プラグイン境界の構造変化（背景）
+
+`pr-convergence` → `github-pr-convergence` の rename で、**プラグイン名と stage slug が独立した鍵として機能している**ことが確認できた。`amadeus/config.json` の `scope-bindings` は外側がプラグイン名、内側が stage slug という二段構造を持ち、rename では外側だけが追随した。プラグイン名を鍵にする消費者の棚卸しは、stage slug を鍵にする消費者と別軸で行う必要がある（`cid:application-design:dual-key-consumer-inventory` の適用例）。

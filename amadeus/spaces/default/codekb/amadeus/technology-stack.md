@@ -57,10 +57,18 @@
 
 Biome `2.5.5` は formatter 無効、cognitive complexity 15超を warning とする。model 550行、store 719行、CLI 853行、migration 580行であり、多問化を理由に新ロジックをCLIへ集中させないことが保守性上の制約である。
 
-## Issue #2985 技術制約（現在、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
+## Issue #2985 技術制約（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
 
 - Runtime / language は Bun `1.3.13` と TypeScript ESM。focused test 実測も Bun `1.3.13` で行われた。
 - 永続化は Markdown artifact、JSON runtime graph、append-only audit shard、Git/GitHub PR で構成され、長時間稼働 service や database はない。
 - PR convergence は `git` と `gh` を外部 process boundary とし、CLI 自身は commit / push を行わない。
 - report integrity は SHA-256 digest と canonical audit receipt に依存する。署名付き trust boundary ではなく、repository write 権限を持つ攻撃者への防御は既存 threat model の対象外である。
 - #2985 は技術バージョン不足ではなく TypeScript data contract と Markdown／audit evidence ownership の cardinality 不一致である。新規 framework、database、queue の必要性は観測されていない。
+
+## 260814-open-bug-batch-6 の技術制約（現在、observed `a49f9e9fd`）
+
+- ランタイム・依存に変更なし。`git diff 1d08374cd..a49f9e9fd -- package.json` は**空**（外部依存の増減ゼロ）
+- プラグイン機構に `plugin.settings` が加わった（PR #3052、`packages/framework/core/tools/amadeus-plugin-settings.ts` 新設 +274 行）。宣言・階層化オーバーライド・fail-closed 解決を提供し、`git-drift` の `fetch-throttle-seconds`（既定 600）が最初の利用者
+- センサー機構の構成（実測、`ls` 出力の転記）: core 正本 **11** 件（`packages/framework/core/sensors/`）、プラグイン供給 **3** 件（`formal-model-check` / `git-drift` / `github-pr-convergence` 各 1）、投影 `.claude/sensors/` は **13** 件。実在 14 に対し投影 13 の差分 1 件が `amadeus-model-completeness.md`（#3026）
+- 選挙系は v2 へ移行（PR #3036）。`amadeus-election-codec.ts` / `amadeus-election-question-tally.ts` / `amadeus-election-transport.ts` が新設され、`scripts/amadeus-election-migrate.ts` は削除。本 intent の Focus 5 件はいずれもこの面に非接触
+- 構成規模（observed 断面、`ls | wc -l` の転記）: `packages/framework/core/tools/*.ts` = **136**、`plugins/*/tools/*.ts` = **49**、テストファイル（unit + integration + e2e + smoke）= **1110**

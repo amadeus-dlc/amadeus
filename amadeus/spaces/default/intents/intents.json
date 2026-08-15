@@ -1236,5 +1236,12 @@
     "dirName": "260814-unit-failure-autoelectio",
     "scope": "self-fix",
     "status": "in-flight"
+  },
+  {
+    "uuid": "01a0028a-aefd-72b7-9e1b-53bb13e5f452",
+    "slug": "open-bug-batch-6",
+    "dirName": "260814-open-bug-batch-6",
+    "scope": "self-fix",
+    "status": "in-flight"
   }
 ]

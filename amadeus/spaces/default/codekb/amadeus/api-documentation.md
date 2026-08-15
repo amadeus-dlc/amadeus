@@ -1,6 +1,6 @@
 # API ドキュメント
 
-## Lifecycle Guard Runtime の公開契約と新設リファレンス（260814-fmc-macos-provider、現在、observed `5f6b5bf97`）
+## Lifecycle Guard Runtime の公開契約と新設リファレンス（260814-fmc-macos-provider、履歴、observed `5f6b5bf97`）
 
 **観測 ref**: observed = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`、差分 base = `89532174c30ef9cc7ff29496cd6916586fdda00a`（9 commits）。正本は `re-scans/260814-fmc-macos-provider.md`。
 
@@ -1900,7 +1900,7 @@ Store の読み取り API は次の単問 shape を返す。
 
 後方読み取りは「旧 definition を新 canonical model の1問へ decode」する API 境界で実現し、新形式専用 parser へ即時置換して既存 `election.json` を読めなくすることはできない。`readTally` の raw JSON cast と `JSON.stringify` 同士の tally equality は、多問 schema 導入時に typed parser / canonical equality へ置き換える必要がある。
 
-## PR convergence 契約（現在、Issue #2985、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
+## PR convergence 契約（履歴、Issue #2985、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
 
 ### CLI
 
@@ -2011,3 +2011,55 @@ Unit "<unit>" failed during <stageSlug> (attempt <n>, batch <b>; siblings: <unit
 ```
 
 型面は `:94`（`soloElection: Readonly<{...}>`）、解決は `:771-775`（`mode: value("solo-election.trigger.mode") as SoloElectionTriggerMode`）。`ALL_LAYERS` により project / space / intent の 3 層で解決される。
+
+## 260814-open-bug-batch-6 の契約断面（現在、observed `a49f9e9fd`）
+
+### `pr-convergence-cli.ts` の verb 契約（#3062）
+
+`runConvergence`(`:1353`) は verb 分岐（`status` は `:1381`）**より前**に self record × `landed` の一律拒否を置く（`:1364-1366`）。この配置により、以下がすべて到達不能になる:
+
+| verb | self record × landed 時の結果 |
+| --- | --- |
+| `status` | exit 1、stderr `landed is not convergence evidence`（`:1392-1393` の「landed は exit 0」分岐へ到達しない） |
+| `report` | 同上 |
+| `override` | 同上（override 分岐に到達する前に拒否） |
+
+同一メッセージの拒否は 3 層にある: `writeSelfReport`(`:815`) の `:823`、`reportOutcome`(`:1253`) の `:1260`、`runConvergence` の `:1364`。**契約を変える是正は 3 層すべてを対象にする必要がある。**
+
+非 self record では `:1392-1393` が有効で、`const settled = verdict.converged || evaluation.value.kind === "landed"` により landed は exit 0（逐語コメント `// A landed pull request is a settled fact: exit 0, like convergence.`）。すなわち **self record かどうかで landed の契約が反転している**。
+
+### `pr-convergence-report-format` センサーの合否契約（#3062）
+
+`amadeus-sensor-pr-convergence-report-format.ts` の判定（実読）:
+
+- `kind === "landed"` → **stage 非依存**で finding（`:368-372`、reason `landed is a merge fact, not convergence evidence`）
+- `kind === "created"` かつ `stage === "pr-convergence"` → finding（`:378-380`、reason `created proves PR delivery only; final convergence requires converged or override`）
+- `kind === "converged"` かつ `converged === "false"` → finding（`:373-374`）
+- `kind === "created"` かつ `converged === "true"` → finding（`:375-376`）
+
+Issue #3062 は landed 拒否を stage 条件付きと記すが、**実装は stage 非依存**であり契約はより強い。
+
+### `pr-convergence-predicate.ts` の verdict 契約
+
+`:262` — `readonly verdict: "converged" | "not-converged" | "landed"`。`:281` `landedVerdict` は `converged: false` を意図的に返す（`:273-275` のコメントが「merged PR の事実の記録であり、`converged` の消費者が新しい前進手段を得ることはない」と明記）。
+
+### `plugin.json` の `sensors` 宣言契約（#3026）
+
+`amadeus-plugin-compose.ts` の `parseSensors`(`:415-433`) が課す制約（実読）:
+
+- `sensors/` で始まり `.md` で終わる相対パスであること（`:421-423`）
+- 重複宣言の禁止（`:425-427`）
+- バンドル内に実在すること（`:431-433`）
+
+いずれも**宣言があった場合の検証**であり、`sensors` キー自体の欠落は検査されない（`:554` / `:956` / `:992` / `:1023` の `?? []`）。ディスク上の資産と宣言の一致は現行契約に含まれない。
+
+### `recordEngineError` / `emitError` の契約（#3032）
+
+`amadeus-lib.ts:8087 emitError` の契約（コメントと実装から）:
+
+- workflow state が存在するときのみ ERROR_LOGGED を 1 行 append（`existsSync(stateFilePath(projectDir))` ガード）
+- **記録の失敗はすべて握り潰す**（`:8102-8105`、逐語 `// Audit write failed — we're already in an error path, swallow.`）
+- 再入ガード `_errorEmitInProgress`（プロセスローカル 1 フラグ）
+- `intent` / `space` を省略するとワークスペース sentinel バケットへ書かれる（`:8058-8060` のコメントが「the wrong ledger, silently」と明記）
+
+`otel/bootstrap.ts:45 assertSameProject` の契約: 登録済み workspace と要求 workspace の不一致で throw（メッセージ末尾 `invariant violation (one workspace per process)`）。**この throw は `emitError` の catch に握り潰されるため、呼び出し側からは no-op と区別がつかない。**

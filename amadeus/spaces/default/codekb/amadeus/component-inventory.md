@@ -1,6 +1,6 @@
 # コンポーネント棚卸し
 
-## core/tools の増減と formal-model-check patient 面の構成要素（260814-fmc-macos-provider、現在、observed `5f6b5bf97`）
+## core/tools の増減と formal-model-check patient 面の構成要素（260814-fmc-macos-provider、履歴、observed `5f6b5bf97`）
 
 **観測 ref**: すべて observed = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`。差分 base = `89532174c30ef9cc7ff29496cd6916586fdda00a`（9 commits）。全数列挙と検索述語は `re-scans/260814-fmc-macos-provider.md` を正本とする。
 
@@ -2588,7 +2588,7 @@ Issue #2785（grilling depth を質問数予算から frontier 駆動の枝刈�
 
 所有境界は維持する。question schema と tally business rule は model、永続形式と dual decoder は store、判断を含まない配送は transport、human-facing state transition は CLI、監査 prose と完全性検査は record、有限状態の安全性は TLA+ が所有する。これらをCLI単一ファイルへ寄せる設計は責務境界を崩すため避ける。
 
-## Issue #2985 コンポーネント一覧（現在、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
+## Issue #2985 コンポーネント一覧（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
 
 | コンポーネント | 責務 | 入力 / 出力 | 状態 |
 |---|---|---|---|
@@ -2675,3 +2675,49 @@ tests/unit/t452-authorize-interaction-semi.test.ts
 - `amadeus-election.ts:137` `handleNext` / `:186` `handleReport` の内部指令生成ロジックは概要把握に留め、逐行未読
 - `tests/e2e/t-exec-codex-autosolo-s13.serial.test.ts` と `tests/harness/autosolo-s13-fixture.ts` は grep によるファイル特定のみ（§13 学習選定の auto 発動面であり本 Issue の halt-and-ask 面とは別類型）
 - `constructionFailureTransition` / `projectConstructionOutcomes` の射影ロジック（`amadeus-construction-outcome*.ts` 系）は患部外として未読
+
+## 260814-open-bug-batch-6 のコンポーネント棚卸し（現在、observed `a49f9e9fd`）
+
+### プラグイン一覧（本区間で 3 → 4 へ増加）
+
+| プラグイン | 責務 | stages | sensors 宣言 | 本区間の変化 |
+| --- | --- | --- | --- | --- |
+| `coverage-patch-quick` | push 前 patch coverage の advisory 往復 | なし | なし（センサー資産も無し） | 変化なし |
+| `formal-model-check` | TLA モデル検査、モデル完全性 | `formal-model-check` / `tla-authoring` | **なし（資産は実在 — #3026）** | ツール 7 件が変更 |
+| `git-drift` | origin drift の早期 advisory | なし | あり（`sensors/amadeus-git-drift.md`） | **新設**（PR #3055、4 ファイル） |
+| `github-pr-convergence` | PR 収束ステージと report 形式検査 | `pr-convergence` | あり | **rename**（旧 `pr-convergence`、PR #3051） |
+
+### センサーコンポーネント（実在 14 / 投影 13）
+
+core 正本 11 件（`packages/framework/core/sensors/`、`ls` 出力の転記）: `amadeus-answer-evidence` / `amadeus-depth-budget` / `amadeus-event-registry-drift` / `amadeus-linter` / `amadeus-nfr-budget` / `amadeus-question-budget` / `amadeus-required-sections` / `amadeus-scope-sizing` / `amadeus-self-scope-consistency` / `amadeus-type-check` / `amadeus-upstream-coverage`。
+
+プラグイン供給 3 件: `amadeus-model-completeness`（formal-model-check、**未投影**）/ `amadeus-git-drift`（git-drift）/ `amadeus-pr-convergence-report-format`（github-pr-convergence）。
+
+投影 `.claude/sensors/` の 13 件は core 11 + git-drift + pr-convergence-report-format。**docs の表に載るのはこのうち 10 件**（欠落 4 = nfr-budget / question-budget / scope-sizing / git-drift、幽霊記載 1 = model-completeness）。この 3 集合（実在 14 / 投影 13 / 文書 10）がどれも一致していないことが #3026 と #3028 の共通の構造である。
+
+### #3062 の関与コンポーネント
+
+| コンポーネント | 責務 | 本 Issue での位置 |
+| --- | --- | --- |
+| `pr-convergence-cli.ts` | verb ディスパッチ、self report 書込 | 拒否の主体（3 層） |
+| `pr-convergence-predicate.ts` | verdict の単一定義 | landed を表現できる側 |
+| `amadeus-sensor-pr-convergence-report-format.ts` | report 形式の blocking 検査 | 拒否のもう一方 |
+| `pr-convergence-attestation.ts` / `pr-convergence-ledger.ts` / `pr-convergence-provenance.ts` | 証跡・台帳・provenance | 是正時の波及候補（本スキャンでは未調査） |
+| `amadeus-state.ts` | approve ゲート | blocking sensor 未解決で拒否する終端 |
+
+### #3032 の関与コンポーネント
+
+| コンポーネント | 責務 |
+| --- | --- |
+| `amadeus-lib.ts` の `emitError` / `emitErrorAuditRow` | エラー終了時の ERROR_LOGGED 記録（best-effort） |
+| `otel/audit-emit.ts` の `emitAuditEvent` | 監査イベントの正準 emit 入口 |
+| `otel/bootstrap.ts` の `ensureOtelBootstrap` / `assertSameProject` | プロセス単位の workspace ピンとその検査 |
+| `tests/unit/t214-engine-error-logged-seam.test.ts` | in-process 駆動側（着地リテラルの帰属先） |
+| `tests/harness/fixtures.ts` の `createTestProject` / `removeWorkspaceRecord` | fixture の隔離境界 |
+
+### 新設コンポーネント（背景）
+
+- `amadeus-plugin-settings.ts`（+274 行）— plugin.settings の宣言・階層化オーバーライド・fail-closed 解決
+- 選挙 v2 — `amadeus-election-codec.ts`(+908) / `amadeus-election-question-tally.ts`(+386) / `amadeus-election-transport.ts`(+94)。`amadeus-election-model.ts` は -536 行縮退、`scripts/amadeus-election-migrate.ts` は削除
+
+本 intent の Focus はこれらに非接触。

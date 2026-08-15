@@ -1,6 +1,6 @@
 # コード品質評価
 
-## ガードの適用境界が原理を持たない — 契約が doc 止まりで違反を検出できない（260814-copytree-guard-boundary、現在、observed `f60b3f4c8`）
+## ガードの適用境界が原理を持たない — 契約が doc 止まりで違反を検出できない（260814-copytree-guard-boundary、履歴、observed `f60b3f4c8`）
 
 対象: [Issue #3014](https://github.com/amadeus-dlc/amadeus/issues/3014)（`copyTreeWithRetry` のガード適用境界が非対称）。測定 ref = observed `f60b3f4c868f3b7608a06f08393b8e2f10287fad`（`git rev-parse HEAD`。`origin/main` 系譜上のコミットであり `git merge-base HEAD origin/main` = 同一 SHA。ローカル `origin/main` は本 scan 時点で 2 commits 先行 = `cd64486a6`、いずれも患部非交差）、差分 base = `5b12d96e99cbf46711acd3dc2b8c103be1b0f801`。正本は `re-scans/260814-copytree-guard-boundary.md`。以下の file:line は Architect が observed 断面で `sed` / `git grep` により verbatim 再照合した。
 
@@ -3575,7 +3575,7 @@ PR CI は build、typecheck、Biome lint、complexity ratchet、control-byte、n
 
 本 reverse-engineering ではテスト、build、coverage、TLC を実行していない。したがって現行 HEAD の pass/fail、coverage、state-space 規模、性能は未測定であり、コードと設定の静的観測だけを品質評価へ使った。
 
-## Issue #2985 品質評価（現在、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
+## Issue #2985 品質評価（履歴、observed `0fbbec42bb33d625bdb9d034789c0ff391df1287`）
 
 ### 実測テスト
 
@@ -3596,7 +3596,7 @@ repository test files は実測 **1119**（unit 422 / integration 568 / e2e 100�
 
 #2473 は head binding、#2791 は provenance enforcement、#2358 は gate 再発行、#2359 は review 復旧、#2836 は gate:false reviewer、#2976 は solo election を扱う。#2989 は本 Intent mirror である。open implementation PR は観測されていない。Issue #2985 の Reviewer A / B comments は訂正後 CONFIRMED である。
 
-## 契約文書とエンジン実装の齟齬を拘束しないテスト面（260814-unit-failure-autoelectio、現在、observed `cd64486a6`）
+## 契約文書とエンジン実装の齟齬を拘束しないテスト面（260814-unit-failure-autoelectio、履歴、observed `cd64486a6`）
 
 ### 所見 1: 文言検査が挙動検査を代替している
 
@@ -3615,3 +3615,59 @@ repository test files は実測 **1119**（unit 422 / integration 568 / e2e 100�
 ### 所見 4: 修正が触る投影面
 
 `stage-protocol.md` を変更する場合、t369 が `dist/<harness>/amadeus-common/` と self-install ツリーを走査するため `bun run build` による全ハーネス投影の再生成が同一変更に必要である。ソース断面のみの green では配送先の退行を隠す（`project.md` の `cid:requirements-analysis:c2-acceptance-at-delivery-tree`）。
+
+## オープンバグ5件の品質評価（260814-open-bug-batch-6、現在、observed `a49f9e9fd`）
+
+### 現状の確定事項（実測に基づく成立判定）
+
+| Issue | observed 断面での成立 | 補足 |
+| --- | --- | --- |
+| #3062 | **成立**（引用パスのみ要訂正） | 患部は rename により `plugins/github-pr-convergence/…` へ移動。内容 R100 のため行番号は有効 |
+| #3026 | **成立** | `plugin.json` に `sensors` キー不在を全文実読で確認。投影 13 件に model-completeness は含まれない |
+| #3028 | **成立、かつ drift 拡大** | 表 10 行に対し実在 14 件。欠落は起票時 3 件 → 現在 **4 件**（`git-drift` が加わった） |
+| #3031 | **患部現存、部分緩和が着地済み** | PR #3056 が git ヘルパへ narrow retry を追加。観測失敗を覆うかは不明 |
+| #3032 | **着地2行は現存、機序は未実証** | 2 行は `260807-projectdir-worktree-fix/audit/…d13e4f0ca2c0.jsonl:155-156` に現存 |
+
+### 欠陥クラスの評価
+
+**D-1: 検証劇場の逆パターン — 検出機構が存在するのに診断が届かない（#3032、S3 相当）**
+
+`otel/bootstrap.ts:45 assertSameProject` は workspace 不一致を正しく検出して throw する。しかし唯一の実質的呼び出し元である `emitError`(`amadeus-lib.ts:8087`) が `catch { }`(`:8102-8105`) で全例外を握り潰すため、**不変条件違反が起きても誰にも通知されない**。握り潰しの理由（既にエラー終了中で、記録失敗が元エラーを隠さないため）は妥当だが、結果として「隔離が破れているのか、単に state が無いのか」を呼び出し側から区別できない。Issue の完了条件 2 が求める「不一致時は無音の別 workspace 書込でなく loud fail または no-op」は、この握り潰しの粒度を分けることが実装上の焦点になる。
+
+**D-2: 正本集合を機械導出しない面の fail-open 乖離（#3026 / #3028、S3 相当）**
+
+`amadeus-plugin-compose.ts` は `sensors` 宣言があれば厳格に検証する（`parseSensors:415-433` がパス形式・重複・実在の 3 条件を課す）が、**キー自体の欠落は検査しない**。`?? []` フォールバックが 4 箇所（`:554` / `:956` / `:992` / `:1023`）にあり、いずれも欠落を空集合へ落とす。docs 側も固定表であり件数フリー契約ではない。
+
+このクラスの再発は本区間で**実際に観測された**: `git-drift` プラグインの追加 PR は投影と activation に追随したが docs 表には追随せず、欠落が 3 件から 4 件へ増えた。「同クラスの欠落は今後のプラグインでも無音で再発しうる」という #3026 の予測が 1 区間で実現している。**再発検出の要否判定（両 Issue の受け入れ条件 3）は、この実例をもって「要」の側に強い証拠がある。**
+
+**D-3: 緩和が受け入れ条件の一方を後退させうる（#3031、S4 相当）**
+
+PR #3056 が追加した retry は narrow（stderr に `/locked' for writing: No such file or directory` を含む場合のみ再実行）で、他の fixture 失敗をマスクしない設計になっており、その点は妥当である。しかし:
+
+1. Issue が観測した失敗の stderr は**未特定**（attempt 1 ログの該当行が空）であり、retry の発火条件に合致したかは不明
+2. アサーション `expect(result.exitCode, result.stderr.toString()).toBe(0)`(`:26`) は retry 後には **2 回目**の stderr を載せるため、初回失敗の本文はむしろ失われる方向に動いた
+
+Issue の受け入れ条件 1（「再発時に exit 128 の本文が assert メッセージへ確実に載ること」）は**未達**であり、緩和の着地をもって Issue を閉じると、診断能力を欠いたまま flake 対策済みと記録することになる。
+
+**D-4: self / 非 self で同一事実の扱いが反転する（#3062、S2 相当）**
+
+`pr-convergence-cli.ts` は非 self record では landed を settled（exit 0、`:1392-1393`）として扱いながら、self record では同じ landed を全 verb で拒否する。この反転は 3 層（`:823` / `:1260` / `:1364`）に分散して実装されており、単一の方針として一箇所に表現されていない。**是正時に 1 層だけを緩めると残り 2 層で落ちる**という形で、修正の不完全さが実行時にしか現れない。
+
+### 未検証面（申し送り）
+
+- **並行実行 tier の並列度**（#3031 の仮説）: `tests/run-tests.ts` への述語 `grep -n "\-P 4\|concurrency\|maxParallel"` は 0 hit。integration tier が 4 並列かは本スキャンでは確定できず、Issue の仮説のまま引き継ぐ
+- **#3062 の波及範囲**: `pr-convergence-attestation.ts` / `pr-convergence-ledger.ts` / `pr-convergence-provenance.ts` が是正でどこまで動くかは未調査
+- **#3032 の当時断面での再現**: 現行断面の読解のみでは機序が確定しない。2026-08-07 時点のバイトでの再現が必須
+- **既存テストのベースライン**: 本スキャンは読取専用のため、フルスイートの実行は行っていない。既存の赤の有無は未確認
+
+### 既存の品質ゲート（変化なし）
+
+`bun run typecheck` / `bun run lint`（Biome）/ 隔離2回ビルドの再現性検査 / `bun run source-only:check` / グラフ不変量検査 / `bash tests/run-tests.sh --ci` / Project Coverage Gate（絶対下限 AND 相対許容幅）/ Patch Coverage Gate / plugin-conformance-e2e。本区間で `.github/workflows/ci.yml` と `pbt.yml` が変更されているが、これは選挙 v2 のテスト構成追随であり、ゲート集合そのものの縮小ではない（本スキャンでは差分の詳細まで追っていない — 実装時に要確認）。
+
+### 台帳同期の注意（実装時）
+
+`cid:build-and-test:bt-ledger-resync` / `cid:build-and-test:c1` の適用対象。本 intent の是正が触りうる台帳:
+
+- `tests/.coverage-registry.json` — テストファイルを新規追加する場合は `bun tests/gen-coverage-registry.ts` の同梱が必須
+- `tests/.coverage-patch-allowlist.json` — `amadeus-plugin-compose.ts` などの署名行が動く場合は意味的セレクタの再アンカーが必要
+- `amadeus/spaces/default/specs/tla/model-map.json` — 本 Focus は選挙系に非接触のため通常は不要だが、`amadeus-orchestrate.ts` を触る場合は実装ハッシュピンの resync が要る
