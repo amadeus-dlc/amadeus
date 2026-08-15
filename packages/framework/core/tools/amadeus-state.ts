@@ -140,6 +140,11 @@ import { KNOWN_HARNESS_DIRS } from "./amadeus-harness.js";
 import { detectHarnessType } from "./amadeus-harness.ts";
 import { autonomyDigest } from "./amadeus-intent-autonomy.ts";
 import {
+  buildAutoDecisionSummary,
+  formatSummaryBuildError,
+  writeAutoDecisionSummaryMarkdown,
+} from "./amadeus-completion-report.ts";
+import {
   commitProductionIntentCompletion,
   commitProductionStageGateDecision,
   productionStageAutonomy,
@@ -3293,6 +3298,11 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
   // splits by audit disposition — a receipt that has not settled is a waiting
   // state the workflow recovers from (the engine's await-completion directive,
   // no ERROR_LOGGED row), everything else is a genuine failure.
+  // Captured once, before the completion-registry mutations below (which may
+  // clear the active-intent cursor) — buildAutoDecisionSummary reuses this
+  // same resolved path later rather than re-resolving recordDir post-cursor-
+  // clear, where an implicit (non---intent) resolution could go ambiguous.
+  const completionRecordDir = operationRecordDir(pd);
   const authorization = evaluateLifecycleGuards<WorkflowAuthorizationGuardContext, GoalReconciliationReceipt>({
     checkpoint: "workflow-completion",
     targetRevision: `workflow:${completedSlug}@${completionInstance}`,
@@ -3302,7 +3312,7 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
       content,
       completedSlug,
       completionInstance,
-      recordDir: operationRecordDir(pd),
+      recordDir: completionRecordDir,
     },
   });
   if (authorization.kind === "blocked") {
@@ -3384,6 +3394,43 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
     operationWriteState(pd, content);
   }
   injectWorkflowCompletionCrash("after-state-completed");
+
+  // C9/ADR-3: non-blocking auto-decision summary (R-3). Every branch here —
+  // including anything this block did not anticipate — resolves to a warning
+  // string, never a thrown error: a defect in report generation must never
+  // turn a real completion into a failed one.
+  //
+  // Must run BEFORE completeIntentRegistryRow below: listProductionAutoDecisions
+  // resolves this Intent's review lifecycle off the intents.json status row, and
+  // a "completed" lifecycle demands a committed completion-seal audit row that a
+  // baseline/"none"-autonomy Intent never writes (commitProductionIntentCompletion
+  // above tolerates "active-intent-required" as a no-op). Reading the summary
+  // while the registry row still says "in-flight" resolves lifecycle "active",
+  // which skips the seal requirement entirely — R-4 only pins this to run after
+  // the state write and before the completion JSON, not relative to the
+  // registry flip, so this ordering stays inside the mandated window.
+  let autoDecisionSummaryPath: string | null = null;
+  let autoDecisionSummaryWarning: string | null = null;
+  try {
+    if (completionRecordDir === null) {
+      autoDecisionSummaryWarning = formatSummaryBuildError({ kind: "record-dir-unresolved" });
+    } else {
+      const built = buildAutoDecisionSummary(pd, completionRecordDir);
+      if (!built.ok) {
+        autoDecisionSummaryWarning = formatSummaryBuildError(built.error);
+      } else {
+        const written = writeAutoDecisionSummaryMarkdown(completionRecordDir, built.summary);
+        if (written.ok) {
+          autoDecisionSummaryPath = written.relativePath;
+        } else {
+          autoDecisionSummaryWarning = formatSummaryBuildError(written.error);
+        }
+      }
+    }
+  } catch (cause) {
+    autoDecisionSummaryWarning = `generation-failed:${cause instanceof Error ? cause.message : String(cause)}`;
+  }
+
   // Intent status lifecycle: terminal completion flips the active intent's
   // registry row to "complete". This is the determinism (field write) gated by
   // the human-confirmed completion that drove complete-workflow here — never an
@@ -3400,6 +3447,7 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
     );
   }
   injectWorkflowCompletionCrash("after-cursor-clear");
+
   console.log(
     JSON.stringify({
       completed: completedSlug,
@@ -3407,6 +3455,8 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
       status: "Completed",
       reason: reason || null,
       timestamp,
+      auto_decision_summary: autoDecisionSummaryPath,
+      auto_decision_summary_warning: autoDecisionSummaryWarning,
       workflow_result: completionWorkflowResultEnvelope(autonomyCompletion),
     })
   );
