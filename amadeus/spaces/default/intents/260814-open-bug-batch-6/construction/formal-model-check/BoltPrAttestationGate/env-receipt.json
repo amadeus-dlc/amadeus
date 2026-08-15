@@ -1,0 +1,42 @@
+{
+  "schema": "amadeus.env-receipt.v1",
+  "runId": "71432dc2-0dba-40c1-86b2-1896009adeea",
+  "planner": "bf6762c7262d8dc2d54c4e817a77814aaf55a3236e57bd02ccd05e6d6ba902bf",
+  "inspections": [
+    {
+      "id": "image-digest",
+      "status": "not-applicable",
+      "expected": null,
+      "observed": null,
+      "reason": "Darwin sandbox-exec does not use a container image"
+    },
+    {
+      "id": "jar-sha256",
+      "status": "passed",
+      "expected": "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88",
+      "observed": "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88",
+      "reason": ""
+    },
+    {
+      "id": "network-deny",
+      "status": "passed",
+      "expected": "eaa59334dfaffe48c0b782ad059da918a63d9a7656fc86c47c34b3e50ea3cda7",
+      "observed": "eaa59334dfaffe48c0b782ad059da918a63d9a7656fc86c47c34b3e50ea3cda7",
+      "reason": ""
+    },
+    {
+      "id": "jdk-snapshot",
+      "status": "passed",
+      "expected": "de66ee406b7fce243943f495b796ef51bc849a175f88f4c1c01967af55619c5d",
+      "observed": "de66ee406b7fce243943f495b796ef51bc849a175f88f4c1c01967af55619c5d",
+      "reason": ""
+    },
+    {
+      "id": "sandbox-profile",
+      "status": "passed",
+      "expected": "eaa59334dfaffe48c0b782ad059da918a63d9a7656fc86c47c34b3e50ea3cda7",
+      "observed": "eaa59334dfaffe48c0b782ad059da918a63d9a7656fc86c47c34b3e50ea3cda7",
+      "reason": ""
+    }
+  ]
+}
