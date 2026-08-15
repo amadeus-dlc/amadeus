@@ -1271,5 +1271,12 @@
     "dirName": "260815-stale-epoch-landed",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "01a00604-1c06-7df6-9683-56557b7af258",
+    "slug": "rfc-autonomy-modes",
+    "dirName": "260815-rfc-autonomy-modes",
+    "scope": "self-feature",
+    "status": "in-flight"
   }
 ]
