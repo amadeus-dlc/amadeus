@@ -199,10 +199,14 @@ const VALID_EVENT_TYPES = new Set([
   "SENSOR_BUDGET_OVERRIDE",
   "GUARDRAIL_LOADED",
   // Learning Loop (MEMORY_EMPTY emitter wired by amadeus-runtime.ts compile;
-  // RULE_LEARNED + SENSOR_PROPOSED emitters wired by amadeus-learnings.ts persist)
+  // RULE_LEARNED + SENSOR_PROPOSED emitters wired by amadeus-learnings.ts persist;
+  // LEARNING_ZERO_CONFIRMED + LEARNING_CANDIDATE_ADDED emitters wired by
+  // amadeus-learnings.ts confirm-zero / add-candidate — unit s13-zero, ADR-6)
   "MEMORY_EMPTY",
   "RULE_LEARNED",
   "SENSOR_PROPOSED",
+  "LEARNING_ZERO_CONFIRMED",
+  "LEARNING_CANDIDATE_ADDED",
   // Swarm lifecycle — UNIT_POOL_EVENT_SET_COMMITTED emits from the C2
   // single-writer tools/amadeus-unit-pool-runtime.ts; the remaining six
   // SWARM_* events emit from the swarm referee amadeus-swarm.ts (the per-Unit
@@ -312,6 +316,8 @@ export const EVENT_HEADINGS: Record<string, string> = {
   MEMORY_EMPTY: "Memory Empty",
   RULE_LEARNED: "Rule Learned",
   SENSOR_PROPOSED: "Sensor Proposed",
+  LEARNING_ZERO_CONFIRMED: "Learning Zero Confirmed",
+  LEARNING_CANDIDATE_ADDED: "Learning Candidate Added",
   SWARM_STARTED: "Swarm Started",
   SWARM_UNIT_CONVERGED: "Swarm Unit Converged",
   SWARM_UNIT_FAILED: "Swarm Unit Failed",

@@ -20,14 +20,14 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 625,
+    "total": 629,
     "enumeratedByClass": {
       "function": 352,
-      "audit": 94,
+      "audit": 96,
       "scope": 15,
       "stage": 32,
       "hook": 15,
-      "subcommand": 110,
+      "subcommand": 112,
       "render-surface": 7
     },
     "coveredByClass": {
@@ -389,6 +389,20 @@
     {
       "unitClass": "audit",
       "unitId": "INTENT_UNARCHIVED",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "LEARNING_CANDIDATE_ADDED",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "LEARNING_ZERO_CONFIRMED",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -6315,6 +6329,20 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-learnings add-candidate",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-learnings confirm-zero",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",
