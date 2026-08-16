@@ -11,7 +11,7 @@ approval-ref: (承認の一次記録 — HUMAN_TURN / PR / Issue コメント)
 bound-surfaces: |
   packages/framework/core/tools/amadeus-swarm.ts
   packages/framework/core/tools/amadeus-orchestrate.ts(発動判定・swarm 指令)
-  packages/framework/core/skills/amadeus/SKILL.md(invoke-swarm 節)
+  packages/framework/harness/{claude,codex,kimi,kiro,kiro-ide,pi}/skills/amadeus/SKILL.md(invoke-swarm 節 — ハーネス別6面)
   packages/framework/core/otel/event-registry.ts(SWARM_* イベント)
   docs / glossary(swarm・ドライバ設定に言及する利用者文書)
   (digest ピンは #2396 実装時に付与 — 本 RFC 時点ではパス列挙のみ)
@@ -67,7 +67,7 @@ swarm の実行モデルは「発動するか(人間の autonomy 付与+決定�
 
 swarm 実行が代替できるのは **変種 (c) のみ**である((a)(b) に swarm 版は存在しない)。
 
-**直列実行(変種 (c))と swarm 実行の対比**(swarm と交換可能な範囲での対比。どちらも実装主体は subagent — 違いは並列度・隔離・検証機構であり、「subagent を使っているか」は判定軸ではない):
+**直列実行(変種 (c))と swarm 実行の対比**(swarm と交換可能な範囲での対比。どちらも実装主体は subagent であり、両者を分けるのは並列度・隔離・検証機構である):
 
 | | 直列実行 変種 (c) | swarm 実行 |
 |---|---|---|
@@ -82,15 +82,15 @@ swarm 実行が代替できるのは **変種 (c) のみ**である((a)(b) に s
 
 swarm 実行が始まるのは、次のすべてが成立するときに限る:
 
-1. 現在のステージが Construction の並列実装対象ステージである(「Unit ごとの反復」と「subagent 委譲」の両方を宣言したステージに限る — **現行該当は code-generation の1つだけ**。設計系の per-unit ステージはインライン実行のため常に直列で、swarm の対象外)
+1. 現在のステージが Construction の並列実装対象ステージである(「Unit ごとの反復」と「subagent 委譲」の両方を宣言したステージに限る — **出荷ステージグラフでは code-generation の1つだけ**。設計系の per-unit ステージはインライン実行のため常に直列で swarm の対象外。opt-in のローカルパックが同条件のステージを追加しうる)
 2. walking-skeleton(最初の構造スライス)ではない — スケルトンは常に単一で実装する
 3. 人間が承認した delivery plan が、依存のない複数 Unit を並列 batch として宣言している
-4. Intent autonomy モード(`none` / `semi` / `full` — 誕生時既定 `none`)が state に記録されている
+4. Intent autonomy モード(`none` / `semi` / `full`)が state に記録されている(現行の intent 初期化は既定 `none` を記録する。未記録のときの挙動は決定表の該当2行)
 5. スケジューリングが `gated`(モードが `none` または `semi`)の場合、当該 batch への人間の承認が記録済みである
 
 どれか1つでも欠ければ直列実行に落ちる。
 
-> **誤解しやすい点(補足)**: `none` / `semi` / `full` は Intent autonomy モード(RFC 0001 の正本)、`autonomous` / `gated` はそこから機械導出されるスケジューリング投影であり、**別の語彙**である。写像は `full → autonomous`、`none`・`semi` → `gated`(下表)。つまり **`none` を選んでも swarm は発動する**(batch ごとに人間承認で停止する gated 形態)。`none` という名前から「並列なし」を読み取るのは誤りである。
+> **誤解しやすい点(補足)**: `none` / `semi` / `full` は Intent autonomy モード(RFC 0001 の正本)、`autonomous` / `gated` はそこから機械導出されるスケジューリング投影であり、**別の語彙**である。写像は `full → autonomous`、`none`・`semi` → `gated`(下表)。つまり **`none` を選んでも swarm は発動する**(batch ごとに人間承認で停止する gated 形態)。`none` は「並列なし」ではなく「gated 並列」を意味する。
 
 **モード対応表**(2層の語彙の写像のみを持つ。モードは sealed な3値、intent 誕生時の既定は `none`。発動可否と承認の要否は下の決定表が正):
 
@@ -107,12 +107,13 @@ swarm 実行が始まるのは、次のすべてが成立するときに限る:
 | ✗ | — | — | — | — | **不発動** — 直列実行(設計系 per-unit ステージは変種 (b)、Unit 反復のないステージは変種 (a)) |
 | ✓ | ✗(skeleton) | — | — | — | **不発動** — 直列実行 変種 (c)(スケルトンは常に単一) |
 | ✓ | ✓ | ✗ | — | — | **不発動** — 直列実行 変種 (c) |
-| ✓ | ✓ | ✓ | 欠落・未認識値(破損) | — | **不発動** — fail-closed に停止して人間へ |
+| ✓ | ✓ | ✓ | 未記録・未認識値(walking-skeleton **出荷前**) | — | **不発動** — 直列実行 変種 (c) で黙認(幅≥2でも停止しない) |
+| ✓ | ✓ | ✓ | 未記録・未認識値(walking-skeleton **出荷後**) | — | **不発動(待機)** — 停止してモードの宣言を人間に要求 |
 | ✓ | ✓ | ✓ | `none` / `semi`(= gated) | 未記録 | **不発動(待機)** — 承認を求めて停止 |
 | ✓ | ✓ | ✓ | `none` / `semi`(= gated) | 記録済み | **発動** — batch 終端で再停止(次 batch は再承認) |
 | ✓ | ✓ | ✓ | `full`(= autonomous) | 不要 | **発動** — 連続実行 |
 
-補足: (a) モードの値域は `none` / `semi` / `full` の3値で閉じており(RFC 0001)、intent 誕生時に既定 `none` が記録されるため「欠落・未認識値」行は破損時防御であり正常経路ではない (b) 発動後にドライバ設定が認識できない値だった場合は swarm を開始せず中止して人間へ返す(§3 の拒否 — 発動判定とは別段)。
+補足: (a) モードの値域は `none` / `semi` / `full` の3値で閉じる(RFC 0001)。現行の intent 初期化は既定 `none` を記録するが、それ以前に誕生した intent の state にはフィールド未記録が実在するため、「未記録」行はレガシーで到達しうる正常経路である(skeleton 出荷前の黙認/出荷後の宣言要求という2分岐は RFC 0001 付録の記述とも一致する) (b) 発動後にドライバ設定が認識できない値だった場合は swarm を開始せず中止して人間へ返す(§3 の拒否 — 発動判定とは別段)。
 
 前3列を通過すれば **swarm は常に発動へ向かい**、モードが決めるのは「batch ごとに人間が承認するか(`none`・`semi`)、連続で走るか(`full`)」だけである。swarm 自体を避ける手段はモードの側にはなく、並列 batch を計画しない(delivery plan 側の判断)ことだけがそれにあたる。
 
@@ -122,13 +123,15 @@ swarm 実行が始まるのは、次のすべてが成立するときに限る:
 
 発動が確定した後、実行バックエンドを次の決定表で選ぶ(現行の設定変数は `AMADEUS_USE_SWARM`):
 
-| 設定値 | claude 上 | codex 上 | pi 上 |
-|---|---|---|---|
-| 未設定 | subagent | subagent | pi |
-| `claude-ultra` | claude-ultra | 降格→subagent | 降格→pi |
-| `codex-ultra` | 降格→subagent | codex-ultra | 降格→pi |
-| `pi` | 降格→subagent | 降格→subagent | pi |
-| 空文字・`subagent` 明示・未知値 | 拒否(swarm 中止、人間へ) | 同左 | 同左 |
+| 設定値 | claude 上 | codex 上 | kiro / kiro-ide / kimi 上 | pi 上 |
+|---|---|---|---|---|
+| 未設定 | subagent | subagent | subagent | pi |
+| `claude-ultra` | claude-ultra | 降格→subagent | 降格→subagent | 降格→pi |
+| `codex-ultra` | 降格→subagent | codex-ultra | 降格→subagent | 降格→pi |
+| `pi` | 降格→subagent | 降格→subagent | 降格→subagent | pi |
+| 空文字・`subagent` 明示・未知値 | 拒否(swarm 中止、人間へ) | 同左 | 同左 | 同左 |
+
+対象ハーネスは6種(claude / codex / kiro / kiro-ide / kimi / pi)。kiro 系3種は固有の高並列機構を持たないため同一の列になる。
 
 契約は3規則に要約できる:
 
@@ -142,14 +145,16 @@ Unit 実装がどの機序で走るかは、次の判定連鎖で一意に決ま
 
 ```mermaid
 flowchart TD
-    A[Construction の Unit 実装ステージに到達] --> B{swarm 対象ステージ?<br/>Unit ごとの反復 かつ subagent 委譲<br/>現行該当は code-generation のみ}
+    A[Construction の Unit 実装ステージに到達] --> B{swarm 対象ステージ?<br/>Unit ごとの反復 かつ subagent 委譲<br/>出荷グラフでは code-generation のみ}
     B -- No: 設計系 per-unit ステージ --> SERB[直列実行 変種 b: inline per-unit の機序<br/>Unit を1つずつ順に主セッションが自ら作業・委譲なし<br/>全 Unit 完了後に単一ゲート]
     B -- Yes --> C{walking-skeleton?}
     C -- Yes: スケルトンは常に単一 --> SER
     C -- No --> D{承認済み計画に<br/>並列 batch の宣言がある?}
     D -- No: Unit 1つ or 依存で直列 --> SER
     D -- Yes --> E{Intent autonomy モード<br/>none / semi / full — 既定 none}
-    E -- フィールド欠落・未認識値 --> HALT1[停止: 破損時防御として人間へ]
+    E -- 未記録・未認識値 --> E2{walking-skeleton は<br/>出荷済み?}
+    E2 -- No --> SER
+    E2 -- Yes --> HALT1[停止: モードの宣言を<br/>人間に要求]
     E -- none / semi = gated --> F{この batch への<br/>人間の承認がある?}
     F -- No --> HALT2[停止: batch 承認を人間に求める<br/>承認記録後に swarm 発動へ]
     F -- Yes --> G[swarm 発動]
@@ -174,7 +179,7 @@ flowchart TD
     end
 ```
 
-テキストフォールバック: Construction の Unit 実装ステージに到達 → (1) swarm 対象ステージか(Unit ごとの反復かつ subagent 委譲 — 現行該当は code-generation のみ)。No(設計系 per-unit ステージ)なら**直列実行 変種 (b)**(Unit を1つずつ順に主セッションが自ら作業・委譲なし・全 Unit 後に単一ゲート)へ (2) walking-skeleton なら**直列実行 変種 (c)** へ (3) 承認済み計画に並列 batch の宣言がなければ直列実行 変種 (c) へ (4) Intent autonomy モード(既定 none)を読む — フィールド欠落・未認識値なら**停止**(破損時防御) (5) `none`・`semi`(= gated)は当該 batch への人間の承認を検査し、なければ**停止**して承認を求める(承認記録後に発動)。承認済みまたは `full`(= autonomous)なら swarm 発動 → ドライバ設定で分岐: 未設定またはこの環境で走れる値は**swarm 実行の機序**へ、認識値だが走れない場合は降格を監査に記録してから同機序へ、認識できない値は**停止**(拒否)。直列実行 変種 (c) の機序 = 次の Unit を1つ取り上げ → subagent 1体へ委譲 → ステージゲートで承認 → 未実装 Unit が残る限り反復。swarm 実行の機序 = Unit ごとに隔離作業領域を準備 → 選択ドライバで N 体並列 fan-out(並列幅の上限内)→ Unit ごとの決定的検証(自己申告不採用)→ 収束主張の全 Unit を再検証して合格のみ統合 → 全収束なら batch 完了(gated は次 batch 前に再承認)、未収束が残れば型付き理由を添えて人間へ。
+テキストフォールバック: Construction の Unit 実装ステージに到達 → (1) swarm 対象ステージか(Unit ごとの反復かつ subagent 委譲 — 出荷グラフでは code-generation のみ)。No(設計系 per-unit ステージ)なら**直列実行 変種 (b)**(Unit を1つずつ順に主セッションが自ら作業・委譲なし・全 Unit 後に単一ゲート)へ (2) walking-skeleton なら**直列実行 変種 (c)** へ (3) 承認済み計画に並列 batch の宣言がなければ直列実行 変種 (c) へ (4) Intent autonomy モード(既定 none)を読む — フィールド欠落・未認識値なら**停止**(破損時防御) (5) `none`・`semi`(= gated)は当該 batch への人間の承認を検査し、なければ**停止**して承認を求める(承認記録後に発動)。承認済みまたは `full`(= autonomous)なら swarm 発動 → ドライバ設定で分岐: 未設定またはこの環境で走れる値は**swarm 実行の機序**へ、認識値だが走れない場合は降格を監査に記録してから同機序へ、認識できない値は**停止**(拒否)。直列実行 変種 (c) の機序 = 次の Unit を1つ取り上げ → subagent 1体へ委譲 → ステージゲートで承認 → 未実装 Unit が残る限り反復。swarm 実行の機序 = Unit ごとに隔離作業領域を準備 → 選択ドライバで N 体並列 fan-out(並列幅の上限内)→ Unit ごとの決定的検証(自己申告不採用)→ 収束主張の全 Unit を再検証して合格のみ統合 → 全収束なら batch 完了(gated は次 batch 前に再承認)、未収束が残れば型付き理由を添えて人間へ。
 
 読み方の要点: 判定連鎖の上段(1〜3)は「どちらの機序か」を、中段(4〜5)は「swarm を今進めてよいか」を、下段(ドライバ)は「swarm 実行のバックエンド」を決める。**swarm を有効にするのは autonomy 側であり、ドライバ設定ではない** — 設定が未設定でも上・中段が揃えば swarm はフロアドライバで発動する。
 
@@ -191,10 +196,10 @@ flowchart TD
 
 | 面 | 名前 | 意味 | 既定 |
 |---|---|---|---|
-| 設定変数 | `AMADEUS_USE_SWARM` | ドライバ選択(§3)。**ON/OFF スイッチではない** | 未設定=ハーネス既定フロア |
+| 設定変数 | `AMADEUS_USE_SWARM` | ドライバ選択(§3)。発動可否には関与しない | 未設定=ハーネス既定フロア |
 | 設定変数 | `AMADEUS_SWARM_RETRY_CAP` | Unit あたり再試行予算の上書き | 2(上限3) |
-| 階層設定 | `max-parallel-units`(`swarm.unit.concurrency.limit`) | 同時実行 Unit 数の上限(超過 Unit はキュー待ちし、slot が空き次第順に実行)。幅の絞りであってモード切替ではない — **1 にしても swarm 実行のまま**(隔離・検証・統合は残る)で、直列実行への切替にはならない。project→space→intent の順で解決、呼び出しは狭める方向のみ | 上限4(範囲 1..4) |
-| 状態 | Intent Autonomy Mode(RFC 0001) | **実質の ON/OFF**。正本は Intent 監査。`none`・`semi`=gated(batch ごとに人間承認)、`full`=autonomous | 誕生時既定 `none`(=gated) |
+| 階層設定 | `swarm.unit.concurrency.limit`(legacy 名 `max-parallel-units`) | 同時実行 Unit 数の上限(超過 Unit はキュー待ちし、slot が空き次第順に実行)。同時実行数の絞りであり、**1 にしても swarm 実行のまま**(隔離・検証・統合は残る)。project→space→intent の順で解決、呼び出しは狭める方向のみ | 上限4(範囲 1..4) |
+| 状態 | Intent Autonomy Mode(RFC 0001) | 発動可否と進行粒度を決める状態(§2)。正本は Intent 監査。`none`・`semi`=gated(batch ごとに人間承認)、`full`=autonomous | 現行 init は誕生時に `none` を記録(レガシー intent には未記録あり — §2) |
 
 可観測性: swarm のライフサイクルは監査イベント `SWARM_STARTED`(batch 開始)/ `SWARM_UNIT_CONVERGED` / `SWARM_UNIT_FAILED`(Unit の帰結)/ `SWARM_DEGRADED`(ドライバ降格)/ `SWARM_BATON_RETURNED`(人間への返還)/ `SWARM_COMPLETED`(batch 完了)として全件記録される。
 
@@ -211,9 +216,11 @@ AS-IS の契約は Part 1(§1〜§6)で閉じている。本節は契約では�
 5. **読取責務の非自明さ**: ドライバ設定を読むのは実行を指揮する側で、検証機構は降格の事実だけを記録として受け取る。この分担がどこにも仕様として書かれていない(構造的必然) — 帰属: 本 RFC §8.5
 6. **ドライバ名 `subagent` の衝突**: ドライバ値 `subagent` は「swarm 実行内の worker 起動手段」を指すが、直列実行も同じ subagent ツールで Unit を(1体ずつ)委譲するため、「subagent を使っている = swarm」という誤読を構造的に誘う。ultra 系ドライバは swarm 専用語なので起きない混同が、`subagent` だけ swarm の外の語彙と衝突する(§1 の対比表参照。実証: 本 RFC 起草セッションの誤読) — 帰属: 本 RFC §8.4
 7. **検証機構側の片側ゲート**: swarm の発動権限検査は発動判定機構にのみ存在し、検証機構自身は autonomy を検査しない。逸脱したエージェントが検証機構の準備コマンドを直接呼べば、権限なしで作業領域の fork と `SWARM_STARTED` の発行が技術的に可能(構造的必然。逸脱の実例は未観測 — evidence 参照) — 帰属: 別 Issue(未起票。防御の二重化は本 RFC のリネームと独立に裁定する)
-8. **RFC 0001 の `none` をめぐる意味論・記述の曖昧さ**: (i) モード名 `none` は「自律なし=並列なし」を示唆するが、実際の契約は gated 並列 — swarm は発動し、batch ごとに人間承認で停止する(実証: kimi 実行時の混乱、および本 RFC 起草セッションでの説明誤り2回) (ii) RFC 0001 付録の注(f)は「mode 未宣言は黙認/宣言要求」と記すが、実装は intent 誕生時に既定 `none` を記録するため「未宣言」は正常経路に存在しない(実証: AS-IS 起草時の誤記。evidence 参照) — 帰属: RFC 0001 amendment(実施の判断は同 RFC の承認者の専権)
+8. **モード名 `none` の意味論**: `none` は「自律なし=並列なし」を示唆するが、実際の契約は gated 並列 — swarm は発動し、batch ごとに人間承認で停止する(実証: kimi 実行時の混乱、および本 RFC 起草セッションでの説明誤り2回) — 帰属: RFC 0001 amendment(実施の判断は同 RFC の承認者の専権)。なお本 RFC の草稿は一時、RFC 0001 付録の「mode 未宣言は黙認/宣言要求」の記述を誤りとして送致対象に含めていたが、独立レビューの実測(未記録 state の実在と2分岐挙動のテスト固定)により同記述が正確であると確認し、撤回した
 
-8項中6項(1〜6)は本 RFC が §8 で是正する。7 は防御構造の問題として別 Issue へ、8 は RFC 0001 の領分としてその amendment 判断へ送致し、本節は記録のみを行う。語彙起因は 1〜4・6・8 であり、権限構造(発動=人間の付与、ドライバ=設定、検証=決定的機構)自体は一貫している。
+9. **ドライバ決定表の面間 drift**: コード(6ハーネス・`pi` 受理)/ 出荷 docs(4列・「3値 enum」・`pi` 非対応と明記)/ ハーネス別 SKILL.md(記述粒度が面ごとに不揃い — ランタイム degrade の記述は claude 面のみ)が同じ決定表を各自の版で持ち、互いに食い違っている(実証: 独立レビューの突合。evidence 参照) — 帰属: 本 RFC §8.6(実装 intent で §3 を正本として全面同期)
+
+9項中7項(1〜6、9)は本 RFC が §8 で是正する。7 は防御構造の問題として別 Issue へ、8 は RFC 0001 の領分としてその amendment 判断へ送致し、本節は記録のみを行う。語彙起因は 1〜4・6・8〜9 であり、権限構造(発動=人間の付与、ドライバ=設定、検証=決定的機構)自体は一貫している。
 
 #### 8. TO-BE 仕様(案 A: 概念に対する最小命名変更)
 
@@ -229,6 +236,9 @@ AS-IS の契約は Part 1(§1〜§6)で閉じている。本節は契約では�
 | 4 「swarm」の多義と語彙断絶 | §8.4 |
 | 5 読取責務の非自明さ | §8.5 |
 | 6 ドライバ名 `subagent` の衝突 | §8.4 |
+| 9 ドライバ決定表の面間 drift | §8.6(§3 を正本に全面同期) |
+
+(§8.3 は §8.1 の派生 — 旧変数の遮断。§8.6 は §8.1〜§8.4 の波及面の棚卸しを兼ねる)
 
 **8.1 設定変数のリネーム**
 
@@ -237,19 +247,19 @@ AS-IS の契約は Part 1(§1〜§6)で閉じている。本節は契約では�
 新: AMADEUS_SWARM_DRIVER=subagent|claude-ultra|codex-ultra|pi   # 未設定=ハーネス既定フロア、全ドライバ名を明示可(名称は裁定済み・確定)
 ```
 
-名前が意味論(「swarm 発動時のドライバ」)をそのまま表し、「USE_SWARM なのに未設定で動く」という誤読の根を断つ。
+名前が意味論(「swarm 発動時のドライバ」)をそのまま表し、「USE_SWARM なのに未設定で動く」という誤読の根を断つ。同名の変数を `auto` 含む5値で設計した不着地の先行案(Prior art 参照)とは異なり、本設計は4値・`auto` なし — 未設定がハーネス既定フロアを与えるため、暗黙の capability probe を持ち込まない。
 
 **8.2 新決定表**(変更セルは太字)
 
 既定(未設定)は **`subagent`**。ただし pi ハーネスのみ **`pi`**(subagent ツールを持たないため)。以下は明示値の解決表:
 
-| AMADEUS_SWARM_DRIVER | claude 上 | codex 上 | pi 上 |
-|---|---|---|---|
-| **`subagent`** | **subagent** | **subagent** | **降格→pi** |
-| `claude-ultra` | claude-ultra | 降格→subagent | 降格→pi |
-| `codex-ultra` | 降格→subagent | codex-ultra | 降格→pi |
-| `pi` | 降格→subagent | 降格→subagent | pi |
-| 空文字・未知値 | 拒否 | 同左 | 同左 |
+| AMADEUS_SWARM_DRIVER | claude 上 | codex 上 | kiro / kiro-ide / kimi 上 | pi 上 |
+|---|---|---|---|---|
+| **`subagent`** | **subagent** | **subagent** | **subagent** | **降格→pi** |
+| `claude-ultra` | claude-ultra | 降格→subagent | 降格→subagent | 降格→pi |
+| `codex-ultra` | 降格→subagent | codex-ultra | 降格→subagent | 降格→pi |
+| `pi` | 降格→subagent | 降格→subagent | 降格→subagent | pi |
+| 空文字・未知値 | 拒否 | 同左 | 同左 | 同左 |
 
 - `subagent` の明示が正当な選択になる。pi 上の `subagent` 明示は「認識できるがこの環境で走れない値」として既存の降格規則に従う(新規則の発明ではなく既存規則への包摂)
 - 拒否の意味論は不変(fail-closed)
@@ -262,8 +272,8 @@ AS-IS の契約は Part 1(§1〜§6)で閉じている。本節は契約では�
 
 用語集に次の語彙セットを定義する(いずれも裁定済み・確定):
 
-- **実行形態の2値定義(code-generation の軸)**: 「**直列実行 = subagent 委譲(1体ずつ)** | **並列実行 ≡ swarm 実行 = swarm ドライバ委譲**(ドライバの1つとして subagent が現れる場合がある)」。並列実行と swarm 実行はこの軸上で同義であり、swarm は並列実行機構の固有名である(3値フラットな列挙「直列|並列|swarm」は並列と swarm が全重複するため不採)。swarm 実行の項に「発動条件は本 RFC §2 の決定表による」の1文を足し、利用者ガイドの「並列 Bolt バッチ」がその利用者向け呼称であることを併記して橋を架ける
-- **直列実行の包含名と3変種の正式名**: 包含名 = **直列実行**(エンジンの既定実行モデルの総称)。変種名 = **(a) 単発実行** / **(b) インライン直列実行** / **(c) 委譲直列実行**。swarm と交換可能なのは委譲直列実行のみであることを1文で明記する
+- **直列実行の包含名と3変種の正式名**: 包含名 = **直列実行**(エンジンの既定実行モデルの総称。「直列実行」という語は常にこの総称を指す)。変種名 = **単発実行** / **インライン直列実行** / **委譲直列実行**(AS-IS §1 のラベル (a)/(b)/(c) にそれぞれ対応)。swarm と交換可能なのは委譲直列実行のみであることを1文で明記する
+- **実行形態の2値定義(code-generation の軸)**: 「**委譲直列実行 = subagent 委譲(1体ずつ)** | **並列実行 ≡ swarm 実行 = swarm ドライバ委譲**(ドライバの1つとして subagent が現れる場合がある)」。並列実行と swarm 実行はこの軸上で同義であり、swarm は並列実行機構の固有名である(3値フラットな列挙「直列|並列|swarm」は並列と swarm が全重複するため不採)。swarm 実行の項に「発動条件は本 RFC §2 の決定表による」の1文を足し、利用者ガイドの「並列 Bolt バッチ」がその利用者向け呼称であることを併記して橋を架ける
 - **subagent の二役の区別**: 「ドライバ `subagent` は swarm 実行内の worker 起動手段を指し、委譲直列実行における subagent 委譲(1体ずつ)とは別概念」の1文を定義に含める
 - **同名の外部機能との識別**: 「Kimi プラットフォームの『Agent Swarm』(タスクをプラットフォーム側が自動判定で最大数百のサブエージェントへ水平分解する機能)は、amadeus の swarm 実行とは無関係の別機能。名称の一致は偶然であり、amadeus の発動条件・ドライバ選択・監査の対象外」の識別注記を swarm 実行の定義に含める(kimi ハーネス利用時にこの外部機能が自動発動すると、amadeus の swarm が起動したように見える誤認が実際に発生した)
 
@@ -293,7 +303,8 @@ AS-IS の契約は Part 1(§1〜§6)で閉じている。本節は契約では�
 
 - RFC 0001(intent-autonomy-modes): 発動権限側の正本。本 RFC は「権限は設定変数に置かない」という同 RFC の構造を前提として保存する
 - 旧 `AMADEUS_USE_SWARM=1`(boolean)→ ドライバ選択への転用(intent 260713-swarm-driver-migration)。値の意味論は移行しつつ名前を残した結果が本 RFC の動機
-- 設定変数の意味論変更を loud reject で守る前例: 旧 boolean 値の明示拒否(現行契約 §3)
+- **同名変数の先行設計(不着地)**: intent 260713 は `AMADEUS_SWARM_DRIVER` という同名の変数を、`auto` を含む5値+capability probe+明示不可時 hard error の設計で起草したが、製品には着地しなかった(`codekb/amadeus/re-scans/260713-swarm-driver-migration.md:36-40`、`codekb/amadeus/code-quality-assessment.md` SD-01 ほか)。本 RFC §8.1 の4値・`auto` なし設計はこの歴史的代替案の再評価であり、`auto` を採らない理由は「未設定=ハーネス既定フロア」が同じ目的を暗黙の probe なしで達成するため
+- 設定変数の意味論変更を loud reject で守る前例: 旧 boolean 値 `"1"` の拒否(現行契約 §3 — 専用分岐ではなく未知値の catch-all で拒否し、コメントで旧値を名指しする形)
 
 ## Unresolved questions(未解決の問題)
 
