@@ -243,6 +243,21 @@ describe("Intent-scoped autonomy production path", () => {
     expect(commitProductionStageGateDecision(gateInput).kind).toBe("decided");
     expect(commitProductionStageGateDecision(gateInput).kind).toBe("already-decided");
 
+    // A malformed supplied recommendation refuses the whole decision
+    // (untrusted JSON is parsed, never trusted) — RFC-0001 FR-1 fail-closed.
+    expect(commitProductionQuestionDecision({
+      projectDir,
+      stage: "code-generation",
+      phase: "construction",
+      graphRevision: `sha256:${"b".repeat(64)}`,
+      questionId: "malformed-recommendation-question",
+      selector: "repair-strategy",
+      question: "Which repair strategy should be used?",
+      optionIds: ["minimal-fix", "broad-refactor"],
+      recommendedOptionId: "minimal-fix",
+      recommendation: { kind: "probably", optionId: "minimal-fix" },
+    })).toEqual({ kind: "human-required", reason: "invalid-recommendation-input", result: null });
+
     const question = commitProductionQuestionDecision({
       projectDir,
       stage: "code-generation",

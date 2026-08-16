@@ -6,6 +6,7 @@
 // fires zero times on the mechanism-caused classes and on ordinary progress —
 // and every count here is produced by running the real derivation.
 
+import * as probes from "../helpers/recommendation-decision-points.ts";
 import { describe, expect, test } from "bun:test";
 
 import {
@@ -38,6 +39,13 @@ describe("R-17 the firing count is an observation derived per decision-point cla
     expect(census.get("walking-skeleton")).toEqual({ unique: 2, contested: 0, none: 0, park: 0, invalid: 0 });
     expect(census.get("s13-learnings")).toEqual({ unique: 1, contested: 0, none: 0, park: 0, invalid: 0 });
     expect(census.get("ordinary-progress")).toEqual({ unique: 2, contested: 0, none: 0, park: 0, invalid: 0 });
+  });
+
+  test("the observer distinguishes every non-decided terminal, not only contested", () => {
+    // Drives the ladderTerminal switch through its escalate/park/invalid arms
+    // so the census can never silently misclassify a stopped ladder as unique.
+    const { ladderProbeTerminals } = probes;
+    expect(ladderProbeTerminals()).toEqual({ none: "none", park: "park", invalid: "invalid" });
   });
 
   test("a contested case is counted against its own class rather than lost", () => {

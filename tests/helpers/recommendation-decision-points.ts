@@ -104,6 +104,12 @@ function ladderTerminal(
     pastHumanRulings: [],
     capability,
   });
+  return terminalOf(resolved);
+}
+
+// Shared classifier: every resolution kind maps to exactly one observed
+// terminal, and both the corpus path and the probe path go through it.
+function terminalOf(resolved: ReturnType<typeof resolveAutoDecision>): ObservedTerminal {
   switch (resolved.kind) {
     case "decided":
       return "unique";
@@ -192,3 +198,41 @@ export function censusByClass(cases: readonly DecisionPointCase[]): ReadonlyMap<
   }
   return census;
 }
+
+// Probe cases that drive the observer's non-decided switch arms through the
+// REAL ladder: an empty capability escalates with none, conflicting norms
+// park, and a malformed scope fingerprint is invalid. Exercised by
+// t3116-contested-frequency so the census can never misread a stopped ladder.
+export function ladderProbeTerminals(): { none: string; park: string; invalid: string } {
+  const none = ladderTerminal(
+    occurrenceOf("question", "probe-none", "probe-selector", ["a", "b"]),
+    [],
+    {
+      soloElectionAvailable: false,
+      unavailableReason: "native-solo-election-result-unavailable",
+      elect: () => RecommendationOutcome.none("probe-unused"),
+      recommend: () => RecommendationOutcome.none("no-applicable-basis"),
+    },
+  );
+  const park = ladderTerminal(
+    occurrenceOf("question", "probe-park", "probe-selector", ["a", "b"]),
+    [normFact("a", "probe-selector", "norm-a"), normFact("b", "probe-selector", "norm-b")],
+    settledElection("a"),
+  );
+  // Invalid needs a malformed DECISION CONTEXT (top-level fingerprints), so it
+  // bypasses ladderTerminal's fixed valid ones and observes the raw resolution.
+  const invalidResolved = resolveAutoDecision({
+    projection: createAutonomyProjection({ intentUuid: INTENT }),
+    occurrence: occurrenceOf("question", "probe-invalid", "probe-selector", ["a", "b"]),
+    authority: authorityOf(["question"]),
+    actorId: "amadeus-conductor",
+    scopeLineageFingerprint: "not-a-sha256",
+    currentNormFingerprint: NORM,
+    applicableNormFacts: [],
+    pastHumanRulings: [],
+    capability: settledElection("a"),
+  });
+  const invalid = terminalOf(invalidResolved);
+  return { none, park, invalid };
+}
+

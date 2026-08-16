@@ -979,7 +979,9 @@ export function commitProductionQuestionDecision(input: ProductionQuestionDecisi
     pastHumanRulings: input.pastHumanRulings ?? [],
     capability: {
       soloElectionAvailable: input.election !== undefined,
-      elect: () => questionElection(input),
+      // Guarded by soloElectionAvailable above: the coordinator never calls
+      // elect without it (amadeus-intent-autonomy.ts:1074).
+      elect: () => questionElection(input.election as NonNullable<typeof input.election>),
       recommend: () => recommendation,
       unavailableReason: input.election === undefined ? "native-solo-election-result-unavailable" : null,
     },
@@ -987,18 +989,17 @@ export function commitProductionQuestionDecision(input: ProductionQuestionDecisi
   });
 }
 
-function questionElection(input: ProductionQuestionDecisionInput): RecommendationOutcome {
-  if (input.election === undefined) {
-    return RecommendationOutcome.unique(input.recommendedOptionId, {
+// The coordinator only invokes `elect` when `soloElectionAvailable` is true
+// (amadeus-intent-autonomy.ts:1074), so the election is present by
+// construction here — the caller narrows it before building the closure.
+function questionElection(
+  election: NonNullable<ProductionQuestionDecisionInput["election"]>,
+): RecommendationOutcome {
+  return "hold" in election
+    ? electionHoldOutcome(election)
+    : RecommendationOutcome.unique(election.optionId, {
       source: "election",
-      fingerprint: autonomyDigest("unavailable-election"),
-    });
-  }
-  return "hold" in input.election
-    ? electionHoldOutcome(input.election)
-    : RecommendationOutcome.unique(input.election.optionId, {
-      source: "election",
-      fingerprint: input.election.evidenceFingerprint,
+      fingerprint: election.evidenceFingerprint,
     });
 }
 

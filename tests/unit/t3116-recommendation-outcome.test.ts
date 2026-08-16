@@ -106,6 +106,25 @@ describe("R-3 parse is the only entrance and fails closed", () => {
     }).ok).toBe(true);
   });
 
+  test("a contested candidate with a blank optionId and a basis with an unknown source are refused", () => {
+    expect(() =>
+      RecommendationOutcome.contested(
+        [
+          { optionId: " ", rationale: "why", rank: 1 },
+          { optionId: "b", rationale: "why-b", rank: 2 },
+        ],
+        "split",
+      )
+    ).toThrow("candidate-requires-option");
+
+    const unknownSource = RecommendationOutcome.parse({
+      kind: "unique",
+      optionId: "accept",
+      basis: { source: "astrology", fingerprint: `sha256:${"a".repeat(64)}` },
+    });
+    expect(unknownSource).toEqual({ ok: false, error: { reason: "unknown-source", path: "basis.source" } });
+  });
+
   test("an unknown kind, missing candidates and a non-sha256 fingerprint each return the error arm", () => {
     const unknownKind = RecommendationOutcome.parse({ kind: "probably", optionId: "accept" });
     expect(unknownKind).toEqual({ ok: false, error: { reason: "unknown-kind", path: "kind" } });
