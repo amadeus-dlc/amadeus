@@ -16,7 +16,7 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { cleanupTestProject, setupIntegrationProject } from "../harness/fixtures.ts";
@@ -288,11 +288,19 @@ describe("t561 R-2 — interactivity failures fall closed to non-interactive", (
     expect(isPendingComposeStop(composeDeps("throws"))).toBe(false);
   });
 
-  test("an unresolvable project dir keeps the question carve-out shut", () => {
-    seedState(null);
+  test("an unreadable audit shard keeps the question carve-out shut", () => {
+    const stateContent = seedState(null);
     seedQuestions();
-    const stateContent = readFileSync(stateFile(), "utf-8");
-    expect(isPendingQuestionStop(stateContent, join(proj, "does-not-exist"))).toBe(false);
+    // The question is genuinely pending, so the walk reaches the interactivity
+    // read; only the evidence is unreadable. A directory at the shard path
+    // makes the port's read fail (EISDIR) rather than find nothing, and the
+    // port's fail-closed answer keeps the carve-out shut.
+    const shardDir = auditShardDir(proj);
+    if (shardDir === null) throw new Error("test fixture: no intent resolved");
+    const shardPath = join(shardDir, auditShardName(proj));
+    rmSync(shardPath, { force: true });
+    mkdirSync(shardPath, { recursive: true });
+    expect(isPendingQuestionStop(stateContent, proj)).toBe(false);
   });
 });
 
