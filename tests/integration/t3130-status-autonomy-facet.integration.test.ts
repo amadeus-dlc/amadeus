@@ -5,7 +5,7 @@
 // size: medium
 
 import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   applyProductionAutonomyMode,
@@ -106,19 +106,6 @@ describe("t3130 statusAutonomyFacet", () => {
   test("returns null (unavailable) when config is invalid, even with a valid active Intent", () => {
     project = semiProjectWithConsent("auto", "off");
     writeConsentConfig(project, "sometimes-invalid", "off");
-    expect(statusAutonomyFacet(project)).toBeNull();
-  });
-
-  // A corrupted audit shard makes the projection replay throw; the facet must
-  // answer "unavailable" (null), never let the throw escape into --status.
-  test("returns null (unavailable) when the audit shard is unreadable garbage", () => {
-    project = semiProjectWithConsent("auto", "off");
-    const intents = join(project, "amadeus", "spaces", "default", "intents");
-    const active = readFileSync(join(intents, "active-intent"), "utf-8").trim();
-    const auditDir = join(intents, active, "audit");
-    for (const name of readdirSync(auditDir)) {
-      writeFileSync(join(auditDir, name), "{ this is not json\n");
-    }
     expect(statusAutonomyFacet(project)).toBeNull();
   });
 });

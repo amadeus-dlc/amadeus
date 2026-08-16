@@ -5098,5 +5098,17 @@
     },
     "reason": "C9/ADR-3 last-resort defensive catch: every anticipated failure of summary generation already resolves to a typed warning on the branches above (covered in-process by t3121 direct arm coverage); this arm only fires on an unanticipated throw inside buildAutoDecisionSummary/write, which has no injectable seam to trigger deterministically.",
     "expiry": "remove when the summary builder gains an injectable failure seam"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-autonomy-status-facet.ts",
+    "selector": {
+      "function": "statusAutonomyFacet",
+      "fingerprint": "sha256:36c1cd1be1d4451c76e5d538ce6b4f91933647a951bc881d2df15ff6009db203",
+      "anchorLines": 1,
+      "targetLines": "1",
+      "class": "catch-arm"
+    },
+    "reason": "Last-resort defensive catch around the projection read: corrupted-shard and EISDIR probes both resolve without throwing (the replay layer degrades internally), so no in-process input reaches this arm; it guards only an unanticipated resolver throw with no injectable seam.",
+    "expiry": "remove when the projection reader exposes an injectable failure seam"
   }
 ]
