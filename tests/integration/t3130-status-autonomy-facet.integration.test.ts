@@ -2,7 +2,7 @@
 // existing effective-value functions (business-rules.md R-6) and never
 // fabricates a value when its inputs are unavailable (R-7).
 // covers: packages/framework/core/tools/amadeus-autonomy-status-facet.ts
-// size: small
+// size: medium
 
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
