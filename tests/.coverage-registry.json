@@ -20,19 +20,19 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 624,
+    "total": 629,
     "enumeratedByClass": {
       "function": 352,
-      "audit": 93,
+      "audit": 96,
       "scope": 15,
       "stage": 32,
       "hook": 15,
-      "subcommand": 110,
+      "subcommand": 112,
       "render-surface": 7
     },
     "coveredByClass": {
       "function": 186,
-      "audit": 45,
+      "audit": 46,
       "scope": 15,
       "stage": 8,
       "hook": 15,
@@ -151,6 +151,18 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "DELEGATED_MERGE_RECORDED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-merge-provenance-record.integration.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "audit",
@@ -377,6 +389,20 @@
     {
       "unitClass": "audit",
       "unitId": "INTENT_UNARCHIVED",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "LEARNING_CANDIDATE_ADDED",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "LEARNING_ZERO_CONFIRMED",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -6011,6 +6037,10 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
+          "file": "tests/integration/t3120-grant-ceremony-preview-command.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/integration/t483-preview-non-auto-kinds.integration.test.ts",
           "mechanism": "cli"
         }
@@ -6052,6 +6082,10 @@
       "unitId": "amadeus-bolt set-autonomy",
       "minMechanism": "cli",
       "coveredBy": [
+        {
+          "file": "tests/integration/t3120-grant-ceremony-preview-command.integration.test.ts",
+          "mechanism": "cli"
+        },
         {
           "file": "tests/integration/t393-birth-autonomy-field.integration.test.ts",
           "mechanism": "cli"
@@ -6295,6 +6329,20 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-learnings add-candidate",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-learnings confirm-zero",
+      "minMechanism": "cli",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "subcommand",
@@ -6678,6 +6726,10 @@
         {
           "file": "tests/integration/t-completed-effective-counter.integration.test.ts",
           "mechanism": "none"
+        },
+        {
+          "file": "tests/integration/t3121-completion-report.integration.test.ts",
+          "mechanism": "cli"
         },
         {
           "file": "tests/integration/t427-goal-reconciliation-completion.integration.test.ts",

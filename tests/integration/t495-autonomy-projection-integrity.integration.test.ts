@@ -9,8 +9,10 @@
 //   1. readAutonomyMode maps full x non-autonomous to null — swarm scheduling
 //      simply never activates. Fail-closed, but SILENT: the operator sees a
 //      record that declares full autonomy and a swarm that never starts, with
-//      nothing anywhere saying why. This pins the warning that makes the
-//      degrade audible while keeping the null return byte-identical.
+//      nothing anywhere saying why. RFC-0001 FR-6 (#3116) closed this by making
+//      the divergence a refusal in EVERY mode instead of a stderr line in one:
+//      the block below now pins the throw, and the stderr-advisory form it
+//      replaced is gone.
 //
 //   2. `amadeus-state set` writes ANY existing field with no audit row. The
 //      three fields the autonomy transaction owns (Intent Autonomy Mode,
@@ -24,9 +26,8 @@
 // MECHANISM. Both surfaces are driven IN-PROCESS from the shipped dist copy
 // (the runner normalises the dist SF: path back to packages/framework/core/...
 // in lcov — coverage-source-path.ts), following t224/t256's established idiom.
-// readAutonomyMode is a pure string reader, so its warning is captured by
-// swapping console.error; handleSet's audit row is read back off the record's
-// own shard.
+// readAutonomyMode is a pure string reader, so its refusal is observed by
+// catching; handleSet's audit row is read back off the record's own shard.
 
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -86,38 +87,43 @@ function stateWith(intentMode: string, scheduling: string): string {
   ].join("\n");
 }
 
-describe("t495 readAutonomyMode announces the full x non-autonomous degrade (#2483)", () => {
-  test("full x gated still returns null AND warns on stderr", () => {
-    const r = captureStreams(() => readAutonomyMode(stateWith("full", "gated")));
-    expect(r.value).toBeNull();
-    expect(r.stderr).toContain("#2483");
-    expect(r.stderr).toContain("Intent Autonomy Mode: full");
-    expect(r.stderr).toContain("gated");
-    // The directive contract: advisories go to stderr only.
+describe("t495 readAutonomyMode refuses a record that disagrees with itself (#2483, RFC-0001 FR-6)", () => {
+  test("full x gated throws and names both halves of the disagreement", () => {
+    const r = captureStreams(() => {
+      expect(() => readAutonomyMode(stateWith("full", "gated"))).toThrow(/AUTONOMY_PROJECTION_DIVERGENCE/);
+    });
+    // The refusal travels as an exception, not as a stream write: nothing may
+    // reach stdout (the directive contract) and nothing is merely advised.
     expect(r.stdout).toBe("");
+    expect(r.stderr).toBe("");
   });
 
-  test("full x unset warns and names the missing projection", () => {
-    const r = captureStreams(() =>
-      readAutonomyMode("## Current Status\n\n- **Intent Autonomy Mode**: full\n"),
-    );
-    expect(r.value).toBeNull();
-    expect(r.stderr).toContain("#2483");
+  test("full x unset throws and names the missing projection", () => {
+    expect(() => readAutonomyMode("## Current Status\n\n- **Intent Autonomy Mode**: full\n"))
+      .toThrow(/\(absent\)/);
   });
 
-  test("full x autonomous is the healthy projection — no warning", () => {
+  test("full x autonomous is the healthy projection", () => {
     const r = captureStreams(() => readAutonomyMode(stateWith("full", "autonomous")));
     expect(r.value).toBe("autonomous");
     expect(r.stderr).toBe("");
   });
 
-  test("semi x gated is a legitimate combination — no warning", () => {
-    const r = captureStreams(() => readAutonomyMode(stateWith("semi", "gated")));
+  // The projection semi USED to get. Under FR-5 semi runs its Bolts, so the
+  // pairing that was legitimate before the RFC is now the record disagreeing
+  // with itself — and it says so instead of quietly capping the schedule.
+  test("semi x gated throws; semi x autonomous schedules", () => {
+    expect(() => readAutonomyMode(stateWith("semi", "gated"))).toThrow(/AUTONOMY_PROJECTION_DIVERGENCE/);
+    expect(readAutonomyMode(stateWith("semi", "autonomous"))).toBe("autonomous");
+  });
+
+  test("the template's initialization pair (none x unset) is the one exemption", () => {
+    const r = captureStreams(() => readAutonomyMode(stateWith("none", "unset")));
     expect(r.value).toBe("gated");
     expect(r.stderr).toBe("");
   });
 
-  test("a record with no Intent Autonomy Mode row is silent", () => {
+  test("a record with no Intent Autonomy Mode row still fails closed to null", () => {
     const r = captureStreams(() =>
       readAutonomyMode("## Current Status\n\n- **Construction Autonomy Mode**: gated\n"),
     );

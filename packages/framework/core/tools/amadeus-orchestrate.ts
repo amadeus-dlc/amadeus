@@ -196,12 +196,19 @@ import {
   classifyApprovalAuthority,
   parseApprovalProcessResult,
 } from "./amadeus-approval-authorization.ts";
-import { autonomyDigest } from "./amadeus-intent-autonomy.ts";
+import {
+  autonomyDigest,
+  declaredIntentAutonomyMode,
+  describeProjectionDivergence,
+  detectProjectionDivergence,
+  projectConstructionAutonomy,
+} from "./amadeus-intent-autonomy.ts";
 // Aliased: this module's own `AutonomyMode` is the Construction SCHEDULING mode
 // ("autonomous" | "gated"), a different axis from the Intent autonomy mode.
 import type {
   AutonomyMode as IntentAutonomyMode,
   AutonomyProjection,
+  SkeletonStance,
 } from "./amadeus-intent-autonomy.ts";
 import {
   admitProductionStageFailure,
@@ -1995,7 +2002,6 @@ function isFirstRunStageOfWorkflow(
 // `report --skeleton-stance`, read by the next `next`). One of the three stance
 // values, or absent before the round-trip completes.
 const SKELETON_STANCE_FIELD = "Skeleton Stance";
-type SkeletonStance = "on" | "off" | "scope-dependent";
 const VALID_SKELETON_STANCES: ReadonlySet<string> = new Set([
   "on",
   "off",
@@ -2023,59 +2029,37 @@ function readSkeletonStance(stateContent: string | null): SkeletonStance | null 
   return VALID_SKELETON_STANCES.has(lower) ? (lower as SkeletonStance) : null;
 }
 
-// `Construction Autonomy Mode` remains an internal scheduling projection for
-// old swarm code. Authorization comes exclusively from the audit-backed
-// `Intent Autonomy Mode`; a legacy autonomous/gated field by itself is never
-// authoritative and therefore fails closed to no swarm.
-const AUTONOMY_MODE_FIELD = "Construction Autonomy Mode";
-const INTENT_AUTONOMY_MODE_FIELD = "Intent Autonomy Mode";
-
 // Compatibility scheduling modes. Authorization is resolved separately from
 // Intent autonomy; `gated` still fans out a batch and waits before the next one.
 type AutonomyMode = "autonomous" | "gated";
 
-// Read the recorded Construction autonomy mode as a discriminated three-valued
-// answer (parse, don't validate): "autonomous" | "gated" | null. Mirrors
-// readSkeletonStance's read-and-narrow shape. An unrecognised value (a typo, a
-// hand-edited state file) narrows to null rather than to a grant — the swarm
-// never activates on a value the engine could not recognise.
+// The scheduling side of the projection (RFC-0001 FR-6). The recorded
+// `Construction Autonomy Mode` is not an independent input: the declared Intent
+// mode projects to it, so this reader derives the schedule through the SAME
+// function the writer uses and treats any disagreement between the two fields as
+// a record that contradicts itself.
+//
+// Two things it deliberately does NOT do. It does not cap semi at "gated" —
+// under RFC-0001 semi keeps its two human milestones and lets the Bolt swarm run
+// (FR-5). And it does not degrade silently: a divergence throws, because the
+// pre-RFC form disabled the swarm with a stderr line at most, which is how a
+// record could declare full autonomy next to a swarm that never started (#2483).
+//
+// A record that declares no mode at all still fails closed to null: there is no
+// declaration to schedule from, and inventing one would grant a swarm nobody
+// asked for.
 export function readAutonomyMode(stateContent: string | null): AutonomyMode | null {
-  const intentMode = stateContent ? getField(stateContent, INTENT_AUTONOMY_MODE_FIELD)?.trim() : null;
-  // none and semi both fan out and stop at batch-end human gates; semi caps any
-  // recorded scheduling at "gated" so it can never skip the in-phase batch wait.
-  if (intentMode === "none" || intentMode === "semi") return "gated";
-  const scheduling = stateContent ? getField(stateContent, AUTONOMY_MODE_FIELD)?.trim() : null;
-  if (intentMode === "full") {
-    if (scheduling === "autonomous") return "autonomous";
-    announceAutonomyProjectionSkew(scheduling ?? null);
-    return null;
-  }
-  return null;
+  const declared = declaredIntentAutonomyMode(stateContent);
+  if (declared === null) return null;
+  const divergence = detectProjectionDivergence(stateContent);
+  if (divergence !== null) throw new Error(describeProjectionDivergence(divergence));
+  return projectConstructionAutonomy(declared);
 }
 
 // One advisory per observed scheduling value per process — the same
 // report-once shape reportedBoltDagRecoveries uses below, so a `next` that
 // reads the mode twice (the swarm predicate and the directive emit) does not
 // print the same line twice.
-const reportedAutonomyProjectionSkews = new Set<string>();
-
-// The full x non-autonomous return above is fail-closed but SILENT: swarm
-// scheduling simply never activates, and the operator sees a record declaring
-// full autonomy next to a swarm that never starts (#2483). Construction
-// Autonomy Mode is a derived projection of Intent Autonomy Mode — under full it
-// is expected to read "autonomous" — so any other value means the projection was
-// written out of band and the record disagrees with itself.
-//
-// stderr only: stdout carries the directive JSON (stdout-directive-stderr-advisory).
-function announceAutonomyProjectionSkew(scheduling: string | null): void {
-  const observed = scheduling === null || scheduling === "" ? "(absent)" : scheduling;
-  if (reportedAutonomyProjectionSkews.has(observed)) return;
-  reportedAutonomyProjectionSkews.add(observed);
-  console.error(
-    `AUTONOMY_PROJECTION_SKEW Intent Autonomy Mode: full but Construction Autonomy Mode: ${observed} — swarm scheduling disabled; the projection is expected to be autonomous under full (#2483)`,
-  );
-}
-
 // Read the compiled batch DAG (the Bolt/unit topological levels) off the
 // runtime graph that `amadeus-runtime compile` materialises. Returns the
 // `batches` array (each inner array is one parallel batch = one topological

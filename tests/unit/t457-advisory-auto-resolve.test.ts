@@ -125,11 +125,13 @@ describe("advisory auto-resolution: option space", () => {
   });
 });
 
-describe("advisory auto-resolution: effect classification (FR-ADV-4 secondary)", () => {
-  test("defer-with-riskはquality-waiverに分類される", () => {
+describe("advisory auto-resolution: effect classification (RFC-0001 ADR-2)", () => {
+  // 延期は quality-waiver ではなく専用の advisory-deferral を名乗る。禁止 5 種の
+  // 意味論を崩さずに天井を 1 分類だけ広げるための構築点(唯一)。
+  test("defer-with-riskはadvisory-deferralに分類される", () => {
     expect(ADVISORY_CHOICE_EFFECT_CLASSIFICATIONS).toEqual({
       "run-now": "workflow-reversible",
-      "defer-with-risk": "quality-waiver",
+      "defer-with-risk": "advisory-deferral",
     });
   });
 });
@@ -154,7 +156,7 @@ describe("advisory auto-resolution: translation (FR-ADV-2 fail-closed)", () => {
     const result: AutonomyDecisionResult = {
       kind: "decided",
       decision: decision("defer-with-risk", ["run-now", "defer-with-risk"]),
-      effect: effect("defer-with-risk", "quality-waiver"),
+      effect: effect("defer-with-risk", "advisory-deferral"),
       receipt,
     };
     expect(translateAdvisoryDecision(result).kind).toBe("human-required");

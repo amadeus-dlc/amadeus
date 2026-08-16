@@ -33,6 +33,7 @@
 // comparison is knowledge (orchestrator-LLM); revise/skip/escalate is
 // judgement (user). No LLM call lives in this tool.
 
+import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
@@ -118,6 +119,12 @@ interface SurfaceOutput {
   memory_entries_total: number;
   candidates: SurfaceCandidate[];
   parked_open_questions: SurfaceParkedQuestion[];
+  // unit s13-zero (ADR-6, R-1): decided from candidates + parked_open_questions
+  // content ONLY (see computeSurfaceDigest) — never from timestamps or the
+  // caller. confirmZeroCandidates recomputes it from the very same fields and
+  // refuses to mint a ZeroReceipt on a mismatch (a tampered/stale digest is
+  // not a basis for "0 件" — self-report by any other name).
+  surfaceDigest: string;
 }
 
 interface RuntimeStageRow {
@@ -262,8 +269,206 @@ export function handleSurface(args: string[], projectDir: string): void {
     memory_entries_total: entries.length,
     candidates,
     parked_open_questions: parked,
+    surfaceDigest: computeSurfaceDigest(candidates, parked),
   };
   console.log(JSON.stringify(out));
+}
+
+// unit s13-zero (ADR-6): a deterministic, content-only digest over candidates
+// + parked_open_questions — NOT memory_entries_total (a derived count, not a
+// content field) and NOT the call time. The same memory.md section always
+// hashes the same, from any caller, at any time (R-2's "同一 memory.md 断面
+// からの再実行は同一 digest を返す"). Algorithm choice (sha256 vs an existing
+// digest utility) was left to code-generation by domain-entities.md.
+function computeSurfaceDigest(
+  candidates: readonly SurfaceCandidate[],
+  parked: readonly SurfaceParkedQuestion[]
+): string {
+  const normalized = {
+    candidates: candidates.map((c) => ({
+      id: c.id,
+      source_heading: c.source_heading,
+      ts: c.ts,
+      summary: c.summary,
+      context: c.context,
+      default_scope: c.default_scope,
+    })),
+    parked_open_questions: parked.map((p) => ({ ts: p.ts, summary: p.summary })),
+  };
+  return createHash("sha256").update(JSON.stringify(normalized)).digest("hex").slice(0, 16);
+}
+
+// --- confirmZeroCandidates / addConductorCandidate (unit s13-zero, ADR-6) ---
+//
+// Both are PURE — no projectDir, no disk write, no audit emit. The consumer
+// is the conductor itself (stage-protocol.md §13 step 3, an LLM reading CLI
+// output), so the audit-recording side effects (R-5) live in the CLI handlers
+// below (handleConfirmZero / handleAddCandidate), which wrap these.
+
+export type ZeroReceipt = { readonly kind: "zero"; readonly surfaceDigest: string; readonly confirmedAt: string };
+export type NotZero = { readonly kind: "not-zero"; readonly candidateCount: number };
+
+// R-1/R-2: the ONLY basis for a "0 件" confirmation is candidates.length === 0
+// AND a surfaceDigest that recomputes to the same value from this SAME
+// surfaceOutput's own candidates + parked_open_questions. A stale/tampered
+// digest never mints a ZeroReceipt — the FD (business-logic-model.md) leaves
+// the digest-mismatch-at-zero-candidates case as "NotZero or an explicit
+// error"; this returns NotZero (candidateCount reports the OBSERVED count,
+// which is 0) rather than adding a third arm to the reviewed domain-entities.md
+// signature.
+export function confirmZeroCandidates(surfaceOutput: SurfaceOutput): ZeroReceipt | NotZero {
+  if (surfaceOutput.candidates.length !== 0) {
+    return { kind: "not-zero", candidateCount: surfaceOutput.candidates.length };
+  }
+  const recomputed = computeSurfaceDigest(surfaceOutput.candidates, surfaceOutput.parked_open_questions);
+  if (recomputed !== surfaceOutput.surfaceDigest) {
+    return { kind: "not-zero", candidateCount: surfaceOutput.candidates.length };
+  }
+  return { kind: "zero", surfaceDigest: surfaceOutput.surfaceDigest, confirmedAt: isoTimestamp() };
+}
+
+export type EvidenceRefusal =
+  | { readonly kind: "evidence-path-missing"; readonly path: string }
+  | { readonly kind: "evidence-mismatch"; readonly path: string; readonly reason: string };
+
+export type AugmentedCandidateSet = { readonly candidates: readonly SurfaceCandidate[]; readonly addedFrom: readonly string[] };
+
+// R-3/R-4: additive-only by construction — this function never receives nor
+// could mutate an existing candidate array; it only validates ONE new
+// candidate against disk evidence and returns the newly-added portion. The
+// conductor (stage-protocol.md §13 step 3, business-logic-model.md "統合面")
+// merges the result into its running candidate set before re-checking
+// confirmZeroCandidates — that merge is an orchestration concern outside this
+// tool. Correspondence check (Q2's [Answer] delegates the method to
+// code-generation): the evidence file's content must contain the candidate's
+// summary text — the simplest machine-checkable form that still refuses an
+// unrelated file, without requiring exact-match brittleness.
+export function addConductorCandidate(
+  candidate: SurfaceCandidate,
+  diskEvidencePath: string
+): { readonly ok: true; readonly value: AugmentedCandidateSet } | { readonly ok: false; readonly error: EvidenceRefusal } {
+  if (!existsSync(diskEvidencePath)) {
+    return { ok: false, error: { kind: "evidence-path-missing", path: diskEvidencePath } };
+  }
+  let content: string;
+  try {
+    content = readFileSync(diskEvidencePath, "utf-8");
+  } catch (e) {
+    return {
+      ok: false,
+      error: { kind: "evidence-mismatch", path: diskEvidencePath, reason: `unreadable: ${errorMessage(e)}` },
+    };
+  }
+  if (!content.includes(candidate.summary)) {
+    return {
+      ok: false,
+      error: {
+        kind: "evidence-mismatch",
+        path: diskEvidencePath,
+        reason: "disk evidence does not contain the candidate's summary text",
+      },
+    };
+  }
+  return { ok: true, value: { candidates: [candidate], addedFrom: [diskEvidencePath] } };
+}
+
+// --- confirm-zero / add-candidate CLI handlers (R-5: audit recording) ---
+
+// FD Iteration-1 FOLLOW-UP (domain-entities.md): the audit payload types were
+// flagged as missing at review time — defined explicitly here rather than
+// left as inline object literals.
+type ZeroConfirmedAuditPayload = {
+  readonly Stage: string;
+  readonly "Surface Digest": string;
+  readonly "Confirmed At": string;
+};
+
+type CandidateAddedAuditPayload = {
+  readonly Stage: string;
+  readonly "Candidate-ID": string;
+  readonly "Disk Evidence Path": string;
+  readonly "Surface Digest": string;
+};
+
+function readJsonFile(path: string, label: string): unknown {
+  let raw: string;
+  try {
+    raw = readFileSync(path, "utf-8");
+  } catch (e) {
+    return fail(`could not read ${label} at ${path}: ${errorMessage(e)}`, 1);
+  }
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    return fail(`${label} at ${path} is not valid JSON: ${errorMessage(e)}`, 1);
+  }
+}
+
+// confirm-zero --surface-json <path> [--project-dir <path>]
+// Reads a `surface` subcommand's stdout JSON (as saved to a file by the
+// caller), applies confirmZeroCandidates, and — ONLY on a ZeroReceipt —
+// records LEARNING_ZERO_CONFIRMED (R-5). A NotZero result is printed but
+// emits nothing: R-6 says the existing selection-ritual flow (structured
+// question / solo election) is unchanged whenever candidates remain, so there
+// is no zero-confirmation event to record.
+export function handleConfirmZero(args: string[], projectDir: string): void {
+  const flags = parseFlags(args);
+  const surfaceJsonPath = flags["surface-json"];
+  if (!surfaceJsonPath) {
+    fail("Usage: amadeus-learnings.ts confirm-zero --surface-json <path> [--project-dir <path>]", 1);
+  }
+  const parsed = readJsonFile(surfaceJsonPath, "surface-json") as SurfaceOutput;
+
+  const result = confirmZeroCandidates(parsed);
+  if (result.kind === "zero") {
+    ensureOtelBootstrap(projectDir);
+    const payload: ZeroConfirmedAuditPayload = {
+      Stage: parsed.stage_slug,
+      "Surface Digest": result.surfaceDigest,
+      "Confirmed At": result.confirmedAt,
+    };
+    appendAuditEntryViaEvents("LEARNING_ZERO_CONFIRMED", payload, projectDir);
+  }
+  console.log(JSON.stringify(result));
+}
+
+// add-candidate --slug <slug> --candidate-json <path> --evidence-path <path>
+//     --surface-digest <digest> [--project-dir <path>]
+// The conductor's additive-only path for a candidate it observed in the §13
+// conversation but that `surface` did not pick up from memory.md. On success,
+// records LEARNING_CANDIDATE_ADDED (R-5) — the addition set plus the
+// surfaceDigest of the snapshot this addition layers on top of, so the audit
+// row ties the addition to a specific, re-derivable surface run. On refusal,
+// fails loud (fail-closed, R-4) and emits nothing.
+export function handleAddCandidate(args: string[], projectDir: string): void {
+  const flags = parseFlags(args);
+  const slug = flags.slug;
+  const candidateJsonPath = flags["candidate-json"];
+  const evidencePath = flags["evidence-path"];
+  const surfaceDigest = flags["surface-digest"];
+  if (!slug || !candidateJsonPath || !evidencePath || !surfaceDigest) {
+    fail(
+      "Usage: amadeus-learnings.ts add-candidate --slug <stage-slug> --candidate-json <path> " +
+        "--evidence-path <path> --surface-digest <digest> [--project-dir <path>]",
+      1
+    );
+  }
+  const candidate = readJsonFile(candidateJsonPath, "candidate-json") as SurfaceCandidate;
+
+  const result = addConductorCandidate(candidate, evidencePath);
+  if (!result.ok) {
+    fail(`add-candidate refused: ${result.error.kind} (${JSON.stringify(result.error)})`, 1);
+  }
+
+  ensureOtelBootstrap(projectDir);
+  const payload: CandidateAddedAuditPayload = {
+    Stage: slug,
+    "Candidate-ID": candidate.id,
+    "Disk Evidence Path": evidencePath,
+    "Surface Digest": surfaceDigest,
+  };
+  appendAuditEntryViaEvents("LEARNING_CANDIDATE_ADDED", payload, projectDir);
+  console.log(JSON.stringify(result.value));
 }
 
 // --- persist ---
@@ -885,6 +1090,16 @@ function printHelp(): void {
       "      {project,team}.md (the relocated method files) and/or scaffold + bind",
       "      a project-tier sensor manifest; emit RULE_LEARNED / SENSOR_PROPOSED",
       "      under one withAuditLock.",
+      "  confirm-zero --surface-json <path> [--project-dir <path>]",
+      "      unit s13-zero (ADR-6): digest-bound 0-candidate confirmation. Mints a",
+      "      ZeroReceipt (and emits LEARNING_ZERO_CONFIRMED) only when candidates is",
+      "      empty AND the surface JSON's own surfaceDigest recomputes; otherwise",
+      "      prints NotZero and emits nothing.",
+      "  add-candidate --slug <stage-slug> --candidate-json <path> --evidence-path <path>",
+      "      --surface-digest <digest> [--project-dir <path>]",
+      "      unit s13-zero (ADR-6): additive-only conductor candidate, gated on disk",
+      "      evidence (fail-closed on a missing/non-corresponding path). Emits",
+      "      LEARNING_CANDIDATE_ADDED on success.",
       "  --help",
       "",
     ].join("\n")
@@ -920,6 +1135,12 @@ function main(): void {
       break;
     case "persist":
       handlePersist(subargs, projectDir);
+      break;
+    case "confirm-zero":
+      handleConfirmZero(subargs, projectDir);
+      break;
+    case "add-candidate":
+      handleAddCandidate(subargs, projectDir);
       break;
     default:
       fail(`Unknown subcommand: ${cmd}. Run amadeus-learnings.ts --help for usage.`, 2);

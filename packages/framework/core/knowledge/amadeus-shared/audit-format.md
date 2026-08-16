@@ -29,7 +29,7 @@ tools read them from. Neither lists the record envelope — every record carries
 (the park pair, the practices events) show it in the table as the attribute it
 is.
 
-## Event Registry (93 events, 21 categories)
+## Event Registry (96 events, 22 categories)
 
 ### Workflow Lifecycle (7 events)
 
@@ -247,6 +247,14 @@ Emitted when Construction's Bolt-merge step calls amadeus-pipeline-deploy-agent 
 | `MERGE_DISPATCH_RETURNED` | Agent returned parsed YAML with strategy, target branch, confidence, notes | Bolt slug, Strategy, Target branch, Confidence, Notes | — | `tools/amadeus-bolt.ts` `dispatch-event --event MERGE_DISPATCH_RETURNED` |
 | `MERGE_DISPATCH_FALLBACK` | Agent timed out or returned malformed YAML; orchestrator fell back to org defaults — critical observability hook | Bolt slug, Fallback reason, Defaults applied | — | `tools/amadeus-bolt.ts` `dispatch-event --event MERGE_DISPATCH_FALLBACK` |
 
+### Delegated Merge Provenance (1 event)
+
+Record-only fact that a PR merge delegated under team.md's standing merge-approval norm (`cid:ci-pipeline:standing-merge-approval-ci-green` — required CI green AND pr-convergence `converged: true`) took place. The norm stays the sole source of truth for the delegation condition; this event never triggers or performs the merge and carries no git/GitHub side effect. Distinct from both the Bolt-internal `*_MERGED` trio (Worktree/State/Audit — a Bolt worktree merging back to main state) and `MERGE_DISPATCH_*` (a Bolt's merge STRATEGY selection) — none of those cover a GitHub PR merge.
+
+| Event | When | Required | Optional | Emitter |
+|-------|------|----------|----------|---------|
+| `DELEGATED_MERGE_RECORDED` | Caller (conductor or delegated executor) confirms the delegation condition was met and the PR merge already happened, then calls `recordDelegatedMerge` | Standing Ruling Ref, CI Conclusion, Converged Digest | — | `tools/amadeus-audit.ts` `recordDelegatedMerge` (CLI: `tools/amadeus-merge-provenance.ts record`) |
+
 ### Sensor Events (5 events)
 
 Emitted by the deterministic-sensor system. The sensor dispatcher emits the four `SENSOR_*` events; the paired-coverage doctor row emits `GUARDRAIL_LOADED` with `Scope: all`, because doctor reads the full resolved guardrail set without an active stage (the per-workflow org → project → phase → stage scoping in the When-clause below describes the steady-state loader, not doctor's unscoped read). Coverage is environmental — every Inception/Construction/Operation stage that writes markdown emits at least one `SENSOR_FIRED` row from the registry-default sensors (`upstream-coverage`, `required-sections`); Construction/Operation TS/JS writes additionally emit `linter` and `type-check` rows. Advisory-only; the future ralph driver introduces blocking semantics for Construction-phase sensors.
@@ -263,15 +271,17 @@ Emitted by the deterministic-sensor system. The sensor dispatcher emits the four
 
 > **Pair by `Fire id`, not by audit-row index.** The PostToolUse Write/Edit hook can fan out a single tool call to four parallel sensor fires (one per applicable sensor on the matching stage). Terminal rows interleave by spawn duration — a 200ms linter beats a 4s tsc — so `findAllEvents("SENSOR_FIRED")[i]` does NOT pair with `findAllEvents("SENSOR_PASSED")[i]` by index. Audit-walking consumers (the `sensor_firings[]` populator, doctor, designer) MUST match terminal rows to FIRED rows via the 8-hex `Fire id` correlator. The dispatcher emits `Fire id` on every row precisely so this pairing remains O(1) under arbitrary fan-out + interleave.
 
-### Learning Loop (3 events)
+### Learning Loop (5 events)
 
-Emitted by stage-protocol §13 (Learnings Ritual). The runtime-graph compile emits `MEMORY_EMPTY` when a just-approved stage's memory.md has zero non-blank entries under the four standard headings. The learning-gate tool emits `RULE_LEARNED` when the user keeps a surfaced or free-text learning (a learning IS a practice — it lands as a practice line under the routed heading in `{project,team}.md`) and `SENSOR_PROPOSED` when a learning installs a sensor binding (manifest + originating stage `sensors:` frontmatter). Doctor reads `MEMORY_EMPTY` rows over time to detect systematic diary-skipping across stages.
+Emitted by stage-protocol §13 (Learnings Ritual). The runtime-graph compile emits `MEMORY_EMPTY` when a just-approved stage's memory.md has zero non-blank entries under the four standard headings. The learning-gate tool emits `RULE_LEARNED` when the user keeps a surfaced or free-text learning (a learning IS a practice — it lands as a practice line under the routed heading in `{project,team}.md`) and `SENSOR_PROPOSED` when a learning installs a sensor binding (manifest + originating stage `sensors:` frontmatter). Doctor reads `MEMORY_EMPTY` rows over time to detect systematic diary-skipping across stages. `LEARNING_ZERO_CONFIRMED` and `LEARNING_CANDIDATE_ADDED` (unit s13-zero, ADR-6) machine-bind a §13 "0 件" confirmation to the digest of the surface run it is based on, so the conductor's own self-report is never the basis: `confirm-zero` only emits `LEARNING_ZERO_CONFIRMED` when candidates is empty AND the surfaceDigest recomputes from the same surface output; `add-candidate` is the additive-only, disk-evidence-gated path for a conductor-observed candidate `surface` missed, and its `LEARNING_CANDIDATE_ADDED` row carries the surfaceDigest of the snapshot it was layered on top of.
 
 | Event | When | Required | Optional | Emitter |
 |-------|------|----------|----------|---------|
 | `MEMORY_EMPTY` | A stage approval triggered a runtime-graph compile and the stage's memory.md had zero non-blank entries under any of the four §13 headings | Stage | — | `tools/amadeus-runtime.ts compile` |
 | `RULE_LEARNED` | The learning gate persisted a kept learning as a practice line under the routed heading in `{project,team}.md` | Stage, Candidate-ID, Destination, Heading, Source | — | `tools/amadeus-learnings.ts persist` |
 | `SENSOR_PROPOSED` | The learning gate scaffolded a project-tier sensor manifest and bound it to the originating stage's `sensors:` frontmatter | Stage, Candidate-ID, Sensor ID, Manifest path, Matches, Destinations, Source | — | `tools/amadeus-learnings.ts persist` |
+| `LEARNING_ZERO_CONFIRMED` | `confirmZeroCandidates` minted a ZeroReceipt: candidates was empty and the surfaceDigest recomputed from the same surface output | Stage, Surface Digest, Confirmed At | — | `tools/amadeus-learnings.ts confirm-zero` |
+| `LEARNING_CANDIDATE_ADDED` | `addConductorCandidate` accepted a conductor-observed candidate whose disk evidence path existed and corresponded to the claim | Stage, Candidate-ID, Disk Evidence Path, Surface Digest | — | `tools/amadeus-learnings.ts add-candidate` |
 
 ### Loop Monitor, Quality Repair, and Intent Autonomy (5 events)
 

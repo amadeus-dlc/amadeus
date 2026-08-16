@@ -199,3 +199,26 @@ describe("the observation cannot change the authorization (FR-2a iii, BR-U1-5)",
     expect(refusalRows(projectDir).length).toBe(1);
   });
 });
+
+describe("an unreadable record falls to the human side, never throws (R-17a stance input)", () => {
+  test("a missing state file resolves the skeleton stance without an error", () => {
+    projectDir = bornProject();
+    appendHumanTurn(projectDir);
+    expect(applyProductionAutonomyMode({
+      projectDir,
+      stateContent: state(projectDir),
+      mode: "semi",
+    })).toMatchObject({ ok: true, projection: { mode: "semi" } });
+    const statePath = join(recordDir(projectDir), "amadeus-state.md");
+    chmodSync(statePath, 0o000);
+    try {
+      const context = stageAutonomy(projectDir, { phaseBoundary: true });
+      expect(context.autoApprove).toBe(false);
+      // Reaching the stance read proves the projection survived the unreadable
+      // state file; an unavailable projection would return before it.
+      expect(context.authorizationReason).not.toBe("intent-autonomy-unavailable");
+    } finally {
+      chmodSync(statePath, 0o644);
+    }
+  });
+});

@@ -24,6 +24,7 @@ import {
   type InteractionOccurrence,
   type SemiAuthorityScope,
 } from "../../packages/framework/core/tools/amadeus-intent-autonomy.ts";
+import { RecommendationOutcome } from "../../packages/framework/core/tools/amadeus-recommendation.ts";
 import {
   encodeIntentAutonomyTransaction,
   readIntentAutonomyTransactions,
@@ -125,8 +126,8 @@ function capability(available = true): DecisionCapabilityPort {
   return {
     soloElectionAvailable: available,
     unavailableReason: available ? null : "native-election-unavailable",
-    elect: () => ({ optionId: "accept", evidenceFingerprint: autonomyDigest("election") }),
-    recommend: () => ({ optionId: "accept", evidenceFingerprint: autonomyDigest("recommendation") }),
+    elect: () => RecommendationOutcome.unique("accept", { source: "election", fingerprint: autonomyDigest("election") }),
+    recommend: () => RecommendationOutcome.unique("accept", { source: "agent", fingerprint: autonomyDigest("recommendation") }),
   };
 }
 
@@ -186,10 +187,11 @@ describe("first gate decision table", () => {
       kind: "human-required",
       reason: "SCOPE_OUT",
     });
-    expect(authorizeInteraction(projection, occurrence("stage-gate", "phase-boundary"), semiScope())).toMatchObject({
-      kind: "human-required",
-      reason: "SCOPE_OUT",
-    });
+    // RFC-0001 FR-5: only the two milestone KINDS stay human. A stage gate that
+    // happens to sit on a phase boundary is still a stage gate — the boundary
+    // itself arrives as a phase-gate occurrence, which the assertion above covers.
+    expect(authorizeInteraction(projection, occurrence("stage-gate", "phase-boundary"), semiScope()).kind)
+      .toBe("semi-authority");
   });
 
   test("full keeps its grant-backed authorization and now carries scope and policies", () => {

@@ -66,6 +66,9 @@ function bornProject(): string {
 }
 
 // The CLI half: run the real subcommand and read the JSON line it prints.
+// preview-autonomy prints two lines (grant-ceremony R-2): the JSON preview,
+// then a paste-ready `set-autonomy` confirmation command — only the first is
+// JSON.
 function previewViaCli(projectDir: string): Record<string, unknown> {
   const result = spawnSync(
     BUN,
@@ -75,7 +78,7 @@ function previewViaCli(projectDir: string): Record<string, unknown> {
   expect(result.stderr ?? "").toBe("");
   expect(result.status ?? -1).toBe(0);
   const lines = (result.stdout ?? "").split("\n").filter(Boolean);
-  expect(lines.length).toBe(1);
+  expect(lines.length).toBe(2);
   return JSON.parse(lines[0] as string) as Record<string, unknown>;
 }
 

@@ -5,21 +5,163 @@
 // change the mode table, grant scope, effect classification, or decision order.
 
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
+import {
+  RecommendationOutcome,
+  type Candidate,
+  type NonUniqueOutcome,
+  type RecommendationBasisSource,
+} from "./amadeus-recommendation.ts";
 import type { VerifiedHumanTurn } from "./amadeus-loop-monitor-runtime.ts";
+import { auditShardDir, auditShardName, findAllEvents, getField } from "./amadeus-lib.ts";
 
 export type AutonomyMode = "none" | "semi" | "full";
 export type WorkflowExecutionState = "running" | "suspended" | null;
+
+// --- The walking-skeleton ceremony (RFC-0001 FR-10 / ADR-10) ---------------
+//
+// The recorded stance for the walking-skeleton ceremony. `scope-dependent` is
+// resolved against the canonical greenfield scope set by the caller that can
+// read state; this module only decides what a resolved stance means.
+export type SkeletonStance = "on" | "off" | "scope-dependent";
+
+// Whether the first Construction stage is a walking-skeleton MILESTONE rather
+// than an ordinary stage gate. Only an explicit `off` retires the ceremony:
+// everything else — including a stance nobody resolved — keeps the acceptance
+// point with the human, because wrongly firing costs one approval while wrongly
+// skipping loses the acceptance point altogether.
+export function firesWalkingSkeletonGate(stance: SkeletonStance): boolean {
+  return stance !== "off";
+}
+
+// --- The Construction scheduling projection (RFC-0001 FR-6) -----------------
+//
+// `Construction Autonomy Mode` is DERIVED from the declared Intent mode; it is
+// not an independent setting. One rule, used by the writer that records it and
+// by the reader that schedules off it, is what makes the record's two fields
+// impossible to disagree about on purpose.
+export type ConstructionProjection = "autonomous" | "gated";
+
+// The state-file field names the projection spans. Named here so the divergence
+// detector and its consumers cannot read one field under two spellings.
+export const INTENT_AUTONOMY_MODE_FIELD = "Intent Autonomy Mode";
+export const CONSTRUCTION_AUTONOMY_MODE_FIELD = "Construction Autonomy Mode";
+
+// The value the state template seeds before any mode is declared. Legal only
+// next to an undeclared (`none`) Intent mode — see detectProjectionDivergence.
+const UNPROJECTED = "unset";
+
+export function projectConstructionAutonomy(mode: AutonomyMode): ConstructionProjection {
+  return mode === "none" ? "gated" : "autonomous";
+}
+
+// What a record says about itself, when the two halves disagree. `recorded` is
+// the RAW field value so a reason line can name a typo or an absence instead of
+// flattening both into "not what I expected".
+export interface DivergenceReport {
+  readonly declared: AutonomyMode;
+  readonly recorded: string | null;
+  readonly expected: ConstructionProjection;
+}
+
+// The declared Intent mode, or null when the record declares none this module
+// recognises. Null is not "mode none": it is "no declaration to project from",
+// which is why the divergence check and the scheduling read both fail closed on
+// it rather than assuming a default.
+export function declaredIntentAutonomyMode(stateContent: string | null): AutonomyMode | null {
+  const raw = stateContent === null ? null : getField(stateContent, INTENT_AUTONOMY_MODE_FIELD)?.trim();
+  return raw === "none" || raw === "semi" || raw === "full" ? raw : null;
+}
+
+// Non-null means the record disagrees with itself and the caller must fail loud
+// (RFC-0001 D3/D9: the pre-RFC reader degraded silently, so an operator saw a
+// declared mode next to a swarm that never started and nothing said why).
+//
+// Exactly one pair is exempt: the initialization pair the state template writes
+// — Intent mode `none` (nothing declared yet) next to an unwritten projection.
+// A DECLARED mode next to `unset` is a divergence like any other; exempting it
+// too would silence the one skew the pre-RFC code already warned about.
+export function detectProjectionDivergence(stateContent: string | null): DivergenceReport | null {
+  const declared = declaredIntentAutonomyMode(stateContent);
+  if (declared === null) return null;
+  const raw = stateContent === null ? undefined : getField(stateContent, CONSTRUCTION_AUTONOMY_MODE_FIELD)?.trim();
+  const recorded = raw === undefined ? null : raw;
+  if (declared === "none" && recorded === UNPROJECTED) return null;
+  const expected = projectConstructionAutonomy(declared);
+  return recorded === expected ? null : { declared, recorded, expected };
+}
+
+// The refusal line a loud caller prints. Kept next to the detector so the reason
+// text and the report it describes cannot drift.
+export function describeProjectionDivergence(report: DivergenceReport): string {
+  const observed = report.recorded === null || report.recorded === "" ? "(absent)" : report.recorded;
+  return `AUTONOMY_PROJECTION_DIVERGENCE ${INTENT_AUTONOMY_MODE_FIELD}: ${report.declared} projects to ${CONSTRUCTION_AUTONOMY_MODE_FIELD}: ${report.expected}, but the record says ${observed}. Re-run the mode declaration to converge the projection (RFC-0001 FR-6).`;
+}
 export type IntentGrantState = "active" | "revoked" | "completed";
 export type InteractionKind = "stage-gate" | "phase-gate" | "walking-skeleton" | "question";
+// The kind universe, next to the union it enumerates so widening one without the
+// other fails typecheck here. Lives in the pure layer because the semi
+// permission set is derived from it (SEMI_ROUTINE_INTERACTIONS below) and the
+// dependency only ever runs production -> pure.
+export const ALL_INTERACTION_KINDS: readonly InteractionKind[] = [
+  "stage-gate",
+  "phase-gate",
+  "walking-skeleton",
+  "question",
+];
 export type StopReason = "AWAITING_HUMAN" | "REPAIR_STALLED" | "NORM_CONFLICT" | "USER_PARKED";
+
+// C3 / FR-2 (RFC-0001) — the single read-only effective-interactivity port.
+// "Interactive" means this clone's own audit shard holds at least one
+// HUMAN_TURN row; every consumer (Stop hook carveout, waiting-admission
+// branch, --status/statusline) must call this instead of re-reading the
+// ledger. Reuses the existing scan pattern from amadeus-state.ts
+// handleDelegateApproval/handleDelegateRejection (auditShardDir +
+// auditShardName + findAllEvents) — never mints presence, never calls
+// mintHumanPresence (read-only boundary).
+export type SessionInteractivity = {
+  readonly interactive: boolean;
+  readonly source: "human-turn-pipeline";
+  readonly measuredAt: string;
+};
+
+// Judgment is binary (>=1 HUMAN_TURN in THIS clone's own shard) with no
+// freshness window, TTY check, or explicit config flag — those alternatives
+// were rejected by the RFC (Q3) and are not reintroduced here. Re-reads the
+// shard from disk on every call (no in-process cache), so a HUMAN_TURN that
+// lands mid-session is observed on the next call. Any resolution/read
+// failure (no active intent, missing shard, corrupted lines) falls closed to
+// `interactive: false` without throwing — this can only under-report, never
+// fabricate a HUMAN_TURN that is not on disk.
+export function resolveSessionInteractivity(projectDir: string): SessionInteractivity {
+  let interactive = false;
+  try {
+    const shardDir = auditShardDir(projectDir);
+    if (shardDir !== null) {
+      const text = readFileSync(join(shardDir, auditShardName(projectDir)), "utf-8");
+      interactive = findAllEvents(text, "HUMAN_TURN").length > 0;
+    }
+  } catch {
+    // Fail-closed terminal: a read failure returns the non-interactive answer
+    // directly. Under-reporting is safe; fabricating presence is not.
+    return { interactive: false, source: "human-turn-pipeline", measuredAt: new Date().toISOString() };
+  }
+  return { interactive, source: "human-turn-pipeline", measuredAt: new Date().toISOString() };
+}
 
 export function autonomyIsRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function bytewise(left: string, right: string): number {
-  return Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8"));
+  const byBytes = Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8"));
+  if (byBytes !== 0) return byBytes;
+  // Lone surrogates collapse to the same UTF-8 replacement bytes, so distinct
+  // strings can compare equal here; break the tie in code-unit order to keep
+  // canonical ordering independent of input order.
+  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 export function autonomyCanonicalJson(value: unknown): string {
@@ -513,7 +655,20 @@ export type ProhibitedEffectClassification =
   | "scope-out"
   | "norm-waiver"
   | "quality-waiver";
-export type EffectClassification = "workflow-reversible" | ProhibitedEffectClassification;
+// `advisory-deferral` is the one classification RFC-0001 ADR-2 added to the
+// autonomous ceiling: deferring past a plugin-declared advisory, with the risk
+// recorded and the advisory re-raisable. It is deliberately NOT a prohibited
+// classification and deliberately NOT `workflow-reversible` — keeping it
+// distinct is what lets the ceiling admit advisory deferral without admitting
+// quality waivers in general.
+export type EffectClassification = "workflow-reversible" | "advisory-deferral" | ProhibitedEffectClassification;
+
+// What an autonomous authority (semi's authority, or a full grant) may act on.
+// Both arms read this one list so the ceiling cannot drift between them.
+const AUTONOMOUS_EFFECT_CLASSIFICATIONS: readonly EffectClassification[] = [
+  "workflow-reversible",
+  "advisory-deferral",
+];
 
 export interface DecisionOptionEffectRegistry {
   readonly revision: string;
@@ -576,9 +731,15 @@ export function createInteractionOccurrence(input: Omit<InteractionOccurrence, "
   };
 }
 
-// The interaction kinds semi decides on its own. Milestones (walking skeleton,
-// phase gates) are absent by construction, which is what keeps them human.
-export const SEMI_ROUTINE_INTERACTIONS: readonly InteractionKind[] = ["stage-gate", "question"];
+// The milestones semi always leaves to the human (RFC-0001 FR-5). This is the
+// only place the pair is named; the permission set below is its complement, so
+// a new InteractionKind becomes semi-decidable without touching either list.
+const SEMI_HUMAN_MILESTONES: readonly InteractionKind[] = ["phase-gate", "walking-skeleton"];
+
+// The interaction kinds semi decides on its own. Milestones are absent by
+// construction, which is what keeps them human.
+export const SEMI_ROUTINE_INTERACTIONS: readonly InteractionKind[] =
+  ALL_INTERACTION_KINDS.filter((kind) => !SEMI_HUMAN_MILESTONES.includes(kind));
 
 export interface SemiAuthorityScope {
   readonly intentUuid: string;
@@ -633,10 +794,15 @@ export const SemiAuthority = {
       }),
     };
   },
+  // The third term is scope-independent on purpose: a caller that hands semi a
+  // scope listing a milestone still does not get the milestone decided. The
+  // retired form compared occurrence.phase against "phase-boundary", a sentinel
+  // production never supplies (it passes the lifecycle phase), so the milestone
+  // line rested on the kind list alone.
   allowsOccurrence(authority: SemiAuthority, occurrence: InteractionOccurrence): boolean {
     return authority.scope.intentUuid === occurrence.intentUuid &&
       authority.scope.allowedInteractionKinds.includes(occurrence.kind) &&
-      occurrence.phase !== "phase-boundary";
+      !SEMI_HUMAN_MILESTONES.includes(occurrence.kind);
   },
   // The authority is the receiver, not a predicate input: scope was already
   // settled at the first gate (allowsOccurrence), so the effect arm only has to
@@ -646,7 +812,7 @@ export const SemiAuthority = {
     effect: DecisionOptionEffect | null,
     currentNormFingerprint: string,
   ): SemiEffectAuthorization {
-    if (effect === null || effect.classification !== "workflow-reversible" ||
+    if (effect === null || !AUTONOMOUS_EFFECT_CLASSIFICATIONS.includes(effect.classification) ||
       effect.applicableNormFingerprint !== currentNormFingerprint) {
       return { ok: false, reason: "semi-gate-effect-not-authorized" };
     }
@@ -800,20 +966,79 @@ export interface DecisionFact {
 
 export interface DecisionCapabilityPort {
   readonly soloElectionAvailable: boolean;
-  elect(occurrence: InteractionOccurrence): { readonly optionId: string; readonly evidenceFingerprint: string };
-  recommend(occurrence: InteractionOccurrence): { readonly optionId: string; readonly evidenceFingerprint: string };
+  elect(occurrence: InteractionOccurrence): RecommendationOutcome;
+  recommend(occurrence: InteractionOccurrence): RecommendationOutcome;
   readonly unavailableReason: string | null;
 }
 
 export type AutoDecisionResolution =
   | { readonly kind: "decided"; readonly record: AutoDecisionRecord }
+  | { readonly kind: "escalate"; readonly outcome: NonUniqueOutcome }
   | { readonly kind: "park"; readonly reason: "NORM_CONFLICT" }
   | { readonly kind: "invalid"; readonly reason: string };
+
+// The canonical form a basis fingerprint is taken over (ADR-11). Whitespace and
+// ordering are presentation, not derivation, so perturbing them must not mint a
+// fresh fingerprint — otherwise a caller could re-enter a rate-limited decision
+// point by reindenting the same evidence.
+export interface RecommendationBasisFacts {
+  readonly source: RecommendationBasisSource;
+  readonly selector: string;
+  readonly optionIds: readonly string[];
+  readonly evidence: readonly string[];
+}
+
+function canonicalText(value: string): string {
+  return value.normalize("NFC").trim().replace(/\s+/gu, " ");
+}
+
+function canonicalSet(values: readonly string[]): readonly string[] {
+  return [...new Set(values.map(canonicalText))].sort(bytewise);
+}
+
+export function recommendationBasisFingerprint(facts: RecommendationBasisFacts): string {
+  return autonomyDigest({
+    source: facts.source,
+    selector: canonicalText(facts.selector),
+    optionIds: canonicalSet(facts.optionIds),
+    evidence: canonicalSet(facts.evidence),
+  });
+}
 
 function uniqueOption(facts: readonly DecisionFact[]): DecisionFact | null | "conflict" {
   if (facts.length === 0) return null;
   const options = new Set(facts.map((fact) => fact.optionId));
   return options.size === 1 ? facts[0]! : "conflict";
+}
+
+// A conflict is a ruling in its own right: the options that were actually
+// argued for, each with the evidence that argued for it.
+function contestedFromFacts(facts: readonly DecisionFact[], reason: string): NonUniqueOutcome {
+  const byOption = new Map<string, DecisionFact>();
+  for (const fact of facts) if (!byOption.has(fact.optionId)) byOption.set(fact.optionId, fact);
+  const candidates: readonly Candidate[] = [...byOption.entries()]
+    .sort(([left], [right]) => bytewise(left, right))
+    .map(([optionId, fact], index) => ({
+      optionId,
+      rationale: `${reason}:${fact.evidenceFingerprint}`,
+      rank: index + 1,
+    }));
+  return RecommendationOutcome.contested(candidates, reason);
+}
+
+// A capability port is a boundary: its outcome is checked here rather than
+// trusted, so a misbehaving elector cannot name an option the occurrence never
+// offered nor hand back an unattributable fingerprint.
+function portOutcomeIsValid(outcome: RecommendationOutcome, occurrence: InteractionOccurrence): boolean {
+  switch (outcome.kind) {
+    case "unique":
+      return occurrence.optionIds.includes(outcome.optionId) && SHA256.test(outcome.basis.fingerprint);
+    case "contested":
+      return outcome.reason.trim().length > 0 && outcome.candidates.length >= 2 &&
+        outcome.candidates.every((candidate) => occurrence.optionIds.includes(candidate.optionId));
+    case "none":
+      return outcome.reason.trim().length > 0;
+  }
 }
 
 interface DecisionRecordInput {
@@ -925,6 +1150,10 @@ interface ResolveAutoDecisionInput {
   readonly applicableNormFacts: readonly DecisionFact[];
   readonly pastHumanRulings: readonly DecisionFact[];
   readonly capability: DecisionCapabilityPort;
+  // Ruling order 1: a decision point reserved to a human is settled before any
+  // derivation runs, so no basis — however unanimous — can auto-decide it. The
+  // predicate itself belongs to the mode authority (U5); the ladder only asks.
+  readonly humanReservedDecision?: (occurrence: InteractionOccurrence) => string | null;
 }
 
 export function resolveAutoDecision(input: ResolveAutoDecisionInput): AutoDecisionResolution {
@@ -932,6 +1161,13 @@ export function resolveAutoDecision(input: ResolveAutoDecisionInput): AutoDecisi
   if (authority === null) return { kind: "invalid", reason: "authorization-required" };
   if (!SHA256.test(input.scopeLineageFingerprint) || !SHA256.test(input.currentNormFingerprint)) {
     return { kind: "invalid", reason: "invalid-decision-context" };
+  }
+  const reserved = input.humanReservedDecision?.(occurrence) ?? null;
+  if (reserved !== null) {
+    // A blank reservation reason is a caller defect; refuse it as an invalid
+    // resolution instead of letting the smart constructor's throw escape.
+    if (reserved.trim().length === 0) return { kind: "invalid", reason: "invalid-reserved-decision-reason" };
+    return { kind: "escalate", outcome: RecommendationOutcome.none(reserved) };
   }
   const policy = resolveConfirmedPolicy({ projection, occurrence, authority, actorId: input.actorId });
   if (policy !== null) return policy;
@@ -945,30 +1181,39 @@ export function resolveAutoDecision(input: ResolveAutoDecisionInput): AutoDecisi
     projection, occurrence, selectedOptionId: norm.optionId, decider: "deterministic-engine", basisKind: "norm",
     basisFingerprint: norm.evidenceFingerprint, actorId: input.actorId,
   }) };
-  const history = uniqueOption(input.pastHumanRulings.filter((fact) =>
+  const applicableRulings = input.pastHumanRulings.filter((fact) =>
     fact.selector === occurrence.selector && fact.scopeLineageFingerprint === input.scopeLineageFingerprint &&
     fact.normFingerprint === input.currentNormFingerprint && occurrence.optionIds.includes(fact.optionId)
-  ));
-  if (history !== null && history !== "conflict") return { kind: "decided", record: decisionRecord({
+  );
+  const history = uniqueOption(applicableRulings);
+  // Past rulings that disagree are the state most in need of a ruling, so they
+  // terminate here rather than being handed down to the election or the agent.
+  if (history === "conflict") {
+    return { kind: "escalate", outcome: contestedFromFacts(applicableRulings, "past-rulings-conflict") };
+  }
+  if (history !== null) return { kind: "decided", record: decisionRecord({
     projection, occurrence, selectedOptionId: history.optionId, decider: "deterministic-engine", basisKind: "history",
     basisFingerprint: history.evidenceFingerprint, actorId: input.actorId,
   }) };
   if (input.capability.soloElectionAvailable) {
     const elected = input.capability.elect(occurrence);
-    if (!occurrence.optionIds.includes(elected.optionId) || !SHA256.test(elected.evidenceFingerprint)) {
-      return { kind: "invalid", reason: "invalid-election-result" };
-    }
+    if (!portOutcomeIsValid(elected, occurrence)) return { kind: "invalid", reason: "invalid-election-result" };
+    if (elected.kind !== "unique") return { kind: "escalate", outcome: elected };
     return { kind: "decided", record: decisionRecord({
       projection, occurrence, selectedOptionId: elected.optionId, decider: "solo-election", basisKind: "solo-election",
-      basisFingerprint: elected.evidenceFingerprint, actorId: input.actorId,
+      basisFingerprint: elected.basis.fingerprint, actorId: input.actorId,
     }) };
   }
   const recommended = input.capability.recommend(occurrence);
-  if (!occurrence.optionIds.includes(recommended.optionId) || !SHA256.test(recommended.evidenceFingerprint) ||
-    !input.capability.unavailableReason) return { kind: "invalid", reason: "invalid-recommendation-result" };
+  if (!portOutcomeIsValid(recommended, occurrence) || !input.capability.unavailableReason) {
+    return { kind: "invalid", reason: "invalid-recommendation-result" };
+  }
+  // Reaching the last rung is not a decision. An agent that cannot single out
+  // an option says so, and the ruling goes to a human.
+  if (recommended.kind !== "unique") return { kind: "escalate", outcome: recommended };
   return { kind: "decided", record: decisionRecord({
     projection, occurrence, selectedOptionId: recommended.optionId, decider: "agent-recommendation",
-    basisKind: "agent-recommendation", basisFingerprint: recommended.evidenceFingerprint, actorId: input.actorId,
+    basisKind: "agent-recommendation", basisFingerprint: recommended.basis.fingerprint, actorId: input.actorId,
     degradedCapability: { capability: "solo-election", reason: input.capability.unavailableReason },
   }) };
 }
@@ -988,7 +1233,7 @@ export function authorizeDecisionEffect(input: AuthorizeDecisionEffectInput): Ef
   const effect = input.registry.resolve(input.selectedOptionId);
   if (effect === null) return { ok: false, reason: "UNKNOWN_EFFECT" };
   if (effect.payloadFingerprint !== autonomyDigest(effect.payload)) return { ok: false, reason: "PAYLOAD_MISMATCH" };
-  if (effect.classification !== "workflow-reversible") {
+  if (!AUTONOMOUS_EFFECT_CLASSIFICATIONS.includes(effect.classification)) {
     return { ok: false, reason: "PROHIBITED_EFFECT" };
   }
   if (effect.requiredScopeFingerprint !== input.grant.scope.scopeFingerprint) return { ok: false, reason: "SCOPE_OUT" };

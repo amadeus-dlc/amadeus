@@ -1,5 +1,6 @@
 // Durable coordinator and audit projection for Intent-scoped autonomy (#2067).
 
+import type { NonUniqueOutcome } from "./amadeus-recommendation.ts";
 import type { LoopMonitorCoordinator } from "./amadeus-loop-monitor-runtime.ts";
 import type { LoopMonitorPartition } from "./amadeus-loop-monitor.ts";
 import {
@@ -248,7 +249,14 @@ export interface AutonomyDecisionInput {
 }
 
 export type AutonomyDecisionResult =
-  | { readonly kind: "human-required"; readonly reason: string; readonly result: WorkflowResult | null }
+  // `outcome` is present when the ladder escalated because the derivation was
+  // not unique. It is what the interruption record stores and re-presents.
+  | {
+      readonly kind: "human-required";
+      readonly reason: string;
+      readonly result: WorkflowResult | null;
+      readonly outcome?: NonUniqueOutcome;
+    }
   | { readonly kind: "parked"; readonly result: WorkflowResult }
   | { readonly kind: "reserved"; readonly reservationId: string; readonly receipt: IntentAutonomyCommitReceipt }
   | {
@@ -544,6 +552,12 @@ export function createIntentAutonomyCoordinator(options: {
     });
     if (resolved.kind === "invalid") return { kind: "conflict", reason: resolved.reason };
     if (resolved.kind === "decided") return { kind: "selected", decision: resolved.record };
+    // A derivation that did not single out an option is a ruling for a human,
+    // not a broken mechanism: it carries the outcome so the caller can present
+    // the candidates instead of re-deriving them.
+    if (resolved.kind === "escalate") {
+      return { kind: "human-required", reason: `recommendation-${resolved.outcome.kind}`, result: null, outcome: resolved.outcome };
+    }
     const condition: ResumeCondition = {
       kind: "norm-change",
       identity: autonomyStableId("resume-condition", [input.occurrence.occurrenceId, "NORM_CONFLICT"]),

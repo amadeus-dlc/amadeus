@@ -5017,5 +5017,86 @@
     },
     "reason": "Implementation identity mismatch shares one return with the path-null check; Bun attributes the hit to the condition line. t-advisory-human-choice-domain covers the invalid-implementation outcomes.",
     "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-learnings.ts",
+    "selector": {
+      "function": "readJsonFile",
+      "fingerprint": "sha256:5b361ac4662f9a0fea4a7b6a0897b95bd57a78e507e75bb9324ee07ed0c09fe0",
+      "anchorLines": 3,
+      "targetLines": "2",
+      "class": "catch-arm"
+    },
+    "reason": "fail() (process exit 1) on an unreadable --surface-json/--candidate-json path; unit s13-zero CLI surface: reached only through the spawned dist CLI (t-learnings-s13-zero seam header precedent — spawned execution is not attributed to parent Bun LCOV). The decision logic itself (confirmZeroCandidates / addConductorCandidate) is covered in-process by tests/integration/t-learnings-s13-zero-seam.integration.test.ts.",
+    "expiry": "remove when Bun merges child-process coverage or the CLI handlers gain an injectable exit seam"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-learnings.ts",
+    "selector": {
+      "function": "readJsonFile",
+      "fingerprint": "sha256:81f8385546c3e13624480a641c6db3b50d8286f50fbf7ae9d2ba946873fb572a",
+      "anchorLines": 3,
+      "targetLines": "2",
+      "class": "catch-arm"
+    },
+    "reason": "fail() (process exit 1) on invalid JSON in the supplied file; unit s13-zero CLI surface: reached only through the spawned dist CLI (t-learnings-s13-zero seam header precedent — spawned execution is not attributed to parent Bun LCOV). The decision logic itself (confirmZeroCandidates / addConductorCandidate) is covered in-process by tests/integration/t-learnings-s13-zero-seam.integration.test.ts.",
+    "expiry": "remove when Bun merges child-process coverage or the CLI handlers gain an injectable exit seam"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-learnings.ts",
+    "selector": {
+      "function": "handleConfirmZero",
+      "fingerprint": "sha256:5adbd1bb20e46915295177f148a63e3166ea267954672c4355e9cf203c5b5102",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "usage fail() line; unit s13-zero CLI surface: reached only through the spawned dist CLI (t-learnings-s13-zero seam header precedent — spawned execution is not attributed to parent Bun LCOV). The decision logic itself (confirmZeroCandidates / addConductorCandidate) is covered in-process by tests/integration/t-learnings-s13-zero-seam.integration.test.ts.",
+    "expiry": "remove when Bun merges child-process coverage or the CLI handlers gain an injectable exit seam"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-learnings.ts",
+    "selector": {
+      "function": "handleAddCandidate",
+      "fingerprint": "sha256:fb2c42831a645e7cffe6fb53c9e78f28586f90b2fc4176a4de5b769e62525f4d",
+      "anchorLines": 4,
+      "targetLines": "1-4"
+    },
+    "reason": "usage fail() lines; unit s13-zero CLI surface: reached only through the spawned dist CLI (t-learnings-s13-zero seam header precedent — spawned execution is not attributed to parent Bun LCOV). The decision logic itself (confirmZeroCandidates / addConductorCandidate) is covered in-process by tests/integration/t-learnings-s13-zero-seam.integration.test.ts.",
+    "expiry": "remove when Bun merges child-process coverage or the CLI handlers gain an injectable exit seam"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-learnings.ts",
+    "selector": {
+      "function": "printHelp",
+      "fingerprint": "sha256:4a4a08dff19b1cc9bfc6a5b441779d774a0d37799b852efa3d8c8bd8e6dc589f",
+      "anchorLines": 10,
+      "targetLines": "1-10"
+    },
+    "reason": "help text lines for the two new subcommands; unit s13-zero CLI surface: reached only through the spawned dist CLI (t-learnings-s13-zero seam header precedent — spawned execution is not attributed to parent Bun LCOV). The decision logic itself (confirmZeroCandidates / addConductorCandidate) is covered in-process by tests/integration/t-learnings-s13-zero-seam.integration.test.ts.",
+    "expiry": "remove when Bun merges child-process coverage or the CLI handlers gain an injectable exit seam"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-learnings.ts",
+    "selector": {
+      "function": "main",
+      "fingerprint": "sha256:34d154b7570d8df39c1e1d797b5a42eb47fdae586729b0f806dd0d4c22ddc0fc",
+      "anchorLines": 6,
+      "targetLines": "1-6",
+      "class": "dispatch-case"
+    },
+    "reason": "main() dispatch cases for confirm-zero/add-candidate; unit s13-zero CLI surface: reached only through the spawned dist CLI (t-learnings-s13-zero seam header precedent — spawned execution is not attributed to parent Bun LCOV). The decision logic itself (confirmZeroCandidates / addConductorCandidate) is covered in-process by tests/integration/t-learnings-s13-zero-seam.integration.test.ts.",
+    "expiry": "remove when Bun merges child-process coverage or the CLI handlers gain an injectable exit seam"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "generateAutoDecisionSummaryOutcome",
+      "fingerprint": "sha256:759ed3562a1457e8ea7390c0a60f9f517374aaebd1f623f6bd42d882609ef93f",
+      "anchorLines": 2,
+      "targetLines": "1-2",
+      "class": "catch-arm"
+    },
+    "reason": "C9/ADR-3 last-resort defensive catch: every anticipated failure of summary generation already resolves to a typed warning on the branches above (covered in-process by t3121 direct arm coverage); this arm only fires on an unanticipated throw inside buildAutoDecisionSummary/write, which has no injectable seam to trigger deterministically.",
+    "expiry": "remove when the summary builder gains an injectable failure seam"
   }
 ]
