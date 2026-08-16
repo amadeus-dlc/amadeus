@@ -33,7 +33,7 @@
         "test",
         "tests/integration/no-silent-drop-gate.test.ts",
         "-t",
-        "first adoption accepts"
+        "a trusted base carrying the event ledger passes"
       ],
       "exitCode": 0,
       "verdict": "pass",
@@ -97,7 +97,7 @@
         "tests/no-silent-drop-gate.ts",
         "check",
         "--base-revision",
-        "9e699ea799eab3d250b752fb099943926d94a232"
+        "9a2b07e22c911ce9ff3c863d249ce2241304d02e"
       ],
       "exitCode": 0,
       "verdict": "pass",
@@ -119,7 +119,7 @@
         "test",
         "tests/integration/no-silent-drop-gate.test.ts",
         "-t",
-        "first adoption fails closed"
+        "fails closed"
       ],
       "exitCode": 0,
       "verdict": "pass",

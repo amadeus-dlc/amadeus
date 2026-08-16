@@ -37,7 +37,7 @@
             "test",
             "tests/integration/no-silent-drop-gate.test.ts",
             "-t",
-            "first adoption accepts"
+            "a trusted base carrying the event ledger passes"
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
@@ -110,7 +110,7 @@
             "tests/no-silent-drop-gate.ts",
             "check",
             "--base-revision",
-            "9e699ea799eab3d250b752fb099943926d94a232"
+            "9a2b07e22c911ce9ff3c863d249ce2241304d02e"
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
@@ -135,7 +135,7 @@
             "test",
             "tests/integration/no-silent-drop-gate.test.ts",
             "-t",
-            "first adoption fails closed"
+            "fails closed"
           ],
           "artifact": {
             "path": "tests/no-silent-drop/evidence/adoption-runs.json",
