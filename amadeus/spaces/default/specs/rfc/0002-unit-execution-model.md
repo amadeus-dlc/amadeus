@@ -15,7 +15,7 @@ bound-surfaces: |
   packages/framework/core/otel/event-registry.ts(SWARM_* イベント)
   docs / glossary(swarm・ドライバ設定に言及する利用者文書)
   (digest ピンは #2396 実装時に付与 — 本 RFC 時点ではパス列挙のみ)
-related: "RFC 0001(intent-autonomy-modes — 発動権限の正本。本 RFC は権限構造に触れない)、#3116、intent 260713-swarm-driver-migration(boolean→ドライバ転用の出所)、intent 260810-swarm-directive-fixes"
+related: "RFC 0001(intent-autonomy-modes — 発動権限の正本。本 RFC は権限構造に触れない)、#3116(RFC 0001 の intent ミラー Issue)、#3125(§8.4 の識別注記から送致した Kimi Agent Swarm 干渉調査)、intent 260713-swarm-driver-migration(boolean→ドライバ転用の出所。同名変数の不着地先行設計は Prior art 参照)、intent 260810-swarm-directive-fixes"
 evidence: evidence/0002-unit-execution-model-survey.md(実装実測 file:line と履歴監査の記録)
 ---
 
@@ -88,7 +88,7 @@ swarm 実行が始まるのは、次のすべてが成立するときに限る:
 4. Intent autonomy モード(`none` / `semi` / `full`)が state に記録されている(現行の intent 初期化は既定 `none` を記録する。未記録のときの挙動は決定表の該当2行)
 5. スケジューリングが `gated`(モードが `none` または `semi`)の場合、当該 batch への人間の承認が記録済みである
 
-どれか1つでも欠ければ直列実行に落ちる。
+条件が欠けたときの帰結は一様ではなく、決定表(下表)を正とする — 条件1〜3の不成立は直列実行、条件4のモード未記録は walking-skeleton 出荷前は黙認直列/出荷後は停止して宣言要求、条件5の未承認 batch は承認待ちで停止する。
 
 > **誤解しやすい点(補足)**: `none` / `semi` / `full` は Intent autonomy モード(RFC 0001 の正本)、`autonomous` / `gated` はそこから機械導出されるスケジューリング投影であり、**別の語彙**である。写像は `full → autonomous`、`none`・`semi` → `gated`(下表)。つまり **`none` を選んでも swarm は発動する**(batch ごとに人間承認で停止する gated 形態)。`none` は「並列なし」ではなく「gated 並列」を意味する。
 
@@ -242,7 +242,7 @@ AS-IS の契約は Part 1(§1〜§6)で閉じている。本節は契約では�
 
 **8.1 設定変数のリネーム**
 
-```
+```text
 旧: AMADEUS_USE_SWARM=claude-ultra|codex-ultra|pi               # 未設定=フロア、フロアの明示は不可
 新: AMADEUS_SWARM_DRIVER=subagent|claude-ultra|codex-ultra|pi   # 未設定=ハーネス既定フロア、全ドライバ名を明示可(名称は裁定済み・確定)
 ```
