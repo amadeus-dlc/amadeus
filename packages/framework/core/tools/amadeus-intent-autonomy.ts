@@ -66,7 +66,12 @@ export function autonomyIsRecord(value: unknown): value is Record<string, unknow
 }
 
 function bytewise(left: string, right: string): number {
-  return Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8"));
+  const byBytes = Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8"));
+  if (byBytes !== 0) return byBytes;
+  // Lone surrogates collapse to the same UTF-8 replacement bytes, so distinct
+  // strings can compare equal here; break the tie in code-unit order to keep
+  // canonical ordering independent of input order.
+  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 export function autonomyCanonicalJson(value: unknown): string {
@@ -1044,7 +1049,12 @@ export function resolveAutoDecision(input: ResolveAutoDecisionInput): AutoDecisi
     return { kind: "invalid", reason: "invalid-decision-context" };
   }
   const reserved = input.humanReservedDecision?.(occurrence) ?? null;
-  if (reserved !== null) return { kind: "escalate", outcome: RecommendationOutcome.none(reserved) };
+  if (reserved !== null) {
+    // A blank reservation reason is a caller defect; refuse it as an invalid
+    // resolution instead of letting the smart constructor's throw escape.
+    if (reserved.trim().length === 0) return { kind: "invalid", reason: "invalid-reserved-decision-reason" };
+    return { kind: "escalate", outcome: RecommendationOutcome.none(reserved) };
+  }
   const policy = resolveConfirmedPolicy({ projection, occurrence, authority, actorId: input.actorId });
   if (policy !== null) return policy;
   const applicableNorms = input.applicableNormFacts.filter((fact) =>

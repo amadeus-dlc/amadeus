@@ -203,7 +203,11 @@ export function censusByClass(cases: readonly DecisionPointCase[]): ReadonlyMap<
 // REAL ladder: an empty capability escalates with none, conflicting norms
 // park, and a malformed scope fingerprint is invalid. Exercised by
 // t3116-contested-frequency so the census can never misread a stopped ladder.
-export function ladderProbeTerminals(): { none: string; park: string; invalid: string } {
+export function ladderProbeTerminals(): {
+  none: ObservedTerminal;
+  park: ObservedTerminal;
+  invalid: ObservedTerminal;
+} {
   const none = ladderTerminal(
     occurrenceOf("question", "probe-none", "probe-selector", ["a", "b"]),
     [],

@@ -258,6 +258,20 @@ describe("Intent-scoped autonomy production path", () => {
       recommendation: { kind: "probably", optionId: "minimal-fix" },
     })).toEqual({ kind: "human-required", reason: "invalid-recommendation-input", result: null });
 
+    // A blank recommended option id refuses through the same arm instead of
+    // letting the smart constructor's throw escape the decision point.
+    expect(commitProductionQuestionDecision({
+      projectDir,
+      stage: "code-generation",
+      phase: "construction",
+      graphRevision: `sha256:${"b".repeat(64)}`,
+      questionId: "blank-recommended-option-question",
+      selector: "repair-strategy",
+      question: "Which repair strategy should be used?",
+      optionIds: ["minimal-fix", "broad-refactor"],
+      recommendedOptionId: "   ",
+    })).toEqual({ kind: "human-required", reason: "invalid-recommendation-input", result: null });
+
     const question = commitProductionQuestionDecision({
       projectDir,
       stage: "code-generation",

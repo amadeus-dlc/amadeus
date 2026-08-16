@@ -1008,6 +1008,9 @@ function questionElection(
 // falling back to the single-option shape.
 function questionRecommendation(input: ProductionQuestionDecisionInput): RecommendationOutcome | null {
   if (input.recommendation === undefined) {
+    // A blank option id would trip the smart constructor's throw; refuse the
+    // decision through the same invalid-recommendation-input arm instead.
+    if (input.recommendedOptionId.trim().length === 0) return null;
     return RecommendationOutcome.unique(input.recommendedOptionId, {
       source: "agent",
       fingerprint: autonomyDigest({ questionId: input.questionId, optionId: input.recommendedOptionId }),

@@ -233,6 +233,13 @@ describe("R-12 a human-reserved decision point is settled before any derivation 
   test("without the seam the ladder behaves exactly as before", () => {
     expect(ladder({ humanReservedDecision: () => null }).kind).toBe("decided");
   });
+
+  test("a blank reservation reason refuses the resolution instead of throwing", () => {
+    expect(ladder({ humanReservedDecision: () => "   " })).toEqual({
+      kind: "invalid",
+      reason: "invalid-reserved-decision-reason",
+    });
+  });
 });
 
 describe("R-13 the gate derivation is deterministic approval expressed through the type", () => {
@@ -299,6 +306,12 @@ describe("ADR-11 the basis fingerprint survives trivial perturbation of the deri
       evidence: ["norm   rule\tA", "  past ruling  B\n"],
     })).toBe(base);
     expect(recommendationBasisFingerprint({ ...facts, evidence: [...facts.evidence, "norm rule A"] })).toBe(base);
+  });
+
+  test("lone surrogates keep the digest order-independent despite equal UTF-8 bytes", () => {
+    const surrogates = { ...facts, evidence: ["\ud800", "\ud801"] };
+    const reversed = { ...facts, evidence: ["\ud801", "\ud800"] };
+    expect(recommendationBasisFingerprint(surrogates)).toBe(recommendationBasisFingerprint(reversed));
   });
 
   test("a different derivation still yields a different digest", () => {
