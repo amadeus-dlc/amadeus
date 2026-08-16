@@ -26,6 +26,7 @@ import {
   getField,
   isAutonomousMode,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
+import { declaredFullAutonomy } from "../../packages/framework/core/tools/amadeus-intent-autonomy.ts";
 import { readAutonomyMode } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import {
   stopBudgetMode,
@@ -324,6 +325,11 @@ describe("every reader of the mode sees the same declaration (FR-2d)", () => {
     // its human-presence carve-out off it — amadeus-log.ts reads the DECLARED
     // Intent mode, so semi's answers stay under the presence guard (FR-12).
     expect(isAutonomousMode(content)).toBe(true);
+    // 7. the gate-revision recovery reader (amadeus-state.ts). R-22: semi keeps
+    // the phase-gate/WS human gates and the [R] revise loop, so recovery must
+    // stay engaged — bound to the DECLARED Intent mode like the answer path,
+    // never to the Construction projection (which semi shares with full).
+    expect(declaredFullAutonomy(content)).toBe(false);
   });
 
   test("a full declaration moves the scheduling readers too", () => {
@@ -345,5 +351,6 @@ describe("every reader of the mode sees the same declaration (FR-2d)", () => {
     expect(stopContinuationDefaultCap(content)).toBe(8);
     expect(stopBudgetMode(content)).toBe("autonomous");
     expect(isAutonomousMode(content)).toBe(true);
+    expect(declaredFullAutonomy(content)).toBe(true);
   });
 });

@@ -137,7 +137,7 @@ import {
 } from "./amadeus-graph.ts";
 import { KNOWN_HARNESS_DIRS } from "./amadeus-harness.js";
 import { detectHarnessType } from "./amadeus-harness.ts";
-import { autonomyDigest } from "./amadeus-intent-autonomy.ts";
+import { autonomyDigest, declaredFullAutonomy } from "./amadeus-intent-autonomy.ts";
 import {
   buildAutoDecisionSummary,
   formatSummaryBuildError,
@@ -4162,7 +4162,10 @@ function authorizeApproval(
     stage: stage.slug,
     produces: declaredProducePaths(pd, stage),
     revisionCount: Number.isFinite(currentRevision) ? currentRevision : 0,
-    autonomous: isAutonomousMode(content),
+    // R-22: recovery is skipped only under DECLARED full — semi keeps its
+    // [R] revise loop, so the Construction projection (autonomous for semi
+    // too) must not decide this.
+    autonomous: declaredFullAutonomy(content),
     disabled:
       process.env.AMADEUS_SKIP_GATE_REVISION_RECOVERY === "1" ||
       KNOWN_CODEKB_STAGES.has(stage.slug),
