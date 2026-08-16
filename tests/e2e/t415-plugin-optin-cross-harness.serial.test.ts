@@ -28,7 +28,13 @@ const FACES: readonly Face[] = [
   { name: "opencode", dist: "opencode", host: ".opencode", kind: "opencode" },
 ];
 
-const HOSTS = [".claude", ".codex", ".cursor", ".kimi-code", ".kiro", ".opencode"] as const;
+const HOSTS = [".claude", ".codex", ".cursor", ".kimi-code", ".kiro", ".opencode", ".pi"] as const;
+
+// Hosts carried in every fixture that no FACES row drives. Pi is a promoted
+// dogfood surface (#2363), but its session lifecycle lives in its extensions
+// and drivers rather than a hook or adapter this test can fire — so it is not
+// a face here, only a host the cross-contamination invariant must cover.
+const HOST_ONLY_DIST: Readonly<Record<string, string>> = { ".pi": "pi" };
 let projects: string[] = [];
 
 function subprocessEnv(extraEnv: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
@@ -52,7 +58,7 @@ function freshProject(face: Face, selected = true): string {
     if (host === ".kiro") {
       dist = face.dist.startsWith("kiro") ? face.dist : "kiro";
     } else {
-      dist = FACES.find((candidate) => candidate.host === host)?.dist;
+      dist = FACES.find((candidate) => candidate.host === host)?.dist ?? HOST_ONLY_DIST[host];
     }
     if (dist === undefined) throw new Error(`no dist tree for ${host}`);
     cpSync(join(REPO_ROOT, "dist", dist, host), join(project, host), { recursive: true });
@@ -108,7 +114,7 @@ function assertOnlyCurrentHostComposed(project: string, current: string): void {
   }
 }
 
-describe("t415 fresh opt-in lifecycle across seven faces and six hosts", () => {
+describe("t415 fresh opt-in lifecycle across seven faces and seven hosts", () => {
   for (const face of FACES) {
     test(`${face.name}: its real startup lifecycle materializes only ${face.host}`, async () => {
       const project = freshProject(face);

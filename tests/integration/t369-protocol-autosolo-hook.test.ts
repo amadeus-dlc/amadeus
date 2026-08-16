@@ -47,7 +47,7 @@ const HARNESS_DIRS = [
   ["dist/opencode", ".opencode"],
 ] as const;
 
-const SELF_INSTALL_DIRS = [".claude", ".codex", ".cursor", ".kimi-code", ".opencode"] as const;
+const SELF_INSTALL_DIRS = [".claude", ".codex", ".cursor", ".kimi-code", ".opencode", ".pi"] as const;
 
 const FAILURE_ELECTION_SURFACES = [
   "packages/framework/harness/claude/skills/amadeus/SKILL.md",

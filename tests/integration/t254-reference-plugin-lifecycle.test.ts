@@ -233,10 +233,10 @@ describe("t254 reference-plugin-and-guides — U11 FR-6 items 21–22", () => {
     scaleTestTime(TIMEOUT_MS),
   );
 
-  test("self-install stays the closed five faces (kiro/kiro-ide packaged, never promoted)", () => {
+  test("self-install stays the closed six faces (kiro/kiro-ide packaged, never promoted)", () => {
     const packageFaces = [...PACKAGE_HARNESSES] as string[];
     const selfInstallFaces = [...SELF_INSTALL_HARNESSES] as string[];
-    expect([...selfInstallFaces].sort()).toEqual(["claude", "codex", "cursor", "kimi", "opencode"]);
+    expect([...selfInstallFaces].sort()).toEqual(["claude", "codex", "cursor", "kimi", "opencode", "pi"]);
     for (const f of selfInstallFaces) expect(packageFaces).toContain(f);
     expect(packageFaces).toContain("kiro");
     expect(selfInstallFaces).not.toContain("kiro");

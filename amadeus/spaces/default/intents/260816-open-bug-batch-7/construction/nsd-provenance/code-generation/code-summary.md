@@ -1,6 +1,6 @@
 # Code Summary — nsd-provenance(#3155)
 
-branch `open-bug-batch-7/nsd-provenance`(head `fbf7fd315`、push 済み・conductor 統合済み)。方式 = D1'(退役、E-AD-8D942DE5)。実測値は builder 報告(worktree 内実行)からの転記で、conductor 統合断面の再実測は本 summary 末尾。
+branch `open-bug-batch-7/nsd-provenance`(実装 head `fbf7fd315`、record 同梱後の PR head `3fd75b517` — pr-convergence-report.md と一致。push 済み・conductor 統合済み)。方式 = D1'(退役、E-AD-8D942DE5)。実測値は builder 報告(worktree 内実行)からの転記で、conductor 統合断面の再実測は本 summary 末尾。
 
 ## 変更ファイル
 
@@ -31,7 +31,7 @@ typecheck 0 / lint 0 / source-only:check 0 / coverage-registry --check 0 / gate+
 
 - `bootstrap.ts` はファイル名のみ残置(中身は custody + lineage。リネームは波及大のため見送り)
 - `CANONICAL_PATHS.exemptions` は本退役以前からの死蔵(計画射程外で据え置き)
-- conductor 統合断面での再実測(build 不変・gate 実走・参照掃引)は取込後に実施し、結果は §12a レビューの attested context として提示
+- conductor 統合断面での再実測は取込後に実施(build 不変・gate 実走 pass・参照掃引は 8 述語のうち中核 3 述語 bootstrap-provenance / validateBootstrapHistory / baselineAtRevision を再実測、いずれも不在 exit 1 — 残り 5 述語は worktree 実測のみ)。結果は §12a の attested context として提示
 
 ## 台帳同期
 

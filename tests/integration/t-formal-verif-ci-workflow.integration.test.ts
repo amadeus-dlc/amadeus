@@ -88,6 +88,13 @@ const BASELINE_SHA = readFileSync(
 //     scaled Bun timeout, and lint runs the timing-sink guard.
 //   - Merge Queue CI: trigger required checks for merge groups and resolve the
 //     changed-file and no-silent-drop bases from the event's trusted SHAs.
+//   - #2363 (pi self-install): add `.pi` to the reproducible-build job's
+//     GENERATED_OUTPUTS. promote-self now reflects dist/pi/.pi into the project
+//     root, so `.pi` is a generated tree the two isolated builds must agree on;
+//     omitting it would leave the newest promoted surface unchecked for
+//     reproducibility. Re-baseline scope was measured, not assumed: reverting
+//     that single line from ci.yml reproduces the previous baseline hash
+//     (57a395d1f0d1…) exactly, so this entry sanctions that edit and nothing else.
 describe("CI workflow structure (formal job isolation + baseline pin)", () => {
   test("contains only the sanctioned edits and an isolated pinned formal job", () => {
     const source = readFileSync(WORKFLOW, "utf8");

@@ -47,7 +47,7 @@ const PROMOTED_SCOPES = [
   "self-refactor",
 ] as const;
 
-const DOGFOOD_FACES = [".claude", ".codex", ".cursor", ".kimi-code", ".opencode"] as const;
+const DOGFOOD_FACES = [".claude", ".codex", ".cursor", ".kimi-code", ".opencode", ".pi"] as const;
 const DIST_FACES = [
   ["claude", ".claude"],
   ["codex", ".codex"],

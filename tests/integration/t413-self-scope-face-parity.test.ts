@@ -1,5 +1,5 @@
-// t413 — self-* scope face parity (#2033). The five self-install faces
-// (.claude/.codex/.cursor/.kimi-code/.opencode) must agree on every canonical
+// t413 — self-* scope face parity (#2033). The six self-install faces
+// (.claude/.codex/.cursor/.kimi-code/.opencode/.pi) must agree on every canonical
 // promoted scope: identical EXECUTE/SKIP cells in tools/data/scope-grid.json
 // over the stage keys ALL faces share, and byte-identical
 // scopes/amadeus-self-*.md prose. The 2026-07-28 self-feature lightening
@@ -20,7 +20,7 @@ import { fileURLToPath } from "node:url";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-const FACES = [".claude", ".codex", ".cursor", ".kimi-code", ".opencode"] as const;
+const FACES = [".claude", ".codex", ".cursor", ".kimi-code", ".opencode", ".pi"] as const;
 const SELF_SCOPES = [
   "installer-distribution",
   "self-document",

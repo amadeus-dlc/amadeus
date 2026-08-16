@@ -102,7 +102,7 @@ describe("t307 installArtifacts (class-driven layout)", () => {
   // The harness token is per-face, not a hardcoded ".claude" leak: each
   // folder-drop face names its OWN dir, and never another face's.
   test("every folder-drop face's INSTALL.md names its own harness dir and no other (#1591)", () => {
-    const dirs = { codex: ".codex", cursor: ".cursor", kimi: ".kimi-code", kiro: ".kiro", opencode: ".opencode" } as const;
+    const dirs = { codex: ".codex", cursor: ".cursor", kimi: ".kimi-code", kiro: ".kiro", opencode: ".opencode", pi: ".pi" } as const;
     for (const [harness, dir] of Object.entries(dirs) as [keyof typeof dirs, string][]) {
       const text = installText(harness);
       expect(text).toContain(`${dir}/${PLUGIN_SOURCE_DIR_NAME}/${FIXTURE}/`);

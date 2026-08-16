@@ -16,6 +16,7 @@ const GENERATED_SELF_INSTALL_ROOTS = [
   ".cursor",
   ".kimi-code",
   ".opencode",
+  ".pi",
 ] as const;
 
 const HISTORICAL_GITATTRIBUTES_EXCEPTIONS = [".codex/hooks.json"] as const;

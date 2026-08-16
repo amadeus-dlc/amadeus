@@ -92,6 +92,7 @@ beforeEach(async () => {
   write("dist/cursor/.cursor/d.txt", "delta\n");
   write("dist/opencode/.opencode/e.txt", "epsilon\n");
   write("dist/kimi/.kimi-code/f.txt", "zeta\n");
+  write("dist/pi/.pi/g.txt", "eta\n");
   write("dist/codex/AGENTS.md", "@.agents/rules/amadeus.md\n\n# AI-DLC on Codex CLI\n\ngenerated\n");
   const claudeOnboarding = "@.claude/rules/amadeus.md\n\n# Claude onboarding\n";
   write(".claude/CLAUDE.md", claudeOnboarding);

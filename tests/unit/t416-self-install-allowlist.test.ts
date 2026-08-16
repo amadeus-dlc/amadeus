@@ -75,6 +75,7 @@ describe("t416 gitignore expectation", () => {
       "/.kimi-code/**",
       "/.opencode/**",
       "!/.opencode/opencode.json",
+      "/.pi/**",
     ]);
   });
 });

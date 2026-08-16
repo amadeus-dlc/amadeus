@@ -24,7 +24,7 @@
 packages/framework/core/                # 手書きの、ハーネス中立なソース(tools, stages, agents, rules, knowledge, hooks)
 packages/framework/harness/<name>/      # ハーネスごとに書かれた表層(manifest、オーケストレーター skill、settings/config; 例 claude/, kiro/, codex/)
 scripts/package.ts   # ビルド: packages/framework/core/ + packages/framework/harness/ から dist/<harness>/ を再生成
-scripts/promote-self.ts # プロジェクトローカルのドッグフーディングインストール: 生成された Claude/Codex 表層を .claude/.codex/.agents に昇格(ワークスペースの memory は決して上書きしない)
+scripts/promote-self.ts # プロジェクトローカルのドッグフーディングインストール: 生成されたセルフインストール表層すべて(.claude/.codex/.agents/.cursor/.opencode/.kimi-code/.pi)をプロジェクトルートへ昇格(ワークスペースの memory は決して上書きしない)
 dist/<harness>/      # ignoreされる使い捨てのローカルビルド出力。bun run build で再生成する
 tests/               # すべて TypeScript のテストスイート(t*.test.ts、bun で実行)
 docs/                # ドキュメント
@@ -41,7 +41,7 @@ docs/                # ドキュメント
 2. **アーキテクチャを読む** -- [reference/01-architecture.md](01-architecture.ja.md) は実行モデル、エージェント委譲、フックシステムを説明します
 3. **エントリポイントを理解する** -- 決定論的エンジン `packages/framework/core/tools/amadeus-orchestrate.ts`(`next` / `report`)がルーティングを所有し、コンダクター `packages/framework/harness/claude/skills/amadeus/SKILL.md` はそのディレクティブに従って動作する薄い転送ループです。正となるエンジン / ディレクティブ / コンダクター / swarm の契約については [The Skill System](17-skill-system.ja.md) を参照してください
 4. **変更を加える** -- `packages/framework/core/` のハーネス中立ソース(tools, stages, agents, hooks, rules, knowledge)、または `packages/framework/harness/<name>/` のハーネス表層(オーケストレーター skill、settings)を編集します。fresh cloneではハーネス起動前に `bun install --frozen-lockfile` と `bun run build` を実行します。生成された `dist/` とself-install面はignoreされるローカル出力なのでstageしません
-5. **ドッグフーディング時はローカルビルドする** -- `bun run build` は全 `dist/<harness>/` を生成し、このリポジトリのプロジェクトローカルな `.claude/`、`.codex/`、`.agents/`、`.cursor/`、`.opencode/`、`.kimi-code/` を更新します。このとき追跡されたbootstrap/configuration allowlistとper-user runtime状態は保持されます。`amadeus/spaces/default/memory/` は手編集されるmethod正本なので意図的に昇格されません。提出前に `bun run source-only:check` を実行します。CIは隔離した2回のビルドもbyte単位で比較します
+5. **ドッグフーディング時はローカルビルドする** -- `bun run build` は全 `dist/<harness>/` を生成し、このリポジトリのプロジェクトローカルな `.claude/`、`.codex/`、`.agents/`、`.cursor/`、`.opencode/`、`.kimi-code/`、`.pi/` を更新します。このとき追跡されたbootstrap/configuration allowlistとper-user runtime状態は保持されます。`amadeus/spaces/default/memory/` は手編集されるmethod正本なので意図的に昇格されません。提出前に `bun run source-only:check` を実行します。CIは隔離した2回のビルドもbyte単位で比較します
 6. **テスト** -- 提出前に `bun tests/run-tests.ts` を実行します
 7. **提出** -- `main` に対して PR を開きます
 

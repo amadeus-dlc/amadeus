@@ -33,6 +33,7 @@ node_modules/
 /.kimi-code/**
 /.opencode/**
 !/.opencode/opencode.json
+/.pi/**
 
 # packages/setup's own build output (bun build src/cli.ts -> dist/cli.js).
 # Unlike the framework's /dist/ above, this is a per-package publish artifact,

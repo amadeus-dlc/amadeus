@@ -30,8 +30,8 @@ timeout_seconds: 5
 This sensor is exclusively for developing Amadeus itself. It is dormant when
 no `self-*` scope exists.
 
-Once any self scope is present, the sensor checks the five dogfood harness
-surfaces (`.claude`, `.codex`, `.cursor`, `.opencode`, and `.kimi-code`). Each
+Once any `self-*` scope is present, the sensor checks the six dogfood harness
+surfaces (`.claude`, `.codex`, `.cursor`, `.opencode`, `.kimi-code`, and `.pi`). Each
 must contain the canonical `installer-distribution`, `self-document`,
 `self-feature`, `self-fix`, and `self-refactor` identities both as scope files
 and as rows in `tools/data/scope-grid.json`. A scope filename whose

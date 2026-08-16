@@ -3,6 +3,7 @@
 
 ## Interpretations
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
+- 2026-08-16T18:40:00Z — build-and-test checkpoint で spec-change advisory 再発火(本線前進による spec identity 変化)。単段再実行: 登録 4 モデル per-model CLI で全て NOT_DETECTED(exit 0)、spec identity c1b7460c… を record 済み
 - 2026-08-16T14:55:00Z — ローカル単段 run では run-model-check-ci.ts(acceptance)でなく per-model run-model-check.ts を用いるのが正: ci 版の runtime receipt は bunVersion 1.3.13 固定と GitHub Actions env(githubRunId/githubRunAttempt 非空)を要求し(ci-model-check-domain.ts:297-305)、ローカルでは TLC 24 run 完走後も構造的に exit 2(ARTIFACT_VERIFY_FAILURE「runtime receipt is incomplete」)になる。また ci 版の --root は evidenceRoot でありリポジトリルートを渡すと評価残渣(モデル名 dir・docker-*.argv/.timing・acceptance.json 等 57 個)がリポジトリ直下へ書かれる — 実測後に全て削除し残渣ゼロを git status で確認済み。per-model 版の --out は親ディレクトリ実在が前提(OUT_PATH「output parent must be an existing directory」)
 - 2026-08-16T14:55:00Z — 検査結果: 登録 4 モデル(BoltPrAttestationGate / FormalElection / MirrorLifecycle / PrConvergenceGate)すべて NOT_DETECTED(exit 0、completion marker と state 統計つきの実 TLC 出力由来)。runId は 7ce356ef / 8e0b28f3 / ca6abac6 / 4f469d1c、artifacts は session scratchpad の fmc/ 配下
 

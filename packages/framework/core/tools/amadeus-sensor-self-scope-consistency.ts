@@ -1,7 +1,7 @@
 // Self-development-only sensor for Amadeus scope registry parity.
 //
 // The distributed tool stays dormant in ordinary projects. It activates only
-// when at least one `self-*` scope is present, then requires the five Amadeus
+// when at least one `self-*` scope is present, then requires the six Amadeus
 // dogfood harness surfaces to expose the same five promoted scopes in both
 // `scopes/amadeus-*.md` and `tools/data/scope-grid.json`.
 //
@@ -13,7 +13,7 @@
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
-export const SELF_HARNESSES = [".claude", ".codex", ".cursor", ".opencode", ".kimi-code"] as const;
+export const SELF_HARNESSES = [".claude", ".codex", ".cursor", ".opencode", ".kimi-code", ".pi"] as const;
 export const EXPECTED_SELF_SCOPES = [
   "installer-distribution",
   "self-document",
