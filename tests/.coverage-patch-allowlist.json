@@ -2027,11 +2027,11 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:b571772e48a7993ca8f1be5ab2ee2e7c06dfb6e9f2dac7ec99a8cee859deac76",
-      "anchorLines": 58,
-      "targetLines": "1-58"
+      "fingerprint": "sha256:f6a994816b67235c94c6deb8dcd6c3da7a37525a3947664256abaa755b9ea144",
+      "anchorLines": 44,
+      "targetLines": "1-44"
     },
-    "reason": "The guarded unpark adapter is covered as shipped subprocess journeys by t259, including success, rejection, mutation, and idempotence; spawned CLI lines are not parent-LCOV resident.",
+    "reason": "The park/unpark CLI adapters are covered as shipped subprocess journeys by t17/t259 (success, rejection, mutation, idempotence); spawned CLI lines are not parent-LCOV resident. Re-anchored after RFC-0001 FR-3 removed the park autonomy guard from this block.",
     "expiry": "remove when guarded unpark and process-exit boundaries are injectable in-process"
   },
   {
@@ -3997,12 +3997,12 @@
   {
     "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
     "selector": {
-      "function": "resume",
-      "fingerprint": "sha256:7dc575c48a55c135ff4b68e4d095a287e655d48293d655f770f02dcdd3a7816b",
+      "function": "unparkRefusal",
+      "fingerprint": "sha256:1da4340d529858f356867b257b913edc5279c1900ab5a8974cb0b0b02433c033",
       "anchorLines": 1,
       "targetLines": "1"
     },
-    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report.",
+    "reason": "Residual defensive, invalid-input, replay, or process-boundary arm not naturally reachable from the in-process lifecycle suites (t431/t432/t435); the public CLI boundary is exercised via spawn, which Bun does not attribute to the parent LCOV report. Re-anchored after RFC-0001 waiting extracted the refusal arms into unparkRefusal.",
     "expiry": "remove when the residual arm gains a deterministic in-process driver, or Bun merges child-process coverage"
   },
   {
