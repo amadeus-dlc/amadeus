@@ -1249,6 +1249,34 @@
     "slug": "open-bug-batch-6",
     "dirName": "260814-open-bug-batch-6",
     "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "01a00368-5780-706f-ae7f-1445b9748390",
+    "slug": "priority-bug-batch-2",
+    "dirName": "260815-priority-bug-batch-2",
+    "scope": "self-fix",
+    "status": "in-flight"
+  },
+  {
+    "uuid": "01a00473-38f9-7786-804b-55615fb0c0b9",
+    "slug": "per-unit-outcome",
+    "dirName": "260815-per-unit-outcome",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "01a0054a-8333-75f0-8311-abe26cf8579e",
+    "slug": "stale-epoch-landed",
+    "dirName": "260815-stale-epoch-landed",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "01a00604-1c06-7df6-9683-56557b7af258",
+    "slug": "rfc-autonomy-modes",
+    "dirName": "260815-rfc-autonomy-modes",
+    "scope": "self-feature",
     "status": "in-flight"
   },
   {

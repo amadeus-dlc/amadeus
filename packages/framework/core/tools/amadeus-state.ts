@@ -41,7 +41,6 @@ import {
   humanPresenceGuardDisabled,
   isAutonomousMode,
   isoTimestamp,
-  outstandingHumanTurns,
   KNOWN_CODEKB_STAGES,
   loadScopeMapping,
   listIntents,
@@ -138,7 +137,12 @@ import {
 } from "./amadeus-graph.ts";
 import { KNOWN_HARNESS_DIRS } from "./amadeus-harness.js";
 import { detectHarnessType } from "./amadeus-harness.ts";
-import { autonomyDigest } from "./amadeus-intent-autonomy.ts";
+import { autonomyDigest, declaredFullAutonomy } from "./amadeus-intent-autonomy.ts";
+import {
+  buildAutoDecisionSummary,
+  formatSummaryBuildError,
+  writeAutoDecisionSummaryMarkdown,
+} from "./amadeus-completion-report.ts";
 import {
   commitProductionIntentCompletion,
   commitProductionStageGateDecision,
@@ -1570,40 +1574,22 @@ function handleSetSkeletonStance(args: string[]): void {
 // completed workflow (nothing to park). Emits WORKFLOW_PARKED - a recorded
 // state event, audit-first under the lock.
 //
-// AUTONOMY GUARD (issue #365, salvaged from the suspend branch; reshaped by
-// #3016): what an autonomous Construction run must never do is park ITSELF -
-// an unattended run has no human to resume it and must keep moving. The guard
-// therefore refuses `park` under `Construction Autonomy Mode: autonomous` only
-// when the run really is unattended, and a real human turn is what proves it is
-// not: park is accepted when the active record's presence ledger still holds an
-// UNCONSUMED `HUMAN_TURN`, and the accepted park consumes it (WORKFLOW_PARKED
-// is a presence resolution), so one turn licenses exactly one park.
+// park is mode-blind (RFC-0001 FR-3). #365's autonomy guard refused it under
+// `Construction Autonomy Mode: autonomous` whenever no unconsumed `HUMAN_TURN`
+// was on record, on the premise that an unattended run has nobody to resume it
+// and therefore has to keep going. RFC-0001's D1/D5 reject that premise: an
+// unattended run that reaches a ruling it may not make is exactly the run that
+// has to stop, and this tool was the layer making stopping impossible. The
+// refusal is gone - there is no mode arm, no flag and no env off-switch here.
 //
-// The predicate is `outstandingHumanTurns`, which fails CLOSED on an absent
-// ledger; `humanActedSinceGate` is deliberately NOT used (it fails OPEN for the
-// active scope, which is the only scope park runs in, so an unattended run with
-// no ledger would park). The `AMADEUS_SKIP_HUMAN_PRESENCE_GUARD` off-switch is
-// not honoured here either: it would hand every scripted run the bypass this
-// guard exists to deny.
-//
-// This tool is the ONLY layer that enforces it - the Stop hook allows an
-// emitted `parked` directive in every mode (amadeus-stop.ts's `parked` branch),
-// so there is no hook-side twin. The refusal protects a direct/scripted
-// `amadeus-state.ts park` invocation in an autonomous run. (#365's suspend
-// mechanism had no first-class tool verb a swarm could call; park's
-// `amadeus-state.ts park` is directly invocable, so the tool refusal closes a
-// path #365 did not have.)
+// The presence ACCOUNTING is untouched, because it never lived here:
+// `WORKFLOW_PARKED` is a presence resolution (amadeus-lib.ts
+// `resolutionConsumesHuman`), so a park still spends whatever turn was
+// outstanding and one turn still licenses exactly one park.
 function handlePark(_args: string[]): void {
   const pd = resolveProjectDir(projectDir);
   withAuditLock(pd, () => {
     let content = readStateFile(pd);
-    if (isAutonomousMode(content) && outstandingHumanTurns(pd).length === 0) {
-      error(
-        "Refusing to park: Construction Autonomy Mode is autonomous and no unconsumed " +
-          "HUMAN_TURN is on record. An unattended autonomous run has no human to resume " +
-          "it and must keep moving - do not park it. Park again from a human turn.",
-      );
-    }
     const status = getField(content, "Status");
     if (status === "Completed") {
       error("Workflow is already Completed - nothing to park.");
@@ -3227,6 +3213,28 @@ export function handleCompleteWorkflow(args: string[]): void {
   );
 }
 
+// C9/ADR-3: non-blocking auto-decision summary (R-3). Every branch —
+// including anything this helper did not anticipate — resolves to a warning
+// string, never a thrown error: a defect in report generation must never turn
+// a real completion into a failed one.
+export function generateAutoDecisionSummaryOutcome(
+  pd: string,
+  completionRecordDir: string | null,
+): { path: string | null; warning: string | null } {
+  try {
+    if (completionRecordDir === null) {
+      return { path: null, warning: formatSummaryBuildError({ kind: "record-dir-unresolved" }) };
+    }
+    const built = buildAutoDecisionSummary(pd, completionRecordDir);
+    if (!built.ok) return { path: null, warning: formatSummaryBuildError(built.error) };
+    const written = writeAutoDecisionSummaryMarkdown(completionRecordDir, built.summary);
+    if (written.ok) return { path: written.relativePath, warning: null };
+    return { path: null, warning: formatSummaryBuildError(written.error) };
+  } catch (cause) {
+    return { path: null, warning: `generation-failed:${cause instanceof Error ? cause.message : String(cause)}` };
+  }
+}
+
 function completeWorkflowForTarget(args: string[], pd: string): void {
   // Keep <completed-slug> positional and distinct from the --reason value.
   // --reason takes a value, so its argument is excluded from positionals too.
@@ -3293,6 +3301,11 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
   // splits by audit disposition — a receipt that has not settled is a waiting
   // state the workflow recovers from (the engine's await-completion directive,
   // no ERROR_LOGGED row), everything else is a genuine failure.
+  // Captured once, before the completion-registry mutations below (which may
+  // clear the active-intent cursor) — buildAutoDecisionSummary reuses this
+  // same resolved path later rather than re-resolving recordDir post-cursor-
+  // clear, where an implicit (non---intent) resolution could go ambiguous.
+  const completionRecordDir = operationRecordDir(pd);
   const authorization = evaluateLifecycleGuards<WorkflowAuthorizationGuardContext, GoalReconciliationReceipt>({
     checkpoint: "workflow-completion",
     targetRevision: `workflow:${completedSlug}@${completionInstance}`,
@@ -3302,7 +3315,7 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
       content,
       completedSlug,
       completionInstance,
-      recordDir: operationRecordDir(pd),
+      recordDir: completionRecordDir,
     },
   });
   if (authorization.kind === "blocked") {
@@ -3384,6 +3397,20 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
     operationWriteState(pd, content);
   }
   injectWorkflowCompletionCrash("after-state-completed");
+
+  // C9/ADR-3: must run BEFORE completeIntentRegistryRow below: listProductionAutoDecisions
+  // resolves this Intent's review lifecycle off the intents.json status row, and
+  // a "completed" lifecycle demands a committed completion-seal audit row that a
+  // baseline/"none"-autonomy Intent never writes (commitProductionIntentCompletion
+  // above tolerates "active-intent-required" as a no-op). Reading the summary
+  // while the registry row still says "in-flight" resolves lifecycle "active",
+  // which skips the seal requirement entirely — R-4 only pins this to run after
+  // the state write and before the completion JSON, not relative to the
+  // registry flip, so this ordering stays inside the mandated window.
+  const summaryOutcome = generateAutoDecisionSummaryOutcome(pd, completionRecordDir);
+  const autoDecisionSummaryPath = summaryOutcome.path;
+  const autoDecisionSummaryWarning = summaryOutcome.warning;
+
   // Intent status lifecycle: terminal completion flips the active intent's
   // registry row to "complete". This is the determinism (field write) gated by
   // the human-confirmed completion that drove complete-workflow here — never an
@@ -3400,6 +3427,7 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
     );
   }
   injectWorkflowCompletionCrash("after-cursor-clear");
+
   console.log(
     JSON.stringify({
       completed: completedSlug,
@@ -3407,6 +3435,8 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
       status: "Completed",
       reason: reason || null,
       timestamp,
+      auto_decision_summary: autoDecisionSummaryPath,
+      auto_decision_summary_warning: autoDecisionSummaryWarning,
       workflow_result: completionWorkflowResultEnvelope(autonomyCompletion),
     })
   );
@@ -4132,7 +4162,10 @@ function authorizeApproval(
     stage: stage.slug,
     produces: declaredProducePaths(pd, stage),
     revisionCount: Number.isFinite(currentRevision) ? currentRevision : 0,
-    autonomous: isAutonomousMode(content),
+    // R-22: recovery is skipped only under DECLARED full — semi keeps its
+    // [R] revise loop, so the Construction projection (autonomous for semi
+    // too) must not decide this.
+    autonomous: declaredFullAutonomy(content),
     disabled:
       process.env.AMADEUS_SKIP_GATE_REVISION_RECOVERY === "1" ||
       KNOWN_CODEKB_STAGES.has(stage.slug),
@@ -6308,7 +6341,7 @@ function evaluatePreparedWorkflowCompletion(
       reason: `Prepared workflow completion cannot resolve mirror configuration: ${details}`,
     });
   }
-  if (config.config.intentMirror.github.issue.mode === "off") {
+  if (config.config.intentMirror.github.issue.consent === "off") {
     return guardNotApplicable("the Intent mirror is off");
   }
   const entries = readIntentRegistry(pd, space).filter((entry) =>

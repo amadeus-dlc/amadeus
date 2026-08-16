@@ -47,6 +47,7 @@ import {
   emitError,
   errorMessage,
   getField,
+  harnessDir,
   loadStageGraph,
   parseApprovedSwarmBatches,
   relativeRecordDir,
@@ -54,6 +55,7 @@ import {
   resolveProjectDir,
   setFieldStrict,
   setOrInsertField,
+  verifyBatchApprovalPresence,
   withAuditLock,
   SWARM_BATCH_APPROVALS_FIELD,
   worktreePath,
@@ -1014,6 +1016,14 @@ function handlePreviewAutonomy(args: string[], explicitProjectDir?: string): voi
   });
   if (!result.ok) error(`Intent autonomy preview failed: ${result.error}`);
   console.log(JSON.stringify(result.preview));
+  // Paste-ready confirmation command (grant-ceremony R-2). Full mode is the
+  // only mode where confirmedDisplayDigest is checked (prepareFullGrantCommand
+  // :617 in amadeus-intent-autonomy-production.ts) — semi/none ignore it
+  // (ADR-2's grant-less semi), so this echoes the mode the digest actually
+  // confirms rather than a mode the caller could choose.
+  console.log(
+    `bun ${harnessDir()}/tools/amadeus-bolt.ts set-autonomy --mode full --confirmed-display-digest ${result.preview.displayDigest}`,
+  );
 }
 
 function handleDecideQuestion(args: string[], explicitProjectDir?: string): void {
@@ -1213,16 +1223,32 @@ function handleSetAutonomy(args: string[], explicitProjectDir?: string): void {
 // Validation is numeric (parse, don't validate) and runs BEFORE any emission, so
 // a rejected batch number leaves neither an orphan audit row nor a state edit.
 //
-// The whole read->decide->emit->write section runs under withAuditLock, the same
-// wrap handleSetAutonomy and every amadeus-state.ts RMW handler use: the audit
-// lock emitAudit takes internally is released before writeStateFile, so only an
-// outer lock serialises the state transaction (issue #2589).
+// approve-batch is a HUMAN gate (issue #1612) but ran with no presence
+// verification of its own (D7, FR-12): an AI agent invoking the subcommand
+// directly could commit the approval with no evidence a real human acted.
+// verifyBatchApprovalPresence (amadeus-lib.ts) closes that gap — it is the
+// FIRST operation inside withAuditLock below, before the state read and the
+// idempotent already-approved shortcut, so a presence-less call refuses
+// UNCONDITIONALLY (business-rules.md R-1/R-2: no "already approved" exemption).
+// It runs inside the lock rather than before it so the presence check and the
+// GATE_APPROVED write share one exclusive section — checking outside the lock
+// would leave a TOCTOU window where a concurrent gate resolution spends the
+// same HUMAN_TURN between the check and the write (functional-design-questions.md
+// Q2).
+//
+// The whole verify->read->decide->emit->write section runs under withAuditLock,
+// the same wrap handleSetAutonomy and every amadeus-state.ts RMW handler use: the
+// audit lock emitAudit takes internally is released before writeStateFile, so
+// only an outer lock serialises the state transaction (issue #2589).
 //
 // The inner emit does not self-deadlock: withAuditLock's per-identity depth
 // counter re-enters (amadeus-lib.ts, "ONE PATH, LOCK HELD OR NOT"). Re-entry
 // needs the identities to MATCH, and they do — this wrap passes no intent/space
 // and neither does the emit, so both key the workspace sentinel, the same bucket
-// handleSetAutonomy and the untargeted amadeus-state.ts handlers take.
+// handleSetAutonomy and the untargeted amadeus-state.ts handlers take. Calling
+// error() (which process.exit()s) from inside the callback is likewise safe:
+// withAuditLock installs an exit-handler safety net that still releases the
+// lock dir.
 function handleApproveBatch(args: string[], explicitProjectDir?: string): void {
   const flags = parseFlags(args);
   if (!flags.batch) error("Missing --batch <n> (the 1-origin swarm batch number)");
@@ -1233,6 +1259,9 @@ function handleApproveBatch(args: string[], explicitProjectDir?: string): void {
 
   const pd = resolveBoltProjectDir(explicitProjectDir);
   withAuditLock(pd, () => {
+    const presence = verifyBatchApprovalPresence(pd);
+    if (!presence.ok) error(presence.error.reason);
+
     const content = readStateFile(pd);
     const approved = parseApprovedSwarmBatches(content);
     if (approved.includes(batch)) {

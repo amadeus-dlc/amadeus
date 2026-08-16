@@ -223,6 +223,8 @@ The canonical event set (defined in the `audit-format.md` registry) is grouped b
 | `WORKFLOW_COMPLETED` | `tools/amadeus-state.ts` |  |
 | `WORKFLOW_PARKED` | `tools/amadeus-state.ts` | `park` - workflow parked mid-flow for a later session; no stage advanced |
 | `WORKFLOW_UNPARKED` | `tools/amadeus-state.ts` | `unpark` - park marker cleared on explicit `--resume` re-entry |
+| `WORKFLOW_WAITING_ENTERED` | `tools/amadeus-intent-autonomy-production.ts` | `enterProductionWaiting` marker - a non-interactive run stopped at a ruling it may not make (RFC-0001 FR-3/ADR-4); the ledger transaction is the record, this row is its projection |
+| `WORKFLOW_WAITING_RESUMED` | `tools/amadeus-intent-autonomy-production.ts` | waiting resume marker - the waiting record was re-presented and ruled on |
 | `INTENT_ARCHIVED` | `tools/amadeus-state.ts` | Human-authorized archive transaction; emitted once per operation ID |
 | `INTENT_UNARCHIVED` | `tools/amadeus-state.ts` | Human-authorized unarchive transaction; emitted once per operation ID |
 | `EXECUTION_EVENT_SET_COMMITTED` | `tools/amadeus-execution-lifecycle.ts` | Canonical audit-first execution lifecycle event set committed atomically |
@@ -384,6 +386,7 @@ route is numbered by is derived from the `run-now` receipts now gone.
 
 | Event | Emitter | Notes |
 |---|---|---|
+| `UNIT_OUTCOME_SETTLED` | `tools/amadeus-orchestrate.ts` | The engine's own per-unit dispatch path settled a covered, non-cancelled Unit's outcome at its coverage boundary; keyed by stage, Unit and batch so re-entry appends nothing, and read only where the Unit pool stream has no terminal for that Unit |
 | `BOLT_STARTED` | `tools/amadeus-bolt.ts` | Accepts CSV bolt names for parallel batches |
 | `BOLT_COMPLETED` | `tools/amadeus-bolt.ts` | Paired with a prior `BOLT_STARTED` |
 | `BOLT_FAILED` | `tools/amadeus-bolt.ts` (`fail` + `abort`) | `--succeeded-siblings` captures parallel-batch survivors; `abort` adds `Reason: aborted` field for sub-classification |
@@ -452,6 +455,14 @@ Emitted via the `amadeus-bolt dispatch-event` subcommand. The conductor brackets
 | `MERGE_DISPATCH_RETURNED` | `tools/amadeus-bolt.ts` `dispatch-event --event MERGE_DISPATCH_RETURNED` | Agent returned parsed YAML with strategy, target branch, confidence, and notes |
 | `MERGE_DISPATCH_FALLBACK` | `tools/amadeus-bolt.ts` `dispatch-event --event MERGE_DISPATCH_FALLBACK` | Agent timed out or returned malformed YAML; conductor fell back to org defaults — critical observability hook |
 
+### Merge provenance
+
+Emitted by `recordDelegatedMerge` (`tools/amadeus-audit.ts`; CLI wrapper `tools/amadeus-merge-provenance.ts record`). Records the provenance of a delegated (standing-approval) PR merge — the standing ruling reference and the measured CI/convergence evidence. Recording only; it never performs or decides a merge.
+
+| Event | Emitter | Trigger |
+|---|---|---|
+| `DELEGATED_MERGE_RECORDED` | `tools/amadeus-audit.ts` `recordDelegatedMerge` | Caller confirms the delegation condition was met and the PR merge already happened |
+
 ### Sensors
 
 The four `SENSOR_*` events are emitted by the sensor dispatcher; `GUARDRAIL_LOADED` by the paired-coverage doctor row. Coverage is environmental — every Inception/Construction/Operation stage that writes markdown emits at least one `SENSOR_FIRED` row from the registry-default sensors. Advisory-only; a future ralph driver introduces blocking semantics for Construction-phase sensors.
@@ -466,13 +477,15 @@ The four `SENSOR_*` events are emitted by the sensor dispatcher; `GUARDRAIL_LOAD
 
 ### Learning loop
 
-`MEMORY_EMPTY` is emitted by `amadeus-runtime.ts compile`. The §13 Learnings Ritual writes a per-stage memory.md during execution; on stage approval, the runtime-graph compile reads memory.md and emits `MEMORY_EMPTY` for any stage with zero non-blank entries under the four standard headings. The learning-gate tool (`amadeus-learnings.ts persist`) emits `RULE_LEARNED` when a kept learning lands as a dated practice entry in `amadeus/spaces/<space>/memory/{project,team}.md`, and `SENSOR_PROPOSED` when a learning installs a sensor binding (manifest + originating stage `sensors:` frontmatter). Doctor reads these rows for diary-discipline observability.
+`MEMORY_EMPTY` is emitted by `amadeus-runtime.ts compile`. The §13 Learnings Ritual writes a per-stage memory.md during execution; on stage approval, the runtime-graph compile reads memory.md and emits `MEMORY_EMPTY` for any stage with zero non-blank entries under the four standard headings. The learning-gate tool (`amadeus-learnings.ts persist`) emits `RULE_LEARNED` when a kept learning lands as a dated practice entry in `amadeus/spaces/<space>/memory/{project,team}.md`, and `SENSOR_PROPOSED` when a learning installs a sensor binding (manifest + originating stage `sensors:` frontmatter). Doctor reads these rows for diary-discipline observability. `LEARNING_ZERO_CONFIRMED` and `LEARNING_CANDIDATE_ADDED` (unit s13-zero, ADR-6) machine-bind a §13 "0 件" confirmation to the surface run's digest instead of the conductor's self-report: `amadeus-learnings.ts confirm-zero` emits `LEARNING_ZERO_CONFIRMED` only when candidates is empty AND the surface JSON's own `surfaceDigest` recomputes from its candidates + parked_open_questions; `amadeus-learnings.ts add-candidate` emits `LEARNING_CANDIDATE_ADDED` when it accepts an additive, disk-evidence-gated conductor candidate.
 
 | Event | Emitter | Trigger |
 |---|---|---|
 | `MEMORY_EMPTY` | `tools/amadeus-runtime.ts` | Stage approval's runtime-graph compile found memory.md missing or with zero non-blank entries under §13's four headings |
 | `RULE_LEARNED` | `tools/amadeus-learnings.ts` | The learning gate persisted a kept learning as a dated practice entry to `amadeus/spaces/<space>/memory/{project,team}.md` |
 | `SENSOR_PROPOSED` | `tools/amadeus-learnings.ts` | The learning gate scaffolded a project-tier sensor manifest and bound it to the originating stage's `sensors:` frontmatter |
+| `LEARNING_ZERO_CONFIRMED` | `tools/amadeus-learnings.ts` | `confirmZeroCandidates` minted a ZeroReceipt: candidates was empty and the surfaceDigest recomputed from the same surface output |
+| `LEARNING_CANDIDATE_ADDED` | `tools/amadeus-learnings.ts` | `addConductorCandidate` accepted a conductor-observed candidate whose disk evidence path existed and corresponded to the claim |
 
 ### Loop monitor and quality repair
 

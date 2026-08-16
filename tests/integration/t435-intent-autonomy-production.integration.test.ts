@@ -88,7 +88,10 @@ function auditEvents(projectDir: string): string[] {
 function selectFullAutonomy(projectDir: string): { readonly status: number; readonly output: string } {
   const preview = run(projectDir, "amadeus-bolt.ts", ["preview-autonomy"]);
   expect(preview.status).toBe(0);
-  const digest = (JSON.parse(preview.output.trim()) as { displayDigest: string }).displayDigest;
+  // Line 1 is the JSON preview; line 2 (grant-ceremony R-2) is a paste-ready
+  // set-autonomy command, not JSON.
+  const previewJsonLine = preview.output.trim().split("\n")[0] as string;
+  const digest = (JSON.parse(previewJsonLine) as { displayDigest: string }).displayDigest;
   appendLedgerEvent(projectDir, "HUMAN_TURN");
   return run(
     projectDir,
@@ -240,6 +243,35 @@ describe("Intent-scoped autonomy production path", () => {
     expect(commitProductionStageGateDecision(gateInput).kind).toBe("decided");
     expect(commitProductionStageGateDecision(gateInput).kind).toBe("already-decided");
 
+    // A malformed supplied recommendation refuses the whole decision
+    // (untrusted JSON is parsed, never trusted) — RFC-0001 FR-1 fail-closed.
+    expect(commitProductionQuestionDecision({
+      projectDir,
+      stage: "code-generation",
+      phase: "construction",
+      graphRevision: `sha256:${"b".repeat(64)}`,
+      questionId: "malformed-recommendation-question",
+      selector: "repair-strategy",
+      question: "Which repair strategy should be used?",
+      optionIds: ["minimal-fix", "broad-refactor"],
+      recommendedOptionId: "minimal-fix",
+      recommendation: { kind: "probably", optionId: "minimal-fix" },
+    })).toEqual({ kind: "human-required", reason: "invalid-recommendation-input", result: null });
+
+    // A blank recommended option id refuses through the same arm instead of
+    // letting the smart constructor's throw escape the decision point.
+    expect(commitProductionQuestionDecision({
+      projectDir,
+      stage: "code-generation",
+      phase: "construction",
+      graphRevision: `sha256:${"b".repeat(64)}`,
+      questionId: "blank-recommended-option-question",
+      selector: "repair-strategy",
+      question: "Which repair strategy should be used?",
+      optionIds: ["minimal-fix", "broad-refactor"],
+      recommendedOptionId: "   ",
+    })).toEqual({ kind: "human-required", reason: "invalid-recommendation-input", result: null });
+
     const question = commitProductionQuestionDecision({
       projectDir,
       stage: "code-generation",
@@ -351,6 +383,18 @@ describe("Intent-scoped autonomy production path", () => {
       principalId: "human-owner",
       policies,
       confirmedDisplayDigest: `sha256:${"0".repeat(64)}`,
+    })).toEqual({ ok: false, error: "CONFIRMATION_REQUIRED" });
+    expect(readProductionAutonomyProjection(projectDir)?.mode).toBe("none");
+
+    // An omitted digest is not the same failure mode as a wrong one — pin it
+    // separately (grant-ceremony R-4) rather than relying on the wrong-digest
+    // case above to cover it.
+    expect(applyProductionAutonomyMode({
+      projectDir,
+      stateContent,
+      mode: "full",
+      principalId: "human-owner",
+      policies,
     })).toEqual({ ok: false, error: "CONFIRMATION_REQUIRED" });
     expect(readProductionAutonomyProjection(projectDir)?.mode).toBe("none");
 
@@ -535,7 +579,9 @@ describe("Intent-scoped autonomy production path", () => {
     expect(selected.status).toBe(0);
     expect(state(projectDir)).toContain("- **Intent Autonomy Mode**: semi");
     expect(state(projectDir)).toContain("- **Intent Grant**: none");
-    expect(state(projectDir)).toContain("- **Construction Autonomy Mode**: gated");
+    // RFC-0001 FR-6: semi projects to autonomous — it keeps two human
+    // milestones, not a gated Bolt schedule.
+    expect(state(projectDir)).toContain("- **Construction Autonomy Mode**: autonomous");
 
     const directive = run(projectDir, "amadeus-orchestrate.ts", ["next"]);
     if (directive.status !== 0) throw new Error(directive.output);
@@ -824,16 +870,32 @@ describe("Intent-scoped autonomy production path", () => {
     const savedArgv = process.argv;
     const savedGraph = process.env.AMADEUS_STAGE_GRAPH;
     process.env.AMADEUS_STAGE_GRAPH = join(projectDir, ".claude", "tools", "data", "stage-graph.json");
+    // FR-8: the JSON contract carries the facet next to `autonomy` (null =
+    // unavailable), so machine consumers read the same surface the
+    // human-readable rendering shows. Capture stdout to assert on it.
+    const chunks: string[] = [];
+    const savedWrite = process.stdout.write;
     try {
       process.argv = [savedArgv[0], "amadeus-utility.ts", "status", "--project-dir", projectDir];
       runUtilityMain();
+      process.stdout.write = ((chunk: string | Uint8Array) => {
+        chunks.push(String(chunk));
+        return true;
+      }) as typeof process.stdout.write;
       process.argv = [savedArgv[0], "amadeus-utility.ts", "status", "--json", "--project-dir", projectDir];
       runUtilityMain();
     } finally {
+      process.stdout.write = savedWrite;
       process.argv = savedArgv;
       if (savedGraph === undefined) delete process.env.AMADEUS_STAGE_GRAPH;
       else process.env.AMADEUS_STAGE_GRAPH = savedGraph;
     }
     expect(readProductionAutonomyProjection(projectDir)?.mode).toBe("full");
+    const jsonLine = chunks.join("").split("\n").find((line) => line.startsWith("{"));
+    if (jsonLine === undefined) throw new Error("status --json wrote no JSON line");
+    const parsed = JSON.parse(jsonLine) as Record<string, unknown>;
+    expect(Object.hasOwn(parsed, "autonomyFacet")).toBe(true);
+    const facet = parsed.autonomyFacet as { mode?: string } | null;
+    if (facet !== null) expect(facet.mode).toBe("full");
   }, scaleTestTime(60_000));
 });

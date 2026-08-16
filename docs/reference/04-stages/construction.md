@@ -43,15 +43,18 @@ Bolts.
 ```
 Intent autonomy (selected before unattended decisions):
   none → humans decide every gate and question
-  semi → in-phase gates are pre-approved and questions auto-decided; milestones (phase boundaries, walking skeleton, Intent completion) wait
-  full → confirmed Intent grant may decide authorised gates and questions
+  full → the confirmed Intent grant decides every interaction kind whose
+         derivation is unique; a reserved point or a non-unique derivation
+         goes to a person (interactive) or into waiting (non-interactive)
+  semi → full minus two human milestones: the phase boundary and the
+         walking skeleton (the latter only where the Skeleton Stance is on)
 
 Bolt 1 (walking skeleton) — follows the same mode table:
   Questions (3.1–3.4 across the Bolt's Units in QUESTION-ONLY mode)
   → Answers gate (Bolt-level)
   Design artifacts (3.1–3.4 in ARTIFACT-ONLY mode)
   Code generation (3.5 per Unit via Task delegation)
-  → Walking-skeleton gate (`full` may decide it; `none`/`semi` wait)
+  → Walking-skeleton gate, where the stance fires it (`full` may decide it; `none`/`semi` wait)
 
 Bolt 2..N — Intent autonomy governs the gate:
   (Parallel-eligible Bolts run as a batch; single batch-level gate covers

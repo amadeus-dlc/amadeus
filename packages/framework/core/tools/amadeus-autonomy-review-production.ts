@@ -14,6 +14,7 @@ import {
   reviewAuditFields,
   type AutonomyReviewPersistenceSnapshot,
   type AutoDecisionReviewedEvent,
+  type DecisionCursor,
   type DecisionDetail,
   type DecisionPage,
   type DecisionReviewReceipt,
@@ -297,6 +298,11 @@ interface ListProductionAutoDecisionsInput {
   readonly intent?: string;
   readonly reviewState?: "not-applicable" | "unreviewed" | "accepted" | "flagged";
   readonly pageSize?: number;
+  // Threads a page forward (Issue #3116/C9 — the completion-report summary
+  // must walk every page, and the only way to ask for page N+1 is to hand
+  // back the cursor page N returned). Omitted = page 1, matching every
+  // existing caller unchanged.
+  readonly cursor?: DecisionCursor;
 }
 
 export function listProductionAutoDecisions(input: ListProductionAutoDecisionsInput): { readonly ok: true; readonly page: DecisionPage } | { readonly ok: false; readonly error: string } {
@@ -308,6 +314,7 @@ export function listProductionAutoDecisions(input: ListProductionAutoDecisionsIn
       lifecycle: target.lifecycle,
       reviewState: input.reviewState,
       pageSize: input.pageSize ?? 100,
+      cursor: input.cursor,
     });
     return result.ok ? { ok: true, page: result.value } : { ok: false, error: `${result.error.code}:${result.error.locus}` };
   } catch (cause) {

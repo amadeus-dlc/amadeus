@@ -1,4 +1,4 @@
-// covers: subcommand:amadeus-orchestrate:next
+// covers: subcommand:amadeus-orchestrate:next, audit:UNIT_OUTCOME_SETTLED
 // size: large
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
@@ -32,6 +32,8 @@ import { resetTracerProviderForTests } from "../../packages/framework/core/otel/
 import {
   cleanupTestProject,
   DEFAULT_RECORD_DIR,
+  parseAuditRecords,
+  seededAuditShard,
   seededRecordDir,
   seededStateFile,
   sedReplaceInFile,
@@ -92,10 +94,13 @@ afterEach(() => {
   resetOtelBootstrapForTests();
 });
 
-function projectWithOutcomes(
+// Seed a runtime population (two Units in batch 1) with every per-unit producer
+// artifact on disk and NO Unit-pool coordinator behind it — the per-unit
+// `run-stage` path of a units-generation EXECUTE scope (#3099). The pool-seeded
+// fixture below builds on top of this.
+function seedPerUnitProject(
   missing?: { unit: string; artifact: string },
-  stage: keyof typeof consumerEdges = "build-and-test",
-  outcomeOverrides: Readonly<Record<string, "succeeded" | "failed" | "cancelled">> = {},
+  stage: keyof typeof consumerEdges | "code-generation" = "build-and-test",
 ): string {
   const project = setupIntegrationProject({ withState: "state-brownfield-feature.md" });
   projects.push(project);
@@ -147,6 +152,36 @@ function projectWithOutcomes(
     "```",
     "",
   ].join("\n"));
+  const artifacts = new Map(
+    Object.values(consumerEdges).flat().map(([artifact, producer]) => [artifact, producer]),
+  );
+  for (const unit of ["unit-z", "unit-a"]) {
+    for (const [artifact, producer] of artifacts) {
+      if (missing?.unit === unit && missing.artifact === artifact) continue;
+      const directory = join(record, "construction", unit, producer);
+      mkdirSync(directory, { recursive: true });
+      writeFileSync(join(directory, `${artifact}.md`), `${unit}:${artifact}\n`);
+    }
+  }
+  return project;
+}
+
+// The pool-seeded fixture: the same population, settled through the C2
+// single-writer Unit pool (the swarm path).
+function projectWithOutcomes(
+  missing?: { unit: string; artifact: string },
+  stage: keyof typeof consumerEdges = "build-and-test",
+  outcomeOverrides: Readonly<Record<string, "succeeded" | "failed" | "cancelled">> = {},
+): string {
+  const project = seedPerUnitProject(missing, stage);
+  settleThroughPool(project, outcomeOverrides);
+  return project;
+}
+
+function settleThroughPool(
+  project: string,
+  outcomeOverrides: Readonly<Record<string, "succeeded" | "failed" | "cancelled">> = {},
+): void {
   const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(project));
   expect(pool.initialEnqueue({
     idempotencyKey: "init",
@@ -175,18 +210,21 @@ function projectWithOutcomes(
       outcome,
     }).ok).toBe(true);
   }
-  const artifacts = new Map(
-    Object.values(consumerEdges).flat().map(([artifact, producer]) => [artifact, producer]),
+}
+
+// Move the cursor onto a consumer stage the way the code-generation approval
+// would, so the next `next` reads the per-unit consume population.
+function moveCursorTo(
+  project: string,
+  stage: keyof typeof consumerEdges | "code-generation",
+): void {
+  const state = seededStateFile(project);
+  sedReplaceInFile(state, /^- \*\*Current Stage\*\*:.*$/m, `- **Current Stage**: ${stage}`);
+  sedReplaceInFile(
+    state,
+    new RegExp(`^- \\[.\\] ${stage} — .*$`, "m"),
+    `- [-] ${stage} — EXECUTE`,
   );
-  for (const unit of ["unit-z", "unit-a"]) {
-    for (const [artifact, producer] of artifacts) {
-      if (missing?.unit === unit && missing.artifact === artifact) continue;
-      const directory = join(record, "construction", unit, producer);
-      mkdirSync(directory, { recursive: true });
-      writeFileSync(join(directory, `${artifact}.md`), `${unit}:${artifact}\n`);
-    }
-  }
-  return project;
 }
 
 function next(project: string) {
@@ -319,6 +357,255 @@ describe("t533 orchestrator per-unit consume fan-out", () => {
       `amadeus/spaces/default/intents/${DEFAULT_RECORD_DIR}/construction/${tail}`
     ));
     expect(directive.consumes_absent).toBeUndefined();
+  });
+
+  // #3099 — the per-unit `run-stage` path never went through the Unit pool, so
+  // a Construction that completed unit by unit left the outcome ledger empty and
+  // every per-unit consumer refused with producer-outcome-pending. The engine
+  // now settles each Unit's outcome at its coverage boundary, on the same
+  // `next` path that iterates the units.
+  test("settles per-unit Construction outcomes so a pool-free population fans out", () => {
+    const project = seedPerUnitProject(undefined, "code-generation");
+
+    const construction = next(project);
+    expect(construction.status, construction.stderr).toBe(0);
+
+    moveCursorTo(project, "build-and-test");
+    const result = next(project);
+
+    expect(result.status, result.stderr).toBe(0);
+    const directive = JSON.parse(result.stdout);
+    expect(directive.kind, JSON.stringify(directive)).toBe("run-stage");
+    expect(directive.stage).toBe("build-and-test");
+    expect(directive.consumes).toEqual(["unit-z", "unit-a"].flatMap((unit) =>
+      ["code-generation-plan", "code-summary"].map((artifact) =>
+        `amadeus/spaces/default/intents/${DEFAULT_RECORD_DIR}/construction/${unit}/code-generation/${artifact}.md`
+      )
+    ));
+  });
+
+  // A Unit that travelled BOTH routes — settled by the engine's per-unit path
+  // and again by the Unit pool — must still produce exactly one outcome row.
+  // Two rows for one Unit is producer-outcome-ambiguous, and the pool's verdict
+  // is the one that stands.
+  test("keeps the pool's verdict when a Unit carries both a pool terminal and an engine outcome", () => {
+    const project = seedPerUnitProject(undefined, "code-generation");
+    const construction = next(project);
+    expect(construction.status, construction.stderr).toBe(0);
+    settleThroughPool(project, { "unit-z": "cancelled" });
+
+    moveCursorTo(project, "build-and-test");
+    const result = next(project);
+
+    expect(result.status, result.stderr).toBe(0);
+    const directive = JSON.parse(result.stdout);
+    expect(directive.kind, JSON.stringify(directive)).toBe("run-stage");
+    // unit-z was settled "succeeded" by the engine and "cancelled" by the pool:
+    // the pool wins, so unit-z contributes no consume paths at all.
+    expect(directive.consumes).toEqual([
+      "code-generation-plan",
+      "code-summary",
+    ].map((artifact) =>
+      `amadeus/spaces/default/intents/${DEFAULT_RECORD_DIR}/construction/unit-a/code-generation/${artifact}.md`
+    ));
+  });
+
+  test("ignores an engine-settled outcome from a batch outside the current runtime population", () => {
+    const project = seedPerUnitProject(undefined, "code-generation");
+    // Both declared Units, settled under a batch identity the current runtime
+    // population does not carry — a previous run's rows. The current batch has
+    // settled nothing, so the population is empty and the consumer waits.
+    // Counted anyway, these rows would satisfy the consumer with an outcome the
+    // current batch never produced.
+    for (const unit of ["unit-z", "unit-a"]) {
+      emitAuditEventGuarded("UNIT_OUTCOME_SETTLED", {
+        Stage: "code-generation",
+        Unit: unit,
+        Batch: "99",
+        Outcome: "succeeded",
+        "Idempotency Key": `code-generation ${unit} 99`,
+      }, project);
+    }
+
+    moveCursorTo(project, "build-and-test");
+    const result = next(project);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("producer-outcome-pending");
+  });
+
+  test("settles each Unit once across re-entry and across per-unit stages", () => {
+    const project = seedPerUnitProject(undefined, "code-generation");
+    expect(next(project).status).toBe(0);
+    // Re-entry: the coverage boundary is observed again, the rows are already
+    // there, and nothing is appended.
+    expect(next(project).status).toBe(0);
+    const settled = parseAuditRecords(readFileSync(seededAuditShard(project), "utf8"))
+      .filter((record) => record.event === "UNIT_OUTCOME_SETTLED");
+    expect(settled.map((record) => record.fields.Unit).sort()).toEqual(["unit-a", "unit-z"]);
+    expect(settled.map((record) => record.fields["Idempotency Key"]).sort()).toEqual([
+      "code-generation unit-a 1",
+      "code-generation unit-z 1",
+    ]);
+
+    // A second per-unit Construction stage settles the same Unit under its own
+    // key. The population carries a Unit's outcome, not a Unit-and-stage's, so
+    // the extra row must not become a second outcome for unit-z.
+    emitAuditEventGuarded("UNIT_OUTCOME_SETTLED", {
+      Stage: "functional-design",
+      Unit: "unit-z",
+      Batch: "1",
+      Outcome: "succeeded",
+      "Idempotency Key": "functional-design unit-z 1",
+    }, project);
+
+    const outcomes = [...(readPerUnitConsumePopulation(project)?.outcomes ?? [])]
+      .sort((a, b) => a.unit.localeCompare(b.unit));
+    expect(outcomes).toEqual([
+      { unit: "unit-a", outcome: "succeeded" },
+      { unit: "unit-z", outcome: "succeeded" },
+    ]);
+  });
+
+  // The recovery path for an intent whose Construction ran unit by unit under an
+  // engine that recorded no outcome: its cursor already sits on the consumer
+  // stage, so nothing settles until the per-unit stage is re-entered. Documented
+  // in docs/guide/15-troubleshooting.md.
+  test("recovers a cursor parked on producer-outcome-pending by re-entering the per-unit stage", () => {
+    const project = seedPerUnitProject(undefined, "build-and-test");
+
+    const parked = next(project);
+    expect(parked.status).toBe(1);
+    expect(parked.stderr).toContain("producer-outcome-pending");
+
+    // A single-stage run is isolated by contract: it emits one directive for the
+    // stage and never enters the engine's per-unit loop, so it settles nothing.
+    const single = spawnSync(process.execPath, [
+      join(project, ".claude/tools/amadeus-orchestrate.ts"),
+      "next",
+      "--stage",
+      "code-generation",
+      "--single",
+      "--project-dir",
+      project,
+    ], {
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        AMADEUS_SKIP_HUMAN_PRESENCE_GUARD: "1",
+        AMADEUS_STAGE_GRAPH: join(project, ".claude/tools/data/stage-graph.json"),
+      },
+    });
+    expect(single.status, single.stderr).toBe(0);
+    expect(
+      parseAuditRecords(readFileSync(seededAuditShard(project), "utf8"))
+        .filter((record) => record.event === "UNIT_OUTCOME_SETTLED"),
+    ).toEqual([]);
+
+    // Pivoting the cursor back onto the per-unit stage is what `amadeus-jump.ts
+    // execute` does to state; from there the engine's own `next` observes the
+    // coverage already on disk and settles each Unit forward.
+    moveCursorTo(project, "code-generation");
+    expect(next(project).status).toBe(0);
+
+    moveCursorTo(project, "build-and-test");
+    const recovered = next(project);
+    expect(recovered.status, recovered.stderr).toBe(0);
+    expect(JSON.parse(recovered.stdout).consumes).toEqual(["unit-z", "unit-a"].flatMap((unit) =>
+      ["code-generation-plan", "code-summary"].map((artifact) =>
+        `amadeus/spaces/default/intents/${DEFAULT_RECORD_DIR}/construction/${unit}/code-generation/${artifact}.md`
+      )
+    ));
+  });
+
+  test("refuses a settled-outcome row whose join keys were stripped", () => {
+    const project = seedPerUnitProject(undefined, "code-generation");
+    expect(next(project).status).toBe(0);
+    // A row that lost its Batch cannot be joined to a runtime population, and a
+    // reader that skipped it would quietly count one Unit fewer than the ledger
+    // claims. The engine writes every key (emitEvent refuses a missing required
+    // attribute), so a row without one has been tampered with: fail loudly.
+    const shard = seededAuditShard(project);
+    writeFileSync(shard, readFileSync(shard, "utf8")
+      .split("\n")
+      .map((line) => {
+        if (!line.includes("UNIT_OUTCOME_SETTLED")) return line;
+        const record = JSON.parse(line);
+        delete record.attributes.Batch;
+        delete record.fields?.Batch;
+        return JSON.stringify(record);
+      })
+      .join("\n"));
+    moveCursorTo(project, "build-and-test");
+    const statePath = seededStateFile(project);
+    const before = readFileSync(statePath, "utf8");
+
+    const result = next(project);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("invalid-unit-outcome-audit-row");
+    expect(readFileSync(statePath, "utf8")).toBe(before);
+  });
+
+  test("refuses a settled-outcome row whose Stage was stripped", () => {
+    const project = seedPerUnitProject(undefined, "code-generation");
+    expect(next(project).status).toBe(0);
+    // Stage is not a join key — outcomes collapse across the per-unit stages a
+    // Unit clears — but the emitter writes it on every row, so a row without it
+    // is not a row the engine produced. Accepting one because Unit and Batch
+    // still match would let an edited ledger past the shape contract.
+    const shard = seededAuditShard(project);
+    writeFileSync(shard, readFileSync(shard, "utf8")
+      .split("\n")
+      .map((line) => {
+        if (!line.includes("UNIT_OUTCOME_SETTLED")) return line;
+        const record = JSON.parse(line);
+        delete record.attributes?.Stage;
+        delete record.fields?.Stage;
+        return JSON.stringify(record);
+      })
+      .join("\n"));
+    moveCursorTo(project, "build-and-test");
+    const statePath = seededStateFile(project);
+    const before = readFileSync(statePath, "utf8");
+
+    const result = next(project);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("invalid-unit-outcome-audit-row");
+    expect(readFileSync(statePath, "utf8")).toBe(before);
+  });
+
+  test("refuses a settled-outcome row carrying an outcome the engine never writes", () => {
+    const project = seedPerUnitProject(undefined, "code-generation");
+    expect(next(project).status).toBe(0);
+    // The engine settles one outcome and one only. A row claiming anything else
+    // did not come from the emitter, and reading it as a verdict would let an
+    // edited ledger decide whether a consumer runs.
+    const shard = seededAuditShard(project);
+    writeFileSync(shard, readFileSync(shard, "utf8")
+      .split("\n")
+      .map((line) => {
+        if (!line.includes("UNIT_OUTCOME_SETTLED")) return line;
+        const record = JSON.parse(line);
+        if (record.attributes !== undefined) record.attributes.Outcome = "bogus";
+        if (record.fields !== undefined) record.fields.Outcome = "bogus";
+        return JSON.stringify(record);
+      })
+      .join("\n"));
+    moveCursorTo(project, "build-and-test");
+    const statePath = seededStateFile(project);
+    const before = readFileSync(statePath, "utf8");
+
+    const result = next(project);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("invalid-unit-outcome-audit-row");
+    expect(readFileSync(statePath, "utf8")).toBe(before);
   });
 
   test("ignores terminal outcomes from a batch outside the current runtime population", () => {

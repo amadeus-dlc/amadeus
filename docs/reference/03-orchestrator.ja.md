@@ -434,7 +434,7 @@ Bolt ごとの構造:
 3. Task ツール(`subagent_type="amadeus-developer-agent"`)を介してユニットごとにステージ 3.5 Code Generation をディスパッチする。`code-generation.md` 内のユニットごとの承認ゲートはオーケストレーターにより **抑制** される。
 4. 単一の Bolt レベル(またはバッチレベル)の承認ゲートを提示する。
 
-自律レベルはwalking skeleton後のラダープロンプトではなく、Intent全体に対して`none` / `semi` / `full`から選択します。`none`ではstage gate、phase gate、質問を人間が裁定します。`semi`ではphase内gateを事前承認済みとして扱い、質問は`full`と同じ解決ラダーで無人裁定（`AUTO_DECIDED`として記録）し、節目 — phase境界・walking skeleton・intent終端 — は人間を待ちます。`full`では、人間が発行したIntent-scoped grantの認可範囲内でstage gate、phase gate、質問を自動裁定し、Intent完了まで進めます。walking skeletonにも同じ表を適用し、`full`だけがそのgateを自動裁定できます。旧常任グラントと`AUTONOMY_MODE_SET`記録はreplay・診断用に残りますが、認可には使いません。
+自律レベルはwalking skeleton後のラダープロンプトではなく、Intent全体に対して`none` / `semi` / `full`から選択します。`none`ではstage gate、phase gate、質問を人間が裁定します。`full`では、人間が発行したIntent-scoped grantの下で4つのinteraction kindすべてをIntent完了まで裁定します — ただし導出が選択肢を一意に絞る場合に限ります。ユーザー専権の裁定点、および contested / none で終わった導出は、対話セッションでは人間へ、非対話セッションでは waiting へ渡ります。`semi`は`full`から人間ゲート2つ（phase境界とwalking skeleton）を引いたもので、それ以外はBolt swarmのバッチ境界を含めて無人で進みます（`AUTO_DECIDED`として記録）。walking skeletonの節目が発火するのはSkeleton Stanceが`on`に解決される場合だけです。旧常任グラントと`AUTONOMY_MODE_SET`記録はreplay・診断用に残りますが、認可には使いません。
 
 並列実行可能な Bolt(依存前提条件を満たし、相互依存なし)は **バッチ** を形成します。オーケストレーターはバッチ内で質問/設計を Bolt ごとに逐次実行し、その後 **単一のアシスタントメッセージで N 個の `Task` 呼び出し** を発行してステージ 3.5 Code Generation を並列にディスパッチします。フレームワークは N 個のサブエージェントセッションを並行して起動します。結果はオーケストレーターの次のターンで到着します。単一のバッチレベルゲートがバッチ内のすべての Bolt をカバーします。監査ログは、`BOLT_STARTED`/`BOLT_COMPLETED` の `Batch` フィールドを介して並列 Bolt を結び付けます。
 

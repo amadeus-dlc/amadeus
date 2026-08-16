@@ -1,0 +1,72 @@
+{
+  "schema": "amadeus.model-check-manifest.v1",
+  "runId": "795afab5-a2e0-4e94-ba96-dfa26255526a",
+  "outcome": "NOT_DETECTED",
+  "exitCode": 0,
+  "startedAt": "2026-08-15T11:31:15.264Z",
+  "finishedAt": "2026-08-15T11:31:16.053Z",
+  "expectedArtifacts": [
+    "env-receipt.json",
+    "tlc-stdout.bin",
+    "tlc-stderr.bin",
+    "completion-marker.json"
+  ],
+  "artifacts": [
+    {
+      "path": "env-receipt.json",
+      "sha256": "6a666fb4d96af86ea8c015783eec7d69eaa9e6044527483b9c51ae2d38771edb",
+      "bytes": 1421
+    },
+    {
+      "path": "tlc-stdout.bin",
+      "sha256": "451673418bedf10d8983ef965b0f7330c69f8a0c6e4c84995ff3600bf516205b",
+      "bytes": 2632
+    },
+    {
+      "path": "tlc-stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "completion-marker.json",
+      "sha256": "825753cdcffafdbd3f8726488c08f9f2a309e9ca37f9a2cc63ae332ca8de55fc",
+      "bytes": 162
+    }
+  ],
+  "partial": false,
+  "errorCode": null,
+  "errorDetail": null,
+  "advisory": null,
+  "sourceProvenance": {
+    "modelPath": "amadeus/spaces/default/specs/tla/PrConvergenceGate.tla",
+    "cfgPath": "amadeus/spaces/default/specs/tla/PrConvergenceGate.cfg",
+    "modelIdentity": "b98fbe83511a8a6588ddd05d5131a5d93e537cda3f5f38acc55cf429c0b4b9c8",
+    "moduleIdentity": "96054dc8321cc5ef1b7d2b7f28f8daf539907d10ce2b5869315ba33020cba451",
+    "cfgIdentity": "02bf3d2a6f6b6cb8143edd06e46b26250c0f5959e2fa04325a260614c533b62b",
+    "moduleSha256": "46c3c52940996de8c875c2b30b012e68e0c3f65c129f2747b3fd796b4af34435",
+    "cfgSha256": "c159cd6ed591c0fce0946e991452ea6a0c9fcc5b7a459348bf6d08958b2f6e9e",
+    "auxiliaries": [],
+    "implementations": [
+      {
+        "path": "packages/framework/core/tools/amadeus-orchestrate.ts",
+        "identity": "a1e1b09b9e561ed0e4028c0d9627db33771b92515c3838301f84bf22a3a8ddce"
+      },
+      {
+        "path": "packages/framework/core/tools/amadeus-state.ts",
+        "identity": "1225e576878a9e80404abc855c1a763ca3e37f6d13ea035a88e80a238b24029a"
+      }
+    ],
+    "constants": [],
+    "sourceIdentity": "37e2a5c82afab2cca0a5fdb07904cf8508a78f4f11ab5a35f6aede019f5b6560"
+  },
+  "verification": {
+    "toolchainVersion": "TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)",
+    "constants": [],
+    "completionMarker": "Model checking completed. No error has been found.",
+    "generatedStates": 319,
+    "distinctStates": 66,
+    "statesLeftOnQueue": 0,
+    "searchDepth": 9,
+    "sourceIdentity": "37e2a5c82afab2cca0a5fdb07904cf8508a78f4f11ab5a35f6aede019f5b6560"
+  }
+}

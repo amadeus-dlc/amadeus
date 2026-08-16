@@ -200,3 +200,45 @@ amadeus-plugin-compose.ts (:362-363)
 このエッジは既存の「plugin は core implementation を import しない」方向を壊さない。宣言は plugin 側、override は config レイヤ、突き合わせは core の 1 点（`resolvePluginSettings`）に閉じており、未宣言キー・型不一致・enum 範囲外はいずれも `ok: false` で**拒否**する（default へ落とさない fail-closed）。
 
 - **git-drift の依存**: `plugins/git-drift/plugin.json` は `stages: []` の tool-only プラグインで、`code-generation` と `build-and-test` の `sensors` seam に `git-drift` を追加する。settings は `fetch-throttle-seconds`（number、default 600）1 件で、上記 plugin.settings 機構の最初の実消費者である。外部依存として `git`（origin fetch）を使う。
+
+## 区間の依存エッジ変化と、患部まわりの依存方向（260815-per-unit-outcome、履歴、observed `78146f435a`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-stale-epoch-landed の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
+
+**外部依存の変化なし**（`git diff --stat 9ba8170bb 78146f435 -- package.json bun.lock '**/package.json'` の出力は空）。内部エッジで動いたのは 1 本 — `amadeus-graph.ts` が plugin host ディレクトリの sensor をマージする読み取りエッジを獲得した（`mergeSensorsFromDir`、#3026 の着地）。
+
+患部まわりの依存方向は区間内で無変更（`git diff --quiet` を 5 パスへ適用し全件 exit 0）。方向は次のとおりで、**`amadeus-orchestrate.ts` だけが 2 つの読み口の両方に依存している**のが本 intent の構造的争点である。
+
+```
+amadeus-orchestrate.ts
+  ├─ import :237  foldUnitPoolEventSets        ← amadeus-unit-pool.ts
+  ├─ import :238  readUnitPoolEventSetsFromAudit ← amadeus-unit-pool-runtime.ts   … 狭い読み口（1 イベント）
+  ├─ import :250  createAuditUnitPoolRepository / createUnitPoolCoordinator ← amadeus-unit-pool-runtime.ts
+  ├─ import :253-254 normalizeConstructionOutcomeAudit / projectConstructionOutcomes
+  │                                            ← amadeus-construction-outcome-projection.ts … 正準射影（5 イベント）
+  └─ → amadeus-per-unit-consume-fanout.ts（母集団を渡す消費側）
+
+amadeus-swarm.ts → amadeus-unit-pool-runtime.ts（pool の唯一の変異源、9 call site）
+```
+
+テキストフォールバック: `amadeus-orchestrate.ts` は unit pool 系（`amadeus-unit-pool.ts` / `amadeus-unit-pool-runtime.ts`）と正準射影（`amadeus-construction-outcome-projection.ts`）の**両方**を import し、前者だけを per-unit fanout の母集団に使っている。`amadeus-swarm.ts` は pool runtime の唯一の変異源。`amadeus-per-unit-consume-fanout.ts` は母集団を受け取るだけで、どちらの読み口にも直接依存しない（＝**是正で依存方向を増やさずに読み口を差し替えられる位置にある**）。
+
+## 区間の依存エッジ変化と、患部まわりの依存方向（260815-stale-epoch-landed、現在、observed `83e1dbeef`）
+
+**外部依存の変化なし**（`git diff --stat 78146f435a 83e1dbeef -- package.json bun.lock '**/package.json'` の**出力は空**）。内部エッジの変化も本 intent の患部には及んでいない — `git diff --quiet 78146f435a 83e1dbeef -- plugins/github-pr-convergence/` → **exit 0**。
+
+患部まわりの依存方向は次のとおりで、**拒否が verb 分岐より上流の 1 点に集中している**のが本 intent の構造的争点である。
+
+```
+pr-convergence-cli.ts  runCli
+  ├─ :1370  selfContextFor ─→ :627 currentSelfContext ─→ :714 attestationBindsIdentity
+  │           （head 束縛。ここで拒否が確定する）          ↑ receipt.prHead === heads.prHead
+  ├─ :1398  verb 分岐 ─→ reportOutcome (:1256) ─→ :597-604 transitionAllowed
+  │           （created → landed の許可はここ。上流で拒否されると到達しない）
+  └─→ pr-convergence-gh-runner.ts:322 fetchOpenPrForHead（--state open のみ）
+
+amadeus-sensor-pr-convergence-report-format.ts:391-393 / :289
+  → record を読むだけ（CLI へは依存しない、独立の blocking 判定）
+```
+
+テキストフォールバック: `runCli` は `selfContextFor`（`:1370`）を verb 分岐（`:1398`）より**先に**呼ぶ。`selfContextFor` は `currentSelfContext`（`:627`）経由で `attestationBindsIdentity`（`:714`）へ至り、そこが `receipt.prHead === heads.prHead` を要求する。`created → landed` を許可する `transitionAllowed`（`:597-604`）は verb 分岐の下流にあるため、head 前進時には到達しない。`fetchOpenPrForHead`（gh-runner `:322`）は open PR だけを引くので MERGED PR の read-back 経路が存在しない。blocking sensor は CLI に依存せず record を直読するため、**CLI 側だけを直しても record を landed にしない限り sensor は赤のまま**である（＝是正は record の中身を変える方向でなければ閉じない）。
+
+機序は `architecture.md`、patch surface は `code-structure.md`、テスト空白と台帳は `code-quality-assessment.md` の各対応節を参照。

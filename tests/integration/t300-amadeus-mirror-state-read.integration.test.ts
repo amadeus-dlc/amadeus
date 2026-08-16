@@ -158,7 +158,7 @@ function makeWorkspace(opts: { block: "absent" | "empty" }): {
       ...(opts.block === "empty" ? [renderMirrorStateBlock(EMPTY_MIRROR_STATE), ""] : []),
     ].join("\n"),
   );
-  writeFileSync(join(root, "amadeus", "config.json"), JSON.stringify({ "intent-mirror": { github: { issue: { mode: "auto" } } } }));
+  writeFileSync(join(root, "amadeus", "config.json"), JSON.stringify({ "intent-mirror": { github: { issue: { consent: "auto" } } } }));
   const real = createMirrorStateStorePorts({ projectDir: root, statePath, intent: DIR, space: SPACE });
   // Keep audit delivery deterministic without a full clone/registry (t278/t282 pattern).
   const ports: MirrorStateStorePorts = {

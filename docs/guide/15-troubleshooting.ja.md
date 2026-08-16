@@ -27,6 +27,7 @@
 | ステータスラインが "ready" を表示 | `amadeus-state.md` に `**Lifecycle Phase**` フィールドがあるか確認 |
 | ステータスラインが表示されない | `bun` が PATH 上にあり、`settings.json` の `statusLine.command` が `amadeus-statusline.ts` を参照するか確認 |
 | サブエージェントがタイムアウト | `/amadeus` を実行して再試行、またはステージをインラインで実行 |
+| Construction 後に `producer-outcome-pending` | `/amadeus --stage code-generation` で `code-generation` へ戻り、`/amadeus` を実行してゲートを承認 |
 
 ---
 
@@ -117,6 +118,31 @@ bun --version
 ### ステージのスキップ
 
 `/amadeus --stage <target>` を使って別のステージへジャンプします。間のステージは状態ファイルで `[S]`(スキップ)にマークされます。
+
+---
+
+## Construction は完走したのに次のステージが拒否する(`producer-outcome-pending`)
+
+**症状**: すべての Unit の Construction 成果物がディスク上にあり承認済みなのに、`next` が `build-and-test`(あるいは他の per-unit consumer)の directive を出さず `producer-outcome-pending: <unit>, <unit>` で停止する。
+
+### 何が起きたか
+
+per-unit 成果物を consume するステージは、各 producer Unit が確定させた outcome を読みます。本修正以前はその outcome を書いていたのは swarm 経路だけで、engine 自身が Unit を1つずつ dispatch したワークフローでは台帳が空のままとなり、consumer は読むものが無く拒否していました(#3099)。
+
+engine は現在、per-unit ステージを反復する中で Unit の必須成果物がディスク上に揃ったことを観測した時点で、自ら outcome を確定させます。過去時刻の後付けは行いません — 行は record が既に持つ coverage から前向きに追記され、Unit pool イベントを捏造することもありません。
+
+### 既に停止している intent の回復手順
+
+1. 修正を含む engine へ更新します(pull し、ソースチェックアウトで開発している場合は `bun run build`)。
+2. consumer が読む per-unit Construction ステージ(通常は `code-generation`)へカーソルを戻します: `/amadeus --stage code-generation` を実行し、表示された `amadeus-jump.ts execute` コマンドを実行します。
+3. `/amadeus` を実行します。engine が record から coverage を再導出して covered かつ未キャンセルの Unit すべての outcome を確定させ、全 Unit が既に covered であるためステージゲートを再提示します。承認してください。
+4. `/amadeus` を実行します。consumer ステージが Unit 群へファンアウトし、ワークフローが継続します。
+
+手順 2〜4 は成果物を追加せず履歴も書き換えません。増えるのは、観測した時点のタイムスタンプを持つ確定済み outcome の行だけです。
+
+**cancel された Unit は確定されません。** engine が outcome を確定させるのは covered **かつ** cancel されていない Unit だけです。したがって cancel された Unit を含むバッチでは、上記の手順の後もその Unit について `producer-outcome-pending` が残ります。swarm 経路はこの点が異なり(Unit pool が cancelled の terminal を記録します)、この非対称の解消は follow-up issue として追跡します。
+
+> `/amadeus --stage code-generation --single` ではこの回復はできません。single 実行は契約上 isolated であり、そのステージの directive を1つ出すだけで engine の per-unit ループに入らないため、何も確定させません。
 
 ---
 

@@ -153,6 +153,95 @@ export function verifyCreatePrerequisites(
   return { ok: true, localHead, remoteHead, base };
 }
 
+export type LandedPrerequisite =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly message: string };
+
+/**
+ * What a landed finalisation can still verify locally. The pull request is
+ * merged: the merge queue routinely deletes its head branch and the checkout
+ * has moved on, so branch identity and head equality no longer describe
+ * anything about it — the merge facts and the epoch ancestry bind it instead.
+ * What remains local, and still matters, is that no foreign uncommitted work is
+ * being folded into the finalisation.
+ */
+export function verifyLandedPrerequisites(
+  cwd: string,
+  git: GitSpawn = nodeGitSpawn,
+  units: readonly string[] | null = null,
+): LandedPrerequisite {
+  const dirty = foreignDirtyPaths(git, cwd, units);
+  return dirty.length === 0
+    ? { ok: true }
+    : { ok: false, message: "tracked worktree is dirty; commit or restore it" };
+}
+
+/**
+ * Evidence that a `created` epoch's attested head is an ancestor of the head
+ * the pull request merged. Only `verifyMergedEpochAncestry` mints one, so no
+ * caller can assert an ancestry it never measured.
+ */
+export type LandedEpochProof = {
+  readonly attestedPrHead: string;
+  readonly mergedHead: string;
+  readonly __brand: "LandedEpochProof";
+};
+
+export type EpochAncestryResult =
+  | { readonly ok: true; readonly proof: LandedEpochProof }
+  | { readonly ok: false; readonly message: string };
+
+function epochProof(attestedPrHead: string, mergedHead: string): EpochAncestryResult {
+  return { ok: true, proof: { attestedPrHead, mergedHead, __brand: "LandedEpochProof" } };
+}
+
+/**
+ * Whether the head a `created` epoch attested is an ancestor of the head the
+ * pull request merged.
+ *
+ * Evidence source: `refs/pull/<n>/head`. GitHub keeps that ref after the merge,
+ * branch deletion or not, so it answers precisely in the case `origin/<branch>`
+ * cannot — and fetching it brings the merged head AND its whole ancestry into
+ * this repository, which turns the question into a local, deterministic
+ * `git merge-base --is-ancestor` rather than a remote judgement. The merge
+ * commit is deliberately NOT the target: `main` squashes, so the attested head
+ * is never an ancestor of the merge commit (measured on #3092).
+ *
+ * A fetch that fails is a loud failure with no second source behind it: an
+ * ancestry that cannot be measured must never become an assumed one.
+ */
+export function verifyMergedEpochAncestry(
+  cwd: string,
+  prNumber: number,
+  attestedPrHead: string,
+  mergedHead: string,
+  git: GitSpawn = nodeGitSpawn,
+): EpochAncestryResult {
+  // Nothing was pushed on top of the epoch: the merged head IS the attested
+  // one, and no commit needs fetching to say so.
+  if (attestedPrHead === mergedHead) return epochProof(attestedPrHead, mergedHead);
+  const ref = `refs/pull/${prNumber}/head`;
+  const fetched = run(git, cwd, ["fetch", "origin", ref]);
+  if (fetched.code !== 0) {
+    return {
+      ok: false,
+      message: `cannot fetch ${ref} to measure the created epoch: ${fetched.stderr.trim()}`,
+    };
+  }
+  const ancestry = run(git, cwd, ["merge-base", "--is-ancestor", attestedPrHead, mergedHead]);
+  if (ancestry.code === 0) return epochProof(attestedPrHead, mergedHead);
+  if (ancestry.code === 1) {
+    return {
+      ok: false,
+      message: `the created epoch attested ${attestedPrHead}, which is not an ancestor of the merged head ${mergedHead}; this report does not describe the delivery that merged`,
+    };
+  }
+  return {
+    ok: false,
+    message: `cannot measure whether ${attestedPrHead} is an ancestor of ${mergedHead}: ${ancestry.stderr.trim()}`,
+  };
+}
+
 /**
  * The pull request the current checkout is allowed to speak for: the same
  * commit AND the same branch name. A SHA alone is not identity — the identical

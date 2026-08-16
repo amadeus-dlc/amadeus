@@ -32,6 +32,7 @@ import {
   type InteractionOccurrence,
   type SemiAuthorityScope,
 } from "../../packages/framework/core/tools/amadeus-intent-autonomy.ts";
+import { RecommendationOutcome } from "../../packages/framework/core/tools/amadeus-recommendation.ts";
 
 const INTENT = "019fc5ac-f0bb-7a5f-8a64-c944b6f76ead";
 const HUMAN = { verified: true, eventType: "HUMAN_TURN", actor: "human", turnId: "human-turn-1" } as const;
@@ -135,8 +136,8 @@ function capability(available = true): DecisionCapabilityPort {
   return {
     soloElectionAvailable: available,
     unavailableReason: available ? null : "native-election-unavailable",
-    elect: () => ({ optionId: "accept", evidenceFingerprint: autonomyDigest("election") }),
-    recommend: () => ({ optionId: "reject", evidenceFingerprint: autonomyDigest("recommendation") }),
+    elect: () => RecommendationOutcome.unique("accept", { source: "election", fingerprint: autonomyDigest("election") }),
+    recommend: () => RecommendationOutcome.unique("reject", { source: "agent", fingerprint: autonomyDigest("recommendation") }),
   };
 }
 
@@ -319,7 +320,9 @@ describe("gate and question decision contract", () => {
       ...decisionInput,
       capability: {
         ...capability(),
-        elect: () => ({ optionId: "missing", evidenceFingerprint: "bad" }),
+        // A misbehaving port is not built through the smart constructor, so the
+        // ladder's own boundary check is what has to catch it.
+        elect: () => ({ kind: "unique", optionId: "missing", basis: { source: "election", fingerprint: "bad" } }),
       },
     })).toEqual({ kind: "invalid", reason: "invalid-election-result" });
     expect(resolveAutoDecision({

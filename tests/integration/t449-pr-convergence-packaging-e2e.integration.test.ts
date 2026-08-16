@@ -76,6 +76,7 @@ import {
   seededRecordDir,
   seededStateFile,
 } from "../harness/fixtures.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import { projectDeliveryBoltPlan } from "../../packages/framework/core/tools/amadeus-delivery-bolts.ts";
 
 function deliveryRefusal(
@@ -299,6 +300,10 @@ function runReport(proj: string): Record<string, unknown> {
 }
 
 beforeEach(() => {
+  // Each case builds its own fixture project, and the canonical emit path
+  // registers a Logger Provider for one workspace per process — so the
+  // registration is dropped between cases, as the sibling engine suites do.
+  resetOtelPerProject();
   saved = Object.fromEntries(GRAPH_ENV_KEYS.map((k) => [k, process.env[k]]));
   host = mkdtempSync(join(tmpdir(), "amadeus-t449-"));
   for (const name of readdirSync(CORE_ROOT)) cpSync(join(CORE_ROOT, name), join(host, name), { recursive: true });

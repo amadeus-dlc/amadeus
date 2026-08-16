@@ -2,7 +2,7 @@
   "intent-mirror": {
     "github": {
       "issue": {
-        "mode": "auto"
+        "consent": "auto"
       },
       "project": {
         "targets": [
@@ -13,16 +13,11 @@
       }
     }
   },
-  "solo-election": {
-    "trigger": {
-      "mode": "auto"
-    }
-  },
   "finding": {
     "github": {
       "issue": {
         "creation": {
-          "mode": "auto"
+          "consent": "auto"
         }
       }
     }

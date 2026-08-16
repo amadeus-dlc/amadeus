@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "ballots": [
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260815-3099-FIX-METHOD",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-3099-method",
+          "choiceInternalNo": 3,
+          "goa": 2,
+          "reservation": "C は既存の pool writer(amadeus-unit-pool-runtime.ts:143-168 createAuditUnitPoolRepository、orchestrate.ts:6586 に既存の 2 番目の呼出点あり)を再利用して unit-settled terminal を commit する形に限定すべきで、新規監査イベント型を mint する形(event-registry regen + CONSTRUCTION_AUDIT_EVENTS 拡張 + fanout 読み口変更が連鎖し FR-6 台帳同期の面が増える)は避けること。commit の時点は engine が unit の covered(unitCovered)+ reviewer verdict を観測した瞬間に限り、過去時刻の後付け生成(pool 捏造 / append-only 違反)を行わない。idempotencyKey は (batchId, unitId, attempt) で固定し、`next` の再実行で terminal が重複しない(producer-outcome-ambiguous に落ちない)ことをテストで固定する。outcome=succeeded の根拠が coverage 述語 + reviewer verdict で足りないと実装時に判断される場合は、その場で緩めず再裁定へ戻すこと。なお A(読み口統一)は本欠陥の修正としては不成立だが、2 読み口の非対称自体は独立の技術負債として別 intent で解消する価値がある。",
+          "rationale": "実測で A は FR-1 を構造的に満たさない。canonical projection が BOLT_STARTED/BOLT_COMPLETED から terminal を作るのは normalizeSoloLifecycle(amadeus-construction-outcome-projection.ts:250-286)であり、hasExplicitCorrelation(:186-188 の Stage/Attempt Id/Batch Id)と batch が `solo:` 始まりであることを要求する。この solo 相関を付けるのは amadeus-bolt.ts:240-256 soloStartCorrelation だが `useWorktree` 時は unit=undefined で相関が付かず、project.md の cid:code-generation:solo-bolt-worktree-required(Bolt 実装は worktree 分離必須)下では per-unit 経路が solo 相関イベントを出せない。実データでも停止中の intent 260814-open-bug-batch-6 の audit は BOLT_STARTED 4 件(すべて worktree 形: attributes は Batch number / Bolt names / Bolt slug / Walking skeleton のみで Stage・Attempt Id・Batch Id 不在)、BOLT_COMPLETED 0 / BOLT_FAILED 0 / SWARM_BATON_RETURNED 0 / UNIT_POOL_EVENT_SET_COMMITTED 0(集計: `cat amadeus/spaces/default/intents/260814-open-bug-batch-6/audit/*.jsonl` を python で Event 別 Counter)。ワークスペース全 intent でも solo 相関付き BOLT_COMPLETED は 0 件(BOLT_STARTED の solo 相関は 6 件のみ)。したがって読み口を 5 イベントへ広げても per-unit 経路には読める terminal が存在せず producer-outcome-pending は残り、FR-2 の Red→Green を成立させるには実経路が出さない fixture イベントを撒くほかなく検証劇場になる。B は dispatch 意味論の変更で、per-unit 経路へ落ちる条件は amadeus-lib.ts:8416 の width<2 免除だけでなく readAutonomyMode(orchestrate.ts:2036-2048)が null を返す arm や all-covered arm も含み(実測: 当該 intent は Intent Autonomy Mode=full/autonomous でありながら pool イベント 0)、width-1 免除の除去では一般の穴(unit が disk 上 covered なのに terminal 台帳が空)が閉じない。加えて autonomy 面は RFC-0001 が再定義予定で Constraints の最小修正・非踏込に反する。C は fanout の読み口(orchestrate.ts:2456-2470)を触らないため batch 所属フィルタ(:2461-2463 currentUnits)の意味論が定義上保存され(FR-3)、19 edge の EXPECTED_PER_UNIT_CONSUMER_EDGES と assertConsumerEdgeInventory は不変のまま全 7 consumer に構造的に及び(FR-4)、swarm 経路の read/write は無改変(FR-7)、監査は完了観測時点の追記のみ(NFR append-only)。よって C を採る。"
+        }
+      ],
+      "submittedAt": "2026-08-15T08:45:13Z",
+      "receivedAt": "2026-08-15T08:46:40Z"
+    },
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260815-3099-FIX-METHOD",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-3099-method",
+          "choiceInternalNo": 3,
+          "goa": 3,
+          "reservation": "C を採るが実装形は3点で縛る。(1) pool の単一 writer 契約(amadeus-unit-pool-runtime.ts:143-168 が UNIT_POOL_EVENT_SET_COMMITTED の唯一の変異源)を壊さないこと — per-unit 経路から pool event set を合成する形は codekb architecture.md:5443 が指摘する所有境界の希薄化かつ『pool 捏造禁止』制約に触れるため、amadeus-execution-lifecycle.ts:336-389 の event-set リポジトリ様式(digest 束縛・idempotencyKey・append-only・重複 eventSetId の無視)を写した別イベントとして発行し、fanout 側の読み口をそのイベントへ拡張する(A の読み口統一を C の内側で最小限だけ使う)。(2) 発行は冪等でなければならない — emitPerUnitRunStage は next のたびに再入するため、intent+stage+unit+batch を鍵に既存イベントを読んでから発行し、重複が producer-outcome-ambiguous(amadeus-per-unit-consume-fanout.ts:207-212)を誘発しないこと。発行点は unit の coverage 成立境界(unitCovered が true へ遷移する時点)に固定する。(3) 発行イベントは数値 batch id を載せ、readPerUnitConsumePopulation:2459-2463 の currentUnits 所属フィルタを逐語のまま残すこと(solo:<n>:<unit> 形式の非数値 id を持ち込むと batch join が退化する)。加えて FR-6 のとおり event registry(packages/framework/core/otel/event-registry.ts, amadeus-audit.ts の canonical list)、model-map 実装ハッシュピン、coverage-registry の resync を同一変更へ含める。",
+          "rationale": "3案のうち C だけが『証拠そのものの不在』を塞ぐ。A は読み口の非対称を解消するが、per-unit 経路には読むべき terminal がそもそも存在しない: 正準射影が pool 以外から terminal を作るのは amadeus-construction-outcome-projection.ts:267 と :388 の solo レーン(Batch Id が solo: 始まり、かつ hasExplicitCorrelation:186-188 が Stage/Attempt Id/Batch Id を要求)だけで、その solo 相関は amadeus-bolt.ts:245-248 の `!useWorktree` により worktree 起動では undefined になる。project.md の cid:code-generation:solo-bolt-worktree-required が worktree 分離を必須とする以上、per-unit 経路の BOLT 行は構造的に非相関である。実測: amadeus/spaces/default/intents/260814-open-bug-batch-6/audit/*.jsonl の BOLT 行 4 件はすべて Batch Id / Stage 欠落・BOLT_COMPLETED 0 件・UNIT_POOL_EVENT_SET_COMMITTED 0 件(grep -h '\"Event\":\"BOLT_' audit/*.jsonl を JSON 展開して転記)、全 intent 横断でも '\"Batch Id\":\"solo:' は 6 行に対し BOLT_COMPLETED は 96 行。よって A 単独では母集団が空のままで FR-1(next が build-and-test directive を返す)に到達せず、しかも solo batch id は非数値のため :2461-2463 の数値 batch join(FR-3)とも噛み合わない。B はさらに射程が狭い: swarm 経路は tryEmitSwarm(amadeus-orchestrate.ts:4156)が node.mode === SWARM_MODE(:3777 = 'subagent')を要求し、per-unit 産出ステージのうち mode: subagent は code-generation のみで、nfr-requirements / nfr-design / infrastructure-design は mode: inline(各 stage md の frontmatter 実測)であるため永久に pool を書かない。EXPECTED_PER_UNIT_CONSUMER_EDGES(:90-110、7 consumer / 19 edge)のうち B が救えるのは code-generation 産出の 3 edge だけで、FR-4 の構造的帰結を満たさない。加えて B は autonomy 未設定時に autonomySwarmOutcome(:3943-3959)が declined を返す経路で穴が残り、dispatch 意味論の変更そのものが RFC-0001 の再定義面と衝突する(Constraints の最小修正条項)。C は emitPerUnitRunStage(:4574-4725)という全 per-unit ステージ共通の経路で outcome を実際に記録するため、19 edge 全体へ構造的に及び、swarm 経路(FR-7)と :2461-2463 のフィルタ(FR-3)を無改変で残せる。監査は発行時点の事実の追記であり、停止済み intent への後付け(FR-5 が文書化で扱う)とは別物なので append-only 不変量にも抵触しない。FR-6 が『新規 ... 監査イベントを導入する場合のみ coverage-registry を regen』と既に分岐を用意しており、C のコストは要件側で見積り済みである。"
+        }
+      ],
+      "submittedAt": "2026-08-15T08:45:44Z",
+      "receivedAt": "2026-08-15T08:46:40Z"
+    }
+  ]
+}

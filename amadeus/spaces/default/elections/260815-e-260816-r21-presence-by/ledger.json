@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "ballots": [
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260816-R21-PRESENCE-BYPASS",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-r21-log278",
+          "choiceInternalNo": 1,
+          "goa": 2,
+          "reservation": "declared Intent Autonomy Mode フィールド(amadeus-lib.ts:5173 getField(stateContent, \"Intent Autonomy Mode\") で既に読まれている既存フィールド)を直読する実装にすること。フィールド不在・空文字のケースは fail-closed(迂回しない = presence ガード維持)側へ倒す — isAutonomousMode(:5186-5188) の `!!stateContent && ... === \"autonomous\"` と同じ厳格等価パターンを踏襲し、未知値やパース失敗を安全側(non-full 扱い)にすること。",
+          "rationale": "設問の2制約——(1) 新しい検出面を増やさない(RFC Q3=A′ の最小化方針) (2) full の既存挙動(無人記録)は保存、semi は presence ガード下へ戻す——をAのみが両方満たす。B(resolveSessionInteractivity)は新規検出面の追加ではないが、対話中の full セッションで presence 要求へ変わり制約(2)に直接反する(質問文自身が明記: 'full の挙動変更')。C(AUTO_DECIDED 記録の実在)はlog経路からdecision台帳への新しい読取結合を作り制約(1)に反する(質問文自身が明記: '新しい読取結合を作る')。Aは既に amadeus-lib.ts:5173 で読まれている `Intent Autonomy Mode` 宣言フィールドを直読するだけで、mode 意味論(declared full=唯一の無人自律、semi/none は人間関与)とも一致する。核心の欠陥は現行が `Construction Autonomy Mode`(投影値、R-12でsemiもautonomousへ投影される予定)を見ている点であり、これを `Intent Autonomy Mode`(宣言値、semiとfullで恒常的に異なる)へ切り替えることで、semiの投影がautonomous化してもR-21のガードは正しくsemiをpresence下に保つ。business-rules.md R-21が挙げる3案そのままの構造で、選択の妥当性はFR-12(D7/D8のpresence封鎖)と直接一致し、team.md P1(単独判断禁止)に基づき裁定を選挙へ委ねている以上、両制約充足度で機械的に絞り込めるA一択と判断した。"
+        }
+      ],
+      "submittedAt": "2026-08-15T20:14:52Z",
+      "receivedAt": "2026-08-15T20:15:53Z"
+    },
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260816-R21-PRESENCE-BYPASS",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-r21-log278",
+          "choiceInternalNo": 1,
+          "goa": 2,
+          "reservation": "amadeus-log.ts:278 の isAutonomousMode(content) は amadeus-lib.ts:5186 で Construction Autonomy Mode を読む1関数であり、他の呼び出し箇所(amadeus-state.ts:1600, :4135)は本 R-21 是正の対象外(owned files 外、R-23 参照)。A へ切替える際は amadeus-log.ts のこの1箇所だけを Intent Autonomy Mode の直読(state.ts の autonomySegment(content) === \"full\" 相当)へ差し替え、他呼び出し箇所の Construction Autonomy Mode 読取は不変に保つこと(R-22 は逆に復元スキップの semi 拡大を防ぐ側であり、amadeus-state.ts:4135 は本則の対象外)。project.md cid:code-generation:c1-threshold-inside-observed-range 相当の懸念はないが、Intent Autonomy Mode が未投影(R-25 の unset pair)の state では A も B も C も fail-closed(presence 要求)側に落ちることを落ちる実証の一部として確認するとよい。",
+          "rationale": "設問が明示する2制約 — (1) full の既存挙動(無人記録)を保存、(2) 新しい検出面を増やさない(Q3=A′ 最小化方針) — のうち、B は選択肢自身のラベルが full の挙動変更を認めており制約(1)に反する。C は選択肢自身のラベルが log 経路→decision 台帳への新しい読取結合(=新しい検出面)を認めており制約(2)に反する。A は Intent Autonomy Mode を直読するだけで、この field は既に amadeus-lib.ts:5173 autonomySegment() が同一 state から読んでいる既存の宣言フィールドであり、新規の検出機構を追加しない。mode 意味論とも一致する(Intent Autonomy Mode=full の時だけ Construction Autonomy Mode が autonomous に投影される — org.md 逐語「full のとき autonomous、それ以外は gated」)ため、full の迂回は保存され、semi は投影が autonomous になっても Intent Autonomy Mode が full でない限り presence ガードへ戻る。2制約を両方満たすのは A のみ。"
+        }
+      ],
+      "submittedAt": "2026-08-15T20:15:07Z",
+      "receivedAt": "2026-08-15T20:15:53Z"
+    }
+  ]
+}

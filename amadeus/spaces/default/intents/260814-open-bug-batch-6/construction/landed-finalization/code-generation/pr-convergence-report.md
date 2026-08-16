@@ -1,12 +1,15 @@
 # PR Convergence Report
 
-- kind: created
+- kind: landed
 - pull request: amadeus-dlc/amadeus#3081
-- generated at: 2026-08-15T01:31:48Z
 - converged: false
+- merged at: 2026-08-15T04:35:06Z
+- merge commit: 6ff5352ba83d57cd627bf7aeb23fb21ed9582325
+- check rollup: SUCCESS
+- generated at: 2026-08-15T15:11:26Z
 ## CLI Attestation
 
-- attestation id: prca:770621aae80008fe9bcacb7817e5df7f4035a099610d8179a73f07bd238a5595
+- attestation id: prca:bb3cafe406355464fb0d56b9828417f97daf1a155a7f926bea20db2cee7d396d
 - intent: open-bug-batch-6
 - intent uuid: 01a0028a-aefd-72b7-9e1b-53bb13e5f452
 - record: amadeus/spaces/default/intents/260814-open-bug-batch-6/
@@ -14,7 +17,9 @@
 - unit: landed-finalization
 - repository: amadeus-dlc/amadeus
 - pr: 3081
-- local head: 144ffa39dc03fe5772179392c4b5a0b4726b11aa
-- remote head: 144ffa39dc03fe5772179392c4b5a0b4726b11aa
-- pr head: 144ffa39dc03fe5772179392c4b5a0b4726b11aa
-- content digest: sha256:905ec8787bbae7626c74dab67595b795584af9ed3c318f22eff513a436d2e7a3
+- local head: 23f5968d8f74785957b61a2e6645c50d557b6e35
+- remote head: 23f5968d8f74785957b61a2e6645c50d557b6e35
+- pr head: 23f5968d8f74785957b61a2e6645c50d557b6e35
+- merge commit: 6ff5352ba83d57cd627bf7aeb23fb21ed9582325
+- merged at: 2026-08-15T04:35:06Z
+- content digest: sha256:d1e07e48a7b43fe54d9e081b9326138f88da483050f0ab301ce96135bbf3452a

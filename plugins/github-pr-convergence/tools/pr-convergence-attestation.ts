@@ -40,6 +40,11 @@ export interface ReportAttestation {
   readonly localHead: string;
   readonly remoteHead: string;
   readonly prHead: string;
+  // The merge a `landed` record is bound to. Present on that kind alone: every
+  // other kind is bound to a live checkout instead, and the two bindings are
+  // kept disjoint so neither can stand in for the other.
+  readonly mergeCommit?: string;
+  readonly mergedAt?: string;
   readonly contentDigest: string;
 }
 
@@ -82,6 +87,8 @@ export function renderAttestation(value: ReportAttestation): string {
     `- local head: ${value.localHead}`,
     `- remote head: ${value.remoteHead}`,
     `- pr head: ${value.prHead}`,
+    ...(value.mergeCommit === undefined ? [] : [`- merge commit: ${value.mergeCommit}`]),
+    ...(value.mergedAt === undefined ? [] : [`- merged at: ${value.mergedAt}`]),
     `- content digest: ${value.contentDigest}`,
     "",
   ].join("\n");
@@ -114,6 +121,8 @@ type ProjectionLabel =
   | "intent uuid"
   | "local head"
   | "member units"
+  | "merge commit"
+  | "merged at"
   | "owner unit"
   | "pr"
   | "pr head"
@@ -153,6 +162,19 @@ export function parseOwnerProjection(body: string): OwnerProjection | null {
   };
 }
 
+/**
+ * The merge a landed receipt binds, or the empty pair when it binds none. The
+ * two fields travel together: half a merge fact names no merge, so a receipt
+ * carrying one of them is malformed rather than partially bound (null).
+ */
+function mergeFields(section: string): Pick<ReportAttestation, "mergeCommit" | "mergedAt"> | null {
+  const mergeCommit = field(section, "merge commit");
+  const mergedAt = field(section, "merged at");
+  if (mergeCommit === null && mergedAt === null) return {};
+  if (mergeCommit === null || mergedAt === null || mergeCommit === "" || mergedAt === "") return null;
+  return { mergeCommit, mergedAt };
+}
+
 export function parseAttestation(body: string): ReportAttestation | null {
   const start = body.indexOf(ATTESTATION_HEADING);
   if (start === -1) return null;
@@ -170,9 +192,12 @@ export function parseAttestation(body: string): ReportAttestation | null {
   if (!Number.isInteger(pr) || pr <= 0 || Object.values(values).some((value) => value === null || value === "")) return null;
   const parsedMembers = memberUnits === null ? null : canonicalUnitSlugs(memberUnits.split(","));
   if (parsedMembers !== null && (!parsedMembers.ok || parsedMembers.value.join(",") !== memberUnits)) return null;
+  const merge = mergeFields(section);
+  if (merge === null) return null;
   return {
-    ...(values as Omit<ReportAttestation, "pr" | "memberUnits">),
+    ...(values as Omit<ReportAttestation, "pr" | "memberUnits" | "mergeCommit" | "mergedAt">),
     ...(parsedMembers === null ? {} : { memberUnits: parsedMembers.value }),
+    ...merge,
     pr,
   };
 }

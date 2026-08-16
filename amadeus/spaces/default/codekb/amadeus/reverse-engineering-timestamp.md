@@ -1,6 +1,78 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260815-priority-bug-batch-2）
+## 実行メタデータ（現在: 260815-rfc-autonomy-modes）
+
+- Date: `2026-08-15`
+- Intent: `260815-rfc-autonomy-modes`
+- Repository: `amadeus`（単一 repo）
+- Scope / depth / project type: `self-feature` / Standard / Brownfield
+- Base commit: `83e1dbeefb3278a00e86f69d3c79071a35ccf043`（前回 observed = 260815-stale-epoch-landed。祖先性 `git merge-base --is-ancestor 83e1dbeef 2eb94f1e39e` → **exit 0**）
+- Observed commit: `2eb94f1e39e940c1c39a80a2181a8e03aaf31eb9`（`origin/main` tip）
+- Distance: **3** コミット（`git rev-list --count 83e1dbeef..2eb94f1e39e`）
+- 差分規模: `git diff --shortstat 83e1dbeef 2eb94f1e39e` → **71 files changed, 3187 insertions(+), 131 deletions(-)**。非 record 面（`-- ':!amadeus/' ':!metrics/'`）は **8 files +1166/−73**
+- Scope of scan: **差分リフレッシュ**（RFC-0001 bound-surfaces に焦点）
+- Focus: RFC-0001（`amadeus/spaces/default/specs/rfc/0001-intent-autonomy-modes.md`、status: approved）の実装前提 — bound-surfaces の現況と RFC 実装引用の currency
+- 区間内容の帰属: 3 コミットは**全量が intent 260815-stale-epoch-landed へ帰属**（#3113 修正 8 files + record checkpoint #3114 + metrics #3115）
+- 構造変化: **なし** — `packages/framework/core/` は **0 file 変更**（`git diff --name-only 83e1dbeef 2eb94f1e39e -- packages/framework/core/` → 空）。新規テストファイルは t3110 の 1 件のみ（coverage-registry は #3113 内で regen 済み）
+- 中核知見: RFC-0001 の bound-surfaces と機序記述は現 main 断面で**そのまま有効**。RFC Reference-level の実装引用 11 件の currency 再照合は **10/11 が逐語/意味論一致・1 件のみ行移動**（読取側 semi→gated ハードコード `amadeus-orchestrate.ts:2040` → **`:2046`**、逐語 `if (intentMode === "none" || intentMode === "semi") return "gated";`）。詳細は `architecture.md` §260815-rfc-autonomy-modes
+- 更新した codekb 面: `architecture.md`（新節 + 前 intent 節の履歴降格・解消注記）/ `code-structure.md`（同）/ 本ファイル。無変更が正: business-overview / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment（区間の非 record 変更が pr-convergence plugin の 1 患部面に限られ、これらの面の記述へ影響しないことを diff 帰属で確認）
+- 旧 intent の未コミット RE（autonomy-refactor worktree）: **破棄** — 本スキャンが最新 main 起点の正
+- Per-intent record: `re-scans/260815-rfc-autonomy-modes.md`
+
+## 実行メタデータ（履歴: 260815-stale-epoch-landed）
+
+- Date: `2026-08-15`
+- Intent: `260815-stale-epoch-landed`
+- Repository: `amadeus`（単一 repo）
+- Scope / depth / project type: `self-fix` / Minimal / Brownfield
+- Base commit: `78146f435a66680055a24144937b5aa03d48bfb4`（前回 observed = 260815-per-unit-outcome。祖先性 `git merge-base --is-ancestor 78146f435a 83e1dbeef` → **exit 0**）
+- Observed commit: `83e1dbeefb3278a00e86f69d3c79071a35ccf043`（`origin/main` tip。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Distance: **4** コミット（`git rev-list --count 78146f435a..83e1dbeef`）
+- 差分規模: `git diff --shortstat 78146f435a 83e1dbeef` → **110 files changed, 4856 insertions(+), 59 deletions(-)**。非 record 面は `-- ':!amadeus/' ':!metrics/'` で **17 files / +565 −37**（内訳: 非テスト 8 + テスト 9。テストは新規 **0** / 変更 9）
+- Scope of scan: **差分リフレッシュ**（#3110 の患部面に焦点、加えて base..observed 全域の棚卸し）
+- Focus: [Issue #3110](https://github.com/amadeus-dlc/amadeus/issues/3110)（P2 / S3-MAJOR、格上げは FOLLOW-UP）— stale created attestation × MERGED PR に最終化経路がない（report は stale 拒否 / create は新規 PR 誤作成 / override は valid attestation 要求の閉路）
+- 区間内容の帰属: 4 コミットは**全量が intent 260815-per-unit-outcome へ帰属**する — PR #3105（`fix(#3099)` settle 経路 + `UNIT_OUTCOME_SETTLED` + テスト t533/t81/t28/t403/t449/t212 + docs + event-registry 92→93 + coverage 台帳）、record checkpoint #3107 / #3111、metrics #3102 / #3108
+- 構造変化: **なし**。新規パッケージ・新規モジュール・ディレクトリ移動はゼロ。新規テストファイルもゼロ（`--diff-filter=A -- 'tests/**'` → 0）
+- 患部の可動性: `git diff --quiet 78146f435a 83e1dbeef -- plugins/github-pr-convergence/` → **exit 0**（ディレクトリ全域が区間内で無変更）。個別 8 パス（cli / gh-runner / sensor 実装 / stage 文書 / attestation / predicate / t3062 / t448）へも同述語を適用し**全件 exit 0**
+- 引用の currency 再検証: #3110 のクロスレビューが引く 5 件を observed 断面で逐語再照合し **5/5 一致** — `pr-convergence-cli.ts:746-748`（stale 文言）/ `:597-604`（`transitionAllowed` の `created → landed`、許可 arm は `:602`）/ `pr-convergence-gh-runner.ts:322`（`"--state", "open"`）/ `amadeus-sensor-pr-convergence-report-format.ts:391-393`（`created proves PR delivery only; …`）/ `stages/pr-convergence.md:344-346`（`A merged pull request needs no ruling — report records it as landed.`）
+- 中核知見: **拒否順序が `created → landed` を構造的な dead code にしている**。`runCli` は `selfContextFor`（`:1370`）を verb 分岐（`:1398`）より先に評価し、その先の `currentSelfContext`（`:627`）→ `attestationBindsIdentity`（`:714`）が `receipt.prHead === heads.prHead` を要求する。#3062 が `:597-604` に追加した `created → landed` は verb 分岐の下流にあるため、create 後に head が前進した self record では到達しない。拒否は verb 非依存のため 4 verb すべてがデッドエンドになる。加えて `fetchOpenPrForHead`（gh-runner `:322`）が `--state open` のみを引くため、エラー文言（`:747`）が指示する「create 再実行」は MERGED PR を reuse せず新規 PR を開く
+- 機序の一次記録: **Issue #3110 の 2 件のクロスレビューコメント**（reviewer-1 CONFIRMED / reviewer-2 CONFIRMED_WITH_REFINEMENTS、`review-run-id: xrev-3110-20260815T114717Z`、`target-sha: 920790ba7fbaea5f58b5637268782df89e496cc2`）。本スキャンは再導出せず、observed 断面での再照合と codekb への写像に留めた
+- 根と規範衝突: 根は PR #3081 の実装逸脱ではなく、**#3062 の選挙（E-260815-3062-LANDED-FINALIZATION）の設問スコープが head-integrity ゲートとの交差を含まなかった**こと（reviewer-2 帰属）。あわせて `team.md` の「record checkpoint 同梱可」（E-260813-RECORD-BUNDLING-NORM 2-0）と CLI の「create 後 head 不動」要求が構造的に両立しない規範衝突を reviewer-1 が FOLLOW-UP として提起（是正設計はどちらの側で解消するかを明示する必要がある = 選挙事項）。原因は同梱に限らず **create 後の任意の追加 push（理由不問）**
+- テスト空白（実測）: `grep -rn "attestation is stale" tests/` → **0 行・exit 1**。pr-convergence 系 4 テストの `grep -c "stale"` は t447=0 / t448=0 / t449=**3**（ただし `:254` / `:273` / `:490` はいずれも **bolt-plan** の staleness で無関係）/ t3062=0。t3062 が landed 最終化を覆いながら本件を捕らえない理由は、`:123-124` の単一 seed commit と `:134` の gh スタブ（`"rev-parse HEAD"` が `f.head` を全呼び出しで同一値返却）により **head が構造的に前進しない**ため（同ファイル 285 行、冒頭コメント `:6-11` も想定を auto-merge 先行に限定）
+- 台帳の係り: `specs/tla/model-map.json` は `grep -c "github-pr-convergence"` → **0**（resync 不要）/ `tests/.coverage-patch-allowlist.json` は `pr-convergence-cli.ts` に **3 セレクタ**（`nodeDecisionEmitter` / `selfReportLifecycle` / `<module>`）— うち **`selfReportLifecycle` は expiry が逐語 `remove if the lifecycle is ever callable without the currentSelfContext head binding` であり、head 束縛を緩める是正なら削除対象になる** / `tests/.coverage-registry.json` は pr-convergence 2 hit（いずれも t2996）で、新規テストファイル追加時のみ regen（`cid:build-and-test:c1`）
+- 同一クラスの残余: `260814-plugins-rename-drift` の 3 unit（#3051 / #3052 / #3055）が record 上 `kind: created` のまま恒久残置（workflow は completed 済みのため停止はしていないが record drift）。`260813-remove-team-up`（#2975）/ `260814-autonomy-stop-fixes`（#3037）は候補（record 内で確定不能）
+- 未検証面: 是正方式（report が merged 事実で stale を免除して landed を書く / create が MERGED PR を read-back して landed epoch を mint する / 折衷）の選択は**本スキャンでは決めていない** — 後続の裁定事項（`memory/team.md` P1）。重大度 S3→S1/S2 の格上げも人間裁定事項として未決。フルスイート・coverage・build はいずれも未実行（本スキャンは読取専用）
+- Verification: git 状態変更（commit / branch / checkout / stash / merge）・GitHub 書込・engine/state ツール実行・`bun run build` は**すべてゼロ**。GitHub は `gh issue view 3110`（読取のみ）を実行。書き込みは `codekb/amadeus/` 配下のみ
+- Updated artifacts: `re-scans/260815-stale-epoch-landed.md`（新規）/ `reverse-engineering-timestamp.md`（本節）/ 本体 8 面すべてに本 intent の節を追記（`architecture.md` / `code-structure.md` / `code-quality-assessment.md` は実質内容、`component-inventory.md` / `dependencies.md` / `api-documentation.md` / `business-overview.md` / `technology-stack.md` は差分デルタの短節）
+- 構造補修: 直前 intent `260815-per-unit-outcome` の現在時制マーカー **8 件**を履歴へ降格（`api-documentation.md:2139` / `architecture.md:5399` / `business-overview.md:142` / `code-quality-assessment.md:3782` / `code-structure.md:385` / `component-inventory.md:2806` / `dependencies.md:204` / `technology-stack.md:87`。本文と行番号は保持、`cid:reverse-engineering:c1`）
+- Per-intent record: `re-scans/260815-stale-epoch-landed.md`
+
+## 実行メタデータ（履歴: 260815-per-unit-outcome）
+
+- Date: `2026-08-15`
+- Intent: `260815-per-unit-outcome`
+- Repository: `amadeus`（単一 repo）
+- Scope / depth / project type: `self-fix` / Minimal / Brownfield
+- Base commit: `9ba8170bb03996fb98b497cfcbac3d207795018d`（前回 observed = 260815-priority-bug-batch-2。祖先性 `git merge-base --is-ancestor 9ba8170bb 78146f435` → **exit 0**）
+- Observed commit: `78146f435a66680055a24144937b5aa03d48bfb4`（`origin/main` tip。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Distance: **12** コミット（`git rev-list --count 9ba8170bb..78146f435`）
+- 差分規模: `git diff --shortstat 9ba8170bb 78146f435` → **103 files changed, 3091 insertions(+), 182 deletions(-)**。非 record 面は `-- ':!amadeus/' ':!metrics/'` で **40 files / +874 −97**（内訳: 非テスト 12 + テスト 28。テストは新規 4 / 変更 24）
+- Scope of scan: **差分リフレッシュ**（#3099 の患部面に焦点、加えて base..observed 全域の棚卸し）
+- Focus: [Issue #3099](https://github.com/amadeus-dlc/amadeus/issues/3099)（P1）— per-unit run-stage で完走した Construction が `producer-outcome-pending` で build-and-test へ到達不能
+- 構造変化: **なし**。新規パッケージ・新規モジュール・ディレクトリ移動はゼロ。コア実装の変更は PR #3101 の 4 ファイル（`amadeus-election.ts` +21/−5、`amadeus-graph.ts` +30/−6、`amadeus-lib.ts` +16/−4、`amadeus-utility.ts` +1/−1）のみ
+- 患部の可動性: 患部 5 ファイル（`amadeus-orchestrate.ts` / `amadeus-construction-outcome-projection.ts` / `amadeus-unit-pool-runtime.ts` / `amadeus-per-unit-consume-fanout.ts` / `amadeus-swarm.ts`）へ `git diff --quiet 9ba8170bb 78146f435 -- <path>` を個別適用し、**全 5 件 exit 0**（区間内で無変更）
+- 中核知見: **Construction 成果の読み口が 2 系統に割れている**。正準射影 `amadeus-construction-outcome-projection.ts:222-228` は 5 イベント（`UNIT_POOL_EVENT_SET_COMMITTED` / `BOLT_STARTED` / `BOLT_COMPLETED` / `BOLT_FAILED` / `SWARM_BATON_RETURNED`）を読み、`amadeus-orchestrate.ts` の 4 消費点が使う。対して per-unit fanout の母集団取得 `readPerUnitConsumePopulation`（`:2447-2473`）は `UNIT_POOL_EVENT_SET_COMMITTED` **1 種のみ**を読む。pool の単一 writer は `amadeus-unit-pool-runtime.ts:152-161` で、変異源は `amadeus-swarm.ts` の 9 call site と `amadeus-orchestrate.ts:6586` のみ。**per-unit dispatch 経路（`emitPerUnitRunStage` `:4574-4725`）は pool へ一切書かない**（同範囲 `grep -n "UnitPool\|unitPool\|UNIT_POOL"` → exit 1 / 0 hit）ため、母集団が空のまま `amadeus-per-unit-consume-fanout.ts:224-228` が `producer-outcome-pending` で fail-closed する
+- 新規に確定した再現条件: `amadeus-lib.ts:8416` 逐語 `if (pendingBatch === null || pendingBatch.units.length < 2) return { kind: "ok" };` — **幅 1 のバッチは autonomy に関わらず plan-integrity redirect を素通り**するため、直列な Unit 計画は必ず per-unit dispatch へ落ちる。受け入れ基準はこの条件を符号化する必要がある
+- 保存すべき不変量: `amadeus-orchestrate.ts:2461-2463` 逐語 `if (!currentUnits.has(terminal.unitId)) continue;`（バッチ所属フィルタ）
+- テスト空白: `grep -rln "readPerUnitConsumePopulation" tests/` → **1 ファイルのみ**で、その中の seeding 4 箇所（`:150` / `:326` / `:363` / `:411`）は**すべて pool 経路**。非 pool 由来の母集団を張るテストはゼロ件であり、#3099 のシナリオに対応する再現テストは存在しない
+- 上流報告からの訂正（申し送り）: (a) t533 のケース数は unit **8** / integration **14**（`grep -c 'test("\|it("'`）であり、上流報告の「9 / 15」と一致しない (b) 区間の変更テストは 23 ではなく **24**（`git diff --name-only --diff-filter=M -- 'tests/**' | wc -l`） (c) `planIntegrityVerdict` の定義行は `:8412`（幅判定は `:8416`）
+- 未検証面: 是正方式（(a) fanout 側で正準射影を読む / (b) per-unit 経路から pool イベントを発行する / (c) 折衷）の選択は**本スキャンでは決めていない** — 後続の裁定事項（`memory/team.md` P1）。フルスイート・coverage・build はいずれも未実行（本スキャンは読取専用）
+- Verification: git 状態変更（commit / branch / checkout / stash / merge）・GitHub 書込・engine/state ツール実行・`bun run build` は**すべてゼロ**。書き込みは `codekb/amadeus/` 配下のみ
+- Updated artifacts: `re-scans/260815-per-unit-outcome.md`（新規）/ `reverse-engineering-timestamp.md`（本節）/ 本体 8 面すべてに本 intent の節を追記（`architecture.md` / `code-structure.md` / `component-inventory.md` / `code-quality-assessment.md` は実質内容、`api-documentation.md` / `dependencies.md` / `technology-stack.md` / `business-overview.md` は差分デルタの短節）
+- 構造補修: 直前 intent `260815-priority-bug-batch-2` の現在時制マーカー **4 件**を履歴へ降格（`architecture.md:5353` / `code-structure.md:343` / `component-inventory.md:2776` / `code-quality-assessment.md:3726`。本文と行番号は保持、`cid:reverse-engineering:c1` / `c3-relabel`）
+- Per-intent record: `re-scans/260815-per-unit-outcome.md`
+
+## 実行メタデータ（履歴: 260815-priority-bug-batch-2）
 
 - Date: `2026-08-15`
 - Base commit: `a49f9e9fdbd19fd40e9374feba77e9360771d173`（observed の祖先で距離**最小**。`git merge-base --is-ancestor a49f9e9fd HEAD` → **exit 0**、`git rev-list --count a49f9e9fd..HEAD` → **9**。対抗候補 `d64fd7cac`（直前 intent の observed）は距離 **10** で劣る。`cid:reverse-engineering:rescan-base-ancestry`）

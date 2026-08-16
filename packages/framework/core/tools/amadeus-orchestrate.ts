@@ -21,7 +21,12 @@
 //
 // Subcommand dispatch table:
 //   next   — read-only. Resolve scope (state > flag > env > default), find the
-//            workflow's position, and emit one directive. LIVE.
+//            workflow's position, and emit one directive. LIVE. "Read-only"
+//            means it never moves the workflow: it births nothing, advances
+//            nothing, pivots no pointer. It does RECORD what it observes — the
+//            intent-lifecycle preflight rows, and the per-unit outcome a
+//            Construction iteration settles (#3099) — appends of facts the read
+//            just established, never edits of state.
 //   report — commit a transition after the conductor acted on a directive.
 //            LIVE. A stage-aware dispatcher: it shells out to amadeus-state.ts
 //            transitions so the next `next` reads fresh state. Explicit
@@ -68,6 +73,7 @@
 // invert the whole thesis).
 
 import { createHash, randomUUID } from "node:crypto";
+import { emitAuditEventGuarded } from "../otel/audit-emit.ts";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
 import {
   closeSync,
@@ -97,6 +103,7 @@ import {
   type GateValue,
   type InvokeSwarmDirective,
   type ParkedDirective,
+  type WaitingDirective,
   type PrintDirective,
   renderAdvisoryChoiceQuestion,
   type RunStageDirective,
@@ -190,12 +197,19 @@ import {
   classifyApprovalAuthority,
   parseApprovalProcessResult,
 } from "./amadeus-approval-authorization.ts";
-import { autonomyDigest } from "./amadeus-intent-autonomy.ts";
+import {
+  autonomyDigest,
+  declaredIntentAutonomyMode,
+  describeProjectionDivergence,
+  detectProjectionDivergence,
+  projectConstructionAutonomy,
+} from "./amadeus-intent-autonomy.ts";
 // Aliased: this module's own `AutonomyMode` is the Construction SCHEDULING mode
 // ("autonomous" | "gated"), a different axis from the Intent autonomy mode.
 import type {
   AutonomyMode as IntentAutonomyMode,
   AutonomyProjection,
+  SkeletonStance,
 } from "./amadeus-intent-autonomy.ts";
 import {
   admitProductionStageFailure,
@@ -205,7 +219,9 @@ import {
   productionStageAutonomy,
   readProductionAutonomyProjection,
   readProductionRepairStall,
+  readProductionWaitingStop,
   type ProductionRepairStall,
+  type ProductionWaitingStop,
   type ProductionStageFailureResult,
 } from "./amadeus-intent-autonomy-production.ts";
 import { detectHarnessType } from "./amadeus-harness.ts";
@@ -240,7 +256,7 @@ import {
   authorizeMainConductor,
   callerAuthorizationError,
 } from "./amadeus-caller-authorization.ts";
-import { resolveAmadeusConfig } from "./amadeus-config.ts";
+import { deriveSoloElectionTrigger, resolveAmadeusConfig } from "./amadeus-config.ts";
 import {
   degradeUnitDirectories,
   DELIVERY_BOLT_PLAN_SOURCE,
@@ -645,7 +661,7 @@ function emitMirrorBoundaryIfNeeded(
   }
   return emitConfiguredMirrorBoundary(
     boundary,
-    resolved.config.intentMirror.github.issue.mode,
+    resolved.config.intentMirror.github.issue.consent,
     intent,
     space,
   );
@@ -1101,6 +1117,26 @@ function emitMigrationError(message: string): void {
 // the conductor can end its turn at a clean inter-stage boundary.
 function parkedDirective(reason: string, stage: string): ParkedDirective {
   return { kind: "parked", reason, stage };
+}
+
+// waiting - the terminal a non-interactive run emits when it reached a ruling
+// it may not make (RFC-0001 FR-3). NOT `parked`: park says a human chose to
+// stop, and a conductor that has to tell the two apart by reading `reason` is
+// one wording change away from getting it wrong. The identifiers point at the
+// Intent autonomy transaction that holds the full ruling, so `--resume`
+// re-presents the SAME candidates rather than a paraphrase of them.
+export function waitingDirectiveFor(stop: ProductionWaitingStop): WaitingDirective {
+  const options = stop.cause.outcome.kind === "contested"
+    ? `${stop.cause.outcome.candidates.length} candidate options are on the table`
+    : "no option could be derived at all";
+  return {
+    kind: "waiting",
+    reason: `Workflow waiting at ${JSON.stringify(stop.occurrenceId)}: this run is not interactive (${stop.cause.interactivityBasis.source}) and the ruling due here is not one it may make - ${options}. The derivation was: ${stop.cause.derivationTranscript}. Re-enter with \`/amadeus --resume\` to be shown the same ruling and settle it.`,
+    stage: stop.stage,
+    occurrence_id: stop.occurrenceId,
+    basis_fingerprint: stop.cause.basisFingerprint,
+    transaction_id: stop.transactionId,
+  };
 }
 
 // --- Flag parsing ---
@@ -1989,7 +2025,6 @@ function isFirstRunStageOfWorkflow(
 // `report --skeleton-stance`, read by the next `next`). One of the three stance
 // values, or absent before the round-trip completes.
 const SKELETON_STANCE_FIELD = "Skeleton Stance";
-type SkeletonStance = "on" | "off" | "scope-dependent";
 const VALID_SKELETON_STANCES: ReadonlySet<string> = new Set([
   "on",
   "off",
@@ -2017,59 +2052,37 @@ function readSkeletonStance(stateContent: string | null): SkeletonStance | null 
   return VALID_SKELETON_STANCES.has(lower) ? (lower as SkeletonStance) : null;
 }
 
-// `Construction Autonomy Mode` remains an internal scheduling projection for
-// old swarm code. Authorization comes exclusively from the audit-backed
-// `Intent Autonomy Mode`; a legacy autonomous/gated field by itself is never
-// authoritative and therefore fails closed to no swarm.
-const AUTONOMY_MODE_FIELD = "Construction Autonomy Mode";
-const INTENT_AUTONOMY_MODE_FIELD = "Intent Autonomy Mode";
-
 // Compatibility scheduling modes. Authorization is resolved separately from
 // Intent autonomy; `gated` still fans out a batch and waits before the next one.
 type AutonomyMode = "autonomous" | "gated";
 
-// Read the recorded Construction autonomy mode as a discriminated three-valued
-// answer (parse, don't validate): "autonomous" | "gated" | null. Mirrors
-// readSkeletonStance's read-and-narrow shape. An unrecognised value (a typo, a
-// hand-edited state file) narrows to null rather than to a grant — the swarm
-// never activates on a value the engine could not recognise.
+// The scheduling side of the projection (RFC-0001 FR-6). The recorded
+// `Construction Autonomy Mode` is not an independent input: the declared Intent
+// mode projects to it, so this reader derives the schedule through the SAME
+// function the writer uses and treats any disagreement between the two fields as
+// a record that contradicts itself.
+//
+// Two things it deliberately does NOT do. It does not cap semi at "gated" —
+// under RFC-0001 semi keeps its two human milestones and lets the Bolt swarm run
+// (FR-5). And it does not degrade silently: a divergence throws, because the
+// pre-RFC form disabled the swarm with a stderr line at most, which is how a
+// record could declare full autonomy next to a swarm that never started (#2483).
+//
+// A record that declares no mode at all still fails closed to null: there is no
+// declaration to schedule from, and inventing one would grant a swarm nobody
+// asked for.
 export function readAutonomyMode(stateContent: string | null): AutonomyMode | null {
-  const intentMode = stateContent ? getField(stateContent, INTENT_AUTONOMY_MODE_FIELD)?.trim() : null;
-  // none and semi both fan out and stop at batch-end human gates; semi caps any
-  // recorded scheduling at "gated" so it can never skip the in-phase batch wait.
-  if (intentMode === "none" || intentMode === "semi") return "gated";
-  const scheduling = stateContent ? getField(stateContent, AUTONOMY_MODE_FIELD)?.trim() : null;
-  if (intentMode === "full") {
-    if (scheduling === "autonomous") return "autonomous";
-    announceAutonomyProjectionSkew(scheduling ?? null);
-    return null;
-  }
-  return null;
+  const declared = declaredIntentAutonomyMode(stateContent);
+  if (declared === null) return null;
+  const divergence = detectProjectionDivergence(stateContent);
+  if (divergence !== null) throw new Error(describeProjectionDivergence(divergence));
+  return projectConstructionAutonomy(declared);
 }
 
 // One advisory per observed scheduling value per process — the same
 // report-once shape reportedBoltDagRecoveries uses below, so a `next` that
 // reads the mode twice (the swarm predicate and the directive emit) does not
 // print the same line twice.
-const reportedAutonomyProjectionSkews = new Set<string>();
-
-// The full x non-autonomous return above is fail-closed but SILENT: swarm
-// scheduling simply never activates, and the operator sees a record declaring
-// full autonomy next to a swarm that never starts (#2483). Construction
-// Autonomy Mode is a derived projection of Intent Autonomy Mode — under full it
-// is expected to read "autonomous" — so any other value means the projection was
-// written out of band and the record disagrees with itself.
-//
-// stderr only: stdout carries the directive JSON (stdout-directive-stderr-advisory).
-function announceAutonomyProjectionSkew(scheduling: string | null): void {
-  const observed = scheduling === null || scheduling === "" ? "(absent)" : scheduling;
-  if (reportedAutonomyProjectionSkews.has(observed)) return;
-  reportedAutonomyProjectionSkews.add(observed);
-  console.error(
-    `AUTONOMY_PROJECTION_SKEW Intent Autonomy Mode: full but Construction Autonomy Mode: ${observed} — swarm scheduling disabled; the projection is expected to be autonomous under full (#2483)`,
-  );
-}
-
 // Read the compiled batch DAG (the Bolt/unit topological levels) off the
 // runtime graph that `amadeus-runtime compile` materialises. Returns the
 // `batches` array (each inner array is one parallel batch = one topological
@@ -2444,6 +2457,59 @@ export interface PerUnitConsumePopulation {
   readonly outcomes: readonly PerUnitConsumeOutcome[];
 }
 
+// One UNIT_OUTCOME_SETTLED row: the outcome the ENGINE settled for a Unit on
+// its own per-unit dispatch path (#3099). Separate from the swarm path's Unit
+// pool stream in every respect — its own event type, its own batch field, no
+// entry in the pool's batchId namespace.
+interface SettledUnitOutcome {
+  readonly batch: string;
+  readonly unit: string;
+  readonly outcome: typeof SETTLED_UNIT_OUTCOME;
+  readonly key: string;
+}
+
+// The one outcome the engine settles: coverage on disk is what it observes, and
+// a covered Unit succeeded. The emitter writes this value and the reader accepts
+// no other — a closed vocabulary, as the pool projection keeps for its own
+// terminals — so an edited ledger cannot decide whether a consumer runs.
+const SETTLED_UNIT_OUTCOME = "succeeded";
+
+// Refusal for a row that does not carry the shape the emitter writes: a missing
+// join key, or an outcome outside the vocabulary above.
+const INVALID_SETTLED_ROW = "invalid-unit-outcome-audit-row: not the shape the engine writes";
+
+// The idempotency key of one settled per-unit outcome. The intent is implicit —
+// the row lands in the active intent's own audit shard — so the key spans the
+// remaining three axes. Re-entering `next` re-derives the same key and finds the
+// row already there, which is what keeps the emission append-once.
+function perUnitOutcomeKey(stage: string, unit: string, batch: string): string {
+  return `${stage} ${unit} ${batch}`;
+}
+
+// Stage is read for its PRESENCE only. Outcomes collapse across the per-unit
+// stages a Unit clears, so the value is not a join key — but the emitter writes
+// it on every row, and a row without it is not a row the engine produced.
+//
+// Every settled row carries all five keys — emitEvent refuses an emit that omits
+// a required attribute — so a row missing one, or carrying an outcome the
+// emitter never writes, was edited after the fact. Reading it anyway would let
+// the edit decide a consumer's fate; skipping it would drop a Unit from the
+// population and surface as producer-outcome-pending, a diagnosis pointing at
+// the wrong thing entirely. Both are worse than refusing.
+function readSettledUnitOutcomes(projectDir: string): SettledUnitOutcome[] {
+  return findAllEvents(readAllAuditShards(projectDir), "UNIT_OUTCOME_SETTLED")
+    .map(({ block }) => {
+      const batch = auditBlockField(block, "Batch");
+      const unit = auditBlockField(block, "Unit");
+      const outcome = auditBlockField(block, "Outcome");
+      const key = auditBlockField(block, "Idempotency Key");
+      const stage = auditBlockField(block, "Stage");
+      if (batch === null || unit === null || key === null || stage === null) throw new Error(INVALID_SETTLED_ROW);
+      if (outcome !== SETTLED_UNIT_OUTCOME) throw new Error(INVALID_SETTLED_ROW);
+      return { batch, unit, outcome, key };
+    });
+}
+
 export function readPerUnitConsumePopulation(
   projectDir: string,
 ): PerUnitConsumePopulation | undefined {
@@ -2454,6 +2520,7 @@ export function readPerUnitConsumePopulation(
     return typeof name === "string" && name.trim() !== "" ? [name] : [];
   });
   const eventSets = readUnitPoolEventSetsFromAudit(projectDir);
+  const settled = readSettledUnitOutcomes(projectDir);
   const outcomes: PerUnitConsumeOutcome[] = [];
   const batches = loadRuntimeUnitBatches(projectDir) ?? [];
   for (const [index, units] of batches.entries()) {
@@ -2468,6 +2535,22 @@ export function readPerUnitConsumePopulation(
           : "failed",
       });
     }
+    // The engine-settled outcomes of the per-unit dispatch path (#3099), for the
+    // Units the pool says nothing about. Pool precedence is what keeps a Unit
+    // that travelled BOTH routes to a single row: two rows for one Unit is
+    // producer-outcome-ambiguous downstream. Several settle rows for one Unit
+    // (one per per-unit Construction stage it cleared) collapse the same way —
+    // the population carries a Unit's outcome, not a Unit-and-stage's. The
+    // batch join is the SAME currentUnits membership the pool loop applies, so a
+    // Unit outside the current runtime population stays ignored.
+    const pooled = new Set(projection.terminal.map((terminal) => terminal.unitId));
+    const engineSettled = new Map<string, string>();
+    for (const row of settled) {
+      if (row.batch !== String(index + 1)) continue;
+      if (!currentUnits.has(row.unit) || pooled.has(row.unit)) continue;
+      engineSettled.set(row.unit, row.outcome);
+    }
+    for (const [unit, outcome] of engineSettled) outcomes.push({ unit, outcome });
   }
   return { declaredUnits, outcomes };
 }
@@ -3111,6 +3194,23 @@ function emitRepairStalledIfSuspended(
   return true;
 }
 
+// Surface a waiting suspension as its own terminal directive, or report that no
+// such stop is pending. The self-disable set matches the stall branch: an
+// explicit re-entry is a deliberate continuation and belongs to the branch that
+// owns it, which is where the ruling gets re-presented.
+function emitWaitingIfSuspended(
+  projectDir: string,
+  stateContent: string | null,
+  flags: ParsedFlags,
+): boolean {
+  const explicitReEntry = Boolean(flags.resume || flags.stage || flags.phase || flags.newIntent);
+  if (stateContent === null || explicitReEntry) return false;
+  const stop = readProductionWaitingStop(projectDir);
+  if (stop === null) return false;
+  emit(waitingDirectiveFor(stop));
+  return true;
+}
+
 // The turn-scoped no-op-next guard (Kiro roll-forward defense). On Kiro the
 // userPromptSubmit seam handles a read-only/navigation command deterministically
 // off-band but CANNOT block the turn, so the conductor relays the output AND may
@@ -3247,6 +3347,13 @@ export function handleNext(args: string[], projectDir: string | undefined): void
   // self-disable set matches Branch 2.5 — an explicit re-entry is a deliberate
   // continuation and must reach the branch that handles it.
   if (emitRepairStalledIfSuspended(pd, stateContent, flags)) return;
+
+  // Branch 2.4b - WAITING suspension (RFC-0001 FR-3). Same shape as the stall
+  // branch above and the same self-disable set, but its own terminal: a run
+  // that stopped because it may not rule is not a run that broke, and the
+  // conductor is told which one it is by the directive kind rather than by the
+  // prose in `reason`.
+  if (emitWaitingIfSuspended(pd, stateContent, flags)) return;
 
   // Branch 2.5 - PARKED workflow (issue #367). The `park` subcommand persists a
   // `Parked` runtime field (via amadeus-state.ts park) without advancing any
@@ -4058,9 +4165,14 @@ function constructionFailureRulingDirective(
   target: { unit: string; attempt?: string; batch?: string },
   siblings: string,
 ): Directive {
-  const config = resolveAmadeusConfig(projectDir);
-  if (config.kind === "invalid") return errorDirective(`Invalid solo-election configuration: ${config.issues.map(swarmConfigIssue).join(" | ")}`);
-  if (config.config.soloElection.trigger.mode !== "auto") {
+  // RFC-0001 ADR-8: the solo-election trigger is DERIVED from the active
+  // Intent's declared Autonomy Mode, not read from config — no declaration
+  // (or no state file at all) derives the same conservative "none" default
+  // the retired config leaf carried. declaredIntentAutonomyMode is the same
+  // direct state-field reader readAutonomyMode/detectProjectionDivergence use
+  // for Construction scheduling decisions elsewhere in this file.
+  const mode = declaredIntentAutonomyMode(loadStateFileIfPresent(projectDir)) ?? "none";
+  if (deriveSoloElectionTrigger(mode) !== "auto") {
     return askDirective(
       `Unit "${target.unit}" failed during ${stage} (attempt ${target.attempt}, batch ${target.batch}; siblings: ${siblings}). Choose exactly one: Retry, Skip, or Abort. The answer is committed through the ordinary ask report path.`,
     );
@@ -4564,6 +4676,48 @@ function reviewerRecoveryForCoveredUnit(
   );
 }
 
+// Append the engine's own outcome row for every Unit of this stage whose
+// required artifacts are on disk and that is not cancelled (#3099). Emission is
+// keyed by stage + Unit + batch and reads the existing rows first, so re-running
+// `next` over an already-covered stage appends nothing. A Unit outside the
+// compiled batches has no batch identity to record under and is skipped: the
+// consume population joins on that identity, and a row it cannot join is a row
+// no reader can use.
+function settlePerUnitOutcomes(
+  projectDir: string,
+  node: GraphStage,
+  units: string[],
+  cancelledUnits: ReadonlySet<string>,
+  recordPrefix: string | null,
+  codekbCtx: CodekbCtx,
+  unitKinds: ReadonlyMap<string, UnitKind>,
+): void {
+  const batches = loadRuntimeUnitBatches(projectDir);
+  if (batches === null) return;
+  const batchOf = new Map<string, string>();
+  for (const [index, batchUnits] of batches.entries()) {
+    for (const unit of batchUnits) {
+      if (!batchOf.has(unit)) batchOf.set(unit, String(index + 1));
+    }
+  }
+  const appended = new Set(readSettledUnitOutcomes(projectDir).map((row) => row.key));
+  for (const unit of units) {
+    const batch = batchOf.get(unit);
+    if (batch === undefined || cancelledUnits.has(unit)) continue;
+    if (!unitCovered(projectDir, node, unit, recordPrefix, codekbCtx, unitKinds.get(unit))) {
+      continue;
+    }
+    const key = perUnitOutcomeKey(node.slug, unit, batch);
+    if (appended.has(key)) continue;
+    emitAuditEventGuarded(
+      "UNIT_OUTCOME_SETTLED",
+      { Stage: node.slug, Unit: unit, Batch: batch, Outcome: SETTLED_UNIT_OUTCOME, "Idempotency Key": key },
+      projectDir,
+    );
+    appended.add(key);
+  }
+}
+
 // Emit ONE iteration of a per-unit Construction stage. The engine owns the
 // for_each loop here: it resolves the next uncovered unit, substitutes the real
 // unit name for {unit-name} in every path, and suppresses the gate for EVERY
@@ -4660,6 +4814,18 @@ function emitPerUnitRunStage(
     );
     return;
   }
+
+  // Settle the outcome of every Unit this stage has already covered (#3099).
+  // The per-unit path is the ONLY dispatch route for a units-generation scope
+  // that does not swarm, and it used to leave no outcome behind: the per-unit
+  // consume population reads terminal outcomes, so every downstream consumer
+  // refused a completed Construction with producer-outcome-pending. The
+  // coverage boundary this loop already observes is where the outcome becomes a
+  // fact, so that is where it is recorded — forward, at the moment it is
+  // observed, never back-dated onto the ledger.
+  settlePerUnitOutcomes(
+    projectDir, node, units, cancelledUnits, recordPrefix, codekbCtx, unitKinds,
+  );
 
   // Delegate the next-unit selection to the canonical construction-iteration
   // seam (selectNextUnitForStage → nextConstructionStep, FR-2 item 8). The

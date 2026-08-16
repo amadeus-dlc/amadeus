@@ -54,6 +54,7 @@ export type DirectiveKind =
   | "committed"
   | "done"
   | "parked"
+  | "waiting"
   | "await-completion"
   | "await-approval";
 
@@ -255,11 +256,13 @@ export interface ExecuteAdvisoryHandoffDirective {
   advisories: AdvisoryChoiceDirectiveAdvisory[];
 }
 
-// execute-failure-election — Construction Unit failure under
-// solo-election.trigger.mode=auto. Not a question: the conductor opens an
-// election with Retry/Skip/Abort and commits the ruling through the existing
-// report --user-input retry|skip|abort path. Absent/manual config still emits
-// ask; invalid config fails closed.
+// execute-failure-election — Construction Unit failure when
+// deriveSoloElectionTrigger(mode) derives "auto" (RFC-0001 ADR-8: the active
+// Intent's Autonomy Mode is semi or full — no config leaf involved). Not a
+// question: the conductor opens an election with Retry/Skip/Abort and commits
+// the ruling through the existing report --user-input retry|skip|abort path.
+// A derived "manual" (mode none, or no active Intent projection) still emits
+// ask.
 export interface ExecuteFailureElectionDirective {
   kind: "execute-failure-election";
   stage: string;
@@ -398,6 +401,20 @@ export interface ParkedDirective {
   stage: string;
 }
 
+// waiting - a non-interactive run reached a ruling it may not make and stopped
+// (RFC-0001 FR-3, ADR-4). Distinct from `parked`, which says a human chose to
+// stop and says nothing about why: the identifiers here point straight at the
+// Intent autonomy transaction holding the full cause, so resume re-presents the
+// SAME ruling instead of reconstructing one from the reason text.
+export interface WaitingDirective {
+  kind: "waiting";
+  reason: string;
+  stage: string;
+  occurrence_id: string;
+  basis_fingerprint: string;
+  transaction_id: string;
+}
+
 // await-completion — the terminal completion transaction has not settled yet.
 // Either the final in-scope stage is approved while `complete-workflow` is still
 // uncommitted, or a completion authority (goal reconciliation, the persisted
@@ -438,6 +455,7 @@ export type Directive =
   | CommittedDirective
   | DoneDirective
   | ParkedDirective
+  | WaitingDirective
   | AwaitCompletionDirective
   | AwaitApprovalDirective;
 
@@ -464,6 +482,7 @@ export const VALID_KINDS = [
   "committed",
   "done",
   "parked",
+  "waiting",
   "await-completion",
   "await-approval",
 ] as const;
@@ -542,6 +561,14 @@ const ERROR_FIELDS = ["kind", "message"] as const;
 const COMMITTED_FIELDS = ["kind", "reason"] as const;
 const DONE_FIELDS = ["kind", "reason"] as const;
 const PARKED_FIELDS = ["kind", "reason", "stage"] as const;
+const WAITING_FIELDS = [
+  "kind",
+  "reason",
+  "stage",
+  "occurrence_id",
+  "basis_fingerprint",
+  "transaction_id",
+] as const;
 const AWAIT_COMPLETION_FIELDS = ["kind", "reason"] as const;
 const AWAIT_APPROVAL_FIELDS = [
   "kind",
@@ -566,6 +593,7 @@ const KNOWN_FIELDS_BY_KIND: Readonly<Record<DirectiveKind, readonly string[]>> =
   committed: COMMITTED_FIELDS,
   done: DONE_FIELDS,
   parked: PARKED_FIELDS,
+  waiting: WAITING_FIELDS,
   "await-completion": AWAIT_COMPLETION_FIELDS,
   "await-approval": AWAIT_APPROVAL_FIELDS,
 };
@@ -668,6 +696,17 @@ const FIELD_CHECKS_BY_KIND: Readonly<Record<DirectiveKind, DirectiveFieldCheck>>
   parked: (o, errors) => {
     checkString(o, "reason", "parked", errors);
     checkString(o, "stage", "parked", errors);
+  },
+  waiting: (o, errors) => {
+    for (const field of ["reason", "stage", "occurrence_id", "transaction_id"]) {
+      checkString(o, field, "waiting", errors);
+    }
+    checkString(o, "basis_fingerprint", "waiting", errors);
+    // The basis is half the rate key, so a directive carrying a malformed one
+    // would name a record the resume path cannot match.
+    if (typeof o.basis_fingerprint === "string" && !/^sha256:[0-9a-f]{64}$/.test(o.basis_fingerprint)) {
+      errors.push("waiting: basis_fingerprint must be a SHA-256 fingerprint");
+    }
   },
   "await-completion": (o, errors) => checkString(o, "reason", "await-completion", errors),
   "await-approval": (o, errors) => checkAwaitApproval(o, errors),

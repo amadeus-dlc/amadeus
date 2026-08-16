@@ -9,15 +9,20 @@ import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 
 import {
+  ALL_INTERACTION_KINDS,
+  CONSTRUCTION_AUTONOMY_MODE_FIELD,
   autonomyDigest,
+  firesWalkingSkeletonGate,
   autonomyScopeFingerprint,
   authorizeInteraction,
+  recommendationBasisFingerprint,
   createAutonomyProjection,
   createDecisionOptionEffectRegistry,
   createInteractionOccurrence,
   grantIssuanceDisplayDigest,
   nonFullCommandDisplayDigest,
   normalizeDecisionPolicies,
+  projectConstructionAutonomy,
   SEMI_ROUTINE_INTERACTIONS,
   type AutonomyMode,
   type AutonomyProjection,
@@ -28,6 +33,7 @@ import {
   type HumanAutonomyCommand,
   type InteractionKind,
   type SemiAuthorityScope,
+  type SkeletonStance,
   type WorkflowResult,
 } from "./amadeus-intent-autonomy.ts";
 import {
@@ -36,7 +42,18 @@ import {
   type AutonomyDecisionResult,
   type IntentAutonomyCoordinator,
 } from "./amadeus-intent-autonomy-runtime.ts";
-import { createAuditIntentAutonomyRepository } from "./amadeus-intent-autonomy-replay.ts";
+import {
+  createAuditIntentAutonomyRepository,
+  readIntentAutonomyTransactionsFromAudit,
+} from "./amadeus-intent-autonomy-replay.ts";
+import { resumeInterruption, type WaitingCause } from "./amadeus-waiting.ts";
+import {
+  RecommendationOutcome,
+  type Candidate,
+  type NonUniqueOutcome,
+  type UniqueOutcome,
+} from "./amadeus-recommendation.ts";
+import type { HoldReason } from "./amadeus-election-model.ts";
 import {
   createFirstPartyQualityContribution,
   emptyQualityPluginProjection,
@@ -67,24 +84,18 @@ import {
   splitAuditRecords,
   readAllAuditShards,
   readStateFile,
+  SKELETON_ON_SCOPES,
   setFieldStrict,
   setOrInsertField,
   withAuditLock,
   writeStateFile,
 } from "./amadeus-lib.ts";
 
-const ALL_INTERACTIONS: readonly InteractionKind[] = [
-  "stage-gate",
-  "phase-gate",
-  "walking-skeleton",
-  "question",
-];
-
 // What a mode auto-decides. Derived from the two existing constants rather than
 // restated, so the pair a semi Intent leaves to the human moves whenever
 // SEMI_ROUTINE_INTERACTIONS moves (FR-2b, BR-U1-7).
 function autoDecidedKinds(mode: AutonomyMode): readonly InteractionKind[] {
-  if (mode === "full") return ALL_INTERACTIONS;
+  if (mode === "full") return ALL_INTERACTION_KINDS;
   if (mode === "semi") return SEMI_ROUTINE_INTERACTIONS;
   return [];
 }
@@ -93,7 +104,40 @@ function autoDecidedKinds(mode: AutonomyMode): readonly InteractionKind[] {
 // is how a human sees, before granting, which gates stay theirs.
 export function nonAutoDecidedKinds(mode: AutonomyMode): readonly InteractionKind[] {
   const decided = autoDecidedKinds(mode);
-  return ALL_INTERACTIONS.filter((kind) => !decided.includes(kind));
+  return ALL_INTERACTION_KINDS.filter((kind) => !decided.includes(kind));
+}
+
+// The stance the walking-skeleton ceremony runs under (RFC-0001 FR-10). Reading
+// it needs state, which is why the resolution lives here and only the resolved
+// meaning lives in the pure layer.
+//
+// `scope-dependent`, an unrecognised value and an absent field all resolve
+// through SKELETON_ON_SCOPES — the same canonical mapping the engine's own
+// gate:"unresolved" fallback uses, so the two can never disagree about which
+// scopes are greenfield. A record this cannot read at all, or one with no Scope
+// row, keeps the ceremony with the human (R-20).
+function resolveSkeletonStance(stateContent: string | null): SkeletonStance {
+  if (stateContent === null) return "on";
+  const raw = getField(stateContent, "Skeleton Stance")?.trim().toLowerCase();
+  if (raw === "on" || raw === "off") return raw;
+  const scope = getField(stateContent, "Scope")?.trim();
+  if (!scope) return "on";
+  return SKELETON_ON_SCOPES.has(scope) ? "on" : "off";
+}
+
+export function skeletonGateFiresFor(stateContent: string | null): boolean {
+  return firesWalkingSkeletonGate(resolveSkeletonStance(stateContent));
+}
+
+// The state a projectDir currently holds, or null when there is none to read.
+// An unreadable record is a legitimate branch for the stance resolution above
+// (it falls to the human side); it is not an error to raise from here.
+function stateContentOrNull(projectDir: string): string | null {
+  try {
+    return readStateFile(projectDir);
+  } catch {
+    return null;
+  }
 }
 
 // Exported so a caller that builds its own option effects can prove, in a test
@@ -186,8 +230,21 @@ export function commitProductionIntentCompletion(input: CommitProductionIntentCo
   return "error" in result ? { ok: false, error: result.error } : { ok: true, result };
 }
 
-function interactionKind(input: { readonly walkingSkeleton: boolean; readonly phaseBoundary?: boolean }): InteractionKind {
-  if (input.walkingSkeleton) return "walking-skeleton";
+// The single point where a stage becomes an interaction KIND. Both call sites
+// that assemble `walkingSkeleton` (amadeus-state.ts's gate approval and
+// amadeus-orchestrate.ts's directive decoration) reach the ceremony through
+// here, and so does the refusal recorder below — which is why the stance gate
+// belongs here and not at either supply point (RFC-0001 R-17a). The suppliers
+// keep answering only "is this the first in-scope Construction stage?"; whether
+// that stage carries the ceremony is the stance's answer.
+interface InteractionKindInput {
+  readonly walkingSkeleton: boolean;
+  readonly phaseBoundary?: boolean;
+  readonly skeletonGateFires: boolean;
+}
+
+function interactionKind(input: InteractionKindInput): InteractionKind {
+  if (input.walkingSkeleton && input.skeletonGateFires) return "walking-skeleton";
   return input.phaseBoundary ? "phase-gate" : "stage-gate";
 }
 
@@ -198,6 +255,7 @@ interface OccurrenceInput {
   readonly graphRevision: string;
   readonly walkingSkeleton: boolean;
   readonly phaseBoundary?: boolean;
+  readonly skeletonGateFires: boolean;
 }
 
 function occurrence(input: OccurrenceInput) {
@@ -245,11 +303,16 @@ export function productionStageAutonomy(input: ProductionStageAutonomyInput): Pr
       qualityRepair: "disabled",
     };
   }
-  const authorization = authorizeProductionOccurrence(projection, occurrence({ ...input, projection }), "intent");
+  const skeletonGateFires = skeletonGateFiresFor(stateContentOrNull(input.projectDir));
+  const authorization = authorizeProductionOccurrence(
+    projection,
+    occurrence({ ...input, projection, skeletonGateFires }),
+    "intent",
+  );
   const qualityRepair = qualityState(projection);
   if (!authorization.authorized) {
     emitAuthorizationRefusal(input.projectDir, {
-      kind: interactionKind(input),
+      kind: interactionKind({ ...input, skeletonGateFires }),
       stage: input.stage,
       reason: authorization.reason,
       mode: projection.mode,
@@ -511,7 +574,7 @@ function grantScope(input: GrantScopeInput): GrantScopeDescriptor {
     intentUuid: input.projection.intentUuid,
     scopeId,
     ...fingerprints,
-    allowedInteractionKinds: ALL_INTERACTIONS,
+    allowedInteractionKinds: ALL_INTERACTION_KINDS,
     permissionBoundaryFingerprint: autonomyDigest("native-host-permission-boundary-v1"),
     prohibitedEffects: PROHIBITED_EFFECTS,
   };
@@ -710,7 +773,7 @@ function writeAutonomyStateProjection(
     withAuditLock(projectDir, () => {
       let updated = setOrInsertField(readStateFile(projectDir), "## Current Status", "Intent Autonomy Mode", mode);
       updated = setOrInsertField(updated, "## Current Status", "Intent Grant", projection.currentGrant?.grantId ?? "none");
-      updated = setFieldStrict(updated, "Construction Autonomy Mode", mode === "full" ? "autonomous" : "gated");
+      updated = setFieldStrict(updated, CONSTRUCTION_AUTONOMY_MODE_FIELD, projectConstructionAutonomy(mode));
       writeStateFile(projectDir, updated);
     });
   } catch (cause) {
@@ -781,6 +844,50 @@ export function applyProductionAutonomyMode(input: ApplyProductionAutonomyModeIn
   return writeAutonomyStateProjection(input.projectDir, input.mode, coordinator.readProjection());
 }
 
+export interface GateRecommendationContext {
+  readonly stage: string;
+  readonly approvalOptionId: string;
+  readonly walkingSkeleton: boolean;
+  readonly scopeFingerprint: string;
+  readonly normFingerprint: string;
+}
+
+// A stage gate offers no alternative to approval: the states that must not pass
+// (an unresolved blocking sensor, a norm conflict) are refused upstream by the
+// existing fail-closed paths, never presented here as a rival candidate. So the
+// derivation is total and always unique — which is exactly what the type says.
+export function deriveGateRecommendation(context: GateRecommendationContext): UniqueOutcome {
+  return RecommendationOutcome.unique(context.approvalOptionId, {
+    source: "norm",
+    fingerprint: recommendationBasisFingerprint({
+      source: "norm",
+      selector: `stage-gate:${context.stage}`,
+      optionIds: [context.approvalOptionId],
+      evidence: [
+        context.scopeFingerprint,
+        context.normFingerprint,
+        `walking-skeleton:${context.walkingSkeleton}`,
+      ],
+    }),
+  });
+}
+
+export interface ElectionHold {
+  readonly hold: HoldReason;
+  readonly candidates: readonly Candidate[];
+}
+
+// RFC-0001 Q1=A: an election that did not settle is never rounded up into a
+// choice. Four of the five hold reasons still leave live positions on the
+// table and are contested; a short quorum leaves no supported position at all,
+// so it degrades to `none` — as does any hold whose candidates could not be
+// enumerated.
+export function electionHoldOutcome(hold: ElectionHold): NonUniqueOutcome {
+  const reason = `election-${hold.hold}`;
+  if (hold.hold === "quorum-short" || hold.candidates.length < 2) return RecommendationOutcome.none(reason);
+  return RecommendationOutcome.contested(hold.candidates, reason);
+}
+
 interface CommitProductionStageGateDecisionInput {
   readonly projectDir: string;
   readonly stateContent: string;
@@ -798,7 +905,7 @@ export function commitProductionStageGateDecision(input: CommitProductionStageGa
   if (resolved === null) return { kind: "not-authorized", reason: "active-intent-required" };
   const coordinator = coordinatorFor(input.projectDir, resolved);
   const projection = coordinator.readProjection();
-  const target = occurrence({ ...input, projection });
+  const target = occurrence({ ...input, projection, skeletonGateFires: skeletonGateFiresFor(input.stateContent) });
   const scopeId = getField(input.stateContent, "Scope") ?? "intent";
   const authorization = authorizeProductionOccurrence(projection, target, scopeId);
   if (!authorization.authorized) return { kind: "not-authorized", reason: authorization.reason };
@@ -822,6 +929,13 @@ export function commitProductionStageGateDecision(input: CommitProductionStageGa
     revision: autonomyDigest(effect),
     effects: [effect],
   });
+  const gateRecommendation = deriveGateRecommendation({
+    stage: input.stage,
+    approvalOptionId: "approve",
+    walkingSkeleton: input.walkingSkeleton,
+    scopeFingerprint,
+    normFingerprint,
+  });
   const result = coordinator.decide({
     occurrence: target,
     actorId: "amadeus-engine",
@@ -832,8 +946,8 @@ export function commitProductionStageGateDecision(input: CommitProductionStageGa
     pastHumanRulings: [],
     capability: {
       soloElectionAvailable: false,
-      elect: () => ({ optionId: "approve", evidenceFingerprint: autonomyDigest("unreachable-election") }),
-      recommend: () => ({ optionId: "approve", evidenceFingerprint: autonomyDigest("stage-gate-default") }),
+      elect: () => gateRecommendation,
+      recommend: () => gateRecommendation,
       unavailableReason: "stage-gate-is-deterministic",
     },
     semiScope: semiAuthorityScope(projection.intentUuid, scopeId),
@@ -855,7 +969,15 @@ export interface ProductionQuestionDecisionInput {
   readonly recommendedOptionId: string;
   readonly applicableNormFacts?: readonly DecisionFact[];
   readonly pastHumanRulings?: readonly DecisionFact[];
-  readonly election?: { readonly optionId: string; readonly evidenceFingerprint: string };
+  // A solo election either settled on one option or held. Both are results;
+  // only the first can be adopted without a human.
+  readonly election?:
+    | { readonly optionId: string; readonly evidenceFingerprint: string }
+    | ElectionHold;
+  // An agent that could not single out one option says so here, in the same
+  // wire shape `RecommendationOutcome.parse` reads, instead of being forced to
+  // name `recommendedOptionId` as though it were sure.
+  readonly recommendation?: unknown;
   // Per-option effect classification. A question whose options are all ordinary
   // workflow moves needs none — the default is `workflow-reversible`, which is
   // what every caller before #2253 relied on. A caller whose option space
@@ -898,6 +1020,10 @@ export function commitProductionQuestionDecision(input: ProductionQuestionDecisi
     };
   });
   const registry = createDecisionOptionEffectRegistry({ revision: autonomyDigest(effects), effects });
+  const recommendation = questionRecommendation(input);
+  if (recommendation === null) {
+    return { kind: "human-required", reason: "invalid-recommendation-input", result: null };
+  }
   return coordinator.decide({
     occurrence: target,
     actorId: "amadeus-conductor",
@@ -908,18 +1034,45 @@ export function commitProductionQuestionDecision(input: ProductionQuestionDecisi
     pastHumanRulings: input.pastHumanRulings ?? [],
     capability: {
       soloElectionAvailable: input.election !== undefined,
-      elect: () => input.election ?? {
-        optionId: input.recommendedOptionId,
-        evidenceFingerprint: autonomyDigest("unavailable-election"),
-      },
-      recommend: () => ({
-        optionId: input.recommendedOptionId,
-        evidenceFingerprint: autonomyDigest({ questionId: input.questionId, optionId: input.recommendedOptionId }),
-      }),
+      // Guarded by soloElectionAvailable above: the coordinator never calls
+      // elect without it (amadeus-intent-autonomy.ts:1074).
+      elect: () => questionElection(input.election as NonNullable<typeof input.election>),
+      recommend: () => recommendation,
       unavailableReason: input.election === undefined ? "native-solo-election-result-unavailable" : null,
     },
     semiScope: semiAuthorityScope(projection.intentUuid, "intent"),
   });
+}
+
+// The coordinator only invokes `elect` when `soloElectionAvailable` is true
+// (amadeus-intent-autonomy.ts:1074), so the election is present by
+// construction here — the caller narrows it before building the closure.
+function questionElection(
+  election: NonNullable<ProductionQuestionDecisionInput["election"]>,
+): RecommendationOutcome {
+  return "hold" in election
+    ? electionHoldOutcome(election)
+    : RecommendationOutcome.unique(election.optionId, {
+      source: "election",
+      fingerprint: election.evidenceFingerprint,
+    });
+}
+
+// A supplied recommendation arrives as untrusted JSON, so it is parsed rather
+// than trusted; a malformed one refuses the whole decision instead of quietly
+// falling back to the single-option shape.
+function questionRecommendation(input: ProductionQuestionDecisionInput): RecommendationOutcome | null {
+  if (input.recommendation === undefined) {
+    // A blank option id would trip the smart constructor's throw; refuse the
+    // decision through the same invalid-recommendation-input arm instead.
+    if (input.recommendedOptionId.trim().length === 0) return null;
+    return RecommendationOutcome.unique(input.recommendedOptionId, {
+      source: "agent",
+      fingerprint: autonomyDigest({ questionId: input.questionId, optionId: input.recommendedOptionId }),
+    });
+  }
+  const parsed = RecommendationOutcome.parse(input.recommendation);
+  return parsed.ok ? parsed.value : null;
 }
 
 export interface ProductionQualityObservationInput {
@@ -1126,6 +1279,115 @@ export function admitProductionStageFailure(
   // rather than announce a stop nobody can resume.
   const stall = readProductionRepairStall(input.projectDir);
   return stall === null ? { kind: "error", reason: "repair-stall-envelope-missing" } : { kind: "parked", stall };
+}
+
+export interface ProductionWaitingStop {
+  readonly stage: string;
+  readonly occurrenceId: string;
+  readonly transactionId: string;
+  readonly resumeConditionIdentity: string;
+  readonly cause: WaitingCause;
+}
+
+/** The stage the record is currently on, for the marker's Stage attribute. */
+function currentStageOf(projectDir: string): string {
+  return getField(readStateFile(projectDir), "Current Stage") ?? "";
+}
+
+// Lifecycle marker for a waiting transition. The transaction is already
+// committed by the time this runs, so a shard that cannot be written must not
+// undo it — the ledger is the record and this is its human-readable projection.
+// Same lazy require and same fail-open rationale as emitAuthorizationRefusal.
+function emitWaitingMarker(
+  projectDir: string,
+  event: string,
+  emit: (emitAuditEvent: typeof EmitAuditEvent) => ReturnType<typeof EmitAuditEvent>,
+): void {
+  try {
+    const otel = require("../otel/audit-emit.ts") as { emitAuditEvent: typeof EmitAuditEvent };
+    const result = emit(otel.emitAuditEvent);
+    if (!result.appended) console.error(`amadeus: could not record ${event} — the transaction ledger is unaffected`);
+  } catch (cause) {
+    console.error(
+      `amadeus: could not record ${event} — the transaction ledger is unaffected: ${cause instanceof Error ? cause.message : String(cause)}`,
+    );
+    return;
+  }
+}
+
+// Enter waiting on the active Intent (RFC-0001 FR-3). Engine-internal by
+// construction: no CLI verb reaches it, because "stop and wait for a ruling"
+// being invocable at will is the self-park move the rate constraint exists to
+// catch. Refusals leave the record untouched — a malformed cause or an
+// over-rate arrival must not half-suspend the workflow.
+export function enterProductionWaiting(
+  projectDir: string,
+  cause: WaitingCause,
+): { readonly waitingId: string; readonly stage: string } | { readonly error: string } {
+  const resolved = resolveIntent(projectDir);
+  if (resolved === null) return { error: "no-active-intent" };
+  const entered = coordinatorFor(projectDir, resolved).enterWaiting({ cause });
+  if ("error" in entered) return { error: entered.error };
+  const stage = currentStageOf(projectDir);
+  emitWaitingMarker(projectDir, "WORKFLOW_WAITING_ENTERED", (emitAuditEvent) =>
+    emitAuditEvent("WORKFLOW_WAITING_ENTERED", {
+      Stage: stage,
+      "Occurrence Id": cause.occurrenceId,
+      "Basis Fingerprint": cause.basisFingerprint,
+      "Transaction Id": entered.waitingId,
+      Timestamp: new Date().toISOString(),
+    }, projectDir));
+  return { waitingId: entered.waitingId, stage };
+}
+
+// What a waiting suspension left behind. The envelope supplies the identifiers
+// and the transaction it names supplies the cause; neither half is enough
+// alone, and a missing half is null rather than a partial reconstruction.
+export function readProductionWaitingStop(projectDir: string): ProductionWaitingStop | null {
+  const resolved = resolveIntent(projectDir);
+  if (resolved === null) return null;
+  const coordinator = coordinatorFor(projectDir, resolved);
+  const envelope = coordinator.readProjection().parkEnvelope;
+  if (envelope === null || envelope.reason !== "AWAITING_RULING") return null;
+  const dispatch = resumeInterruption({
+    parked: false,
+    parkedAtStage: null,
+    envelope,
+    transactions: readIntentAutonomyTransactionsFromAudit(projectDir, resolved.intentDir, resolved.space),
+  });
+  if (!dispatch.ok || dispatch.value.kind !== "waiting") return null;
+  return {
+    stage: currentStageOf(projectDir),
+    occurrenceId: envelope.triggerOccurrenceId,
+    transactionId: envelope.parkTransactionId,
+    resumeConditionIdentity: envelope.resumeCondition.identity,
+    cause: dispatch.value.cause,
+  };
+}
+
+// Close a waiting record. The ruling itself is the human's; this is the half
+// that records that one was made, which is also what releases the rate key so
+// the same point may legitimately wait again later.
+export function resumeProductionWaiting(
+  projectDir: string,
+): { readonly waitingId: string } | { readonly error: string } {
+  const resolved = resolveIntent(projectDir);
+  if (resolved === null) return { error: "no-active-intent" };
+  const coordinator = coordinatorFor(projectDir, resolved);
+  const envelope = coordinator.readProjection().parkEnvelope;
+  if (envelope === null || envelope.reason !== "AWAITING_RULING") return { error: "no-waiting-record" };
+  const resumed = coordinator.resumeWaiting({
+    waitingId: envelope.parkTransactionId,
+    satisfiedConditionIdentity: envelope.resumeCondition.identity,
+  });
+  if ("error" in resumed) return { error: resumed.error };
+  emitWaitingMarker(projectDir, "WORKFLOW_WAITING_RESUMED", (emitAuditEvent) =>
+    emitAuditEvent("WORKFLOW_WAITING_RESUMED", {
+      Stage: currentStageOf(projectDir),
+      "Transaction Id": envelope.parkTransactionId,
+      Timestamp: new Date().toISOString(),
+    }, projectDir));
+  return { waitingId: envelope.parkTransactionId };
 }
 
 export interface ProductionRepairStall {

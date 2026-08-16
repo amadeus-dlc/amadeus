@@ -136,14 +136,14 @@ export const MIRROR_USER_CONTRACT = {
   // Project board sync. The targets leaf names the boards an Intent syncs to;
   // it resolves per key, so a layer that carries it replaces the previous
   // layer's list outright and never merges into it, and it is independent of
-  // the issue-mode leaf (the mode decides whether an operation runs at all).
+  // the issue-consent leaf (the consent decides whether an operation runs at all).
   projectConfig: {
     key: "intent-mirror.github.project.targets",
     shape:
       'array of { project: "<owner>/<number>", phase-field?: string, status-names?: { <phase>: string } }',
     phaseKeys: ["ideation", "inception", "construction", "operation", "done"],
     layerResolution: "last-layer-with-a-value-replaces",
-    independentOf: "intent-mirror.github.issue.mode",
+    independentOf: "intent-mirror.github.issue.consent",
     phaseField: {
       key: "phase-field",
       default: MIRROR_PROJECT_FIELD_CONTRACT.lifecycle.defaultField,

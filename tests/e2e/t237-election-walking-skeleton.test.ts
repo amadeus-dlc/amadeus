@@ -8,6 +8,12 @@ import { spawnSync } from "bun";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { applyProductionAutonomyMode } from "../../packages/framework/core/tools/amadeus-intent-autonomy-production.ts";
+import { mintHumanPresence } from "../../packages/framework/core/tools/amadeus-presence-reservation.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
+import { createTestProject, FIXTURES_DIR, seededStateFile, seedStateFile } from "../harness/fixtures.ts";
+
+const CONSTRUCTION = join(FIXTURES_DIR, "state-construction.md");
 
 const SCRIPT = join(
   import.meta.dir,
@@ -121,15 +127,28 @@ describe("t237 election walking skeleton (e2e)", () => {
   });
 
   test("an automatic failure election records a tie hold and routes to the human fallback", () => {
-    const projectDir = mkdtempSync(join(tmpdir(), "failure-election-e2e-"));
+    const projectDir = createTestProject();
     try {
       mkdirSync(join(projectDir, "amadeus", "spaces", "default", "elections"), {
         recursive: true,
       });
-      writeFileSync(
-        join(projectDir, "amadeus", "config.json"),
-        JSON.stringify({ "solo-election": { trigger: { mode: "auto" } } }),
-      );
+      // RFC-0001 ADR-8: the solo auto-election trigger is DERIVED from the
+      // declared Intent Autonomy Mode (deriveSoloElectionTrigger: "semi"/"full"
+      // -> "auto"), not read from config any more. Declare it through the real
+      // production API so the spawned CLI's readProductionAutonomyProjection
+      // (audit-sourced, not a bare state-file field read) actually observes it.
+      seedStateFile(projectDir, CONSTRUCTION);
+      resetOtelPerProject();
+      mintHumanPresence({
+        projectDir,
+        capability: { kind: "unavailable", reason: "t237 e2e fixture" },
+      });
+      const applied = applyProductionAutonomyMode({
+        projectDir,
+        stateContent: readFileSync(seededStateFile(projectDir), "utf-8"),
+        mode: "semi",
+      });
+      if (!applied.ok) throw new Error(`semi declaration failed: ${applied.error}`);
       const definition = join(projectDir, "failure-definition.json");
       writeFileSync(
         definition,

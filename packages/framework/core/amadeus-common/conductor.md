@@ -98,8 +98,9 @@ vs *within* a stage (you loop on your own). Inside one stage you still own:
   1. The deviation amounts to a user-visible spec change → it is ALWAYS the
      user's call, whatever the config says. Do not open an election; take it
      to the user for a ruling.
-  2. Otherwise, in solo mode, when the layered config (`amadeus/config.json`
-     → space → intent) resolves `solo-election.trigger.mode` to `auto`, put the
+  2. Otherwise, in solo mode, when the Intent Autonomy Mode
+     derives an `auto` solo-election trigger (`semi` / `full`; `none` derives
+     `manual`), put the
      deviation to an election: write a definition JSON carrying `schemaVersion: 2`,
      `electionId`, `kind`, `voters` and a one-element `questions[]` whose entry sets `questionId` to the fixed id
      `q-design-deviation`, `text` to the deviation summary, and `choices` mapped
@@ -109,7 +110,7 @@ vs *within* a stage (you loop on your own). Inside one stage you still own:
      — `--file` is REQUIRED (without it the CLI exits 2 on usage and no trigger
      is evaluated). On `{"opened":null,"reason":"solo-election-manual-trigger-required"}`
      no election is created and the deviation goes to the user for a ruling.
-  3. Otherwise (team mode, or the config is unset or `manual`): do not open an
+  3. Otherwise (team mode, or an Intent mode of `none` deriving `manual`): do not open an
      election from this hook; stop and take the deviation to the user for a
      ruling (in team mode, through the team's own decision protocol).
 - **Keep / Modify / Redo** — when the user requests changes at a gate, decide

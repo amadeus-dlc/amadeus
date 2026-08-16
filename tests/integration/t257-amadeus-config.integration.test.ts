@@ -44,8 +44,8 @@ function writeConfig(path: string, value: unknown): void {
   writeFileSync(path, `${JSON.stringify(value)}\n`, "utf-8");
 }
 
-function mirror(mode: unknown): unknown {
-  return { "intent-mirror": { github: { issue: { mode } } } };
+function mirror(consent: unknown): unknown {
+  return { "intent-mirror": { github: { issue: { consent } } } };
 }
 
 function setActiveSpace(root: string, space: string): void {
@@ -75,7 +75,7 @@ describe("t257 resolve against real files", () => {
     const outcome = resolveAmadeusConfig(project(), INTENT);
     expect(outcome.kind).toBe("resolved");
     if (outcome.kind === "resolved") {
-      expect(outcome.config.intentMirror.github.issue.mode).toBe("prompt");
+      expect(outcome.config.intentMirror.github.issue.consent).toBe("prompt");
       expect(outcome.sources).toEqual([]);
     }
   });
@@ -89,7 +89,7 @@ describe("t257 resolve against real files", () => {
     const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("resolved");
     if (outcome.kind === "resolved") {
-      expect(outcome.config.intentMirror.github.issue.mode).toBe("auto");
+      expect(outcome.config.intentMirror.github.issue.consent).toBe("auto");
     }
   });
 
@@ -128,7 +128,7 @@ describe("t257 resolve against real files", () => {
     const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("resolved");
     if (outcome.kind === "resolved") {
-      expect(outcome.config.intentMirror.github.issue.mode).toBe("auto");
+      expect(outcome.config.intentMirror.github.issue.consent).toBe("auto");
     }
   });
 
@@ -138,7 +138,7 @@ describe("t257 resolve against real files", () => {
     const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("resolved");
     if (outcome.kind === "resolved") {
-      expect(outcome.config.intentMirror.github.issue.mode).toBe("auto");
+      expect(outcome.config.intentMirror.github.issue.consent).toBe("auto");
       expect(outcome.sources).toEqual([
         join("amadeus", "spaces", "default", "intents", INTENT, "config.json"),
       ]);
@@ -152,7 +152,7 @@ describe("t257 resolve against real files", () => {
     const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("resolved");
     if (outcome.kind === "resolved") {
-      expect(outcome.config.intentMirror.github.issue.mode).toBe("auto");
+      expect(outcome.config.intentMirror.github.issue.consent).toBe("auto");
     }
   });
 

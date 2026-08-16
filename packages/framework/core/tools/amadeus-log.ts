@@ -18,12 +18,11 @@ import {
   hasOpenGate,
   humanActedSinceLastAnswer,
   humanPresenceGuardDisabled,
-  isAutonomousMode,
   resolveProjectDir,
   splitAuditRecords,
   stateFilePath,
 } from "./amadeus-lib.js";
-import type { AutonomyMode } from "./amadeus-intent-autonomy.ts";
+import { declaredIntentAutonomyMode, type AutonomyMode } from "./amadeus-intent-autonomy.ts";
 import { decodeIntentAutonomyTransaction } from "./amadeus-intent-autonomy-replay.ts";
 
 // Resolve the project dir AND assert that an active workflow exists before any
@@ -275,8 +274,12 @@ function handleAnswer(args: string[]): void {
       "Refusing to record this answer: an approval gate is open. Approval and rejection responses must resolve the gate directly via amadeus-orchestrate.ts report or amadeus-state.ts reject; no QUESTION_ANSWERED event was emitted."
     );
   }
-  if (isAutonomousMode(content)) {
-    // autonomous Construction: no human presence required
+  if (declaredIntentAutonomyMode(content) === "full") {
+    // full autonomy: nobody is watching this run, so there is no human turn to
+    // wait for. Bound to the DECLARED Intent mode, not to the Construction
+    // projection: semi projects to autonomous too (RFC-0001 FR-6) but keeps its
+    // human milestones, and reading the projection here would switch the
+    // presence guard off for every semi answer.
   } else if (humanPresenceGuardDisabled()) {
     // scoped test off-switch
   } else if (!humanActedSinceLastAnswer(pd)) {

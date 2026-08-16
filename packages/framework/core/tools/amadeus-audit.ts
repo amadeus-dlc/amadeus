@@ -58,7 +58,7 @@ export type AppendAuditResult =
   | { appended: true; event: string; timestamp: string }
   | { appended: false; reason: "intent-complete" | "fatal-latch"; event: string; timestamp: string };
 
-// --- Canonical event types (85) ---
+// --- Canonical event types (98) ---
 // See docs/reference/12-state-machine.md for the state transitions that emit each event.
 
 const VALID_EVENT_TYPES = new Set([
@@ -81,6 +81,8 @@ const VALID_EVENT_TYPES = new Set([
   "WORKFLOW_COMPLETED",
   "WORKFLOW_PARKED",
   "WORKFLOW_UNPARKED",
+  "WORKFLOW_WAITING_ENTERED",
+  "WORKFLOW_WAITING_RESUMED",
   "INTENT_ARCHIVED",
   "INTENT_UNARCHIVED",
   "GOAL_CHANGE_PROPOSED",
@@ -158,7 +160,11 @@ const VALID_EVENT_TYPES = new Set([
   // Error/Recovery
   "ERROR_LOGGED",
   "RECOVERY_COMPLETED",
-  // Construction Bolt execution
+  // Construction Bolt execution — UNIT_OUTCOME_SETTLED is the per-unit
+  // `run-stage` path's outcome row (#3099), emitted by the engine at a Unit's
+  // coverage boundary. It is a SEPARATE stream from the swarm path's
+  // UNIT_POOL_EVENT_SET_COMMITTED, which keeps its C2 single-writer contract.
+  "UNIT_OUTCOME_SETTLED",
   "BOLT_STARTED",
   "BOLT_COMPLETED",
   "BOLT_FAILED",
@@ -183,6 +189,10 @@ const VALID_EVENT_TYPES = new Set([
   "MERGE_DISPATCH_INVOKED",
   "MERGE_DISPATCH_RETURNED",
   "MERGE_DISPATCH_FALLBACK",
+  // Delegated merge provenance (C11/FR-9): a record-only fact, distinct from
+  // the Bolt-internal *_MERGED trio and from MERGE_DISPATCH_* (see business-
+  // logic-model.md reality-check — none of those cover a GitHub PR merge).
+  "DELEGATED_MERGE_RECORDED",
   // Sensors (emitters wired by sensor dispatcher for SENSOR_*; doctor for
   // GUARDRAIL_LOADED)
   "SENSOR_FIRED",
@@ -191,10 +201,14 @@ const VALID_EVENT_TYPES = new Set([
   "SENSOR_BUDGET_OVERRIDE",
   "GUARDRAIL_LOADED",
   // Learning Loop (MEMORY_EMPTY emitter wired by amadeus-runtime.ts compile;
-  // RULE_LEARNED + SENSOR_PROPOSED emitters wired by amadeus-learnings.ts persist)
+  // RULE_LEARNED + SENSOR_PROPOSED emitters wired by amadeus-learnings.ts persist;
+  // LEARNING_ZERO_CONFIRMED + LEARNING_CANDIDATE_ADDED emitters wired by
+  // amadeus-learnings.ts confirm-zero / add-candidate — unit s13-zero, ADR-6)
   "MEMORY_EMPTY",
   "RULE_LEARNED",
   "SENSOR_PROPOSED",
+  "LEARNING_ZERO_CONFIRMED",
+  "LEARNING_CANDIDATE_ADDED",
   // Swarm lifecycle — UNIT_POOL_EVENT_SET_COMMITTED emits from the C2
   // single-writer tools/amadeus-unit-pool-runtime.ts; the remaining six
   // SWARM_* events emit from the swarm referee amadeus-swarm.ts (the per-Unit
@@ -231,6 +245,8 @@ export const EVENT_HEADINGS: Record<string, string> = {
   WORKFLOW_COMPLETED: "Workflow Completion",
   WORKFLOW_PARKED: "Workflow Parked",
   WORKFLOW_UNPARKED: "Workflow Unparked",
+  WORKFLOW_WAITING_ENTERED: "Workflow Waiting Entered",
+  WORKFLOW_WAITING_RESUMED: "Workflow Waiting Resumed",
   INTENT_ARCHIVED: "Intent Archived",
   INTENT_UNARCHIVED: "Intent Unarchived",
   GOAL_CHANGE_PROPOSED: "Goal Change Proposed",
@@ -276,6 +292,7 @@ export const EVENT_HEADINGS: Record<string, string> = {
   RECOMPOSED: "Plan Recomposed",
   ERROR_LOGGED: "Error Logged",
   RECOVERY_COMPLETED: "Recovery Completed",
+  UNIT_OUTCOME_SETTLED: "Unit Outcome Settled",
   BOLT_STARTED: "Bolt Started",
   BOLT_COMPLETED: "Bolt Completed",
   BOLT_FAILED: "Bolt Failed",
@@ -294,6 +311,7 @@ export const EVENT_HEADINGS: Record<string, string> = {
   MERGE_DISPATCH_INVOKED: "Merge Dispatch Invoked",
   MERGE_DISPATCH_RETURNED: "Merge Dispatch Returned",
   MERGE_DISPATCH_FALLBACK: "Merge Dispatch Fallback",
+  DELEGATED_MERGE_RECORDED: "Delegated Merge Recorded",
   SENSOR_FIRED: "Sensor Fired",
   SENSOR_PASSED: "Sensor Passed",
   SENSOR_FAILED: "Sensor Failed",
@@ -302,6 +320,8 @@ export const EVENT_HEADINGS: Record<string, string> = {
   MEMORY_EMPTY: "Memory Empty",
   RULE_LEARNED: "Rule Learned",
   SENSOR_PROPOSED: "Sensor Proposed",
+  LEARNING_ZERO_CONFIRMED: "Learning Zero Confirmed",
+  LEARNING_CANDIDATE_ADDED: "Learning Candidate Added",
   SWARM_STARTED: "Swarm Started",
   SWARM_UNIT_CONVERGED: "Swarm Unit Converged",
   SWARM_UNIT_FAILED: "Swarm Unit Failed",
@@ -1247,6 +1267,69 @@ function orphanDeltaDetail(entriesMerged: number, mainAuditPath: string): string
   return `orphan delta (${entriesMerged} record(s)) is in ${mainAuditPath} with no AUDIT_MERGED row`;
 }
 
+// --- Subcommand: record-delegated-merge (C11, FR-9) ---
+//
+// team.md's standing merge-approval norm (cid:ci-pipeline:standing-merge-
+// approval-ci-green) is the sole source of truth for the DELEGATION
+// CONDITION (required CI green AND pr-convergence converged:true). This
+// function does not decide or perform a merge — it records, after the fact,
+// that a delegated merge whose condition the caller already verified took
+// place. Record-only (R-2/R-3): no git/GitHub side effect ever happens here.
+export type DelegatedMergeEvidence = {
+  readonly standingRulingRef: string;
+  readonly ciConclusion: string;
+  readonly convergedDigest: string;
+};
+
+export type AuditReceipt = {
+  readonly eventId: string;
+  readonly committedAt: string;
+};
+
+export type RecordDelegatedMergeRefusal = {
+  readonly kind: "evidence-incomplete";
+  readonly missingField: keyof DelegatedMergeEvidence;
+};
+
+export type RecordDelegatedMergeResult =
+  | { readonly ok: true; readonly receipt: AuditReceipt }
+  | { readonly ok: false; readonly error: RecordDelegatedMergeRefusal };
+
+// Evidence field -> its audit row label, in emission order.
+const DELEGATED_MERGE_FIELDS: ReadonlyArray<readonly [keyof DelegatedMergeEvidence, string]> = [
+  ["standingRulingRef", "Standing Ruling Ref"],
+  ["ciConclusion", "CI Conclusion"],
+  ["convergedDigest", "Converged Digest"],
+];
+
+export function recordDelegatedMerge(
+  evidence: DelegatedMergeEvidence,
+  projectDir: string,
+  intent?: string,
+  space?: string
+): RecordDelegatedMergeResult {
+  for (const [key] of DELEGATED_MERGE_FIELDS) {
+    if (evidence[key].trim().length === 0) {
+      return { ok: false, error: { kind: "evidence-incomplete", missingField: key } };
+    }
+  }
+  const fields: Record<string, string> = {};
+  for (const [key, label] of DELEGATED_MERGE_FIELDS) fields[label] = evidence[key];
+
+  // Same fail-closed-on-latch pattern as handleAuditFork/handleAuditMerge:
+  // refuse before the emit rather than let a suppressed row silently mint a
+  // "committed" receipt for nothing.
+  assertMutationAllowed();
+  const result = emitCanonicalAuditEvent("DELEGATED_MERGE_RECORDED", fields, projectDir, intent, space);
+  if (result.appended === false) {
+    if (result.reason === "fatal-latch") assertMutationAllowed();
+    throw new Error(
+      `recordDelegatedMerge: DELEGATED_MERGE_RECORDED emit dropped (reason=${result.reason}) — no audit row landed`
+    );
+  }
+  return { ok: true, receipt: { eventId: result.event, committedAt: result.timestamp } };
+}
+
 // --- Presence/provenance CLI minting guard ---
 //
 // HUMAN_TURN, DELEGATED_APPROVAL and DELEGATED_REJECTION are the trust anchors of
@@ -1265,6 +1348,10 @@ const PRESENCE_PROTECTED_EVENTS = new Set([
   "HUMAN_TURN",
   "DELEGATED_APPROVAL",
   "DELEGATED_REJECTION",
+  // Delegated-merge provenance rows are only trustworthy when the validated
+  // writer (recordDelegatedMerge) minted them — a generic append would bypass
+  // its non-empty-evidence refusal.
+  "DELEGATED_MERGE_RECORDED",
   // Legacy event shapes remain read-only. Refuse new rows so fabricated history
   // cannot influence replay or migration projections.
   "GRANT_ISSUED",

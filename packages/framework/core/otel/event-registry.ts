@@ -45,6 +45,7 @@ export type EventCategory =
   | "worktree"
   | "practices"
   | "merge-dispatch"
+  | "merge-provenance"
   | "sensor"
   | "learning"
   | "swarm"
@@ -76,7 +77,9 @@ export type EventDef = {
 
 // The canonical cardinality (#1672). The drift guard pins this so an emptied
 // or truncated registry fails instead of passing vacuously.
-export const EXPECTED_CANONICAL_COUNT = 92;
+// +LEARNING_ZERO_CONFIRMED +LEARNING_CANDIDATE_ADDED (unit s13-zero, ADR-6)
+// +DELEGATED_MERGE_RECORDED (unit merge-provenance, ADR-10) take it to 96.
+export const EXPECTED_CANONICAL_COUNT = 98;
 
 // The OTel semantic-convention span event name produced by recordException().
 // Registered as telemetry (FR-EVT-7): it rides the span record, never the
@@ -130,6 +133,29 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "workflow-lifecycle",
     requiredAttributes: [],
+    optionalAttributes: ["Timestamp"],
+    schemaVersion: 1,
+  },
+  // RFC-0001 FR-3 / ADR-4 — waiting is a terminal of its own, so it gets
+  // markers of its own rather than borrowing park's. Both carry identifiers
+  // only: `Transaction Id` points at the Intent autonomy transaction that holds
+  // the WaitingCause, and the cause never appears here (a second copy of it
+  // could disagree with the ledger, and the ledger is the truth).
+  {
+    name: "amadeus.workflow.waiting.entered",
+    auditEvent: "WORKFLOW_WAITING_ENTERED",
+    durability: "canonical",
+    category: "workflow-lifecycle",
+    requiredAttributes: ["Stage", "Occurrence Id", "Basis Fingerprint", "Transaction Id"],
+    optionalAttributes: ["Timestamp"],
+    schemaVersion: 1,
+  },
+  {
+    name: "amadeus.workflow.waiting.resumed",
+    auditEvent: "WORKFLOW_WAITING_RESUMED",
+    durability: "canonical",
+    category: "workflow-lifecycle",
+    requiredAttributes: ["Stage", "Transaction Id"],
     optionalAttributes: ["Timestamp"],
     schemaVersion: 1,
   },
@@ -696,7 +722,21 @@ export const REGISTERED_EVENTS = [
     optionalAttributes: ["Reason"],
     schemaVersion: 1,
   },
-  // --- Construction Bolt Events (4) ---
+  // --- Construction Bolt Events (5) ---
+  {
+    // The per-unit `run-stage` path's own outcome row (#3099). The Unit pool
+    // stream is the swarm path's ledger; a units-generation scope that never
+    // swarms dispatches unit by unit through the engine, and this is where that
+    // route records a Unit's settled outcome. Deliberately NOT folded into the
+    // pool's batchId namespace: the pool keeps its single-writer contract.
+    name: "amadeus.unit.outcome.settled",
+    auditEvent: "UNIT_OUTCOME_SETTLED",
+    durability: "canonical",
+    category: "bolt",
+    requiredAttributes: ["Stage", "Unit", "Batch", "Outcome", "Idempotency Key"],
+    optionalAttributes: [],
+    schemaVersion: 1,
+  },
   {
     name: "amadeus.bolt.started",
     auditEvent: "BOLT_STARTED",
@@ -874,6 +914,18 @@ export const REGISTERED_EVENTS = [
     optionalAttributes: [],
     schemaVersion: 1,
   },
+  // --- Delegated Merge Provenance (1) --- (C11/FR-9: record-only fact that a
+  // team.md standing-ruling-delegated merge happened; NOT a merge-dispatch
+  // strategy selection and NOT a Bolt-internal worktree merge.)
+  {
+    name: "amadeus.delegated.merge",
+    auditEvent: "DELEGATED_MERGE_RECORDED",
+    durability: "canonical",
+    category: "merge-provenance",
+    requiredAttributes: ["Standing Ruling Ref", "CI Conclusion", "Converged Digest"],
+    optionalAttributes: [],
+    schemaVersion: 1,
+  },
   // --- Sensor Events (5) ---
   {
     name: "amadeus.sensor.fired",
@@ -945,6 +997,30 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "learning",
     requiredAttributes: ["Stage", "Candidate-ID", "Sensor ID", "Manifest path", "Matches", "Destinations", "Source"],
+    optionalAttributes: [],
+    schemaVersion: 1,
+  },
+  {
+    // unit s13-zero (ADR-6, R-1/R-2/R-5): the sole machine-checkable basis
+    // for a §13 "0 件" confirmation — the surfaceDigest bound at surface
+    // time. Emitted only when confirmZeroCandidates mints a ZeroReceipt.
+    name: "amadeus.learning.zero_confirmed",
+    auditEvent: "LEARNING_ZERO_CONFIRMED",
+    durability: "canonical",
+    category: "learning",
+    requiredAttributes: ["Stage", "Surface Digest", "Confirmed At"],
+    optionalAttributes: [],
+    schemaVersion: 1,
+  },
+  {
+    // unit s13-zero (ADR-6, R-3/R-4/R-5): the conductor's additive-only
+    // candidate, gated on disk evidence. "Surface Digest" ties the addition
+    // to the surface snapshot it was layered on top of.
+    name: "amadeus.learning.candidate_added",
+    auditEvent: "LEARNING_CANDIDATE_ADDED",
+    durability: "canonical",
+    category: "learning",
+    requiredAttributes: ["Stage", "Candidate-ID", "Disk Evidence Path", "Surface Digest"],
     optionalAttributes: [],
     schemaVersion: 1,
   },

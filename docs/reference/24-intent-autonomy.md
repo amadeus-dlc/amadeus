@@ -20,11 +20,32 @@ mean.
 The mode is one of three values, held on the Intent's autonomy projection
 (`packages/framework/core/tools/amadeus-intent-autonomy.ts`):
 
+There are four interaction kinds — `stage-gate`, `phase-gate`,
+`walking-skeleton` and `question` — and a mode is defined by which of them it
+decides for itself:
+
 | Mode | What may be decided without a human |
 | --- | --- |
 | `none` | Nothing. Every gate and question is `human-required`. |
-| `semi` | Internal stage gates and stage questions — a stage gate that is not a phase boundary, plus a `question` that is not raised at one, and only when the mode itself was set by a human command. |
-| `full` | Whatever the current grant's scope allows. |
+| `semi` | Everything `full` decides, minus the two milestones `phase-gate` and `walking-skeleton`, and only when the mode itself was set by a human command. |
+| `full` | All four kinds, within the current grant's scope. |
+
+`semi`'s permission set is not a written list: it is computed as the complement
+of the milestone pair, so adding a fifth interaction kind makes it
+semi-decidable without either list being edited. The milestone line is also
+enforced independently of scope — hand `semi` a scope that names `phase-gate`
+and the milestone is still not decided.
+
+Deciding a kind is not the same as never stopping. A ruling point reserved to
+the user, and a derivation that does not single out one option, still go to a
+person in every mode including `full` — see
+[When a mode cannot decide](#when-a-mode-cannot-decide).
+
+The mode also projects onto Construction scheduling. `Construction Autonomy
+Mode` is derived from the Intent mode by one function that the writer and the
+scheduler both call — `none` → `gated`, `semi` / `full` → `autonomous` — so
+`semi` runs the Bolt swarm unattended, and a record whose two fields disagree
+is refused loudly instead of quietly scheduling the lower of the two.
 
 `none` is the default, and it is also where a legacy or unreadable projection
 lands: the two non-human provenances (`system-default` and
@@ -76,8 +97,12 @@ the occurrence against that scope: a mismatched Intent, a workflow that is not
 running, or an interaction kind outside the scope all return `human-required`
 with reason `SCOPE_OUT` rather than falling through to a decision.
 
-Effects are classified, and five classifications can never be authorized by a
-grant: `new-permission`, `irreversible`, `scope-out`, `norm-waiver`, and
+Effects are classified. Two classifications an autonomous authority may act on —
+`workflow-reversible` and `advisory-deferral` (deferring past a
+plugin-declared advisory, which used to borrow `quality-waiver` and no longer
+does) — are read from one shared list by both authorization arms. Five
+classifications can never be authorized by a grant: `new-permission`,
+`irreversible`, `scope-out`, `norm-waiver`, and
 `quality-waiver`. An effect whose payload does not match its recorded
 fingerprint, or whose applicable norm fingerprint has moved, is refused as
 `PAYLOAD_MISMATCH` or `NORM_DRIFT`. Autonomy therefore cannot widen its own
@@ -88,8 +113,15 @@ permissions, waive quality, or take an irreversible action, regardless of mode.
 A gate decision under `semi` or `full` is direct: the basis is the mode
 provenance or the grant itself, and the decider is the deterministic engine.
 
-A *question* under `full` goes through an ordered resolution, and the order is
-the point — cheaper and more authoritative bases are consulted first:
+A *question* under `semi` or `full` goes through an ordered resolution, and the
+order is the point — cheaper and more authoritative bases are consulted first.
+Before any of them runs, one question is asked first:
+
+0. **Is this ruling point reserved to the user?** A spec change, a goal
+   revision, an election hold, a merge outside the standing delegation. A
+   reserved point is settled here, so no basis — however unanimous — can
+   auto-decide it. The predicate belongs to the mode authority; the ladder only
+   asks it.
 
 1. **Confirmed policy** — an answer the human pre-confirmed when issuing the
    grant, supplied via `--policies-file` as `{sourceText, selector, optionId}`.
@@ -105,6 +137,54 @@ the point — cheaper and more authoritative bases are consulted first:
 Every branch validates that the selected option is one the occurrence actually
 offered and that the evidence fingerprint is a real digest; anything else is
 `invalid` rather than a decision.
+
+Rungs 4 and 5 answer in a three-way vocabulary rather than always producing an
+option: `unique(optionId, basis)`, `contested(candidates, reason)`, or
+`none(reason)`. Only `unique` carries an option id, which is what makes
+"decide without a basis" unrepresentable. Reaching the last rung is therefore
+not a licence to answer: an agent that cannot single out an option returns
+`contested` or `none`, and the ruling goes to a person. Past human rulings that
+disagree with each other terminate the same way — a conflict there is the state
+most in need of a ruling, so it is not handed down to the election or the agent.
+
+## When a mode cannot decide
+
+Two terminals hand a ruling back: the reserved point (step 0) and the
+non-unique derivation (`contested` / `none`). What happens next is decided by
+the session, not the mode:
+
+- **Interactive** — this clone's own audit shard holds at least one
+  `HUMAN_TURN`. The engine returns `human-required` carrying the outcome, and
+  the conductor presents exactly those candidates and that reason, then ends the
+  turn.
+- **Non-interactive** — it does not. The engine enters **waiting**
+  (`AWAITING_RULING`) and emits a terminal `waiting` directive naming the
+  occurrence, the basis fingerprint and the transaction that holds the full
+  cause, so `/amadeus --resume` re-presents the same ruling rather than a
+  paraphrase of it.
+
+Interactivity is judged per session and re-read from disk on every call, so a
+`HUMAN_TURN` that lands mid-session is observed on the next one. There is no
+freshness window, no TTY probe and no declaration flag — all three were
+considered and rejected — and any resolution failure (no active Intent, missing
+shard, corrupt lines) falls closed to non-interactive. The judgment can
+under-report; it can never fabricate a turn that is not on disk.
+
+`waiting` is its own stop reason, distinct from `AWAITING_HUMAN` (an
+authorization the run lacks), `REPAIR_STALLED` (a defect stopped it) and
+`USER_PARKED` (somebody chose to stop). Conflating any two of the four would
+make "broken" and "waiting for an answer" resume the same way. Repeated
+arrivals at the same waiting key are rate-constrained, and the constraint
+escalates to a human or to repair — "over the limit, therefore continue" is not
+a representable outcome.
+
+Parking is mode-blind. The retired guard refused a park under an autonomous
+Construction projection when no unconsumed `HUMAN_TURN` was on record, on the
+premise that an unattended run has nobody to resume it; an unattended run that
+reaches a ruling it may not make is exactly the run that has to stop, so the
+refusal is gone — there is no mode arm, no flag and no env off-switch. The
+presence *accounting* is untouched: `WORKFLOW_PARKED` is still a presence
+resolution, so a park still spends whatever turn was outstanding.
 
 Drive it with the `decide-question` verb, which takes the occurrence and its
 context as a JSON document:
@@ -140,6 +220,13 @@ occurrence classifies as `irreversible` or `new-permission` comes back
 
 Merging is never one of these. A merge is a separate human decision, asked about
 that specific PR; no convergence verdict, grant, or ladder ruling authorizes it.
+Where the workspace's norms carry a standing merge delegation, the human
+exercises it under those norms and the engine's part is to *record* it:
+`amadeus-merge-provenance record` emits `DELEGATED_MERGE_RECORDED` with the
+standing-ruling reference, the CI conclusion and the convergence digest the
+delegation rested on. That recorder is not a mode arm — it takes the caller's
+word for the evidence, touches neither git nor GitHub, and no Intent mode makes
+a merge automatic.
 
 ## Reviewing an auto decision
 
@@ -182,6 +269,17 @@ silently omitting them.
 
 The commit appends `AUTO_DECISION_REVIEWED`. The production adapter is the only
 writer of that path, and it takes the audit lock to do so.
+
+### The completion-boundary summary
+
+`full` decides its milestones too, which removes the phase boundary as the place
+a human used to sweep the unreviewed queue. In its place, terminal completion
+writes `completion/auto-decision-summary.md` into the record: the total number
+of `AUTO_DECIDED` rows, the breakdown by basis kind and by review state, and a
+count mismatch when the audit rows and the listed items disagree. Every number
+is read from the `AUTO_DECIDED` audit trail and the existing review listing —
+none is authored — and the whole step is best-effort: any failure becomes a
+warning on the completion JSON rather than blocking the completion.
 
 ## The completion seal
 

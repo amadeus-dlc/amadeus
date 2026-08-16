@@ -2773,7 +2773,7 @@ core 正本 11 件（`packages/framework/core/sensors/`、`ls` 出力の転記�
 
 `tests/integration/t2996-pr-convergence-scope-grid.integration.test.ts`（rename 後の scope grid 固定）、`tests/integration/t3016-park-provenance.integration.test.ts`（PR #3053、autonomous park の human-turn provenance）、`tests/fixtures/coverage-registry/unit/fixture.none.test.ts`、`tests/no-silent-drop/events/01M008DFEFXTFBWM3T9FZRHKAZ.json`（追記型 ULID イベント台帳への 1 件追加）。
 
-## 新規モジュール 1 件と、選挙 7 モジュールの責務分担（260815-priority-bug-batch-2、現在、observed `9ba8170bb`）
+## 新規モジュール 1 件と、選挙 7 モジュールの責務分担（260815-priority-bug-batch-2、履歴、observed `9ba8170bb`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-per-unit-outcome の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: base `a49f9e9fdbd19fd40e9374feba77e9360771d173` → observed `9ba8170bb03996fb98b497cfcbac3d207795018d`。増減の列挙元は `git diff --name-status a49f9e9fd HEAD -- ':!amadeus/' ':!metrics/'`（A **1 件** / D **0 件** / M 9 件）。`packages/framework/core/tools/` の総数は **167**（`git ls-files packages/framework/core/tools | wc -l`。前区間 166 から +1）。
 
@@ -2802,3 +2802,54 @@ core 正本 11 件（`packages/framework/core/sensors/`、`ls` 出力の転記�
 | `amadeus-election-model.ts` | 32 | `Result` / `ok` / `err` / `VoterKind` / `HoldReason` の共有語彙のみ | 非接触 |
 
 **責務境界としての要点**: digest の**定義**（codec）、**生産**（CLI）、**検証**（store）が 3 モジュールに分かれており、生産と検証が互いの述語を参照していない。#3077 はこの分散が生んだ不整合であり、是正は「述語を 1 か所に持ち、生産と検証の双方がそれを呼ぶ」形が構造的な再発防止になる（詳細は `architecture.md` の対応節）。
+
+## per-unit consume / unit pool / construction outcome の 3 コンポーネント（260815-per-unit-outcome、履歴、observed `78146f435a`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-stale-epoch-landed の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
+
+**観測 ref**: observed `78146f435a66680055a24144937b5aa03d48bfb4`（base `9ba8170bb03996fb98b497cfcbac3d207795018d` からの差分リフレッシュ）。**区間で本節のコンポーネントはいずれも無変更**（`git diff --quiet 9ba8170bb 78146f435 -- <path>` を 5 パスへ適用し全件 **exit 0**）。行数は `wc -l`、export 数は `grep -c "^export "` の実測。
+
+### 患部を構成する 5 モジュール
+
+| モジュール | 行数 | export | 責務 | 本 intent での位置 |
+|---|---|---|---|---|
+| `packages/framework/core/tools/amadeus-per-unit-consume-fanout.ts` | 272 | 11 | per-unit consume の展開と fail-closed 判定。消費者エッジ在庫 `EXPECTED_PER_UNIT_CONSUMER_EDGES`（`:90-110`）とガード `assertConsumerEdgeInventory`（`:144-168`、`consumer-edge-inventory-mismatch`） | **症状の発火点**（`:224-228` の `producer-outcome-pending`） |
+| `packages/framework/core/tools/amadeus-unit-pool-runtime.ts` | 354 | 9 | unit pool の監査シャード永続化。`UNIT_POOL_EVENT_SET_COMMITTED` の**単一 writer**（`:152-161`）と reader（`:122-141`） | 患部の**入力源**（per-unit 経路はここへ書かない） |
+| `packages/framework/core/tools/amadeus-construction-outcome-projection.ts` | 681 | 15 | Construction 成果の正準射影。`CONSTRUCTION_AUDIT_EVENTS`（`:222-228`）で 5 イベントを正規化 | **既存のより豊かな読み口**（fanout はこれを使っていない） |
+| `packages/framework/core/tools/amadeus-orchestrate.ts` | 7088 | — | ディスパッチ本体。`readPerUnitConsumePopulation`（`:2447-2473`）、`emitRunStageForSlug`（`:4232`、配線 `:4259-4261`）、`emitPerUnitRunStage`（`:4574-4725`）、正準射影の 4 消費点 | **2 系統の読み口が同居する層** |
+| `packages/framework/core/tools/amadeus-lib.ts` | 9061 | — | plan-integrity 判定 `planIntegrityVerdict`（`:8412`、幅判定 `:8416`。`grep -n "export function planIntegrityVerdict"` で再取得） | **再現条件**（幅 1 バッチが redirect を素通り） |
+
+関連: `packages/framework/core/tools/amadeus-unit-pool.ts`（450 行、`foldUnitPoolEventSets` の純関数側）、`packages/framework/core/tools/amadeus-swarm.ts`（1426 行、pool の唯一の変異源 = 9 call site）。
+
+### 消費者エッジ在庫 — 7 consumer / 19 edge
+
+`amadeus-per-unit-consume-fanout.ts:90-110`。件数の述語は `awk 'NR>=91 && NR<=109' <file> | grep -c '^\s*\['` → **19**、consumer 名は同範囲へ `grep -oE '^\s*\["[a-z-]+' | grep -oE '[a-z-]+$' | sort -u | wc -l` → **7**。内訳は `sort | uniq -c` からの転記。
+
+| consumer（stage） | edge 数 | consume する artifact ← producer stage |
+|---|---|---|
+| `observability-setup` | 5 | performance-design / security-design / reliability-design ← `nfr-design`、monitoring-design / infrastructure-services ← `infrastructure-design` |
+| `performance-validation` | 4 | performance-requirements / scalability-requirements ← `nfr-requirements`、performance-design / scalability-design ← `nfr-design` |
+| `incident-response` | 3 | reliability-design / security-design ← `nfr-design`、deployment-architecture ← `infrastructure-design` |
+| `build-and-test` | 2 | code-generation-plan / code-summary ← `code-generation` |
+| `deployment-pipeline` | 2 | deployment-architecture / cicd-pipeline ← `infrastructure-design` |
+| `environment-provisioning` | 2 | deployment-architecture / infrastructure-services ← `infrastructure-design` |
+| `ci-pipeline` | 1 | code-summary ← `code-generation` |
+
+Issue #3099 が名指す到達不能は `build-and-test`（2 edge、producer = `code-generation`）で発生する。**在庫はガードで fail-closed のため、是正がエッジ集合を変えるなら在庫の更新が同時に必要**であり、変えないなら触れてはならない。
+
+機序は `architecture.md`、配置は `code-structure.md`、テスト面と台帳は `code-quality-assessment.md` の各対応節を参照。
+
+## pr-convergence の 4 コンポーネントと、拒否の所在（260815-stale-epoch-landed、現在、observed `83e1dbeef`）
+
+**本差分でのコンポーネント変化なし。** base `78146f435a` → observed `83e1dbeef` で新規モジュール・責務移動はゼロ。`git diff --quiet 78146f435a 83e1dbeef -- plugins/github-pr-convergence/` → **exit 0**。
+
+[Issue #3110](https://github.com/amadeus-dlc/amadeus/issues/3110) の患部にあたる 4 コンポーネントの責務分担は次のとおり（行数は observed 断面の `wc -l`）。
+
+| コンポーネント | ファイル | 規模 | 責務 | 本件での役割 |
+|---|---|---|---|---|
+| CLI（4 verb） | `plugins/github-pr-convergence/tools/pr-convergence-cli.ts` | 1468 行 | `create` / `report` / `override` / `status` の駆動、attestation の検証と書込 | **拒否の所在**。`:669` の head 束縛が verb 分岐（`:1398`）より先に走り、4 verb すべてを塞ぐ |
+| GitHub runner | `plugins/github-pr-convergence/tools/pr-convergence-gh-runner.ts` | 354 行 | `gh` CLI の readiness 検査と呼び出し（optional dependency 扱い） | `fetchOpenPrForHead`（`:322`）が `--state open` のみ引き、MERGED PR の read-back 経路を持たない |
+| blocking sensor | `plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts` | 432 行 | report ファイルの形式と最終性を record 直読で判定 | `:391-393` が `created` を非最終と報告し、`:289` が local head 不一致を報告。**CLI に依存しない独立判定** |
+| stage 文書 | `plugins/github-pr-convergence/stages/pr-convergence.md` | 431 行 | ステージ契約の正本 | `:344-346` が「merged PR に ruling は不要、report が landed を書く」と定め、override 経路を閉じる |
+
+補助として `pr-convergence-attestation.ts`（`local head` フィールドの生成 `:82` / 型 `:115` / parse `:166`）と `pr-convergence-predicate.ts`（`converged` / `landed` の判定）が関わる。**sensor manifest（`sensors/amadeus-pr-convergence-report-format.md`）と sensor 実装（`tools/amadeus-sensor-pr-convergence-report-format.ts`）はファイル名プレフィックスもディレクトリも異なる**ため、参照時に取り違えない（`sensors/` 配下に `.ts` は存在しない）。
+
+**責務分担から見た是正の制約**: sensor は record を直読する独立コンポーネントであるため、CLI 側の挙動だけを変えても record が `created` のままなら赤は消えない。閉路の解消は「record へ `landed` を書けるようにする」側でしか成立しない。機序は `architecture.md` の対応節を参照。

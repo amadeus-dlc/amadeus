@@ -21,6 +21,7 @@ import {
   type ResumeCondition,
   type SemiAuthorityScope,
 } from "../../packages/framework/core/tools/amadeus-intent-autonomy.ts";
+import { RecommendationOutcome } from "../../packages/framework/core/tools/amadeus-recommendation.ts";
 import {
   createIntentAutonomyCoordinator,
   createMemoryIntentAutonomyRepository,
@@ -90,11 +91,11 @@ function capability(available = true, counters?: { elect: number; recommend: num
     unavailableReason: available ? null : "subagent-capability-unavailable",
     elect() {
       if (counters) counters.elect++;
-      return { optionId: "accept", evidenceFingerprint: autonomyDigest("election") };
+      return RecommendationOutcome.unique("accept", { source: "election", fingerprint: autonomyDigest("election") });
     },
     recommend() {
       if (counters) counters.recommend++;
-      return { optionId: "accept", evidenceFingerprint: autonomyDigest("recommendation") };
+      return RecommendationOutcome.unique("accept", { source: "agent", fingerprint: autonomyDigest("recommendation") });
     },
   };
 }

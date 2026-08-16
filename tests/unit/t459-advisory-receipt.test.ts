@@ -19,9 +19,12 @@
 //                    provenance claims.
 //   single-spend   — one decision id backs one receipt.
 //
-// The effect-classification barrier (FR-ADV-4 secondary) is pinned here too:
-// `quality-waiver` has to remain a prohibited classification, or deferring past
-// a run-required advisory would stop being refused at effect authorization.
+// The prohibited-classification list is pinned here too: `quality-waiver` has to
+// remain prohibited so that waiving a quality signal in general is still refused
+// at effect authorization. Advisory deferral itself moved to its own
+// `advisory-deferral` classification under RFC-0001 ADR-2 and is authorizable;
+// what keeps an unattended deferral human is translateAdvisoryDecision, which
+// resolves `run-now` only.
 
 import { describe, expect, test } from "bun:test";
 

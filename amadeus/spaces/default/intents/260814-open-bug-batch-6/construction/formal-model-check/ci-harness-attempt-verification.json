@@ -1,0 +1,7 @@
+{
+  "schema": "amadeus.ci-model-check-verification.v1",
+  "pass": false,
+  "errorCode": "ARTIFACT_VERIFY",
+  "detail": "runtime receipt is incomplete",
+  "completedRuns": 24
+}

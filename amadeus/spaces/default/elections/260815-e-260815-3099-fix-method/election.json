@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 2,
+  "electionId": "E-260815-3099-FIX-METHOD",
+  "kind": "design-deviation",
+  "questions": [
+    {
+      "questionId": "q-3099-method",
+      "text": "Issue #3099: units-generation EXECUTE スコープで per-unit run-stage 経路により完走した Construction が、build-and-test の per-unit consume fanout で producer-outcome-pending となり構造的に到達不能になる(fanout の outcome 母集団が swarm pool イベント UNIT_POOL_EVENT_SET_COMMITTED のみ由来のため)。修正方式を選定する。制約: batch 所属フィルタ(orchestrate.ts:2461-2463)の意味論保存 / swarm 経路の無退行 / 監査 append-only(pool 捏造禁止)/ 最小修正(RFC-0001 実装に踏み込まない)。",
+      "choices": [
+        {
+          "internalNo": 1,
+          "label": "A: 読み口統一 — readPerUnitConsumePopulation の outcome 源を canonical projection(normalizeConstructionOutcomeAudit + projectConstructionOutcomes、5 イベント受理)へ寄せ、fanout だけが 1 イベントしか見ない非対称を解消する"
+        },
+        {
+          "internalNo": 2,
+          "label": "B: dispatch 是正 — 幅1 batch でも swarm 経路(invoke-swarm)へ回るよう plan-integrity guard / dispatch 分岐を是正し、pool イベントが常に emit される構造にする"
+        },
+        {
+          "internalNo": 3,
+          "label": "C: emit 追加 — per-unit run-stage の unit 完了時に engine 自身が unit outcome 監査イベントを記録し、fanout の既存読み口(pool events)で読めるようにする"
+        }
+      ]
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

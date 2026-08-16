@@ -3748,6 +3748,27 @@ type PresenceEvent = {
   shardPath?: string;
 };
 
+// A discriminated-union Result, per project.md's Code Style convention (each
+// tools/*.ts module declares its own local copy rather than importing a shared
+// one — amadeus-recommendation.ts / amadeus-plugin-compose.ts /
+// amadeus-stage-stats.ts are the precedent this mirrors).
+export type Result<T, E> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: E };
+
+// verifyBatchApprovalPresence's success/failure witnesses (presence-closure
+// unit, D7 / FR-12). The check is a one-shot yes/no — the caller
+// (handleApproveBatch) consumes no data beyond the fact that it succeeded, so
+// both types are intentionally minimal (domain-entities.md).
+export type PresenceReceipt = { readonly present: true };
+export type PresenceRefusal = { readonly reason: string };
+
+// resolveGatePresence's verdict (D8 / FR-12): ledger-absent is now ALWAYS
+// fail-closed (the old active/legacy-scope fail-open is retired), and the
+// "ledger present but nothing outstanding" case is distinguished for future
+// callers that may want the reason.
+export type PresenceVerdict =
+  | { readonly present: true }
+  | { readonly present: false; readonly reason: "ledger-absent" | "no-outstanding-human-act" };
+
 // Parse + verify the ledger once, tagging each event with its ORIGIN shard so the
 // predicates can apply the fail-closed cross-shard tie-break. Returns null when no
 // ledger exists at all (the fail-open signal). Delegations are verified here so
@@ -3837,6 +3858,29 @@ function humanActOutstanding(
   return false;
 }
 
+// One (isHuman, isResolution) predicate pair to test for an outstanding human
+// act — the shape humanActOutstanding already takes. humanActedSinceGate's
+// verb-scoped branch ORs two independent slots (the local HUMAN_TURN slot and
+// the delegate's per-verb GATE slot); the verb-less branch is one slot.
+type PresenceSlot = {
+  readonly isHuman: (e: PresenceEvent) => boolean;
+  readonly isResolution: (e: PresenceEvent) => boolean;
+};
+
+// resolveGatePresence — D8 (FR-12, presence-closure unit): the single place
+// that turns a scanned ledger (or its absence) into a presence verdict.
+// Ledger-absent is now UNIFORMLY fail-closed regardless of caller scope — the
+// retired behaviour distinguished active/legacy (fail-open) from an
+// explicitly-named record (fail-closed, #2588); component-methods.md C13 draws
+// no such distinction. `slots` is evaluated with OR semantics: presence holds
+// if ANY slot has an outstanding human act, matching humanActedSinceGate's
+// existing multi-slot verb branch.
+function resolveGatePresence(scan: PresenceEvent[] | null, slots: readonly PresenceSlot[]): PresenceVerdict {
+  if (scan === null) return { present: false, reason: "ledger-absent" };
+  const outstanding = slots.some((slot) => humanActOutstanding(scan, slot.isHuman, slot.isResolution));
+  return outstanding ? { present: true } : { present: false, reason: "no-outstanding-human-act" };
+}
+
 // The approval-gate presence predicate. With a verb it is the #736/#685 gate
 // predicate (per-delegate GATE slot, verb-scoped); with no verb it is the general
 // predicate the delegate-issuance grounding relies on (legacy uniform boundary,
@@ -3863,13 +3907,18 @@ function humanActOutstanding(
 // Omitting the selector (the delegate-issuance + approve callers) keeps the
 // active/legacy scope byte-for-byte.
 //
-// Empty-ledger disposition depends on scope: fail OPEN for the active/legacy
-// scope (intent === undefined — a harness whose shard has no events yet must not
-// brick before the first event), but fail CLOSED for an EXPLICITLY NAMED record.
-// A named record with no ledger honestly proves no human acted there, so a
+// Empty-ledger disposition (D8, FR-12): fail CLOSED uniformly, regardless of
+// scope. Previously the active/legacy scope (intent === undefined) failed OPEN
+// on an empty ledger — "a harness whose shard has no events yet must not brick
+// before the first event" — while an EXPLICITLY NAMED record failed CLOSED
+// (#2588). That scope split is retired: resolveGatePresence now returns
+// ledger-absent -> present:false for every caller. In practice this does not
+// brick a fresh harness — the UserPromptSubmit mint hook appends a HUMAN_TURN
+// before any gate-resolution command can run, so a genuine human turn never
+// observes a truly-empty ledger (functional-design-questions.md Q3). A named
+// record with no ledger still honestly proves no human acted there, so a
 // missing ledger must not license a cross-record reject of an untouched record
-// (the fresh-clone / empty-target fail-open reviewer-2 flagged, scoped to the
-// only caller that names a record).
+// (the fresh-clone / empty-target case #2588 fixed) — now true for every scope.
 //
 // (These branch notes live up here rather than inside the body: bun's lcov
 // stamps in-body comment/blank lines as never-hit DA records, which the codecov
@@ -3881,21 +3930,47 @@ export function humanActedSinceGate(
   space?: string
 ): boolean {
   const events = scanPresenceLedger(projectDir, intent, space);
-  if (events === null) return intent === undefined; // fail open (active/legacy) / fail closed (named record)
   if (verb === undefined) {
-    return humanActOutstanding(events, (e) => e.human, (e) => e.res !== undefined);
+    return resolveGatePresence(events, [{ isHuman: (e) => e.human, isResolution: (e) => e.res !== undefined }])
+      .present;
   }
-  const humanTurnOutstanding = humanActOutstanding(
-    events,
-    (e) => e.human && e.delegVerb === undefined,
-    (e) => e.res !== undefined,
-  );
-  if (humanTurnOutstanding) return true;
-  return humanActOutstanding(
-    events,
-    (e) => e.delegVerb === verb,
-    (e) => e.res === "gate",
-  );
+  return resolveGatePresence(events, [
+    { isHuman: (e) => e.human && e.delegVerb === undefined, isResolution: (e) => e.res !== undefined },
+    { isHuman: (e) => e.delegVerb === verb, isResolution: (e) => e.res === "gate" },
+  ]).present;
+}
+
+// verifyBatchApprovalPresence — D7 (FR-12, presence-closure unit): the
+// approve-batch human gate's presence check. Reuses the verb-less
+// humanActedSinceGate predicate (R-6 — no independent judgement logic; project.md
+// "意図ベースの重複排除") since approve-batch is, like the two delegate-issuance
+// sites, asking the general question "did a human act since the last
+// resolution of any kind", not a per-verb GATE-slot question. The caller
+// (amadeus-bolt.ts handleApproveBatch) invokes this as the FIRST operation
+// inside withAuditLock, before any state read or idempotency shortcut
+// (business-rules.md R-2 — TOCTOU closure).
+//
+// Honours the SAME suite-wide deterministic off-switch the sibling presence
+// guards already use (amadeus-state.ts's assertHumanPresentForGateResolution /
+// handleDelegateApproval / handleDelegateRejection, all gated on
+// humanPresenceGuardDisabled()): most of the existing test suite drives
+// approve/advance-shaped commands, including approve-batch, without recording
+// a HUMAN_TURN, and tests/run-tests.ts sets AMADEUS_SKIP_HUMAN_PRESENCE_GUARD=1
+// for the whole suite for exactly that reason. Omitting this check here would
+// make approve-batch the one presence gate that does not respect that
+// established off-switch, breaking every existing approve-batch test the
+// suite runs it against. The dedicated guard test clears the var in its own
+// process to exercise real enforcement (the t188 precedent).
+export function verifyBatchApprovalPresence(projectDir: string): Result<PresenceReceipt, PresenceRefusal> {
+  if (humanPresenceGuardDisabled()) return { ok: true, value: { present: true } };
+  if (humanActedSinceGate(projectDir)) return { ok: true, value: { present: true } };
+  return {
+    ok: false,
+    error: {
+      reason:
+        "Refusing to approve-batch: no human presence recorded since the last gate resolution (no HUMAN_TURN or verified delegation on the audit ledger).",
+    },
+  };
 }
 
 // One outstanding human turn: the block that carries it and the shard it came
@@ -5172,6 +5247,18 @@ const AUTONOMY_SEGMENT_MODES: readonly AutonomyMode[] = ["none", "semi", "full"]
 export function autonomySegment(stateContent: string): string {
   const mode = getField(stateContent, "Intent Autonomy Mode")?.trim() ?? "";
   return AUTONOMY_SEGMENT_MODES.some((known) => known === mode) ? mode : "";
+}
+
+// RFC-0001 C8 / FR-8: the statusline's non-interactive marker, appended
+// directly after the `@<mode>` segment. Pure by the same design as
+// autonomySegment above — the hook (spawn-only, no importable seam) reads the
+// interactivity FACT (resolveSessionInteractivity, an I/O read) and hands the
+// boolean here for the display DECISION, so this function itself never
+// touches the filesystem. Shown only when there IS a mode segment, matching
+// business-logic-model.md's "the marker rides on the @<mode> segment" design
+// — no independent marker when the mode itself is unknown.
+export function nonInteractiveMarker(interactive: boolean): string {
+  return interactive ? "" : "!";
 }
 
 // --- Autonomy mode ---

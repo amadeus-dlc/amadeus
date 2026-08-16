@@ -312,15 +312,35 @@ Recording it is how this stage finalises. `main` requires the merge queue, so
 auto-merge can land the pull request before `report` runs, and the loop cannot
 control that ordering. When `status` answers `landed` (exit 0, like
 convergence), run `report`: it writes and attests a `landed` record carrying
-the merge instant and the merge commit. Self-development records take the same
-path as every other record — the identity, epoch, and attestation
-prerequisites are unchanged, so finalisation still binds to the `created`
-epoch this delivery opened. The blocking sensor accepts that record at this
-stage, and only this stage, when the merge instant parses and the merge commit
-is a real object id; a `created` report, or a `landed` report missing either
-merge fact, still fails. The check rollup is recorded but never a pass
-condition: a merge commit picks up post-merge workflow runs the pull request
-never carried.
+the merge instant and the merge commit.
+
+For a self-development record, finalising a merge is bound differently from
+finalising a live pull request, because a merged pull request has neither a
+live branch nor a live head to bind to: the merge queue routinely deletes the
+head branch, and the checkout has moved on. The `report` verb therefore
+**replaces** the two live-head prerequisites on this path (#3110). It binds the
+half of identity no push can change — Intent, Bolt, Unit, pull request — and
+proves the epoch by ancestry instead of equality: the head the `created` epoch
+attested must be an ancestor of the head the pull request merged, measured from
+`refs/pull/<number>/head`, which GitHub keeps after the branch is gone. A push
+between `create` and the merge (a record checkpoint, a review fix) is therefore
+finalised rather than refused, while an epoch attested on a commit the merge
+never carried is still refused, and an ancestry that cannot be measured fails
+loudly rather than being assumed. The landed receipt attests the merge commit
+and the merge instant, and the record is bound to those facts in the place a
+live record is bound to its checkout.
+
+The blocking sensor accepts that record at this stage, and only this stage,
+when the merge instant parses, the merge commit is a real object id, and both
+match the receipt; a `created` report, a `landed` report missing either merge
+fact, and a live report that carries merge facts all still fail. The check
+rollup is recorded but never a pass condition: a merge commit picks up
+post-merge workflow runs the pull request never carried.
+
+`create` has no part in this. Re-pushing a merged delivery's head and running
+`create` opened a second pull request for work already on the trunk (#3109);
+a delivery that already holds a `created` report now refuses that create and
+names `report` as the way to finalise.
 
 ## When GitHub is unreachable
 
@@ -342,9 +362,10 @@ bun {{HARNESS_DIR}}/plugins/github-pr-convergence/tools/pr-convergence-cli.ts ov
 real human turn in the record's audit shards, and a non-blank reason. It
 refuses to override an already-converged pull request, records the ruling, then
 writes and attests an `override` report with `converged: false`. A merged pull
-request needs no ruling — `report` records it as `landed`. There is no
-environment variable, flag, or state field that skips the guard silently: a
-bypass that leaves no record is not offered.
+request needs no ruling — `report` records it as `landed`, and `override` keeps
+the live-head gate for exactly that reason: the merged path belongs to the verb
+that records the merge. There is no environment variable, flag, or state field
+that skips the guard silently: a bypass that leaves no record is not offered.
 
 ## CI observation and local validation ordering
 

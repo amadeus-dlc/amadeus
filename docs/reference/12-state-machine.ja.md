@@ -223,6 +223,8 @@ session フックは発行前にアクティブな intent の `amadeus-state.md`
 | `WORKFLOW_COMPLETED` | `tools/amadeus-state.ts` |  |
 | `WORKFLOW_PARKED` | `tools/amadeus-state.ts` | `park` - 後のセッション向けに実行途中で park された workflow。ステージ進行なし |
 | `WORKFLOW_UNPARKED` | `tools/amadeus-state.ts` | `unpark` - 明示的な `--resume` 再入時に park マーカーがクリアされた |
+| `WORKFLOW_WAITING_ENTERED` | `tools/amadeus-intent-autonomy-production.ts` | `enterProductionWaiting` マーカー - 非対話 run が自ら下せない裁定で停止した(RFC-0001 FR-3/ADR-4)。正本は台帳トランザクションで、この行はその投影 |
+| `WORKFLOW_WAITING_RESUMED` | `tools/amadeus-intent-autonomy-production.ts` | waiting 再開マーカー - waiting record が再提示され裁定された |
 | `INTENT_ARCHIVED` | `tools/amadeus-state.ts` | 人間が承認した archive トランザクション。operation ID ごとに1回発行 |
 | `INTENT_UNARCHIVED` | `tools/amadeus-state.ts` | 人間が承認した unarchive トランザクション。operation ID ごとに1回発行 |
 | `EXECUTION_EVENT_SET_COMMITTED` | `tools/amadeus-execution-lifecycle.ts` | 正典の audit-first 実行ライフサイクルイベントセットを原子的に記録 |
@@ -323,6 +325,7 @@ bun .claude/tools/amadeus-advisory-choice.ts recover-schema-1 \
 
 | Event | Emitter | Notes |
 |---|---|---|
+| `UNIT_OUTCOME_SETTLED` | `tools/amadeus-orchestrate.ts` | エンジン自身の per-unit dispatch 経路が、covered かつ未キャンセルの Unit の coverage 成立境界でその outcome を確定した。stage・Unit・batch を鍵とするため再入しても行は増えず、Unit pool ストリームにその Unit の terminal が無い場合にのみ読まれる |
 | `BOLT_STARTED` | `tools/amadeus-bolt.ts` | 並列バッチ用の CSV bolt 名を受け付ける |
 | `BOLT_COMPLETED` | `tools/amadeus-bolt.ts` | 先行する `BOLT_STARTED` とペア |
 | `BOLT_FAILED` | `tools/amadeus-bolt.ts`(`fail` + `abort`) | `--succeeded-siblings` が並列バッチの生存者を捕捉。`abort` はサブ分類のため `Reason: aborted` フィールドを追加 |
@@ -390,6 +393,14 @@ bun .claude/tools/amadeus-advisory-choice.ts recover-schema-1 \
 | `MERGE_DISPATCH_RETURNED` | `tools/amadeus-bolt.ts` `dispatch-event --event MERGE_DISPATCH_RETURNED` | エージェントが戦略、ターゲットブランチ、信頼度、注記を含むパース済み YAML を返した |
 | `MERGE_DISPATCH_FALLBACK` | `tools/amadeus-bolt.ts` `dispatch-event --event MERGE_DISPATCH_FALLBACK` | エージェントがタイムアウトまたは不正 YAML を返した。コンダクターは org デフォルトにフォールバック — 重要な可観測性フック |
 
+### Merge provenance
+
+Emitted by `recordDelegatedMerge` (`tools/amadeus-audit.ts`; CLI wrapper `tools/amadeus-merge-provenance.ts record`). Records the provenance of a delegated (standing-approval) PR merge — the standing ruling reference and the measured CI/convergence evidence. Recording only; it never performs or decides a merge.
+
+| Event | Emitter | Trigger |
+|---|---|---|
+| `DELEGATED_MERGE_RECORDED` | `tools/amadeus-audit.ts` `recordDelegatedMerge` | Caller confirms the delegation condition was met and the PR merge already happened |
+
 ### Sensors
 
 4つの `SENSOR_*` イベントはセンサーディスパッチャーから、`GUARDRAIL_LOADED` は paired-coverage doctor 行から発行されます。カバレッジは環境的です — markdown を書くすべての Inception/Construction/Operation ステージは、レジストリデフォルトのセンサーから少なくとも1つの `SENSOR_FIRED` 行を発行します。アドバイザリのみです。将来の ralph ドライバが Construction フェーズのセンサーにブロッキングセマンティクスを導入します。
@@ -404,13 +415,15 @@ bun .claude/tools/amadeus-advisory-choice.ts recover-schema-1 \
 
 ### Learning loop
 
-`MEMORY_EMPTY` は `amadeus-runtime.ts compile` から発行されます。§13 の Learnings Ritual は実行中にステージごとの memory.md を書きます。ステージ承認時、runtime-graph の compile が memory.md を読み、4つの標準見出しの下に非空エントリが0のステージについて `MEMORY_EMPTY` を発行します。learning-gate ツール(`amadeus-learnings.ts persist`)は、保持された学習が `amadeus/spaces/<space>/memory/{project,team}.md` に日付付きのプラクティスエントリとして到着したとき `RULE_LEARNED` を発行し、学習がセンサーバインディング(マニフェスト + 起源ステージの `sensors:` フロントマター)をインストールしたとき `SENSOR_PROPOSED` を発行します。doctor はダイアリー規律の可観測性のためにこれらの行を読みます。
+`MEMORY_EMPTY` は `amadeus-runtime.ts compile` から発行されます。§13 の Learnings Ritual は実行中にステージごとの memory.md を書きます。ステージ承認時、runtime-graph の compile が memory.md を読み、4つの標準見出しの下に非空エントリが0のステージについて `MEMORY_EMPTY` を発行します。learning-gate ツール(`amadeus-learnings.ts persist`)は、保持された学習が `amadeus/spaces/<space>/memory/{project,team}.md` に日付付きのプラクティスエントリとして到着したとき `RULE_LEARNED` を発行し、学習がセンサーバインディング(マニフェスト + 起源ステージの `sensors:` フロントマター)をインストールしたとき `SENSOR_PROPOSED` を発行します。doctor はダイアリー規律の可観測性のためにこれらの行を読みます。`LEARNING_ZERO_CONFIRMED` と `LEARNING_CANDIDATE_ADDED`(unit s13-zero, ADR-6)は、§13 の「0 件」確定を conductor の自己申告ではなく surface 実行の digest に機械的に束縛します — `amadeus-learnings.ts confirm-zero` は candidates が空かつ surface JSON 自身の `surfaceDigest` が候補 + parked_open_questions から再算出できる場合にのみ `LEARNING_ZERO_CONFIRMED` を発行し、`amadeus-learnings.ts add-candidate` は追加のみ・disk 証跡束縛の conductor 候補を受理したとき `LEARNING_CANDIDATE_ADDED` を発行します。
 
 | Event | Emitter | Trigger |
 |---|---|---|
 | `MEMORY_EMPTY` | `tools/amadeus-runtime.ts` | ステージ承認の runtime-graph compile が memory.md の欠落、または §13 の4見出しの下に非空エントリが0であることを発見 |
 | `RULE_LEARNED` | `tools/amadeus-learnings.ts` | learning gate が保持された学習を `amadeus/spaces/<space>/memory/{project,team}.md` へ日付付きプラクティスエントリとして永続化した |
 | `SENSOR_PROPOSED` | `tools/amadeus-learnings.ts` | learning gate が project 層のセンサーマニフェストを scaffold し、起源ステージの `sensors:` フロントマターにバインドした |
+| `LEARNING_ZERO_CONFIRMED` | `tools/amadeus-learnings.ts` | `confirmZeroCandidates` が ZeroReceipt を発行した — candidates が空かつ同一 surface 出力から surfaceDigest が再算出された |
+| `LEARNING_CANDIDATE_ADDED` | `tools/amadeus-learnings.ts` | `addConductorCandidate` が、disk 証跡パスが実在し主張と対応する conductor 発の候補を受理した |
 
 ### Loop monitor and quality repair
 

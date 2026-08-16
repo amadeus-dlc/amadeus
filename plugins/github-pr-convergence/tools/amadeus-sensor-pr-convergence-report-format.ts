@@ -230,6 +230,8 @@ function checkAttestationIntegrity(
     ...(receipt.memberUnits === undefined ? {} : { memberUnits: receipt.memberUnits }),
     repo: receipt.repo, pr: receipt.pr,
     localHead: receipt.localHead, remoteHead: receipt.remoteHead, prHead: receipt.prHead,
+    ...(receipt.mergeCommit === undefined ? {} : { mergeCommit: receipt.mergeCommit }),
+    ...(receipt.mergedAt === undefined ? {} : { mergedAt: receipt.mergedAt }),
     contentDigest: receipt.contentDigest,
   });
   if (receipt.id !== expectedId) findings.push({ field: "attestation id", reason: "does not bind the declared identity" });
@@ -273,10 +275,18 @@ function checkAttestationMembers(
   }
 }
 
+/**
+ * What the receipt is bound to besides its own identity. A live record answers
+ * for the checkout it was written from; a landed record (#3110) cannot — the
+ * merge queue commonly deletes the head branch and the checkout has moved on,
+ * so the merge it records stands in that place. The two bindings are exclusive:
+ * neither kind may borrow the other's evidence.
+ */
 function checkAttestationEnvironment(
   recordRoot: string,
   body: string,
   receipt: ReportAttestation,
+  kind: string | null,
   findings: ReportFormatFinding[],
 ): void {
   const pr = field(body, "pull request");
@@ -284,16 +294,52 @@ function checkAttestationEnvironment(
   if (receipt.localHead !== receipt.remoteHead || receipt.localHead !== receipt.prHead) {
     findings.push({ field: "head", reason: "local, remote, and PR head SHAs differ" });
   }
-  const local = spawnSync("git", ["rev-parse", "HEAD"], { cwd: recordRoot, encoding: "utf-8" });
-  if (local.status !== 0 || local.stdout.trim() !== receipt.localHead) {
-    findings.push({ field: "local head", reason: "does not match the current checkout" });
-  }
+  if (kind === "landed") checkMergeBinding(body, receipt, findings);
+  else checkCheckoutBinding(recordRoot, receipt, findings);
   if (!auditCarriesAttestation(recordRoot, receipt)) {
     findings.push({ field: "attestation event", reason: "canonical audit receipt is missing" });
   }
 }
 
-function checkAttestation(outputPath: string, body: string, findings: ReportFormatFinding[]): void {
+/** The merge facts the record states are evidence only when the receipt — and
+ *  through it the audit shard — attests those same values. */
+function checkMergeBinding(
+  body: string,
+  receipt: ReportAttestation,
+  findings: ReportFormatFinding[],
+): void {
+  if (receipt.mergeCommit === undefined || receipt.mergedAt === undefined) {
+    findings.push({ field: "attestation", reason: "a landed record attests the merge commit and the merge instant" });
+    return;
+  }
+  if (receipt.mergeCommit !== field(body, "merge commit")) {
+    findings.push({ field: "merge commit", reason: "does not match the attestation" });
+  }
+  if (receipt.mergedAt !== field(body, "merged at")) {
+    findings.push({ field: "merged at", reason: "does not match the attestation" });
+  }
+}
+
+function checkCheckoutBinding(
+  recordRoot: string,
+  receipt: ReportAttestation,
+  findings: ReportFormatFinding[],
+): void {
+  if (receipt.mergeCommit !== undefined || receipt.mergedAt !== undefined) {
+    findings.push({ field: "attestation", reason: "only a landed record attests merge facts" });
+  }
+  const local = spawnSync("git", ["rev-parse", "HEAD"], { cwd: recordRoot, encoding: "utf-8" });
+  if (local.status !== 0 || local.stdout.trim() !== receipt.localHead) {
+    findings.push({ field: "local head", reason: "does not match the current checkout" });
+  }
+}
+
+function checkAttestation(
+  outputPath: string,
+  body: string,
+  kind: string | null,
+  findings: ReportFormatFinding[],
+): void {
   const recordRoot = recordRootForReport(outputPath);
   if (recordRoot === null || !isSelfRecord(recordRoot)) return;
   const receipt = parseAttestation(body);
@@ -305,7 +351,7 @@ function checkAttestation(outputPath: string, body: string, findings: ReportForm
   checkAttestationIntegrity(body, receipt, findings);
   const unit = checkAttestationOwner(recordRoot, outputPath, body, receipt, findings);
   checkAttestationMembers(recordRoot, unit, receipt, findings);
-  checkAttestationEnvironment(recordRoot, body, receipt, findings);
+  checkAttestationEnvironment(recordRoot, body, receipt, kind, findings);
 }
 
 /** The section body between a real `## <heading>` line (outside code fences)
@@ -357,7 +403,7 @@ export function evaluateReportFormat(outputPath: string, stage?: string): Report
   const findings: ReportFormatFinding[] = [];
   const { kind, converged } = checkCommon(body, findings);
   applyKindRules(kind, converged, body, findings, stage);
-  checkAttestation(outputPath, body, findings);
+  checkAttestation(outputPath, body, kind, findings);
   const reason = kind === "override" || kind === "landed" || kind === "created" ? kind : "converged";
   return verdict(reason, findings);
 }

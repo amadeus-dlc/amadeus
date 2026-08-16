@@ -1,0 +1,111 @@
+{
+  "schema": "amadeus.model-check-manifest.v1",
+  "runId": "d559186d-ed8e-426d-978d-8031db743129",
+  "outcome": "NOT_DETECTED",
+  "exitCode": 0,
+  "startedAt": "2026-08-15T11:31:07.072Z",
+  "finishedAt": "2026-08-15T11:31:08.131Z",
+  "expectedArtifacts": [
+    "env-receipt.json",
+    "tlc-stdout.bin",
+    "tlc-stderr.bin",
+    "completion-marker.json"
+  ],
+  "artifacts": [
+    {
+      "path": "env-receipt.json",
+      "sha256": "567dea73dfbc552132ab72c9b6b0813541345be41082489466a5fe9b526d79a9",
+      "bytes": 1421
+    },
+    {
+      "path": "tlc-stdout.bin",
+      "sha256": "edc2e66909831aa16ec9344ea937f8ebbd217c93b24b9d4aafb19623100dbe51",
+      "bytes": 4037
+    },
+    {
+      "path": "tlc-stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "completion-marker.json",
+      "sha256": "a47b8f842d0996fecb615de44156d285fdcdc5e456a363a6cd148f1c5ef3129c",
+      "bytes": 162
+    }
+  ],
+  "partial": false,
+  "errorCode": null,
+  "errorDetail": null,
+  "advisory": null,
+  "sourceProvenance": {
+    "modelPath": "amadeus/spaces/default/specs/tla/FormalElection.tla",
+    "cfgPath": "amadeus/spaces/default/specs/tla/FormalElection.cfg",
+    "modelIdentity": "0620048b34048238d286e9b52911fd59041b0df006fa749ecfb8739351de332b",
+    "moduleIdentity": "3ed4cf989d43982ac488d236cd138bca022078c7c3b1de7b47ba4faaf3406868",
+    "cfgIdentity": "ffb0617cb9599d707b549d34e0f6ddfac7c66aedbfa1cea03f6aed717c93aed5",
+    "moduleSha256": "3a440f2765ba9e287d3b372ade29d5af5e4d638c32bf753c5112acd25199aa4b",
+    "cfgSha256": "09403d7c20f14ae6b1defb4965b6045afc7226f9637f404e30746b6b8415c00f",
+    "auxiliaries": [
+      {
+        "path": "amadeus/spaces/default/specs/tla/FormalElectionCore.tla",
+        "identity": "0711f95454cb1c13d336327fbc82ec02d7c804b9fc14b8d6525c148ff3de78c9"
+      }
+    ],
+    "implementations": [
+      {
+        "path": "packages/framework/core/tools/amadeus-election-codec.ts",
+        "identity": "6b4ea9cbbfe1401de41cb1b0063ececb3064ff87fd1efcdd62d4a578632ed52b"
+      },
+      {
+        "path": "packages/framework/core/tools/amadeus-election-record.ts",
+        "identity": "9887b938e0a22dfa6089de2baefc5768f95d8cc2f14cd8d8bd8c63ce6d43dc99"
+      },
+      {
+        "path": "packages/framework/core/tools/amadeus-election-store.ts",
+        "identity": "546d854602deb9d21cc554382dd936d0747bea74feca792a0cc575ec23eeb3f2"
+      },
+      {
+        "path": "packages/framework/core/tools/amadeus-election-transport.ts",
+        "identity": "4a8e400eb9bf85ef2950686c6102b918f79ddbcb445d0630824fcc5d5acc5c18"
+      },
+      {
+        "path": "packages/framework/core/tools/amadeus-election.ts",
+        "identity": "29a030d4d7a84f8c1ea965883c2a29fcd3186c0e8bc0f3d1cfc59dd62a6e1c2d"
+      }
+    ],
+    "constants": [
+      "V1=V1",
+      "V2=V2",
+      "Q1=Q1",
+      "Q2=Q2",
+      "Q1C1=Q1C1",
+      "Q1C2=Q1C2",
+      "Q2C1=Q2C1",
+      "Q2C2=Q2C2",
+      "Favor=Favor",
+      "Block=Block"
+    ],
+    "sourceIdentity": "c8da3c53312121fd0ce8d9e7709650e9b95eb2aec26cbd11977e77e059f51be8"
+  },
+  "verification": {
+    "toolchainVersion": "TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)",
+    "constants": [
+      "V1=V1",
+      "V2=V2",
+      "Q1=Q1",
+      "Q2=Q2",
+      "Q1C1=Q1C1",
+      "Q1C2=Q1C2",
+      "Q2C1=Q2C1",
+      "Q2C2=Q2C2",
+      "Favor=Favor",
+      "Block=Block"
+    ],
+    "completionMarker": "Model checking completed. No error has been found.",
+    "generatedStates": 5922,
+    "distinctStates": 2266,
+    "statesLeftOnQueue": 0,
+    "searchDepth": 13,
+    "sourceIdentity": "c8da3c53312121fd0ce8d9e7709650e9b95eb2aec26cbd11977e77e059f51be8"
+  }
+}

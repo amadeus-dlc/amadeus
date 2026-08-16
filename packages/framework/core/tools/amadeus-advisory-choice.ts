@@ -291,15 +291,17 @@ export function advisoryChoiceOptionIds(): readonly string[] {
   return ["run-now", "defer-with-risk"];
 }
 
-// FR-ADV-4, SECONDARY mechanism: deferring past a raised advisory waives a
-// quality signal, and `quality-waiver` is a prohibited effect classification, so
-// even a ladder that somehow selected it would be refused at effect
-// authorization (amadeus-intent-autonomy.ts authorizeDecisionEffect /
-// SemiAuthority.authorizeEffect, both of which admit `workflow-reversible`
-// only). Two independent barriers, each with its own falsification.
+// The ONLY construction point for `advisory-deferral` (RFC-0001 ADR-2). Keeping
+// it here is what limits the new classification to plugin-declared advisories:
+// a blocking sensor verdict, a norm waiver or a coverage deferral is built
+// elsewhere, and every other construction point assigns `workflow-reversible`,
+// so those deferrals cannot name this classification at all.
+//
+// FR-ADV-4's PRIMARY barrier is untouched — translateAdvisoryDecision below
+// resolves `run-now` only, so an unattended deferral still reaches a human.
 export const ADVISORY_CHOICE_EFFECT_CLASSIFICATIONS: Readonly<Record<AdvisoryChoice, EffectClassification>> = {
   "run-now": "workflow-reversible",
-  "defer-with-risk": "quality-waiver",
+  "defer-with-risk": "advisory-deferral",
 };
 
 // --- C17: the acceptance predicates the unattended provenance has to clear ---

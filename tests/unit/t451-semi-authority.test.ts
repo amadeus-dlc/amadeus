@@ -192,7 +192,9 @@ describe("SemiAuthority scope and effect authorization", () => {
     expect(SemiAuthority.allowsOccurrence(authority, occurrence("stage-gate"))).toBe(true);
     expect(SemiAuthority.allowsOccurrence(authority, occurrence("walking-skeleton"))).toBe(false);
     expect(SemiAuthority.allowsOccurrence(authority, occurrence("phase-gate"))).toBe(false);
-    expect(SemiAuthority.allowsOccurrence(authority, occurrence("stage-gate", { phase: "phase-boundary" }))).toBe(false);
+    // RFC-0001 FR-5: the milestone line is drawn by kind, not by the occurrence
+    // phase, so a routine kind stays routine whatever phase string it carries.
+    expect(SemiAuthority.allowsOccurrence(authority, occurrence("stage-gate", { phase: "phase-boundary" }))).toBe(true);
     expect(SemiAuthority.allowsOccurrence(authority, occurrence("question", { intentUuid: "other-intent" }))).toBe(false);
   });
 

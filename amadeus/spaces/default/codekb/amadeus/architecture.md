@@ -5350,7 +5350,7 @@ plugin.json の settings 宣言          amadeus/config.json の plugin.settings
 - **#3035 — 性能 assert の測定境界**。`tests/unit/t07-hook-audit-logger.serial.test.ts:401-406` の 300ms 予算は `Bun.spawnSync` を挟んだ壁時計であり、bun のコールドスタートを含む（同ファイル `:396-397` のコメントが逐語で `The .sh measured bun cold-start + the logging path` と述べる）。skip path の実処理は数 ms であるため、この assert は実質 CI マシンの空き具合を測っている。
 - **#3034 — テスト隔離の境界破れ**。`tests/integration/t2851-doctor-self-install-freshness.serial.test.ts:78-87` の fixture が live repo の `scripts/promote-self.ts --check` を spawn する薄いラッパであり、`scripts/promote-self.ts:57` の `REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..")` が自ファイル位置から repo root を解決するため、`packages/framework/core/tools/amadeus-utility.ts:1589-1602` が渡す `cwd: projectDir` は構造的に無効である。`isSelfDevWorkspace`（同 `:1017-1019`）が `scripts/promote-self.ts` の存在だけを見るため、fixture を置いた瞬間に live 検査経路へ入る。
 
-## 選挙の保存 digest 契約の不整合と、recompose ガードの層境界（260815-priority-bug-batch-2、現在、observed `9ba8170bb`）
+## 選挙の保存 digest 契約の不整合と、recompose ガードの層境界（260815-priority-bug-batch-2、履歴、observed `9ba8170bb`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-per-unit-outcome の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: observed `9ba8170bb03996fb98b497cfcbac3d207795018d`（base `a49f9e9fd`）。本区間にアーキテクチャ変更はない。本節が記録するのは、既存構造の中に確定した**不変条件違反 1 件**と、修正方向を規定する**層境界 1 件**である。
 
@@ -5395,3 +5395,117 @@ plugin.json の settings 宣言          amadeus/config.json の plugin.settings
 | **swarm in-flight** | 追加すると層が反転する | state ファイルに swarm のフィールドが**存在しない**（`git grep -nE "[Ss]warm" -- packages/framework/core/tools/amadeus-state.ts` → 5 hit がすべてコメント行）。一次記録は監査イベント（`SWARM_UNIT_STARTED` / `SWARM_UNIT_CONVERGED`）側にあり、これを純射影から読むには lib → audit の依存を新設することになる |
 
 **設計判断（エスカレーション対象）**: swarm 軸を要件が必須とする場合、それを `assertRecomposeAllowed` の中で解決してはならない。呼び出し側 `assertRecomposeStateAllowed` が監査から導出して第 3 引数として渡す形にすれば境界は保たれるが、これは「純射影に何を渡すか」の設計変更であり、実装者が単独で決める事項ではない。**phase 軸のみを足す**案は既存の層構造に完全に収まるため、要件が phase だけを求めるなら追加裁定は要らない。
+
+## Construction outcome の読み口が 2 系統に割れている非対称（260815-per-unit-outcome、履歴、observed `78146f435a`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-stale-epoch-landed の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
+
+**観測 ref**: base `9ba8170bb03996fb98b497cfcbac3d207795018d` → observed `78146f435a66680055a24144937b5aa03d48bfb4`（祖先性 `git merge-base --is-ancestor 9ba8170bb 78146f435` → **exit 0**、距離 `git rev-list --count 9ba8170bb..78146f435` → **12**）。区間規模は `git diff --shortstat 9ba8170bb 78146f435` → **103 files / +3091 −182**、うち非 record 面は `git diff --shortstat 9ba8170bb 78146f435 -- ':!amadeus/' ':!metrics/'` → **40 files / +874 −97**。
+
+**本 intent の患部は区間内で 1 バイトも動いていない。** `git diff --quiet 9ba8170bb 78146f435 -- <path>` を患部 5 ファイル（`amadeus-orchestrate.ts` / `amadeus-construction-outcome-projection.ts` / `amadeus-unit-pool-runtime.ts` / `amadeus-per-unit-consume-fanout.ts` / `amadeus-swarm.ts`）へ適用し、**全件 exit 0**（差分なし）を実測した。したがって以下の機序はすべて observed 断面の現況である。
+
+### 中核機序 — 同じ「Construction の Unit 成果」に読み口が 2 系統ある
+
+Issue [#3099](https://github.com/amadeus-dlc/amadeus/issues/3099)（per-unit run-stage で完走した Construction が `producer-outcome-pending` で build-and-test へ到達できない）の根は、単一の欠落ではなく**読み口の分裂**である。Construction が「どの Unit がどう終わったか」を後段へ渡す経路が 2 本あり、一方だけが極端に狭い。
+
+| 系統 | 実装 | 読むイベント | 用途 |
+|---|---|---|---|
+| **正準射影** | `amadeus-construction-outcome-projection.ts` の `CONSTRUCTION_AUDIT_EVENTS`（`:222-228`） | `UNIT_POOL_EVENT_SET_COMMITTED` / `BOLT_STARTED` / `BOLT_COMPLETED` / `BOLT_FAILED` / `SWARM_BATON_RETURNED` の **5 種** | `amadeus-orchestrate.ts` の 4 消費点（`:3830-3832` `cancelledConstructionUnits`、`:4006-4013`、`:4088-4113`、`:6574-6579`） |
+| **per-unit fanout の母集団取得** | `amadeus-orchestrate.ts` の `readPerUnitConsumePopulation`（`:2447-2473`） | `readUnitPoolEventSetsFromAudit`（`:2456`）＋ `foldUnitPoolEventSets`（`:2460`）— 実質 `UNIT_POOL_EVENT_SET_COMMITTED` の **1 種のみ** | `emitRunStageForSlug`（`:4259-4261`）→ `resolveConsumes`（`:2518-2532`）→ `amadeus-per-unit-consume-fanout.ts` |
+
+正準射影のほうが**豊か**で、後発の狭い読み口だけが 5 イベント中 1 イベントしか見ない。これは「情報が存在しない」問題ではなく、**同じ事実に対する 2 つの読み取り規約が同期していない**という層境界の欠陥である（`memory/project.md` § Code Style の「既存 API の戻り値が実検出値と fallback を同じ表現へ潰す場合…」と同族の、provenance を失う読み口の問題）。
+
+### 単一 writer と、per-unit 経路がそこへ書かないこと
+
+`UNIT_POOL_EVENT_SET_COMMITTED` の**書き手は 1 箇所だけ**である — `amadeus-unit-pool-runtime.ts:152-161`、`createAuditUnitPoolRepository` のトランザクション内（読み側は同ファイル `:122-141` の `readUnitPoolEventSetsFromAudit`）。pool を生成する箇所を全数列挙すると（`grep -rn "createAuditUnitPoolRepository" packages/framework/core/tools/*.ts`、出現 14 行のうち import/定義 3 行を除く）:
+
+- `amadeus-swarm.ts` — **9 call site**（同ファイル出現 10 行 − import 1 行、`grep -c` 実測）。pool の唯一の変異源。
+- `amadeus-orchestrate.ts:3812` — 読み取り専用の合成。
+- `amadeus-orchestrate.ts:6586` — `handleFailureRuling`（retry / skip）での変異。
+
+一方 **per-unit dispatch 経路（`emitPerUnitRunStage`、`amadeus-orchestrate.ts:4574-4725`）は pool へ一切書かない** — 同範囲へ `grep -n "UnitPool\|unitPool\|UNIT_POOL"` を適用して **exit 1（0 hit）** を実測した。つまり swarm 経路を通らずに per-unit で完走した Construction は、pool イベントを 1 件も残さない。
+
+### 症状の発火点
+
+`amadeus-per-unit-consume-fanout.ts:224-228` が `declaredUnits` のうち outcome を持たない Unit を `pending` に落とし、`throwForUnits("producer-outcome-pending", pending)` で fail-closed する。`declaredUnits` は `loadRuntimeUnitRows`（`amadeus-orchestrate.ts:2450`、`bolt_dag.units` 由来）から来るので、**Unit は宣言されているのに outcome が空**という組み合わせが構造的に成立する。
+
+degrade スコープ（units-generation SKIP）は `:2451` の早期 return（runtime unit row が無ければ `undefined`）により影響を受けない。患部は **units-generation を EXECUTE した intent が per-unit dispatch へ落ちた場合**に限られる。
+
+### 再発条件 — width-1 バッチが plan-integrity redirect を素通りする
+
+本スキャンで新たに確定した条件。`amadeus-lib.ts:8416` が逐語で:
+
+> `if (pendingBatch === null || pendingBatch.units.length < 2) return { kind: "ok" };`
+
+**幅 1 のバッチは autonomy に関わらず plan-integrity の redirect を通らない**。したがって直列（linear）な Unit 計画は per-unit dispatch へ落ち、pool イベントが 0 件になり、構造的に `producer-outcome-pending` に至る。幅 2 以上かつ autonomy 未設定なら ask へ redirect されるため、この経路には入らない。**受け入れ基準はこの width-1 条件を明示的に符号化する必要がある。**
+
+### 是正方式の構造的評価（方式選択は後続の裁定事項）
+
+- **(a) fanout 側で正準射影を読む** — 既存構造との整合が最も高い。読み口を 1 本へ寄せる方向であり、直近の前例（PR #3101 の `runPreservedDigest`: 3 つの呼び出し点を 1 つの純関数へ統一）と同じ形をとる。
+- **(b) per-unit 経路から pool イベントを発行する** — 単一 writer 契約（`amadeus-unit-pool-runtime.ts:152-161`）へ 2 つ目の変異源を追加することになり、pool の所有境界を弱める。
+- **(c) 両者の折衷 / 別の第三案**。
+
+**本節は方式を決定しない**（`memory/team.md` P1 — 判断は独立検証された合意で行う）。いずれの方式でも保存すべき不変量として、`amadeus-orchestrate.ts:2461-2463` の逐語 `if (!currentUnits.has(terminal.unitId)) continue;` — **バッチ所属フィルタの意味論**を挙げる。バッチをまたいだ terminal outcome を現行バッチの母集団へ混ぜない性質であり、読み口を差し替えるときに落としやすい。
+
+### 消費者エッジの契約面
+
+per-unit consume の消費者側契約は `amadeus-per-unit-consume-fanout.ts:90-110` の `EXPECTED_PER_UNIT_CONSUMER_EDGES` に閉じている（**7 consumer / 19 edge**。件数の述語は `awk 'NR>=91 && NR<=109' <file> | grep -c '^\s*\['` → **19**、consumer 名は同範囲へ `grep -oE '^\s*\["[a-z-]+' | grep -oE '[a-z-]+$' | sort -u | wc -l` → **7**）。`assertConsumerEdgeInventory`（`:144-168`）が `consumer-edge-inventory-mismatch` で fail-closed するため、**この表と実グラフの乖離は無音では通らない**。是正がエッジ集合を変えないなら、この在庫は触らずに済む。
+
+## stale created attestation × MERGED PR に最終化経路がない — 拒否順序が `created → landed` 遷移を到達不能にしている（260815-stale-epoch-landed、履歴、observed `83e1dbeef`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-rfc-autonomy-modes の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する。主題は PR #3113 着地で解消済み））
+
+**観測 ref**: base `78146f435a66680055a24144937b5aa03d48bfb4` → observed `83e1dbeefb3278a00e86f69d3c79071a35ccf043`（`git merge-base --is-ancestor 78146f435a 83e1dbeef` → **exit 0**、`git rev-list --count 78146f435a..83e1dbeef` → **4**）。対象は [Issue #3110](https://github.com/amadeus-dlc/amadeus/issues/3110)（P2 / S3-MAJOR、格上げは FOLLOW-UP）。
+
+**患部は区間内で 1 バイトも動いていない。** `git diff --quiet 78146f435a 83e1dbeef -- plugins/github-pr-convergence/` → **exit 0**。したがって本節の file:line は observed 断面の値であり、区間の変更（intent 260815-per-unit-outcome の着地）とは独立である。
+
+**機序の一次記録は Issue #3110 の 2 件のクロスレビューコメント**（reviewer-1: CONFIRMED / reviewer-2: CONFIRMED_WITH_REFINEMENTS、いずれも `review-run-id: xrev-3110-20260815T114717Z`、`target-sha: 920790ba7fbaea5f58b5637268782df89e496cc2`）である。本節はそこで確定した機序を observed 断面で再照合したうえで要約する（**再導出はしない** — 一次記録は Issue コメント）。
+
+### 1. 拒否順序が `created → landed` を構造的な dead code にしている
+
+`transitionAllowed`（`plugins/github-pr-convergence/tools/pr-convergence-cli.ts:597-604`）は #3062 で `created → landed` を明示的に許可している（`:602` 逐語 `if (current === "created") return next === "converged" || next === "override" || next === "landed";`、直上のコメント `:598-601` が「merge-queue finalisation」と説明）。しかし `runCli` の評価順序は次のとおりである。
+
+| 順 | 位置 | 内容 |
+|---|---|---|
+| 1 | `pr-convergence-cli.ts:1370` | `const selfContext = selfContextFor(options, evaluation.value, seams);` |
+| 2 | `:614-624` → `:627` | `selfContextFor` は `currentSelfContext` へ委譲 |
+| 3 | `:669` | `!attestationBindsIdentity(receipt, work, heads, options.ref)` で拒否（`attestationBindsIdentity` の定義は `:714`） |
+| 4 | `:1398` | `if (options.verb === "report") return reportOutcome(...)` — **verb 分岐はここで初めて評価される** |
+
+`attestationBindsIdentity` は `receipt.prHead === heads.prHead` を要求するため、create 後に head が前進した self record では **手順 3 で拒否が確定し、手順 4 の verb 分岐へ到達しない**。結果として `created → landed` の正規経路は「create 後に head が一切動かない」場合にのみ機能する。拒否文言は `:746-748`（逐語 `report attestation is stale: the PR head advanced to ${heads.prHead} since this report was attested at ${receipt.prHead}. ` + `"Push the current HEAD, then run the create verb again for this pull request to open a new created epoch; "` + `"the existing pull request is reused, never closed and reopened.\n"`）。
+
+**この拒否順序は verb に依らない**ため、`override` も report と同一の stale 文言で返る（reviewer-1 の精度注記）。すなわち 4 verb すべてが self record ではデッドエンドになる。
+
+### 2. read-back の欠落 — 指示どおりの `create` 再実行が MERGED PR を reuse しない
+
+`:747` が指示する「create 再実行」は、`fetchOpenPrForHead`（`pr-convergence-gh-runner.ts:322`）が `"--state", "open"` のみを検索するため MERGED/CLOSED PR を read-back せず、**新規 PR を開いてしまう**（Issue 本文の実測: PR #3109 の誤作成）。エラーメッセージが指示する回復手順が、その手順自身の前提（PR が open であること）を満たさない状態で発行されている点が構造的欠陥である。
+
+### 3. blocking sensor と stage 文書の自己言及が閉路を閉じる
+
+- `plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts:391-393` — `stage === "pr-convergence" && kind === "created"` のとき逐語 `created proves PR delivery only; final convergence requires converged or override` を finding として出す。あわせて `:289` が `{ field: "local head", reason: "does not match the current checkout" }` を出す。**この fail-closed 動作自体は正しい**（record が created のまま最終化されていない事実を正確に報告している）。
+- `plugins/github-pr-convergence/stages/pr-convergence.md:344-346` — 逐語 `A merged pull request needs no ruling — `report` records it as `landed`.` が override 経路を明示的に閉じる。つまり「override は使うな、report を使え」と指示する一方、その report は機序 1 で拒否される。
+
+3 者が合わさり、当該 intent の pr-convergence ステージは**完了不能**になる（実測: intent 260814-open-bug-batch-6 の park。唯一の脱出路は `AMADEUS_SKIP_BLOCKING_SENSOR_GUARD` という緊急バイパス）。
+
+### 4. 根 — 未検討の交差、および運用ノルムとの規範衝突
+
+reviewer-2 の帰属によれば、根は PR #3081 の実装逸脱ではなく、**#3062 の選挙（E-260815-3062-LANDED-FINALIZATION）の設問スコープが head-integrity ゲートとの交差を含んでいなかった**ことにある。当時の設問は「self × landed で全 verb が拒否される」の解消であり、self record にもとから存在する `currentSelfContext` の head 束縛との相互作用は検討されていない。
+
+これに重なる形で、reviewer-1 が **規範衝突**を FOLLOW-UP として提起している —
+
+| 側 | 規範 | 要求 |
+|---|---|---|
+| 運用ノルム | `team.md` Way of Working（E-260813-RECORD-BUNDLING-NORM 2-0） | 自 intent の record checkpoint は Bolt PR へ**同梱可** |
+| CLI 契約 | `pr-convergence-cli.ts:669` の head 束縛 | create 後に head を**前進させてはならない**（暗黙） |
+
+record checkpoint を同梱すれば head は必ず前進するため、両者は構造的に両立しない。**是正設計はこの衝突をどちらの側で解消するかを明示する必要がある**（選挙事項）。なお reviewer-2 の一般化により、原因は「record checkpoint 同梱」に限定されず **create 後の任意の追加 push（理由不問）** である（監査シャード一次証拠: obb6 audit shard seq1→seq4 で PR #3092 の attested head が 2 つの create epoch 間で実際に前進）。
+
+### 5. 同一クラスの残余
+
+`260814-plugins-rename-drift` の 3 unit（PR #3051 / #3052 / #3055 — 各 unit の convergence-outcome.md が MERGED と実測記録済み）は record 上 `kind: created` のまま恒久残置している。workflow は completed 済みのため停止はしていないが、**record drift として同クラスの残留物**である。`260813-remove-team-up`（#2975）と `260814-autonomy-stop-fixes`（#3037）は候補（record 内では確定できず）。是正の受け入れ条件を設計する際、この既存残置を「修正後に最終化できるか」の観点で扱うかは要判断。
+
+配置と patch surface は `code-structure.md`、テスト空白と台帳は `code-quality-assessment.md` の各対応節を参照。
+
+## Intent Autonomy Mode の機構面 — RFC-0001 実装に向けた bound-surfaces の現況（260815-rfc-autonomy-modes、現在、observed `2eb94f1e39e`）
+
+- 差分区間 `83e1dbeef..2eb94f1e39e`（3 コミット — #3113 の landed 最終化 fix と record/metrics）は**全量が intent 260815-stale-epoch-landed へ帰属**し、RFC-0001 bound-surfaces（`packages/framework/core/`）との交差は **0 file**（`git diff --name-only 83e1dbeef 2eb94f1e39e -- packages/framework/core/` → 空、exit 0）。前節（260815-stale-epoch-landed）の主題は #3113 で解消済み。
+- RFC-0001 Reference-level が引く実装引用の currency を observed 断面で再照合 — **11 件中 10 件が逐語/意味論一致、1 件のみ行移動**:
+  - 一致: `amadeus-intent-autonomy.ts:581`（`SEMI_ROUTINE_INTERACTIONS: readonly InteractionKind[] = ["stage-gate", "question"]` 逐語）/ `:636-640`（`allowsOccurrence` — `occurrence.phase !== "phase-boundary"` の第 2 ガード）/ `:510-516`（`PROHIBITED_EFFECTS` 列挙）/ `:930-974`（`resolveAutoDecision` の invalid 系）/ `amadeus-intent-autonomy-production.ts:833-838`（`elect`/`recommend` が定数 `optionId: "approve"` を返す — 推奨導出が常に 1 件）/ `:713`（`Construction Autonomy Mode` の書込投影 `mode === "full" ? "autonomous" : …`）/ `:99-106`（advisory 効果分類の消費面）/ `amadeus-state.ts:1599`（park guard — `isAutonomousMode(content) && outstandingHumanTurns(pd).length === 0` で error）/ `amadeus-stop.ts:569`（`transcriptIsConversational(transcriptPath, format)` 署名）/ `amadeus-advisory-choice.ts:300-303`（`"defer-with-risk": "quality-waiver"`）
+  - 行移動: 読取側 semi→gated ハードコードは `amadeus-orchestrate.ts:2040` → **`:2046`**（逐語 `if (intentMode === "none" || intentMode === "semi") return "gated";`、`readAutonomyMode` 直下）。意味論は RFC 記載どおり不変
+- 帰結: RFC の bound-surfaces 列挙と機序記述は現 main 断面でそのまま有効。requirements/design は RFC を一次資料として引き直しなしで消費できる（行番号のみ orchestrate.ts の 1 件を `:2046` へ読み替え）。

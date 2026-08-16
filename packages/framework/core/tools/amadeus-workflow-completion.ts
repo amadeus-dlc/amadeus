@@ -270,7 +270,7 @@ export function completionMirrorDisposition(
       message: `Invalid mirror configuration: ${details}`,
     };
   }
-  return resolved.config.intentMirror.github.issue.mode === "off"
+  return resolved.config.intentMirror.github.issue.consent === "off"
     ? { kind: "immediate" }
     : { kind: "defer" };
 }

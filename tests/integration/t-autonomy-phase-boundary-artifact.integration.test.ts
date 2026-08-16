@@ -89,7 +89,10 @@ function bornProjectWithFullAutonomy(): string {
     humanPresenceGuard: false,
   });
   if (preview.status !== 0) throw new Error(preview.output);
-  const digest = (JSON.parse(preview.output.trim()) as { displayDigest: string }).displayDigest;
+  // Line 1 is the JSON preview; line 2 (grant-ceremony R-2) is a paste-ready
+  // set-autonomy command, not JSON.
+  const previewJsonLine = preview.output.trim().split("\n")[0] as string;
+  const digest = (JSON.parse(previewJsonLine) as { displayDigest: string }).displayDigest;
   appendHumanTurn(projectDir);
   const selected = run(projectDir, "amadeus-bolt.ts", [
     "set-autonomy",
