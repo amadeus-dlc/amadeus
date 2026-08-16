@@ -512,6 +512,9 @@ To get started:
       lastCompleted,
       nextStage,
       autonomy,
+      // FR-8: the facet rides the JSON contract too — null means unavailable,
+      // mirroring the human-readable rendering's degraded arm.
+      autonomyFacet,
     })}\n`);
     return;
   }

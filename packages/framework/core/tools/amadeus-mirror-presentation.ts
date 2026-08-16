@@ -136,7 +136,7 @@ export const MIRROR_USER_CONTRACT = {
   // Project board sync. The targets leaf names the boards an Intent syncs to;
   // it resolves per key, so a layer that carries it replaces the previous
   // layer's list outright and never merges into it, and it is independent of
-  // the issue-mode leaf (the mode decides whether an operation runs at all).
+  // the issue-consent leaf (the consent decides whether an operation runs at all).
   projectConfig: {
     key: "intent-mirror.github.project.targets",
     shape:

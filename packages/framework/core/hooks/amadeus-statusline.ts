@@ -267,8 +267,12 @@ function recordRuntimeAttrs(projectDir: string, input: Input): void {
 // read failure here must never affect the status line, matching
 // recordRuntimeAttrs' posture — since C8 adds no bespoke timeout handling of
 // its own (business-logic-model.md error-path table).
-// The statusline must render even when interactivity cannot be resolved; an
-// unreadable ledger degrades to no marker rather than a broken line.
+// The statusline must render even when interactivity cannot be resolved. An
+// unreadable ledger is answered INSIDE resolveSessionInteractivity — it fails
+// closed to non-interactive (under-reporting presence is safe; fabricating it
+// is not) — so the marker then truthfully shows the effective answer the
+// runtime will act on. The catch below only guards throws outside that
+// contract, degrading to no marker rather than a broken line.
 function safeNonInteractiveMarker(projectDir: string): string {
   try {
     return nonInteractiveMarker(resolveSessionInteractivity(projectDir).interactive);

@@ -4,7 +4,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 import { AMADEUS_CONFIG_REGISTRY } from "../../packages/framework/core/tools/amadeus-config.ts";
 
 const ROOT = join(import.meta.dir, "..", "..");
@@ -69,7 +69,10 @@ function files(root: string): string[] {
 }
 
 function legacyViolations(path: string): string[] {
-  if (LEGACY_TOKEN_EXEMPT_SUFFIXES.some((suffix) => path.endsWith(suffix))) return [];
+  // join() yields "\"-separated paths on Windows; the exempt suffixes are
+  // written with "/", so normalize before matching.
+  const slashed = path.split(sep).join("/");
+  if (LEGACY_TOKEN_EXEMPT_SUFFIXES.some((suffix) => slashed.endsWith(suffix))) return [];
   const contents = readFileSync(path, "utf-8");
   return LEGACY_TOKENS.filter((token) => contents.includes(token)).map(
     (token) => `${relative(ROOT, path)}: ${token}`,

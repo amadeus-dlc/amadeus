@@ -50,7 +50,7 @@ Space での上書き:
 | `subagent.dispatch.enforced-models` | モデル名配列(別名は完全 ID にも一致) | `["opus","sonnet"]` |
 
 `solo-election.trigger.mode` という config パスはありません。ソロ選挙の自動発動は、
-アクティブな Intent の Autonomy Mode から**導出**されます(`none` → manual、
+アクティブな intent の Autonomy Mode から**導出**されます(`none` → manual、
 `semi`/`full` → auto)— 設定可能な項目ではありません。
 
 設定は fail-closed です。未知のパス、旧フラットキー、`null`、不正な JSON、読み取れない
