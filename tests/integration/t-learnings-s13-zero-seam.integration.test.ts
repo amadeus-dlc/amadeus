@@ -221,6 +221,18 @@ describe("s13-zero: addConductorCandidate (R-3/R-4)", () => {
     }
   });
 
+  test("an unreadable evidence path (a directory) is refused as a mismatch", () => {
+    const pd = mkproj(ZERO_CANDIDATE_MEMORY);
+    const dirAsEvidence = join(pd, "evidence-dir");
+    mkdirSync(dirAsEvidence, { recursive: true });
+    const result = addConductorCandidate(candidate, dirAsEvidence);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.kind).toBe("evidence-mismatch");
+      expect((result.error as { reason: string }).reason).toStartWith("unreadable:");
+    }
+  });
+
   test("disk evidence that does not correspond to the candidate is refused", () => {
     const pd = mkproj(ZERO_CANDIDATE_MEMORY);
     const evidencePath = join(pd, "unrelated-evidence.md");
