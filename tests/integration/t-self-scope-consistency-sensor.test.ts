@@ -118,6 +118,15 @@ afterEach(() => {
 });
 
 describe("self-scope-consistency sensor", () => {
+  // #2363 — the scanned face set must cover every promoted dogfood surface.
+  // Pi became a self-install face when promote-self started reflecting
+  // dist/pi/.pi into the project root; a face the parity sensor does not scan
+  // is a face whose scope grid can drift unobserved, which is exactly the
+  // #2033 failure this sensor exists to catch.
+  test("scans every promoted dogfood face", () => {
+    expect([...SELF_HARNESSES]).toEqual([".claude", ".codex", ".cursor", ".opencode", ".kimi-code", ".pi"]);
+  });
+
   test("stays dormant outside Amadeus self-development", () => {
     expect(evaluateSelfScopeConsistency(fixtureRoot())).toEqual({
       pass: true,
@@ -127,7 +136,7 @@ describe("self-scope-consistency sensor", () => {
     });
   });
 
-  test("passes when all five dogfood harnesses expose every promoted scope", () => {
+  test("passes when all six dogfood harnesses expose every promoted scope", () => {
     const root = fixtureRoot();
     for (const harness of HARNESSES) seedHarness(root, harness);
     expect(evaluateSelfScopeConsistency(root).pass).toBe(true);
