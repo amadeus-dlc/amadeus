@@ -10,14 +10,14 @@
 // checking presence and recording the approval (functional-design-questions.md
 // Q2).
 //
-// R-1: presence なし -> 拒否、GATE_APPROVED 未発行、state 未編集。
-// R-2: presence 検証は withAuditLock の内側・冪等ショートカットより前 — 既承認
-//      バッチへの presence なし再呼出しでも一律拒否(「冪等だから許される」抜け
-//      道がないことの反証)。
-// R-6: verifyBatchApprovalPresence は独自の判定を持たず humanActedSinceGate を
-//      再利用する(意図ベースの重複排除)。
-// R-7: presence 拒否は新しい監査痕跡を残さない — 拒否前後で監査シャード・state
-//      ファイルのバイト内容が不変。
+// R-1: no presence -> refusal, no GATE_APPROVED emitted, state untouched.
+// R-2: the presence check sits INSIDE withAuditLock and BEFORE the idempotent
+//      shortcut - a presence-less re-call against an already-approved batch is
+//      refused uniformly (falsifying the "idempotent, so allowed" loophole).
+// R-6: verifyBatchApprovalPresence holds no predicate of its own and reuses
+//      humanActedSinceGate (intent-based deduplication).
+// R-7: a presence refusal leaves no new audit trace - the audit shard and the
+//      state file are byte-identical before and after the refusal.
 //
 // Mechanism: in-process via the exported handleBoltCommand seam (the t507
 // precedent). process.exit is trapped (t214 precedent) since a presence
@@ -30,7 +30,7 @@
 // fixture project.
 
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -122,7 +122,7 @@ function recordHumanTurn(p: string): void {
     event: "HUMAN_TURN",
     fields: {},
   })}\n`;
-  Bun.write(shard, existing + row);
+  writeFileSync(shard, existing + row);
 }
 
 class ExitSignal extends Error {
