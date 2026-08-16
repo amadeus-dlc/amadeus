@@ -5138,8 +5138,8 @@
   {
     "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
     "selector": {
-      "function": "<module>",
-      "fingerprint": "sha256:d3d960ab9434ab93d1d0b6ec0b6d4ed2f8d5751f40a67334544f884c06a34311",
+      "function": "emitWaitingIfSuspended",
+      "fingerprint": "sha256:1b2bcd0a2a70e6206a25193892b7ad548e735a691d575182e76201383830b894",
       "anchorLines": 2,
       "targetLines": "1-2"
     },
