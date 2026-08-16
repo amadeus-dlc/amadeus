@@ -5,14 +5,55 @@
 // change the mode table, grant scope, effect classification, or decision order.
 
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import type { VerifiedHumanTurn } from "./amadeus-loop-monitor-runtime.ts";
+import { auditShardDir, auditShardName, findAllEvents } from "./amadeus-lib.ts";
 
 export type AutonomyMode = "none" | "semi" | "full";
 export type WorkflowExecutionState = "running" | "suspended" | null;
 export type IntentGrantState = "active" | "revoked" | "completed";
 export type InteractionKind = "stage-gate" | "phase-gate" | "walking-skeleton" | "question";
 export type StopReason = "AWAITING_HUMAN" | "REPAIR_STALLED" | "NORM_CONFLICT" | "USER_PARKED";
+
+// C3 / FR-2 (RFC-0001) — the single read-only effective-interactivity port.
+// "Interactive" means this clone's own audit shard holds at least one
+// HUMAN_TURN row; every consumer (Stop hook carveout, waiting-admission
+// branch, --status/statusline) must call this instead of re-reading the
+// ledger. Reuses the existing scan pattern from amadeus-state.ts
+// handleDelegateApproval/handleDelegateRejection (auditShardDir +
+// auditShardName + findAllEvents) — never mints presence, never calls
+// mintHumanPresence (read-only boundary).
+export type SessionInteractivity = {
+  readonly interactive: boolean;
+  readonly source: "human-turn-pipeline";
+  readonly measuredAt: string;
+};
+
+// Judgment is binary (>=1 HUMAN_TURN in THIS clone's own shard) with no
+// freshness window, TTY check, or explicit config flag — those alternatives
+// were rejected by the RFC (Q3) and are not reintroduced here. Re-reads the
+// shard from disk on every call (no in-process cache), so a HUMAN_TURN that
+// lands mid-session is observed on the next call. Any resolution/read
+// failure (no active intent, missing shard, corrupted lines) falls closed to
+// `interactive: false` without throwing — this can only under-report, never
+// fabricate a HUMAN_TURN that is not on disk.
+export function resolveSessionInteractivity(projectDir: string): SessionInteractivity {
+  let interactive = false;
+  try {
+    const shardDir = auditShardDir(projectDir);
+    if (shardDir !== null) {
+      const text = readFileSync(join(shardDir, auditShardName(projectDir)), "utf-8");
+      interactive = findAllEvents(text, "HUMAN_TURN").length > 0;
+    }
+  } catch {
+    // Fail-closed terminal: a read failure returns the non-interactive answer
+    // directly. Under-reporting is safe; fabricating presence is not.
+    return { interactive: false, source: "human-turn-pipeline", measuredAt: new Date().toISOString() };
+  }
+  return { interactive, source: "human-turn-pipeline", measuredAt: new Date().toISOString() };
+}
 
 export function autonomyIsRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
