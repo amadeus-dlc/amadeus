@@ -31,6 +31,13 @@
 // sensor a prose sentence is talking about would carry prose interpretation into
 // a machine gate. The same containment is not applied to 07's prose, which
 // quotes an illustrative authoring glob (`**/*.ts`) that no manifest declares.
+//
+// Reading discipline. A manifest's `matches` is read from its YAML frontmatter
+// only — a `matches:` line in the body is prose, and honouring it would let an
+// authoring example stand in for a declaration the frontmatter no longer makes.
+// A docs table that repeats a manifest row is rejected rather than deduped: a
+// stale row sitting beside the corrected one is exactly the drift this gate
+// exists to catch, and last-write-wins would publish it green.
 
 import { describe, expect, test } from "bun:test";
 import { readFileSync, readdirSync } from "node:fs";
@@ -90,6 +97,19 @@ function derivedCorpus(): string[] {
 }
 
 /**
+ * A manifest's YAML frontmatter — the only region where `matches:` is a
+ * declaration rather than prose. A manifest that opens without frontmatter, or
+ * never closes it, is malformed and fails closed.
+ */
+function manifestFrontmatter(path: string): string {
+  const lines = readFileSync(path, "utf8").split("\n");
+  if (lines[0] !== "---") throw new Error(`${path}: manifest does not open with YAML frontmatter`);
+  const end = lines.indexOf("---", 1);
+  if (end === -1) throw new Error(`${path}: manifest has unterminated YAML frontmatter`);
+  return lines.slice(1, end).join("\n");
+}
+
+/**
  * The `matches` glob each manifest declares. Absence is an opt-out (a manifest
  * with no `matches` never fires, so 07 does not list it); an unparseable
  * declaration is a defect and fails closed rather than silently opting out.
@@ -97,7 +117,7 @@ function derivedCorpus(): string[] {
 function declaredMatches(): Map<string, string> {
   const out = new Map<string, string>();
   for (const [name, path] of [...derivedManifests()].sort()) {
-    const line = readFileSync(path, "utf8").match(/^matches:.*$/mu)?.[0];
+    const line = manifestFrontmatter(path).match(/^matches:.*$/mu)?.[0];
     if (line === undefined) continue;
     const value = line.match(/^matches:\s*"(.+)"\s*$/u)?.[1];
     if (value === undefined) throw new Error(`${path}: unparseable matches declaration: ${line}`);
@@ -109,7 +129,9 @@ function declaredMatches(): Map<string, string> {
 /**
  * The name→glob pairs the 07 `matches` table publishes. Anchored on the section
  * heading so the unrelated manifest table earlier in the doc cannot leak in, and
- * fails closed when a manifest row in that section has no backticked glob cell.
+ * fails closed when a manifest row in that section has no backticked glob cell
+ * or when one manifest holds more than one row — a repeated name would otherwise
+ * let a stale glob survive beside the corrected one.
  */
 function matchesTableRows(doc: string): Map<string, string> {
   const lines = readFileSync(join(REPO_ROOT, "docs", "reference", doc), "utf8").split("\n");
@@ -118,13 +140,19 @@ function matchesTableRows(doc: string): Map<string, string> {
     throw new Error(`${doc}: expected exactly one "## \`matches\`" section, found ${headings.length}`);
   }
   const out = new Map<string, string>();
+  const repeated: string[] = [];
   for (let i = (headings[0] ?? 0) + 1; i < lines.length; i++) {
     const line = lines[i] ?? "";
     if (line.startsWith("## ")) break;
     if (!MANIFEST_ROW.test(line)) continue;
     const row = line.match(MANIFEST_GLOB_ROW);
     if (!row) throw new Error(`${doc}:${i + 1}: manifest row without a backticked glob cell: ${line}`);
-    out.set(row[1] ?? "", row[2] ?? "");
+    const name = row[1] ?? "";
+    if (out.has(name)) repeated.push(name);
+    out.set(name, row[2] ?? "");
+  }
+  if (repeated.length > 0) {
+    throw new Error(`${doc}: manifest listed more than once in the \`matches\` table: ${[...new Set(repeated)].sort().join(", ")}`);
   }
   return out;
 }
@@ -185,6 +213,10 @@ describe("07-sensor-system `matches` tables match the sensor corpus (#3097)", ()
 describe("06-sensors prose quotes only real manifest globs (#3097)", () => {
   test("the English prose quotes at least one glob (vacuity guard)", () => {
     expect(proseGlobs("06-sensors.md").length).toBeGreaterThan(0);
+  });
+
+  test("the Japanese prose quotes at least one glob (vacuity guard)", () => {
+    expect(proseGlobs("06-sensors.ja.md").length).toBeGreaterThan(0);
   });
 
   test("every glob the English prose quotes is a declared matches value", () => {
