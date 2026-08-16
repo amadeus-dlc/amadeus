@@ -3236,7 +3236,7 @@ export function handleCompleteWorkflow(args: string[]): void {
 // including anything this helper did not anticipate — resolves to a warning
 // string, never a thrown error: a defect in report generation must never turn
 // a real completion into a failed one.
-function generateAutoDecisionSummaryOutcome(
+export function generateAutoDecisionSummaryOutcome(
   pd: string,
   completionRecordDir: string | null,
 ): { path: string | null; warning: string | null } {

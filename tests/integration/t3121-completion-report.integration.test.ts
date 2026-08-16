@@ -225,3 +225,78 @@ describe("completion-report: auto-decision summary at workflow completion (C9/AD
     expect(json.auto_decision_summary_warning as string).toContain("write-failed");
   });
 });
+
+// In-process arm coverage (spawned CLI runs do not register bun coverage):
+// the shard-reader tolerances, the pagination cursor, the write-failure arm
+// and the completion helper's warning arms are exercised directly here.
+import { mkdirSync, rmSync } from "node:fs";
+import {
+  buildAutoDecisionSummary,
+  writeAutoDecisionSummaryMarkdown,
+} from "../../packages/framework/core/tools/amadeus-completion-report.ts";
+import { generateAutoDecisionSummaryOutcome } from "../../packages/framework/core/tools/amadeus-state.ts";
+
+describe("completion-report: direct arm coverage", () => {
+  test("a record dir without an audit dir summarises to zero decisions", () => {
+    const { project, record } = birth();
+    const recordDir = join(project, "amadeus", "spaces", "default", "intents", record);
+    // remove the audit/ dir so the readdir catch returns [].
+    rmSync(join(recordDir, "audit"), { recursive: true, force: true });
+    const built = buildAutoDecisionSummary(project, recordDir);
+    expect(built.ok).toBe(true);
+    if (built.ok) expect(built.summary.totalAutoDecided).toBe(0);
+  });
+
+  test("a shard entry that is a directory is skipped, not fatal", () => {
+    const { project, record, intentUuid } = birth();
+    seedAutoDecisions(project, record, intentUuid, [{ decisionId: "d-dir", basisKind: "grant-gate" }]);
+    const recordDir = join(project, "amadeus", "spaces", "default", "intents", record);
+    mkdirSync(join(recordDir, "audit", "ghost.jsonl"), { recursive: true });
+    const built = buildAutoDecisionSummary(project, recordDir);
+    expect(built.ok).toBe(true);
+    if (built.ok) expect(built.summary.totalAutoDecided).toBe(1);
+  });
+
+  test("the pagination cursor advances across a second page", () => {
+    const { project, record, intentUuid } = birth();
+    const specs = Array.from({ length: 101 }, (_, i) => ({
+      decisionId: `d-${String(i).padStart(3, "0")}`,
+      basisKind: "grant-gate" as DecisionBasisKind,
+    }));
+    seedAutoDecisions(project, record, intentUuid, specs);
+    const built = buildAutoDecisionSummary(
+      project,
+      join(project, "amadeus", "spaces", "default", "intents", record),
+    );
+    expect(built.ok).toBe(true);
+    if (built.ok) expect(built.summary.totalAutoDecided).toBe(101);
+  });
+
+  test("a completion path squatted by a file yields write-failed", () => {
+    const { project, record, intentUuid } = birth();
+    seedAutoDecisions(project, record, intentUuid, [{ decisionId: "d-wf", basisKind: "grant-gate" }]);
+    const recordDir = join(project, "amadeus", "spaces", "default", "intents", record);
+    writeFileSync(join(recordDir, "completion"), "a file, not a directory");
+    const built = buildAutoDecisionSummary(project, recordDir);
+    expect(built.ok).toBe(true);
+    if (built.ok) {
+      const written = writeAutoDecisionSummaryMarkdown(recordDir, built.summary);
+      expect(written.ok).toBe(false);
+    }
+  });
+
+  test("the completion helper resolves every branch to a warning, never a throw", () => {
+    const { project, record, intentUuid } = birth();
+    // null record dir -> record-dir-unresolved
+    const unresolved = generateAutoDecisionSummaryOutcome(project, null);
+    expect(unresolved.path).toBeNull();
+    expect(unresolved.warning).toContain("record-dir-unresolved");
+    // squatted completion path -> write-failed warning through the helper
+    seedAutoDecisions(project, record, intentUuid, [{ decisionId: "d-h", basisKind: "grant-gate" }]);
+    const recordDir = join(project, "amadeus", "spaces", "default", "intents", record);
+    writeFileSync(join(recordDir, "completion"), "a file, not a directory");
+    const failed = generateAutoDecisionSummaryOutcome(project, recordDir);
+    expect(failed.path).toBeNull();
+    expect(failed.warning).toContain("write-failed");
+  });
+});
