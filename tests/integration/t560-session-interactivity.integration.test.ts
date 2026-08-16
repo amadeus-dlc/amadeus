@@ -232,7 +232,10 @@ describe("R-5 — rejected alternatives (freshness window / TTY / explicit flag)
       .filter(Boolean);
     expect(params).toEqual(["projectDir: string"]);
 
-    const bodyMatch = source.match(/export function resolveSessionInteractivity\([\s\S]*?\n}\n/);
+    // Capture through the NEXT top-level export so the whole body is inspected
+    // even if the function later gains additional column-0 braces or trailing
+    // statements after the try/catch.
+    const bodyMatch = source.match(/export function resolveSessionInteractivity\([\s\S]*?\n}\n(?=\s*(?:\/\/[^\n]*\n\s*)*export\b)/);
     expect(bodyMatch).not.toBeNull();
     const body = (bodyMatch as RegExpMatchArray)[0];
     // TTY / harness-kind detection.
