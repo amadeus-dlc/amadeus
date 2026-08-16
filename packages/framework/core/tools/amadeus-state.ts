@@ -3232,6 +3232,28 @@ export function handleCompleteWorkflow(args: string[]): void {
   );
 }
 
+// C9/ADR-3: non-blocking auto-decision summary (R-3). Every branch —
+// including anything this helper did not anticipate — resolves to a warning
+// string, never a thrown error: a defect in report generation must never turn
+// a real completion into a failed one.
+function generateAutoDecisionSummaryOutcome(
+  pd: string,
+  completionRecordDir: string | null,
+): { path: string | null; warning: string | null } {
+  try {
+    if (completionRecordDir === null) {
+      return { path: null, warning: formatSummaryBuildError({ kind: "record-dir-unresolved" }) };
+    }
+    const built = buildAutoDecisionSummary(pd, completionRecordDir);
+    if (!built.ok) return { path: null, warning: formatSummaryBuildError(built.error) };
+    const written = writeAutoDecisionSummaryMarkdown(completionRecordDir, built.summary);
+    if (written.ok) return { path: written.relativePath, warning: null };
+    return { path: null, warning: formatSummaryBuildError(written.error) };
+  } catch (cause) {
+    return { path: null, warning: `generation-failed:${cause instanceof Error ? cause.message : String(cause)}` };
+  }
+}
+
 function completeWorkflowForTarget(args: string[], pd: string): void {
   // Keep <completed-slug> positional and distinct from the --reason value.
   // --reason takes a value, so its argument is excluded from positionals too.
@@ -3395,12 +3417,7 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
   }
   injectWorkflowCompletionCrash("after-state-completed");
 
-  // C9/ADR-3: non-blocking auto-decision summary (R-3). Every branch here —
-  // including anything this block did not anticipate — resolves to a warning
-  // string, never a thrown error: a defect in report generation must never
-  // turn a real completion into a failed one.
-  //
-  // Must run BEFORE completeIntentRegistryRow below: listProductionAutoDecisions
+  // C9/ADR-3: must run BEFORE completeIntentRegistryRow below: listProductionAutoDecisions
   // resolves this Intent's review lifecycle off the intents.json status row, and
   // a "completed" lifecycle demands a committed completion-seal audit row that a
   // baseline/"none"-autonomy Intent never writes (commitProductionIntentCompletion
@@ -3409,27 +3426,9 @@ function completeWorkflowForTarget(args: string[], pd: string): void {
   // which skips the seal requirement entirely — R-4 only pins this to run after
   // the state write and before the completion JSON, not relative to the
   // registry flip, so this ordering stays inside the mandated window.
-  let autoDecisionSummaryPath: string | null = null;
-  let autoDecisionSummaryWarning: string | null = null;
-  try {
-    if (completionRecordDir === null) {
-      autoDecisionSummaryWarning = formatSummaryBuildError({ kind: "record-dir-unresolved" });
-    } else {
-      const built = buildAutoDecisionSummary(pd, completionRecordDir);
-      if (!built.ok) {
-        autoDecisionSummaryWarning = formatSummaryBuildError(built.error);
-      } else {
-        const written = writeAutoDecisionSummaryMarkdown(completionRecordDir, built.summary);
-        if (written.ok) {
-          autoDecisionSummaryPath = written.relativePath;
-        } else {
-          autoDecisionSummaryWarning = formatSummaryBuildError(written.error);
-        }
-      }
-    }
-  } catch (cause) {
-    autoDecisionSummaryWarning = `generation-failed:${cause instanceof Error ? cause.message : String(cause)}`;
-  }
+  const summaryOutcome = generateAutoDecisionSummaryOutcome(pd, completionRecordDir);
+  const autoDecisionSummaryPath = summaryOutcome.path;
+  const autoDecisionSummaryWarning = summaryOutcome.warning;
 
   // Intent status lifecycle: terminal completion flips the active intent's
   // registry row to "complete". This is the determinism (field write) gated by

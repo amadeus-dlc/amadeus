@@ -79,6 +79,7 @@ function readAutoDecisionAuditRecords(recordDir: string): readonly AutoDecisionR
     } catch {
       // a shard vanished between enumerate and read — skip it, matching
       // readAllAuditShards()'s own tolerance for that race.
+      continue;
     }
   }
   const buffer = parts.join("\n");
