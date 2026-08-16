@@ -577,14 +577,19 @@ export function composeCarveoutBasis(
     });
   }
   if (freshness.kind !== "fresh") return null;
-  let interactivity: SessionInteractivitySignal;
-  try {
-    interactivity = deps.interactivity();
-  } catch {
-    interactivity = { interactive: false, source: "undetermined" };
-  }
+  const interactivity = interactivityOrUndetermined(deps.interactivity);
   if (!interactivity.interactive) return null; // the engine waits instead
   return { carveout: "pending-compose", interactivity, outcomeKind: "human-prerogative" };
+}
+
+// Same undetermined fallback as sessionInteractivity above, over the injected
+// read seam: a port that cannot be reached answers non-interactive.
+function interactivityOrUndetermined(read: () => SessionInteractivitySignal): SessionInteractivitySignal {
+  try {
+    return read();
+  } catch {
+    return { interactive: false, source: "undetermined" };
+  }
 }
 
 /** @internal */
