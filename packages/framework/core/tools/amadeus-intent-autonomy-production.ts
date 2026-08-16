@@ -9,7 +9,10 @@ import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 
 import {
+  ALL_INTERACTION_KINDS,
+  CONSTRUCTION_AUTONOMY_MODE_FIELD,
   autonomyDigest,
+  firesWalkingSkeletonGate,
   autonomyScopeFingerprint,
   authorizeInteraction,
   recommendationBasisFingerprint,
@@ -19,6 +22,7 @@ import {
   grantIssuanceDisplayDigest,
   nonFullCommandDisplayDigest,
   normalizeDecisionPolicies,
+  projectConstructionAutonomy,
   SEMI_ROUTINE_INTERACTIONS,
   type AutonomyMode,
   type AutonomyProjection,
@@ -29,6 +33,7 @@ import {
   type HumanAutonomyCommand,
   type InteractionKind,
   type SemiAuthorityScope,
+  type SkeletonStance,
   type WorkflowResult,
 } from "./amadeus-intent-autonomy.ts";
 import {
@@ -75,24 +80,18 @@ import {
   splitAuditRecords,
   readAllAuditShards,
   readStateFile,
+  SKELETON_ON_SCOPES,
   setFieldStrict,
   setOrInsertField,
   withAuditLock,
   writeStateFile,
 } from "./amadeus-lib.ts";
 
-const ALL_INTERACTIONS: readonly InteractionKind[] = [
-  "stage-gate",
-  "phase-gate",
-  "walking-skeleton",
-  "question",
-];
-
 // What a mode auto-decides. Derived from the two existing constants rather than
 // restated, so the pair a semi Intent leaves to the human moves whenever
 // SEMI_ROUTINE_INTERACTIONS moves (FR-2b, BR-U1-7).
 function autoDecidedKinds(mode: AutonomyMode): readonly InteractionKind[] {
-  if (mode === "full") return ALL_INTERACTIONS;
+  if (mode === "full") return ALL_INTERACTION_KINDS;
   if (mode === "semi") return SEMI_ROUTINE_INTERACTIONS;
   return [];
 }
@@ -101,7 +100,40 @@ function autoDecidedKinds(mode: AutonomyMode): readonly InteractionKind[] {
 // is how a human sees, before granting, which gates stay theirs.
 export function nonAutoDecidedKinds(mode: AutonomyMode): readonly InteractionKind[] {
   const decided = autoDecidedKinds(mode);
-  return ALL_INTERACTIONS.filter((kind) => !decided.includes(kind));
+  return ALL_INTERACTION_KINDS.filter((kind) => !decided.includes(kind));
+}
+
+// The stance the walking-skeleton ceremony runs under (RFC-0001 FR-10). Reading
+// it needs state, which is why the resolution lives here and only the resolved
+// meaning lives in the pure layer.
+//
+// `scope-dependent`, an unrecognised value and an absent field all resolve
+// through SKELETON_ON_SCOPES — the same canonical mapping the engine's own
+// gate:"unresolved" fallback uses, so the two can never disagree about which
+// scopes are greenfield. A record this cannot read at all, or one with no Scope
+// row, keeps the ceremony with the human (R-20).
+function resolveSkeletonStance(stateContent: string | null): SkeletonStance {
+  if (stateContent === null) return "on";
+  const raw = getField(stateContent, "Skeleton Stance")?.trim().toLowerCase();
+  if (raw === "on" || raw === "off") return raw;
+  const scope = getField(stateContent, "Scope")?.trim();
+  if (!scope) return "on";
+  return SKELETON_ON_SCOPES.has(scope) ? "on" : "off";
+}
+
+export function skeletonGateFiresFor(stateContent: string | null): boolean {
+  return firesWalkingSkeletonGate(resolveSkeletonStance(stateContent));
+}
+
+// The state a projectDir currently holds, or null when there is none to read.
+// An unreadable record is a legitimate branch for the stance resolution above
+// (it falls to the human side); it is not an error to raise from here.
+function stateContentOrNull(projectDir: string): string | null {
+  try {
+    return readStateFile(projectDir);
+  } catch {
+    return null;
+  }
 }
 
 // Exported so a caller that builds its own option effects can prove, in a test
@@ -194,8 +226,21 @@ export function commitProductionIntentCompletion(input: CommitProductionIntentCo
   return "error" in result ? { ok: false, error: result.error } : { ok: true, result };
 }
 
-function interactionKind(input: { readonly walkingSkeleton: boolean; readonly phaseBoundary?: boolean }): InteractionKind {
-  if (input.walkingSkeleton) return "walking-skeleton";
+// The single point where a stage becomes an interaction KIND. Both call sites
+// that assemble `walkingSkeleton` (amadeus-state.ts's gate approval and
+// amadeus-orchestrate.ts's directive decoration) reach the ceremony through
+// here, and so does the refusal recorder below — which is why the stance gate
+// belongs here and not at either supply point (RFC-0001 R-17a). The suppliers
+// keep answering only "is this the first in-scope Construction stage?"; whether
+// that stage carries the ceremony is the stance's answer.
+interface InteractionKindInput {
+  readonly walkingSkeleton: boolean;
+  readonly phaseBoundary?: boolean;
+  readonly skeletonGateFires: boolean;
+}
+
+function interactionKind(input: InteractionKindInput): InteractionKind {
+  if (input.walkingSkeleton && input.skeletonGateFires) return "walking-skeleton";
   return input.phaseBoundary ? "phase-gate" : "stage-gate";
 }
 
@@ -206,6 +251,7 @@ interface OccurrenceInput {
   readonly graphRevision: string;
   readonly walkingSkeleton: boolean;
   readonly phaseBoundary?: boolean;
+  readonly skeletonGateFires: boolean;
 }
 
 function occurrence(input: OccurrenceInput) {
@@ -253,11 +299,16 @@ export function productionStageAutonomy(input: ProductionStageAutonomyInput): Pr
       qualityRepair: "disabled",
     };
   }
-  const authorization = authorizeProductionOccurrence(projection, occurrence({ ...input, projection }), "intent");
+  const skeletonGateFires = skeletonGateFiresFor(stateContentOrNull(input.projectDir));
+  const authorization = authorizeProductionOccurrence(
+    projection,
+    occurrence({ ...input, projection, skeletonGateFires }),
+    "intent",
+  );
   const qualityRepair = qualityState(projection);
   if (!authorization.authorized) {
     emitAuthorizationRefusal(input.projectDir, {
-      kind: interactionKind(input),
+      kind: interactionKind({ ...input, skeletonGateFires }),
       stage: input.stage,
       reason: authorization.reason,
       mode: projection.mode,
@@ -519,7 +570,7 @@ function grantScope(input: GrantScopeInput): GrantScopeDescriptor {
     intentUuid: input.projection.intentUuid,
     scopeId,
     ...fingerprints,
-    allowedInteractionKinds: ALL_INTERACTIONS,
+    allowedInteractionKinds: ALL_INTERACTION_KINDS,
     permissionBoundaryFingerprint: autonomyDigest("native-host-permission-boundary-v1"),
     prohibitedEffects: PROHIBITED_EFFECTS,
   };
@@ -718,7 +769,7 @@ function writeAutonomyStateProjection(
     withAuditLock(projectDir, () => {
       let updated = setOrInsertField(readStateFile(projectDir), "## Current Status", "Intent Autonomy Mode", mode);
       updated = setOrInsertField(updated, "## Current Status", "Intent Grant", projection.currentGrant?.grantId ?? "none");
-      updated = setFieldStrict(updated, "Construction Autonomy Mode", mode === "full" ? "autonomous" : "gated");
+      updated = setFieldStrict(updated, CONSTRUCTION_AUTONOMY_MODE_FIELD, projectConstructionAutonomy(mode));
       writeStateFile(projectDir, updated);
     });
   } catch (cause) {
@@ -850,7 +901,7 @@ export function commitProductionStageGateDecision(input: CommitProductionStageGa
   if (resolved === null) return { kind: "not-authorized", reason: "active-intent-required" };
   const coordinator = coordinatorFor(input.projectDir, resolved);
   const projection = coordinator.readProjection();
-  const target = occurrence({ ...input, projection });
+  const target = occurrence({ ...input, projection, skeletonGateFires: skeletonGateFiresFor(input.stateContent) });
   const scopeId = getField(input.stateContent, "Scope") ?? "intent";
   const authorization = authorizeProductionOccurrence(projection, target, scopeId);
   if (!authorization.authorized) return { kind: "not-authorized", reason: authorization.reason };

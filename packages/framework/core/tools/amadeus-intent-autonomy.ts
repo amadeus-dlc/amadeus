@@ -15,12 +15,102 @@ import {
   type RecommendationBasisSource,
 } from "./amadeus-recommendation.ts";
 import type { VerifiedHumanTurn } from "./amadeus-loop-monitor-runtime.ts";
-import { auditShardDir, auditShardName, findAllEvents } from "./amadeus-lib.ts";
+import { auditShardDir, auditShardName, findAllEvents, getField } from "./amadeus-lib.ts";
 
 export type AutonomyMode = "none" | "semi" | "full";
 export type WorkflowExecutionState = "running" | "suspended" | null;
+
+// --- The walking-skeleton ceremony (RFC-0001 FR-10 / ADR-10) ---------------
+//
+// The recorded stance for the walking-skeleton ceremony. `scope-dependent` is
+// resolved against the canonical greenfield scope set by the caller that can
+// read state; this module only decides what a resolved stance means.
+export type SkeletonStance = "on" | "off" | "scope-dependent";
+
+// Whether the first Construction stage is a walking-skeleton MILESTONE rather
+// than an ordinary stage gate. Only an explicit `off` retires the ceremony:
+// everything else — including a stance nobody resolved — keeps the acceptance
+// point with the human, because wrongly firing costs one approval while wrongly
+// skipping loses the acceptance point altogether.
+export function firesWalkingSkeletonGate(stance: SkeletonStance): boolean {
+  return stance !== "off";
+}
+
+// --- The Construction scheduling projection (RFC-0001 FR-6) -----------------
+//
+// `Construction Autonomy Mode` is DERIVED from the declared Intent mode; it is
+// not an independent setting. One rule, used by the writer that records it and
+// by the reader that schedules off it, is what makes the record's two fields
+// impossible to disagree about on purpose.
+export type ConstructionProjection = "autonomous" | "gated";
+
+// The state-file field names the projection spans. Named here so the divergence
+// detector and its consumers cannot read one field under two spellings.
+export const INTENT_AUTONOMY_MODE_FIELD = "Intent Autonomy Mode";
+export const CONSTRUCTION_AUTONOMY_MODE_FIELD = "Construction Autonomy Mode";
+
+// The value the state template seeds before any mode is declared. Legal only
+// next to an undeclared (`none`) Intent mode — see detectProjectionDivergence.
+const UNPROJECTED = "unset";
+
+export function projectConstructionAutonomy(mode: AutonomyMode): ConstructionProjection {
+  return mode === "none" ? "gated" : "autonomous";
+}
+
+// What a record says about itself, when the two halves disagree. `recorded` is
+// the RAW field value so a reason line can name a typo or an absence instead of
+// flattening both into "not what I expected".
+export interface DivergenceReport {
+  readonly declared: AutonomyMode;
+  readonly recorded: string | null;
+  readonly expected: ConstructionProjection;
+}
+
+// The declared Intent mode, or null when the record declares none this module
+// recognises. Null is not "mode none": it is "no declaration to project from",
+// which is why the divergence check and the scheduling read both fail closed on
+// it rather than assuming a default.
+export function declaredIntentAutonomyMode(stateContent: string | null): AutonomyMode | null {
+  const raw = stateContent === null ? null : getField(stateContent, INTENT_AUTONOMY_MODE_FIELD)?.trim();
+  return raw === "none" || raw === "semi" || raw === "full" ? raw : null;
+}
+
+// Non-null means the record disagrees with itself and the caller must fail loud
+// (RFC-0001 D3/D9: the pre-RFC reader degraded silently, so an operator saw a
+// declared mode next to a swarm that never started and nothing said why).
+//
+// Exactly one pair is exempt: the initialization pair the state template writes
+// — Intent mode `none` (nothing declared yet) next to an unwritten projection.
+// A DECLARED mode next to `unset` is a divergence like any other; exempting it
+// too would silence the one skew the pre-RFC code already warned about.
+export function detectProjectionDivergence(stateContent: string | null): DivergenceReport | null {
+  const declared = declaredIntentAutonomyMode(stateContent);
+  if (declared === null) return null;
+  const raw = stateContent === null ? undefined : getField(stateContent, CONSTRUCTION_AUTONOMY_MODE_FIELD)?.trim();
+  const recorded = raw === undefined ? null : raw;
+  if (declared === "none" && recorded === UNPROJECTED) return null;
+  const expected = projectConstructionAutonomy(declared);
+  return recorded === expected ? null : { declared, recorded, expected };
+}
+
+// The refusal line a loud caller prints. Kept next to the detector so the reason
+// text and the report it describes cannot drift.
+export function describeProjectionDivergence(report: DivergenceReport): string {
+  const observed = report.recorded === null || report.recorded === "" ? "(absent)" : report.recorded;
+  return `AUTONOMY_PROJECTION_DIVERGENCE ${INTENT_AUTONOMY_MODE_FIELD}: ${report.declared} projects to ${CONSTRUCTION_AUTONOMY_MODE_FIELD}: ${report.expected}, but the record says ${observed}. Re-run the mode declaration to converge the projection (RFC-0001 FR-6).`;
+}
 export type IntentGrantState = "active" | "revoked" | "completed";
 export type InteractionKind = "stage-gate" | "phase-gate" | "walking-skeleton" | "question";
+// The kind universe, next to the union it enumerates so widening one without the
+// other fails typecheck here. Lives in the pure layer because the semi
+// permission set is derived from it (SEMI_ROUTINE_INTERACTIONS below) and the
+// dependency only ever runs production -> pure.
+export const ALL_INTERACTION_KINDS: readonly InteractionKind[] = [
+  "stage-gate",
+  "phase-gate",
+  "walking-skeleton",
+  "question",
+];
 export type StopReason = "AWAITING_HUMAN" | "REPAIR_STALLED" | "NORM_CONFLICT" | "USER_PARKED";
 
 // C3 / FR-2 (RFC-0001) — the single read-only effective-interactivity port.
@@ -565,7 +655,20 @@ export type ProhibitedEffectClassification =
   | "scope-out"
   | "norm-waiver"
   | "quality-waiver";
-export type EffectClassification = "workflow-reversible" | ProhibitedEffectClassification;
+// `advisory-deferral` is the one classification RFC-0001 ADR-2 added to the
+// autonomous ceiling: deferring past a plugin-declared advisory, with the risk
+// recorded and the advisory re-raisable. It is deliberately NOT a prohibited
+// classification and deliberately NOT `workflow-reversible` — keeping it
+// distinct is what lets the ceiling admit advisory deferral without admitting
+// quality waivers in general.
+export type EffectClassification = "workflow-reversible" | "advisory-deferral" | ProhibitedEffectClassification;
+
+// What an autonomous authority (semi's authority, or a full grant) may act on.
+// Both arms read this one list so the ceiling cannot drift between them.
+const AUTONOMOUS_EFFECT_CLASSIFICATIONS: readonly EffectClassification[] = [
+  "workflow-reversible",
+  "advisory-deferral",
+];
 
 export interface DecisionOptionEffectRegistry {
   readonly revision: string;
@@ -628,9 +731,15 @@ export function createInteractionOccurrence(input: Omit<InteractionOccurrence, "
   };
 }
 
-// The interaction kinds semi decides on its own. Milestones (walking skeleton,
-// phase gates) are absent by construction, which is what keeps them human.
-export const SEMI_ROUTINE_INTERACTIONS: readonly InteractionKind[] = ["stage-gate", "question"];
+// The milestones semi always leaves to the human (RFC-0001 FR-5). This is the
+// only place the pair is named; the permission set below is its complement, so
+// a new InteractionKind becomes semi-decidable without touching either list.
+const SEMI_HUMAN_MILESTONES: readonly InteractionKind[] = ["phase-gate", "walking-skeleton"];
+
+// The interaction kinds semi decides on its own. Milestones are absent by
+// construction, which is what keeps them human.
+export const SEMI_ROUTINE_INTERACTIONS: readonly InteractionKind[] =
+  ALL_INTERACTION_KINDS.filter((kind) => !SEMI_HUMAN_MILESTONES.includes(kind));
 
 export interface SemiAuthorityScope {
   readonly intentUuid: string;
@@ -685,10 +794,15 @@ export const SemiAuthority = {
       }),
     };
   },
+  // The third term is scope-independent on purpose: a caller that hands semi a
+  // scope listing a milestone still does not get the milestone decided. The
+  // retired form compared occurrence.phase against "phase-boundary", a sentinel
+  // production never supplies (it passes the lifecycle phase), so the milestone
+  // line rested on the kind list alone.
   allowsOccurrence(authority: SemiAuthority, occurrence: InteractionOccurrence): boolean {
     return authority.scope.intentUuid === occurrence.intentUuid &&
       authority.scope.allowedInteractionKinds.includes(occurrence.kind) &&
-      occurrence.phase !== "phase-boundary";
+      !SEMI_HUMAN_MILESTONES.includes(occurrence.kind);
   },
   // The authority is the receiver, not a predicate input: scope was already
   // settled at the first gate (allowsOccurrence), so the effect arm only has to
@@ -698,7 +812,7 @@ export const SemiAuthority = {
     effect: DecisionOptionEffect | null,
     currentNormFingerprint: string,
   ): SemiEffectAuthorization {
-    if (effect === null || effect.classification !== "workflow-reversible" ||
+    if (effect === null || !AUTONOMOUS_EFFECT_CLASSIFICATIONS.includes(effect.classification) ||
       effect.applicableNormFingerprint !== currentNormFingerprint) {
       return { ok: false, reason: "semi-gate-effect-not-authorized" };
     }
@@ -1119,7 +1233,7 @@ export function authorizeDecisionEffect(input: AuthorizeDecisionEffectInput): Ef
   const effect = input.registry.resolve(input.selectedOptionId);
   if (effect === null) return { ok: false, reason: "UNKNOWN_EFFECT" };
   if (effect.payloadFingerprint !== autonomyDigest(effect.payload)) return { ok: false, reason: "PAYLOAD_MISMATCH" };
-  if (effect.classification !== "workflow-reversible") {
+  if (!AUTONOMOUS_EFFECT_CLASSIFICATIONS.includes(effect.classification)) {
     return { ok: false, reason: "PROHIBITED_EFFECT" };
   }
   if (effect.requiredScopeFingerprint !== input.grant.scope.scopeFingerprint) return { ok: false, reason: "SCOPE_OUT" };

@@ -579,7 +579,9 @@ describe("Intent-scoped autonomy production path", () => {
     expect(selected.status).toBe(0);
     expect(state(projectDir)).toContain("- **Intent Autonomy Mode**: semi");
     expect(state(projectDir)).toContain("- **Intent Grant**: none");
-    expect(state(projectDir)).toContain("- **Construction Autonomy Mode**: gated");
+    // RFC-0001 FR-6: semi projects to autonomous — it keeps two human
+    // milestones, not a gated Bolt schedule.
+    expect(state(projectDir)).toContain("- **Construction Autonomy Mode**: autonomous");
 
     const directive = run(projectDir, "amadeus-orchestrate.ts", ["next"]);
     if (directive.status !== 0) throw new Error(directive.output);

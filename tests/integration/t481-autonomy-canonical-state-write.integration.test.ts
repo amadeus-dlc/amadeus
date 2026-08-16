@@ -114,7 +114,8 @@ describe("the mode transaction owns the state projection (FR-2c)", () => {
     expect(autonomyFields(projectDir)).toEqual({
       mode: "semi",
       grant: "none",
-      scheduling: "gated",
+      // RFC-0001 FR-6: semi projects to autonomous.
+      scheduling: "autonomous",
     });
   });
 
@@ -166,7 +167,7 @@ describe("the mode transaction owns the state projection (FR-2c)", () => {
       grant_id: null,
       state_updated: true,
     });
-    expect(autonomyFields(projectDir)).toEqual({ mode: "semi", grant: "none", scheduling: "gated" });
+    expect(autonomyFields(projectDir)).toEqual({ mode: "semi", grant: "none", scheduling: "autonomous" });
   });
 });
 
@@ -217,7 +218,7 @@ describe("failure modes around the audit-first ordering (FR-2c)", () => {
     })).toMatchObject({ ok: true, projection: { mode: "semi" } });
 
     // Converged, and the revision did not move — no duplicate transaction.
-    expect(autonomyFields(projectDir)).toEqual({ mode: "semi", grant: "none", scheduling: "gated" });
+    expect(autonomyFields(projectDir)).toEqual({ mode: "semi", grant: "none", scheduling: "autonomous" });
     expect(readProductionAutonomyProjection(projectDir)?.projectionRevision).toBe(revisionAfterFailure);
   });
 
@@ -255,7 +256,7 @@ describe("failure modes around the audit-first ordering (FR-2c)", () => {
       stateContent,
       mode: "semi",
     })).toMatchObject({ ok: true, projection: { mode: "semi" } });
-    expect(autonomyFields(projectDir)).toEqual({ mode: "semi", grant: "none", scheduling: "gated" });
+    expect(autonomyFields(projectDir)).toEqual({ mode: "semi", grant: "none", scheduling: "autonomous" });
   });
 });
 
@@ -269,9 +270,16 @@ describe("the canonical write point is unique (BR-U1-1)", () => {
     for (const entry of readdirSync(coreRoot, { recursive: true }) as string[]) {
       if (!entry.endsWith(".ts")) continue;
       const source = readFileSync(join(coreRoot, entry), "utf8");
+      // A field is "named" by its literal or by the exported constant that holds
+      // it — the projection writer uses the constant for the derived field.
+      const tokensFor: Readonly<Record<string, readonly string[]>> = {
+        "Intent Autonomy Mode": ['"Intent Autonomy Mode"'],
+        "Intent Grant": ['"Intent Grant"'],
+        "Construction Autonomy Mode": ['"Construction Autonomy Mode"', "CONSTRUCTION_AUTONOMY_MODE_FIELD"],
+      };
       for (const field of ["Intent Autonomy Mode", "Intent Grant", "Construction Autonomy Mode"]) {
         for (const line of source.split("\n")) {
-          if (!line.includes(`"${field}"`)) continue;
+          if (!tokensFor[field].some((token) => line.includes(token))) continue;
           if (!/setOrInsertField|setFieldStrict/.test(line)) continue;
           if (/^\s*(\/\/|\*)/.test(line)) continue;
           offenders.push(`${entry} :: ${field}`);
@@ -305,13 +313,16 @@ describe("every reader of the mode sees the same declaration (FR-2d)", () => {
     // 3. the statusline segment (amadeus-lib.ts)
     expect(autonomySegment(content)).toBe("semi");
     // 4. the swarm scheduling reader (amadeus-orchestrate.ts)
-    expect(readAutonomyMode(content)).toBe("gated");
+    expect(readAutonomyMode(content)).toBe("autonomous");
     // 5. the Stop hook's continuation budget (amadeus-stop.ts)
     expect(stopContinuationDefaultCap(content)).toBe(8);
     // 6. the Stop hook's budget mode (amadeus-stop.ts)
     expect(stopBudgetMode(content)).not.toBe("interactive");
-    // 7. the answer path's autonomous-mode predicate (amadeus-log.ts reads this)
-    expect(isAutonomousMode(content)).toBe(false);
+    // 7. the Construction-projection predicate (amadeus-lib.ts). It follows the
+    // projection, so semi now reads autonomous. The answer path no longer keys
+    // its human-presence carve-out off it — amadeus-log.ts reads the DECLARED
+    // Intent mode, so semi's answers stay under the presence guard (FR-12).
+    expect(isAutonomousMode(content)).toBe(true);
   });
 
   test("a full declaration moves the scheduling readers too", () => {

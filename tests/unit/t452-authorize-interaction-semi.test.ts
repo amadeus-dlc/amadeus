@@ -187,10 +187,11 @@ describe("first gate decision table", () => {
       kind: "human-required",
       reason: "SCOPE_OUT",
     });
-    expect(authorizeInteraction(projection, occurrence("stage-gate", "phase-boundary"), semiScope())).toMatchObject({
-      kind: "human-required",
-      reason: "SCOPE_OUT",
-    });
+    // RFC-0001 FR-5: only the two milestone KINDS stay human. A stage gate that
+    // happens to sit on a phase boundary is still a stage gate — the boundary
+    // itself arrives as a phase-gate occurrence, which the assertion above covers.
+    expect(authorizeInteraction(projection, occurrence("stage-gate", "phase-boundary"), semiScope()).kind)
+      .toBe("semi-authority");
   });
 
   test("full keeps its grant-backed authorization and now carries scope and policies", () => {

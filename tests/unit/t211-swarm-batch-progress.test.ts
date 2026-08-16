@@ -625,13 +625,19 @@ function codegenStateWithAutonomy(autonomy: string): string {
         "- **Construction Autonomy Mode**: unset",
       );
   }
+  // RFC-0001 FR-6: `gated` is the projection of Intent mode `none`. Before the
+  // RFC it was also semi's projection; semi now projects to `autonomous` and
+  // runs its Bolts, which cases d1/e1 below pin.
   if (autonomy === "gated") {
     return base
-      .replace("- **Intent Autonomy Mode**: full", "- **Intent Autonomy Mode**: semi")
+      .replace("- **Intent Autonomy Mode**: full", "- **Intent Autonomy Mode**: none")
       .replace(
         "- **Construction Autonomy Mode**: autonomous",
         "- **Construction Autonomy Mode**: gated",
       );
+  }
+  if (autonomy === "semi") {
+    return base.replace("- **Intent Autonomy Mode**: full", "- **Intent Autonomy Mode**: semi");
   }
   if (autonomy === "autonomous") return base;
   return base
@@ -664,14 +670,14 @@ function recordBatchApprovals(proj: string, batches: number[]): void {
 }
 
 describe("t211 Intent-scoped autonomy preserves batch fanout", () => {
-  test("d: semi + gated Construction scheduling fans the first batch out", () => {
+  test("d: none + gated Construction scheduling fans the first batch out", () => {
     const proj = seedAutonomyProject([["alpha"], ["beta"]], "gated");
     const directive = runNext(proj);
     expect(directive.kind).toBe("invoke-swarm");
     expect(directive.units).toEqual(["alpha"]);
   });
 
-  test("e: semi requires approval after the completed batch", () => {
+  test("e: gated scheduling requires approval after the completed batch", () => {
     const proj = seedAutonomyProject([["alpha"], ["beta"]], "gated");
     coverUnit(proj, "alpha");
     const directive = runNext(proj);
@@ -679,7 +685,7 @@ describe("t211 Intent-scoped autonomy preserves batch fanout", () => {
     expect(directive.question).toContain("Approve batch 1");
   });
 
-  test("f: a recorded batch approval lets semi continue fanout", () => {
+  test("f: a recorded batch approval lets gated scheduling continue fanout", () => {
     const proj = seedAutonomyProject([["alpha"], ["beta"]], "gated");
     coverUnit(proj, "alpha");
     recordBatchApprovals(proj, [1]);
@@ -688,7 +694,7 @@ describe("t211 Intent-scoped autonomy preserves batch fanout", () => {
     expect(directive.units).toEqual(["beta"]);
   });
 
-  test("g: malformed approvals fail closed and keep the semi gate", () => {
+  test("g: malformed approvals fail closed and keep the batch gate", () => {
     const proj = seedAutonomyProject([["alpha"], ["beta"]], "gated");
     coverUnit(proj, "alpha");
     const path = seededStateFile(proj);
@@ -704,7 +710,7 @@ describe("t211 Intent-scoped autonomy preserves batch fanout", () => {
     expect(directive.question).toContain("Approve batch 1");
   });
 
-  test("h: semi + every batch covered -> the stage's own gate", () => {
+  test("h: gated + every batch covered -> the stage's own gate", () => {
     const proj = seedAutonomyProject([["alpha"], ["beta"]], "gated");
     coverUnit(proj, "alpha");
     coverUnit(proj, "beta");
@@ -712,6 +718,23 @@ describe("t211 Intent-scoped autonomy preserves batch fanout", () => {
     const directive = runNext(proj);
     expect(directive.kind).toBe("run-stage");
     expect(directive.kind).not.toBe("ask");
+  });
+
+  // RFC-0001 FR-5/FR-6: semi keeps its two human milestones, and its Bolt swarm
+  // runs — so the batch-end gate that used to hold semi is gone.
+  test("d1: semi projects to autonomous and fans the first batch out", () => {
+    const proj = seedAutonomyProject([["alpha"], ["beta"]], "semi");
+    const directive = runNext(proj);
+    expect(directive.kind).toBe("invoke-swarm");
+    expect(directive.units).toEqual(["alpha"]);
+  });
+
+  test("e1: semi continues to the next batch without a batch approval", () => {
+    const proj = seedAutonomyProject([["alpha"], ["beta"]], "semi");
+    coverUnit(proj, "alpha");
+    const directive = runNext(proj);
+    expect(directive.kind).toBe("invoke-swarm");
+    expect(directive.units).toEqual(["beta"]);
   });
 
   test("i: full ignores the legacy approvals ledger entirely", () => {
@@ -735,7 +758,7 @@ describe("t211 Intent-scoped autonomy preserves batch fanout", () => {
     expect(directive.kind).not.toBe("invoke-swarm");
   });
 
-  test("l: semi batch coverage is NOT refused by the all-units coverage guard", () => {
+  test("l: gated batch coverage is NOT refused by the all-units coverage guard", () => {
     const proj = seedAutonomyProject([["alpha"], ["beta"]], "gated");
     coverUnit(proj, "alpha");
     const directive = runReport(proj, ["--stage", "code-generation", "--result", "approved"]);
