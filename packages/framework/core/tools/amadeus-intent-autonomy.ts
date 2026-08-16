@@ -75,6 +75,16 @@ export function declaredIntentAutonomyMode(stateContent: string | null): Autonom
   return raw === "none" || raw === "semi" || raw === "full" ? raw : null;
 }
 
+// R-22 (RFC-0001 U5): decisions that would DROP a human checkpoint — gate
+// revision recovery being the canonical one — key off the DECLARED Intent
+// mode, never the Construction projection: semi projects to autonomous too
+// (FR-6) but keeps its phase-gate/WS human gates and the [R] revise loop, so
+// reading the projection would silently widen full-only skips to semi. Mirrors
+// amadeus-log.ts's presence-guard treatment of the answer path (R-21).
+export function declaredFullAutonomy(stateContent: string | null): boolean {
+  return declaredIntentAutonomyMode(stateContent) === "full";
+}
+
 // Non-null means the record disagrees with itself and the caller must fail loud
 // (RFC-0001 D3/D9: the pre-RFC reader degraded silently, so an operator saw a
 // declared mode next to a swarm that never started and nothing said why).
