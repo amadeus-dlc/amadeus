@@ -42,7 +42,11 @@ import {
   type AutonomyDecisionResult,
   type IntentAutonomyCoordinator,
 } from "./amadeus-intent-autonomy-runtime.ts";
-import { createAuditIntentAutonomyRepository } from "./amadeus-intent-autonomy-replay.ts";
+import {
+  createAuditIntentAutonomyRepository,
+  readIntentAutonomyTransactionsFromAudit,
+} from "./amadeus-intent-autonomy-replay.ts";
+import { resumeInterruption, type WaitingCause } from "./amadeus-waiting.ts";
 import {
   RecommendationOutcome,
   type Candidate,
@@ -1275,6 +1279,115 @@ export function admitProductionStageFailure(
   // rather than announce a stop nobody can resume.
   const stall = readProductionRepairStall(input.projectDir);
   return stall === null ? { kind: "error", reason: "repair-stall-envelope-missing" } : { kind: "parked", stall };
+}
+
+export interface ProductionWaitingStop {
+  readonly stage: string;
+  readonly occurrenceId: string;
+  readonly transactionId: string;
+  readonly resumeConditionIdentity: string;
+  readonly cause: WaitingCause;
+}
+
+/** The stage the record is currently on, for the marker's Stage attribute. */
+function currentStageOf(projectDir: string): string {
+  return getField(readStateFile(projectDir), "Current Stage") ?? "";
+}
+
+// Lifecycle marker for a waiting transition. The transaction is already
+// committed by the time this runs, so a shard that cannot be written must not
+// undo it — the ledger is the record and this is its human-readable projection.
+// Same lazy require and same fail-open rationale as emitAuthorizationRefusal.
+function emitWaitingMarker(
+  projectDir: string,
+  event: string,
+  emit: (emitAuditEvent: typeof EmitAuditEvent) => ReturnType<typeof EmitAuditEvent>,
+): void {
+  try {
+    const otel = require("../otel/audit-emit.ts") as { emitAuditEvent: typeof EmitAuditEvent };
+    const result = emit(otel.emitAuditEvent);
+    if (!result.appended) console.error(`amadeus: could not record ${event} — the transaction ledger is unaffected`);
+  } catch (cause) {
+    console.error(
+      `amadeus: could not record ${event} — the transaction ledger is unaffected: ${cause instanceof Error ? cause.message : String(cause)}`,
+    );
+    return;
+  }
+}
+
+// Enter waiting on the active Intent (RFC-0001 FR-3). Engine-internal by
+// construction: no CLI verb reaches it, because "stop and wait for a ruling"
+// being invocable at will is the self-park move the rate constraint exists to
+// catch. Refusals leave the record untouched — a malformed cause or an
+// over-rate arrival must not half-suspend the workflow.
+export function enterProductionWaiting(
+  projectDir: string,
+  cause: WaitingCause,
+): { readonly waitingId: string; readonly stage: string } | { readonly error: string } {
+  const resolved = resolveIntent(projectDir);
+  if (resolved === null) return { error: "no-active-intent" };
+  const entered = coordinatorFor(projectDir, resolved).enterWaiting({ cause });
+  if ("error" in entered) return { error: entered.error };
+  const stage = currentStageOf(projectDir);
+  emitWaitingMarker(projectDir, "WORKFLOW_WAITING_ENTERED", (emitAuditEvent) =>
+    emitAuditEvent("WORKFLOW_WAITING_ENTERED", {
+      Stage: stage,
+      "Occurrence Id": cause.occurrenceId,
+      "Basis Fingerprint": cause.basisFingerprint,
+      "Transaction Id": entered.waitingId,
+      Timestamp: new Date().toISOString(),
+    }, projectDir));
+  return { waitingId: entered.waitingId, stage };
+}
+
+// What a waiting suspension left behind. The envelope supplies the identifiers
+// and the transaction it names supplies the cause; neither half is enough
+// alone, and a missing half is null rather than a partial reconstruction.
+export function readProductionWaitingStop(projectDir: string): ProductionWaitingStop | null {
+  const resolved = resolveIntent(projectDir);
+  if (resolved === null) return null;
+  const coordinator = coordinatorFor(projectDir, resolved);
+  const envelope = coordinator.readProjection().parkEnvelope;
+  if (envelope === null || envelope.reason !== "AWAITING_RULING") return null;
+  const dispatch = resumeInterruption({
+    parked: false,
+    parkedAtStage: null,
+    envelope,
+    transactions: readIntentAutonomyTransactionsFromAudit(projectDir, resolved.intentDir, resolved.space),
+  });
+  if (!dispatch.ok || dispatch.value.kind !== "waiting") return null;
+  return {
+    stage: currentStageOf(projectDir),
+    occurrenceId: envelope.triggerOccurrenceId,
+    transactionId: envelope.parkTransactionId,
+    resumeConditionIdentity: envelope.resumeCondition.identity,
+    cause: dispatch.value.cause,
+  };
+}
+
+// Close a waiting record. The ruling itself is the human's; this is the half
+// that records that one was made, which is also what releases the rate key so
+// the same point may legitimately wait again later.
+export function resumeProductionWaiting(
+  projectDir: string,
+): { readonly waitingId: string } | { readonly error: string } {
+  const resolved = resolveIntent(projectDir);
+  if (resolved === null) return { error: "no-active-intent" };
+  const coordinator = coordinatorFor(projectDir, resolved);
+  const envelope = coordinator.readProjection().parkEnvelope;
+  if (envelope === null || envelope.reason !== "AWAITING_RULING") return { error: "no-waiting-record" };
+  const resumed = coordinator.resumeWaiting({
+    waitingId: envelope.parkTransactionId,
+    satisfiedConditionIdentity: envelope.resumeCondition.identity,
+  });
+  if ("error" in resumed) return { error: resumed.error };
+  emitWaitingMarker(projectDir, "WORKFLOW_WAITING_RESUMED", (emitAuditEvent) =>
+    emitAuditEvent("WORKFLOW_WAITING_RESUMED", {
+      Stage: currentStageOf(projectDir),
+      "Transaction Id": envelope.parkTransactionId,
+      Timestamp: new Date().toISOString(),
+    }, projectDir));
+  return { waitingId: envelope.parkTransactionId };
 }
 
 export interface ProductionRepairStall {

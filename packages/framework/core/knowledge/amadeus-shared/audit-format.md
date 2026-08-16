@@ -29,9 +29,9 @@ tools read them from. Neither lists the record envelope — every record carries
 (the park pair, the practices events) show it in the table as the attribute it
 is.
 
-## Event Registry (96 events, 22 categories)
+## Event Registry (98 events, 22 categories)
 
-### Workflow Lifecycle (7 events)
+### Workflow Lifecycle (9 events)
 
 | Event | When | Required | Optional | Emitter |
 |-------|------|----------|----------|---------|
@@ -39,6 +39,8 @@ is.
 | ✓ `WORKFLOW_COMPLETED` | All in-scope stages done with an ACHIEVED Goal receipt | Scope, Details | Reason, Completion Instance, Goal Id, Goal Revision, Goal Digest, Goal Receipt Id, Goal Receipt Digest, Goal Verdict, Goal Evidence Count, Goal Human Ruling | `tools/amadeus-state.ts complete-workflow` |
 | ✓ `WORKFLOW_PARKED` | Workflow parked mid-flow for a later session (no stage advanced) | Stage | Timestamp | `tools/amadeus-state.ts park` |
 | ✓ `WORKFLOW_UNPARKED` | Park marker cleared on explicit `--resume` re-entry | — | Timestamp | `tools/amadeus-state.ts unpark` |
+| ✓ `WORKFLOW_WAITING_ENTERED` | A non-interactive run stopped at a ruling it may not make (the cause is in the named Intent autonomy transaction) | Stage, Occurrence Id, Basis Fingerprint, Transaction Id | Timestamp | engine (waiting admission) |
+| ✓ `WORKFLOW_WAITING_RESUMED` | A waiting record was re-presented and ruled on | Stage, Transaction Id | Timestamp | engine (resume) |
 | `INTENT_ARCHIVED` | Human-authorized intent archive transaction commits | Intent, From Status, To Status, Operation Id, User Input, Human Turn Timestamp | — | `tools/amadeus-state.ts archive` |
 | `INTENT_UNARCHIVED` | Human-authorized intent unarchive transaction commits | Intent, From Status, To Status, Operation Id, User Input, Human Turn Timestamp | — | `tools/amadeus-state.ts unarchive` |
 | `EXECUTION_EVENT_SET_COMMITTED` | One audit-first execution lifecycle event set commits before required projections or native dispatch | Root Operation Id, Event Set Digest, Event Set | — | `tools/amadeus-execution-lifecycle.ts` |
