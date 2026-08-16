@@ -48,7 +48,9 @@ export function resolveSessionInteractivity(projectDir: string): SessionInteract
       interactive = findAllEvents(text, "HUMAN_TURN").length > 0;
     }
   } catch {
-    interactive = false;
+    // Fail-closed terminal: a read failure returns the non-interactive answer
+    // directly. Under-reporting is safe; fabricating presence is not.
+    return { interactive: false, source: "human-turn-pipeline", measuredAt: new Date().toISOString() };
   }
   return { interactive, source: "human-turn-pipeline", measuredAt: new Date().toISOString() };
 }
