@@ -29,7 +29,7 @@
     },
     {
       "file": "docs/harness-engineering/06-sensors.md",
-      "text": "`**/{amadeus-docs,intents}/**` — the per-intent record tree, with the legacy",
+      "text": "`**/{amadeus-docs,intents,codekb}/**` — the per-intent record tree, with the legacy",
       "why": "sensor matches-glob value (the shipped framework glob, post-P9)"
     },
     {
@@ -39,17 +39,17 @@
     },
     {
       "file": "docs/reference/07-sensor-system.md",
-      "text": "matches: \"**/{amadeus-docs,intents}/**\"                  # optional capability filter",
+      "text": "matches: \"**/{amadeus-docs,intents,codekb}/**\"           # optional capability filter",
       "why": "sensor manifest frontmatter example (the shipped glob)"
     },
     {
       "file": "docs/reference/07-sensor-system.md",
-      "text": "| `amadeus-required-sections.md` | `**/{amadeus-docs,intents}/**` |",
+      "text": "| `amadeus-required-sections.md` | `**/{amadeus-docs,intents,codekb}/**` |",
       "why": "shipped required-sections sensor matches-glob value"
     },
     {
       "file": "docs/reference/07-sensor-system.md",
-      "text": "| `amadeus-upstream-coverage.md` | `**/{amadeus-docs,intents}/**` |",
+      "text": "| `amadeus-upstream-coverage.md` | `**/{amadeus-docs,intents,codekb}/**` |",
       "why": "shipped upstream-coverage sensor matches-glob value"
     }
   ]

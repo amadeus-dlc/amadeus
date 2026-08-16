@@ -77,7 +77,7 @@ These manifests ship under `.claude/sensors/`, each prefixed `amadeus-`:
 
 Every one of them is gated by a `matches:` glob (more on that below): the first two
 document-shape checks scope to the artifact tree (the shipped manifests carry
-`**/{amadeus-docs,intents}/**` — the per-intent record tree, with the legacy
+`**/{amadeus-docs,intents,codekb}/**` — the per-intent record tree, with the legacy
 `amadeus-docs/` arm kept for a pre-migration project), the two code-quality checks
 to their language globs (`**/*.{ts,js}`, `**/*.{ts,tsx}`), the answer-evidence
 check to the questions file (`**/*-questions.md`), the event-registry drift check
