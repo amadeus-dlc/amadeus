@@ -33,13 +33,11 @@ import {
   runGate,
   verifySnapshot,
 } from "../no-silent-drop/engine.ts";
-import { encodeEvent } from "../no-silent-drop/events.ts";
+import { encodeEvent, type GrantEvent } from "../no-silent-drop/events.ts";
 import {
   addedFindings,
-  approvalDigest,
   assertExemptionsShrinkOnly,
   assertShrinkOnly,
-  baselineAtRevision,
   buildCandidate,
   filterExemptions,
   parseApproval,
@@ -54,7 +52,6 @@ import { ulidFromSeed } from "../no-silent-drop/ulid.ts";
 import {
   type ApprovalDoc,
   type BaselineDoc,
-  digest,
   type Finding,
   findingFingerprint,
   InfraFailure,
@@ -68,11 +65,10 @@ const revision = (...args: string[]): string | null => {
   const value = result.status === 0 ? result.stdout.trim() : "";
   return /^[0-9a-f]{40}$/.test(value) ? value : null;
 };
-const TRUSTED_BASE_REVISION = noSilentDropTrustedBase(REPO_ROOT)
-  ?? revision("rev-parse", "HEAD^")
-    ?? JSON.parse(
-      readFileSync(join(REPO_ROOT, "tests", "no-silent-drop", "bootstrap-provenance.json"), "utf8"),
-    ).bootstrapBaseRevision as string;
+const TRUSTED_BASE_REVISION = noSilentDropTrustedBase(REPO_ROOT) ?? revision("rev-parse", "HEAD^");
+if (TRUSTED_BASE_REVISION === null) {
+  throw new Error("no-silent-drop check needs a trusted base: neither a merge-base nor HEAD^ resolved");
+}
 const require = createRequire(import.meta.url);
 const temporaryDirectories: string[] = [];
 
@@ -161,20 +157,16 @@ function runGit(root: string, args: string[]): string {
   return result.stdout.trim();
 }
 
-function artifact(root: string, path: string, value: unknown): { path: string; digest: string } {
-  const bytes = `${JSON.stringify(value)}\n`;
-  writeFileSync(join(root, path), bytes);
-  return { path, digest: digest(bytes) };
-}
+const FIXTURE_IDENTITY = ["-c", "user.name=Fixture", "-c", "user.email=fixture@example.com"];
 
-function bootstrapRepository(): { root: string; baseRevision: string; artifactPaths: string[] } {
-  const root = mkdtempSync(join(tmpdir(), "nsd-bootstrap-"));
+/** Scannable working tree with an empty event ledger directory, committed as `base`. */
+function scannableRepository(): string {
+  const root = mkdtempSync(join(tmpdir(), "nsd-repo-"));
   temporaryDirectories.push(root);
   for (const path of [
     "packages/framework/core",
     "packages/framework/harness",
     "scripts",
-    "tests/no-silent-drop/bootstrap",
     "tests/no-silent-drop/events",
   ]) {
     mkdirSync(join(root, path), { recursive: true });
@@ -188,143 +180,48 @@ function bootstrapRepository(): { root: string; baseRevision: string; artifactPa
     readFileSync(join(REPO_ROOT, "tests/no-silent-drop/ast-shape-fixture.ts.txt"), "utf8"),
   );
   runGit(root, ["init", "-q"]);
+  // Only the scan roots are committed, so `tests/` stays out of the base tree.
   runGit(root, ["add", "packages", "scripts"]);
-  runGit(root, ["-c", "user.name=Fixture", "-c", "user.email=fixture@example.com", "commit", "-qm", "base"]);
+  runGit(root, [...FIXTURE_IDENTITY, "commit", "-qm", "base"]);
+  return root;
+}
+
+/**
+ * A base commit that predates the event ledger: the working tree carries an events
+ * directory, the base tree does not. The gate must refuse that shape, because it
+ * has no trusted previous set to ratchet against.
+ */
+function ledgerlessBaseRepository(): { root: string; baseRevision: string } {
+  const root = scannableRepository();
   const baseRevision = runGit(root, ["rev-parse", "HEAD"]);
-  runGit(root, ["-c", "user.name=Fixture", "-c", "user.email=fixture@example.com", "commit", "--allow-empty", "-qm", "post"]);
-  const postRevision = runGit(root, ["rev-parse", "HEAD"]);
-  const emptyDigest = digest("");
-  const legacyFingerprint = "f".repeat(64);
-  const secondLegacyFingerprint = "e".repeat(64);
-  const preEntries = [
-    {
-      fingerprint: legacyFingerprint,
-      ruleId: "NSD003",
-      file: "packages/framework/core/legacy.ts",
-      reason: "Approved pre-fix mutation contract debt.",
-      issues: ["#1874"],
-    },
-    {
-      fingerprint: secondLegacyFingerprint,
-      ruleId: "NSD003",
-      file: "packages/framework/core/other-legacy.ts",
-      reason: "Approved pre-fix mutation contract debt.",
-      issues: ["#1878"],
-    },
-  ];
-  const preIdentities = [legacyFingerprint, secondLegacyFingerprint];
-  const preIdentityDigest = digest([...preIdentities].sort().join("\n"));
-  const postApproval = {
+  runGit(root, [...FIXTURE_IDENTITY, "commit", "--allow-empty", "-qm", "head"]);
+  return { root, baseRevision };
+}
+
+/**
+ * The supported shape: the base commit already carries the event ledger, so the gate
+ * has a trusted previous set and custody has base bytes to compare head against.
+ */
+function ledgerBaseRepository(): { root: string; baseRevision: string; ulid: string; grant: GrantEvent } {
+  const root = scannableRepository();
+  const ulid = ulidFromSeed("grant:grandfather:gate-fixture");
+  const grant: GrantEvent = {
     schemaVersion: 1,
-    censusDigest: emptyDigest,
-    entries: [],
-  } as const satisfies ApprovalDoc;
-  const baselineValue = {
-    schemaVersion: 1,
-    direction: "shrink-only",
-    generatedFrom: {
-      revision: postRevision,
-      censusDigest: emptyDigest,
-      approvalDigest: approvalDigest(postApproval),
-      previousDigest: preIdentityDigest,
-    },
-    entries: [],
+    ulid,
+    op: "grant",
+    kind: "grandfather",
+    fingerprint: "d".repeat(64),
+    ruleId: "NSD001",
+    file: "packages/framework/core/legacy.ts",
+    reason: "Approved legacy finding carried by the event ledger.",
+    issues: ["#1979"],
   };
-  const baselineBytes = `${JSON.stringify(baselineValue)}\n`;
-  writeFileSync(join(root, "tests/no-silent-drop/baseline.json"), baselineBytes);
-  const exemptionsValue = { schemaVersion: 1, previousDigest: emptyDigest, entries: [] };
-  const exemptionsBytes = `${JSON.stringify(exemptionsValue)}\n`;
-  writeFileSync(join(root, "tests/no-silent-drop/exemptions.json"), exemptionsBytes);
-  const ruleBundleDigest = "a".repeat(64);
-  const semanticDependencyDigest = "b".repeat(64);
-  const preRaw = artifact(root, "tests/no-silent-drop/bootstrap/pre-raw.json", { schemaVersion: 1 });
-  const preClassification = artifact(root, "tests/no-silent-drop/bootstrap/pre-classification.json", { schemaVersion: 1 });
-  const preApproval = artifact(root, "tests/no-silent-drop/bootstrap/pre-approval.json", {
-    schemaVersion: 1,
-    censusDigest: preIdentityDigest,
-    entries: [{
-      fingerprint: legacyFingerprint,
-      classification: "TP",
-      reason: "Approved mutation contract debt.",
-      issues: ["#1874"],
-    }, {
-      fingerprint: secondLegacyFingerprint,
-      classification: "TP",
-      reason: "Approved mutation contract debt.",
-      issues: ["#1878"],
-    }],
-  });
-  const postRaw = artifact(root, "tests/no-silent-drop/bootstrap/post-raw.json", { schemaVersion: 1 });
-  const postClassification = artifact(root, "tests/no-silent-drop/bootstrap/post-classification.json", { schemaVersion: 1 });
-  const postApprovalRef = artifact(root, "tests/no-silent-drop/bootstrap/post-approval.json", postApproval);
-  const approved = (
-    path: string,
-    revision: string,
-    refs: { raw: { digest: string }; classification: { digest: string }; approval: { digest: string } },
-    identities: string[],
-  ) => artifact(root, path, {
-    schemaVersion: 1,
-    revision,
-    rawDigest: refs.raw.digest,
-    classificationDigest: refs.classification.digest,
-    approvalDigest: refs.approval.digest,
-    ruleBundleDigest,
-    semanticDependencyDigest,
-    identities,
-  });
-  const preApproved = approved(
-    "tests/no-silent-drop/bootstrap/pre-approved.json",
-    baseRevision,
-    { raw: preRaw, classification: preClassification, approval: preApproval },
-    preIdentities,
-  );
-  const postApproved = approved(
-    "tests/no-silent-drop/bootstrap/post-approved.json",
-    postRevision,
-    { raw: postRaw, classification: postClassification, approval: postApprovalRef },
-    [],
-  );
-  const candidate = { path: "tests/no-silent-drop/baseline.json", digest: digest(baselineBytes) };
-  const humanReview = artifact(root, "tests/no-silent-drop/bootstrap/human-review.json", {
-    schemaVersion: 1,
-    decision: "approved",
-    reviewer: "human-reviewer",
-    reviewedAt: "2026-08-02T00:00:00.000Z",
-    candidateDigest: candidate.digest,
-    preApprovedEvidenceDigest: preApproved.digest,
-    postApprovedEvidenceDigest: postApproved.digest,
-  });
-  const provenance = {
-    schemaVersion: 1,
-    commandVersion: "no-silent-drop-bootstrap-v1",
-    bootstrapBaseRevision: baseRevision,
-    preRevision: baseRevision,
-    postRevision,
-    ruleBundleDigest,
-    semanticDependencyDigest,
-    pre: { raw: preRaw, classification: preClassification, approval: preApproval, approvedEvidence: preApproved },
-    post: { raw: postRaw, classification: postClassification, approval: postApprovalRef, approvedEvidence: postApproved },
-    candidate,
-    humanReview,
-    approvedPre: { identitySetDigest: preIdentityDigest, entries: preEntries },
-    candidateB0: { identitySetDigest: emptyDigest },
-    initialExemptions: { bytesDigest: digest(exemptionsBytes), identitySetDigest: emptyDigest, entries: [] },
-    removed: [
-      { fingerprint: legacyFingerprint, issue: "#1874" },
-      { fingerprint: secondLegacyFingerprint, issue: "#1878" },
-    ],
-    added: [],
-  };
-  writeFileSync(join(root, "tests/no-silent-drop/bootstrap-provenance.json"), `${JSON.stringify(provenance)}\n`);
-  return {
-    root,
-    baseRevision,
-    artifactPaths: [
-      "tests/no-silent-drop/bootstrap-provenance.json",
-      preRaw.path,
-      preApproved.path,
-    ],
-  };
+  writeFileSync(join(root, `tests/no-silent-drop/events/${ulid}.json`), encodeEvent(grant));
+  runGit(root, ["add", "tests"]);
+  runGit(root, [...FIXTURE_IDENTITY, "commit", "-qm", "adopt event ledger"]);
+  const baseRevision = runGit(root, ["rev-parse", "HEAD"]);
+  runGit(root, [...FIXTURE_IDENTITY, "commit", "--allow-empty", "-qm", "head"]);
+  return { root, baseRevision, ulid, grant };
 }
 
 function snapshotRepository(): string {
@@ -335,16 +232,6 @@ function snapshotRepository(): string {
     writeFileSync(join(root, path, "source.ts"), "export const value = 1;\n");
   }
   return root;
-}
-
-function mutateBootstrapProvenance(
-  fixture: ReturnType<typeof bootstrapRepository>,
-  mutate: (value: Record<string, unknown>) => void,
-): void {
-  const path = join(fixture.root, "tests/no-silent-drop/bootstrap-provenance.json");
-  const value = JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
-  mutate(value);
-  writeFileSync(path, `${JSON.stringify(value)}\n`);
 }
 
 describe("no-silent-drop AST rules", () => {
@@ -836,8 +723,6 @@ describe("no-silent-drop ledger", () => {
       });
     }
 
-    expect(() => baselineAtRevision(root, "f".repeat(40))).toThrow("does not contain an unambiguous baseline");
-
     const findings = scan("try { a(); } catch {}");
     const approval: ApprovalDoc = {
       schemaVersion: 1,
@@ -1005,13 +890,13 @@ describe("no-silent-drop boundaries", () => {
   });
 
   test("approval modes report missing and malformed approval documents", async () => {
-    const missing = bootstrapRepository();
+    const missing = ledgerlessBaseRepository();
     expect(await runGate("approve-evidence", missing.root)).toMatchObject({
       status: "error",
       code: "BASELINE_MISSING",
     });
 
-    const malformed = bootstrapRepository();
+    const malformed = ledgerlessBaseRepository();
     writeFileSync(join(malformed.root, "tests/no-silent-drop/approval.json"), "{");
     expect(await runGate("approve-evidence", malformed.root)).toMatchObject({
       status: "error",
@@ -1019,169 +904,67 @@ describe("no-silent-drop boundaries", () => {
     });
   });
 
-  test("first adoption accepts a fully bound bootstrap provenance when the base has no ledger", async () => {
-    const fixture = bootstrapRepository();
+  test("a trusted base carrying the event ledger passes and exits 0", async () => {
+    const fixture = ledgerBaseRepository();
     const result = await runGate("check", fixture.root, { baseRevision: fixture.baseRevision });
     expect(result).toEqual({ schemaVersion: 1, status: "pass", code: "NO_SILENT_DROP_OK", findings: [] });
     expect(resultExitCode(result)).toBe(0);
   });
 
-  test("first adoption remains valid when the trusted base advances from the approved pre revision", async () => {
-    const fixture = bootstrapRepository();
-    const advancedBaseRevision = runGit(fixture.root, ["rev-parse", "HEAD"]);
-    const result = await runGate("check", fixture.root, { baseRevision: advancedBaseRevision });
-    expect(result).toEqual({ schemaVersion: 1, status: "pass", code: "NO_SILENT_DROP_OK", findings: [] });
+  test("a trusted base without the event ledger fails closed", async () => {
+    const fixture = ledgerlessBaseRepository();
+    const result = await runGate("check", fixture.root, { baseRevision: fixture.baseRevision });
+    expect(result).toMatchObject({
+      status: "error",
+      code: "BASELINE_MISSING",
+      detail: expect.stringContaining("trusted base does not contain the event ledger"),
+    });
+    expect(resultExitCode(result)).toBe(2);
   });
 
-  test("first adoption rejects a trusted base outside the approved pre lineage", async () => {
-    const fixture = bootstrapRepository();
+  test("a trusted base outside the head lineage fails closed", async () => {
+    const fixture = ledgerBaseRepository();
     const divergentRevision = runGit(fixture.root, [
-      "-c",
-      "user.name=Fixture",
-      "-c",
-      "user.email=fixture@example.com",
+      ...FIXTURE_IDENTITY,
       "commit-tree",
       "4b825dc642cb6eb9a060e54bf8d69288fbee4904",
       "-m",
       "divergent",
     ]);
-    expect(await runGate("check", fixture.root, { baseRevision: divergentRevision })).toMatchObject({
+    const result = await runGate("check", fixture.root, { baseRevision: divergentRevision });
+    expect(result).toMatchObject({
+      status: "error",
+      code: "BASELINE_MISSING",
+      detail: expect.stringContaining("trusted base does not contain the event ledger"),
+    });
+    expect(resultExitCode(result)).toBe(2);
+  });
+
+  test("deleting a trusted-base event without a snapshot fails closed", async () => {
+    const fixture = ledgerBaseRepository();
+    rmSync(join(fixture.root, `tests/no-silent-drop/events/${fixture.ulid}.json`));
+    const result = await runGate("check", fixture.root, { baseRevision: fixture.baseRevision });
+    expect(result).toMatchObject({
       status: "error",
       code: "BASELINE_INVALID",
+      detail: expect.stringContaining("event custody subset check failed"),
     });
+    expect(resultExitCode(result)).toBe(2);
   });
 
-  test("first adoption fails closed for absent, mutated, mismatched, or incomplete provenance", async () => {
-    const mutations: Array<(fixture: ReturnType<typeof bootstrapRepository>) => void> = [
-      (fixture) => rmSync(join(fixture.root, fixture.artifactPaths[0]!)),
-      (fixture) => writeFileSync(join(fixture.root, fixture.artifactPaths[1]!), '{"schemaVersion":1} \n'),
-      (fixture) => {
-        const path = join(fixture.root, fixture.artifactPaths[0]!);
-        const value = JSON.parse(readFileSync(path, "utf8"));
-        value.bootstrapBaseRevision = "0".repeat(40);
-        writeFileSync(path, `${JSON.stringify(value)}\n`);
-      },
-      (fixture) => rmSync(join(fixture.root, fixture.artifactPaths[2]!)),
-      (fixture) => {
-        const path = join(fixture.root, fixture.artifactPaths[0]!);
-        const value = JSON.parse(readFileSync(path, "utf8"));
-        value.approvedPre.identitySetDigest = "c".repeat(64);
-        writeFileSync(path, `${JSON.stringify(value)}\n`);
-      },
-    ];
-    for (const mutate of mutations) {
-      const fixture = bootstrapRepository();
-      mutate(fixture);
-      const result = await runGate("check", fixture.root, { baseRevision: fixture.baseRevision });
-      expect(result.status).toBe("error");
-      expect(resultExitCode(result)).toBe(2);
-    }
-  });
-
-  test("bootstrap provenance parser rejects malformed envelopes, paths, arrays, and roles", async () => {
-    const mutations: Array<(fixture: ReturnType<typeof bootstrapRepository>) => void> = [
-      (fixture) => writeFileSync(join(fixture.root, fixture.artifactPaths[0]!), "{"),
-      (fixture) => writeFileSync(join(fixture.root, fixture.artifactPaths[0]!), "[]\n"),
-      (fixture) => mutateBootstrapProvenance(fixture, (value) => { value.schemaVersion = 2; }),
-      (fixture) => mutateBootstrapProvenance(fixture, (value) => { value.bootstrapBaseRevision = ""; }),
-      (fixture) => mutateBootstrapProvenance(fixture, (value) => {
-        const pre = value.pre as Record<string, unknown>;
-        (pre.raw as Record<string, unknown>).path = "/absolute.json";
-      }),
-      (fixture) => mutateBootstrapProvenance(fixture, (value) => { value.added = "invalid"; }),
-      (fixture) => mutateBootstrapProvenance(fixture, (value) => {
-        const removed = value.removed as Array<Record<string, unknown>>;
-        removed[0]!.issue = "#unknown";
-      }),
-      (fixture) => mutateBootstrapProvenance(fixture, (value) => {
-        const pre = value.pre as Record<string, unknown>;
-        const post = value.post as Record<string, unknown>;
-        (post.raw as Record<string, unknown>).path = (pre.raw as Record<string, unknown>).path;
-      }),
-    ];
-    for (const mutate of mutations) {
-      const fixture = bootstrapRepository();
-      mutate(fixture);
-      expect((await runGate("check", fixture.root, { baseRevision: fixture.baseRevision })).status).toBe("error");
-    }
-  });
-
-  test("bootstrap evidence and human-review binding mismatches fail closed", async () => {
-    const evidenceFixture = bootstrapRepository();
-    mutateBootstrapProvenance(evidenceFixture, (provenance) => {
-      const pre = provenance.pre as Record<string, unknown>;
-      const ref = pre.approvedEvidence as { path: string; digest: string };
-      const approved = JSON.parse(readFileSync(join(evidenceFixture.root, ref.path), "utf8")) as Record<string, unknown>;
-      approved.rawDigest = "0".repeat(64);
-      const bytes = `${JSON.stringify(approved)}\n`;
-      writeFileSync(join(evidenceFixture.root, ref.path), bytes);
-      ref.digest = digest(bytes);
-    });
-    expect((await runGate("check", evidenceFixture.root, { baseRevision: evidenceFixture.baseRevision })).status)
-      .toBe("error");
-
-    const reviewFixture = bootstrapRepository();
-    mutateBootstrapProvenance(reviewFixture, (provenance) => {
-      const ref = provenance.humanReview as { path: string; digest: string };
-      const review = JSON.parse(readFileSync(join(reviewFixture.root, ref.path), "utf8")) as Record<string, unknown>;
-      review.decision = "rejected";
-      const bytes = `${JSON.stringify(review)}\n`;
-      writeFileSync(join(reviewFixture.root, ref.path), bytes);
-      ref.digest = digest(bytes);
-    });
-    expect((await runGate("check", reviewFixture.root, { baseRevision: reviewFixture.baseRevision })).status)
-      .toBe("error");
-  });
-
-  test("bootstrap removals must be declared in provenance or revoked in the ledger", async () => {
-    const fixture = bootstrapRepository();
-    let undeclared = "";
-    mutateBootstrapProvenance(fixture, (provenance) => {
-      const removed = provenance.removed as { fingerprint: string }[];
-      undeclared = removed.pop()?.fingerprint ?? "";
-    });
-    expect(await runGate("check", fixture.root, { baseRevision: fixture.baseRevision })).toMatchObject({
-      status: "error",
-      detail: expect.stringContaining("neither declared nor revoked"),
-    });
-
-    const ulid = ulidFromSeed(`revoke:${undeclared}`);
+  test("rewriting a trusted-base event in place fails closed", async () => {
+    const fixture = ledgerBaseRepository();
     writeFileSync(
-      join(fixture.root, `tests/no-silent-drop/events/${ulid}.json`),
-      encodeEvent({ schemaVersion: 1, ulid, op: "revoke", fingerprint: undeclared }),
+      join(fixture.root, `tests/no-silent-drop/events/${fixture.ulid}.json`),
+      encodeEvent({ ...fixture.grant, reason: "Rewritten after the trusted base." }),
     );
-    expect((await runGate("check", fixture.root, { baseRevision: fixture.baseRevision })).status).toBe("pass");
-  });
-
-  test("an approved B_pre identity that became an exemption is not a removal", async () => {
-    const fixture = bootstrapRepository();
-    let exempted = "";
-    mutateBootstrapProvenance(fixture, (provenance) => {
-      const removed = provenance.removed as { fingerprint: string }[];
-      exempted = removed.pop()?.fingerprint ?? "";
-      (provenance.initialExemptions as Record<string, unknown>).identitySetDigest = digest(exempted);
-    });
-    const ulid = ulidFromSeed(`grant:exemption:${exempted}`);
-    writeFileSync(
-      join(fixture.root, `tests/no-silent-drop/events/${ulid}.json`),
-      encodeEvent({
-        schemaVersion: 1,
-        ulid,
-        op: "grant",
-        kind: "exemption",
-        fingerprint: exempted,
-        ruleId: "NSD002",
-        file: "packages/framework/core/legacy.ts",
-        reason: "Intentional drop retained as an exemption.",
-        issues: ["#1979"],
-      }),
-    );
-    // Bootstrap accounting runs before exemption filtering, so reaching the stale
-    // exemption arm proves the identity was not counted as an unaccounted removal.
-    expect(await runGate("check", fixture.root, { baseRevision: fixture.baseRevision })).toMatchObject({
+    const result = await runGate("check", fixture.root, { baseRevision: fixture.baseRevision });
+    expect(result).toMatchObject({
       status: "error",
-      detail: expect.stringContaining("exemption is stale"),
+      code: "BASELINE_INVALID",
+      detail: expect.stringContaining("in-place mutation forbidden"),
     });
+    expect(resultExitCode(result)).toBe(2);
   });
 
   test("trusted previous ledgers support event custody and reject incomplete or invalid bases", () => {
@@ -1246,7 +1029,7 @@ describe("no-silent-drop boundaries", () => {
     const nonRepository = mkdtempSync(join(tmpdir(), "nsd-lineage-error-"));
     temporaryDirectories.push(nonRepository);
     expect(() => isAncestor(nonRepository, "a".repeat(40), "b".repeat(40)))
-      .toThrow("bootstrap base lineage could not be verified");
+      .toThrow("trusted base lineage could not be verified");
   });
 
   test("real repository check emits the public pass envelope and exit 0", async () => {

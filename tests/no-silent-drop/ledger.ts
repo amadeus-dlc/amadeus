@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import {
   type ApprovalDoc,
@@ -223,22 +222,6 @@ export function trustedBaseSha(explicit?: string): string | null {
   return source;
 }
 
-export function baselineAtRevision(repoRoot: string, sha: string): BaselineDoc {
-  const object = `${sha}:tests/no-silent-drop/baseline.json`;
-  const shown = spawnSync("git", ["show", object], { cwd: repoRoot, encoding: "utf8" });
-  if (shown.error !== undefined || shown.status === null || typeof shown.stdout !== "string") {
-    throw new InfraFailure("INTERNAL_ERROR", "trusted baseline lookup could not start");
-  }
-  if (shown.status !== 0) {
-    const detail = typeof shown.stderr === "string" ? shown.stderr.trim() : "";
-    throw new InfraFailure(
-      "BASELINE_INVALID",
-      `trusted base does not contain an unambiguous baseline: ${detail || object}`,
-    );
-  }
-  return parseBaseline(shown.stdout, `baseline at ${sha}`);
-}
-
 export function approvalDigest(approval: ApprovalDoc): string {
   return digest(JSON.stringify({
     schemaVersion: approval.schemaVersion,
@@ -299,10 +282,8 @@ export function buildCandidate(
 }
 
 export const CANONICAL_PATHS = {
-  baseline: (root: string) => join(root, "tests", "no-silent-drop", "baseline.json"),
   exemptions: (root: string) => join(root, "tests", "no-silent-drop", "exemptions.json"),
   events: (root: string) => join(root, "tests", "no-silent-drop", "events"),
   approval: (root: string) => join(root, "tests", "no-silent-drop", "approval.json"),
-  bootstrap: (root: string) => join(root, "tests", "no-silent-drop", "bootstrap-provenance.json"),
   eventsRel: "tests/no-silent-drop/events",
 } as const;
