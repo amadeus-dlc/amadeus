@@ -358,12 +358,12 @@ layout are described in
 
 ---
 
-## Eight packaged faces, five self-install faces
+## Eight packaged faces, six self-install faces
 
 The packager projects every plugin into **eight** harness faces: `claude`,
 `codex`, `cursor`, `kiro`, `kiro-ide`, `opencode`, `kimi`, and `pi`.
 Self-install — the reflection of a harness into the project root — stays the
-**closed five**: `claude`, `codex`, `cursor`, `opencode`, and `kimi`. `kiro`,
-`kiro-ide`, and `pi` are packaged but never promoted to the project root. The two
+**closed six**: `claude`, `codex`, `cursor`, `opencode`, `kimi`, and `pi`.
+`kiro` and `kiro-ide` are packaged but never promoted to the project root. The two
 matrices are verified against separate expected sets; one is never used as a
-stand-in for the other, and the five is never widened to the packaged set.
+stand-in for the other, and the six is never widened to the packaged set.

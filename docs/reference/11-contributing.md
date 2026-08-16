@@ -24,7 +24,7 @@ Contributions to this implementation are welcome. This guide covers prerequisite
 packages/framework/core/          # Hand-authored, harness-neutral source (tools, stages, agents, rules, knowledge, hooks)
 packages/framework/harness/<name>/ # Per-harness authored surfaces (manifest, orchestrator skill, settings/config)
 scripts/package.ts                # The build: regenerates dist/<harness>/ from packages/framework/core + harness
-scripts/promote-self.ts # Project-local dogfood install: promotes generated Claude/Codex surfaces into .claude/.codex/.agents (workspace memory is never overwritten)
+scripts/promote-self.ts # Project-local dogfood install: promotes every generated self-install surface (.claude/.codex/.agents/.cursor/.opencode/.kimi-code/.pi) into the project root (workspace memory is never overwritten)
 dist/<harness>/      # ignored, disposable local build output; regenerate with bun run build
 packages/setup/      # Sibling setup package when present; separate from packages/framework/
 tests/               # All-TypeScript test suite (t*.test.ts, run via bun)

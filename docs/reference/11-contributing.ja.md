@@ -24,7 +24,7 @@
 packages/framework/core/                # 手書きの、ハーネス中立なソース(tools, stages, agents, rules, knowledge, hooks)
 packages/framework/harness/<name>/      # ハーネスごとに書かれた表層(manifest、オーケストレーター skill、settings/config; 例 claude/, kiro/, codex/)
 scripts/package.ts   # ビルド: packages/framework/core/ + packages/framework/harness/ から dist/<harness>/ を再生成
-scripts/promote-self.ts # プロジェクトローカルのドッグフーディングインストール: 生成された Claude/Codex 表層を .claude/.codex/.agents に昇格(ワークスペースの memory は決して上書きしない)
+scripts/promote-self.ts # プロジェクトローカルのドッグフーディングインストール: 生成されたセルフインストール表層すべて(.claude/.codex/.agents/.cursor/.opencode/.kimi-code/.pi)をプロジェクトルートへ昇格(ワークスペースの memory は決して上書きしない)
 dist/<harness>/      # ignoreされる使い捨てのローカルビルド出力。bun run build で再生成する
 tests/               # すべて TypeScript のテストスイート(t*.test.ts、bun で実行)
 docs/                # ドキュメント

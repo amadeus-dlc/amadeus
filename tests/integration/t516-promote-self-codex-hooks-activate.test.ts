@@ -53,7 +53,7 @@ const HOOKS_EXAMPLE = JSON.stringify(
 ) + "\n";
 
 function seedBaseFixture(): void {
-  // Minimal dist fixture covering all managed dirs (claude/codex/agents/cursor/opencode/kimi) —
+  // Minimal dist fixture covering all managed dirs (claude/codex/agents/cursor/opencode/kimi/pi) —
   // no postApply wiring is exercised here, so no kimi snippet master is needed
   // (promoteSelfMain is driven with postApply = null in every test below).
   write("dist/claude/.claude/tools/a.txt", "alpha\n");

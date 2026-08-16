@@ -27,19 +27,29 @@ const packagedPi = (...segments: string[]): string =>
   join(REPO_ROOT, "dist", "pi", ".pi", ...segments);
 const promotedPi = (...segments: string[]): string => join(REPO_ROOT, ".pi", ...segments);
 
-function fileNames(dir: string): readonly string[] {
-  return readdirSync(dir, { withFileTypes: true })
-    .filter((entry) => entry.isFile())
-    .map((entry) => entry.name)
-    .sort();
+// Every file under `dir`, as sorted POSIX paths relative to it. Recursive on
+// purpose: Pi's vendored runtime nests two levels deep, so a top-level-only
+// scan compares a single file and silently ignores everything below it.
+// Dirent types are read without following symlinks, matching promote-self's
+// own walk.
+function filePaths(dir: string): readonly string[] {
+  const walk = (current: string, prefix: string): string[] =>
+    readdirSync(current, { withFileTypes: true }).flatMap((entry) =>
+      entry.isDirectory()
+        ? walk(join(current, entry.name), `${prefix}${entry.name}/`)
+        : entry.isFile()
+          ? [`${prefix}${entry.name}`]
+          : [],
+    );
+  return walk(dir, "").sort();
 }
 
 describe("t2363 pi self-install delivery", () => {
   test("the promoted agents set equals the packaged agents set", () => {
-    const packaged = fileNames(packagedPi("agents"));
+    const packaged = filePaths(packagedPi("agents"));
     // Guards the equality below from passing on two empty directories.
     expect(packaged.length).toBeGreaterThan(0);
-    expect(fileNames(promotedPi("agents"))).toEqual(packaged);
+    expect(filePaths(promotedPi("agents"))).toEqual(packaged);
   });
 
   test("the promoted reviewer charter carries Pi's read-only tool allowlist", () => {
@@ -49,8 +59,11 @@ describe("t2363 pi self-install delivery", () => {
   });
 
   test("the promoted face carries Pi's vendored OpenTelemetry runtime", () => {
-    const packaged = fileNames(packagedPi("vendor", "opentelemetry"));
-    expect(packaged.length).toBeGreaterThan(0);
-    expect(fileNames(promotedPi("vendor", "opentelemetry"))).toEqual(packaged);
+    const packaged = filePaths(packagedPi("vendor", "opentelemetry"));
+    // The runtime is nested, so the guard also pins that the walk descended:
+    // a top-level-only scan would see a single file here.
+    expect(packaged.length).toBeGreaterThan(1);
+    expect(packaged.some((path) => path.includes("/"))).toBe(true);
+    expect(filePaths(promotedPi("vendor", "opentelemetry"))).toEqual(packaged);
   });
 });

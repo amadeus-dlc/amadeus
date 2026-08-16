@@ -12,7 +12,7 @@
 //
 // Falling/passing evidence: validatePluginSources over a manifest-less source
 // throws (red-relevant), and over a well-formed set returns it (green); the
-// self-install guard rejects kiro/kiro-ide and accepts the closed five.
+// self-install guard rejects kiro/kiro-ide and accepts the closed six.
 
 import { describe, expect, test } from "bun:test";
 import {

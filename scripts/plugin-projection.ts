@@ -4,7 +4,7 @@
 // each into the eight packaged harness trees (dist/<harness>/<harnessDir>/plugins/
 // <name>/) and a harness-neutral bundle (dist/plugins/<name>/), and derives
 // byte/orphan/unreferenced/collision drift. Self-install stays the existing
-// closed five faces (claude/codex/cursor/opencode/kimi) — kiro/kiro-ide/pi are packaged
+// closed six faces (claude/codex/cursor/opencode/kimi/pi) — kiro/kiro-ide are packaged
 // but never promoted to the project root.
 //
 // OWNERSHIP: plugins/<name>/ is hand-authored source (read-only here). Every
@@ -977,18 +977,18 @@ export function isSelfInstallHarness(name: string): name is SelfInstallHarness {
   return (SELF_INSTALL_HARNESSES as readonly string[]).includes(name);
 }
 
-// Assert a harness belongs to the self-install closed five. kiro/kiro-ide are
+// Assert a harness belongs to the self-install closed six. kiro/kiro-ide are
 // packaged but must never promote to the project root; a runtime reject backs
 // the compile-time SelfInstallHarness union.
 export function assertSelfInstallHarness(name: string): SelfInstallHarness {
   if (!isSelfInstallHarness(name))
-    throw new PluginValidationError([`SELF_INSTALL rejected: ${name} is not in the closed five`]);
+    throw new PluginValidationError([`SELF_INSTALL rejected: ${name} is not in the closed six`]);
   return name;
 }
 
-// C5 internal helper: the self-install projection is the closed five faces only.
+// C5 internal helper: the self-install projection is the closed six faces only.
 // Returns the (empty) BuildResult contract; the actual byte reflection stays in
-// promote-self.ts's existing five-face closed list — U09 does not widen it.
+// promote-self.ts's existing six-face closed list — U09 does not widen it.
 const DETERMINISTIC_GRANT_TIMESTAMP = "1970-01-01T00:00:00.000Z";
 
 function copyDirectoryContents(source: string, destination: string): void {
