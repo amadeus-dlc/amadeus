@@ -1,6 +1,6 @@
 # Code Summary — pi-distribution(#2363)
 
-branch `open-bug-batch-7/pi-distribution`(実装 head `64ce0a7b9` + 追補 `7ee84f501`。push 済み・conductor 統合済み)。方式 = D2(kimi 先例踏襲 + 2 方向検証)+ 裁定 E-AD-22BD77EC(scope-parity sensor と面列挙の 6 面拡張を同 unit で実施)。実測値は builder 報告からの転記、conductor 統合断面の再実測は末尾。
+branch `open-bug-batch-7/pi-distribution`(実装 head `64ce0a7b9` + 追補 `7ee84f501`、record 同梱後の PR head は pr-convergence-report.md の記載を正とする。push 済み・conductor 統合済み)。方式 = D2(kimi 先例踏襲 + 2 方向検証)+ 裁定 E-AD-22BD77EC(scope-parity sensor と面列挙の 6 面拡張を同 unit で実施)。実測値は builder 報告からの転記、conductor 統合断面の再実測は末尾。
 
 ## 変更ファイル(計 32、うち新規 1)
 

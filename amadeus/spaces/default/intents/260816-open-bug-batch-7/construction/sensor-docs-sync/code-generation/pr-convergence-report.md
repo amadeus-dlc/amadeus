@@ -2,11 +2,11 @@
 
 - kind: created
 - pull request: amadeus-dlc/amadeus#3158
-- generated at: 2026-08-16T15:40:15Z
+- generated at: 2026-08-16T16:33:45Z
 - converged: false
 ## CLI Attestation
 
-- attestation id: prca:2f55fd9f3a3074fb0f9c58e37e83a5dfae5e8917695048808072c8a4aec85e42
+- attestation id: prca:79508d7504b0cb69cbc8cc53a7f18d02ec5780b4e89e2ad14a5872ed82446dc3
 - intent: open-bug-batch-7
 - intent uuid: 01a00a81-d60b-77a8-b97f-1e83048b6932
 - record: amadeus/spaces/default/intents/260816-open-bug-batch-7/
@@ -14,7 +14,7 @@
 - unit: sensor-docs-sync
 - repository: amadeus-dlc/amadeus
 - pr: 3158
-- local head: 58e7e0997228109a5549306123afeb5f8d94362f
-- remote head: 58e7e0997228109a5549306123afeb5f8d94362f
-- pr head: 58e7e0997228109a5549306123afeb5f8d94362f
-- content digest: sha256:d52f1546de2fa7701d839c31332d2153ad7f2a0bab9c5507ed1f4b6447642a2c
+- local head: 6672f91cfa6cc780bf7cc2d1c6fcb49182dec463
+- remote head: 6672f91cfa6cc780bf7cc2d1c6fcb49182dec463
+- pr head: 6672f91cfa6cc780bf7cc2d1c6fcb49182dec463
+- content digest: sha256:48eddcc0767b61db654e0752b1476c539528b1d2c82b94cc440da7667b0ff64b

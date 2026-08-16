@@ -1256,7 +1256,7 @@
   "slug": "priority-bug-batch-2",
   "dirName": "260815-priority-bug-batch-2",
   "scope": "self-fix",
-  "status": "in-flight"
+  "status": "complete"
  },
  {
   "uuid": "01a00473-38f9-7786-804b-55615fb0c0b9",
@@ -1278,13 +1278,6 @@
   "dirName": "260815-rfc-autonomy-modes",
   "scope": "self-feature",
   "status": "in-flight"
- },
- {
-  "uuid": "01a00368-5780-706f-ae7f-1445b9748390",
-  "slug": "priority-bug-batch-2",
-  "dirName": "260815-priority-bug-batch-2",
-  "scope": "self-fix",
-  "status": "complete"
  },
  {
   "uuid": "01a00a81-d60b-77a8-b97f-1e83048b6932",
