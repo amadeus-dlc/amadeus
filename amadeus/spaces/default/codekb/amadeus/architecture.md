@@ -5449,7 +5449,7 @@ degrade スコープ（units-generation SKIP）は `:2451` の早期 return（ru
 
 per-unit consume の消費者側契約は `amadeus-per-unit-consume-fanout.ts:90-110` の `EXPECTED_PER_UNIT_CONSUMER_EDGES` に閉じている（**7 consumer / 19 edge**。件数の述語は `awk 'NR>=91 && NR<=109' <file> | grep -c '^\s*\['` → **19**、consumer 名は同範囲へ `grep -oE '^\s*\["[a-z-]+' | grep -oE '[a-z-]+$' | sort -u | wc -l` → **7**）。`assertConsumerEdgeInventory`（`:144-168`）が `consumer-edge-inventory-mismatch` で fail-closed するため、**この表と実グラフの乖離は無音では通らない**。是正がエッジ集合を変えないなら、この在庫は触らずに済む。
 
-## stale created attestation × MERGED PR に最終化経路がない — 拒否順序が `created → landed` 遷移を到達不能にしている（260815-stale-epoch-landed、履歴、observed `83e1dbeef`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-rfc-autonomy-modes の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する。主題は PR #3113 着地で解消済み））
+## stale created attestation × MERGED PR に最終化経路がない — 拒否順序が `created → landed` 遷移を到達不能にしている（260815-stale-epoch-landed、履歴、observed `83e1dbeef`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260816-open-bug-batch-7 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する。なお本節が記す欠陥は PR #3113（`8ceeb2dc18`）で是正済み — 現況は本ファイル末尾の 260816-open-bug-batch-7 節を参照））
 
 **観測 ref**: base `78146f435a66680055a24144937b5aa03d48bfb4` → observed `83e1dbeefb3278a00e86f69d3c79071a35ccf043`（`git merge-base --is-ancestor 78146f435a 83e1dbeef` → **exit 0**、`git rev-list --count 78146f435a..83e1dbeef` → **4**）。対象は [Issue #3110](https://github.com/amadeus-dlc/amadeus/issues/3110)（P2 / S3-MAJOR、格上げは FOLLOW-UP）。
 
@@ -5502,10 +5502,77 @@ record checkpoint を同梱すれば head は必ず前進するため、両者�
 
 配置と patch surface は `code-structure.md`、テスト空白と台帳は `code-quality-assessment.md` の各対応節を参照。
 
-## Intent Autonomy Mode の機構面 — RFC-0001 実装に向けた bound-surfaces の現況（260815-rfc-autonomy-modes、現在、observed `2eb94f1e39e`）
+## RFC-0001 autonomy の全 unit 着地と、オープンバグ 3 件のアーキテクチャ上の位置づけ（260816-open-bug-batch-7、現在、observed `5c5911ee3`）
 
-- 差分区間 `83e1dbeef..2eb94f1e39e`（3 コミット — #3113 の landed 最終化 fix と record/metrics）は**全量が intent 260815-stale-epoch-landed へ帰属**し、RFC-0001 bound-surfaces（`packages/framework/core/`）との交差は **0 file**（`git diff --name-only 83e1dbeef 2eb94f1e39e -- packages/framework/core/` → 空、exit 0）。前節（260815-stale-epoch-landed）の主題は #3113 で解消済み。
-- RFC-0001 Reference-level が引く実装引用の currency を observed 断面で再照合 — **11 件中 10 件が逐語/意味論一致、1 件のみ行移動**:
-  - 一致: `amadeus-intent-autonomy.ts:581`（`SEMI_ROUTINE_INTERACTIONS: readonly InteractionKind[] = ["stage-gate", "question"]` 逐語）/ `:636-640`（`allowsOccurrence` — `occurrence.phase !== "phase-boundary"` の第 2 ガード）/ `:510-516`（`PROHIBITED_EFFECTS` 列挙）/ `:930-974`（`resolveAutoDecision` の invalid 系）/ `amadeus-intent-autonomy-production.ts:833-838`（`elect`/`recommend` が定数 `optionId: "approve"` を返す — 推奨導出が常に 1 件）/ `:713`（`Construction Autonomy Mode` の書込投影 `mode === "full" ? "autonomous" : …`）/ `:99-106`（advisory 効果分類の消費面）/ `amadeus-state.ts:1599`（park guard — `isAutonomousMode(content) && outstandingHumanTurns(pd).length === 0` で error）/ `amadeus-stop.ts:569`（`transcriptIsConversational(transcriptPath, format)` 署名）/ `amadeus-advisory-choice.ts:300-303`（`"defer-with-risk": "quality-waiver"`）
-  - 行移動: 読取側 semi→gated ハードコードは `amadeus-orchestrate.ts:2040` → **`:2046`**（逐語 `if (intentMode === "none" || intentMode === "semi") return "gated";`、`readAutonomyMode` 直下）。意味論は RFC 記載どおり不変
-- 帰結: RFC の bound-surfaces 列挙と機序記述は現 main 断面でそのまま有効。requirements/design は RFC を一次資料として引き直しなしで消費できる（行番号のみ orchestrate.ts の 1 件を `:2046` へ読み替え）。
+**観測 ref**: base `83e1dbeefb3278a00e86f69d3c79071a35ccf043`（前回 observed = 260815-stale-epoch-landed）→ observed `5c5911ee3f107152c3173701caf178a746b6e3aa`（`git rev-parse HEAD`、`origin/main` 一致断面）。区間規模は **28 コミット / 399 files changed, 22808 insertions(+), 1198 deletions(-)**（Developer scan §1 からの転記）。
+
+対象は互いに独立した 3 件のバグ — [#2363](https://github.com/amadeus-dlc/amadeus/issues/2363)（pi persona charter が dogfood self-install へ配布されない）/ [#2162](https://github.com/amadeus-dlc/amadeus/issues/2162)（no-silent-drop bootstrap provenance の到達不能 revision）/ [#3097](https://github.com/amadeus-dlc/amadeus/issues/3097)（`docs/reference/07-sensor-system.md` のセンサー列挙 drift）。
+
+### 1. 区間の主変化 — RFC-0001 intent autonomy modes（#3116）の全 unit 着地
+
+区間の非 record 変更の中心は intent `260815-rfc-autonomy-modes` の全 unit 着地である。**unit 数は 13**（本節の実測: `ls amadeus/spaces/default/intents/260815-rfc-autonomy-modes/construction/ | grep -v -x -e code-generation -e functional-design -e nfr-design | wc -l` → **13**。ステージスラッグ 3 件を除外した unit ディレクトリの列挙）。Developer scan §1 は 11 と記録していたが、record 上の列挙は 13 であり、本節は実測値を採る（訂正の詳細は `re-scans/260816-open-bug-batch-7.md` §訂正）。
+
+新規 core tool は **5 本**（`git diff --name-status 83e1dbee..HEAD -- packages/framework/core/tools/ | grep "^A"`）で、既存 21 本が変更を受けた（同述語の `^M` = 21）。責務は次のとおり（行数は observed 断面の `wc -l`）。
+
+| 新規 tool | 規模 | 責務 | 由来 unit / PR |
+|---|---|---|---|
+| `amadeus-recommendation.ts` | 218 行 | 裁定語彙 `unique` / `contested` / `none` の型と codec。`RecommendationBasisSource` は `norm` / `prior-ruling` / `election` / `agent` の閉語彙（`:14`） | recommendation-core / #3122 |
+| `amadeus-waiting.ts` | 328 行 | park と区別される第一級 terminal「waiting」の台帳。`WaitingCause` / `WaitingReceipt` / `WaitingLedgerEntry` と、events から entry を導出する `waitingEntriesOfEvents`（`:206`） | waiting-interruption / #3130 |
+| `amadeus-completion-report.ts` | 198 行 | workflow 完了時の auto-decision サマリ生成。出力先は `AUTO_DECISION_SUMMARY_RELATIVE_PATH`（`:34` = `completion/auto-decision-summary.md`） | completion-report / #3128 |
+| `amadeus-autonomy-status-facet.ts` | 64 行 | `--status` へ出す autonomy facet の合成（mode / projection / interactive / mirrorConsent / findingConsent）。解決不能時は**推測値を埋めず `null`**（`:39-64`、コメント逐語「`null` means "unavailable", never a guessed value (R-7)」） | config-visibility / #3132 |
+| `amadeus-merge-provenance.ts` | 67 行 | 委任マージの provenance を `DELEGATED_MERGE_RECORDED` として記録するだけの CLI。**git / GitHub には一切触れない**（`:1-11` のコメントが record-only を明示） | merge-provenance / #3119 |
+
+アーキテクチャ上の要点は 3 つある。
+
+1. **権限の単一正本化**: `solo-election.trigger.mode` が config leaf として廃止され、Intent Autonomy Mode からの派生になった（`packages/framework/core/tools/amadeus-config.ts:658` の ADR-8 注記、`:685` が `auto-solo-election` を `{ kind: "abolished", ... }` として拒否語彙に登録）。設定面と権限面の二重定義が解消された形である。
+2. **待機の terminal 化**: `waiting` が park とは別の terminal になり、rate 超過時の逃げ道が `human` / `repair` の 2 択に固定された（`amadeus-waiting.ts:56-60` の `RateRefusal.escalation`、コメント逐語「Two escalations, no third. "Over the rate limit, therefore continue" is the value ADR-4 refuses to make representable」）。**「上限だから続行」を表現不能にする**設計であり、parse-don't-validate と同系の型による排除である。
+3. **監査語彙の拡張**: 区間で audit イベントが **5 件**増えた — `DELEGATED_MERGE_RECORDED` / `LEARNING_CANDIDATE_ADDED` / `LEARNING_ZERO_CONFIRMED` / `WORKFLOW_WAITING_ENTERED` / `WORKFLOW_WAITING_RESUMED`（`git diff -U0 83e1dbee..HEAD -- packages/framework/core/otel/event-registry.ts` の追加行から抽出）。基数 pin は `tests/integration/event-registry-drift.test.ts:51` が **98**（前回 observed 断面では 93）。
+
+**本 intent の 3 件はいずれも autonomy 実装と独立**であり、患部ファイルは上表のどれとも交差しない。
+
+### 2. #2363 — 配布経路の集合定義が 3 重化し、包含検査が片方向にしかない
+
+pi ハーネスは packager 側では第一級だが、**自己インストール面のハーネス集合が 3 箇所に別々の形で書かれており、pi はそのいずれにも入っていない**（すべて observed 断面で逐語確認）。
+
+| # | 定義 | 形 | pi |
+|---|---|---|---|
+| 1 | `scripts/plugin-projection.ts:59` | `export const SELF_INSTALL_HARNESSES = ["claude", "codex", "cursor", "opencode", "kimi"] as const;` | 不在 |
+| 2 | `scripts/promote-self.ts:64-71` | `managedDirs` の 6 エントリ（dist→作業ツリーの src/dst マッピング。codex だけが `.codex` と `.agents` の 2 行を持つ） | 不在 |
+| 3 | `packages/framework/core/tools/data/self-install-allowlist.ts:12-19` | `GENERATED_SELF_INSTALL_ROOTS`（`.agents` / `.claude` / `.codex` / `.cursor` / `.kimi-code` / `.opencode`）。ここから `.gitignore` と `.gitattributes` が導出される | 不在 |
+
+1 は「どのハーネスを投影するか」の集合、2 は「どこからどこへ配るか」の写像、3 は「どのルートを生成物として無視するか」の集合であり、**同じ事実の 3 つの投影が独立に手書きされている**。`promote-self.ts:45-48` のコメントは face set が 1 箇所で定義されると述べるが、それが指すのは 1 のみで、2 と 3 はその主張の外にある。作業ツリーの実ルートは 6 件で `.pi/` は存在しない（`ls -d .agents .claude .codex .cursor .kimi-code .opencode .pi` → `.pi` のみ `No such file or directory`、他 6 件は列挙される）。
+
+**検査が片方向である**点が、この drift を無音にしている。`tests/integration/t531-plugin-harness-literal-guard.integration.test.ts:143-148` は「self-install ⊆ package」の包含だけを検査するため、package 側にしか居ないハーネス（= pi）は違反にならない。`scripts/promote-self.ts:327-329` の `packageFreshnessArgs` も `SELF_INSTALL_HARNESSES` 由来であり、`97581b3e39` で `/amadeus --doctor` に配線された鮮度検査は**同じ 5 面の盲点をそのまま継承**している。
+
+**実害の射程は 1 点に絞られる。** pi driver は charter 探索にフォールバック順を持ち（`packages/framework/harness/pi/drivers/amadeus-pi-driver.ts:32` 逐語 `const PERSONA_CHARTER_DIRS = [".pi/agents", ".codex/agents", ".claude/agents", ".agents/agents"] as const;`）、`.claude/agents` と `.codex/agents` は実在するため charter 本体と model ピンは fallback で解決される。解決されないのは `packages/framework/harness/pi/manifest.ts:106-108` の `frontmatterAdditions` が投影する `tools: read, grep, find, ls`（`agents/amadeus-architecture-reviewer-agent.md` 宛）である。すなわち**§12a reviewer の read-only allowlist だけが構造的に未配布**であり、外部ユーザー向けの `bunx @amadeus-dlc/setup install --harness pi` 経路（`docs/guide/harnesses/pi.md:36-48`）は塞がっていない。是正の射程はここで切れる。
+
+### 3. #2162 — 台帳移行で正本が消えたのに、それを指す参照と検査の穴が残った
+
+`tests/no-silent-drop/` は `fe8c701ba1`（#2338 / #2353）で `baseline.json` を **append-only ULID event 台帳**へ置換した（`ls tests/no-silent-drop/events/ | wc -l` → **222**、`ls tests/no-silent-drop/baseline.json` → **exit 1** = 不在）。この移行が 2 つの構造的残滓を作っている。
+
+**(a) 信頼経路の分岐により bootstrap 検証が潜在化した。** `loadTrustedPreviousLedgers`（`tests/no-silent-drop/bootstrap.ts:435-461`）は `trustedSha` に `events/` が存在するかで分岐し、存在すれば `assertStrictAncestorOfHead`（`:449`）、しなければ `validateBootstrapHistory`（`:451`）へ入る。events は着地済みなので、通常の CI 経路（`.github/workflows/ci.yml:164` の `bun run no-silent-drop -- --base-revision "${BASE_REVISION}"`）は `validateBootstrapHistory` を**通らない**。Issue が指す fail-closed は現行では潜在状態である。
+
+**(b) 到達性検査が `preRevision` にしか掛かっていない。** `:352-356` は `preRevision` に `gitObjectExists` と `isAncestor` を課すが、`postRevision` の実消費点は `:358` の `validateEvidenceBundle` 1 箇所だけで、そこでの検査は `:283` の `approved.revision !== revision` という**文字列等値比較のみ**である（`grep -n postRevision tests/no-silent-drop/*.ts` → `:53` 型 / `:186` パース / `:358` 消費 の 3 hit）。したがって到達不能な postRevision は**現行では直接には落ちない**。実 record の `fc49f8de26f85c56ddc7ba94ee7522276ed3ec60` は `git cat-file -t` では commit だが、どの ref からも到達不能な dangling commit である（Developer scan §3 の実測）。
+
+**(c) 死んだ経路がテストで固定されている。** `tests/no-silent-drop/ledger.ts:301-302` の `CANONICAL_PATHS.baseline` と `:226-227` の `baselineAtRevision`（`git show ${sha}:tests/no-silent-drop/baseline.json`）は、**もう存在しないファイルを指し続けている**。唯一の呼出は `tests/integration/no-silent-drop-gate.test.ts:839` の negative test であり、production 経路からは呼ばれない。
+
+したがって「何を修理するか」の再定義が先に必要である — Issue 本文が挙げた不整合のうち `candidate.digest` と `baseline.generatedFrom.revision` に関する 2 点は移行で消滅済みで、残る実体は (b) と (c) である。
+
+### 4. #3097 — 導出可能な集合を 2 つの doc が手書きし、検査は片方だけに掛かっている
+
+センサー manifest の実在コーパスは機械的に導出できる（core 11 + plugin 宣言 3 = **14**）。`tests/integration/t3028-sensors-docs-sync.integration.test.ts:20-45` の `derivedCorpus()` がまさにそれを行い、`tableRows()`（`:47-51`）と `toEqual` で突合する。**しかしその射程は `docs/harness-engineering/06-sensors.md` とその `.ja.md` のみ**である（`:1-2` の `covers:` ヘッダ、`:47-48` が `docs/harness-engineering` 直下だけを読む）。`docs/reference/07-sensor-system.md` は同種の表を持ちながら**誰からも検査されていない**。
+
+07 の drift は 2 クラスある（いずれも本節で再実測）。
+
+- **行集合の欠落 4 件**: 対象集合を「`matches:` を宣言する manifest」に取ると **13 件**（`for f in packages/framework/core/sensors/*.md plugins/*/sensors/*.md; do grep -q "^matches:" "$f" && basename "$f"; done | sort | wc -l` → 13）。07 en の表行は **9 件**（`grep -o '^| \`amadeus-[a-z0-9-]*\.md\`' docs/reference/07-sensor-system.md | sed 's/^| \`//;s/\`$//' | sort -u` → 9、実体は `:200-208`）。`comm -23` → `amadeus-nfr-budget.md` / `amadeus-pr-convergence-report-format.md` / `amadeus-question-budget.md` / `amadeus-scope-sizing.md`。逆向き `comm -13` は **0 件**。
+- **値の陳腐化 2 行**: `amadeus-required-sections.md` と `amadeus-upstream-coverage.md` の `matches` は manifest 側が `**/{amadeus-docs,intents,codekb}/**`（両 manifest とも `:8`）だが、07 の表（`:200` / `:201`）は `**/{amadeus-docs,intents}/**` で **`codekb` が欠落**している。
+
+**同期先は 14 ではなく 13 である。** `plugins/git-drift/sensors/amadeus-git-drift.md` は `matches` を宣言せず（`grep -c "^matches:"` → **0**、exit 1）、07 自身が `:210-212` で「`matches` glob を持たないエントリは一切発火しない」と述べているため、これを 14 件目として機械的に足すと表が自己矛盾する。Issue 本文の「実在コーパス（14）へ同期」をそのまま受けると誤った表になる。
+
+### 5. 3 件に共通する構造クラスと、共通しない部分
+
+#2363 と #3097 は**同じクラス**である — 導出可能な集合を手書きで複製し、その複製に対する検査が片側にしか掛かっていない（#2363 は「self-install ⊆ package」の一方向、#3097 は「06 のみ」の一部分）。是正の型も共通で、**正本から導出する**か、**検査を全数・双方向にする**かのいずれかになる。
+
+#2162 は別クラスで、正本そのものが移行で消えたのに参照と記録が残った「移行の残滓」である。是正は同期ではなく、死んだ経路の削除と、欠けている到達性検査の追加になる。
+
+配置と patch surface は `code-structure.md`、コンポーネント境界は `component-inventory.md`、テスト空白と台帳は `code-quality-assessment.md` の各対応節を参照。

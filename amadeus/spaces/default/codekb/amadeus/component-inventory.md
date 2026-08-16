@@ -2837,7 +2837,7 @@ Issue #3099 が名指す到達不能は `build-and-test`（2 edge、producer = `
 
 機序は `architecture.md`、配置は `code-structure.md`、テスト面と台帳は `code-quality-assessment.md` の各対応節を参照。
 
-## pr-convergence の 4 コンポーネントと、拒否の所在（260815-stale-epoch-landed、現在、observed `83e1dbeef`）
+## pr-convergence の 4 コンポーネントと、拒否の所在（260815-stale-epoch-landed、履歴、observed `83e1dbeef`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260816-open-bug-batch-7 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **本差分でのコンポーネント変化なし。** base `78146f435a` → observed `83e1dbeef` で新規モジュール・責務移動はゼロ。`git diff --quiet 78146f435a 83e1dbeef -- plugins/github-pr-convergence/` → **exit 0**。
 
@@ -2853,3 +2853,59 @@ Issue #3099 が名指す到達不能は `build-and-test`（2 edge、producer = `
 補助として `pr-convergence-attestation.ts`（`local head` フィールドの生成 `:82` / 型 `:115` / parse `:166`）と `pr-convergence-predicate.ts`（`converged` / `landed` の判定）が関わる。**sensor manifest（`sensors/amadeus-pr-convergence-report-format.md`）と sensor 実装（`tools/amadeus-sensor-pr-convergence-report-format.ts`）はファイル名プレフィックスもディレクトリも異なる**ため、参照時に取り違えない（`sensors/` 配下に `.ts` は存在しない）。
 
 **責務分担から見た是正の制約**: sensor は record を直読する独立コンポーネントであるため、CLI 側の挙動だけを変えても record が `created` のままなら赤は消えない。閉路の解消は「record へ `landed` を書けるようにする」側でしか成立しない。機序は `architecture.md` の対応節を参照。
+
+## オープンバグ 3 件のコンポーネント棚卸しと、区間のコンポーネント増減（260816-open-bug-batch-7、現在、observed `5c5911ee3`）
+
+**観測 ref**: base `83e1dbeefb3278a00e86f69d3c79071a35ccf043` → observed `5c5911ee3f107152c3173701caf178a746b6e3aa`。file:line はすべて observed 断面で本節の起草時に逐語確認した（`sed -n` による直読）。
+
+### A. 区間のコンポーネント増減 — 新規 core tool 5 本
+
+`git diff --name-status 83e1dbee..HEAD -- packages/framework/core/tools/` → 新規（`^A`）**5** / 変更（`^M`）**21**。新規 5 本の責務と規模（`wc -l`）は `architecture.md` の対応節の表に収載。いずれも RFC-0001 intent autonomy modes（#3116、intent `260815-rfc-autonomy-modes`、unit **13**）由来であり、**本節 B〜D の患部とは 1 ファイルも交差しない**。
+
+### B. #2363 — self-install 配布経路のコンポーネント
+
+pi は **packager 側では第一級**である（`scripts/plugin-projection.ts:44-53` の `PACKAGE_HARNESSES` は 8 面で、`:52` が `"pi"`。`packages/framework/harness/pi/` も実在）。不在なのは自己インストール側の 3 定義すべてである。
+
+| コンポーネント | ファイル / 行 | 責務 | pi の扱い |
+|---|---|---|---|
+| package face 集合 | `scripts/plugin-projection.ts:44-53` | 配布対象 8 ハーネスの閉じた union | **在**（`:52`） |
+| self-install face 集合 | `scripts/plugin-projection.ts:59` | `SELF_INSTALL_HARNESSES = ["claude", "codex", "cursor", "opencode", "kimi"]`（5 面）。直上 `:56` のコメントが「the five faces promote-self.ts reflects into」と述べる | **不在** |
+| dist→作業ツリー写像 | `scripts/promote-self.ts:64-71` | `managedDirs`（6 エントリ。codex のみ `.codex` と `.agents` の 2 行を持つ） | **不在** |
+| 生成ルート allowlist | `packages/framework/core/tools/data/self-install-allowlist.ts:12-19` | `GENERATED_SELF_INSTALL_ROOTS`（6 ルート）。ここから `.gitignore` の ignore 行と `.gitattributes` が導出される | **不在**（`.pi` なし） |
+| pi manifest | `packages/framework/harness/pi/manifest.ts:83` / `:106-108` / `:112` | `{ src: "agents", dst: "agents" }` の投影、`frontmatterAdditions`（reviewer へ `tools: read, grep, find, ls`）、`modelPins: PI_MODEL_PINS` | 宣言は完備 |
+| pi driver（charter 解決） | `packages/framework/harness/pi/drivers/amadeus-pi-driver.ts:32` | `PERSONA_CHARTER_DIRS = [".pi/agents", ".codex/agents", ".claude/agents", ".agents/agents"]` のフォールバック順 | fallback で charter 本体は解決される |
+| 包含ガード | `tests/integration/t531-plugin-harness-literal-guard.integration.test.ts:143-148` | テスト名逐語 `PACKAGE_HARNESSES enumerates every self-install face`。`for (const harness of SELF_INSTALL_HARNESSES) expect(PACKAGE_HARNESSES).toContain(harness);` | **片方向**（package 側にしか居ないハーネスは違反にならない） |
+| doctor 鮮度検査 | `scripts/promote-self.ts:327-329` | `packageFreshnessArgs` が `SELF_INSTALL_HARNESSES.map(...)` を返す | 同じ 5 面の盲点を継承 |
+
+作業ツリーの実ルートは 6 件で `.pi/` は不在（`ls -d .agents .claude .codex .cursor .kimi-code .opencode .pi` → `.pi` のみ `No such file or directory`）。**固定件数ピンを持つテスト 3 本**が pi 追加で確実に赤化する（Red の実測点）: `tests/integration/t-plugin-projection-packaging.test.ts:148-149`（`toEqual(["claude","codex","cursor","kimi","opencode"])` と `toHaveLength(5)`）、`tests/unit/t-plugin-projection.test.ts:308`（`toHaveLength(5)`）、`tests/unit/t209-promote-self-dangling-symlink.test.ts:146-150`（`packageFreshnessArgs("apply")` の逐語配列）。
+
+### C. #2162 — no-silent-drop bootstrap provenance のコンポーネント
+
+| コンポーネント | ファイル / 行 | 責務 | 本件での役割 |
+|---|---|---|---|
+| 信頼台帳ローダ | `tests/no-silent-drop/bootstrap.ts:435-461` | `loadTrustedPreviousLedgers`。`trustedSha` に `events/` があれば `assertStrictAncestorOfHead`（`:449`）、無ければ `validateBootstrapHistory`（`:451`） | **分岐点**。events 着地後は後者を通らず、bootstrap 検証が潜在化 |
+| bootstrap 検証 | 同 `:348-358` | `bootstrapBaseRevision === preRevision` の等値（`:348-351`）と `preRevision` の `gitObjectExists` + `isAncestor`（`:352-356`） | 到達性検査は **`preRevision` にのみ**掛かる |
+| evidence 束の検証 | 同 `:283` | `approved.revision !== revision` の**文字列等値比較のみ** | `postRevision` の唯一の実消費（`:358` 経由）。git 到達性は見ない |
+| ULID event 台帳 | `tests/no-silent-drop/events/` | append-only の grant / revoke / snapshot 台帳（**222** ファイル、`ls \| wc -l`） | `fe8c701ba1`（#2338 / #2353）で `baseline.json` を置換した新正本 |
+| 死んだ baseline 参照 | `tests/no-silent-drop/ledger.ts:226-227` / `:301-302` | `baselineAtRevision`（`git show ${sha}:tests/no-silent-drop/baseline.json`）と `CANONICAL_PATHS.baseline` | **不在ファイルを指し続ける**（`ls tests/no-silent-drop/baseline.json` → exit 1）。唯一の呼出は `tests/integration/no-silent-drop-gate.test.ts:839` の negative test |
+| CI 起動点 | `.github/workflows/ci.yml:164` | `bun run no-silent-drop -- --base-revision "${BASE_REVISION}"` | 通常経路。`validateBootstrapHistory` を通らない |
+
+`postRevision` の全消費点は 3 hit のみ（`grep -n postRevision tests/no-silent-drop/*.ts` → `bootstrap.ts:53` 型 / `:186` パース / `:358` 消費）。
+
+### D. #3097 — センサー機構の docs 面と検査射程
+
+**この面は本 intent 以前の codekb に収載がない。** `grep -c "07-sensor-system" *.md`（本 codekb ディレクトリ 9 面）→ **全 9 面 0**（exit 1 = エラーなく不一致）。対照として `grep -c "sensor"` は `architecture.md` 71 / `component-inventory.md` 64 であり、センサー機構そのものは収載済みで、**この docs パスだけが未収載**という限定的な不在だった。本節がその欠落を埋める。
+
+| コンポーネント | ファイル / 行 | 内容 |
+|---|---|---|
+| manifest コーパス（core） | `packages/framework/core/sensors/` | **11** ファイル（`ls \| wc -l`） |
+| manifest コーパス（plugin 宣言） | `plugins/*/plugin.json` の `sensors` 配列 | **3**（`formal-model-check` → `sensors/amadeus-model-completeness.md`、`git-drift` → `sensors/amadeus-git-drift.md`、`github-pr-convergence` → `sensors/amadeus-pr-convergence-report-format.md`） |
+| `matches` 宣言を持つ集合 | 上記 14 のうち | **13**（`amadeus-git-drift.md` のみ `grep -c "^matches:"` → 0、exit 1） |
+| 検査対象の doc（射程内） | `docs/harness-engineering/06-sensors.md` / `.ja.md` | t3028 の `covers:` ヘッダ（`:1-2`）が名指す 2 面。表は 14 行で同期済み |
+| 検査対象外の doc | `docs/reference/07-sensor-system.md` / `.ja.md` | **誰も検査していない**。`matches` 表は en `:200-208` で **9 行**（ヘッダ行は `:198`）。ja 面は表 `:199-207` |
+| 同期テスト | `tests/integration/t3028-sensors-docs-sync.integration.test.ts` | `derivedCorpus()`（`:20-45`）が core + plugin 宣言から 14 件を導出、`tableRows()`（`:47-51`）が `docs/harness-engineering` **直下だけ**を読み `toEqual` 比較 |
+| 発火規約の宣言 | `docs/reference/07-sensor-system.md:210-212` | 逐語「`matches` **is** the fire filter … an entry **without** a `matches` glob never fires at all」 |
+
+07 の欠落 4 件は `amadeus-nfr-budget.md` / `amadeus-pr-convergence-report-format.md` / `amadeus-question-budget.md` / `amadeus-scope-sizing.md`（`comm -23`）。逆向き（表にあるが実在しない）は **0 件**。値の陳腐化は `:200` / `:201` の 2 行で、manifest 側（両者とも `:8`）が `**/{amadeus-docs,intents,codekb}/**` なのに対し表は `codekb` を欠く。**同期先の正しい対象集合は 14 ではなく 13** である（`amadeus-git-drift.md` を足すと `:210-212` の規約と矛盾する行が生まれる）。
+
+**3 領域はファイル交差ゼロ**（A は `scripts/` + allowlist + harness manifest、B は `tests/no-silent-drop/`、C は `docs/reference/07-*` + t3028）。機序は `architecture.md`、配置は `code-structure.md`、テスト空白と台帳は `code-quality-assessment.md` の各対応節を参照。

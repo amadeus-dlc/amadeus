@@ -1,23 +1,30 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260815-rfc-autonomy-modes）
+## 実行メタデータ（現在: 260816-open-bug-batch-7）
 
-- Date: `2026-08-15`
-- Intent: `260815-rfc-autonomy-modes`
-- Repository: `amadeus`（単一 repo）
-- Scope / depth / project type: `self-feature` / Standard / Brownfield
-- Base commit: `83e1dbeefb3278a00e86f69d3c79071a35ccf043`（前回 observed = 260815-stale-epoch-landed。祖先性 `git merge-base --is-ancestor 83e1dbeef 2eb94f1e39e` → **exit 0**）
-- Observed commit: `2eb94f1e39e940c1c39a80a2181a8e03aaf31eb9`（`origin/main` tip）
-- Distance: **3** コミット（`git rev-list --count 83e1dbeef..2eb94f1e39e`）
-- 差分規模: `git diff --shortstat 83e1dbeef 2eb94f1e39e` → **71 files changed, 3187 insertions(+), 131 deletions(-)**。非 record 面（`-- ':!amadeus/' ':!metrics/'`）は **8 files +1166/−73**
-- Scope of scan: **差分リフレッシュ**（RFC-0001 bound-surfaces に焦点）
-- Focus: RFC-0001（`amadeus/spaces/default/specs/rfc/0001-intent-autonomy-modes.md`、status: approved）の実装前提 — bound-surfaces の現況と RFC 実装引用の currency
-- 区間内容の帰属: 3 コミットは**全量が intent 260815-stale-epoch-landed へ帰属**（#3113 修正 8 files + record checkpoint #3114 + metrics #3115）
-- 構造変化: **なし** — `packages/framework/core/` は **0 file 変更**（`git diff --name-only 83e1dbeef 2eb94f1e39e -- packages/framework/core/` → 空）。新規テストファイルは t3110 の 1 件のみ（coverage-registry は #3113 内で regen 済み）
-- 中核知見: RFC-0001 の bound-surfaces と機序記述は現 main 断面で**そのまま有効**。RFC Reference-level の実装引用 11 件の currency 再照合は **10/11 が逐語/意味論一致・1 件のみ行移動**（読取側 semi→gated ハードコード `amadeus-orchestrate.ts:2040` → **`:2046`**、逐語 `if (intentMode === "none" || intentMode === "semi") return "gated";`）。詳細は `architecture.md` §260815-rfc-autonomy-modes
-- 更新した codekb 面: `architecture.md`（新節 + 前 intent 節の履歴降格・解消注記）/ `code-structure.md`（同）/ 本ファイル。無変更が正: business-overview / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment（区間の非 record 変更が pr-convergence plugin の 1 患部面に限られ、これらの面の記述へ影響しないことを diff 帰属で確認）
-- 旧 intent の未コミット RE（autonomy-refactor worktree）: **破棄** — 本スキャンが最新 main 起点の正
-- Per-intent record: `re-scans/260815-rfc-autonomy-modes.md`
+- Date: `2026-08-16`
+- Intent: `260816-open-bug-batch-7`
+- Repository: `amadeus`（単一 repo、root `/Users/j5ik2o/orca/workspaces/amadeus/gh-issue`）
+- Scope / depth / project type: `self-fix` / Minimal / Brownfield
+- Base commit: `83e1dbeefb3278a00e86f69d3c79071a35ccf043`（前回 observed = 260815-stale-epoch-landed。祖先性 `git merge-base --is-ancestor 83e1dbee HEAD` → **exit 0**）
+- Observed commit: `5c5911ee3f107152c3173701caf178a746b6e3aa`（`git rev-parse HEAD`、`origin/main` 一致断面。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Distance: **28** コミット（`git rev-list --count 83e1dbee..HEAD`）
+- 差分規模: `git diff --shortstat 83e1dbee HEAD` → **399 files changed, 22808 insertions(+), 1198 deletions(-)**。非 record 面（`-- ':!amadeus/' ':!metrics/'`）は **165 files / +11114 −1126**。テストは `tests/**` 全域で **90** ファイル = 新規 **30** / 変更 **59** / 削除 **1**（`--diff-filter=A|M|D -- 'tests/**'`。削除は `tests/integration/t456-question-carveout-predicate.test.ts`、commit `7516194519`（interactive-carveout unit / PR #3137）由来）
+- Scope of scan: **差分リフレッシュ**（base..observed 全域の棚卸し + 対象 3 バグ領域の深掘り）
+- Focus: オープンバグ 3 件 — [#2363](https://github.com/amadeus-dlc/amadeus/issues/2363)（pi persona charter が dogfood self-install へ配布されない）/ [#2162](https://github.com/amadeus-dlc/amadeus/issues/2162)（no-silent-drop bootstrap provenance の到達不能 revision）/ [#3097](https://github.com/amadeus-dlc/amadeus/issues/3097)（`docs/reference/07-sensor-system.md` のセンサー列挙 drift）
+- 区間内容の帰属: 主体は intent `260815-rfc-autonomy-modes`（RFC-0001 intent autonomy modes、Issue #3116）の**全 unit 着地**。unit 数は **13**（`ls amadeus/spaces/default/intents/260815-rfc-autonomy-modes/construction/ | grep -v -x -e code-generation -e functional-design -e nfr-design | wc -l`）。あわせて #3110 の是正 PR #3113（`8ceeb2dc18`）、RFC 0002 ドラフト（#3126）、metrics snapshot 12 件が区間に含まれる
+- 構造変化: 新規 core tool **5 本**（`amadeus-autonomy-status-facet.ts` / `amadeus-completion-report.ts` / `amadeus-merge-provenance.ts` / `amadeus-recommendation.ts` / `amadeus-waiting.ts`）、既存 core tool 21 本が変更（`git diff --name-status 83e1dbee..HEAD -- packages/framework/core/tools/` の `^A` / `^M`）。**パッケージ追加・ディレクトリ移動はゼロ**、`packages/framework/core/` と `packages/framework/harness/<name>/` の境界は不変。`.github/` は **0 件**変更
+- 公開契約の変化: audit イベント **5 件**追加（`DELEGATED_MERGE_RECORDED` / `LEARNING_CANDIDATE_ADDED` / `LEARNING_ZERO_CONFIRMED` / `WORKFLOW_WAITING_ENTERED` / `WORKFLOW_WAITING_RESUMED`）で基数 pin は **93 → 98**（`tests/integration/event-registry-drift.test.ts:51`）。`solo-election.trigger.mode` は config leaf として廃止され Intent Autonomy Mode からの派生になった（`amadeus-config.ts:658` / `:685`）。新規 CLI `amadeus-merge-provenance record`（record-only、git / GitHub に触れない）
+- 中核知見（3 バグ）: **#2363** — self-install 配布経路の集合定義が **3 重**（`plugin-projection.ts:59` の `SELF_INSTALL_HARNESSES` / `promote-self.ts:64-71` の `managedDirs` / `self-install-allowlist.ts:12-19` の `GENERATED_SELF_INSTALL_ROOTS`）で、pi はいずれにも不在。ガード（`t531:143-148`）は「self-install ⊆ package」の**片方向のみ**。実害は `frontmatterAdditions` の read-only allowlist 1 点に絞られ（charter 本体と model ピンは driver の `PERSONA_CHARTER_DIRS` fallback で解決）、外部導入経路は無傷。**#2162** — `baseline.json` は ULID event 台帳へ移行済み（`events/` **222** 件、`baseline.json` は不在）。残る実体は (i) `postRevision` に git 到達性検査が無い（消費点は `bootstrap.ts:358` → `:283` の文字列等値のみ）(ii) `ledger.ts:226-227` / `:301-302` が不在ファイルを指す死んだ経路（negative test `no-silent-drop-gate.test.ts:839` が固定）。Issue 本文の 3 不整合のうち 2 つは移行で消滅済み。**#3097** — 07 の `matches` 表（`:200-208`、9 行）に対し `matches` 宣言を持つ manifest は **13** 件で、欠落 4 件・値の陳腐化 2 行。同期先は Issue が書く 14 ではなく **13**（`amadeus-git-drift.md` は `matches` 非宣言、07 自身の `:210-212` と矛盾するため）
+- codekb からの引用可能性: `07-sensor-system` は本 intent 以前の 9 面すべてで **0 hit**（`grep -c "07-sensor-system" *.md` → 全 0、exit 1）だった。本 intent で `component-inventory.md` §D と `code-structure.md` に収載し、後続ステージが引ける状態にした。`promote-self` / `no-silent-drop` は既存収載あり
+- 品質指標: coverage **93.3805 → 93.4193**（+0.0388pp）、test files **1017 → 1044**、assertions **13600 → 13879**、loc core **146600 → 148942**、複雑度閾値超過 **32 → 32**（横ばい）、open bugs **4 → 4**。測定元は区間最初と最後の metrics snapshot JSON（`8ceeb2dc1823` / `3e1c6a19ed5b`）の `collectors.<name>.values` 直読
+- 台帳: 区間内で allowlist **+187 行** / registry **+128 行** / model-map **12 行** / complexity-baseline **4 行** / coverage-ratchet **4 行** が resync 済み。是正時の係りは A=allowlist 1 hit（`tests/deletion-gate.ts` の reason 文中）/ B=allowlist 5・registry 3 / C=なし。**いずれの領域も新規テストファイル追加時は registry regen が必須**
+- 未検証面: 3 件の是正方式（#2363 の pi 追加と逆向きガードの形、#2162 の修理対象の再定義、#3097 の同期方式）は**本スキャンでは決めていない** — 後続の裁定事項（`memory/team.md` P1）。フルスイート・coverage・`bun run build` はいずれも未実行（本スキャンは読取専用）
+- 申し送り（重要）: `cid:code-generation:oq-singleton` により、degrade スコープでは construction 配下の unit ディレクトリが**ちょうど 1 つ**であることを pr-convergence の Delivery Bolt authority が要求する。**3 Issue を 1 intent に載せると 2 つ目の unit を作った時点で report mint が構造的に不成立**になるため、intent 分割か非 degrade スコープの選択が要る
+- Verification: git 状態変更（commit / branch / checkout / stash / merge）・GitHub 書込・engine/state ツール実行（`amadeus-orchestrate.ts` / `amadeus-state.ts` / `amadeus-log.ts` / `amadeus-bolt.ts`）・`bun run build` は**すべてゼロ**。書き込みは `amadeus/spaces/default/codekb/amadeus/` 配下のみ
+- Updated artifacts: 本体 8 面すべてに本 intent の節を追記 + `reverse-engineering-timestamp.md`（本節）+ `re-scans/260816-open-bug-batch-7.md`（新規）
+- 構造補修: 直前 intent `260815-stale-epoch-landed` の現在時制マーカー **8 件**を履歴へ降格（`api-documentation.md` / `architecture.md` / `business-overview.md` / `code-quality-assessment.md` / `code-structure.md` / `component-inventory.md` / `dependencies.md` / `technology-stack.md`。本文と行番号は保持、`cid:reverse-engineering:c1`）。あわせて本ファイル下部に残っていた `## 実行メタデータ（最新: 260813-bolt-pr-attestation）` の陳腐化した現在時制マーカー（`最新`）を履歴ラベルへ更新
+- Per-intent record: `re-scans/260816-open-bug-batch-7.md`
 
 ## 実行メタデータ（履歴: 260815-stale-epoch-landed）
 
@@ -2123,7 +2130,7 @@ packaging 入力集合と source-unreferenced ギャップに焦点を絞った 
 - Updated artifacts: shared 9成果物と `re-scans/260813-election-multiq.md`。既存履歴節は削除・再整形せず、最新節を追記。
 - Verification: read-only の git/rg/gh/line-count 計測のみ。テスト、build、coverage、TLC は未実行。
 
-## 実行メタデータ（最新: 260813-bolt-pr-attestation）
+## 実行メタデータ（履歴: 260813-bolt-pr-attestation。**現在時制マーカーのみ更新**（`cid:reverse-engineering:c1`、260816-open-bug-batch-7 の差分リフレッシュ時。旧ラベル `最新` は 260813 時点の記述で、以後複数の intent が本ファイル上部に節を追加しているため陳腐化していた。本節の本文と当時の値は保存する））
 
 - Date: `2026-08-14`（Asia/Tokyo）
 - Intent: `260813-bolt-pr-attestation`
