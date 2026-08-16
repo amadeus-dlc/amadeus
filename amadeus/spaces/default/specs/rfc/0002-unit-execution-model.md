@@ -11,6 +11,7 @@ approval-ref: (承認の一次記録 — HUMAN_TURN / PR / Issue コメント)
 bound-surfaces: |
   packages/framework/core/tools/amadeus-swarm.ts
   packages/framework/core/tools/amadeus-orchestrate.ts(発動判定・swarm 指令)
+  packages/framework/core/tools/amadeus-config.ts(並列幅キーの定義 — §8.4 の設定キー改名対象)
   packages/framework/harness/{claude,codex,kimi,kiro,kiro-ide,pi}/skills/amadeus/SKILL.md(invoke-swarm 節 — ハーネス別6面)
   packages/framework/core/otel/event-registry.ts(SWARM_* イベント)
   docs / glossary(swarm・ドライバ設定に言及する利用者文書)
@@ -34,7 +35,7 @@ swarm の実行モデルは「発動するか(人間の autonomy 付与+決定�
 本 RFC 承認後の世界では、利用者は次の3つの独立した概念だけを覚えればよい:
 
 1. **実行方針**(計画時の姿勢): **直列限定** — 並列の余地があっても必ず直列に計画する / **並列可**(既定) — 独立な Unit は並列 batch に、依存があれば直列に編成する。delivery planning での選択であり、実行時スイッチではない。
-2. **進行の粒度**は Intent autonomy(RFC 0001、既定 `none`)。`none`・`semi` は batch ごとに人間承認で停止する gated 並列、`full` は連続実行(§2 の発動条件表参照)。
+2. **発動可否と進行の粒度**は Intent autonomy(RFC 0001、既定 `none`)。並列実行を有効にするのはこの状態であり、ドライバ設定ではない。`none`・`semi` は batch ごとに人間承認で停止する gated 並列、`full` は連続実行(§2 の発動条件表参照)。
 3. **並列実行のバックエンド**はドライバ設定 `AMADEUS_PARALLEL_DRIVER=subagent|claude-ultra|codex-ultra|pi`(未設定=ハーネス既定)。既定値を明示的に書いても拒否されない。
 
 「並列にしたくない」は実行方針「直列限定」で表現し、「並列を止めながら進める」は gated(none / semi)の batch 承認で表現する。機構に固有名はなく、実行形態は「直列実行/並列実行」とだけ呼ぶ。
@@ -221,7 +222,9 @@ AS-IS の契約は Part 1(§1〜§6)で閉じている。本節は契約では�
 
 9. **ドライバ決定表の面間 drift**: コード(6ハーネス・`pi` 受理)/ 出荷 docs(4列・「3値 enum」・`pi` 非対応と明記)/ ハーネス別 SKILL.md(記述粒度が面ごとに不揃い — ランタイム degrade の記述は claude 面のみ)が同じ決定表を各自の版で持ち、互いに食い違っている(実証: 独立レビューの突合。evidence 参照) — 帰属: 本 RFC §8.6(実装 intent で §3 を正本として全面同期)
 
-9項中7項(1〜6、9)は本 RFC が §8 で是正する。7 は防御構造の問題として別 Issue へ、8 は RFC 0001 の領分としてその amendment 判断へ送致し、本節は記録のみを行う。語彙起因は 1〜4・6・8〜9 であり、権限構造(発動=人間の付与、ドライバ=設定、検証=決定的機構)自体は一貫している。
+10. **実行方針の無名性**: 「並列の余地があっても直列に計画する/独立なら並列に編成する」という計画時の判断が語彙を持たず、delivery plan の batch 宣言の有無という構造としてしか存在しない。判断そのものを名指しできないため「並列にしたくない」という意思の表現手段を語彙で説明できない(実証: 本 RFC 議論セッションで実行時スイッチ案〈不採〉への誤導線を生んだ) — 帰属: 本 RFC §8.4
+
+10項中8項(1〜6、9、10)は本 RFC が §8 で是正する。7 は防御構造の問題として別 Issue へ、8 は RFC 0001 の領分としてその amendment 判断へ送致し、本節は記録のみを行う。語彙起因は 1〜4・6・8〜10 であり、権限構造(発動=人間の付与、ドライバ=設定、検証=決定的機構)自体は一貫している。
 
 #### 8. TO-BE 仕様(ユビキタス言語の確定と固有名の廃止)
 
@@ -238,6 +241,7 @@ AS-IS の契約は Part 1(§1〜§6)で閉じている。本節は契約では�
 | 5 読取責務の非自明さ | §8.5 |
 | 6 ドライバ名 `subagent` の衝突 | §8.4 |
 | 9 ドライバ決定表の面間 drift | §8.6(§3 を正本に全面同期) |
+| 10 実行方針の無名性 | §8.4 |
 
 (§8.3 は §8.1 の派生 — 旧変数の遮断。§8.6 は §8.1〜§8.4 の波及面の棚卸しを兼ねる)
 
@@ -277,17 +281,18 @@ AS-IS の契約は Part 1(§1〜§6)で閉じている。本節は契約では�
 
 | 概念 | 語彙(日本語 / 英語正準) | 定義 |
 |---|---|---|
-| 実行方針(計画時の姿勢) | **直列限定** `serial-only` / **並列可** `parallel-allowed`(既定) | delivery planning での選択。直列限定は並列の余地があっても必ず直列に編成する。並列可は独立な Unit を並列 batch に、依存があれば直列に編成する。**実行時スイッチではない** |
+| 実行方針(計画時の姿勢) | **直列限定** `serial-only` / **並列可** `parallel-allowed`(既定) | delivery planning での選択。直列限定は並列の余地があっても必ず直列に編成する。並列可は独立な Unit を並列 batch に、依存があれば直列に編成する。**既存の計画時判断への命名であり、新設の設定・実行時スイッチではない** — 機械面は delivery-planning 成果物と用語集の記録語彙に限る(§7 項10) |
 | 実行形態(導出結果) | **直列実行** `serial` / **並列実行** `parallel` | 方針・計画・autonomy から導出される結果(§2 の決定表)。機構の固有名は持たない |
 | 直列実行の3変種 | **単発実行** / **インライン直列実行** / **委譲直列実行** | AS-IS §1 のラベル (a)/(b)/(c) に対応。「直列実行」という語は常に総称を指す。並列実行と交換可能なのは委譲直列実行のみ |
-| CG 軸の2値対比 | 「**委譲直列実行** = subagent 委譲(1体ずつ)| **並列実行** = 並列ドライバ委譲(ドライバの1つとして subagent が現れる場合がある)」 | 3値フラットな列挙は不採(並列実行に第2の名を与えない) |
+| CG 軸の2値対比 | 「**委譲直列実行** = subagent 委譲(1体ずつ)\| **並列実行** = 並列ドライバ委譲(ドライバの1つとして subagent が現れる場合がある)」 | 3値フラットな列挙は不採(並列実行に第2の名を与えない) |
 | ドライバ | `subagent` / `claude-ultra` / `codex-ultra` / `pi` | 並列実行のバックエンド。「ドライバ `subagent` は並列実行内の worker 起動手段を指し、委譲直列実行における subagent 委譲(1体ずつ)とは別概念」の1文を定義に含める |
 
-**固有名 swarm の廃止**: 「swarm」はアジャイル文脈の swarming(多対一の集結)と意味論が逆であり(§7 項4(iii))、機構の実装イメージを過剰に固定する。固有名を廃し記述名で呼ぶことで誤読の根を断ち、機構の抽象度を実装側で調整する余地を保つ。機械名も同じ言語へ貫通させる:
+**固有名 swarm の廃止**: 「swarm」はアジャイル文脈の swarming(多対一の集結)とは逆向きの語義を持つ多義語であり(§7 項4(iii) — Docker Swarm の語義とは整合するため誤りではなく多義)、機構の実装イメージを過剰に固定する。固有名を廃し記述名で呼ぶことで誤読の根を断ち、機構の抽象度を実装側で調整する余地を保つ。機械名も同じ言語へ貫通させる:
 
 | 面 | 旧 | 新 |
 |---|---|---|
 | 環境変数 | `AMADEUS_USE_SWARM` | `AMADEUS_PARALLEL_DRIVER`(§8.1) |
+| 環境変数 | `AMADEUS_SWARM_RETRY_CAP` | `AMADEUS_PARALLEL_RETRY_CAP` |
 | 階層設定 | `swarm.unit.concurrency.limit` | `parallel.unit.concurrency.limit` |
 | 検証ツール | `amadeus-swarm.ts` | `amadeus-parallel.ts` |
 | 監査イベント | `SWARM_STARTED` / `SWARM_UNIT_CONVERGED` / `SWARM_UNIT_FAILED` / `SWARM_BATON_RETURNED` / `SWARM_COMPLETED` / `SWARM_DEGRADED` | `PARALLEL_STARTED` / `PARALLEL_UNIT_CONVERGED` / `PARALLEL_UNIT_FAILED` / `PARALLEL_BATON_RETURNED` / `PARALLEL_COMPLETED` / `PARALLEL_DEGRADED` |
@@ -296,7 +301,7 @@ AS-IS の契約は Part 1(§1〜§6)で閉じている。本節は契約では�
 
 **同名の外部機能との識別**: 「Kimi プラットフォームの『Agent Swarm』(タスクをプラットフォーム側が自動判定で最大数百のサブエージェントへ水平分解する機能)は、amadeus の並列実行とは無関係の別機能」の識別注記を用語集に置く。本 RFC により amadeus 側の語彙から「swarm」が消えるため、この語は以後、外部機能を指すときにのみ現れる。
 
-利用者ガイドの「並列 Bolt バッチ」は並列実行の利用者向け呼称であることを併記して橋を架ける。`AMADEUS_SWARM_RETRY_CAP` は `AMADEUS_PARALLEL_RETRY_CAP` へ同様に追随する。
+利用者ガイドの「並列 Bolt バッチ」は並列実行の利用者向け呼称であることを併記して橋を架ける。
 
 **8.5 読取責務の仕様化**
 
@@ -322,7 +327,7 @@ AS-IS の契約は Part 1(§1〜§6)で閉じている。本節は契約では�
 
 - RFC 0001(intent-autonomy-modes): 発動権限側の正本。本 RFC は「権限は設定変数に置かない」という同 RFC の構造を前提として保存する
 - 旧 `AMADEUS_USE_SWARM=1`(boolean)→ ドライバ選択への転用(intent 260713-swarm-driver-migration)。値の意味論は移行しつつ名前を残した結果が本 RFC の動機
-- **同名変数の先行設計(不着地)**: intent 260713 は `AMADEUS_SWARM_DRIVER` という同名の変数を、`auto` を含む5値+capability probe+明示不可時 hard error の設計で起草したが、製品には着地しなかった(`codekb/amadeus/re-scans/260713-swarm-driver-migration.md:36-40`、`codekb/amadeus/code-quality-assessment.md` SD-01 ほか)。本 RFC §8.1(最終名 `AMADEUS_PARALLEL_DRIVER`)の4値・`auto` なし設計はこの歴史的代替案の再評価であり、`auto` を採らない理由は「未設定=ハーネス既定フロア」が同じ目的を暗黙の probe なしで達成するため
+- **先行設計(不着地)**: intent 260713 は `AMADEUS_SWARM_DRIVER`(本 RFC の一次裁定名と同名、最終名 `AMADEUS_PARALLEL_DRIVER` とは異なる)という変数を、`auto` を含む5値+capability probe+明示不可時 hard error の設計で起草したが、製品には着地しなかった(`codekb/amadeus/re-scans/260713-swarm-driver-migration.md:36-40`、`codekb/amadeus/code-quality-assessment.md` SD-01 ほか)。本 RFC §8.1(最終名 `AMADEUS_PARALLEL_DRIVER`)の4値・`auto` なし設計はこの歴史的代替案の再評価であり、`auto` を採らない理由は「未設定=ハーネス既定フロア」が同じ目的を暗黙の probe なしで達成するため
 - 設定変数の意味論変更を loud reject で守る前例: 旧 boolean 値 `"1"` の拒否(現行契約 §3 — 専用分岐ではなく未知値の catch-all で拒否し、コメントで旧値を名指しする形)
 
 ## Unresolved questions(未解決の問題)
