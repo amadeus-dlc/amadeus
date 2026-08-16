@@ -316,7 +316,6 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "unit/t29.test.ts",
     "unit/t30-hook-session-end.test.ts",
     "unit/t31.test.ts",
-    "unit/t3116-semi-answer-presence.test.ts",
     "unit/t33.test.ts",
     "unit/t34.test.ts",
     "unit/t35.test.ts",
