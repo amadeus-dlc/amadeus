@@ -2431,17 +2431,6 @@
     "expiry": "remove when currentRevision receives an injected process port that can return malformed successful stdout"
   },
   {
-    "file": "tests/no-silent-drop/ledger.ts",
-    "selector": {
-      "function": "baselineAtRevision",
-      "fingerprint": "sha256:704f2c6974e59623bf49616242a5bd00d59c739b04334a680de867e80cbe19f3",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "Defensive startup-failure classification for git show. The integration suite drives the observable non-zero lookup failure; making spawnSync itself fail to start would require removing the running test process's git executable or injecting a process port. The distinct INTERNAL_ERROR branch is retained fail closed.",
-    "expiry": "remove when baselineAtRevision receives an injected process port that can model startup failure"
-  },
-  {
     "file": "packages/framework/core/tools/amadeus-advisory-choice.ts",
     "selector": {
       "function": "advisoryOccurrenceMatchesDecision",

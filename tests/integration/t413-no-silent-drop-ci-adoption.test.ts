@@ -92,7 +92,7 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     );
   });
 
-  test("post-fix census is deterministic and removes only the approved issue identities", () => {
+  test("post-fix census is deterministic and every removal is an explicit revoke", () => {
     const command = ["tests/no-silent-drop-gate.ts", "census-evidence"];
     const first = spawnSync("bun", command, { cwd: REPO_ROOT, encoding: "utf8" });
     const second = spawnSync("bun", command, { cwd: REPO_ROOT, encoding: "utf8" });
@@ -102,42 +102,35 @@ describe("t413 no-silent-drop blocking CI structure", () => {
 
     const result = JSON.parse(first.stdout);
     const folded = foldEvents(loadEvents(REPO_ROOT).byUlid.values());
-    const provenance = JSON.parse(
-      readFileSync(join(REPO_ROOT, "tests", "no-silent-drop", "bootstrap-provenance.json"), "utf8"),
-    );
-    const currentIdentities = new Set<string>(
-      result.evidence.findings.map((finding: { fingerprint: string }) => finding.fingerprint),
-    );
-    const removed = provenance.approvedPre.entries.filter(
-      (entry: { fingerprint: string }) => !currentIdentities.has(entry.fingerprint),
-    );
     // The census only ever shrinks, so these numbers move whenever a silent-drop
     // path is deleted. 217 -> 215 was #2151; 215 -> 214 is #1906, which removed the
     // fail-open catch that let finalizeAuditLockAcquire swallow a failed lock
     // finalization. That catch was the NSD001 identity b775faf8 in amadeus-lib.ts,
-    // so deleting the silent-continue path deletes the finding, and the pre-approved
-    // set loses one more identity (12 -> 13). The issue set is unchanged because
-    // b775faf8 was already filed under #1979. 214 -> 213 is the standing-grant
-    // removal, which deleted the NSD001 identity 56fefece in amadeus-state.ts
-    // along with the authorization path that carried it (13 -> 14), and that
-    // identity was also filed under #1979. After #2338 the grandfather set lives
-    // in events/<ulid>.json and B0 is the folded effective set size. 213 -> 215
-    // is #2378: two design-approved fail-open catches — the autonomy refusal
-    // emit (u1) and the question-route sweep (u3) — each entered as a granted
-    // NSD001 identity. Moving plugin policy out of core removed both catches,
-    // so their grants are now explicitly revoked and the baseline returns to 213.
-    // 213 -> 212 is the canonical election replacement: deleting the legacy
-    // migration CLI (scripts/amadeus-election-migrate.ts) deleted its NSD001
-    // identity faacb3ea, whose grant is now explicitly revoked (filed under
-    // #1979, so the issue set is unchanged).
+    // so deleting the silent-continue path deletes the finding. 214 -> 213 is the
+    // standing-grant removal, which deleted the NSD001 identity 56fefece in
+    // amadeus-state.ts along with the authorization path that carried it. After
+    // #2338 the grandfather set lives in events/<ulid>.json and B0 is the folded
+    // effective set size. 213 -> 215 is #2378: two design-approved fail-open
+    // catches — the autonomy refusal emit (u1) and the question-route sweep (u3) —
+    // each entered as a granted NSD001 identity. Moving plugin policy out of core
+    // removed both catches, so their grants are now explicitly revoked and the
+    // baseline returns to 213. 213 -> 212 is the canonical election replacement:
+    // deleting the legacy migration CLI (scripts/amadeus-election-migrate.ts)
+    // deleted its NSD001 identity faacb3ea, whose grant is now explicitly revoked.
     expect(result.evidence.counts).toEqual({ C_pre: 212, B_pre: 212, B0: 212 });
     expect(folded.grandfather).toHaveLength(212);
-    expect(removed).toHaveLength(17);
-    expect(removed.some((entry: { fingerprint: string }) => entry.fingerprint.startsWith("b775faf8"))).toBeTrue();
-    expect(removed.some((entry: { fingerprint: string }) => entry.fingerprint.startsWith("56fefece"))).toBeTrue();
-    expect(new Set(removed.flatMap((entry: { issues: string[] }) => entry.issues))).toEqual(
-      new Set(["#1874", "#1878", "#1979"]),
+
+    // A shrink is only auditable when the ledger states it: every revoked identity
+    // must have left the census, and no revoked identity may still be granted.
+    const currentIdentities = new Set<string>(
+      result.evidence.findings.map((finding: { fingerprint: string }) => finding.fingerprint),
     );
+    const revoked = [...folded.revoked].sort();
+    expect(revoked).toHaveLength(7);
+    expect(revoked.some((fingerprint) => fingerprint.startsWith("b775faf8"))).toBeTrue();
+    expect(revoked.some((fingerprint) => fingerprint.startsWith("56fefece"))).toBeTrue();
+    expect(revoked.filter((fingerprint) => currentIdentities.has(fingerprint))).toEqual([]);
+    expect(folded.grandfather.filter((entry) => folded.revoked.has(entry.fingerprint))).toEqual([]);
   });
 
   test("the deadline and performance/capacity fixtures preserve their complete populations", () => {
