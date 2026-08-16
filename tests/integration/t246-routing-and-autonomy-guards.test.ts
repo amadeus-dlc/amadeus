@@ -8,7 +8,17 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, w
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { isPendingComposeStop } from "../../packages/framework/core/hooks/amadeus-stop.ts";
-import { hooksHealthDir } from "../../packages/framework/core/tools/amadeus-lib.ts";
+import {
+  auditCloneId,
+  auditShardDir,
+  auditShardName,
+  hooksHealthDir,
+  isoTimestamp,
+} from "../../packages/framework/core/tools/amadeus-lib.ts";
+import {
+  JOURNAL_SCHEMA_VERSION,
+  serializeJournalEntry,
+} from "../../packages/framework/core/tools/amadeus-journal.ts";
 import { handleNext } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import { amadeusToolTarget } from "../harness/cli-target.ts";
 import {
@@ -33,6 +43,37 @@ function project(): string {
   roots.push(root);
   mkdirSync(join(root, "amadeus", "spaces", "default", "memory", "phases"), { recursive: true });
   writeFileSync(join(root, "amadeus", "spaces", "default", "memory", "org.md"), "# Org\n", "utf-8");
+  return root;
+}
+
+/** A project whose own audit shard carries a HUMAN_TURN, so the compose
+ *  carve-out's real interactivity port (resolveSessionInteractivity) answers
+ *  true — ADR-5 binds the carve-out to a session a human is in. */
+function interactiveProject(): string {
+  const root = project();
+  const record = "t246-fixture-abcd1234";
+  const intents = join(root, "amadeus", "spaces", "default", "intents");
+  mkdirSync(join(intents, record), { recursive: true });
+  writeFileSync(join(intents, record, "amadeus-state.md"), "# AI-DLC State\n", "utf-8");
+  writeFileSync(join(root, "amadeus", "active-space"), "default\n", "utf-8");
+  writeFileSync(join(intents, "active-intent"), `${record}\n`, "utf-8");
+  const shardDir = auditShardDir(root);
+  if (shardDir === null) throw new Error("test fixture: no intent resolved");
+  mkdirSync(shardDir, { recursive: true });
+  writeFileSync(
+    join(shardDir, auditShardName(root)),
+    `${serializeJournalEntry({
+      schemaVersion: JOURNAL_SCHEMA_VERSION,
+      seq: 1,
+      cloneId: auditCloneId(root),
+      intentId: record,
+      timestamp: isoTimestamp(),
+      heading: "Human Turn",
+      event: "HUMAN_TURN",
+      fields: {},
+    })}`,
+    "utf-8",
+  );
   return root;
 }
 
@@ -203,8 +244,7 @@ describe("t246 production help routing", () => {
 });
 
 describe("t246 production marker carrier", () => {
-  test("fake deps cover autonomy, absent, fresh, stale, cleanup failure, and unreadable", () => {
-    const state = "- **Construction Autonomy Mode**: gated\n";
+  test("fake deps cover non-interactive, absent, fresh, stale, cleanup failure, and unreadable", () => {
     const marker = "/tmp/t246/amadeus/.amadeus-compose-pending";
     let statCalls = 0;
     let clockCalls = 0;
@@ -214,7 +254,11 @@ describe("t246 production marker carrier", () => {
       cleanup: "deleted" | "delete-failed";
       enforcement: "continued";
     }> = [];
-    const deps = (stat: () => { mtimeMs: number } | undefined, unlink = () => {}) => ({
+    const deps = (
+      stat: () => { mtimeMs: number } | undefined,
+      unlink = () => {},
+      interactive = true,
+    ) => ({
       projectDir: "/tmp/t246",
       nowMs: () => {
         clockCalls++;
@@ -231,27 +275,30 @@ describe("t246 production marker carrier", () => {
         unlink();
       },
       diagnostic: (value: (typeof diagnostics)[number]) => diagnostics.push(value),
+      interactivity: () => ({ interactive, source: "human-turn-pipeline" }),
     });
 
-    expect(isPendingComposeStop("- **Intent Autonomy Mode**: full\n", deps(() => undefined))).toBe(false);
+    // A non-interactive session refuses the carve-out (ADR-5 R-8) but still
+    // inspects the marker — the janitor is not a carve-out decision.
+    expect(isPendingComposeStop(deps(() => ({ mtimeMs: 100_000_000 }), () => {}, false))).toBe(false);
     expect([statCalls, clockCalls, unlinkCalls]).toEqual([1, 1, 0]);
-    expect(isPendingComposeStop(state, deps(() => undefined))).toBe(false);
-    expect(isPendingComposeStop(state, deps(() => ({ mtimeMs: 100_000_000 })))).toBe(true);
-    expect(isPendingComposeStop(state, deps(() => ({ mtimeMs: 0 })))).toBe(false);
+    expect(isPendingComposeStop(deps(() => undefined))).toBe(false);
+    expect(isPendingComposeStop(deps(() => ({ mtimeMs: 100_000_000 })))).toBe(true);
+    expect(isPendingComposeStop(deps(() => ({ mtimeMs: 0 })))).toBe(false);
     expect(unlinkCalls).toBe(1);
-    expect(isPendingComposeStop(state, deps(() => ({ mtimeMs: 0 }), () => { throw new Error("EPERM"); }))).toBe(false);
+    expect(isPendingComposeStop(deps(() => ({ mtimeMs: 0 }), () => { throw new Error("EPERM"); }))).toBe(false);
     expect(unlinkCalls).toBe(2);
     expect(diagnostics).toEqual([
       { markerState: "stale", cleanup: "deleted", enforcement: "continued" },
       { markerState: "stale", cleanup: "delete-failed", enforcement: "continued" },
     ]);
-    expect(isPendingComposeStop(state, deps(() => ({ mtimeMs: -1 })))).toBe(false);
+    expect(isPendingComposeStop(deps(() => ({ mtimeMs: -1 })))).toBe(false);
     expect(unlinkCalls).toBe(2);
-    expect(isPendingComposeStop(state, deps(() => { throw new Error("EACCES"); }))).toBe(false);
+    expect(isPendingComposeStop(deps(() => { throw new Error("EACCES"); }))).toBe(false);
   });
 
   test("real deps observe, remove, and then miss the canonical marker", async () => {
-    const root = project();
+    const root = interactiveProject();
     const marker = join(root, "amadeus", ".amadeus-compose-pending");
     const originalProjectDir = process.env.CLAUDE_PROJECT_DIR;
     process.env.CLAUDE_PROJECT_DIR = root;
@@ -259,15 +306,14 @@ describe("t246 production marker carrier", () => {
       const isolated = await import(`${STOP}?t246-real-deps`) as {
         isPendingComposeStop: typeof isPendingComposeStop;
       };
-      const state = "- **Construction Autonomy Mode**: gated\n";
       writeFileSync(marker, "pending\n", "utf-8");
-      expect(isolated.isPendingComposeStop(state)).toBe(true);
+      expect(isolated.isPendingComposeStop()).toBe(true);
       utimesSync(marker, new Date(0), new Date(0));
-      expect(isolated.isPendingComposeStop(state)).toBe(false);
+      expect(isolated.isPendingComposeStop()).toBe(false);
       expect(existsSync(marker)).toBe(false);
       const dropFile = join(hooksHealthDir(root), "stop.drops");
       expect(readFileSync(dropFile, "utf-8")).toMatch(/stale.*deleted/i);
-      expect(isolated.isPendingComposeStop(state)).toBe(false);
+      expect(isolated.isPendingComposeStop()).toBe(false);
     } finally {
       if (originalProjectDir === undefined) delete process.env.CLAUDE_PROJECT_DIR;
       else process.env.CLAUDE_PROJECT_DIR = originalProjectDir;

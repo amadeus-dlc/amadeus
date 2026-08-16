@@ -113,6 +113,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "integration/t540-full-autonomy-referee-failure.integration.test.ts",
     "integration/t555-election-v2-directive-executor.integration.test.ts",
     "integration/t558-election-distribution-packaging.integration.test.ts",
+    "integration/t561-interactive-carveout.integration.test.ts",
     "e2e/t-formal-verif-model-completeness-sensor.test.ts",
     "e2e/t237-election-walking-skeleton.test.ts",
     "e2e/t265-engine-boundary.test.ts",

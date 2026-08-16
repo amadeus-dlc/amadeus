@@ -114,7 +114,6 @@ import {
   isHumanWaitStop,
   isPendingComposeStop,
   isPendingQuestionStop,
-  isQuestionCarveoutIntent,
   runEngineNextKind,
   transcriptIsConversational,
 } from "../../packages/framework/core/hooks/amadeus-stop.ts";
@@ -355,13 +354,20 @@ function seedInProgressWithQuestions(
   }
 }
 
-function seedFullIntentGrant(proj: string): void {
-  resetOtelPerProject();
+/** Make the session interactive: a real HUMAN_TURN in THIS clone's own shard is
+ *  what resolveSessionInteractivity reads (RFC-0001 C3), and ADR-5 binds the
+ *  question and compose carve-outs to it. */
+function appendHumanTurn(proj: string, seq = 2): void {
   writeFileSync(
     pinnedShardPath(proj),
-    `${readFileSync(pinnedShardPath(proj), "utf-8")}${humanTurnRow(2)}\n`,
+    `${readFileSync(pinnedShardPath(proj), "utf-8")}${humanTurnRow(seq)}\n`,
     "utf-8",
   );
+}
+
+function seedFullIntentGrant(proj: string): void {
+  resetOtelPerProject();
+  appendHumanTurn(proj);
   const stateContent = readFileSync(seededStateFile(proj), "utf-8");
   const preview = previewProductionAutonomyGrant({ projectDir: proj, stateContent });
   if (!preview.ok) throw new Error(preview.error);
@@ -377,18 +383,14 @@ function seedFullIntentGrant(proj: string): void {
 /**
  * Declare `semi` through the ONE human-command write path, so the projection
  * carries `modeProvenance.kind === "human-command"`. The question carve-out
- * (#2253, isQuestionCarveoutIntent) demands that provenance: an
+ * (#2253) demanded that provenance: an
  * `Intent Autonomy Mode: semi` line in state is a claim, not an authorization,
  * and only a real human command turns it into one. Unlike the `full` seed there
  * is no grant to preview — `semi` is a mode declaration, not a grant issuance.
  */
 function seedSemiIntentMode(proj: string): void {
   resetOtelPerProject();
-  writeFileSync(
-    pinnedShardPath(proj),
-    `${readFileSync(pinnedShardPath(proj), "utf-8")}${humanTurnRow(2)}\n`,
-    "utf-8",
-  );
+  appendHumanTurn(proj);
   const applied = applyProductionAutonomyMode({
     projectDir: proj,
     stateContent: readFileSync(seededStateFile(proj), "utf-8"),
@@ -827,6 +829,10 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
       questions: "## Questions\n\n[Answer]: ___\n",
     });
     const pending = readFileSync(seededStateFile(proj), "utf-8");
+    // ADR-5 binds the carve-out to a session a human is in: this shard holds no
+    // HUMAN_TURN, so the pending question waits for the engine, not the hook.
+    expect(isPendingQuestionStop(pending, proj)).toBe(false);
+    appendHumanTurn(proj);
     expect(isPendingQuestionStop(pending, proj)).toBe(true);
     expect(isPendingQuestionStop(pending.replace("[-]", "[?]"), proj)).toBe(false);
     seedInProgressWithQuestions(proj, {
@@ -835,6 +841,8 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
       intentMode: "full",
     });
     seedFullIntentGrant(proj);
+    // `full` is no longer refused on the mode — it is refused because no ruling
+    // was handed back, which is what keeps an auto-decidable question quiet.
     expect(isPendingQuestionStop(readFileSync(seededStateFile(proj), "utf-8"), proj)).toBe(false);
     expect(isPendingQuestionStop("- **Current Stage**: missing\n", proj)).toBe(false);
   });
@@ -1116,6 +1124,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     seedInProgressWithQuestions(proj, {
       questions: "# Questions\n\n## Q1\nWhich URL scheme?\n[Answer]:\n",
     });
+    appendHumanTurn(proj); // ADR-5: the carve-out needs somebody to answer
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     expect(r.rc).toBe(0);
     expect(r.out).toBe(""); // allowed — a question is genuinely pending
@@ -1126,6 +1135,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     seedInProgressWithQuestions(proj, {
       questions: "# Questions\n\n## Q1\nWhich URL scheme?\n[Answer]: ____\n",
     });
+    appendHumanTurn(proj);
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     expect(r.rc).toBe(0);
     expect(r.out).toBe("");
@@ -1186,15 +1196,14 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
   }, scaleTestTime(30000));
 
-  test("(f) a corrupt autonomy audit row CLOSES the semi carve-out (projection read failure answers false)", () => {
+  test("(f) a corrupt autonomy audit row CLOSES the question carve-out (an unreadable ledger is not an allow)", () => {
     const proj = makeProject();
-    // The carve-out's second judgment stage reads the production autonomy
-    // projection; readIntentAutonomyTransactions throws on an
+    // The bound carve-out reads the ruling terminal off the ledger;
+    // readIntentAutonomyTransactions throws on an
     // INTENT_AUTONOMY_TRANSACTION_COMMITTED row missing its payload fields
-    // (invalid-intent-autonomy-audit-row:missing-field). The catch arm must
-    // answer false — an unreadable projection is no authorization, so the
-    // pending question releases the stop (the hook merely stops, which is the
-    // conservative side here).
+    // (invalid-intent-autonomy-audit-row:missing-field). ADR-5 R-5/R-10 put that
+    // failure on the SHUT side: a terminal nobody can read is no evidence that a
+    // human is owed a ruling, so the budget-bounded block stands.
     seedInProgressWithQuestions(proj, {
       slug: "code-generation",
       phase: "construction",
@@ -1204,9 +1213,7 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     });
     seedSemiIntentMode(proj);
     const stateContent = readFileSync(seededStateFile(proj), "utf-8");
-    // Intact, this same Intent opens the carve-out — the tamper below is the
-    // only difference.
-    expect(isQuestionCarveoutIntent(stateContent, proj)).toBe(true);
+    expect(isPendingQuestionStop(stateContent, proj)).toBe(false);
     writeFileSync(
       pinnedShardPath(proj),
       `${readFileSync(pinnedShardPath(proj), "utf-8")}${JSON.stringify({
@@ -1221,27 +1228,31 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
       })}\n`,
       "utf-8",
     );
-    // Pin the throw itself, so the false above provably comes from the catch
-    // arm and not from a silently-null projection.
+    // Pin the throw itself, so the false below provably comes from the catch
+    // arm and not from a silently-null read.
     expect(() => readProductionAutonomyProjection(proj)).toThrow(
       "invalid-intent-autonomy-audit-row:missing-field",
     );
-    expect(isQuestionCarveoutIntent(stateContent, proj)).toBe(false);
+    expect(isPendingQuestionStop(stateContent, proj)).toBe(false);
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     expect(r.rc).toBe(0);
-    expect(r.out).toBe("");
+    expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
   }, scaleTestTime(30000));
 
   test("(f) gated Construction — [-] + blank question DOES allow (autonomy not granted)", () => {
     const proj = makeProject();
     // The complement: same Construction stage, but autonomy is 'gated' (or
-    // unset) → the human is in the loop, so a pending question releases.
+    // unset) → the human is in the loop, so a pending question releases. The
+    // HUMAN_TURN is what makes "in the loop" a fact rather than a mode string
+    // (ADR-5): no declared Intent mode means no ladder, so the unanswered tag
+    // remains the whole signal once the session is known to be interactive.
     seedInProgressWithQuestions(proj, {
       slug: "code-generation",
       phase: "construction",
       autonomy: "gated",
       questions: "# Questions\n\n## Q1\nEdge case?\n[Answer]:\n",
     });
+    appendHumanTurn(proj);
     const r = runHook(proj, '{"stop_hook_active":false}', "run-stage");
     expect(r.rc).toBe(0);
     expect(r.out).toBe("");
@@ -1333,30 +1344,24 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
     expect((JSON.parse(r.out) as { decision?: string }).decision).toBe("block");
   }, scaleTestTime(30000));
 
-  test("(f) semi does NOT reach the compose or conversational carve-outs (#2253 opens tier-2 only)", () => {
-    // The counterpart to the reversed tier-2 pin above. Redefining `semi`
-    // (#2253) opens exactly ONE of the three carve-out sites; the compose gate
-    // (isPendingComposeStop) and the tier-3 conversational carve-out
-    // (isConversationalStop) keep asking the full-only predicate, so a
-    // human-declared `semi` must leave both of them behaving as they do for any
-    // non-autonomous Intent.
+  test("(f) semi still reaches the compose and conversational carve-outs", () => {
+    // The three carve-out sites ask three different questions, and a
+    // human-declared `semi` is where that shows: ADR-5 binds compose to session
+    // interactivity, while the conversational site keeps its full-only guard.
+    // Sharing one predicate across all three is what this case would destroy.
     const proj = makeProject();
     // No questions file: tier-2 has nothing to release, so what this case
-    // observes is purely which predicate the OTHER two sites ask.
+    // observes is purely what the OTHER two sites ask.
     seedInProgressWithQuestions(proj, { intentMode: "semi" });
     seedSemiIntentMode(proj);
     const stateContent = readFileSync(seededStateFile(proj), "utf-8");
 
-    // Tier-2 IS open for this same Intent — the two answers must differ, which
-    // is precisely what sharing one predicate across all three would destroy.
-    expect(isQuestionCarveoutIntent(stateContent, proj)).toBe(true);
-
-    // :457 compose — the guard does NOT fire, so a fresh pending marker still
-    // releases (a `full` Intent would have been suppressed before this point).
+    // compose — a fresh marker in an interactive session releases (the seed's
+    // HUMAN_TURN is what makes it interactive).
     const markerPath = join(proj, COMPOSE_MARKER_RELATIVE_PATH);
     writeFileSync(markerPath, "", "utf-8");
     expect(
-      isPendingComposeStop(stateContent, {
+      isPendingComposeStop({
         projectDir: proj,
         nowMs: () => statSync(markerPath).mtimeMs,
         stat: (p) => (existsSync(p) ? { mtimeMs: statSync(p).mtimeMs } : undefined),
@@ -1366,11 +1371,12 @@ describe("t121 amadeus-stop hook — forwarding-loop enforcement (migrated from 
         diagnostic: () => {
           throw new Error("a fresh marker must not raise a janitor diagnostic");
         },
+        interactivity: () => ({ interactive: true, source: "human-turn-pipeline" }),
       }),
     ).toBe(true);
 
-    // :716 conversational — the guard does NOT fire, so a chat transcript still
-    // releases the stop end-to-end through the real hook.
+    // conversational — the full-only guard does NOT fire, so a chat transcript
+    // still releases the stop end-to-end through the real hook.
     const tp = seedTranscript(proj, { format: "claude", engineCall: false });
     expect(isConversationalStop(stateContent, tp, "claude", proj)).toBe(true);
     const r = runHook(
