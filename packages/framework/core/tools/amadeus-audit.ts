@@ -1276,11 +1276,10 @@ export type AuditReceipt = {
   readonly committedAt: string;
 };
 
-export type RecordDelegatedMergeRefusal =
-  | { readonly kind: "evidence-incomplete"; readonly missingField: keyof DelegatedMergeEvidence }
-  // Defensive insurance only: DELEGATED_MERGE_RECORDED is registered by this
-  // same unit, so registeredAuditEventTypes() always contains it in practice.
-  | { readonly kind: "event-unregistered" };
+export type RecordDelegatedMergeRefusal = {
+  readonly kind: "evidence-incomplete";
+  readonly missingField: keyof DelegatedMergeEvidence;
+};
 
 export type RecordDelegatedMergeResult =
   | { readonly ok: true; readonly receipt: AuditReceipt }
@@ -1303,9 +1302,6 @@ export function recordDelegatedMerge(
     if (evidence[key].trim().length === 0) {
       return { ok: false, error: { kind: "evidence-incomplete", missingField: key } };
     }
-  }
-  if (unregisteredEventRejection("DELEGATED_MERGE_RECORDED") !== null) {
-    return { ok: false, error: { kind: "event-unregistered" } };
   }
   const fields: Record<string, string> = {};
   for (const [key, label] of DELEGATED_MERGE_FIELDS) fields[label] = evidence[key];

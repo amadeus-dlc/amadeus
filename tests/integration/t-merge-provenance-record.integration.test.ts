@@ -31,7 +31,7 @@ import { resetOtelBootstrapForTests } from "../../dist/claude/.claude/otel/boots
 import { resetFatalLatchForTests } from "../../dist/claude/.claude/otel/fatal-latch.ts";
 import { resetLoggerProviderForTests } from "../../dist/claude/.claude/otel/logger-provider.ts";
 import { auditRowsFrom, countAuditEvent } from "../harness/audit-records.ts";
-import { cleanupTestProject, createTestProject, seedStateFile } from "../harness/fixtures.ts";
+import { cleanupTestProject, createTestProject, DEFAULT_RECORD_DIR, seedStateFile } from "../harness/fixtures.ts";
 
 let proj: string | undefined;
 let priorProjectDir: string | undefined;
@@ -173,5 +173,24 @@ describe("recordDelegatedMerge (C11/FR-9)", () => {
     const shard = auditFilePath(proj);
     const body = existsSync(shard) ? readFileSync(shard, "utf-8") : "";
     expect(countAuditEvent(body, "DELEGATED_MERGE_RECORDED")).toBe(0);
+  });
+});
+
+describe("recordDelegatedMerge emit-drop arm (fail-closed)", () => {
+  test("an intent-complete drop throws instead of minting a receipt for a dropped row", async () => {
+    // "intent-complete" is the drop reason that reaches the post-emit arm:
+    // the fatal latch is already refused by the pre-emit assertMutationAllowed.
+    const proj2 = seedProject();
+    const { withLockedIntentRegistry, transitionIntentStatusLocked } = await import(
+      "../../dist/claude/.claude/tools/amadeus-lib.ts"
+    );
+    try {
+      withLockedIntentRegistry(proj2, (context) =>
+        transitionIntentStatusLocked(context, DEFAULT_RECORD_DIR, "complete")
+      );
+      expect(() => recordDelegatedMerge(VALID_EVIDENCE, proj2)).toThrow(/emit dropped/);
+    } finally {
+      cleanupTestProject(proj2);
+    }
   });
 });
