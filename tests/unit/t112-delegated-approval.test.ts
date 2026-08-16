@@ -360,12 +360,23 @@ describe("delegate-rejection writer — grounded issuance gate (#685)", () => {
     writeFileSync(join(root, "amadeus", "spaces", "default", "intents", "active-intent"), `${issuer}\n`, "utf-8");
   }
 
+  // D8 (FR-12, presence-closure unit) note: handleDelegateRejection runs TWO
+  // checks in order — the general humanPresenceGuardDisabled/humanActedSinceGate
+  // gate (:4701) first, then the specific own-shard grounding read (:4719-4731)
+  // whose distinct error this test used to observe. Before D8 the general gate
+  // fail-OPENED on this scaffold's genuinely-empty issuer ledger (active/legacy
+  // scope, no ledger at all), so it passed through silently and the SPECIFIC
+  // grounding check below it fired instead. D8 retires that scope-conditional
+  // fail-open — the general gate is now fail-CLOSED on an empty ledger too, so
+  // it refuses FIRST with its own message; the specific check is never reached.
+  // Both are legitimate refusals for the same underlying fact (no HUMAN_TURN
+  // anywhere on this session), so this is a pin update, not a behaviour loss.
   test("refuses to issue when this session's shard holds no HUMAN_TURN", () => {
     const { root, conductor, issuer } = scaffold();
     makeIssuerActive(root, issuer);
     const r = runDelegateRejection(root, conductor);
     expect(r.rc).not.toBe(0);
-    expect(r.err).toContain("no HUMAN_TURN in this session's own audit shard");
+    expect(r.err).toContain("Refusing to delegate rejection: no real human turn on this session");
   });
 
   test("issues a DELEGATED_REJECTION into the target when grounded in a real HUMAN_TURN", () => {

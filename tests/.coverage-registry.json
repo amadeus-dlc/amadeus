@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 629,
+    "total": 630,
     "enumeratedByClass": {
-      "function": 352,
+      "function": 353,
       "audit": 96,
       "scope": 15,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 186,
+      "function": 187,
       "audit": 46,
       "scope": 15,
       "stage": 8,
@@ -4649,6 +4649,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:verifyBatchApprovalPresence",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-approve-batch-presence-guard.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:verifyDelegatedProvenance",
       "minMechanism": "none",
       "coveredBy": [],
@@ -5880,6 +5892,10 @@
       "unitId": "amadeus-bolt approve-batch",
       "minMechanism": "cli",
       "coveredBy": [
+        {
+          "file": "tests/integration/t-approve-batch-presence-guard.integration.test.ts",
+          "mechanism": "none"
+        },
         {
           "file": "tests/integration/t145-state-lock-concurrency.test.ts",
           "mechanism": "cli"

@@ -19,7 +19,8 @@
 //     auto-cascaded in the same human turn opens AFTER the GATE_APPROVED that just
 //     committed (so no HUMAN_TURN follows it -> refused); a stale human turn
 //     precedes the last resolution (-> refused).
-//   - fail-open when the ledger has NO events at all (presence not tracked yet).
+//   - fail-CLOSED when the ledger has NO events at all (D8, presence-closure
+//     unit / FR-12 — was fail-open; see scenario F below).
 //
 // CRITICAL test-harness note: run-tests.ts sets AMADEUS_SKIP_HUMAN_PRESENCE_GUARD=1
 // for the whole suite (so the ~81 approve/advance tests keep passing). This test
@@ -269,19 +270,27 @@ describe("t188: human-presence approval gate (ledger-event design)", () => {
     expect(field(proj, "Current Stage")).toBe(slug2);
   });
 
-  // --- Scenario F: fail-open when the ledger has no events -------------------
+  // --- Scenario F: fail-CLOSED when the ledger has no events (D8) -------------
   //
-  // humanActedSinceGate fails OPEN on an empty ledger (a harness/clone whose shard
-  // has no events yet) so the gate never bricks before any event is recorded.
-  // Asserted directly on the helper: the approve PATH can't reach this state (it
-  // requires a gate-start, which itself writes STAGE_AWAITING_APPROVAL), so the
-  // empty-ledger fallback is a guarantee of the predicate, exercised here in-process.
-  test("F: humanActedSinceGate fails OPEN on an empty ledger", async () => {
+  // humanActedSinceGate now fails CLOSED on an empty ledger (D8, presence-closure
+  // unit / FR-12): resolveGatePresence returns { present: false, reason:
+  // "ledger-absent" } uniformly, regardless of active/legacy vs named-record
+  // scope — the old scope-conditional fail-open (`intent === undefined`) is
+  // retired. A harness/clone whose shard has no events yet must have its first
+  // gate opened by a real HUMAN_TURN, not by the absence of tracking. This is
+  // safe in practice: the UserPromptSubmit mint hook appends a HUMAN_TURN before
+  // any gate-resolution command can run, so a genuine human turn never sees a
+  // truly-empty ledger (functional-design-questions.md Q3). Asserted directly on
+  // the helper: the approve PATH can't reach this state (it requires a
+  // gate-start, which itself writes STAGE_AWAITING_APPROVAL), so the
+  // empty-ledger case is exercised here in-process as a guarantee of the
+  // predicate itself.
+  test("F: humanActedSinceGate fails CLOSED on an empty ledger (D8)", async () => {
     const { humanActedSinceGate } = await import(
       "../../dist/claude/.claude/tools/amadeus-lib.ts"
     );
     // proj here has a seeded state file but no audit shard (no event emitted yet).
-    expect(humanActedSinceGate(proj)).toBe(true);
+    expect(humanActedSinceGate(proj)).toBe(false);
   });
 
   // --- Scenario G: multi-shard chronological ordering -------------------------
@@ -637,25 +646,27 @@ describe("t188: human-presence approval gate (ledger-event design)", () => {
       expect(gateRejectedIn(B_RECORD)).toBe(1); // still exactly one across both attempts
     });
 
-    // In-process seam for the predicate itself: the propagate + scoped fail-open
-    // change lives in humanActedSinceGate. Exercise BOTH null-ledger outcomes
-    // directly (spawned reject only reaches the state.ts wiring): active/legacy
-    // scope (no intent) fails OPEN, an explicitly-named empty record fails CLOSED,
-    // and a named record carrying a HUMAN_TURN reads its OWN ledger.
-    test("seam: humanActedSinceGate scopes to the named record and fails closed when empty", async () => {
+    // In-process seam for the predicate itself: the propagate change (#2588)
+    // lives in humanActedSinceGate. Exercise both null-ledger outcomes directly
+    // (spawned reject only reaches the state.ts wiring): since D8
+    // (presence-closure unit / FR-12) BOTH active/legacy scope (no intent) AND
+    // an explicitly-named empty record fail CLOSED — the old scope split
+    // (active/legacy fail-open, named fail-closed) is retired — and a named
+    // record carrying a HUMAN_TURN still reads its OWN ledger correctly.
+    test("seam: humanActedSinceGate scopes to the named record; every scope fails closed when empty (D8)", async () => {
       const { humanActedSinceGate } = await import(
         "../../dist/claude/.claude/tools/amadeus-lib.ts"
       );
       seedIntentB();
-      // Active/legacy scope on an empty ledger: fail OPEN (unchanged).
-      expect(humanActedSinceGate(proj)).toBe(true);
-      // Explicitly-named record B with NO ledger: fail CLOSED (#2588).
+      // Active/legacy scope on an empty ledger: fails CLOSED (D8 — was fail-open).
+      expect(humanActedSinceGate(proj)).toBe(false);
+      // Explicitly-named record B with NO ledger: fails CLOSED (#2588, unchanged).
       expect(humanActedSinceGate(proj, "reject", B_RECORD, "default")).toBe(false);
       // Named record B once it carries an outstanding HUMAN_TURN: presence there.
       recordHumanTurnIn(B_RECORD);
       expect(humanActedSinceGate(proj, "reject", B_RECORD, "default")).toBe(true);
-      // The turn on B does NOT leak into the active/legacy scope (still A's ledger).
-      expect(humanActedSinceGate(proj, "reject")).toBe(true); // A empty → fail open
+      // The turn on B does NOT leak into the active/legacy scope (still A's empty ledger).
+      expect(humanActedSinceGate(proj, "reject")).toBe(false); // A empty → fail closed (D8)
     });
 
     // FAIL-CLOSED: the reviewer-2 finding — with the active cursor absent (fresh

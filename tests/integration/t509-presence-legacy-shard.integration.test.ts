@@ -134,9 +134,17 @@ describe("t509: presence grounding on a legacy Markdown-only audit ledger (#2582
 
   // --- Non-regression.
 
-  test("no audit dir at all: the genuine no-ledger fail-open is preserved", () => {
-    expect(humanActedSinceGate(proj, "approve")).toBe(true);
-    expect(humanActedSinceGate(proj)).toBe(true);
+  // D8 (FR-12, presence-closure unit): ledger-absent is now fail-CLOSED,
+  // uniformly across active/legacy and named-record scope (the old
+  // `intent === undefined` scope split that fail-opened here is retired —
+  // resolveGatePresence returns { present: false, reason: "ledger-absent" }
+  // regardless of scope). humanActedSinceLastAnswer is a separate predicate
+  // this unit does not touch (owned files: amadeus-bolt.ts + amadeus-lib.ts's
+  // humanActedSinceGate only — functional-design-questions.md Q4), so its
+  // genuine fail-open is unchanged.
+  test("no audit dir at all: humanActedSinceGate now fails CLOSED (D8); humanActedSinceLastAnswer is unaffected", () => {
+    expect(humanActedSinceGate(proj, "approve")).toBe(false);
+    expect(humanActedSinceGate(proj)).toBe(false);
     expect(humanActedSinceLastAnswer(proj)).toBe(true);
   });
 
