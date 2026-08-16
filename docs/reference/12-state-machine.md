@@ -453,6 +453,14 @@ Emitted via the `amadeus-bolt dispatch-event` subcommand. The conductor brackets
 | `MERGE_DISPATCH_RETURNED` | `tools/amadeus-bolt.ts` `dispatch-event --event MERGE_DISPATCH_RETURNED` | Agent returned parsed YAML with strategy, target branch, confidence, and notes |
 | `MERGE_DISPATCH_FALLBACK` | `tools/amadeus-bolt.ts` `dispatch-event --event MERGE_DISPATCH_FALLBACK` | Agent timed out or returned malformed YAML; conductor fell back to org defaults — critical observability hook |
 
+### Merge provenance
+
+Emitted by `recordDelegatedMerge` (`tools/amadeus-audit.ts`; CLI wrapper `tools/amadeus-merge-provenance.ts record`). Records the provenance of a delegated (standing-approval) PR merge — the standing ruling reference and the measured CI/convergence evidence. Recording only; it never performs or decides a merge.
+
+| Event | Emitter | Trigger |
+|---|---|---|
+| `DELEGATED_MERGE_RECORDED` | `tools/amadeus-audit.ts` `recordDelegatedMerge` | Caller confirms the delegation condition was met and the PR merge already happened |
+
 ### Sensors
 
 The four `SENSOR_*` events are emitted by the sensor dispatcher; `GUARDRAIL_LOADED` by the paired-coverage doctor row. Coverage is environmental — every Inception/Construction/Operation stage that writes markdown emits at least one `SENSOR_FIRED` row from the registry-default sensors. Advisory-only; a future ralph driver introduces blocking semantics for Construction-phase sensors.

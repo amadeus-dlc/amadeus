@@ -20,10 +20,10 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 624,
+    "total": 625,
     "enumeratedByClass": {
       "function": 352,
-      "audit": 93,
+      "audit": 94,
       "scope": 15,
       "stage": 32,
       "hook": 15,
@@ -32,7 +32,7 @@
     },
     "coveredByClass": {
       "function": 186,
-      "audit": 45,
+      "audit": 46,
       "scope": 15,
       "stage": 8,
       "hook": 15,
@@ -151,6 +151,18 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "audit",
+      "unitId": "DELEGATED_MERGE_RECORDED",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t-merge-provenance-record.integration.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "audit",

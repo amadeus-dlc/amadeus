@@ -391,6 +391,14 @@ bun .claude/tools/amadeus-advisory-choice.ts recover-schema-1 \
 | `MERGE_DISPATCH_RETURNED` | `tools/amadeus-bolt.ts` `dispatch-event --event MERGE_DISPATCH_RETURNED` | エージェントが戦略、ターゲットブランチ、信頼度、注記を含むパース済み YAML を返した |
 | `MERGE_DISPATCH_FALLBACK` | `tools/amadeus-bolt.ts` `dispatch-event --event MERGE_DISPATCH_FALLBACK` | エージェントがタイムアウトまたは不正 YAML を返した。コンダクターは org デフォルトにフォールバック — 重要な可観測性フック |
 
+### Merge provenance
+
+Emitted by `recordDelegatedMerge` (`tools/amadeus-audit.ts`; CLI wrapper `tools/amadeus-merge-provenance.ts record`). Records the provenance of a delegated (standing-approval) PR merge — the standing ruling reference and the measured CI/convergence evidence. Recording only; it never performs or decides a merge.
+
+| Event | Emitter | Trigger |
+|---|---|---|
+| `DELEGATED_MERGE_RECORDED` | `tools/amadeus-audit.ts` `recordDelegatedMerge` | Caller confirms the delegation condition was met and the PR merge already happened |
+
 ### Sensors
 
 4つの `SENSOR_*` イベントはセンサーディスパッチャーから、`GUARDRAIL_LOADED` は paired-coverage doctor 行から発行されます。カバレッジは環境的です — markdown を書くすべての Inception/Construction/Operation ステージは、レジストリデフォルトのセンサーから少なくとも1つの `SENSOR_FIRED` 行を発行します。アドバイザリのみです。将来の ralph ドライバが Construction フェーズのセンサーにブロッキングセマンティクスを導入します。

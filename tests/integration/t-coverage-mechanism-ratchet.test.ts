@@ -126,6 +126,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "integration/t299-plugin-cli-walking-skeleton.integration.test.ts",
     "integration/t2997-git-drift-sensor.integration.test.ts",
     "integration/t3016-park-provenance.integration.test.ts",
+    "integration/t-merge-provenance-record.integration.test.ts",
     "integration/t3120-grant-ceremony-preview-command.integration.test.ts",
     "integration/hook-dispatcher.integration.test.ts",
     "integration/t-advisory-choice-record.test.ts",

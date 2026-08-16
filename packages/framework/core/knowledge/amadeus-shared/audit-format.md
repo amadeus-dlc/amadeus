@@ -29,7 +29,7 @@ tools read them from. Neither lists the record envelope — every record carries
 (the park pair, the practices events) show it in the table as the attribute it
 is.
 
-## Event Registry (93 events, 21 categories)
+## Event Registry (94 events, 22 categories)
 
 ### Workflow Lifecycle (7 events)
 
@@ -246,6 +246,14 @@ Emitted when Construction's Bolt-merge step calls amadeus-pipeline-deploy-agent 
 | `MERGE_DISPATCH_INVOKED` | Orchestrator dispatched amadeus-pipeline-deploy-agent with current practices section + Bolt context | Bolt slug, Practices section excerpt | — | `tools/amadeus-bolt.ts` `dispatch-event --event MERGE_DISPATCH_INVOKED` |
 | `MERGE_DISPATCH_RETURNED` | Agent returned parsed YAML with strategy, target branch, confidence, notes | Bolt slug, Strategy, Target branch, Confidence, Notes | — | `tools/amadeus-bolt.ts` `dispatch-event --event MERGE_DISPATCH_RETURNED` |
 | `MERGE_DISPATCH_FALLBACK` | Agent timed out or returned malformed YAML; orchestrator fell back to org defaults — critical observability hook | Bolt slug, Fallback reason, Defaults applied | — | `tools/amadeus-bolt.ts` `dispatch-event --event MERGE_DISPATCH_FALLBACK` |
+
+### Delegated Merge Provenance (1 event)
+
+Record-only fact that a PR merge delegated under team.md's standing merge-approval norm (`cid:ci-pipeline:standing-merge-approval-ci-green` — required CI green AND pr-convergence `converged: true`) took place. The norm stays the sole source of truth for the delegation condition; this event never triggers or performs the merge and carries no git/GitHub side effect. Distinct from both the Bolt-internal `*_MERGED` trio (Worktree/State/Audit — a Bolt worktree merging back to main state) and `MERGE_DISPATCH_*` (a Bolt's merge STRATEGY selection) — none of those cover a GitHub PR merge.
+
+| Event | When | Required | Optional | Emitter |
+|-------|------|----------|----------|---------|
+| `DELEGATED_MERGE_RECORDED` | Caller (conductor or delegated executor) confirms the delegation condition was met and the PR merge already happened, then calls `recordDelegatedMerge` | Standing Ruling Ref, CI Conclusion, Converged Digest | — | `tools/amadeus-audit.ts` `recordDelegatedMerge` (CLI: `tools/amadeus-merge-provenance.ts record`) |
 
 ### Sensor Events (5 events)
 
