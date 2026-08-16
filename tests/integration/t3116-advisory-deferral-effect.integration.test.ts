@@ -1,5 +1,5 @@
 // covers: file:packages/framework/core/tools/amadeus-intent-autonomy.ts, file:packages/framework/core/tools/amadeus-advisory-choice.ts
-// size: small
+// size: medium
 
 // RFC-0001 ADR-2 (#3116). The semi effect ceiling grows by exactly one
 // classification, `advisory-deferral`, and it is reachable from exactly one

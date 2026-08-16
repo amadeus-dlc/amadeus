@@ -1,5 +1,5 @@
 // covers: file:packages/framework/core/tools/amadeus-intent-autonomy.ts
-// size: small
+// size: medium
 
 // RFC-0001 FR-5 (#3116). Semi leaves exactly two interaction kinds to the human
 // — phase-gate and walking-skeleton — and decides every other kind itself. The

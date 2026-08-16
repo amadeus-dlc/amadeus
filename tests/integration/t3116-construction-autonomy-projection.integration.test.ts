@@ -1,5 +1,5 @@
 // covers: file:packages/framework/core/tools/amadeus-intent-autonomy.ts
-// size: small
+// size: medium
 
 // RFC-0001 FR-6 (#3116). The Construction scheduling projection is derived from
 // the declared Intent mode by ONE function, and any record whose two fields

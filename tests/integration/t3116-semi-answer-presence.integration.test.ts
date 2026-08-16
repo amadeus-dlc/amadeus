@@ -1,5 +1,5 @@
 // covers: cli:amadeus-log(answer), function:handleAnswer, function:declaredIntentAutonomyMode, file:packages/framework/core/tools/amadeus-log.ts
-// size: small
+// size: medium
 
 // RFC-0001 R-21 (#3116). `amadeus-log answer` skips the human-presence check in
 // autonomous Construction, because a Bolt answering its own question is not a
