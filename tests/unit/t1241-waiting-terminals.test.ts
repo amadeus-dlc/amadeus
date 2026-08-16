@@ -280,3 +280,70 @@ describe("t1241 waiting is engine-issued (R-6)", () => {
     expect(usage).not.toContain("waiting");
   });
 });
+
+// Patch-coverage closure for the arms the shipped CLI cannot register in-process:
+// the rate refusal, the resume-condition mismatch, and the malformed
+// interactivity-basis refusals are all pure/coordinator seams, so they get
+// direct tests here.
+describe("t1241 refusal arms are typed results, never throws", () => {
+  test("a second waiting inside the rate window is refused with the prior id", () => {
+    const repository = createMemoryIntentAutonomyRepository({ onCommit: () => {} });
+    const coordinator = createIntentAutonomyCoordinator({
+      initialProjection: createAutonomyProjection({ intentUuid: INTENT }),
+      repository,
+    });
+    const first = coordinator.enterWaiting({ cause: CAUSE });
+    expect("error" in first).toBe(false);
+    if ("error" in first) return;
+    // resume, then immediately try to wait again on the same cause: the rate
+    // constraint sees the prior durable entry and refuses.
+    const resumed = coordinator.resumeWaiting({
+      waitingId: first.waitingId,
+      satisfiedConditionIdentity: coordinator.readProjection().parkEnvelope?.resumeCondition.identity ?? "",
+    });
+    expect("error" in resumed).toBe(false);
+    const second = coordinator.enterWaiting({ cause: CAUSE });
+    expect("error" in second).toBe(true);
+    if ("error" in second) {
+      expect(second.error).toStartWith("waiting-rate-refused:");
+      expect(second.error).toContain(first.waitingId);
+    }
+  });
+
+  test("a resume with the right id but the wrong condition identity is refused", () => {
+    const repository = createMemoryIntentAutonomyRepository({ onCommit: () => {} });
+    const coordinator = createIntentAutonomyCoordinator({
+      initialProjection: createAutonomyProjection({ intentUuid: INTENT }),
+      repository,
+    });
+    const entered = coordinator.enterWaiting({ cause: CAUSE });
+    expect("error" in entered).toBe(false);
+    if ("error" in entered) return;
+    const refused = coordinator.resumeWaiting({
+      waitingId: entered.waitingId,
+      satisfiedConditionIdentity: "not-the-declared-condition",
+    });
+    expect(refused).toEqual({ error: "resume-condition-not-satisfied" });
+  });
+
+  test("a malformed interactivity basis refuses with the offending field named", () => {
+    const base = {
+      occurrenceId: CAUSE.occurrenceId,
+      outcome: CAUSE.outcome,
+      derivationTranscript: CAUSE.derivationTranscript,
+      basisFingerprint: CAUSE.basisFingerprint,
+    };
+    const badSource = WaitingCause.parse({
+      ...base,
+      interactivityBasis: { interactive: false, source: "carrier-pigeon", measuredAt: "2026-08-16T00:00:00Z" },
+    });
+    expect(badSource.ok).toBe(false);
+    if (!badSource.ok) expect(badSource.error.detail).toContain("unknown source");
+    const badTimestamp = WaitingCause.parse({
+      ...base,
+      interactivityBasis: { interactive: false, source: "human-turn-pipeline", measuredAt: "  " },
+    });
+    expect(badTimestamp.ok).toBe(false);
+    if (!badTimestamp.ok) expect(badTimestamp.error.detail).toContain("non-empty timestamp");
+  });
+});

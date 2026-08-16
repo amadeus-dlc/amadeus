@@ -1131,10 +1131,7 @@ export function waitingDirectiveFor(stop: ProductionWaitingStop): WaitingDirecti
     : "no option could be derived at all";
   return {
     kind: "waiting",
-    reason: `Workflow waiting at ${JSON.stringify(stop.occurrenceId)}: this run is not interactive ` +
-      `(${stop.cause.interactivityBasis.source}) and the ruling due here is not one it may make - ${options}. ` +
-      `The derivation was: ${stop.cause.derivationTranscript}. Re-enter with \`/amadeus --resume\` to be shown ` +
-      "the same ruling and settle it.",
+    reason: `Workflow waiting at ${JSON.stringify(stop.occurrenceId)}: this run is not interactive (${stop.cause.interactivityBasis.source}) and the ruling due here is not one it may make - ${options}. The derivation was: ${stop.cause.derivationTranscript}. Re-enter with \`/amadeus --resume\` to be shown the same ruling and settle it.`,
     stage: stop.stage,
     occurrence_id: stop.occurrenceId,
     basis_fingerprint: stop.cause.basisFingerprint,

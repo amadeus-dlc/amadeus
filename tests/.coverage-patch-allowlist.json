@@ -5098,5 +5098,52 @@
     },
     "reason": "C9/ADR-3 last-resort defensive catch: every anticipated failure of summary generation already resolves to a typed warning on the branches above (covered in-process by t3121 direct arm coverage); this arm only fires on an unanticipated throw inside buildAutoDecisionSummary/write, which has no injectable seam to trigger deterministically.",
     "expiry": "remove when the summary builder gains an injectable failure seam"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
+    "selector": {
+      "function": "emitWaitingMarker",
+      "fingerprint": "sha256:2183db7a72cf5224a9a0ff389ca3ff9f08cd7f7761cbdc5de322e2e87399a3c7",
+      "anchorLines": 3,
+      "targetLines": "1-3",
+      "class": "catch-arm"
+    },
+    "reason": "Last-resort fail-open catch for the waiting lifecycle marker: every anticipated failure resolves through the result branch above; this arm only fires on an unanticipated throw inside the lazy-required emitter, which has no injectable seam. Reached only through the spawned dist CLI (spawned execution is not attributed to parent Bun LCOV); the decision seams are covered in-process by tests/unit/t1241-waiting-terminals.test.ts and tests/integration/t1241-waiting-engine.integration.test.ts.",
+    "expiry": "remove when Bun merges child-process coverage or the arm gains an injectable failure seam"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "selector": {
+      "function": "enterWaiting",
+      "fingerprint": "sha256:6932f01d536e101fc3a74a5d33ba3b1efac501e4a430ffa0490c3460ace608fe",
+      "anchorLines": 2,
+      "targetLines": "1-2",
+      "class": "catch-arm"
+    },
+    "reason": "Last-resort defensive catch around the waiting-entry commit: refusals are typed results on the branches above; this arm only fires on an unanticipated repository/commit throw with no injectable seam. Reached only through the spawned dist CLI (spawned execution is not attributed to parent Bun LCOV); the decision seams are covered in-process by tests/unit/t1241-waiting-terminals.test.ts and tests/integration/t1241-waiting-engine.integration.test.ts.",
+    "expiry": "remove when Bun merges child-process coverage or the arm gains an injectable failure seam"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-intent-autonomy-runtime.ts",
+    "selector": {
+      "function": "resumeWaiting",
+      "fingerprint": "sha256:6932f01d536e101fc3a74a5d33ba3b1efac501e4a430ffa0490c3460ace608fe",
+      "anchorLines": 2,
+      "targetLines": "1-2",
+      "class": "catch-arm"
+    },
+    "reason": "Last-resort defensive catch around the waiting-resume commit: refusals are typed results on the branches above; this arm only fires on an unanticipated repository/commit throw with no injectable seam. Reached only through the spawned dist CLI (spawned execution is not attributed to parent Bun LCOV); the decision seams are covered in-process by tests/unit/t1241-waiting-terminals.test.ts and tests/integration/t1241-waiting-engine.integration.test.ts.",
+    "expiry": "remove when Bun merges child-process coverage or the arm gains an injectable failure seam"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "selector": {
+      "function": "<module>",
+      "fingerprint": "sha256:d3d960ab9434ab93d1d0b6ec0b6d4ed2f8d5751f40a67334544f884c06a34311",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "emitWaitingIfSuspended's emit lines run only inside the spawned engine `next` (t1241-waiting-engine drives the shipped CLI); the directive payload itself (waitingDirectiveFor) is covered in-process by the same file. Reached only through the spawned dist CLI (spawned execution is not attributed to parent Bun LCOV); the decision seams are covered in-process by tests/unit/t1241-waiting-terminals.test.ts and tests/integration/t1241-waiting-engine.integration.test.ts.",
+    "expiry": "remove when Bun merges child-process coverage or the arm gains an injectable failure seam"
   }
 ]
