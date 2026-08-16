@@ -830,7 +830,7 @@ brief analysis, skip optional stages:
 | **Subagent execution** | An execution mode where the orchestrator delegates stage work to a separate Claude Code subprocess via the Task tool. The subagent runs autonomously without user interaction. Used for stages 2.1 (reverse-engineering) and 3.5 (code-generation). |
 | **Subagent stage** | A stage that delegates its execution to a subagent instead of running inline. See **Subagent execution**. |
 | **Unit of work** | An independently implementable piece of the solution, decomposed during stage 2.7 (Units Generation). One or more Units are bundled into a Bolt for Construction. |
-| **Walking skeleton** | The first Bolt in Construction — the thinnest end-to-end slice that exercises every integration point. Its gate follows the Intent autonomy table: `full` may decide it within the confirmed grant; `none` and `semi` wait for a human. |
+| **Walking skeleton** | The first Bolt in Construction — the thinnest end-to-end slice that exercises every integration point. Its ceremony fires only where the Skeleton Stance resolves `on` (greenfield scopes); where the stance is `off` the first Construction stage carries an ordinary gate instead. When it does fire, the gate follows the Intent autonomy table: `full` may decide it within the confirmed grant; `none` and `semi` wait for a human. |
 <!-- glossary:projection:end -->
 
 ---

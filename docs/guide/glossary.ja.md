@@ -36,7 +36,7 @@ Terminology 表、Developer Reference の Terminology 表、`packages/framework/
 | **agmsg** | チームモードで使うエージェント間メッセージングの skill(送信 / 受信箱 / ack)。未登録の宛先でも成功が返るため不達が無音になり、対応を求めるメッセージは必ず ack とセットで運用します。 |
 | **AIDLC** | AI-Driven Development Life Cycle — このシステムが実装する方法論。**Lifecycle** を参照。 |
 | **Approval gate(承認ゲート)** | 各ステージの終わりにある対話的なチェックポイント。作業を承認するか、変更を要求するか、(3 回の改訂後に)そのまま受け入れるかを選びます。Initialization ステージは承認ゲートをスキップします。 |
-| **Autonomy mode(自律レベル)** | intent auditを正本として記録する`none / semi / full`の選択。`none`（既定）はgateも質問も人間が裁定し、`semi`はphase内gateを自動承認し、質問は`full`と同じ解決ラダーで無人裁定（`AUTO_DECIDED`として記録）して節目（phase境界・walking skeleton・intent終端）だけを人間へ戻し、`full`は人間が発行したintent-scoped grantの範囲でintent完了までgateと質問を裁定する。headless起動や旧`unset/gated/autonomous`だけでは昇格しない。 |
+| **Autonomy mode(自律レベル)** | intent auditを正本として記録する`none / semi / full`の選択。`none`（既定）はgateも質問も人間が裁定する。`full`は導出が1つの選択肢を一意に定めるかぎりすべての裁定点を自分で決め、決められないとき — ユーザー専権の裁定点、または導出が contested / none で終わったとき — は、対話セッションなら人間へ聞き、非対話セッションなら候補を記録して**waiting**へ入る。`semi`は`full`にphase境界とwalking skeletonの2つの人間ゲートを足したもので、Boltのswarmは`semi`でも無人で走る。headless起動や旧`unset/gated/autonomous`だけでは昇格しない。 |
 | **Blind distribution(blind 配布)** | 提案者の推奨や先行票を伏せて選挙候補を配ること。各投票者が独立に判断できるようにするためで、推奨と先行票は開票後に公開します。 |
 | **Bolt** | Construction 実行の単位: 1 つの Unit(または依存関係でリンクされた小さな Unit グループ)についてステージ 3.1–3.5 を 1 回通過すること。ステージ 3.6(Build and Test)と 3.7(CI Pipeline)は、Bolt ごとではなくすべての Bolt 完了後に 1 回実行されます。Construction の最初の Bolt が walking skeleton です。参照: [parallel batch]、[walking skeleton]、[autonomy mode]。 注: これは AI-DLC v1 からの意図的な逸脱です。v1 では Bolt は sprint 相当のタイムボックス(Unit of Work が複数の Bolt にまたがる)を指しますが、本実装では Bolt を1つ以上の Unit of Work を包む deployable slice の意味に意図的に転用しています。 |
 | **Builder(ビルダー)** | Unit を実装するチームモードの帽子 — コードを書き、検証を実行し、結果を報告します。自分の実装を自分でレビューすることはありません。**Conductor**、**Reviewer**、**Leader** を参照。 |
@@ -129,7 +129,7 @@ Terminology 表、Developer Reference の Terminology 表、`packages/framework/
 | **Subagent stage(サブエージェントステージ)** | インライン実行ではなく、サブエージェントへ実行を委譲するステージ。**Subagent execution** を参照。 |
 | **Swarm** | prepare → 並列 fan-out → check → finalize で、複数の Construction Unit をそれぞれ独自の worktree で並行実装する機構(`amadeus-swarm.ts`)。 |
 | **Unit of work(作業単位)** | ステージ 2.7(Units Generation)で分解される、独立して実装可能なソリューションの一片。1 つ以上の Unit が Construction のために Bolt にまとめられます。 |
-| **Walking skeleton** | Construction の最初の Bolt — すべての統合点を実行する最も薄いエンドツーエンドのスライス。gateはintent自律レベル表に従い、`full`は確認済みgrant内で裁定でき、`none` / `semi`は人間を待ちます。 |
+| **Walking skeleton** | Construction の最初の Bolt — すべての統合点を実行する最も薄いエンドツーエンドのスライス。この儀式が発火するのは Skeleton Stance が `on` に解決される場合(greenfield scope)だけで、`off` のときは最初の Construction ステージが通常の gate を持ちます。発火する場合、gateはintent自律レベル表に従い、`full`は確認済みgrant内で裁定でき、`none` / `semi`は人間を待ちます。 |
 | **Utility command(ユーティリティコマンド)** | `/amadeus` に渡される非ワークフローのフラグ(`--status`、`--doctor`、`--version`、`--stage`、`--phase`、`--scope` など)。フルワークフローを実行せずに特定の操作を行います。 |
 | **Verification theatre(検証劇場)** | 実行結果から導出されない検証 — ハードコードされた status、自己参照比較、両分岐が同一の条件式、どのコードも消費しないフィールド。偽の信頼を生む分だけ、ゲートが無いことより悪いものとして扱います。 |
 | **Workflow(ワークフロー)** | `/amadeus` の起動からステージ完了までの、AI-DLC ライフサイクルの 1 回のエンドツーエンド実行。特定のタスク(feature、fix など)にスコープされます。 |

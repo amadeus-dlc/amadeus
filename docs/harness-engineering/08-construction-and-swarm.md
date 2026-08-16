@@ -59,16 +59,15 @@ demands. The shipped default lives in the org rule you author at
   `chore`, `refactor`, `security-patch`. There is nothing to bootstrap on an existing
   codebase, so the first Bolt runs like any other.
 - The human selects Intent autonomy as `none`, `semi`, or `full` before
-  unattended decisions. `semi` pre-approves in-phase gates and auto-decides
-  questions through the same resolution ladder as `full`, waiting only at
-  milestones (phase boundaries, the walking skeleton, Intent completion).
-  `full` requires confirmation of the displayed
-  Intent-scoped grant and may decide authorised gates and questions through
-  Intent completion.
+  unattended decisions. `full` decides every interaction kind where the
+  derivation is unique, and hands the rest to a person (interactive) or to
+  waiting (non-interactive). `semi` is `full` minus two human milestones — the
+  phase boundary and the walking skeleton. `full` requires confirmation of the
+  displayed Intent-scoped grant.
 - Autonomy selects approval **authority**, not execution shape. Every mode fans
   out dependency-independent Units. `none` stops at a human batch-end gate;
-  `semi` and `full` may continue according to their mode table. The final batch
-  uses the stage's own gate, so gates never stack.
+  `semi` and `full` both schedule the swarm unattended and run batch to batch.
+  The final batch uses the stage's own gate, so gates never stack.
 
 You shape this posture the same way you shape any rule, through the
 strict-additive layers from [Rules and the Learning Loop](05-rules-and-the-loop.md):

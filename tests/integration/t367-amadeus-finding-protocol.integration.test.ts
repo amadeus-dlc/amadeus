@@ -1,4 +1,4 @@
-// covers: protocol:finding.github.issue.creation.mode
+// covers: protocol:finding.github.issue.creation.consent
 // size: medium
 
 import { describe, expect, test } from "bun:test";
@@ -15,7 +15,7 @@ describe("automatic Amadeus finding protocol", () => {
   test("routes confirmed out-of-scope findings through deterministic GitHub Issue creation", () => {
     const protocol = readFileSync(PROTOCOL, "utf-8");
 
-    expect(protocol).toContain("finding.github.issue.creation.mode");
+    expect(protocol).toContain("finding.github.issue.creation.consent");
     expect(protocol).toContain("off | prompt | auto");
     expect(protocol).toContain(
       "bun {{HARNESS_DIR}}/tools/amadeus-finding.ts create-github-issue",

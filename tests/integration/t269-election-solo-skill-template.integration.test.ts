@@ -8,13 +8,19 @@ const ROOT = join(import.meta.dir, "..", "..");
 const SKILL_PATH = join(ROOT, "packages", "framework", "core", "skills", "amadeus-election", "SKILL.md");
 const TEAM_PATH = join(ROOT, "amadeus", "spaces", "default", "memory", "team.md");
 
+// RFC-0001 ADR-8 abolished the `solo-election.trigger.mode` config leaf, so the
+// SKILL now states the activation condition as a DERIVATION from the Intent
+// Autonomy Mode. The verbatim pin follows the SKILL's current text.
 const ACTIVATION_RULES =
-  "自動発動は opt-in である。`amadeus/config.json`、space、intent の階層設定で最終解決された `solo-election.trigger.mode` が `auto` の場合に限り、(a) 設計逸脱 (b) ブロッカー (c) §13 学習選定 の3類型を自動発動する。自動発動では `open` に `--trigger auto` を必ず付け、`{\"opened\":null,\"reason\":\"solo-election-manual-trigger-required\"}` が返ったら選挙を作成せずユーザー裁定へ切り替える。未設定または `manual`、および上記以外の類型では、ユーザーが「選挙にかけて」と明示したときだけ通常の `open` で発動する。仕様変更およびエスカレーション正準リスト事項は設定値にかかわらず選挙対象外(ユーザー専権)とする。";
+  "発動条件は設定項目ではなく Intent Autonomy Mode から導出する。`semi` / `full` は `auto`、`none` は `manual` を導出し(旧 `solo-election.trigger.mode` は廃止済み — 残置された旧キーは無視されず config 解決が loud fail する)、`auto` の場合に限り (a) 設計逸脱 (b) ブロッカー (c) §13 学習選定 の3類型を自動発動する。自動発動では `open` に `--trigger auto` を必ず付け、`{\"opened\":null,\"reason\":\"solo-election-manual-trigger-required\"}` が返ったら選挙を作成せずユーザー裁定へ切り替える。`manual` を導出する場合、および上記以外の類型では、ユーザーが「選挙にかけて」と明示したときだけ通常の `open` で発動する。仕様変更およびエスカレーション正準リスト事項は mode によらず選挙対象外(ユーザー専権)とする。";
 
-// Surviving invariants of ACTIVATION_RULES as they appear in the distilled team.md.
+// Surviving invariants of ACTIVATION_RULES as they appear in the distilled
+// team.md. The trigger-condition line is deliberately NOT among them: team.md
+// still carries the retired config wording, and revising a norm file is a
+// separate reviewed PR (team.md's persist discipline), not part of this change.
+// The draft revision lives in the intent record's norm-revision-drafts.md.
 const TEAM_ACTIVATION_INVARIANTS = [
   "自動発動は opt-in",
-  "`solo-election.trigger.mode` が `auto`",
   "(a) 設計逸脱 (b) ブロッカー (c) §13 学習選定",
   "`open --trigger auto`",
   "選挙対象外(ユーザー専権)",

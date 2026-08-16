@@ -29,7 +29,11 @@ const ROOT = join(import.meta.dir, "..", "..");
 // rather than by a literal path.
 const OPEN_COMMAND = /tools\/amadeus-election\.ts open --trigger auto/;
 const DISABLED_ENVELOPE = '{"opened":null,"reason":"solo-election-manual-trigger-required"}';
-const CONFIG_KEY = '`solo-election.trigger.mode` to `auto`';
+// RFC-0001 ADR-8 retired the `solo-election.trigger.mode` config leaf: the
+// trigger is DERIVED from the Intent Autonomy Mode. The surfaces must name the
+// derivation, so this pins the derived-trigger phrase rather than a config path
+// no workspace may set any more.
+const DERIVED_TRIGGER = "derives an `auto` solo-election trigger";
 
 // Every surface that must carry the hook: the canonical source plus each
 // generated distribution and self-install copy.
@@ -110,7 +114,7 @@ describe("t369 automatic solo hook is baked into the harness-neutral protocol (#
       const section = sectionThirteen(readFileSync(path, "utf8"));
       expect(section).not.toBe("");
       expect(findMissingHookMarker(section)).toBeNull();
-      expect(section).toContain(CONFIG_KEY);
+      expect(section).toContain(DERIVED_TRIGGER);
     }
   });
 
@@ -128,7 +132,7 @@ describe("t369 automatic solo hook is baked into the harness-neutral protocol (#
       const content = readFileSync(path, "utf8");
       expect(findMissingHookMarker(content)).toBeNull();
       expect(content).toContain("Design deviations");
-      expect(content).toContain(CONFIG_KEY);
+      expect(content).toContain(DERIVED_TRIGGER);
     }
   });
 
