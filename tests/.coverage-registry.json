@@ -158,7 +158,7 @@
       "minMechanism": "none",
       "coveredBy": [
         {
-          "file": "tests/unit/t-merge-provenance-record.test.ts",
+          "file": "tests/integration/t-merge-provenance-record.integration.test.ts",
           "mechanism": "none"
         }
       ],
