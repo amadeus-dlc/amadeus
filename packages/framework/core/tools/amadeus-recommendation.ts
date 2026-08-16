@@ -192,8 +192,7 @@ export const RecommendationOutcome = {
         return parseContested(value);
       case "none":
         return parseNone(value);
-      default:
-        return err("unknown-kind", "kind");
+      default: return err("unknown-kind", "kind");
     }
   },
 
