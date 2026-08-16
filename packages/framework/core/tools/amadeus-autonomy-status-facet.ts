@@ -45,7 +45,9 @@ export function statusAutonomyFacet(
   try {
     projection = readProductionAutonomyProjection(projectDir, intent, space);
   } catch {
-    projection = null;
+    // An unreadable projection means there is no facet to show — same answer
+    // as an absent one.
+    return null;
   }
   if (projection === null) return null;
 
