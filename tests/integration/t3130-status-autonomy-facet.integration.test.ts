@@ -18,6 +18,7 @@ import {
   cleanupTestProject,
   createTestProject,
   FIXTURES_DIR,
+  seededAuditShard,
   seededStateFile,
   seedStateFile,
 } from "../harness/fixtures.ts";
@@ -106,6 +107,24 @@ describe("t3130 statusAutonomyFacet", () => {
   test("returns null (unavailable) when config is invalid, even with a valid active Intent", () => {
     project = semiProjectWithConsent("auto", "off");
     writeConsentConfig(project, "sometimes-invalid", "off");
+    expect(statusAutonomyFacet(project)).toBeNull();
+  });
+
+  // R-7: TAMPERED autonomy audit provenance (transaction digest mismatch)
+  // makes projection replay throw instead of parse; the facet degrades to
+  // unavailable (null) rather than surfacing a value derived from a ledger
+  // that failed its own integrity check.
+  test("returns null (unavailable) when the autonomy audit provenance is tampered", () => {
+    project = semiProjectWithConsent("auto", "off");
+    expect(statusAutonomyFacet(project)).not.toBeNull();
+    const shard = seededAuditShard(project);
+    const original = readFileSync(shard, "utf-8");
+    const tampered = original.replace(
+      /("Transaction Digest":"sha256:)[0-9a-f]{8}/,
+      "$1deadbeef",
+    );
+    expect(tampered).not.toBe(original);
+    writeFileSync(shard, tampered, "utf-8");
     expect(statusAutonomyFacet(project)).toBeNull();
   });
 });
