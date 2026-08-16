@@ -1,12 +1,28 @@
 # PR Convergence Report
 
-- kind: created
+- kind: converged
 - pull request: amadeus-dlc/amadeus#3121
-- generated at: 2026-08-16T01:33:19Z
-- converged: false
+- generated at: 2026-08-16T01:52:43Z
+- converged: true
+- merge state: CLEAN
+- mergeable resolution: resolved
+
+## Violating threads
+
+- replied-unresolved: 0
+- ignored: 0
+
+## Ledger
+
+- resolved: 1
+- outdated: 0
+- replied-unresolved: 0
+- ignored: 0
+- human-only (out of scope): 0
+- terminalized: 1
 ## CLI Attestation
 
-- attestation id: prca:bced2042debb6d8ea7484e95252674b2faf17f94d5dda2431b877be6829323f9
+- attestation id: prca:8af2817b792de07e4b8ea3af86b337d62c56a5eaeeb1d8da217c3db8896251b4
 - intent: rfc-autonomy-modes
 - intent uuid: 01a00604-1c06-7df6-9683-56557b7af258
 - record: amadeus/spaces/default/intents/260815-rfc-autonomy-modes/
@@ -14,7 +30,7 @@
 - unit: presence-detection
 - repository: amadeus-dlc/amadeus
 - pr: 3121
-- local head: 264ddaef06ab3f9c61a6bb3598c3e9ad737d9e0c
-- remote head: 264ddaef06ab3f9c61a6bb3598c3e9ad737d9e0c
-- pr head: 264ddaef06ab3f9c61a6bb3598c3e9ad737d9e0c
-- content digest: sha256:d11c824e5befd1ecd1fae97e6e6a9b7d3e098110674135b7b6339a0a11b236c0
+- local head: 22fd51387808037798c948d7f28ede9ec811cc90
+- remote head: 22fd51387808037798c948d7f28ede9ec811cc90
+- pr head: 22fd51387808037798c948d7f28ede9ec811cc90
+- content digest: sha256:3d37a80e269b05c26eb8bcee2d4ea922868fc4b2356ce06b09b3cf78b89d0076

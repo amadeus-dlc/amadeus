@@ -24,6 +24,7 @@ import {
   type InteractionOccurrence,
   type SemiAuthorityScope,
 } from "../../packages/framework/core/tools/amadeus-intent-autonomy.ts";
+import { RecommendationOutcome } from "../../packages/framework/core/tools/amadeus-recommendation.ts";
 import {
   encodeIntentAutonomyTransaction,
   readIntentAutonomyTransactions,
@@ -125,8 +126,8 @@ function capability(available = true): DecisionCapabilityPort {
   return {
     soloElectionAvailable: available,
     unavailableReason: available ? null : "native-election-unavailable",
-    elect: () => ({ optionId: "accept", evidenceFingerprint: autonomyDigest("election") }),
-    recommend: () => ({ optionId: "accept", evidenceFingerprint: autonomyDigest("recommendation") }),
+    elect: () => RecommendationOutcome.unique("accept", { source: "election", fingerprint: autonomyDigest("election") }),
+    recommend: () => RecommendationOutcome.unique("accept", { source: "agent", fingerprint: autonomyDigest("recommendation") }),
   };
 }
 
