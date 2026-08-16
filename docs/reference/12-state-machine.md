@@ -223,6 +223,8 @@ The canonical event set (defined in the `audit-format.md` registry) is grouped b
 | `WORKFLOW_COMPLETED` | `tools/amadeus-state.ts` |  |
 | `WORKFLOW_PARKED` | `tools/amadeus-state.ts` | `park` - workflow parked mid-flow for a later session; no stage advanced |
 | `WORKFLOW_UNPARKED` | `tools/amadeus-state.ts` | `unpark` - park marker cleared on explicit `--resume` re-entry |
+| `WORKFLOW_WAITING_ENTERED` | `tools/amadeus-intent-autonomy-production.ts` | `enterProductionWaiting` marker - a non-interactive run stopped at a ruling it may not make (RFC-0001 FR-3/ADR-4); the ledger transaction is the record, this row is its projection |
+| `WORKFLOW_WAITING_RESUMED` | `tools/amadeus-intent-autonomy-production.ts` | waiting resume marker - the waiting record was re-presented and ruled on |
 | `INTENT_ARCHIVED` | `tools/amadeus-state.ts` | Human-authorized archive transaction; emitted once per operation ID |
 | `INTENT_UNARCHIVED` | `tools/amadeus-state.ts` | Human-authorized unarchive transaction; emitted once per operation ID |
 | `EXECUTION_EVENT_SET_COMMITTED` | `tools/amadeus-execution-lifecycle.ts` | Canonical audit-first execution lifecycle event set committed atomically |

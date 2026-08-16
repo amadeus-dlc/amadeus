@@ -1255,16 +1255,15 @@ describe("t17 park/unpark", () => {
     );
   }
 
-  // #3016 — an autonomous run is no longer refused outright. The refusal is
-  // fail-closed on human presence: with no unconsumed HUMAN_TURN in the active
-  // record's ledger, the run is unattended and park stays refused.
-  test("park REFUSES under autonomous mode with no unconsumed HUMAN_TURN", () => {
+  // RFC-0001 FR-3 — park is mode-blind. #3016 had narrowed #365's blanket
+  // refusal to unattended autonomous runs; RFC-0001 removes what was left,
+  // because an unattended run reaching a ruling it may not make is precisely
+  // the run that has to stop. t1241 owns the removal's own falling proof.
+  test("park is ACCEPTED under autonomous mode with no unconsumed HUMAN_TURN", () => {
     declareAutonomous();
     const r = runState(proj, ["park"]);
-    expect(r.rc).not.toBe(0);
-    expect(r.combined).toContain("autonomous");
-    // State untouched: no Parked marker written.
-    expect(readState(proj)).not.toContain("- **Parked**:");
+    expect(r.rc).toBe(0);
+    expect(readState(proj)).toContain("- **Parked**:");
   });
 
   test("park is ACCEPTED under autonomous mode with an unconsumed HUMAN_TURN", () => {
@@ -1278,17 +1277,18 @@ describe("t17 park/unpark", () => {
     expect(countEvent(readAudit(proj), "WORKFLOW_PARKED")).toBe(1);
   });
 
-  // FR-3 consume-once: the accepted park is itself the resolution that spends
-  // the turn, so the SAME turn cannot park a second time.
-  test("an accepted park consumes the turn - a second park is refused", () => {
+  // A second park is no longer turned away: the refusal that used to expose
+  // consume-once at this boundary is gone with the guard. The accounting it
+  // used to stand for (WORKFLOW_PARKED resolves the outstanding turn) is now
+  // asserted against the ledger predicate in t1241, which is where an
+  // in-process assertion belongs — t17 stays a pure CLI-contract file.
+  test("a second park is accepted after the turn is spent", () => {
     declareAutonomous();
     seedHumanTurn("2026-08-14T09:00:00Z");
     expect(runState(proj, ["park"]).rc).toBe(0);
     expect(runState(proj, ["unpark"]).rc).toBe(0);
-    const second = runState(proj, ["park"]);
-    expect(second.rc).not.toBe(0);
-    expect(second.combined).toContain("autonomous");
-    expect(readState(proj)).not.toContain("- **Parked**:");
+    expect(runState(proj, ["park"]).rc).toBe(0);
+    expect(readState(proj)).toContain("- **Parked**:");
   });
 });
 

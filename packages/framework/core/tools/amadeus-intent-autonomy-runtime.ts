@@ -1,6 +1,7 @@
 // Durable coordinator and audit projection for Intent-scoped autonomy (#2067).
 
 import type { NonUniqueOutcome } from "./amadeus-recommendation.ts";
+import { admitWaiting, WaitingCause, waitingEntriesOfEvents, type RateRefusal } from "./amadeus-waiting.ts";
 import type { LoopMonitorCoordinator } from "./amadeus-loop-monitor-runtime.ts";
 import type { LoopMonitorPartition } from "./amadeus-loop-monitor.ts";
 import {
@@ -85,6 +86,13 @@ export type AutonomyRuntimeEvent =
       readonly satisfiedConditionIdentity: string;
       readonly basis: "evidence-change" | "human-retry" | "norm-change" | "capability";
     }
+  // Waiting (RFC-0001 FR-3, ADR-4). The entered event is the ONLY place the
+  // cause is stored: the park envelope holds fixed-width identifiers and the
+  // audit marker holds a pointer, so a resume that wants to re-present the
+  // ruling has to come back here for it. `waitingId` is the transaction id the
+  // envelope joins on, which is also what the resumed event closes.
+  | { readonly type: "WORKFLOW_WAITING_ENTERED"; readonly waitingId: string; readonly cause: WaitingCause }
+  | { readonly type: "WORKFLOW_WAITING_RESUMED"; readonly waitingId: string; readonly satisfiedConditionIdentity: string }
   | { readonly type: "INVOCATION_FAILED"; readonly failure: InvocationFailureRecord };
 
 export interface IntentAutonomyTransaction {
@@ -296,6 +304,14 @@ export interface IntentAutonomyCoordinator {
     readonly monitorLatchIdentity?: string;
   }): { readonly result: WorkflowResult; readonly receipt: IntentAutonomyCommitReceipt } | { readonly error: string };
   resume(input: ResumeInput): IntentAutonomyCommitReceipt | { readonly error: string };
+  // Waiting has its own entry and its own exit (ADR-4 Q14=A). Sharing park's
+  // would put "a human chose to stop" and "the run may not rule" back behind
+  // one door, which is the collapse the three-terminal split undoes.
+  enterWaiting(input: { readonly cause: WaitingCause }): EnterWaitingResult;
+  resumeWaiting(input: {
+    readonly waitingId: string;
+    readonly satisfiedConditionIdentity: string;
+  }): IntentAutonomyCommitReceipt | { readonly error: string };
   recordInvocationFailure(input: {
     readonly invocationId: string;
     readonly failureClass: string;
@@ -305,6 +321,17 @@ export interface IntentAutonomyCoordinator {
     { readonly error: string };
   readProjection(): AutonomyProjection;
 }
+
+// An over-rate arrival names the refusal it hit, so the caller can escalate to
+// the thing the refusal points at instead of guessing. There is no third arm
+// that means "carry on regardless" (R-11).
+export type EnterWaitingResult =
+  | {
+      readonly result: WorkflowResult;
+      readonly receipt: IntentAutonomyCommitReceipt;
+      readonly waitingId: string;
+    }
+  | { readonly error: string; readonly rateRefusal?: RateRefusal };
 
 function parkedResult(projection: AutonomyProjection): WorkflowResult {
   const envelope = projection.parkEnvelope;
@@ -644,6 +671,20 @@ export function createIntentAutonomyCoordinator(options: {
     return reserveFullDecision(projection, input, selected.decision);
   }
 
+  // Everything that can turn an unpark away, in one place. Waiting is refused
+  // outright rather than validated: it exits through resumeWaiting, and letting
+  // it out here would emit WORKFLOW_UNPARKED for a record that never parked,
+  // erasing the distinction the terminals are kept apart for.
+  function unparkRefusal(envelope: ParkEnvelope, input: ResumeInput): string | null {
+    if (envelope.reason === "AWAITING_RULING") return "waiting-resumes-through-resume-waiting";
+    validateResumeCondition(envelope.reason, input.condition);
+    if (input.triggerOccurrenceId !== envelope.triggerOccurrenceId) return "resume-trigger-mismatch";
+    if (input.condition.identity !== envelope.resumeCondition.identity || input.condition.status !== "satisfied") {
+      return "resume-condition-not-satisfied";
+    }
+    return clearRepairStalledLatch(envelope, input);
+  }
+
   function clearRepairStalledLatch(envelope: ParkEnvelope, input: ResumeInput): string | null {
     if (envelope.reason !== "REPAIR_STALLED") {
       return input.loopMonitor === undefined ? null : "monitor-latch-not-applicable";
@@ -695,13 +736,8 @@ export function createIntentAutonomyCoordinator(options: {
         const before = current();
         const envelope = before.parkEnvelope;
         if (before.workflowExecutionState !== "suspended" || envelope === null) return { error: "workflow-not-suspended" };
-        validateResumeCondition(envelope.reason, input.condition);
-        if (input.triggerOccurrenceId !== envelope.triggerOccurrenceId) return { error: "resume-trigger-mismatch" };
-        if (input.condition.identity !== envelope.resumeCondition.identity || input.condition.status !== "satisfied") {
-          return { error: "resume-condition-not-satisfied" };
-        }
-        const latchError = clearRepairStalledLatch(envelope, input);
-        if (latchError !== null) return { error: latchError };
+        const refusal = unparkRefusal(envelope, input);
+        if (refusal !== null) return { error: refusal };
         const after: AutonomyProjection = {
           ...before,
           workflowExecutionState: "running",
@@ -713,6 +749,80 @@ export function createIntentAutonomyCoordinator(options: {
           parkTransactionId: envelope.parkTransactionId,
           satisfiedConditionIdentity: input.condition.identity,
           basis: input.basis,
+        }]);
+      } catch (cause) {
+        return { error: cause instanceof Error ? cause.message : String(cause) };
+      }
+    },
+    enterWaiting(input) {
+      try {
+        const projection = current();
+        if (projection.workflowExecutionState === "suspended") return { error: "workflow-already-suspended" };
+        // The cause came in typed, but a typed value is not a validated one:
+        // this is the boundary the record is written at, so the invariants are
+        // re-established here rather than assumed from the call site.
+        const validated = WaitingCause.parse(WaitingCause.serialize(input.cause));
+        if (!validated.ok) return { error: `waiting-cause-malformed:${validated.error.detail}` };
+        // The rate constraint reads the LEDGER, never this process's memory:
+        // an arrival that repeats one from a previous session has to be seen as
+        // a repeat, and only the durable record crosses sessions.
+        const prior = waitingEntriesOfEvents(
+          repository.readTransactions(intentUuid).flatMap((transaction) => [...transaction.events]),
+        );
+        const admitted = admitWaiting({ cause: validated.value, prior });
+        if (!admitted.ok) {
+          return { error: `waiting-rate-refused:${admitted.error.priorWaitingId}`, rateRefusal: admitted.error };
+        }
+        const resumeCondition: ResumeCondition = {
+          kind: "ruling-or-human",
+          identity: autonomyStableId("waiting-resume-condition", [
+            validated.value.occurrenceId,
+            validated.value.basisFingerprint,
+          ]),
+          status: "pending",
+          evidenceFingerprint: validated.value.basisFingerprint,
+        };
+        const planned = parkProjection({
+          projection,
+          triggerOccurrenceId: validated.value.occurrenceId,
+          reason: "AWAITING_RULING",
+          resumeCondition,
+          monitorLatchIdentity: null,
+        });
+        const waitingId = planned.envelope.parkTransactionId;
+        const receipt = commit(projection, planned.after, waitingId, [{
+          type: "WORKFLOW_WAITING_ENTERED",
+          waitingId,
+          cause: validated.value,
+        }]);
+        return { result: parkedResult(planned.after), receipt, waitingId };
+      } catch (cause) {
+        return { error: cause instanceof Error ? cause.message : String(cause) };
+      }
+    },
+    resumeWaiting(input) {
+      try {
+        const before = current();
+        const envelope = before.parkEnvelope;
+        if (before.workflowExecutionState !== "suspended" || envelope === null) return { error: "workflow-not-suspended" };
+        if (envelope.reason !== "AWAITING_RULING") return { error: "not-a-waiting-suspension" };
+        if (input.waitingId !== envelope.parkTransactionId) return { error: "resume-waiting-id-mismatch" };
+        if (input.satisfiedConditionIdentity !== envelope.resumeCondition.identity) {
+          return { error: "resume-condition-not-satisfied" };
+        }
+        const after: AutonomyProjection = {
+          ...before,
+          workflowExecutionState: "running",
+          parkEnvelope: null,
+          projectionRevision: before.projectionRevision + 1,
+        };
+        return commit(before, after, autonomyStableId("waiting-resume", [
+          envelope.parkTransactionId,
+          input.satisfiedConditionIdentity,
+        ]), [{
+          type: "WORKFLOW_WAITING_RESUMED",
+          waitingId: envelope.parkTransactionId,
+          satisfiedConditionIdentity: input.satisfiedConditionIdentity,
         }]);
       } catch (cause) {
         return { error: cause instanceof Error ? cause.message : String(cause) };

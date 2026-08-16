@@ -103,6 +103,7 @@ import {
   type GateValue,
   type InvokeSwarmDirective,
   type ParkedDirective,
+  type WaitingDirective,
   type PrintDirective,
   renderAdvisoryChoiceQuestion,
   type RunStageDirective,
@@ -218,7 +219,9 @@ import {
   productionStageAutonomy,
   readProductionAutonomyProjection,
   readProductionRepairStall,
+  readProductionWaitingStop,
   type ProductionRepairStall,
+  type ProductionWaitingStop,
   type ProductionStageFailureResult,
 } from "./amadeus-intent-autonomy-production.ts";
 import { detectHarnessType } from "./amadeus-harness.ts";
@@ -1114,6 +1117,26 @@ function emitMigrationError(message: string): void {
 // the conductor can end its turn at a clean inter-stage boundary.
 function parkedDirective(reason: string, stage: string): ParkedDirective {
   return { kind: "parked", reason, stage };
+}
+
+// waiting - the terminal a non-interactive run emits when it reached a ruling
+// it may not make (RFC-0001 FR-3). NOT `parked`: park says a human chose to
+// stop, and a conductor that has to tell the two apart by reading `reason` is
+// one wording change away from getting it wrong. The identifiers point at the
+// Intent autonomy transaction that holds the full ruling, so `--resume`
+// re-presents the SAME candidates rather than a paraphrase of them.
+export function waitingDirectiveFor(stop: ProductionWaitingStop): WaitingDirective {
+  const options = stop.cause.outcome.kind === "contested"
+    ? `${stop.cause.outcome.candidates.length} candidate options are on the table`
+    : "no option could be derived at all";
+  return {
+    kind: "waiting",
+    reason: `Workflow waiting at ${JSON.stringify(stop.occurrenceId)}: this run is not interactive (${stop.cause.interactivityBasis.source}) and the ruling due here is not one it may make - ${options}. The derivation was: ${stop.cause.derivationTranscript}. Re-enter with \`/amadeus --resume\` to be shown the same ruling and settle it.`,
+    stage: stop.stage,
+    occurrence_id: stop.occurrenceId,
+    basis_fingerprint: stop.cause.basisFingerprint,
+    transaction_id: stop.transactionId,
+  };
 }
 
 // --- Flag parsing ---
@@ -3171,6 +3194,23 @@ function emitRepairStalledIfSuspended(
   return true;
 }
 
+// Surface a waiting suspension as its own terminal directive, or report that no
+// such stop is pending. The self-disable set matches the stall branch: an
+// explicit re-entry is a deliberate continuation and belongs to the branch that
+// owns it, which is where the ruling gets re-presented.
+function emitWaitingIfSuspended(
+  projectDir: string,
+  stateContent: string | null,
+  flags: ParsedFlags,
+): boolean {
+  const explicitReEntry = Boolean(flags.resume || flags.stage || flags.phase || flags.newIntent);
+  if (stateContent === null || explicitReEntry) return false;
+  const stop = readProductionWaitingStop(projectDir);
+  if (stop === null) return false;
+  emit(waitingDirectiveFor(stop));
+  return true;
+}
+
 // The turn-scoped no-op-next guard (Kiro roll-forward defense). On Kiro the
 // userPromptSubmit seam handles a read-only/navigation command deterministically
 // off-band but CANNOT block the turn, so the conductor relays the output AND may
@@ -3307,6 +3347,13 @@ export function handleNext(args: string[], projectDir: string | undefined): void
   // self-disable set matches Branch 2.5 — an explicit re-entry is a deliberate
   // continuation and must reach the branch that handles it.
   if (emitRepairStalledIfSuspended(pd, stateContent, flags)) return;
+
+  // Branch 2.4b - WAITING suspension (RFC-0001 FR-3). Same shape as the stall
+  // branch above and the same self-disable set, but its own terminal: a run
+  // that stopped because it may not rule is not a run that broke, and the
+  // conductor is told which one it is by the directive kind rather than by the
+  // prose in `reason`.
+  if (emitWaitingIfSuspended(pd, stateContent, flags)) return;
 
   // Branch 2.5 - PARKED workflow (issue #367). The `park` subcommand persists a
   // `Parked` runtime field (via amadeus-state.ts park) without advancing any
