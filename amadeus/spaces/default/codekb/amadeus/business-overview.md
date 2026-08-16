@@ -149,7 +149,7 @@ merge queue + auto-merge を使う運用で、PR が `report` 実行より先に
 
 **本差分での業務境界そのものの変化はなし**（区間の非 record 変更 40 ファイルはいずれもエンジン内部の修正・plugin sensor 宣言・docs 同期であり、製品の対象ユーザー・提供価値・スコープ境界を動かしていない）。詳細な機序は `architecture.md`、患部配置は `code-structure.md` の各対応節を参照。
 
-## record が最終化できず intent が恒久停止する業務影響（260815-stale-epoch-landed、現在、observed `83e1dbeef`）
+## record が最終化できず intent が恒久停止する業務影響（260815-stale-epoch-landed、履歴、observed `83e1dbeef`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260816-open-bug-batch-7 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **業務境界そのものの変化なし。** base `78146f435a` → observed `83e1dbeef` の非 record 17 ファイルはいずれもエンジン内部の修正・テスト・docs 同期であり、対象ユーザー・提供価値・スコープ境界を動かしていない。
 
@@ -158,3 +158,21 @@ merge queue + auto-merge を使う運用で、PR が `report` 実行より先に
 **踏みやすさが運用ノルムと結びついている**点が本件の性質である — チームのノルムは自 intent の record checkpoint を Bolt PR へ同梱してよいと定めており、同梱すれば head は必ず前進する。すなわち**ノルムどおりに運用するほど本欠陥を踏む**。原因は同梱に限らず create 後の任意の追加 push（レビュー指摘対応の修正コミット、main 取込など理由不問）である。
 
 回復には `AMADEUS_SKIP_BLOCKING_SENSOR_GUARD` という緊急バイパスしかなく、これは record に「escape hatch」として自己認識される性質の操作である。加えて既に `260814-plugins-rename-drift` の 3 unit が `kind: created` のまま恒久残置しており、**過去の完了済み intent にも record drift として残留している**。機序は `architecture.md`、テスト空白と台帳は `code-quality-assessment.md` の各対応節を参照。
+
+## オープンバグ 3 件の業務影響（260816-open-bug-batch-7、現在、observed `5c5911ee3`）
+
+**業務境界そのものの変化なし。** base `83e1dbeef` → observed `5c5911ee3` の 28 コミットは RFC-0001 intent autonomy modes（#3116）の全 unit 着地と #3110 の是正（PR #3113）であり、いずれもエンジン内部の権限・監査・記録の機構である。製品の対象ユーザー・提供価値・スコープ境界は動いていない。
+
+autonomy の着地が業務上もつ意味は「**無人実行の権限を Intent Autonomy Mode という単一の正本へ集約し、その派生として設定面・待機・完了報告を揃えた**」ことである。設定キーの二重定義（`solo-election.trigger.mode`）が廃止され、待機が park と区別される第一級の terminal になったため、「なぜ止まっているのか」「誰の承認を待っているのか」が record から一意に読めるようになった。
+
+本 intent が扱う 3 件の業務影響は次のとおりで、**いずれもユーザー配布物の欠陥ではなく、自リポジトリの開発運用の信頼性に関わる**。
+
+| Issue | 誰が困るか | 損失 |
+|---|---|---|
+| [#2363](https://github.com/amadeus-dlc/amadeus/issues/2363) | pi ハーネスで本リポジトリを dogfood する開発者 | §12a reviewer の read-only allowlist（`tools: read, grep, find, ls`）が作業ツリーへ配布されないため、レビュアーが本来持たない書込権限を持ちうる。**外部ユーザーの導入経路（`bunx @amadeus-dlc/setup install --harness pi`）は無傷**で、損失は dogfood 面に限定される |
+| [#2162](https://github.com/amadeus-dlc/amadeus/issues/2162) | no-silent-drop ゲートを信頼する全員 | bootstrap provenance が到達不能な revision を含み、かつ `postRevision` に到達性検査が無い。現行 CI 経路では発火しない**潜在的な fail-closed** であり、将来 events 台帳を持たない断面から検証が走ると恒久的に赤くなる。加えて存在しない `baseline.json` を指す死んだ経路が残っている |
+| [#3097](https://github.com/amadeus-dlc/amadeus/issues/3097) | センサー機構を docs から学ぶ開発者・エージェント | `docs/reference/07-sensor-system.md` の `matches` 表が実在 manifest と乖離（**4 件欠落・2 件の値が陳腐化**）。読者は「宣言されていないセンサーは存在しない」と誤読しうる。docs は AI エージェントの一次入力でもあるため、誤った表は誤った実装判断へ直結する |
+
+**3 件に共通する運用上の性質**は、いずれも「壊れていることが誰にも通知されない」点である。#2363 は逆向きガードが無く、#3097 は検査射程の外にあり、#2162 は分岐によって検証コードに到達しない。**修正の価値の半分は欠陥そのものの解消ではなく、同じ drift を次回は検知できるようにすること**にある。
+
+機序は `architecture.md`、コンポーネント境界は `component-inventory.md`、テスト空白は `code-quality-assessment.md` の各対応節を参照。

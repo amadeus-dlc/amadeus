@@ -3826,7 +3826,7 @@ Issue #3075 が「単位要確認」と留保したまま B 群へ置いた箇�
 
 本区間の PR #3101 が `amadeus-election.ts` に `runPreservedDigest()` を新設し、digest 生産の 3 呼び出し点を 1 つの純関数へ統一している（+21/−5）。**「N 個の読み口／書き口を 1 つの純関数へ寄せる」形は本リポジトリの直近の前例を持つ**（Issue #3099 の是正方式のうち「fanout 側で正準射影を読む」案と同型）。方式の選択自体は後続の裁定事項であり、本節は前例の存在のみを記録する。
 
-## head 前進後の stale created 経路のテスト空白と、是正時に同期を要する台帳（260815-stale-epoch-landed、現在、observed `83e1dbeef`）
+## head 前進後の stale created 経路のテスト空白と、是正時に同期を要する台帳（260815-stale-epoch-landed、履歴、observed `83e1dbeef`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260816-open-bug-batch-7 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: base `78146f435a66680055a24144937b5aa03d48bfb4` → observed `83e1dbeefb3278a00e86f69d3c79071a35ccf043`。対象は [Issue #3110](https://github.com/amadeus-dlc/amadeus/issues/3110)。
 
@@ -3872,3 +3872,62 @@ allowlist の 3 セレクタ（`tests/.coverage-patch-allowlist.json:4388` / `:4
 - **fail-closed 自体は健全**: sensor の拒否（`:391-393`）は record が created のまま最終化されていない事実を正確に報告しており、これを緩める方向の是正は検証劇場になる。閉路の解消は「report が landed を書けるようにする」側で行う必要がある。
 
 機序は `architecture.md`、patch surface の配置は `code-structure.md` の各対応節を参照。一次記録は Issue #3110 の 2 件のクロスレビューコメント。
+
+## 品質指標の区間差分と、オープンバグ 3 件のテスト空白（260816-open-bug-batch-7、現在、observed `5c5911ee3`）
+
+**観測 ref**: base `83e1dbeefb3278a00e86f69d3c79071a35ccf043` → observed `5c5911ee3f107152c3173701caf178a746b6e3aa`。
+
+### 1. 品質指標の差分 — 全項目が改善または横ばい
+
+区間の最初と最後の metrics snapshot からの転記。**測定元**: `metrics/2026-08-15T15-18-46-261Z-8ceeb2dc1823.json`（commit `8ceeb2dc1823…`）と `metrics/2026-08-16T11-04-41-875Z-3e1c6a19ed5b.json`（commit `3e1c6a19ed5b…`）。**取得述語**: 各 JSON の `collectors.<name>.values` を直読（本節の起草時に再実行して確認。Developer scan §5 とも一致）。
+
+| 指標 | collector | base | observed | 差 |
+|---|---|---|---|---|
+| coverage percent | `coverage` | 93.3805400500996 | 93.41934476465595 | **+0.0388pp** |
+| coverage hits / lines | `coverage` | 94686 / 101398 | 95724 / 102467 | +1038 / +1069 |
+| test files | `tests` | 1017 | 1044 | **+27** |
+| assertions | `tests` | 13600 | 13879 | +279 |
+| failed files / assertions | `tests` | 0 / 0 | 0 / 0 | 横ばい（緑） |
+| unit_small | `test_pyramid` | 258 | 270 | +12 |
+| integration_medium | `test_pyramid` | 565 | 580 | +15 |
+| loc core | `loc` | 146600 | 148942 | +2342 |
+| 関数数 / 閾値超過 | `ccn` | 7218 / 32 | 7301 / 32 | +83 / **±0** |
+| open bugs | `bugs` | 4 | 4 | 横ばい |
+
+**注目点**: core が +2342 行増えても coverage percent が上がり（+0.0388pp）、複雑度の閾値超過関数は 32 件で不変である。`cid:build-and-test:bt-coverage-universe-inflation` が記す「大きなソースを 1 本のテストが import して母集団が膨らむ」退行は本区間では起きていない。
+
+### 2. 台帳の同期状況 — 区間内で健全に resync 済み
+
+`git diff --stat 83e1dbee..HEAD -- <5 台帳>`（本節の実測）: `tests/.coverage-patch-allowlist.json` **187 行**、`tests/.coverage-registry.json` **128 行**、`amadeus/spaces/default/specs/tla/model-map.json` **12 行**、`tests/.complexity-baseline.json` **4 行**、`tests/.coverage-ratchet.json` **4 行**（計 301 insertions / 34 deletions）。`cid:build-and-test:bt-ledger-resync` と `cid:build-and-test:c1` が要求する 3 台帳（allowlist / model-map / registry）はいずれも本区間で追随している。
+
+### 3. 領域別のテスト空白
+
+**A. #2363 — 逆向きのガードが存在しない**
+
+`tests/integration/t531-plugin-harness-literal-guard.integration.test.ts:143-148` はテスト名逐語 `PACKAGE_HARNESSES enumerates every self-install face` のとおり **self-install ⊆ package の一方向**しか検査しない。「charter を宣言する package harness が self-install へ配布されているか」という逆向きは**どのテストも検査していない**。この非対称が pi の未配布を無音にしている。`scripts/promote-self.ts:327-329` の `packageFreshnessArgs` 経由で `/amadeus --doctor` に配線された鮮度検査も同じ 5 面しか見ない。
+
+**Red の実測点は既に存在する**: 固定件数ピン 3 本（`tests/integration/t-plugin-projection-packaging.test.ts:148-149` の `toEqual([...])` と `toHaveLength(5)`、`tests/unit/t-plugin-projection.test.ts:308` の `toHaveLength(5)`、`tests/unit/t209-promote-self-dangling-symlink.test.ts:146-150` の `packageFreshnessArgs("apply")` 逐語配列）は pi を足せば確実に赤くなる。ただし**これは「pi が足された」ことを示すだけで、「逆向きガードが無い」欠陥そのものの落ちる実証にはならない** — 後者には新しい双方向ガードと、その注入赤の実測が要る。
+
+**B. #2162 — 通常経路が検証コードを通らない**
+
+`validateBootstrapHistory`（`tests/no-silent-drop/bootstrap.ts:451`）は、`events/` が存在する trustedSha では呼ばれない（`:448` の分岐）。events は 222 ファイルで着地済みのため、CI の通常経路（`.github/workflows/ci.yml:164`）はこの検証を**通らない**。恒久 fail-closed は潜在状態である。
+
+死んだ経路が negative test で固定されている点も品質上の争点である — `baselineAtRevision`（`tests/no-silent-drop/ledger.ts:226-227`）は存在しないファイルを `git show` するため常に throw し、その throw を `tests/integration/no-silent-drop-gate.test.ts:839` が `toThrow("does not contain an unambiguous baseline")` で固定している。**production から呼ばれない経路の例外挙動をテストが保存している**形で、削除する場合はこの negative test も同時に処理する必要がある。
+
+**C. #3097 — 検査射程の外**
+
+`tests/integration/t3028-sensors-docs-sync.integration.test.ts` の `covers:` ヘッダ（`:1-2`）は `docs/harness-engineering/06-sensors.md` と `.ja.md` のみを宣言し、`tableRows()`（`:47-51`）は `docs/harness-engineering` 直下だけを読む。**`docs/reference/07-sensor-system.md` は完全に射程外**であり、Issue の主張はこの点で成立する。06 側は en `:63-76` / ja `:30-43` の 14 行で同期済みなので、drift が起きているのは無検査の 07 だけである。
+
+なお `.github/workflows/ci.yml:14-15` の `paths-ignore` は `metrics/**` のみで docs を除外していないため、`cid:build-and-test:ci-paths-ignore-doc-guard-blindspot` の「doc 変更 → ガード素通り」は本件には該当しない。
+
+### 4. 是正時に同期を要する台帳（領域別、実測）
+
+| 領域 | allowlist hit | registry hit | model-map hit | 判定 |
+|---|---|---|---|---|
+| A（`promote-self` / `plugin-projection` / `self-install-allowlist`） | **1**（`promote-self` を reason 文中に引く `tests/deletion-gate.ts` の `runDistributionGuards` エントリ。expiry 逐語 `remove if the guards gain in-process entry points`） | 0 | 0 | セレクタの再アンカーは不要。ただし**テストファイルを新規追加するなら registry の regen が必須**（`cid:build-and-test:c1`） |
+| B（`no-silent-drop`） | **5** | **3**（すべて `tests/perf/t-no-silent-drop-text-mutation.test.ts`） | 0 | 免除エントリ 5 件の去就を実測で判定する（`cid:code-generation:c-measure-not-prose`: reason の散文でなく lcov の DA で決める） |
+| C（docs + t3028） | 0 | 0 | 0 | 台帳の係りなし。ただし t3028 を拡張して**新規テストファイルを足す場合は registry regen**が要る |
+
+いずれの領域も `amadeus-orchestrate.ts` を触らないため、`cid:build-and-test:bt-ledger-resync` が指す model-map の実装ハッシュピン resync は現時点では不要である（是正が同ファイルへ及んだ場合は再判定）。
+
+機序は `architecture.md`、コンポーネント境界は `component-inventory.md`、配置は `code-structure.md` の各対応節を参照。

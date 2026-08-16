@@ -90,8 +90,22 @@ Biome `2.5.5` は formatter 無効、cognitive complexity 15超を warning と�
 
 本 intent の患部（per-unit consume の母集団取得と unit pool 監査イベント）は既存スタック内に閉じており、新しいランタイム依存・新しい検証系を必要としない。
 
-## 区間の技術スタック（260815-stale-epoch-landed、現在、observed `83e1dbeef`）
+## 区間の技術スタック（260815-stale-epoch-landed、履歴、observed `83e1dbeef`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260816-open-bug-batch-7 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **本差分での変化なし。** base `78146f435a` → observed `83e1dbeef` で依存宣言は 1 バイトも動いていない — `git diff --stat 78146f435a 83e1dbeef -- package.json bun.lock '**/package.json'` の**出力は空**。ランタイム（Bun / TypeScript / ESM）、リンター（Biome、フォーマッタ無効）、型検査（`tsc --noEmit`）、テストランナー（`tests/run-tests.sh` の 4 層）の構成はいずれも不変。
 
 本 intent の患部（`plugins/github-pr-convergence/` の CLI・sensor・stage 文書）は既存スタック内に閉じており、外部依存として使うのは `gh` CLI のみ（optional dependency として既存の扱いのまま）。新しいランタイム依存・新しい検証系を必要としない。
+
+## 区間の技術スタック（260816-open-bug-batch-7、現在、observed `5c5911ee3`）
+
+**外部依存の変化なし。** base `83e1dbeef` → observed `5c5911ee3` で `git diff --stat 83e1dbee..HEAD -- package.json bun.lock '**/package.json'` の**出力は空**（本節の実測）。区間で core が +2342 行、新規 core tool が 5 本増えたが、いずれも既存スタック（Bun / TypeScript / ESM、Biome、`tsc --noEmit`、`tests/run-tests.sh` の 4 層）の内側に閉じている。新規 tool の import も `node:crypto` / `node:fs` / `node:path` と自リポジトリ内モジュールのみである。
+
+本 intent の 3 領域が触れるスタック面は次のとおりで、**新しいランタイム依存・新しい検証系はいずれも不要**である。
+
+| 領域 | 触れるスタック面 |
+|---|---|
+| #2363（pi 配布） | `scripts/` のパッケージャ・self-install 投影（Bun 直接実行）、`.gitignore` / `.gitattributes` の生成、`packages/framework/harness/pi/` の manifest / driver。**新規ハーネス追加ではなく既存 pi の配布面の追加**なので、ハーネス実装スタックは不変 |
+| #2162（no-silent-drop） | `tests/no-silent-drop/` の TypeScript 実装と、`git cat-file` / `git show` / `git merge-base` を介した git 到達性判定。CI からは `bun run no-silent-drop` として起動（`.github/workflows/ci.yml:164`） |
+| #3097（センサー docs） | Markdown の docs 面と、`tests/integration/` の bun test。導出は `readdirSync` + `plugins/*/plugin.json` の JSON 読取のみ |
+
+`.github/` は区間内で 0 件変更（`git diff --name-only 83e1dbee..HEAD -- .github/` が空出力・exit 0）であり、CI の構成そのものも本区間で動いていない。

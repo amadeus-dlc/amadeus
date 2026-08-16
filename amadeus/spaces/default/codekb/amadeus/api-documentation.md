@@ -2145,10 +2145,46 @@ base `9ba8170bb` → observed `78146f435a`（`git diff --shortstat` → 103 file
 
 **本 intent の患部側の契約は無変更。** `readPerUnitConsumePopulation` / `EXPECTED_PER_UNIT_CONSUMER_EDGES` / `UNIT_POOL_EVENT_SET_COMMITTED` / `CONSTRUCTION_AUDIT_EVENTS` を含む 5 ファイルへ `git diff --quiet 9ba8170bb 78146f435 -- <path>` を適用し**全件 exit 0**。fail-closed の失敗コード（`producer-outcome-pending` / `producer-outcome-failed` / `producer-outcome-unknown` / `consumer-edge-inventory-mismatch`）も同断面のまま。
 
-## 区間の公開契約の変化（260815-stale-epoch-landed、現在、observed `83e1dbeef`）
+## 区間の公開契約の変化（260815-stale-epoch-landed、履歴、observed `83e1dbeef`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260816-open-bug-batch-7 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 base `78146f435a` → observed `83e1dbeef`。区間で動いた公開契約は **audit イベント 1 件の追加のみ** — intent 260815-per-unit-outcome（PR #3105）が `UNIT_OUTCOME_SETTLED` を新設し、`packages/framework/core/otel/event-registry.ts` の登録数が **92 → 93** になった（`git diff --numstat 78146f435a 83e1dbeef -- packages/framework/core/otel/event-registry.ts` → **+16 / −2**、observed 側の基数は `tests/integration/event-registry-drift.test.ts:50-54` が **93** に pin。併せて `packages/framework/core/knowledge/amadeus-shared/audit-format.md` と `docs/reference/12-state-machine{,.ja}.md` を同期）。
 
 **本 intent（Issue #3110）の患部側の公開契約は本差分で変化なし。** `git diff --quiet 78146f435a 83e1dbeef -- plugins/github-pr-convergence/` → **exit 0**。`pr-convergence` CLI の 4 verb（`create` / `report` / `override` / `status`）、report の `kind` 語彙（`created` / `converged` / `override` / `landed`）、attestation の `local head` フィールド（`pr-convergence-attestation.ts:82` / `:115` / `:166`）、blocking sensor の finding スキーマはいずれも observed 断面のまま。
 
 是正が公開契約に触れうる面は 2 つあり、いずれも方式選択に依存する — (1) `:746-748` の stale 拒否文言（ユーザー可視のエラー contract。現行文言は誤った回復手順を指示している）(2) `report` が MERGED × stale created で `kind: landed` を書けるようになる場合の verb 挙動。詳細は `architecture.md` / `code-quality-assessment.md` の各対応節を参照。
+
+## 区間の公開契約の変化（260816-open-bug-batch-7、現在、observed `5c5911ee3`）
+
+base `83e1dbeefb3278a00e86f69d3c79071a35ccf043` → observed `5c5911ee3f107152c3173701caf178a746b6e3aa`。本区間は**公開契約が大きく動いた区間**である（前 2 区間はいずれもほぼ無変化だった）。動いた面は 5 つ。
+
+### 1. 監査イベント語彙 — 5 件追加、基数 pin 93 → 98
+
+`git diff -U0 83e1dbee..HEAD -- packages/framework/core/otel/event-registry.ts` の追加行から抽出した新規イベントは `DELEGATED_MERGE_RECORDED` / `LEARNING_CANDIDATE_ADDED` / `LEARNING_ZERO_CONFIRMED` / `WORKFLOW_WAITING_ENTERED` / `WORKFLOW_WAITING_RESUMED` の **5 件**。基数 pin は `tests/integration/event-registry-drift.test.ts:51` が `expect(EXPECTED_CANONICAL_COUNT).toBe(98);`（前 observed 断面では 93）。
+
+### 2. 設定スキーマ — `solo-election.trigger.mode` の廃止
+
+`solo-election.trigger.mode` は config leaf ではなくなり、Intent Autonomy Mode からの派生になった（`packages/framework/core/tools/amadeus-config.ts:658` の ADR-8 注記）。`:685` が `["auto-solo-election", { kind: "abolished", explanation: SOLO_ELECTION_ABOLISHED_EXPLANATION }]` として拒否語彙に登録するため、**旧キーを書いた設定は無音で無視されるのではなく、廃止として説明付きで拒否される**。`amadeus/spaces/default/memory/team.md` の「階層設定の `solo-election.trigger.mode` が `auto` のときだけ…」という記述は本区間の docs 同期（PR #3139）以後の断面と突き合わせる必要がある。
+
+### 3. 新規 CLI 契約 — `amadeus-merge-provenance record`
+
+`packages/framework/core/tools/amadeus-merge-provenance.ts` の usage 逐語（`:41-43`）:
+
+`Usage: amadeus-merge-provenance record --standing-ruling-ref <cid> --ci-conclusion <result> --converged-digest <ref> [--project-dir <path>] [--intent <dir>] [--space <name>]`
+
+`record` 以外の第 1 引数は usage を出して exit 1。成功時は receipt を JSON で stdout へ、拒否時は `{"error":"record-delegated-merge refused","detail":...}` を stderr へ出し exit 1（`:60-65`）。**この CLI は git にも GitHub にも触れない record-only** であり、委任条件（必須 CI green かつ pr-convergence `converged: true`）が実際に満たされたかの正本は `team.md` の常任マージ承認ノルム側にある（`:1-11` のコメントが明示）。
+
+### 4. `--status` の autonomy facet
+
+`statusAutonomyFacet(projectDir, intent?, space?)`（`amadeus-autonomy-status-facet.ts:39`）が `{ mode, projection, interactive, mirrorConsent, findingConsent }`（型は `:26-32`）を返す。**解決不能時は既定値で埋めず `null`**（コメント逐語「`null` means "unavailable", never a guessed value (R-7)」）。既存の `autonomy === null` → "unavailable" の表示規約と同じ degrade をする。autonomy 宣言の入口は `/amadeus --autonomy <mode>` と `bun <bolt> set-autonomy --mode <mode> [--confirmed-display-digest <digest>]` の 2 経路（`amadeus-utility.ts:4367-4368` / `:4381` / `:4395`）。
+
+### 5. pr-convergence — `report` の merged arm（#3113 が本区間で着地）
+
+前節（260815-stale-epoch-landed）が記録した「MERGED PR に最終化経路がない」は、本区間の PR #3113（`8ceeb2dc18`）で是正された。`report` は merged arm で祖先性を実測して `kind: landed` を書き、`create` は自 delivery の head が MERGED PR を持つとき loud 拒否して `report` を指す（`plugins/github-pr-convergence/tools/pr-convergence-cli.ts:881-883` の `epoch.attestedPrHead` / `epoch.mergedHead` 束縛、`:909-910` のコメントが `#3110` を明示的に参照）。本 codekb の該当節はすでに履歴へ降格済みである。
+
+### 本 intent（3 バグ）の契約面
+
+- **#2363**: `SELF_INSTALL_HARNESSES`（`scripts/plugin-projection.ts:59`）は `export const` の公開値で、複数テストが**逐語ピン**している（`toEqual(["claude","codex","cursor","kimi","opencode"])` / `toHaveLength(5)`）。派生する生成物契約は `.gitignore` の ignore 行と `.gitattributes`（導出元は `packages/framework/core/tools/data/self-install-allowlist.ts:12-19`）。**外部ユーザー向けの導入契約は無傷** — `docs/guide/harnesses/pi.md:36-48` の `bunx @amadeus-dlc/setup install --harness pi` は完全な導入経路を提供しており、欠落しているのは本リポジトリの dogfood self-install だけである。
+- **#2162**: `bootstrap-provenance.json` のフィールド契約（`bootstrapBaseRevision` / `preRevision` / `postRevision`。型は `tests/no-silent-drop/bootstrap.ts:53`、パースは `:186`）。`postRevision` に git 到達性の要求は**現行契約に存在しない**（`:283` の文字列等値のみ）ため、到達性を課す是正は契約の追加になる。
+- **#3097**: docs 自体は契約ではないが、`t3028` の `toEqual` 比較（`:47-51`）が「doc の表 = 導出コーパス」を契約として固定している。07 を射程へ入れる是正はこの契約の適用範囲を広げる形になる。対象集合は 14 ではなく **`matches` 宣言を持つ 13 件**（根拠は `docs/reference/07-sensor-system.md:210-212` の発火規約）。
+
+詳細は `architecture.md` / `component-inventory.md` / `code-structure.md` の各対応節を参照。

@@ -419,7 +419,7 @@ Issue #3031 は `:160-175` / `:169` を引くが、observed 断面では対象�
 
 機序の解説は `architecture.md` の対応節、テスト面と台帳は `code-quality-assessment.md` の対応節を参照。
 
-## 差分リフレッシュで観測した構造変化（260815-stale-epoch-landed、履歴、observed `83e1dbeef`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-rfc-autonomy-modes の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する。主題は PR #3113 着地で解消済み））
+## 差分リフレッシュで観測した構造変化（260815-stale-epoch-landed、履歴、observed `83e1dbeef`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260816-open-bug-batch-7 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: base `78146f435a66680055a24144937b5aa03d48bfb4` → observed `83e1dbeefb3278a00e86f69d3c79071a35ccf043`（`git merge-base --is-ancestor 78146f435a 83e1dbeef` → **exit 0**、`git rev-list --count 78146f435a..83e1dbeef` → **4**）。
 
@@ -453,7 +453,54 @@ patch surface のファイル規模（`wc -l`、observed 断面）: `pr-converge
 
 機序の解説は `architecture.md` の対応節、テスト空白と台帳は `code-quality-assessment.md` の対応節を参照。
 
-## 差分リフレッシュで観測した構造変化（260815-rfc-autonomy-modes、現在、observed `2eb94f1e39e`）
+## 差分リフレッシュで観測した構造変化と、オープンバグ 3 件の患部配置（260816-open-bug-batch-7、現在、observed `5c5911ee3`）
 
-- 区間 `83e1dbeef..2eb94f1e39e`: 3 コミット、71 files +3187/−131（非 record/metrics 面は 8 files +1166/−73 — すべて `plugins/github-pr-convergence/` の #3113 修正 + t3110 + allowlist）。新規パッケージ・ディレクトリ移動・新規 core モジュール: **ゼロ**。新規テストファイルは `tests/integration/t3110-pr-convergence-stale-epoch-landed.integration.test.ts` の 1 件（coverage-registry は #3113 内で regen 済み）
-- `packages/framework/core/` の変更: **0 file** — RFC-0001 bound-surfaces は前回 observed から不動
+**観測 ref**: base `83e1dbeefb3278a00e86f69d3c79071a35ccf043` → observed `5c5911ee3f107152c3173701caf178a746b6e3aa`。区間は **28 コミット / 399 files changed, 22808 insertions(+), 1198 deletions(-)**（Developer scan §1 からの転記）。
+
+### 区間の構造変化 — 新規モジュール 5 本、ディレクトリ再編はゼロ
+
+領域別のファイル数（Developer scan §1 の表からの転記）は `amadeus/spaces/default/intents` 195 / `tests/{integration,unit,e2e}` 83（うち新規 30）/ `packages/framework/core/tools` 26（うち新規 5）/ `docs/{reference,guide,harness-engineering}` 26 / `metrics` 12 / `plugins/github-pr-convergence` 6 / `amadeus/spaces/default/codekb` 10。なお `tests/**` 全域を対象にすると **90** ファイル（`git diff --name-only 83e1dbee HEAD -- 'tests/**' | wc -l`、本節の実測。内訳は新規 **30** / 変更 **59** / 削除 **1**）で、上の 83 との差 **7** は `tests/{integration,unit,e2e}` の外側にある — `tests/.complexity-baseline.json` / `tests/.coverage-patch-allowlist.json` / `tests/.coverage-ratchet.json` / `tests/.coverage-registry.json`（台帳 4 件）、`tests/harness/autosolo-s13-fixture.ts`、`tests/helpers/recommendation-decision-points.ts`、`tests/perf/t269-amadeus-mirror-contract-policy-performance.test.ts`。**対象集合が異なるだけで矛盾ではない**。削除 1 件は `tests/integration/t456-question-carveout-predicate.test.ts`（`--diff-filter=D`）で、interactive-carveout unit（#3137）の着地に伴う。**`.github/` は 0 件**（`git diff --name-only 83e1dbee..HEAD -- .github/` が空出力・exit 0）で、CI 面は本区間で不変である。
+
+新規モジュールは `packages/framework/core/tools/` 直下の 5 本のみで、パッケージ追加もディレクトリ移動も無い。既存の `packages/framework/core/` / `packages/framework/harness/<name>/` 境界は不変である。区間には #3110 の是正（PR #3113、`8ceeb2dc18`）も含まれ、`plugins/github-pr-convergence/` の 6 ファイルがこれに当たる（`git merge-base --is-ancestor 8ceeb2dc18 HEAD` → **exit 0**、同述語を base に適用 → **exit 1**、すなわち区間内の着地）。
+
+### 本 intent の patch surface — 3 領域はファイル交差ゼロ
+
+行番号はすべて observed `5c5911ee3` 断面の値で、本節の起草時に逐語確認した。
+
+**A. #2363（pi 配布経路）** — 編集が要る面は 3 定義 + 派生 3 面。
+
+| 役割 | ファイル / 行 |
+|---|---|
+| self-install face 集合 | `scripts/plugin-projection.ts:59` |
+| dist→作業ツリー写像 | `scripts/promote-self.ts:64-71` |
+| 生成ルート allowlist（`.gitignore` / `.gitattributes` の導出元） | `packages/framework/core/tools/data/self-install-allowlist.ts:12-19` |
+| pi の否定パターン（一括 ignore と衝突する） | pi の `dot-gitignore`（`!/.pi/vendor/` / `!/.pi/vendor/**`） |
+| 逐語列挙する docs | `docs/reference/11-contributing.md:47`（6 ルート）、`docs/guide/harnesses/kimi-code.ja.md:173-174`（dogfood promote の記述） |
+| 固定件数ピン（Red の実測点） | `tests/integration/t-plugin-projection-packaging.test.ts:148-149`、`tests/unit/t-plugin-projection.test.ts:308`、`tests/unit/t209-promote-self-dangling-symlink.test.ts:146-150` |
+
+**B. #2162（bootstrap provenance）** — `tests/no-silent-drop/` に閉じる。
+
+| 役割 | ファイル / 行 |
+|---|---|
+| 信頼経路の分岐 | `tests/no-silent-drop/bootstrap.ts:435-461`（`:448` 判定 → `:449` / `:451`） |
+| 到達性検査（`preRevision` のみ） | 同 `:348-358` |
+| `postRevision` の全消費点（3 hit） | 同 `:53` / `:186` / `:358` |
+| 文字列等値のみの比較 | 同 `:283` |
+| 死んだ baseline 参照 | `tests/no-silent-drop/ledger.ts:226-227` / `:301-302` |
+| 死んだ経路を固定する negative test | `tests/integration/no-silent-drop-gate.test.ts:839` |
+| bootstrap を消費するテスト | `tests/integration/no-silent-drop-gate.test.ts`（`:28` import、`:74-75` が実 record の `bootstrapBaseRevision` を読む唯一点、`:170-330` の合成 fixture、`:1222-1244` の検査群）、`tests/integration/t427-no-silent-drop-evidence-reconcile.integration.test.ts` |
+
+**C. #3097（センサー列挙 drift）** — docs 2 面 + 検査 1 本。
+
+| 役割 | ファイル / 行 |
+|---|---|
+| drift のある表（en） | `docs/reference/07-sensor-system.md:200-208`（ヘッダ `:198`。別に `:48-49` の filename↔id 例示表（網羅意図なし）、`:380-386` の `timeout_seconds` 散文列挙） |
+| 同（ja） | `docs/reference/07-sensor-system.ja.md`（表 `:199-207`、例示表 `:48-49`、散文 `:377-384`） |
+| 発火規約の宣言（14 件目を足すと矛盾する根拠） | `docs/reference/07-sensor-system.md:210-212` |
+| 射程内の doc（同期済み 14 行） | `docs/harness-engineering/06-sensors.md`（en `:63-76`）/ `.ja.md`（`:30-43`） |
+| 検査 | `tests/integration/t3028-sensors-docs-sync.integration.test.ts:1-2`（`covers:`）、`:20-45`（`derivedCorpus()`）、`:47-51`（`tableRows()`、`docs/harness-engineering` 直下限定） |
+| 導出元コーパス | `packages/framework/core/sensors/`（11）+ `plugins/*/plugin.json` の `sensors` 配列（3） |
+
+**paths-ignore の盲点は無い** — `.github/workflows/ci.yml:14-15` の `paths-ignore` は `metrics/**` のみで、docs は除外されていない（`cid:build-and-test:ci-paths-ignore-doc-guard-blindspot` の該当なし）。
+
+機序は `architecture.md`、コンポーネント境界は `component-inventory.md`、テスト空白と台帳は `code-quality-assessment.md` の各対応節を参照。

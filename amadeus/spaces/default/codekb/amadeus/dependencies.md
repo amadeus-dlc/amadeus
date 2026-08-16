@@ -221,7 +221,7 @@ amadeus-swarm.ts → amadeus-unit-pool-runtime.ts（pool の唯一の変異源�
 
 テキストフォールバック: `amadeus-orchestrate.ts` は unit pool 系（`amadeus-unit-pool.ts` / `amadeus-unit-pool-runtime.ts`）と正準射影（`amadeus-construction-outcome-projection.ts`）の**両方**を import し、前者だけを per-unit fanout の母集団に使っている。`amadeus-swarm.ts` は pool runtime の唯一の変異源。`amadeus-per-unit-consume-fanout.ts` は母集団を受け取るだけで、どちらの読み口にも直接依存しない（＝**是正で依存方向を増やさずに読み口を差し替えられる位置にある**）。
 
-## 区間の依存エッジ変化と、患部まわりの依存方向（260815-stale-epoch-landed、現在、observed `83e1dbeef`）
+## 区間の依存エッジ変化と、患部まわりの依存方向（260815-stale-epoch-landed、履歴、observed `83e1dbeef`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260816-open-bug-batch-7 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **外部依存の変化なし**（`git diff --stat 78146f435a 83e1dbeef -- package.json bun.lock '**/package.json'` の**出力は空**）。内部エッジの変化も本 intent の患部には及んでいない — `git diff --quiet 78146f435a 83e1dbeef -- plugins/github-pr-convergence/` → **exit 0**。
 
@@ -242,3 +242,51 @@ amadeus-sensor-pr-convergence-report-format.ts:391-393 / :289
 テキストフォールバック: `runCli` は `selfContextFor`（`:1370`）を verb 分岐（`:1398`）より**先に**呼ぶ。`selfContextFor` は `currentSelfContext`（`:627`）経由で `attestationBindsIdentity`（`:714`）へ至り、そこが `receipt.prHead === heads.prHead` を要求する。`created → landed` を許可する `transitionAllowed`（`:597-604`）は verb 分岐の下流にあるため、head 前進時には到達しない。`fetchOpenPrForHead`（gh-runner `:322`）は open PR だけを引くので MERGED PR の read-back 経路が存在しない。blocking sensor は CLI に依存せず record を直読するため、**CLI 側だけを直しても record を landed にしない限り sensor は赤のまま**である（＝是正は record の中身を変える方向でなければ閉じない）。
 
 機序は `architecture.md`、patch surface は `code-structure.md`、テスト空白と台帳は `code-quality-assessment.md` の各対応節を参照。
+
+## 区間の依存エッジ変化と、オープンバグ 3 件の依存方向（260816-open-bug-batch-7、現在、observed `5c5911ee3`）
+
+**外部依存の変化なし**（`git diff --stat 83e1dbee..HEAD -- package.json bun.lock '**/package.json'` の**出力は空**）。内部エッジは新規 core tool 5 本の分だけ増えた（本節の実測: 各ファイルの `from "..."` を列挙）。
+
+| 新規モジュール | 依存先 |
+|---|---|
+| `amadeus-recommendation.ts` | **なし**（葉。裁定語彙の型と codec だけを持つ） |
+| `amadeus-waiting.ts` | `./amadeus-recommendation.ts`、`node:crypto` |
+| `amadeus-autonomy-status-facet.ts` | `./amadeus-config.ts`、`./amadeus-intent-autonomy.ts`、`./amadeus-intent-autonomy-production.ts`、`./amadeus-mirror-types.ts` |
+| `amadeus-completion-report.ts` | `./amadeus-autonomy-review.ts`、`./amadeus-autonomy-review-production.ts`、`./amadeus-intent-autonomy.ts`、`./amadeus-intent-autonomy-replay.ts`、`./amadeus-lib.ts`、`node:fs`、`node:path` |
+| `amadeus-merge-provenance.ts` | `./amadeus-audit.ts`、`./amadeus-lib.ts`、`./amadeus-observability.ts` |
+
+依存方向は**語彙（`amadeus-recommendation.ts`）→ 機構（`amadeus-waiting.ts`）→ 投影（facet / report）**の一方向で、逆流と循環は無い。`amadeus-recommendation.ts` が葉であることが、裁定語彙を他の機構から独立してテストできる形を担保している。
+
+### 本 intent の 3 領域の依存方向
+
+```
+A. #2363 — self-install 配布経路（3 定義が並列、単一正本が無い）
+   scripts/plugin-projection.ts:44-53  PACKAGE_HARNESSES (8, pi 在)
+   scripts/plugin-projection.ts:59     SELF_INSTALL_HARNESSES (5, pi 不在)
+        ├─→ scripts/promote-self.ts:327-329  packageFreshnessArgs → /amadeus --doctor
+        └─→ t531:143-148  「self-install ⊆ package」のみ検査（逆向き無し）
+   scripts/promote-self.ts:64-71       managedDirs (6, pi 不在) …独立の手書き写像
+   .../data/self-install-allowlist.ts:12-19  GENERATED_SELF_INSTALL_ROOTS (6, .pi 不在)
+        └─→ .gitignore / .gitattributes（生成）
+
+B. #2162 — no-silent-drop（分岐で検証到達性が変わる）
+   .github/workflows/ci.yml:164 → bun run no-silent-drop
+        └─→ bootstrap.ts:435-461 loadTrustedPreviousLedgers
+              ├─ events/ 在 → :449 assertStrictAncestorOfHead   ← 通常経路
+              └─ events/ 不在 → :451 validateBootstrapHistory    ← 潜在（到達しない）
+                    └─→ :352-356 preRevision のみ到達性検査
+                    └─→ :358 → :283 postRevision は文字列等値のみ
+   ledger.ts:226-227 baselineAtRevision（不在ファイル参照、常に throw）
+        └← no-silent-drop-gate.test.ts:839 のみが呼ぶ（production から呼出なし）
+
+C. #3097 — センサー docs（導出可能なのに手書き、検査は片方だけ）
+   packages/framework/core/sensors/ (11) + plugins/*/plugin.json sensors (3)
+        └─→ t3028:20-45 derivedCorpus() (14)
+              └─→ t3028:47-51 tableRows() … docs/harness-engineering 直下のみ
+                    └─→ 06-sensors.md / .ja.md（14 行、同期済み）
+        ✗ docs/reference/07-sensor-system.md（9 行、無検査 → drift）
+```
+
+テキストフォールバック: **A** は配布集合の定義が 3 箇所（package 集合 / self-install 集合 / dist→ツリー写像 / 生成ルート allowlist）に分散し、どれもが他から導出されていない。唯一のガード（t531）は「self-install に載っているものは package にもある」方向しか見ないため、package 側にしか居ない pi は検査を通過する。doctor の鮮度検査も self-install 集合から引くので同じ盲点を持つ。**B** は CI から入る通常経路が events 台帳の存在によって `assertStrictAncestorOfHead` 側へ分岐するため、`validateBootstrapHistory` とその配下の到達性検査には到達しない。`postRevision` は到達性を一切見られず、文字列等値だけで通る。`baselineAtRevision` は存在しないファイルを参照するので必ず throw し、その throw を negative test だけが保持している。**C** はセンサーの実在コーパスが core ディレクトリと plugin 宣言から機械導出できるにもかかわらず、2 つの docs が同じ表を手書きしており、検査（t3028）は `docs/harness-engineering` 側だけを読む。`docs/reference/07-sensor-system.md` は誰からも参照されず drift する。
+
+**3 領域の間に依存エッジは無い**（ファイル交差ゼロ）。機序は `architecture.md`、配置は `code-structure.md`、コンポーネント境界は `component-inventory.md` の各対応節を参照。
