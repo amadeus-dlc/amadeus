@@ -1,4 +1,4 @@
-# RFC 0002 実装サーベイ(evidence)— swarm 実行モデルの現行実装
+# RFC 0002 実装サーベイ(evidence)— Unit 実行モデルの現行実装
 
 > RFC 0002 本文は契約仕様のみを記す。本ファイルはその根拠となる実装実測(file:line)の記録。測定 ref: origin/main 215855ea7(2026-08-16)。
 
