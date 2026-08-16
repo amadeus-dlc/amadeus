@@ -1,5 +1,5 @@
 ---
-feature: swarm-driver-concept-model
+feature: swarm-execution-model
 start-date: 2026-08-16
 rfc-pr: (この RFC を導入した PR へのリンク。マージ時に記入)
 tracking-issue: (実装を追跡する Issue。承認後に記入)
@@ -16,10 +16,10 @@ bound-surfaces: |
   docs / glossary(swarm・ドライバ設定に言及する利用者文書)
   (digest ピンは #2396 実装時に付与 — 本 RFC 時点ではパス列挙のみ)
 related: "RFC 0001(intent-autonomy-modes — 発動権限の正本。本 RFC は権限構造に触れない)、#3116、intent 260713-swarm-driver-migration(boolean→ドライバ転用の出所)、intent 260810-swarm-directive-fixes"
-evidence: evidence/0002-swarm-driver-survey.md(実装実測 file:line と履歴監査の記録)
+evidence: evidence/0002-swarm-execution-model-survey.md(実装実測 file:line と履歴監査の記録)
 ---
 
-# swarm ドライバ概念モデルの整理 — 発動権限と実行バックエンド選択の語彙分離
+# swarm 実行モデルの概念整理 — 発動契約の確定と実行形態・ドライバ設定の語彙是正
 
 ## Summary(要約)
 
