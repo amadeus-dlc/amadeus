@@ -14,3 +14,20 @@
 - [ ] Step 6 (FR-5): 台帳同期 — 新規テストファイルは coverage-registry regen。amadeus-lib/utility/election* の allowlist セレクタ・model-map implPath を照合し必要なら resync。**coverage 母集団の実測**: 変更で新たに in-process import されるファイルの有無を確認し結果を code-summary へ記録(reviewer FOLLOW-UP)
 - [ ] Step 7: ローカル検証 — typecheck / lint / targeted(election v2 系、recompose 系、t224、FR-3 の変更ファイル群)/ coverage-patch-quick advisory
 - [ ] Step 8: commit(英語・Conventional・意味単位)→ push → PR 作成(push-first)
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-15T05:37:51Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+FR-1〜FR-4はfile:lineで整合確認、計画外追加2件は正当な必然。FR-3は5箇所スポットチェックで妥当性確認、網羅性のみスコープ外で独立検証不可。
+
+### Findings
+
+- FOLLOW-UP | code-summary.md の FR-1 call-site 行番号表記(tallyElection/isCommittedRun)が実コードと入れ替わっている(amadeus-election.ts:436=isCommittedRun, :467=tallyElection)
+- FOLLOW-UP | FR-3の24箇所→A/B群0 hitの網羅性主張はIssue #3075の検索述語(レビュースコープ外)なしに独立検証できない。build-and-test段での再実測記録を推奨
+- FOLLOW-UP | t370-canonical-lock-target.integration.test.ts:171 の0×0ms判別アサーションが「機能テストに厳密時間アサーション禁止」裁定との境界線上。正当化コメントはあるがチーム確認を推奨
+- NIT | code-summary.md のFR-2 Red件数(非Construction4+判読不能3=7)がt246-routing-and-autonomy-guards.test.ts:144のtest.each(4値)と不一致の可能性
