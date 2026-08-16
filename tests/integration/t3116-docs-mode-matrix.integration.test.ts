@@ -1,5 +1,5 @@
 // covers: file:amadeus/spaces/default/intents/260815-rfc-autonomy-modes/construction/docs-norms/mode-matrix.md
-// size: small
+// size: medium
 
 // RFC-0001 FR-14 / R-1 (#3116), unit docs-norms. The mode × 確認ポイント matrix
 // is a DERIVED document: the implementation decides, the matrix reports. This
