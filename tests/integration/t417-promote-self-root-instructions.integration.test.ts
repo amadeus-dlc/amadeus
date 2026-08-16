@@ -49,6 +49,7 @@ beforeEach(() => {
   write("dist/cursor/.cursor/d.txt", "delta\n");
   write("dist/opencode/.opencode/e.txt", "epsilon\n");
   write("dist/kimi/.kimi-code/f.txt", "zeta\n");
+  write("dist/pi/.pi/g.txt", "eta\n");
   write("dist/codex/AGENTS.md", CODEX_DIST_AGENTS);
   write(".claude/CLAUDE.md", CLAUDE_ONBOARDING);
   write("CLAUDE.md", `${PROJECT_INSTRUCTIONS}${CLAUDE_ONBOARDING}`);

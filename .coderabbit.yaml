@@ -29,6 +29,7 @@ reviews:
     - "!.cursor/**"
     - "!.opencode/**"
     - "!.kimi-code/**"
+    - "!.pi/**"
     # Workflow records are append-only process/audit artifacts, not editable
     # sources: intents (stage records + audit shards), elections (ballot
     # ledgers), codekb (RE-generated observation snapshots pinned to observed

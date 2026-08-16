@@ -57,13 +57,22 @@ const write = (rel: string, content: string): void => {
 
 beforeEach(async () => {
   root = mkdtempSync(join(tmpdir(), "t209-promote-self-"));
-  // Minimal dist fixture covering all managed dirs (claude/codex/agents/cursor/opencode/kimi).
+  // Minimal dist fixture covering all managed dirs (claude/codex/agents/cursor/opencode/kimi/pi).
   write("dist/claude/.claude/tools/a.txt", "alpha\n");
   write("dist/codex/.codex/b.txt", "beta\n");
   write("dist/codex/.agents/c.txt", "gamma\n");
   write("dist/cursor/.cursor/d.txt", "delta\n");
   write("dist/opencode/.opencode/e.txt", "epsilon\n");
   write("dist/kimi/.kimi-code/f.txt", "zeta\n");
+  write("dist/pi/.pi/g.txt", "eta\n");
+  // Pi ships its vendored OpenTelemetry runtime inside the harness dir, so the
+  // promote has to descend into it rather than stop at the top level.
+  write("dist/pi/.pi/vendor/opentelemetry/api.js", "vendored\n");
+  // Pi's manifest also projects a dot-gitignore to the PROJECT ROOT
+  // (dist/pi/.gitignore). It carries `!/.pi/vendor/` negations meant for an
+  // installed user workspace, the opposite of this repository's source-only
+  // boundary — the promote must leave the root file alone.
+  write("dist/pi/.gitignore", "!/.pi/vendor/\n!/.pi/vendor/**\n");
   write("dist/codex/AGENTS.md", "@.agents/rules/amadeus.md\n\n# AI-DLC on Codex CLI\n\ngenerated\n");
   const claudeOnboarding = "@.claude/rules/amadeus.md\n\n# Claude onboarding\n";
   write(".claude/CLAUDE.md", claudeOnboarding);
@@ -150,6 +159,7 @@ describe("t209 promote-self dangling-symlink resilience", () => {
       ["scripts/package.ts", "cursor"],
       ["scripts/package.ts", "opencode"],
       ["scripts/package.ts", "kimi"],
+      ["scripts/package.ts", "pi"],
     ]);
     expect(packageFreshnessArgs("check")).toEqual([
       ["scripts/package.ts", "claude"],
@@ -157,7 +167,32 @@ describe("t209 promote-self dangling-symlink resilience", () => {
       ["scripts/package.ts", "cursor"],
       ["scripts/package.ts", "opencode"],
       ["scripts/package.ts", "kimi"],
+      ["scripts/package.ts", "pi"],
     ]);
+  });
+
+  // #2363 — Pi was packaged into dist/pi/ but never promoted, so the dogfood
+  // repository carried no .pi surface at all. The promote must reach the whole
+  // harness dir, vendored runtime included.
+  test("--apply promotes the pi harness dir including its vendor subtree", async () => {
+    expect(await promoteSelfMain(["--apply", "--no-build"], root, undefined, null)).toBe(0);
+    expect(readFileSync(join(root, ".pi", "g.txt"), "utf-8")).toBe("eta\n");
+    expect(readFileSync(join(root, ".pi", "vendor", "opentelemetry", "api.js"), "utf-8")).toBe(
+      "vendored\n",
+    );
+    expect(await promoteSelfMain(["--no-build"], root)).toBe(0);
+  });
+
+  // Only dist/pi/.pi is managed. dist/pi/.gitignore is Pi's project-root file
+  // for INSTALLED workspaces; promoting it would overwrite this repository's
+  // hand-maintained source-only boundary with the inverse rule set.
+  test("--apply leaves the project-root .gitignore untouched", async () => {
+    const rootIgnore = join(root, ".gitignore");
+    const boundary = "/dist/**\n/.pi/**\n";
+    writeFileSync(rootIgnore, boundary);
+    expect(await promoteSelfMain(["--apply", "--no-build"], root, undefined, null)).toBe(0);
+    expect(readFileSync(rootIgnore, "utf-8")).toBe(boundary);
+    expect(await promoteSelfMain(["--no-build"], root)).toBe(0);
   });
 
   test("--apply installs OpenCode and preserves its activated config", async () => {

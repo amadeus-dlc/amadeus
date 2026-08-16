@@ -175,6 +175,7 @@ describe("u7 CI build-before-test contract", () => {
       ".cursor",
       ".opencode",
       ".kimi-code",
+      ".pi",
       "release-assets",
     ];
     const generatedFiles = ["AGENTS.md", "CLAUDE.md"];

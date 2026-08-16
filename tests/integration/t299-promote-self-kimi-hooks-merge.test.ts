@@ -103,6 +103,7 @@ beforeEach(() => {
   write("dist/cursor/.cursor/d.txt", "delta\n");
   write("dist/opencode/.opencode/e.txt", "epsilon\n");
   write("dist/kimi/.kimi-code/f.txt", "zeta\n");
+  write("dist/pi/.pi/g.txt", "eta\n");
   write("packages/framework/harness/kimi/hooks/amadeus-hooks.snippet.toml", SNIPPET);
   write("dist/codex/AGENTS.md", "# AI-DLC on Codex CLI\n\ngenerated\n");
   write(".claude/CLAUDE.md", "# Claude onboarding\n");

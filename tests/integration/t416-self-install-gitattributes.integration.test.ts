@@ -36,7 +36,7 @@ describe("t416 generated gitignore semantics", () => {
   test("the repository source-only patterns match the canonical allowlist", () => {
     const expected = ["/dist/**", ...gitignoreExpectation(SELF_INSTALL_ALLOWLIST)];
     const generatedSurfacePattern =
-      /^!?\/(?:dist|\.agents|\.claude|\.codex|\.cursor|\.kimi-code|\.opencode)(?:\/|$)/;
+      /^!?\/(?:dist|\.agents|\.claude|\.codex|\.cursor|\.kimi-code|\.opencode|\.pi)(?:\/|$)/;
     const actual = readFileSync(join(REPO_ROOT, ".gitignore"), "utf-8")
       .split("\n")
       .map((line) => line.trim())

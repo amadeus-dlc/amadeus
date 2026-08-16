@@ -23,6 +23,7 @@ const HOST: Record<SelfInstallHarness, string> = {
   cursor: ".cursor",
   opencode: ".opencode",
   kimi: ".kimi-code",
+  pi: ".pi",
 };
 
 let project = "";

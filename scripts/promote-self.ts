@@ -3,7 +3,7 @@
 //
 // This is a project-local dogfood install, not a distributable build. The
 // packager still owns dist/; this script copies the generated Claude/Codex/
-// Cursor/OpenCode/Kimi harness surfaces into the repository root so Amadeus can develop itself.
+// Cursor/OpenCode/Kimi/Pi harness surfaces into the repository root so Amadeus can develop itself.
 // Contributor-only skill runtime files under contrib/skills/ are projected
 // into both harness discovery trees without entering dist/. Authoring-only
 // eval assets remain at the canonical contributor path.
@@ -68,6 +68,11 @@ export const managedDirs: ManagedDir[] = [
   { src: "dist/cursor/.cursor", dst: ".cursor" },
   { src: "dist/opencode/.opencode", dst: ".opencode" },
   { src: "dist/kimi/.kimi-code", dst: ".kimi-code" },
+  // Only the harness dir. dist/pi/.gitignore is Pi's project-root file for an
+  // INSTALLED workspace (it negates a broad vendor/ rule so .pi/vendor/ stays
+  // commit-visible there); this repository's root .gitignore is the opposite —
+  // the hand-maintained source-only boundary that ignores /.pi/**.
+  { src: "dist/pi/.pi", dst: ".pi" },
 ];
 
 const CONTRIBUTOR_SKILLS_ROOT = "contrib/skills";
@@ -307,7 +312,7 @@ function printUsage(): void {
       "usage: bun scripts/promote-self.ts [--check|--apply] [--no-build]",
       "",
       "  --check     verify project-local self install matches generated output (default)",
-      "  --apply     write .claude/, .codex/, .agents/, .cursor/, .opencode/, and .kimi-code/ generated files,",
+      "  --apply     write .claude/, .codex/, .agents/, .cursor/, .opencode/, .kimi-code/, and .pi/ generated files,",
       "              then merge the amadeus hooks managed block into the user-level kimi config",
       "              ($KIMI_CODE_HOME/config.toml, or ~/.kimi-code/config.toml when unset; a backup is made)",
       "  --no-build  skip the package.ts freshness step",

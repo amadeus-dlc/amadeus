@@ -53,10 +53,10 @@ export const PACKAGE_HARNESSES = [
 ] as const;
 export type PackageHarness = (typeof PACKAGE_HARNESSES)[number];
 
-// The self-install closed union: the five faces promote-self.ts reflects into
+// The self-install closed union: the six faces promote-self.ts reflects into
 // the project root. Intentionally NOT the eight package faces — a type + runtime
-// boundary that keeps kiro/kiro-ide/pi out of the project-local install.
-export const SELF_INSTALL_HARNESSES = ["claude", "codex", "cursor", "opencode", "kimi"] as const;
+// boundary that keeps kiro/kiro-ide out of the project-local install.
+export const SELF_INSTALL_HARNESSES = ["claude", "codex", "cursor", "opencode", "kimi", "pi"] as const;
 export type SelfInstallHarness = (typeof SELF_INSTALL_HARNESSES)[number];
 
 // Read-only filesystem seam. Single definition lives in the core engine

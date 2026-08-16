@@ -402,6 +402,7 @@ jobs:
             .cursor
             .opencode
             .kimi-code
+            .pi
             AGENTS.md
             CLAUDE.md
             release-assets

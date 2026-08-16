@@ -48,7 +48,7 @@ function pluginRecord(...slugs: string[]): PluginRecord {
 }
 
 describe("t416 deterministic self-install plugin projections", () => {
-  test("all five faces produce deterministic managed surfaces from the selected plugin", () => {
+  test("all six faces produce deterministic managed surfaces from the selected plugin", () => {
     for (const harness of SELF_INSTALL_HARNESSES) {
       const first = buildSelfInstallProjection(harness, REPO_ROOT);
       const second = buildSelfInstallProjection(harness, REPO_ROOT);
