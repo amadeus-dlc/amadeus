@@ -3968,8 +3968,7 @@ export function verifyBatchApprovalPresence(projectDir: string): Result<Presence
     ok: false,
     error: {
       reason:
-        "Refusing to approve-batch: no human presence recorded since the last gate resolution " +
-        "(no HUMAN_TURN or verified delegation on the audit ledger).",
+        "Refusing to approve-batch: no human presence recorded since the last gate resolution (no HUMAN_TURN or verified delegation on the audit ledger).",
     },
   };
 }
