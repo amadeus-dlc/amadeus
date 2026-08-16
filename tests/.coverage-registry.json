@@ -6728,6 +6728,10 @@
           "mechanism": "none"
         },
         {
+          "file": "tests/integration/t3121-completion-report.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/integration/t427-goal-reconciliation-completion.integration.test.ts",
           "mechanism": "cli"
         },

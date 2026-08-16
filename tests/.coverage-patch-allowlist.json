@@ -5086,5 +5086,17 @@
     },
     "reason": "main() dispatch cases for confirm-zero/add-candidate; unit s13-zero CLI surface: reached only through the spawned dist CLI (t-learnings-s13-zero seam header precedent — spawned execution is not attributed to parent Bun LCOV). The decision logic itself (confirmZeroCandidates / addConductorCandidate) is covered in-process by tests/integration/t-learnings-s13-zero-seam.integration.test.ts.",
     "expiry": "remove when Bun merges child-process coverage or the CLI handlers gain an injectable exit seam"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "generateAutoDecisionSummaryOutcome",
+      "fingerprint": "sha256:759ed3562a1457e8ea7390c0a60f9f517374aaebd1f623f6bd42d882609ef93f",
+      "anchorLines": 2,
+      "targetLines": "1-2",
+      "class": "catch-arm"
+    },
+    "reason": "C9/ADR-3 last-resort defensive catch: every anticipated failure of summary generation already resolves to a typed warning on the branches above (covered in-process by t3121 direct arm coverage); this arm only fires on an unanticipated throw inside buildAutoDecisionSummary/write, which has no injectable seam to trigger deterministically.",
+    "expiry": "remove when the summary builder gains an injectable failure seam"
   }
 ]
