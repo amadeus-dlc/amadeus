@@ -197,13 +197,26 @@ describe("completion-report: auto-decision summary at workflow completion (C9/AD
     expect(summaryMd).toContain("Total AUTO_DECIDED: 5");
     expect(summaryMd).toMatch(/\| grant-gate \| 3 \|/);
     expect(summaryMd).toMatch(/\| confirmed-policy \| 2 \|/);
+    // The review-state aggregation is transcribed, never collapsed: the review
+    // lifecycle resolves every listed item to not-applicable here, so a lost
+    // byReviewState accumulation would surface as a zero row.
+    expect(summaryMd).toMatch(/\| not-applicable \| 5 \|/);
+    expect(summaryMd).toMatch(/\| unreviewed \| 0 \|/);
   });
 
   test("complete-workflow completes with no AUTO_DECIDED audit rows present (current behaviour, pre-summary Red baseline)", () => {
-    const { project } = birth();
+    const { project, record } = birth();
     reconcileAchieved(project);
     const { json } = runComplete(project);
     expect(json.status).toBe("Completed");
+    // The zero-decision summary is still generated, not skipped with a warning.
+    expect(json.auto_decision_summary_warning).toBeNull();
+    expect(typeof json.auto_decision_summary).toBe("string");
+    const summaryMd = readFileSync(
+      join(project, "amadeus", "spaces", "default", "intents", record, json.auto_decision_summary as string),
+      "utf8",
+    );
+    expect(summaryMd).toContain("Total AUTO_DECIDED: 0");
   });
 
   test("non-blocking: a write failure at the summary path does not fail complete-workflow", () => {
@@ -269,7 +282,13 @@ describe("completion-report: direct arm coverage", () => {
       join(project, "amadeus", "spaces", "default", "intents", record),
     );
     expect(built.ok).toBe(true);
-    if (built.ok) expect(built.summary.totalAutoDecided).toBe(101);
+    if (built.ok) {
+      expect(built.summary.totalAutoDecided).toBe(101);
+      // The listing walked past the first page: a truncated list would leave a
+      // count mismatch and a short review-state tally.
+      expect(built.summary.countMismatch).toBeNull();
+      expect(built.summary.byReviewState["not-applicable"]).toBe(101);
+    }
   });
 
   test("a completion path squatted by a file yields write-failed", () => {

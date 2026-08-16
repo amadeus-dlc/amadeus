@@ -1,4 +1,4 @@
-// C9/ADR-3 (RFC-0001 §full-mode 事後検収): the auto-decision summary generated
+// C9/ADR-3 (RFC-0001 §full-mode post-completion verification): the auto-decision summary generated
 // at the workflow-completion boundary. Reads ONLY the AUTO_DECIDED audit trail
 // and the existing listProductionAutoDecisions review API — no LLM-authored
 // counts or prose (P2). Every failure here is a Result the caller turns into a
