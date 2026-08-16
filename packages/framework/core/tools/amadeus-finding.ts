@@ -144,7 +144,7 @@ export const defaultFindingDependencies = {
       ? { kind: "invalid" }
       : {
           kind: "resolved",
-          creationMode: outcome.config.finding.github.issue.creation.mode,
+          creationMode: outcome.config.finding.github.issue.creation.consent,
         };
   },
 } satisfies Pick<FindingCoordinatorDependencies, "resolveConfig">;

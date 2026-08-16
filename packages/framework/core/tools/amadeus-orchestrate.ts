@@ -256,7 +256,7 @@ import {
   authorizeMainConductor,
   callerAuthorizationError,
 } from "./amadeus-caller-authorization.ts";
-import { resolveAmadeusConfig } from "./amadeus-config.ts";
+import { deriveSoloElectionTrigger, resolveAmadeusConfig } from "./amadeus-config.ts";
 import {
   degradeUnitDirectories,
   DELIVERY_BOLT_PLAN_SOURCE,
@@ -661,7 +661,7 @@ function emitMirrorBoundaryIfNeeded(
   }
   return emitConfiguredMirrorBoundary(
     boundary,
-    resolved.config.intentMirror.github.issue.mode,
+    resolved.config.intentMirror.github.issue.consent,
     intent,
     space,
   );
@@ -4165,9 +4165,14 @@ function constructionFailureRulingDirective(
   target: { unit: string; attempt?: string; batch?: string },
   siblings: string,
 ): Directive {
-  const config = resolveAmadeusConfig(projectDir);
-  if (config.kind === "invalid") return errorDirective(`Invalid solo-election configuration: ${config.issues.map(swarmConfigIssue).join(" | ")}`);
-  if (config.config.soloElection.trigger.mode !== "auto") {
+  // RFC-0001 ADR-8: the solo-election trigger is DERIVED from the active
+  // Intent's declared Autonomy Mode, not read from config — no declaration
+  // (or no state file at all) derives the same conservative "none" default
+  // the retired config leaf carried. declaredIntentAutonomyMode is the same
+  // direct state-field reader readAutonomyMode/detectProjectionDivergence use
+  // for Construction scheduling decisions elsewhere in this file.
+  const mode = declaredIntentAutonomyMode(loadStateFileIfPresent(projectDir)) ?? "none";
+  if (deriveSoloElectionTrigger(mode) !== "auto") {
     return askDirective(
       `Unit "${target.unit}" failed during ${stage} (attempt ${target.attempt}, batch ${target.batch}; siblings: ${siblings}). Choose exactly one: Retry, Skip, or Abort. The answer is committed through the ordinary ask report path.`,
     );

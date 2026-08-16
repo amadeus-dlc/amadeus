@@ -4,7 +4,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 import { AMADEUS_CONFIG_REGISTRY } from "../../packages/framework/core/tools/amadeus-config.ts";
 
 const ROOT = join(import.meta.dir, "..", "..");
@@ -31,6 +31,33 @@ const LEGACY_TOKENS = [
   "FindingFileOutcome",
   "parseFileCommand",
   "config.plugins",
+  // RFC-0001 ADR-8 (C7/FR-7): solo-election.trigger.mode was abolished (no
+  // replacement leaf — derived from Intent Autonomy Mode) and the consent-axis
+  // keys were renamed .mode -> .consent. amadeus-config.ts itself is exempt
+  // (legacyViolations skips it) because it must still name the OLD spellings
+  // in its LEGACY_KEY_REPLACEMENTS / LEGACY_PATH_REPLACEMENTS diagnostics.
+  "solo-election.trigger.mode",
+  "intent-mirror.github.issue.mode",
+  "finding.github.issue.creation.mode",
+] as const;
+
+// Files that must still be able to NAME an old spelling verbatim — either to
+// explain a fail-closed diagnostic (amadeus-config.ts, the layered-config
+// docs it feeds) or because they are process/method prose owned by a
+// different unit-of-work.md unit (U12 docs-norms: stage-protocol.md, the
+// memory layers, and the election SKILL) whose sync is that unit's FR-14
+// follow-up, not this unit's (config-visibility / U7)'s to resolve.
+const LEGACY_TOKEN_EXEMPT_SUFFIXES = [
+  "tools/amadeus-config.ts",
+  "docs/guide/21-layered-config.md",
+  "docs/guide/21-layered-config.ja.md",
+  "docs/reference/19-layered-config.md",
+  "docs/reference/19-layered-config.ja.md",
+  "amadeus-common/conductor.md",
+  "amadeus-common/protocols/stage-protocol.md",
+  "skills/amadeus-election/SKILL.md",
+  "memory/team.md",
+  "memory/project.md",
 ] as const;
 
 function files(root: string): string[] {
@@ -42,7 +69,10 @@ function files(root: string): string[] {
 }
 
 function legacyViolations(path: string): string[] {
-  if (path.endsWith("tools/amadeus-config.ts")) return [];
+  // join() yields "\"-separated paths on Windows; the exempt suffixes are
+  // written with "/", so normalize before matching.
+  const slashed = path.split(sep).join("/");
+  if (LEGACY_TOKEN_EXEMPT_SUFFIXES.some((suffix) => slashed.endsWith(suffix))) return [];
   const contents = readFileSync(path, "utf-8");
   return LEGACY_TOKENS.filter((token) => contents.includes(token)).map(
     (token) => `${relative(ROOT, path)}: ${token}`,

@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 632,
+    "total": 633,
     "enumeratedByClass": {
-      "function": 353,
+      "function": 354,
       "audit": 98,
       "scope": 15,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 187,
+      "function": 188,
       "audit": 48,
       "scope": 15,
       "stage": 8,
@@ -3071,6 +3071,18 @@
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:nonInteractiveMarker",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t3131-nonInteractiveMarker.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",

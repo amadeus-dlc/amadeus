@@ -279,7 +279,7 @@ export function createProjectFixture(options: FixtureOptions = {}) {
     JSON.stringify({
       "intent-mirror": {
         github: {
-          issue: { mode: options.mode ?? "auto" },
+          issue: { consent: options.mode ?? "auto" },
           project: {
             targets: (options.boards ?? [BOARD_A]).map((board) => ({
               project: canonical(board),

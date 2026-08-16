@@ -31,13 +31,12 @@ writes.
 {
   "intent-mirror": {
     "github": {
-      "issue": { "mode": "prompt" },
+      "issue": { "consent": "prompt" },
       "project": { "targets": [] }
     }
   },
-  "solo-election": { "trigger": { "mode": "manual" } },
   "finding": {
-    "github": { "issue": { "creation": { "mode": "prompt" } } }
+    "github": { "issue": { "creation": { "consent": "prompt" } } }
   },
   "swarm": { "unit": { "concurrency": { "limit": 4 } } },
   "plugin": {
@@ -50,18 +49,25 @@ writes.
 
 | Path | Values and default | Layers |
 |------|--------------------|--------|
-| `intent-mirror.github.issue.mode` | `off \| prompt \| auto`; `prompt` | Project, Space, Intent |
+| `intent-mirror.github.issue.consent` | `off \| prompt \| auto`; `prompt` | Project, Space, Intent |
 | `intent-mirror.github.project.targets` | target array; `[]` | Project, Space, Intent |
-| `solo-election.trigger.mode` | `manual \| auto`; `manual` | Project, Space, Intent |
-| `finding.github.issue.creation.mode` | `off \| prompt \| auto`; `prompt` | Project, Space, Intent |
+| `finding.github.issue.creation.consent` | `off \| prompt \| auto`; `prompt` | Project, Space, Intent |
 | `swarm.unit.concurrency.limit` | integer `1..4`; `4` | Project, Space, Intent |
 | `plugin.activation.names` | sorted unique plugin-name array; `[]` | Project only |
 | `plugin.scope-bindings` | plugin-to-stage-to-unique-scope-array map; `{}` | Project only |
 | `plugin.settings` | plugin-to-setting-key map of string, number or boolean values; `{}` | Project, Space, Intent |
 | `subagent.dispatch.enforced-models` | non-empty unique model-name array; `["opus","sonnet"]` | Project, Space, Intent |
 
-Unknown paths and legacy flat keys are errors. Legacy-key diagnostics identify
-the structured replacement; the resolver does not migrate or alias them.
+There is no `solo-election.trigger.mode` leaf (RFC-0001 ADR-8). The solo-election
+auto-trigger is `deriveSoloElectionTrigger(mode)` — a pure function of the active
+Intent's Autonomy Mode (`none` -> `"manual"`, `semi`/`full` -> `"auto"`), not a
+config value.
+
+Unknown paths and legacy flat keys are errors. A *renamed* legacy key's
+diagnostic (the consent-axis keys above, `.mode` -> `.consent`) identifies the
+structured replacement; the *abolished* `solo-election.trigger.mode` key's
+diagnostic explains it is derived from Intent Autonomy Mode instead, without
+naming a replacement path. The resolver does not migrate or alias either case.
 `observability` remains delegated to its existing resolver and is tolerated at
 the root without becoming part of this registry.
 
@@ -80,8 +86,10 @@ order because activation is a set.
 ## CLI integrations
 
 - Automatic elections use `open --trigger auto`; manual opens use
-  `--trigger manual` (the default). When the resolved mode is `manual`, an
-  automatic request returns
+  `--trigger manual` (the default). When `deriveSoloElectionTrigger(mode)`
+  derives `"manual"` (no active Intent projection also derives `"manual"`, the
+  same conservative default the retired config leaf carried), an automatic
+  request returns
   `{"opened":null,"reason":"solo-election-manual-trigger-required"}`.
 - Finding creation uses the `create-github-issue` subcommand. The resolved
   mode gates GitHub access before readiness checks or mutation.

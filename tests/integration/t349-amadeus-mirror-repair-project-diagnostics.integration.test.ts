@@ -317,7 +317,7 @@ function fixture(options: FixtureOptions = {}) {
     JSON.stringify({
       "intent-mirror": {
         github: {
-          issue: { mode: "auto" },
+          issue: { consent: "auto" },
           project: {
             targets: (options.boards ?? [{ project: BOARD_A }]).map(
               (board) => ({

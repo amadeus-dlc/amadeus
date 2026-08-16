@@ -531,7 +531,7 @@ describe("workflow-completion checkpoint", () => {
     writeFileSync(join(recordDir, "amadeus-state.md"), completionState({ prepared: true }));
     writeFileSync(
       join(pd, "amadeus", "config.json"),
-      `${JSON.stringify({ "intent-mirror": { github: { issue: { mode: "off" } } } }, null, 2)}\n`,
+      `${JSON.stringify({ "intent-mirror": { github: { issue: { consent: "off" } } } }, null, 2)}\n`,
     );
     const decision = preparationDecision(
       preparationContext({

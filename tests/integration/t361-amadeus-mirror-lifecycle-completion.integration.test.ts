@@ -1034,7 +1034,7 @@ describe("t346 prompt Project face", () => {
       JSON.stringify({
         "intent-mirror": {
           github: {
-            issue: { mode: "prompt" },
+            issue: { consent: "prompt" },
             project: {
               targets: [
                 { project: canonical(BOARD_A), "phase-field": "Lifecycle" },

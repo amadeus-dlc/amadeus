@@ -6338,7 +6338,7 @@ function evaluatePreparedWorkflowCompletion(
       reason: `Prepared workflow completion cannot resolve mirror configuration: ${details}`,
     });
   }
-  if (config.config.intentMirror.github.issue.mode === "off") {
+  if (config.config.intentMirror.github.issue.consent === "off") {
     return guardNotApplicable("the Intent mirror is off");
   }
   const entries = readIntentRegistry(pd, space).filter((entry) =>

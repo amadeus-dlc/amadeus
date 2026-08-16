@@ -11,9 +11,12 @@
 // unit + integration only: the integration test that proves these preconditions
 // hold has to reach the same seeder the e2e uses, or the two drift apart.
 
-import { cpSync, mkdirSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { REPO_ROOT } from "./fixtures.ts";
+import { applyProductionAutonomyMode } from "../../packages/framework/core/tools/amadeus-intent-autonomy-production.ts";
+import { mintHumanPresence } from "../../packages/framework/core/tools/amadeus-presence-reservation.ts";
+import { resetOtelPerProject } from "./otel-reset.ts";
 
 export const CODEX_DIST = join(REPO_ROOT, "dist", "codex");
 
@@ -63,12 +66,34 @@ export function seedAutoSoloS13Project(proj: string): void {
     join(proj, RECORD_REL, "amadeus-state.md"),
     [
       "# AI-DLC State Tracking",
+      "",
+      "## Current Status",
       `- **Current Stage**: ${STAGE_SLUG}`,
       "- **Scope**: feature",
+      "- **Construction Autonomy Mode**: unset",
       "",
     ].join("\n"),
     "utf-8",
   );
+
+  // RFC-0001 ADR-8: the solo auto-election trigger is DERIVED from the
+  // declared Intent Autonomy Mode (deriveSoloElectionTrigger: "semi"/"full" ->
+  // "auto"), not read from config any more. Mode is audit-sourced (event
+  // replay, not a bare state-file field read), so it must be declared through
+  // the real production API to produce a projection readProductionAutonomy
+  // Projection actually observes — the same mechanism production code path
+  // uses, not a hand-written field.
+  resetOtelPerProject();
+  mintHumanPresence({
+    projectDir: proj,
+    capability: { kind: "unavailable", reason: "s13 fixture seeder" },
+  });
+  const applied = applyProductionAutonomyMode({
+    projectDir: proj,
+    stateContent: readFileSync(join(proj, RECORD_REL, "amadeus-state.md"), "utf-8"),
+    mode: "semi",
+  });
+  if (!applied.ok) throw new Error(`s13 fixture semi declaration failed: ${applied.error}`);
 
   // memory_path is project-relative: surface joins it onto the project dir.
   writeFileSync(
@@ -104,13 +129,6 @@ export function seedAutoSoloS13Project(proj: string): void {
       "## Open questions",
       "",
     ].join("\n"),
-    "utf-8",
-  );
-
-  // Solo auto-election is opt-in; this is the layered config the §13 hook reads.
-  writeFileSync(
-    join(proj, "amadeus", "config.json"),
-    `${JSON.stringify({ "solo-election": { trigger: { mode: "auto" } } }, null, 2)}\n`,
     "utf-8",
   );
 

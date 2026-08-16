@@ -5249,6 +5249,18 @@ export function autonomySegment(stateContent: string): string {
   return AUTONOMY_SEGMENT_MODES.some((known) => known === mode) ? mode : "";
 }
 
+// RFC-0001 C8 / FR-8: the statusline's non-interactive marker, appended
+// directly after the `@<mode>` segment. Pure by the same design as
+// autonomySegment above — the hook (spawn-only, no importable seam) reads the
+// interactivity FACT (resolveSessionInteractivity, an I/O read) and hands the
+// boolean here for the display DECISION, so this function itself never
+// touches the filesystem. Shown only when there IS a mode segment, matching
+// business-logic-model.md's "the marker rides on the @<mode> segment" design
+// — no independent marker when the mode itself is unknown.
+export function nonInteractiveMarker(interactive: boolean): string {
+  return interactive ? "" : "!";
+}
+
 // --- Autonomy mode ---
 //
 // The state-file field that distinguishes autonomous Construction (swarm/Bolt)

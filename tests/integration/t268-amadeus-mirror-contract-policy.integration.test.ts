@@ -62,7 +62,7 @@ describe("t268 one-way C0->C1->C2 flow", () => {
   test("a resolved lifecycle mode drives a policy decision", () => {
     const root = project();
     writeConfig(globalPath(root), {
-      "intent-mirror": { github: { issue: { mode: "auto" } } },
+      "intent-mirror": { github: { issue: { consent: "auto" } } },
     });
     const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("resolved");
@@ -74,7 +74,7 @@ describe("t268 one-way C0->C1->C2 flow", () => {
     );
     const decision = decideMirrorAction({
       kind: "lifecycle",
-      mode: outcome.config.intentMirror.github.issue.mode,
+      mode: outcome.config.intentMirror.github.issue.consent,
       event,
       state: {
         revision: 1,
@@ -93,7 +93,7 @@ describe("t268 filesystem security", () => {
   test("a symlink escaping the workspace root is a read failure", () => {
     const root = project();
     const outside = join(root, "outside.json");
-    writeFileSync(outside, JSON.stringify({ "intent-mirror": { github: { issue: { mode: "auto" } } } }), "utf-8");
+    writeFileSync(outside, JSON.stringify({ "intent-mirror": { github: { issue: { consent: "auto" } } } }), "utf-8");
     mkdirSync(dirname(globalPath(root)), { recursive: true });
     symlinkSync(outside, globalPath(root));
     const outcome = resolveAmadeusConfig(root, INTENT);
@@ -108,7 +108,7 @@ describe("t268 filesystem security", () => {
   test("a config file above the size limit is a read failure", () => {
     const root = project();
     mkdirSync(dirname(globalPath(root)), { recursive: true });
-    const oversize = `{"intent-mirror":{"github":{"issue":{"mode":"auto"}}}}${" ".repeat(1024 * 1024 + 16)}`;
+    const oversize = `{"intent-mirror":{"github":{"issue":{"consent":"auto"}}}}${" ".repeat(1024 * 1024 + 16)}`;
     writeFileSync(globalPath(root), oversize, "utf-8");
     const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("invalid");
@@ -121,7 +121,7 @@ describe("t268 filesystem security", () => {
 
   test.skipIf(isRoot)("an unreadable config file is a read failure", () => {
     const root = project();
-    writeConfig(globalPath(root), { "intent-mirror": { github: { issue: { mode: "auto" } } } });
+    writeConfig(globalPath(root), { "intent-mirror": { github: { issue: { consent: "auto" } } } });
     chmodSync(globalPath(root), 0o000);
     const outcome = resolveAmadeusConfig(root, INTENT);
     expect(outcome.kind).toBe("invalid");
@@ -172,6 +172,10 @@ describe("t268 dependency purity", () => {
       "./amadeus-plugin-settings.ts",
       "./amadeus-mirror-project-contract.ts",
       "./amadeus-mirror-types.ts",
+      // RFC-0001 ADR-8: deriveSoloElectionTrigger's parameter type. Type-only
+      // (`import type`) — no runtime dependency, and amadeus-intent-autonomy.ts
+      // does not import back from here, so the purity direction is preserved.
+      "./amadeus-intent-autonomy.ts",
     ]);
     expect(imports).not.toContain("./amadeus-mirror-policy.ts");
   });

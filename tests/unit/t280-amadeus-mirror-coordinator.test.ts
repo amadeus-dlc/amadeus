@@ -113,13 +113,12 @@ function input(
         config: {
           intentMirror: {
             github: {
-              issue: { mode },
+              issue: { consent: mode },
               project: { targets: [] },
             },
           },
-          soloElection: { trigger: { mode: "manual" } },
           finding: {
-            github: { issue: { creation: { mode: "prompt" } } },
+            github: { issue: { creation: { consent: "prompt" } } },
           },
           swarm: { unit: { concurrency: { limit: 4 } } },
           plugin: { activation: { names: [] }, scopeBindings: {}, settings: {} },
@@ -207,7 +206,7 @@ describe("t280 mode routing", () => {
               kind: "invalid-value",
               layer: "space",
               path: "/project/amadeus/config.json",
-              key: "intent-mirror.github.issue.mode",
+              key: "intent-mirror.github.issue.consent",
               actualType: "boolean",
               expected: "off | prompt | auto",
             },
@@ -233,7 +232,7 @@ describe("t280 mode routing", () => {
               kind: "read-failure",
               layer: "project",
               path: "/project/amadeus/config.json",
-              key: "intent-mirror.github.issue.mode",
+              key: "intent-mirror.github.issue.consent",
               summary: "permission denied",
               expected: "readable configuration",
             },
