@@ -234,6 +234,62 @@ describe("t1241 the three terminals are distinct on resume (R-13, R-16)", () => 
     expect(dispatch.error.reason).toBe("not-suspendable");
     expect(dispatch.error.detail).toContain("SOMETHING_ELSE");
   });
+
+  // R-16 — the ledger names the transaction but its entered event carries no
+  // cause. The identifiers alone would render SOMETHING, and a partial
+  // re-presentation is a different ruling from the one the run stopped on.
+  test("a waiting record whose entered event carries no cause refuses", () => {
+    const waiting = enteredWaiting();
+    const stripped = waiting.transactions.map((transaction) => ({
+      ...transaction,
+      events: transaction.events.filter((event) => event.type !== "WORKFLOW_WAITING_ENTERED"),
+    }));
+    const dispatch = resumeInterruption({
+      parked: false,
+      parkedAtStage: null,
+      envelope: waiting.envelope,
+      transactions: stripped,
+    });
+    expect(dispatch.ok).toBe(false);
+    if (dispatch.ok) return;
+    expect(dispatch.error.reason).toBe("not-suspendable");
+    expect(dispatch.error.detail).toContain("carries no cause");
+  });
+
+  // R-16 — a human-re-entry stop reason that travelled as an envelope (not the
+  // bare park marker) still dispatches to park, reading the recorded stage and
+  // degrading to "" when the record names none.
+  test("a human-reentry envelope dispatches to park with the recorded stage", () => {
+    const envelope = envelopeFor("USER_PARKED", {
+      kind: "human-unpark",
+      identity: autonomyStableId("terminal-fixture-unpark", ["USER_PARKED"]),
+      status: "pending",
+      evidenceFingerprint: null,
+    });
+    const named = resumeInterruption({
+      parked: false,
+      parkedAtStage: "code-generation",
+      envelope,
+      transactions: [],
+    });
+    if (!named.ok || named.value.kind !== "park") throw new Error("expected a park dispatch");
+    expect(named.value.stage).toBe("code-generation");
+    const unnamed = resumeInterruption({ parked: false, parkedAtStage: null, envelope, transactions: [] });
+    if (!unnamed.ok || unnamed.value.kind !== "park") throw new Error("expected a park dispatch");
+    expect(unnamed.value.stage).toBe("");
+  });
+
+  // R-18 — a bare park marker that names no stage is an unreadable record,
+  // refused rather than resumed as a stage-less park.
+  test("a park marker that names no stage refuses", () => {
+    for (const stage of [null, "", "   "]) {
+      const dispatch = resumeInterruption({ parked: true, parkedAtStage: stage, envelope: null, transactions: [] });
+      expect(dispatch.ok).toBe(false);
+      if (dispatch.ok) return;
+      expect(dispatch.error.reason).toBe("not-suspendable");
+      expect(dispatch.error.detail).toContain("names no stage");
+    }
+  });
 });
 
 describe("t1241 waiting is engine-issued (R-6)", () => {
