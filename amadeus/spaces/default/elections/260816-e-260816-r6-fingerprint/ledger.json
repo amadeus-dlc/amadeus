@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "ballots": [
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260816-R6-FINGERPRINT",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-r6-placement",
+          "choiceInternalNo": 1,
+          "goa": 2,
+          "reservation": "是正Issueは、コード配置の当否だけでなく code-summary.md:87-88 の『逸脱: none』申告が同文書 :16 の記述と自己矛盾している事実(虚偽の準拠申告)を独立の論点として明記すること。加えて unit-of-work.md:24 の ADR-11 申し送り文言(basisFingerprintをcode-generationで算出すること)と、business-rules.md R-6 / domain-entities.md:96 の『意図的にモデル化しないもの』除外(unit全体スコープ)との間の緊張関係を是正Issue内で明示的に裁定し、(a) 算出実装を本unit外へ移設するか、(b) 現状維持を追認してR-6・domain-entities.mdの文言を改定するかのいずれかを選挙/レビューで確定すること。どちらの結論でも code-summary.md の申し送り記述は実測と一致する形に訂正する。",
+          "rationale": "R-6(business-rules.md:22-23)はFDレビュー済み(security-design.md:14-19 が READY 判定でR-6を明示照合)であり、検証基準は『本unitのソースに fingerprint 算出の実装が存在しないこと』と明記。domain-entities.md:96 は『basisFingerprintの正規化アルゴリズム』を『意図的にモデル化しないもの』節(93-101行)に置くが、同節の他項目(対話/非対話判定→U2、waiting/park→U3、専権判定→U5)はすべて他unitへの委譲であり、unit内の別ファイルへの再配置ではない。したがって『本unit』はU1全体(amadeus-intent-autonomy.ts / -production.ts を含む owned files 全体、unit-of-work.md:7)を指すと読むのが構造上自然で、B案の『representation module限定』読みは同節の他項目パターンと整合しない。決定的なのは、code-summary.md:16 が recommendationBasisFingerprint を本unitの amadeus-intent-autonomy.ts 実装として明記しながら、同文書 :87-88 の申し送り節は『逸脱: none』『本unitのソースに実装せず…構造検査のみで担保』と述べており、同一文書内で事実が矛盾している点。amadeus-recommendation.ts:8-10 のコメントは実装者が意図的にrepresentation/derivationを分割したことを示すが、これはteam.md P3『承認済み意図からの逸脱は…その場で実装せず選挙/エスカレーションで裁定を得てから続行する』の手続きを経ておらず、無申告逸脱はレビューで必ず差し戻す(P3)という既定則に反する。coding上の合理性の有無にかかわらず、承認済みFDと矛盾する実装を無申告かつ虚偽の準拠申告付きでマージしたことは是正Issue起票に値する。"
+        }
+      ],
+      "submittedAt": "2026-08-16T10:42:00Z",
+      "receivedAt": "2026-08-16T11:28:09Z"
+    },
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260816-R6-FINGERPRINT",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-r6-placement",
+          "choiceInternalNo": 2,
+          "goa": 2,
+          "reservation": "code-summary.md:87 の『逸脱: none』は、R-6 自身が定める検証(『本 unit のソースに fingerprint 算出の実装が存在しないことの文書・構造検査』)を満たす形で記録されていない。是正として、code-summary.md へ (1) 『本 unit』が C1(amadeus-recommendation.ts、表現のみ)を指し、C2(梯子・ゲート実配線、amadeus-intent-autonomy.ts/-production.ts)は ADR-11 が明示的に code-generation へ申し送った算出の実現先であるという解釈根拠を decisions.md:62 / unit-of-work.md:7,24 / business-logic-model.md:3 / domain-entities.md:93-96 への参照とともに追記し、(2) amadeus-recommendation.ts に createHash/autonomyDigest の import・呼出が存在しないことの grep 実測(構造検査)を追記すること。この record 是正が入るまでは B 判定の実装上の正しさは成立するが、record の申告としては不完全である。",
+          "rationale": "4本の独立した上流成果物が一致して『本 unit』をC1(表現のみのvocabulary module)に限定する読みを支持する: (1) decisions.md:62 のADR-11 Decision文『C4のbasisFingerprintの算出法…はcode-generationへの明示入力として申し送る』— 申し送り先は『ユニット』ではなく『ステージ』。(2) unit-of-work.md:7がU1のowned filesにamadeus-intent-autonomy.ts/-production.ts(導出各段)を明示的に含め、:24で同じADR-11の算出仕様(空白・順序の自明摂動で変わらない正規化)をU1自身のcode-generationへの指示として繰り返す。(3) business-logic-model.md:3『対応設計: C1(amadeus-recommendation.ts新設)+C2(梯子・ゲートの実配線)』— U1はC1とC2の両方を含み、C2はintent-autonomy.ts/-production.ts側。(4) domain-entities.md:93-96『意図的にモデル化しないもの』が『導出ロジック本体…C1は表現のみを持つ』『basisFingerprintの正規化アルゴリズム: ADR-11の申し送り事項。型はフィールドを運ぶだけ』と明記し、制約をC1に限定。実装側の確認: amadeus-recommendation.ts:1-10のコード comment『This module owns the representation, never the derivation…the canonical-form digest belongs to the derivation stages』はこの設計意図と完全に一致し、grep実測でcreateHash/autonomyDigestのimport・使用は皆無(SHA256.test()による書式検証のみ、:58/:110)。amadeus-intent-autonomy.ts:985-1011のrecommendationBasisFingerprintはADR-11の仕様(NFC正規化・trim・空白圧縮・重複排除+sort、reindent攻撃への言及コメント)をそのまま実装しており、これはFDが計画した『C2側での算出』そのものである。したがって設計逸脱ではなく設計意図の実現と判断する。"
+        }
+      ],
+      "submittedAt": "2026-08-16T09:00:00Z",
+      "receivedAt": "2026-08-16T11:28:30Z"
+    }
+  ]
+}

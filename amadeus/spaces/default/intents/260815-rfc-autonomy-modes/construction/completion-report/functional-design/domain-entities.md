@@ -4,6 +4,13 @@
 
 ```ts
 // component-methods.md C9 のシグネチャをそのまま採用(署名は refine しない)
+// 〔事後注記 2026-08-16: この pin は同一ブロック内の SummaryBuildError 型と
+// 不変条件「生成失敗は SummaryBuildError を経て警告フィールドへ」と両立不能
+// (素の SummaryDoc 戻り値にエラー経路がない)で、かつ本文書が命じる
+// listProductionAutoDecisions 消費は projectDir を必須とする — 起草時の
+// 自己矛盾。実装署名 (pd, recordDir) + Result 化は E-260816-C9-SIGNATURE
+// 1-1 tie のユーザー裁定 B(強制適応の追認)で確定。詳細は
+// code-generation/code-summary.md 申し送り節〕
 buildAutoDecisionSummary(recordDir: string): SummaryDoc;
 
 interface SummaryDoc {

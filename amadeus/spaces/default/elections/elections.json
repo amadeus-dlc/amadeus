@@ -1678,5 +1678,17 @@
     "dirName": "260815-e-260816-r21-presence-by",
     "createdAt": "2026-08-15T20:13:53Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-260816-R6-FINGERPRINT",
+    "dirName": "260816-e-260816-r6-fingerprint",
+    "createdAt": "2026-08-16T11:22:33Z",
+    "status": "partial"
+  },
+  {
+    "electionId": "E-260816-C9-SIGNATURE",
+    "dirName": "260816-e-260816-c9-signature",
+    "createdAt": "2026-08-16T11:52:47Z",
+    "status": "partial"
   }
 ]

@@ -42,7 +42,7 @@ type RecommendationBasis = {
 
 unique がどの梯子段の根拠で決まったかを保持する。`source` の 4 値は既存 `DecisionBasisKind`(`amadeus-intent-autonomy.ts:766-773` — `mode-semi` / `grant-gate` / `confirmed-policy` / `norm` / `history` / `solo-election` / `agent-recommendation`)の **裁定根拠としての側面** への写像であり、置換ではない。`confirmed-policy` と `history` はどちらも「過去の裁定」であるため `prior-ruling` へ、`mode-semi` / `grant-gate` は根拠ではなく権限であるため source には現れない(ゲート導出器は `source: "norm"` を使う)。
 
-**不変条件**: `fingerprint` は SHA-256 形式(既存 `SHA256` 述語と同一)。**算出規則は本 unit の外**(ADR-11 の code-generation 申し送り)。
+**不変条件**: `fingerprint` は SHA-256 形式(既存 `SHA256` 述語と同一)。**算出規則は本 unit の外**(ADR-11 の code-generation 申し送り)。〔事後注記 2026-08-16: 「本 unit」は C1 語彙モジュール(amadeus-recommendation.ts)を指すと確定 — E-260816-R6-FINGERPRINT 1-1 tie のユーザー裁定 B。導出段 C2 での算出実装は設計意図の実現。詳細は code-generation/code-summary.md 申し送り節〕
 
 ### `RulingPresentation`
 

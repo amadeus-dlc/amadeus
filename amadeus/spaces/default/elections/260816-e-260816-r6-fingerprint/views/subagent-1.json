@@ -1,0 +1,22 @@
+{
+  "electionId": "E-260816-R6-FINGERPRINT",
+  "voter": "subagent-1",
+  "questions": [
+    {
+      "questionId": "q-r6-placement",
+      "text": "unit recommendation-core(intent 260815-rfc-autonomy-modes、PR #3122 マージ済み squash 56af74d10)の §12a レビューが BLOCKER を検出した。裁定対象: ADR-11 の正規形 digest 関数 recommendationBasisFingerprint が packages/framework/core/tools/amadeus-intent-autonomy.ts:1004 に実装され(正規形の組み立て + autonomyDigest 呼出。消費者は amadeus-intent-autonomy-production.ts:862)、これが FD の R-6 制約に違反する設計逸脱か、設計意図の実現かを判定せよ。一次証拠(全て本セッションで実測・逐語): (1) business-rules.md:22-23 R-6「`RecommendationBasis.fingerprint` は本 unit では不透明な SHA-256 文字列として扱い、算出規則を本 unit に置かない。正規化規則は code-generation への申し送り入力である。検証: 本 unit のソースに fingerprint 算出の実装が存在しないことの文書・構造検査(型定義と検証述語のみ)」 (2) domain-entities.md:45「算出規則は本 unit の外(ADR-11 の code-generation 申し送り)」 (3) security-design.md:6「basis.fingerprint は不透明 SHA-256(算出は下流)— 本 unit は書式検証のみ」 (4) unit-of-work.md:7 の U1 owned files は「新規 amadeus-recommendation.ts、amadeus-bolt.ts(decide-question 区画)、amadeus-intent-autonomy.ts / -production.ts(導出各段)」を含む (5) code-summary.md:16 は同関数を本 unit の追加として列挙し、:87 は「逸脱: none」と申告(構造検査エビデンスなし)。解釈の対立点: 「本 unit(のソース)」を owned files 全体(=amadeus-intent-autonomy.ts を含む→violation)と読むか、recommendation 語彙モジュール(新規 amadeus-recommendation.ts)に限定し「導出各段」(intent-autonomy/production)を R-6 の言う『下流』と読むか(→実現)。R-6 自身が「正規化規則は code-generation への申し送り入力」と述べており、CG 時にどこかへ算出が実装されることは FD が予定していた。いずれの選択でも record(code-summary)の是正(構造検査の明記または逸脱の申告)は必要であり、問うのはコード配置の妥当性と record 是正の形である。",
+      "ordered": [
+        {
+          "internalNo": 2,
+          "label": "B: 設計意図の実現(逸脱なし)— R-6 の『本 unit』は recommendation 語彙モジュール(RecommendationBasis 型を定義する面)を指し、owned files の『導出各段』(intent-autonomy/production)は R-6 の言う『下流』に当たる。record 是正のみ: code-summary へ解釈の根拠と構造検査(amadeus-recommendation.ts に算出実装が存在しないことの grep 実測)を追記する",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 1,
+          "label": "A: R-6 違反(設計逸脱)— 算出実装は unit-owned source 外へ移設すべき。是正 Issue を起票し、record には『無申告逸脱を検出、是正待ち』と記録する。コードは是正 Issue の裁定まで現状維持(マージ済みのため revert しない)",
+          "displayNo": 2
+        }
+      ]
+    }
+  ]
+}

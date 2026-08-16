@@ -20,3 +20,19 @@
 - swarm batch 4(config-visibility / presence-closure)。
 - referee: `42f99aa32 integrate bolt-config-visibility (batch 4)` で `swarm-int-rfc0001` へ収束。base `57f40d5d5`(batch3統合断面)。
 - worktree: `.amadeus/worktrees/bolt-config-visibility`、branch `bolt-config-visibility`、HEAD `b962c2712`。
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-16T12:29:15Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+U7 config-visibility artifacts trace fully to C7/C8+FR-7/FR-8, no compat alias, FD-leaf vs unit-of-work ownership conflict is announced and resolved; only minor evidentiary/TDD-rigor gaps found.
+
+### Findings
+
+- FOLLOW-UP | code-summary.md:33-35 | header states "pre-existing失敗3件" but only 2 distinct failure classes are enumerated beneath it (t265-engine-boundary.integration.test.ts cluster; t265-engine-boundary.test.ts final-report case) — the count and the enumeration disagree, and no aggregating command/run is cited for the '3件' figure, which conflicts with the team norm that measured counts must be reproducible from a stated command/ref (numbers-from-command-output-only).
+- FOLLOW-UP | code-generation-plan.md:15 | Step 4 (owned-consumer edits in amadeus-election.ts / amadeus-orchestrate.ts, a genuine behavior change from independently-configurable trigger.mode to mode-derived value) substitutes `bun run typecheck` for a failing behavioral test as the TDD Red gate, justified only as "既存テストが実行時経路をカバー済みのため" — this does not name one of the four narrow TDD-exception categories (org/team mandate: TDD is default for any behavior change, exceptions limited to docs-only / behavior-invariant refactor / mechanical projection sync / discarded spike). If the intent is 'behavior-invariant refactoring', the plan should say so explicitly rather than leaning on a compile-error surrogate for Red.
+- NIT | business-rules.md:45-49 (R-8) and domain-entities.md:38-40 | Both FD leaf docs still assert amadeus-election.ts/amadeus-orchestrate.ts are out-of-scope for this unit; the actual ownership (unit-of-work.md, post-review) and delivered code-summary.md:51 correctly override this and self-report the staleness, but the FD leaf docs themselves were never patched — worth a housekeeping follow-up so future readers of business-rules.md/domain-entities.md alone aren't misled.

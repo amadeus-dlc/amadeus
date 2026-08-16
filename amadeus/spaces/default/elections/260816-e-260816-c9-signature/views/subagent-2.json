@@ -1,0 +1,22 @@
+{
+  "electionId": "E-260816-C9-SIGNATURE",
+  "voter": "subagent-2",
+  "questions": [
+    {
+      "questionId": "q-c9-signature",
+      "text": "unit completion-report(U8、intent 260815-rfc-autonomy-modes、PR #3128 マージ済み)の §12a レビューが BLOCKER を検出した。裁定対象: FD の domain-entities.md:5-7 は「component-methods.md C9 のシグネチャをそのまま採用(署名は refine しない)」と注記して `buildAutoDecisionSummary(recordDir: string): SummaryDoc` を pin するが、実装(packages/framework/core/tools/amadeus-completion-report.ts:116-119)は `buildAutoDecisionSummary(pd: string, recordDir: string): {ok:true, summary: SummaryDoc} | {ok:false, error: SummaryBuildError}` — 引数追加と Result 化の二重の署名変更であり、code-summary.md は無申告(逸脱開示は builder-notes 欠落のみ)。実装側の自己注記(同ファイル :111-115、逐語): 「`pd` is threaded alongside recordDir because listProductionAutoDecisions resolves the review target against the workspace's intents.json (space + intent registry), which recordDir alone cannot reconstruct — the audit-row half of the summary needs only recordDir, the listProductionAutoDecisions half needs the project root too」。構造事実(実測): summary の review-state 集計半分は listProductionAutoDecisions({projectDir, intent, ...}) を必須とし(:103)、これは workspace root の intents.json を読む。recordDir(<pd>/amadeus/spaces/<space>/intents/<dir>)から pd をパス遡上で導出することは可能だが、codebase の慣行は projectDir 明示渡しで、遡上導出の前例はない。Result 化は construction guardrail「エラーは呼び出し元へ伝播させるかログに記録 — サイレント失敗は許容しない」(list API 失敗の伝播)に整合する。裁定: この署名変更は (1) FD pin の違反として是正(pin どおりの署名へ戻す)を要するか、(2) 実装時に発見された設計と実装現実の矛盾への強制適応として追認し record 是正(開示 + 根拠)のみとするか。",
+      "ordered": [
+        {
+          "internalNo": 1,
+          "label": "A: pin 違反 — 是正 Issue を起票し、署名を pin どおり (recordDir) へ戻す方式(pd のパス遡上導出 or 呼出構造の変更)を裁定する。record には無申告逸脱として記録",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 2,
+          "label": "B: 強制適応の追認 — pin の意図は『署名の gold-plating 禁止』であり、FD 時点で不可視だった構造制約(intents.json 解決に project root 必須)への最小適応は設計矛盾の正当な解消。record 是正のみ(code-summary へ逸脱の開示・実装注記と同じ根拠・R-4/R-6/R-7 の traceability 補記)",
+          "displayNo": 2
+        }
+      ]
+    }
+  ]
+}
