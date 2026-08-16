@@ -159,7 +159,7 @@
       "coveredBy": [
         {
           "file": "tests/integration/t-merge-provenance-record.integration.test.ts",
-          "mechanism": "none"
+          "mechanism": "cli"
         }
       ],
       "status": "covered"
