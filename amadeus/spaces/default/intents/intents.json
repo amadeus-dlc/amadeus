@@ -1,1289 +1,1296 @@
 [
-  {
-    "uuid": "019f3868-a0a6-763c-b2f9-777cc00610b3",
-    "slug": "amadeus-grilling",
-    "dirName": "260706-amadeus-grilling",
-    "scope": "grilling-integration",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f38fd-517c-7ef6-9627-1e4288fd76e5",
-    "slug": "installer-impl",
-    "dirName": "260706-installer-impl",
-    "scope": "feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f3b18-24ee-7e7f-93bd-647d343a4f16",
-    "slug": "layout-normalization",
-    "dirName": "260707-layout-normalization",
-    "scope": "workspace-layout-normalization",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f3f86-f543-7ef6-bf37-350678da58e3",
-    "slug": "installer-distribution",
-    "dirName": "260708-installer-distribution",
-    "scope": "installer-distribution",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f45fc-6fce-7194-a414-1ef902fde564",
-    "slug": "bug-zero-batch",
-    "dirName": "260709-bug-zero-batch",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f45d0-4646-7c84-b627-e8f0bdba656c",
-    "slug": "canonical-settings",
-    "dirName": "260709-canonical-settings",
-    "scope": "feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f48c4-c619-700b-8d3a-d5fca154d3cd",
-    "slug": "dynamic-test-size",
-    "dirName": "260709-dynamic-test-size",
-    "scope": "refactor",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f45ae-c0c9-7277-bc22-e322efec6972",
-    "slug": "framework-repair-batch",
-    "dirName": "260709-framework-repair-batch",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f46b2-60d7-777e-84d1-13754b4ef5aa",
-    "slug": "gate-mechanics",
-    "dirName": "260709-gate-mechanics",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f46cc-d639-7b7e-8db3-4a5f10229292",
-    "slug": "integrity-batch",
-    "dirName": "260709-integrity-batch",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f46ac-7bdb-7a8e-a99f-da2232df246e",
-    "slug": "packaging-repair-batch",
-    "dirName": "260709-packaging-repair-batch",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f473b-762f-7dfb-ac29-2436cc4e13d0",
-    "slug": "pbt-small-band",
-    "dirName": "260709-pbt-small-band",
-    "scope": "refactor",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f4738-d9b4-73d8-b7dc-3f7b1a23a34e",
-    "slug": "t92-worktree-hermeticity",
-    "dirName": "260709-t92-worktree-hermeticity",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f4b5e-682b-7c9b-8362-0535f6f2a2d6",
-    "slug": "bughunt-fix-batch",
-    "dirName": "260710-bughunt-fix-batch",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f49fc-0afa-7349-9d19-c6165c291d6c",
-    "slug": "codecov-project-gate",
-    "dirName": "260710-codecov-project-gate",
-    "scope": "refactor",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f49f8-25a2-73d9-bb58-0b24da2ef07f",
-    "slug": "delegate-answer-consume",
-    "dirName": "260710-delegate-answer-consume",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f49b1-9e7e-7949-86ef-a78cab92c49b",
-    "slug": "kiro-stale-hooks",
-    "dirName": "260710-kiro-stale-hooks",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f4a2b-c911-74a6-8fe9-afb4c17d342e",
-    "slug": "mint-presence-vectors",
-    "dirName": "260710-mint-presence-vectors",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f4d86-78cd-7391-9230-dc3888dc5c34",
-    "slug": "p3-cleanup-batch4",
-    "dirName": "260710-p3-cleanup-batch4",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f49f8-bff3-79ac-8d0f-c602c02057e9",
-    "slug": "source-unreferenced-chec",
-    "dirName": "260710-source-unreferenced-chec",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f519d-2d17-7d5c-ba0c-6548a60af66f",
-    "slug": "docs-repair-batch9",
-    "dirName": "260711-docs-repair-batch9",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f5085-0b7f-7ba1-bf1e-ccf71cbf9599",
-    "slug": "p2-repair-batch7",
-    "dirName": "260711-p2-repair-batch7",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f5081-f2aa-733f-b775-06083afca037",
-    "slug": "p3-repair-batch6",
-    "dirName": "260711-p3-repair-batch6",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f549d-27db-7284-b7fe-b74314933049",
-    "slug": "metrics-observation",
-    "dirName": "260712-metrics-observation",
-    "scope": "feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f59b8-d24b-7000-8027-f432910b27cc",
-    "slug": "swarm-driver-migration",
-    "dirName": "260713-swarm-driver-migration",
-    "scope": "amadeus",
-    "status": "archived"
-  },
-  {
-    "uuid": "019f6683-1975-7b70-8cef-f7150c0854b0",
-    "slug": "opencode-cursor-harness",
-    "dirName": "260715-opencode-cursor-harness",
-    "scope": "amadeus",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f67d8-e34c-748e-89b4-366df8a37ee4",
-    "slug": "parser-checkbox-fixes",
-    "dirName": "260715-parser-checkbox-fixes",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f681e-d027-7de2-a05a-14f5774cd812",
-    "slug": "state-set-failclosed",
-    "dirName": "260715-state-set-failclosed",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f6cbe-0ac0-78da-a7e8-6d133d91b90d",
-    "slug": "answer-preemption-guard",
-    "dirName": "260716-answer-preemption-guard",
-    "scope": "amadeus",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f6903-7112-7a2d-9604-0d2a95af3a03",
-    "slug": "codecov-fallback",
-    "dirName": "260716-codecov-fallback",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f6afc-4e99-7e11-9c55-c45754e4c7a3",
-    "slug": "covci-flake",
-    "dirName": "260716-covci-flake",
-    "scope": "bugfix",
-    "status": "complete",
-    "docsOnly": {
-      "evidence": "GATE_APPROVED requirements-analysis 2026-07-16T13:13Z — FR-3 の pre-declared 分岐(非再現→選挙)が承認済み要件であり、E-1085-FIX 裁定 A(発動条件付き保留)によりリポジトリ変更ゼロが裁定どおりの成果。調査成果は Issue #1085 コメントと record 成果物に完結、scratch ハーネスは repo 外"
-    }
-  },
-  {
-    "uuid": "019f6a48-573d-7c43-94d2-2584a4554b21",
-    "slug": "diary-ensure-exists",
-    "dirName": "260716-diary-ensure-exists",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f6b58-9bfe-7e61-a235-80190714c30d",
-    "slug": "eoc1-gate-check",
-    "dirName": "260716-eoc1-gate-check",
-    "scope": "feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f6845-f1ee-751a-b4df-7dec51d84976",
-    "slug": "github-issue-912-tests-s",
-    "dirName": "260716-github-issue-912-tests-s",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f6a9a-4c13-7b77-9066-a880a4c694fc",
-    "slug": "installer-new-harnesses",
-    "dirName": "260716-installer-new-harnesses",
-    "scope": "feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f6cbc-ef47-78b8-a164-ec045c7f2ad6",
-    "slug": "metrics-timeseries-repor",
-    "dirName": "260716-metrics-timeseries-repor",
-    "scope": "amadeus",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f6cbf-50b8-75b4-a09f-cf3cb9fbe31f",
-    "slug": "opencode-plugins-hooks",
-    "dirName": "260716-opencode-plugins-hooks",
-    "scope": "amadeus",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f686d-f509-7ac8-a009-68b433b6c629",
-    "slug": "s13-label-clarity",
-    "dirName": "260716-s13-label-clarity",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f69f5-4556-7004-8fab-9801266c36df",
-    "slug": "t224-size-large",
-    "dirName": "260716-t224-size-large",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f6844-d2e4-7606-8cda-1d29a90a048a",
-    "slug": "team-up-herdr-only",
-    "dirName": "260716-team-up-herdr-only",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f6a43-36bb-7e9e-bc47-a112ae376363",
-    "slug": "teamup-resume-size-drift",
-    "dirName": "260716-teamup-resume-size-drift",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f6eb1-49b3-7787-b6dc-a078323be69e",
-    "slug": "answer-tag-vocab-fix",
-    "dirName": "260717-answer-tag-vocab-fix",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f712a-ed49-7a85-8dba-26efb88df0db",
-    "slug": "codekb-diff3-cleanup",
-    "dirName": "260717-codekb-diff3-cleanup",
-    "scope": "amadeus",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f6d77-2af6-789b-8eda-1cc89285a745",
-    "slug": "metrics-retention-gc",
-    "dirName": "260717-metrics-retention-gc",
-    "scope": "amadeus",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f7003-e273-7c0b-85ba-0a6c99d0aa9d",
-    "slug": "mirror-issue-tool",
-    "dirName": "260717-mirror-issue-tool",
-    "scope": "amadeus",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f6eb1-b802-7152-a6b8-f848a5af16b0",
-    "slug": "presence-teammsg-marker",
-    "dirName": "260717-presence-teammsg-marker",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f6da4-5cfb-79cf-8b66-e05088e7df92",
-    "slug": "standing-delegation-gran",
-    "dirName": "260717-standing-delegation-gran",
-    "scope": "amadeus",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f7124-0601-7cc9-8504-749fc2d6c16d",
-    "slug": "state-mirror-fixes",
-    "dirName": "260717-state-mirror-fixes",
-    "scope": "amadeus",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f717b-e718-7619-9d23-7f1c18cdf992",
-    "slug": "swarm-dispatch-enum",
-    "dirName": "260717-swarm-dispatch-enum",
-    "scope": "amadeus",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f6d94-b376-7126-a771-628a38be6946",
-    "slug": "teamup-msg-backend",
-    "dirName": "260717-teamup-msg-backend",
-    "scope": "amadeus",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f6f9b-e2f0-789e-85b3-ea7fb9c52ec3",
-    "slug": "test-pyramid-rebuild",
-    "dirName": "260717-test-pyramid-rebuild",
-    "scope": "amadeus",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f7782-2ba8-78a4-b257-f69342978c2e",
-    "slug": "election-ts-foundation",
-    "dirName": "260718-election-ts-foundation",
-    "scope": "amadeus",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f728e-549e-7aab-b02c-90ab691ba300",
-    "slug": "hooks-config-conflict",
-    "dirName": "260718-hooks-config-conflict",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f7ae6-9d2a-719f-a990-daa24ed37df3",
-    "slug": "ballot-failclosed-amend",
-    "dirName": "260719-ballot-failclosed-amend",
-    "scope": "amadeus",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f7ac8-1612-7278-afdb-129ccaeedf93",
-    "slug": "cursor-complete-clear",
-    "dirName": "260719-cursor-complete-clear",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f7ac8-5be3-7e8a-a8c7-28d89977796e",
-    "slug": "goa-multiseg-ecode",
-    "dirName": "260719-goa-multiseg-ecode",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f7947-d5c8-7490-a9f8-49258c1cbe56",
-    "slug": "mirror-productization",
-    "dirName": "260719-mirror-productization",
-    "scope": "amadeus",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f7c7f-3732-734b-abee-f303e3c719c4",
-    "slug": "tally-choice-ruling",
-    "dirName": "260719-tally-choice-ruling",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f7cdb-6fab-7ff1-94d7-d59c0f7653e3",
-    "slug": "ballot-received-at",
-    "dirName": "260720-ballot-received-at",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f7d6c-c0d1-7a7f-b17c-1fce8048fcd1",
-    "slug": "diary-autogen-guard",
-    "dirName": "260720-diary-autogen-guard",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f7dcf-fc6c-74e1-8f50-12368857b855",
-    "slug": "formal-verif-experiment",
-    "dirName": "260720-formal-verif-experiment",
-    "scope": "amadeus",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f7d6c-e782-7647-95e7-a2960623e717",
-    "slug": "hold-choice-resolution",
-    "dirName": "260720-hold-choice-resolution",
-    "scope": "amadeus",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f7ddf-6856-70ae-a130-e3317a3262f3",
-    "slug": "upstream-sync-230",
-    "dirName": "260720-upstream-sync-230",
-    "scope": "amadeus",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f8263-3d92-79d5-be23-96e8990d0f97",
-    "slug": "teamup-safety-wait",
-    "dirName": "260721-teamup-safety-wait",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f8bee-9cff-7bf2-925a-3060d1aec008",
-    "slug": "election-core-promotion",
-    "dirName": "260722-election-core-promotion",
-    "scope": "amadeus",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f8a5b-eab2-74ef-b700-a8aebc250814",
-    "slug": "space-record-catalog",
-    "dirName": "260722-space-record-catalog",
-    "scope": "amadeus",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f88dc-baad-7920-b357-68bbfdc41e13",
-    "slug": "state-intent-selector",
-    "dirName": "260722-state-intent-selector",
-    "scope": "chore",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f8bd9-2dd4-7e33-ba12-175f4914b2a8",
-    "slug": "teamup-prompt-race",
-    "dirName": "260722-teamup-prompt-race",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f8969-c622-72e9-8df9-c3172571921a",
-    "slug": "tla-plugin",
-    "dirName": "260722-tla-plugin",
-    "scope": "amadeus",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f8d0c-62e4-7495-93a2-37cf947d5c9d",
-    "slug": "archived-status-guard",
-    "dirName": "260723-archived-status-guard",
-    "scope": "amadeus",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f8cdc-25b5-7145-a0f8-a692ddc5c172",
-    "slug": "doctor-inprocess-seam",
-    "dirName": "260723-doctor-inprocess-seam",
-    "scope": "refactor",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f8c95-8d9e-776e-9a55-5bb3d3a75225",
-    "slug": "fixture-shard-pollution",
-    "dirName": "260723-fixture-shard-pollution",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f8c95-8dd9-751a-9aca-8b01f6dc2ecc",
-    "slug": "marker-heading-exemption",
-    "dirName": "260723-marker-heading-exemption",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f8c79-9080-7d78-915a-f0129006edb4",
-    "slug": "t241-ci-residency",
-    "dirName": "260723-t241-ci-residency",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f93c5-0c24-7967-86a6-b46427e118a0",
-    "slug": "harness-provenance",
-    "dirName": "260724-harness-provenance",
-    "scope": "feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f91d4-246a-728c-b078-ccdae13385ee",
-    "slug": "mirror-auto-modes",
-    "dirName": "260724-mirror-auto-modes",
-    "scope": "amadeus-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f9380-63f6-7d69-8831-9c8855482117",
-    "slug": "watcher-timeout-fix",
-    "dirName": "260724-watcher-timeout-fix",
-    "scope": "bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f97bf-a393-759e-8194-7029d5864fe8",
-    "slug": "kimi-harness",
-    "dirName": "260725-kimi-harness",
-    "scope": "amadeus-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f96e1-9991-7459-9ff8-5986a8da2a11",
-    "slug": "mirror-review-fixes",
-    "dirName": "260725-mirror-review-fixes",
-    "scope": "amadeus-bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f96b6-5ddc-719b-86d7-c638183999da",
-    "slug": "solo-standing-grants",
-    "dirName": "260725-solo-standing-grants",
-    "scope": "amadeus-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f9856-8a40-7666-927b-adb40ac7646f",
-    "slug": "teamup-attach-latency",
-    "dirName": "260725-teamup-attach-latency",
-    "scope": "amadeus-bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f98dc-bfde-7c93-8d2a-57f7f5d57f58",
-    "slug": "teamup-launch-hardening",
-    "dirName": "260725-teamup-launch-hardening",
-    "scope": "amadeus-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f9b7f-7a9e-70df-95ae-9bff89799bcf",
-    "slug": "worktree-ref-fixes",
-    "dirName": "260725-worktree-ref-fixes",
-    "scope": "amadeus-bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fa0d8-df5f-7446-b1fa-87f93d26e906",
-    "slug": "answer-manual-binding",
-    "dirName": "260726-answer-manual-binding",
-    "scope": "amadeus-bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f9d46-a826-701f-b3d3-cf1e49507cba",
-    "slug": "crossreviewed-bug-batch",
-    "dirName": "260726-crossreviewed-bug-batch",
-    "scope": "amadeus-bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f9cdc-fb89-7a6d-85e5-ff3ed639378e",
-    "slug": "grant-scope-gate",
-    "dirName": "260726-grant-scope-gate",
-    "scope": "amadeus-bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f9cc2-67f1-7554-9455-dd8421cbd742",
-    "slug": "metrics-visualization",
-    "dirName": "260726-metrics-visualization",
-    "scope": "amadeus-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f9e2d-3e2d-7ffe-bef2-d8c4e39c5082",
-    "slug": "mirror-envelope-lf",
-    "dirName": "260726-mirror-envelope-lf",
-    "scope": "amadeus-bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f9ec8-7a7c-75cf-bfbb-85cdf16d3430",
-    "slug": "mirror-state-split",
-    "dirName": "260726-mirror-state-split",
-    "scope": "amadeus-bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f9eae-1f81-77ee-947e-1034ae8c20f8",
-    "slug": "plugin-host-delivery",
-    "dirName": "260726-plugin-host-delivery",
-    "scope": "amadeus-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f9e5f-bbb1-7c6e-b432-867eb8a9a560",
-    "slug": "promote-self-hooks",
-    "dirName": "260726-promote-self-hooks",
-    "scope": "amadeus-bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019f9f6a-654e-7ffc-b87c-073df7cce477",
-    "slug": "t258-p95-flake",
-    "dirName": "260726-t258-p95-flake",
-    "scope": "amadeus-bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fa23d-cbbb-70b2-9849-65deff83d20d",
-    "slug": "docs-impl-sync",
-    "dirName": "260727-docs-impl-sync",
-    "scope": "amadeus-document",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fa33d-4b05-7359-8e5a-c0bb3ab600fd",
-    "slug": "e2e-plugin-conformance",
-    "dirName": "260727-e2e-plugin-conformance",
-    "scope": "amadeus-bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fa27a-2c73-7630-b7b0-f67b538b6970",
-    "slug": "install-doc-mismatch",
-    "dirName": "260727-install-doc-mismatch",
-    "scope": "amadeus-bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fa1ab-6548-700c-ace2-9675d4e3c20d",
-    "slug": "mirror-project-status",
-    "dirName": "260727-mirror-project-status",
-    "scope": "amadeus-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fa40f-b7f3-7ebf-89fe-dc6ec70c2b89",
-    "slug": "plugin-verb-skills",
-    "dirName": "260727-plugin-verb-skills",
-    "scope": "amadeus-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fa398-b858-70d8-9fd9-ebc678ddb8c4",
-    "slug": "solo-election",
-    "dirName": "260727-solo-election",
-    "scope": "amadeus-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fa8f7-d4bb-779a-8412-19d41ce07462",
-    "slug": "slop-cleanup",
-    "dirName": "260728-slop-cleanup",
-    "scope": "amadeus-bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019faca9-5a73-7de1-a97b-c2a85f22349a",
-    "slug": "open-bug-batch",
-    "dirName": "260729-open-bug-batch",
-    "scope": "amadeus-bugfix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fac61-7082-7d61-8577-26e5cf2a817a",
-    "slug": "otel-upstream",
-    "dirName": "260729-otel-upstream",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fb39f-6bc0-7944-a4c6-153a150895a8",
-    "slug": "open-bug-batch-2",
-    "dirName": "260730-open-bug-batch-2",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fb55c-3116-7019-a7be-53c3fdae228a",
-    "slug": "open-bug-batch-3",
-    "dirName": "260730-open-bug-batch-3",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fb2fa-b9b3-76f6-8836-ef7ccb61c408",
-    "slug": "skill-reviewer-fixes",
-    "dirName": "260730-skill-reviewer-fixes",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fb74a-d1fc-7897-a6c1-0f8c6567be59",
-    "slug": "formal-verif-value-chain",
-    "dirName": "260731-formal-verif-value-chain",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fb69c-0dca-7eae-86b4-68be91ed9242",
-    "slug": "open-bug-batch-4",
-    "dirName": "260731-open-bug-batch-4",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fb763-d042-7b51-91bb-d0456efc5eb4",
-    "slug": "perf-ci-separation",
-    "dirName": "260731-perf-ci-separation",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fbc46-79b7-7500-8f62-e6a59c508d17",
-    "slug": "cg-plan-guard",
-    "dirName": "260801-cg-plan-guard",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fbd30-86e1-72a5-8c98-2db7743bb7da",
-    "slug": "kimi-bootstrap-deadlock",
-    "dirName": "260801-kimi-bootstrap-deadlock",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fbae3-a898-7dcd-b1df-420bf3945066",
-    "slug": "open-bug-batch-5",
-    "dirName": "260801-open-bug-batch-5",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fbabd-a1a8-70d3-8839-4e97c36a480f",
-    "slug": "otel-meta-schema",
-    "dirName": "260801-otel-meta-schema",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fbfa8-d1a8-7ce7-841d-5391f747be8e",
-    "slug": "silent-drop-gate",
-    "dirName": "260801-silent-drop-gate",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fbdd0-90e0-7592-8ea5-ae67b35716a2",
-    "slug": "tla-multi-model",
-    "dirName": "260801-tla-multi-model",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fc02a-c982-7839-ada8-4493deb88435",
-    "slug": "codex-duration-bounds",
-    "dirName": "260802-codex-duration-bounds",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fc3b0-a3d5-784d-912a-77a82a01b21d",
-    "slug": "nfr-kind-pruning",
-    "dirName": "260802-nfr-kind-pruning",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fc11b-7db5-7be6-a79d-9bfae4ca9385",
-    "slug": "plugin-optin-parity",
-    "dirName": "260802-plugin-optin-parity",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fc49f-46eb-79c2-89f4-818d7c094873",
-    "slug": "plugin-projection-parity",
-    "dirName": "260802-plugin-projection-parity",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fc33a-5108-7892-af73-77827a83fd10",
-    "slug": "record-roundtrip-pbt",
-    "dirName": "260802-record-roundtrip-pbt",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fc39a-516f-7b89-9fc6-97a1052a7855",
-    "slug": "registry-drift-guard",
-    "dirName": "260802-registry-drift-guard",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fc1f2-b04a-7136-bed4-4ae17f4f276a",
-    "slug": "scope-grid-face-sync",
-    "dirName": "260802-scope-grid-face-sync",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fc36b-87d2-716a-8457-76dc3372a2c0",
-    "slug": "source-only-dist",
-    "dirName": "260802-source-only-dist",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fc1b1-e84e-7a5a-a4cb-2b75b28d4c8a",
-    "slug": "vocab-canonical-consolid",
-    "dirName": "260802-vocab-canonical-consolid",
-    "scope": "self-document",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fc698-ba1f-7467-b6b6-57c4b5b50140",
-    "slug": "advisory-human-choice",
-    "dirName": "260803-advisory-human-choice",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fc681-e93b-7b3e-9224-0501ca9f782a",
-    "slug": "election-state-guard",
-    "dirName": "260803-election-state-guard",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fc6a6-d525-7ff7-951b-49f8eba49fa4",
-    "slug": "harness-live-e2e",
-    "dirName": "260803-harness-live-e2e",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fc5ac-f0bb-7a5f-8a64-c944b6f76ead",
-    "slug": "intent-autonomy",
-    "dirName": "260803-intent-autonomy",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fc68d-6fe4-7564-a95b-f2677daa1fb2",
-    "slug": "pi-harness",
-    "dirName": "260803-pi-harness",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fc782-d6de-7a7c-b704-bfe10d0be118",
-    "slug": "state-integrity",
-    "dirName": "260803-state-integrity",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fca5b-db81-7bf9-97e1-4de243cf62c4",
-    "slug": "evidence-revision-rebind",
-    "dirName": "260804-evidence-revision-rebind",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fcacc-48af-7c69-b0b1-b9da1583cd62",
-    "slug": "goal-reconciliation-guar",
-    "dirName": "260804-goal-reconciliation-guar",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fcbdf-d303-765e-b24a-33db12b4b828",
-    "slug": "live-e2e-phase2",
-    "dirName": "260804-live-e2e-phase2",
-    "scope": "self-feature",
-    "status": "in-flight"
-  },
-  {
-    "uuid": "019fcf2d-b6df-73b6-8ad6-c412d96059ad",
-    "slug": "phase-boundary-approval",
-    "dirName": "260804-phase-boundary-approval",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fccb7-8e76-7054-b227-8a42de94bba5",
-    "slug": "tla-authoring",
-    "dirName": "260804-tla-authoring",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fd1fe-7463-7d60-b780-b4d239953509",
-    "slug": "cross-harness-resume",
-    "dirName": "260805-cross-harness-resume",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fd067-5759-7053-bead-aff6ad5c1cac",
-    "slug": "pr-convergence-plugin",
-    "dirName": "260805-pr-convergence-plugin",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fd042-ac17-7e99-9eaa-3894237ab66b",
-    "slug": "semi-redefine-autonomy-f",
-    "dirName": "260805-semi-redefine-autonomy-f",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fd213-1e30-7528-a6f4-a47d2520a2a0",
-    "slug": "subagent-type-guard",
-    "dirName": "260805-subagent-type-guard",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fd097-c7b1-7ba2-80bd-12e04bfd2051",
-    "slug": "xrev-bug-batch",
-    "dirName": "260805-xrev-bug-batch",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fdbf9-9869-7d66-83e6-3b94c7f79cf0",
-    "slug": "autonomy-reachability",
-    "dirName": "260807-autonomy-reachability",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fda37-8c17-79ec-96b3-0db6823f0622",
-    "slug": "failclosed-recovery-path",
-    "dirName": "260807-failclosed-recovery-path",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fde33-123d-7db7-bae1-bc5440d53980",
-    "slug": "intent-2328-tests-e2e-au",
-    "dirName": "260807-intent-2328-tests-e2e-au",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fdba8-b44c-7dcd-8fa4-60b494ff9457",
-    "slug": "merged-pr-convergence",
-    "dirName": "260807-merged-pr-convergence",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fdba1-cd1a-7f5c-8c40-d2e8874194ed",
-    "slug": "projectdir-worktree-fix",
-    "dirName": "260807-projectdir-worktree-fix",
-    "scope": "self-fix",
-    "status": "complete",
-    "docsOnly": {
-      "evidence": "GATE_APPROVED requirements-analysis"
-    }
-  },
-  {
-    "uuid": "019fdbb3-b302-7cde-9b6b-ad1d864d99db",
-    "slug": "stage-perf-report",
-    "dirName": "260807-stage-perf-report",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fdc46-ecdb-74a6-b70a-d1a8f39c5e3e",
-    "slug": "subagent-start-pair",
-    "dirName": "260807-subagent-start-pair",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fdb7a-041e-7afe-aaa3-d74c8871365f",
-    "slug": "tla-specs-relocation",
-    "dirName": "260807-tla-specs-relocation",
-    "scope": "self-refactor",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fe5fc-00f2-7cb7-b6c7-aeb00cedb203",
-    "slug": "cg-attribution-stats",
-    "dirName": "260809-cg-attribution-stats",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fe8bb-cdc5-743f-ba13-53cc2f579805",
-    "slug": "report-done-kind-split",
-    "dirName": "260809-report-done-kind-split",
-    "scope": "self-fix",
-    "status": "in-flight"
-  },
-  {
-    "uuid": "019fe6e2-ced1-7307-9b4f-4d5ff49ed3f1",
-    "slug": "sensor-parseflags-failop",
-    "dirName": "260809-sensor-parseflags-failop",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fe504-4400-7358-b05a-e1b4bc09d2ab",
-    "slug": "stage-attribution",
-    "dirName": "260809-stage-attribution",
-    "scope": "self-feature",
-    "status": "in-flight"
-  },
-  {
-    "uuid": "019feacc-4b02-78ab-86d8-1425caeb18da",
-    "slug": "control-byte-gate",
-    "dirName": "260810-control-byte-gate",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fe9c1-1949-74d5-a30c-6b8073d6164e",
-    "slug": "grilling-frontier-resync",
-    "dirName": "260810-grilling-frontier-resync",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fea00-cb6c-78ca-9875-b4eebc8ed2ad",
-    "slug": "plugin-harness-dir-token",
-    "dirName": "260810-plugin-harness-dir-token",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019feb2a-1562-7a8a-9388-a4543a5d52a1",
-    "slug": "plugin-manifest-resoluti",
-    "dirName": "260810-plugin-manifest-resoluti",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019feab2-7563-7d45-b7ac-828621c7e1ab",
-    "slug": "plugin-prose-seed-guard",
-    "dirName": "260810-plugin-prose-seed-guard",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fec0c-9e96-7df8-b0e6-daa3682b857b",
-    "slug": "test-time-factor",
-    "dirName": "260810-test-time-factor",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fe910-38cc-7f1f-b5a5-2031459ca539",
-    "slug": "tla-applicability-wiring",
-    "dirName": "260810-tla-applicability-wiring",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019ff109-86d3-7bf0-a906-98e8be106ef7",
-    "slug": "allowlist-semantic-audit",
-    "dirName": "260811-allowlist-semantic-audit",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019ff124-287b-77ff-8667-8565a8b879fd",
-    "slug": "pr-convergence-gate",
-    "dirName": "260811-pr-convergence-gate",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019ff349-9d80-79ad-ae0b-ede0018cac73",
-    "slug": "tla-proof-receipt",
-    "dirName": "260812-tla-proof-receipt",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019ffb1a-d46b-7016-938d-5de854a84362",
-    "slug": "advisory-requestion-fix",
-    "dirName": "260813-advisory-requestion-fix",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019ffbce-7316-7c96-9bcc-8ae7a4714543",
-    "slug": "lifecycle-guard-runtime",
-    "dirName": "260813-lifecycle-guard-runtime",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019ffb66-d1c4-7d3c-9aa7-50e0f6966e57",
-    "slug": "remove-team-up",
-    "dirName": "260813-remove-team-up",
-    "scope": "self-fix",
-    "status": "in-flight"
-  },
-  {
-    "uuid": "019ffe33-9663-73f3-bcc6-70bd6fde1987",
-    "slug": "ambient-error-sink",
-    "dirName": "260814-ambient-error-sink",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fff1b-302d-7b27-8475-61ca61752ca8",
-    "slug": "autonomy-stop-fixes",
-    "dirName": "260814-autonomy-stop-fixes",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fff14-98a2-725c-9b20-99add2639251",
-    "slug": "copytree-guard-boundary",
-    "dirName": "260814-copytree-guard-boundary",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019ffa02-2d39-71f4-bd0c-e8dbe87244fa",
-    "slug": "election-multiq",
-    "dirName": "260813-election-multiq",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019ffee6-ed59-7748-85cb-7f578201362a",
-    "slug": "coverage-quick-norm",
-    "dirName": "260814-coverage-quick-norm",
-    "scope": "self-document",
-    "status": "in-flight"
-  },
-  {
-    "uuid": "019fff1a-ba9f-7173-abec-40c9e7a6d004",
-    "slug": "failopen-error-paths",
-    "dirName": "260814-failopen-error-paths",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019ffda6-2636-755d-8e85-1f83b1719c6a",
-    "slug": "fmc-macos-provider",
-    "dirName": "260814-fmc-macos-provider",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fffa6-bc7f-735f-8ed5-4e4cc4e3ce62",
-    "slug": "park-provenance",
-    "dirName": "260814-park-provenance",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fff1a-bae8-77b2-99a4-5f9e19d75d17",
-    "slug": "plugins-rename-drift",
-    "dirName": "260814-plugins-rename-drift",
-    "scope": "self-feature",
-    "status": "complete"
-  },
-  {
-    "uuid": "019ffda5-bc87-754d-92b6-ff1b7a50d9a4",
-    "slug": "t245-origin-fixture",
-    "dirName": "260814-t245-origin-fixture",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019ffda5-8b96-7498-a17d-f1766ea1ffd7",
-    "slug": "t528-ambient-isolation",
-    "dirName": "260814-t528-ambient-isolation",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019ffea5-c321-70cd-a824-ecd9f9240a60",
-    "slug": "t99-copytree-race",
-    "dirName": "260814-t99-copytree-race",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "019fff1a-becf-72aa-ae9f-6c87f8323fbc",
-    "slug": "unit-failure-autoelectio",
-    "dirName": "260814-unit-failure-autoelectio",
-    "scope": "self-fix",
-    "status": "in-flight"
-  },
-  {
-    "uuid": "01a00282-0af2-74e2-91d5-e30058ba5862",
-    "slug": "priority-bug-batch",
-    "dirName": "260814-priority-bug-batch",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "01a0028a-aefd-72b7-9e1b-53bb13e5f452",
-    "slug": "open-bug-batch-6",
-    "dirName": "260814-open-bug-batch-6",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "01a00368-5780-706f-ae7f-1445b9748390",
-    "slug": "priority-bug-batch-2",
-    "dirName": "260815-priority-bug-batch-2",
-    "scope": "self-fix",
-    "status": "in-flight"
-  },
-  {
-    "uuid": "01a00473-38f9-7786-804b-55615fb0c0b9",
-    "slug": "per-unit-outcome",
-    "dirName": "260815-per-unit-outcome",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "01a0054a-8333-75f0-8311-abe26cf8579e",
-    "slug": "stale-epoch-landed",
-    "dirName": "260815-stale-epoch-landed",
-    "scope": "self-fix",
-    "status": "complete"
-  },
-  {
-    "uuid": "01a00604-1c06-7df6-9683-56557b7af258",
-    "slug": "rfc-autonomy-modes",
-    "dirName": "260815-rfc-autonomy-modes",
-    "scope": "self-feature",
-    "status": "in-flight"
-  },
-  {
-    "uuid": "01a00368-5780-706f-ae7f-1445b9748390",
-    "slug": "priority-bug-batch-2",
-    "dirName": "260815-priority-bug-batch-2",
-    "scope": "self-fix",
-    "status": "complete"
+ {
+  "uuid": "019f3868-a0a6-763c-b2f9-777cc00610b3",
+  "slug": "amadeus-grilling",
+  "dirName": "260706-amadeus-grilling",
+  "scope": "grilling-integration",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f38fd-517c-7ef6-9627-1e4288fd76e5",
+  "slug": "installer-impl",
+  "dirName": "260706-installer-impl",
+  "scope": "feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f3b18-24ee-7e7f-93bd-647d343a4f16",
+  "slug": "layout-normalization",
+  "dirName": "260707-layout-normalization",
+  "scope": "workspace-layout-normalization",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f3f86-f543-7ef6-bf37-350678da58e3",
+  "slug": "installer-distribution",
+  "dirName": "260708-installer-distribution",
+  "scope": "installer-distribution",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f45fc-6fce-7194-a414-1ef902fde564",
+  "slug": "bug-zero-batch",
+  "dirName": "260709-bug-zero-batch",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f45d0-4646-7c84-b627-e8f0bdba656c",
+  "slug": "canonical-settings",
+  "dirName": "260709-canonical-settings",
+  "scope": "feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f48c4-c619-700b-8d3a-d5fca154d3cd",
+  "slug": "dynamic-test-size",
+  "dirName": "260709-dynamic-test-size",
+  "scope": "refactor",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f45ae-c0c9-7277-bc22-e322efec6972",
+  "slug": "framework-repair-batch",
+  "dirName": "260709-framework-repair-batch",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f46b2-60d7-777e-84d1-13754b4ef5aa",
+  "slug": "gate-mechanics",
+  "dirName": "260709-gate-mechanics",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f46cc-d639-7b7e-8db3-4a5f10229292",
+  "slug": "integrity-batch",
+  "dirName": "260709-integrity-batch",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f46ac-7bdb-7a8e-a99f-da2232df246e",
+  "slug": "packaging-repair-batch",
+  "dirName": "260709-packaging-repair-batch",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f473b-762f-7dfb-ac29-2436cc4e13d0",
+  "slug": "pbt-small-band",
+  "dirName": "260709-pbt-small-band",
+  "scope": "refactor",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f4738-d9b4-73d8-b7dc-3f7b1a23a34e",
+  "slug": "t92-worktree-hermeticity",
+  "dirName": "260709-t92-worktree-hermeticity",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f4b5e-682b-7c9b-8362-0535f6f2a2d6",
+  "slug": "bughunt-fix-batch",
+  "dirName": "260710-bughunt-fix-batch",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f49fc-0afa-7349-9d19-c6165c291d6c",
+  "slug": "codecov-project-gate",
+  "dirName": "260710-codecov-project-gate",
+  "scope": "refactor",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f49f8-25a2-73d9-bb58-0b24da2ef07f",
+  "slug": "delegate-answer-consume",
+  "dirName": "260710-delegate-answer-consume",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f49b1-9e7e-7949-86ef-a78cab92c49b",
+  "slug": "kiro-stale-hooks",
+  "dirName": "260710-kiro-stale-hooks",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f4a2b-c911-74a6-8fe9-afb4c17d342e",
+  "slug": "mint-presence-vectors",
+  "dirName": "260710-mint-presence-vectors",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f4d86-78cd-7391-9230-dc3888dc5c34",
+  "slug": "p3-cleanup-batch4",
+  "dirName": "260710-p3-cleanup-batch4",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f49f8-bff3-79ac-8d0f-c602c02057e9",
+  "slug": "source-unreferenced-chec",
+  "dirName": "260710-source-unreferenced-chec",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f519d-2d17-7d5c-ba0c-6548a60af66f",
+  "slug": "docs-repair-batch9",
+  "dirName": "260711-docs-repair-batch9",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f5085-0b7f-7ba1-bf1e-ccf71cbf9599",
+  "slug": "p2-repair-batch7",
+  "dirName": "260711-p2-repair-batch7",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f5081-f2aa-733f-b775-06083afca037",
+  "slug": "p3-repair-batch6",
+  "dirName": "260711-p3-repair-batch6",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f549d-27db-7284-b7fe-b74314933049",
+  "slug": "metrics-observation",
+  "dirName": "260712-metrics-observation",
+  "scope": "feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f59b8-d24b-7000-8027-f432910b27cc",
+  "slug": "swarm-driver-migration",
+  "dirName": "260713-swarm-driver-migration",
+  "scope": "amadeus",
+  "status": "archived"
+ },
+ {
+  "uuid": "019f6683-1975-7b70-8cef-f7150c0854b0",
+  "slug": "opencode-cursor-harness",
+  "dirName": "260715-opencode-cursor-harness",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f67d8-e34c-748e-89b4-366df8a37ee4",
+  "slug": "parser-checkbox-fixes",
+  "dirName": "260715-parser-checkbox-fixes",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f681e-d027-7de2-a05a-14f5774cd812",
+  "slug": "state-set-failclosed",
+  "dirName": "260715-state-set-failclosed",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f6cbe-0ac0-78da-a7e8-6d133d91b90d",
+  "slug": "answer-preemption-guard",
+  "dirName": "260716-answer-preemption-guard",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f6903-7112-7a2d-9604-0d2a95af3a03",
+  "slug": "codecov-fallback",
+  "dirName": "260716-codecov-fallback",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f6afc-4e99-7e11-9c55-c45754e4c7a3",
+  "slug": "covci-flake",
+  "dirName": "260716-covci-flake",
+  "scope": "bugfix",
+  "status": "complete",
+  "docsOnly": {
+   "evidence": "GATE_APPROVED requirements-analysis 2026-07-16T13:13Z — FR-3 の pre-declared 分岐(非再現→選挙)が承認済み要件であり、E-1085-FIX 裁定 A(発動条件付き保留)によりリポジトリ変更ゼロが裁定どおりの成果。調査成果は Issue #1085 コメントと record 成果物に完結、scratch ハーネスは repo 外"
   }
+ },
+ {
+  "uuid": "019f6a48-573d-7c43-94d2-2584a4554b21",
+  "slug": "diary-ensure-exists",
+  "dirName": "260716-diary-ensure-exists",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f6b58-9bfe-7e61-a235-80190714c30d",
+  "slug": "eoc1-gate-check",
+  "dirName": "260716-eoc1-gate-check",
+  "scope": "feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f6845-f1ee-751a-b4df-7dec51d84976",
+  "slug": "github-issue-912-tests-s",
+  "dirName": "260716-github-issue-912-tests-s",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f6a9a-4c13-7b77-9066-a880a4c694fc",
+  "slug": "installer-new-harnesses",
+  "dirName": "260716-installer-new-harnesses",
+  "scope": "feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f6cbc-ef47-78b8-a164-ec045c7f2ad6",
+  "slug": "metrics-timeseries-repor",
+  "dirName": "260716-metrics-timeseries-repor",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f6cbf-50b8-75b4-a09f-cf3cb9fbe31f",
+  "slug": "opencode-plugins-hooks",
+  "dirName": "260716-opencode-plugins-hooks",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f686d-f509-7ac8-a009-68b433b6c629",
+  "slug": "s13-label-clarity",
+  "dirName": "260716-s13-label-clarity",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f69f5-4556-7004-8fab-9801266c36df",
+  "slug": "t224-size-large",
+  "dirName": "260716-t224-size-large",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f6844-d2e4-7606-8cda-1d29a90a048a",
+  "slug": "team-up-herdr-only",
+  "dirName": "260716-team-up-herdr-only",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f6a43-36bb-7e9e-bc47-a112ae376363",
+  "slug": "teamup-resume-size-drift",
+  "dirName": "260716-teamup-resume-size-drift",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f6eb1-49b3-7787-b6dc-a078323be69e",
+  "slug": "answer-tag-vocab-fix",
+  "dirName": "260717-answer-tag-vocab-fix",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f712a-ed49-7a85-8dba-26efb88df0db",
+  "slug": "codekb-diff3-cleanup",
+  "dirName": "260717-codekb-diff3-cleanup",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f6d77-2af6-789b-8eda-1cc89285a745",
+  "slug": "metrics-retention-gc",
+  "dirName": "260717-metrics-retention-gc",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f7003-e273-7c0b-85ba-0a6c99d0aa9d",
+  "slug": "mirror-issue-tool",
+  "dirName": "260717-mirror-issue-tool",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f6eb1-b802-7152-a6b8-f848a5af16b0",
+  "slug": "presence-teammsg-marker",
+  "dirName": "260717-presence-teammsg-marker",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f6da4-5cfb-79cf-8b66-e05088e7df92",
+  "slug": "standing-delegation-gran",
+  "dirName": "260717-standing-delegation-gran",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f7124-0601-7cc9-8504-749fc2d6c16d",
+  "slug": "state-mirror-fixes",
+  "dirName": "260717-state-mirror-fixes",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f717b-e718-7619-9d23-7f1c18cdf992",
+  "slug": "swarm-dispatch-enum",
+  "dirName": "260717-swarm-dispatch-enum",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f6d94-b376-7126-a771-628a38be6946",
+  "slug": "teamup-msg-backend",
+  "dirName": "260717-teamup-msg-backend",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f6f9b-e2f0-789e-85b3-ea7fb9c52ec3",
+  "slug": "test-pyramid-rebuild",
+  "dirName": "260717-test-pyramid-rebuild",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f7782-2ba8-78a4-b257-f69342978c2e",
+  "slug": "election-ts-foundation",
+  "dirName": "260718-election-ts-foundation",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f728e-549e-7aab-b02c-90ab691ba300",
+  "slug": "hooks-config-conflict",
+  "dirName": "260718-hooks-config-conflict",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f7ae6-9d2a-719f-a990-daa24ed37df3",
+  "slug": "ballot-failclosed-amend",
+  "dirName": "260719-ballot-failclosed-amend",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f7ac8-1612-7278-afdb-129ccaeedf93",
+  "slug": "cursor-complete-clear",
+  "dirName": "260719-cursor-complete-clear",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f7ac8-5be3-7e8a-a8c7-28d89977796e",
+  "slug": "goa-multiseg-ecode",
+  "dirName": "260719-goa-multiseg-ecode",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f7947-d5c8-7490-a9f8-49258c1cbe56",
+  "slug": "mirror-productization",
+  "dirName": "260719-mirror-productization",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f7c7f-3732-734b-abee-f303e3c719c4",
+  "slug": "tally-choice-ruling",
+  "dirName": "260719-tally-choice-ruling",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f7cdb-6fab-7ff1-94d7-d59c0f7653e3",
+  "slug": "ballot-received-at",
+  "dirName": "260720-ballot-received-at",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f7d6c-c0d1-7a7f-b17c-1fce8048fcd1",
+  "slug": "diary-autogen-guard",
+  "dirName": "260720-diary-autogen-guard",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f7dcf-fc6c-74e1-8f50-12368857b855",
+  "slug": "formal-verif-experiment",
+  "dirName": "260720-formal-verif-experiment",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f7d6c-e782-7647-95e7-a2960623e717",
+  "slug": "hold-choice-resolution",
+  "dirName": "260720-hold-choice-resolution",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f7ddf-6856-70ae-a130-e3317a3262f3",
+  "slug": "upstream-sync-230",
+  "dirName": "260720-upstream-sync-230",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f8263-3d92-79d5-be23-96e8990d0f97",
+  "slug": "teamup-safety-wait",
+  "dirName": "260721-teamup-safety-wait",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f8bee-9cff-7bf2-925a-3060d1aec008",
+  "slug": "election-core-promotion",
+  "dirName": "260722-election-core-promotion",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f8a5b-eab2-74ef-b700-a8aebc250814",
+  "slug": "space-record-catalog",
+  "dirName": "260722-space-record-catalog",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f88dc-baad-7920-b357-68bbfdc41e13",
+  "slug": "state-intent-selector",
+  "dirName": "260722-state-intent-selector",
+  "scope": "chore",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f8bd9-2dd4-7e33-ba12-175f4914b2a8",
+  "slug": "teamup-prompt-race",
+  "dirName": "260722-teamup-prompt-race",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f8969-c622-72e9-8df9-c3172571921a",
+  "slug": "tla-plugin",
+  "dirName": "260722-tla-plugin",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f8d0c-62e4-7495-93a2-37cf947d5c9d",
+  "slug": "archived-status-guard",
+  "dirName": "260723-archived-status-guard",
+  "scope": "amadeus",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f8cdc-25b5-7145-a0f8-a692ddc5c172",
+  "slug": "doctor-inprocess-seam",
+  "dirName": "260723-doctor-inprocess-seam",
+  "scope": "refactor",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f8c95-8d9e-776e-9a55-5bb3d3a75225",
+  "slug": "fixture-shard-pollution",
+  "dirName": "260723-fixture-shard-pollution",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f8c95-8dd9-751a-9aca-8b01f6dc2ecc",
+  "slug": "marker-heading-exemption",
+  "dirName": "260723-marker-heading-exemption",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f8c79-9080-7d78-915a-f0129006edb4",
+  "slug": "t241-ci-residency",
+  "dirName": "260723-t241-ci-residency",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f93c5-0c24-7967-86a6-b46427e118a0",
+  "slug": "harness-provenance",
+  "dirName": "260724-harness-provenance",
+  "scope": "feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f91d4-246a-728c-b078-ccdae13385ee",
+  "slug": "mirror-auto-modes",
+  "dirName": "260724-mirror-auto-modes",
+  "scope": "amadeus-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f9380-63f6-7d69-8831-9c8855482117",
+  "slug": "watcher-timeout-fix",
+  "dirName": "260724-watcher-timeout-fix",
+  "scope": "bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f97bf-a393-759e-8194-7029d5864fe8",
+  "slug": "kimi-harness",
+  "dirName": "260725-kimi-harness",
+  "scope": "amadeus-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f96e1-9991-7459-9ff8-5986a8da2a11",
+  "slug": "mirror-review-fixes",
+  "dirName": "260725-mirror-review-fixes",
+  "scope": "amadeus-bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f96b6-5ddc-719b-86d7-c638183999da",
+  "slug": "solo-standing-grants",
+  "dirName": "260725-solo-standing-grants",
+  "scope": "amadeus-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f9856-8a40-7666-927b-adb40ac7646f",
+  "slug": "teamup-attach-latency",
+  "dirName": "260725-teamup-attach-latency",
+  "scope": "amadeus-bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f98dc-bfde-7c93-8d2a-57f7f5d57f58",
+  "slug": "teamup-launch-hardening",
+  "dirName": "260725-teamup-launch-hardening",
+  "scope": "amadeus-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f9b7f-7a9e-70df-95ae-9bff89799bcf",
+  "slug": "worktree-ref-fixes",
+  "dirName": "260725-worktree-ref-fixes",
+  "scope": "amadeus-bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fa0d8-df5f-7446-b1fa-87f93d26e906",
+  "slug": "answer-manual-binding",
+  "dirName": "260726-answer-manual-binding",
+  "scope": "amadeus-bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f9d46-a826-701f-b3d3-cf1e49507cba",
+  "slug": "crossreviewed-bug-batch",
+  "dirName": "260726-crossreviewed-bug-batch",
+  "scope": "amadeus-bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f9cdc-fb89-7a6d-85e5-ff3ed639378e",
+  "slug": "grant-scope-gate",
+  "dirName": "260726-grant-scope-gate",
+  "scope": "amadeus-bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f9cc2-67f1-7554-9455-dd8421cbd742",
+  "slug": "metrics-visualization",
+  "dirName": "260726-metrics-visualization",
+  "scope": "amadeus-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f9e2d-3e2d-7ffe-bef2-d8c4e39c5082",
+  "slug": "mirror-envelope-lf",
+  "dirName": "260726-mirror-envelope-lf",
+  "scope": "amadeus-bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f9ec8-7a7c-75cf-bfbb-85cdf16d3430",
+  "slug": "mirror-state-split",
+  "dirName": "260726-mirror-state-split",
+  "scope": "amadeus-bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f9eae-1f81-77ee-947e-1034ae8c20f8",
+  "slug": "plugin-host-delivery",
+  "dirName": "260726-plugin-host-delivery",
+  "scope": "amadeus-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f9e5f-bbb1-7c6e-b432-867eb8a9a560",
+  "slug": "promote-self-hooks",
+  "dirName": "260726-promote-self-hooks",
+  "scope": "amadeus-bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019f9f6a-654e-7ffc-b87c-073df7cce477",
+  "slug": "t258-p95-flake",
+  "dirName": "260726-t258-p95-flake",
+  "scope": "amadeus-bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fa23d-cbbb-70b2-9849-65deff83d20d",
+  "slug": "docs-impl-sync",
+  "dirName": "260727-docs-impl-sync",
+  "scope": "amadeus-document",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fa33d-4b05-7359-8e5a-c0bb3ab600fd",
+  "slug": "e2e-plugin-conformance",
+  "dirName": "260727-e2e-plugin-conformance",
+  "scope": "amadeus-bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fa27a-2c73-7630-b7b0-f67b538b6970",
+  "slug": "install-doc-mismatch",
+  "dirName": "260727-install-doc-mismatch",
+  "scope": "amadeus-bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fa1ab-6548-700c-ace2-9675d4e3c20d",
+  "slug": "mirror-project-status",
+  "dirName": "260727-mirror-project-status",
+  "scope": "amadeus-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fa40f-b7f3-7ebf-89fe-dc6ec70c2b89",
+  "slug": "plugin-verb-skills",
+  "dirName": "260727-plugin-verb-skills",
+  "scope": "amadeus-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fa398-b858-70d8-9fd9-ebc678ddb8c4",
+  "slug": "solo-election",
+  "dirName": "260727-solo-election",
+  "scope": "amadeus-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fa8f7-d4bb-779a-8412-19d41ce07462",
+  "slug": "slop-cleanup",
+  "dirName": "260728-slop-cleanup",
+  "scope": "amadeus-bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019faca9-5a73-7de1-a97b-c2a85f22349a",
+  "slug": "open-bug-batch",
+  "dirName": "260729-open-bug-batch",
+  "scope": "amadeus-bugfix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fac61-7082-7d61-8577-26e5cf2a817a",
+  "slug": "otel-upstream",
+  "dirName": "260729-otel-upstream",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fb39f-6bc0-7944-a4c6-153a150895a8",
+  "slug": "open-bug-batch-2",
+  "dirName": "260730-open-bug-batch-2",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fb55c-3116-7019-a7be-53c3fdae228a",
+  "slug": "open-bug-batch-3",
+  "dirName": "260730-open-bug-batch-3",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fb2fa-b9b3-76f6-8836-ef7ccb61c408",
+  "slug": "skill-reviewer-fixes",
+  "dirName": "260730-skill-reviewer-fixes",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fb74a-d1fc-7897-a6c1-0f8c6567be59",
+  "slug": "formal-verif-value-chain",
+  "dirName": "260731-formal-verif-value-chain",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fb69c-0dca-7eae-86b4-68be91ed9242",
+  "slug": "open-bug-batch-4",
+  "dirName": "260731-open-bug-batch-4",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fb763-d042-7b51-91bb-d0456efc5eb4",
+  "slug": "perf-ci-separation",
+  "dirName": "260731-perf-ci-separation",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fbc46-79b7-7500-8f62-e6a59c508d17",
+  "slug": "cg-plan-guard",
+  "dirName": "260801-cg-plan-guard",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fbd30-86e1-72a5-8c98-2db7743bb7da",
+  "slug": "kimi-bootstrap-deadlock",
+  "dirName": "260801-kimi-bootstrap-deadlock",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fbae3-a898-7dcd-b1df-420bf3945066",
+  "slug": "open-bug-batch-5",
+  "dirName": "260801-open-bug-batch-5",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fbabd-a1a8-70d3-8839-4e97c36a480f",
+  "slug": "otel-meta-schema",
+  "dirName": "260801-otel-meta-schema",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fbfa8-d1a8-7ce7-841d-5391f747be8e",
+  "slug": "silent-drop-gate",
+  "dirName": "260801-silent-drop-gate",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fbdd0-90e0-7592-8ea5-ae67b35716a2",
+  "slug": "tla-multi-model",
+  "dirName": "260801-tla-multi-model",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fc02a-c982-7839-ada8-4493deb88435",
+  "slug": "codex-duration-bounds",
+  "dirName": "260802-codex-duration-bounds",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fc3b0-a3d5-784d-912a-77a82a01b21d",
+  "slug": "nfr-kind-pruning",
+  "dirName": "260802-nfr-kind-pruning",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fc11b-7db5-7be6-a79d-9bfae4ca9385",
+  "slug": "plugin-optin-parity",
+  "dirName": "260802-plugin-optin-parity",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fc49f-46eb-79c2-89f4-818d7c094873",
+  "slug": "plugin-projection-parity",
+  "dirName": "260802-plugin-projection-parity",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fc33a-5108-7892-af73-77827a83fd10",
+  "slug": "record-roundtrip-pbt",
+  "dirName": "260802-record-roundtrip-pbt",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fc39a-516f-7b89-9fc6-97a1052a7855",
+  "slug": "registry-drift-guard",
+  "dirName": "260802-registry-drift-guard",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fc1f2-b04a-7136-bed4-4ae17f4f276a",
+  "slug": "scope-grid-face-sync",
+  "dirName": "260802-scope-grid-face-sync",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fc36b-87d2-716a-8457-76dc3372a2c0",
+  "slug": "source-only-dist",
+  "dirName": "260802-source-only-dist",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fc1b1-e84e-7a5a-a4cb-2b75b28d4c8a",
+  "slug": "vocab-canonical-consolid",
+  "dirName": "260802-vocab-canonical-consolid",
+  "scope": "self-document",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fc698-ba1f-7467-b6b6-57c4b5b50140",
+  "slug": "advisory-human-choice",
+  "dirName": "260803-advisory-human-choice",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fc681-e93b-7b3e-9224-0501ca9f782a",
+  "slug": "election-state-guard",
+  "dirName": "260803-election-state-guard",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fc6a6-d525-7ff7-951b-49f8eba49fa4",
+  "slug": "harness-live-e2e",
+  "dirName": "260803-harness-live-e2e",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fc5ac-f0bb-7a5f-8a64-c944b6f76ead",
+  "slug": "intent-autonomy",
+  "dirName": "260803-intent-autonomy",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fc68d-6fe4-7564-a95b-f2677daa1fb2",
+  "slug": "pi-harness",
+  "dirName": "260803-pi-harness",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fc782-d6de-7a7c-b704-bfe10d0be118",
+  "slug": "state-integrity",
+  "dirName": "260803-state-integrity",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fca5b-db81-7bf9-97e1-4de243cf62c4",
+  "slug": "evidence-revision-rebind",
+  "dirName": "260804-evidence-revision-rebind",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fcacc-48af-7c69-b0b1-b9da1583cd62",
+  "slug": "goal-reconciliation-guar",
+  "dirName": "260804-goal-reconciliation-guar",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fcbdf-d303-765e-b24a-33db12b4b828",
+  "slug": "live-e2e-phase2",
+  "dirName": "260804-live-e2e-phase2",
+  "scope": "self-feature",
+  "status": "in-flight"
+ },
+ {
+  "uuid": "019fcf2d-b6df-73b6-8ad6-c412d96059ad",
+  "slug": "phase-boundary-approval",
+  "dirName": "260804-phase-boundary-approval",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fccb7-8e76-7054-b227-8a42de94bba5",
+  "slug": "tla-authoring",
+  "dirName": "260804-tla-authoring",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fd1fe-7463-7d60-b780-b4d239953509",
+  "slug": "cross-harness-resume",
+  "dirName": "260805-cross-harness-resume",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fd067-5759-7053-bead-aff6ad5c1cac",
+  "slug": "pr-convergence-plugin",
+  "dirName": "260805-pr-convergence-plugin",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fd042-ac17-7e99-9eaa-3894237ab66b",
+  "slug": "semi-redefine-autonomy-f",
+  "dirName": "260805-semi-redefine-autonomy-f",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fd213-1e30-7528-a6f4-a47d2520a2a0",
+  "slug": "subagent-type-guard",
+  "dirName": "260805-subagent-type-guard",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fd097-c7b1-7ba2-80bd-12e04bfd2051",
+  "slug": "xrev-bug-batch",
+  "dirName": "260805-xrev-bug-batch",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fdbf9-9869-7d66-83e6-3b94c7f79cf0",
+  "slug": "autonomy-reachability",
+  "dirName": "260807-autonomy-reachability",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fda37-8c17-79ec-96b3-0db6823f0622",
+  "slug": "failclosed-recovery-path",
+  "dirName": "260807-failclosed-recovery-path",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fde33-123d-7db7-bae1-bc5440d53980",
+  "slug": "intent-2328-tests-e2e-au",
+  "dirName": "260807-intent-2328-tests-e2e-au",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fdba8-b44c-7dcd-8fa4-60b494ff9457",
+  "slug": "merged-pr-convergence",
+  "dirName": "260807-merged-pr-convergence",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fdba1-cd1a-7f5c-8c40-d2e8874194ed",
+  "slug": "projectdir-worktree-fix",
+  "dirName": "260807-projectdir-worktree-fix",
+  "scope": "self-fix",
+  "status": "complete",
+  "docsOnly": {
+   "evidence": "GATE_APPROVED requirements-analysis"
+  }
+ },
+ {
+  "uuid": "019fdbb3-b302-7cde-9b6b-ad1d864d99db",
+  "slug": "stage-perf-report",
+  "dirName": "260807-stage-perf-report",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fdc46-ecdb-74a6-b70a-d1a8f39c5e3e",
+  "slug": "subagent-start-pair",
+  "dirName": "260807-subagent-start-pair",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fdb7a-041e-7afe-aaa3-d74c8871365f",
+  "slug": "tla-specs-relocation",
+  "dirName": "260807-tla-specs-relocation",
+  "scope": "self-refactor",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fe5fc-00f2-7cb7-b6c7-aeb00cedb203",
+  "slug": "cg-attribution-stats",
+  "dirName": "260809-cg-attribution-stats",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fe8bb-cdc5-743f-ba13-53cc2f579805",
+  "slug": "report-done-kind-split",
+  "dirName": "260809-report-done-kind-split",
+  "scope": "self-fix",
+  "status": "in-flight"
+ },
+ {
+  "uuid": "019fe6e2-ced1-7307-9b4f-4d5ff49ed3f1",
+  "slug": "sensor-parseflags-failop",
+  "dirName": "260809-sensor-parseflags-failop",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fe504-4400-7358-b05a-e1b4bc09d2ab",
+  "slug": "stage-attribution",
+  "dirName": "260809-stage-attribution",
+  "scope": "self-feature",
+  "status": "in-flight"
+ },
+ {
+  "uuid": "019feacc-4b02-78ab-86d8-1425caeb18da",
+  "slug": "control-byte-gate",
+  "dirName": "260810-control-byte-gate",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fe9c1-1949-74d5-a30c-6b8073d6164e",
+  "slug": "grilling-frontier-resync",
+  "dirName": "260810-grilling-frontier-resync",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fea00-cb6c-78ca-9875-b4eebc8ed2ad",
+  "slug": "plugin-harness-dir-token",
+  "dirName": "260810-plugin-harness-dir-token",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019feb2a-1562-7a8a-9388-a4543a5d52a1",
+  "slug": "plugin-manifest-resoluti",
+  "dirName": "260810-plugin-manifest-resoluti",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019feab2-7563-7d45-b7ac-828621c7e1ab",
+  "slug": "plugin-prose-seed-guard",
+  "dirName": "260810-plugin-prose-seed-guard",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fec0c-9e96-7df8-b0e6-daa3682b857b",
+  "slug": "test-time-factor",
+  "dirName": "260810-test-time-factor",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fe910-38cc-7f1f-b5a5-2031459ca539",
+  "slug": "tla-applicability-wiring",
+  "dirName": "260810-tla-applicability-wiring",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019ff109-86d3-7bf0-a906-98e8be106ef7",
+  "slug": "allowlist-semantic-audit",
+  "dirName": "260811-allowlist-semantic-audit",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019ff124-287b-77ff-8667-8565a8b879fd",
+  "slug": "pr-convergence-gate",
+  "dirName": "260811-pr-convergence-gate",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019ff349-9d80-79ad-ae0b-ede0018cac73",
+  "slug": "tla-proof-receipt",
+  "dirName": "260812-tla-proof-receipt",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019ffb1a-d46b-7016-938d-5de854a84362",
+  "slug": "advisory-requestion-fix",
+  "dirName": "260813-advisory-requestion-fix",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019ffbce-7316-7c96-9bcc-8ae7a4714543",
+  "slug": "lifecycle-guard-runtime",
+  "dirName": "260813-lifecycle-guard-runtime",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019ffb66-d1c4-7d3c-9aa7-50e0f6966e57",
+  "slug": "remove-team-up",
+  "dirName": "260813-remove-team-up",
+  "scope": "self-fix",
+  "status": "in-flight"
+ },
+ {
+  "uuid": "019ffe33-9663-73f3-bcc6-70bd6fde1987",
+  "slug": "ambient-error-sink",
+  "dirName": "260814-ambient-error-sink",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fff1b-302d-7b27-8475-61ca61752ca8",
+  "slug": "autonomy-stop-fixes",
+  "dirName": "260814-autonomy-stop-fixes",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fff14-98a2-725c-9b20-99add2639251",
+  "slug": "copytree-guard-boundary",
+  "dirName": "260814-copytree-guard-boundary",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019ffa02-2d39-71f4-bd0c-e8dbe87244fa",
+  "slug": "election-multiq",
+  "dirName": "260813-election-multiq",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019ffee6-ed59-7748-85cb-7f578201362a",
+  "slug": "coverage-quick-norm",
+  "dirName": "260814-coverage-quick-norm",
+  "scope": "self-document",
+  "status": "in-flight"
+ },
+ {
+  "uuid": "019fff1a-ba9f-7173-abec-40c9e7a6d004",
+  "slug": "failopen-error-paths",
+  "dirName": "260814-failopen-error-paths",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019ffda6-2636-755d-8e85-1f83b1719c6a",
+  "slug": "fmc-macos-provider",
+  "dirName": "260814-fmc-macos-provider",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fffa6-bc7f-735f-8ed5-4e4cc4e3ce62",
+  "slug": "park-provenance",
+  "dirName": "260814-park-provenance",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fff1a-bae8-77b2-99a4-5f9e19d75d17",
+  "slug": "plugins-rename-drift",
+  "dirName": "260814-plugins-rename-drift",
+  "scope": "self-feature",
+  "status": "complete"
+ },
+ {
+  "uuid": "019ffda5-bc87-754d-92b6-ff1b7a50d9a4",
+  "slug": "t245-origin-fixture",
+  "dirName": "260814-t245-origin-fixture",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019ffda5-8b96-7498-a17d-f1766ea1ffd7",
+  "slug": "t528-ambient-isolation",
+  "dirName": "260814-t528-ambient-isolation",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019ffea5-c321-70cd-a824-ecd9f9240a60",
+  "slug": "t99-copytree-race",
+  "dirName": "260814-t99-copytree-race",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "019fff1a-becf-72aa-ae9f-6c87f8323fbc",
+  "slug": "unit-failure-autoelectio",
+  "dirName": "260814-unit-failure-autoelectio",
+  "scope": "self-fix",
+  "status": "in-flight"
+ },
+ {
+  "uuid": "01a00282-0af2-74e2-91d5-e30058ba5862",
+  "slug": "priority-bug-batch",
+  "dirName": "260814-priority-bug-batch",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "01a0028a-aefd-72b7-9e1b-53bb13e5f452",
+  "slug": "open-bug-batch-6",
+  "dirName": "260814-open-bug-batch-6",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "01a00368-5780-706f-ae7f-1445b9748390",
+  "slug": "priority-bug-batch-2",
+  "dirName": "260815-priority-bug-batch-2",
+  "scope": "self-fix",
+  "status": "in-flight"
+ },
+ {
+  "uuid": "01a00473-38f9-7786-804b-55615fb0c0b9",
+  "slug": "per-unit-outcome",
+  "dirName": "260815-per-unit-outcome",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "01a0054a-8333-75f0-8311-abe26cf8579e",
+  "slug": "stale-epoch-landed",
+  "dirName": "260815-stale-epoch-landed",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "01a00604-1c06-7df6-9683-56557b7af258",
+  "slug": "rfc-autonomy-modes",
+  "dirName": "260815-rfc-autonomy-modes",
+  "scope": "self-feature",
+  "status": "in-flight"
+ },
+ {
+  "uuid": "01a00368-5780-706f-ae7f-1445b9748390",
+  "slug": "priority-bug-batch-2",
+  "dirName": "260815-priority-bug-batch-2",
+  "scope": "self-fix",
+  "status": "complete"
+ },
+ {
+  "uuid": "01a00a81-d60b-77a8-b97f-1e83048b6932",
+  "slug": "open-bug-batch-7",
+  "dirName": "260816-open-bug-batch-7",
+  "scope": "self-fix",
+  "status": "in-flight"
+ }
 ]
