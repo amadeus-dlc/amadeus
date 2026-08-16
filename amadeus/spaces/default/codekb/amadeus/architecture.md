@@ -5449,7 +5449,7 @@ degrade スコープ（units-generation SKIP）は `:2451` の早期 return（ru
 
 per-unit consume の消費者側契約は `amadeus-per-unit-consume-fanout.ts:90-110` の `EXPECTED_PER_UNIT_CONSUMER_EDGES` に閉じている（**7 consumer / 19 edge**。件数の述語は `awk 'NR>=91 && NR<=109' <file> | grep -c '^\s*\['` → **19**、consumer 名は同範囲へ `grep -oE '^\s*\["[a-z-]+' | grep -oE '[a-z-]+$' | sort -u | wc -l` → **7**）。`assertConsumerEdgeInventory`（`:144-168`）が `consumer-edge-inventory-mismatch` で fail-closed するため、**この表と実グラフの乖離は無音では通らない**。是正がエッジ集合を変えないなら、この在庫は触らずに済む。
 
-## stale created attestation × MERGED PR に最終化経路がない — 拒否順序が `created → landed` 遷移を到達不能にしている（260815-stale-epoch-landed、現在、observed `83e1dbeef`）
+## stale created attestation × MERGED PR に最終化経路がない — 拒否順序が `created → landed` 遷移を到達不能にしている（260815-stale-epoch-landed、履歴、observed `83e1dbeef`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260815-rfc-autonomy-modes の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する。主題は PR #3113 着地で解消済み））
 
 **観測 ref**: base `78146f435a66680055a24144937b5aa03d48bfb4` → observed `83e1dbeefb3278a00e86f69d3c79071a35ccf043`（`git merge-base --is-ancestor 78146f435a 83e1dbeef` → **exit 0**、`git rev-list --count 78146f435a..83e1dbeef` → **4**）。対象は [Issue #3110](https://github.com/amadeus-dlc/amadeus/issues/3110)（P2 / S3-MAJOR、格上げは FOLLOW-UP）。
 
@@ -5501,3 +5501,11 @@ record checkpoint を同梱すれば head は必ず前進するため、両者�
 `260814-plugins-rename-drift` の 3 unit（PR #3051 / #3052 / #3055 — 各 unit の convergence-outcome.md が MERGED と実測記録済み）は record 上 `kind: created` のまま恒久残置している。workflow は completed 済みのため停止はしていないが、**record drift として同クラスの残留物**である。`260813-remove-team-up`（#2975）と `260814-autonomy-stop-fixes`（#3037）は候補（record 内では確定できず）。是正の受け入れ条件を設計する際、この既存残置を「修正後に最終化できるか」の観点で扱うかは要判断。
 
 配置と patch surface は `code-structure.md`、テスト空白と台帳は `code-quality-assessment.md` の各対応節を参照。
+
+## Intent Autonomy Mode の機構面 — RFC-0001 実装に向けた bound-surfaces の現況（260815-rfc-autonomy-modes、現在、observed `2eb94f1e39e`）
+
+- 差分区間 `83e1dbeef..2eb94f1e39e`（3 コミット — #3113 の landed 最終化 fix と record/metrics）は**全量が intent 260815-stale-epoch-landed へ帰属**し、RFC-0001 bound-surfaces（`packages/framework/core/`）との交差は **0 file**（`git diff --name-only 83e1dbeef 2eb94f1e39e -- packages/framework/core/` → 空、exit 0）。前節（260815-stale-epoch-landed）の主題は #3113 で解消済み。
+- RFC-0001 Reference-level が引く実装引用の currency を observed 断面で再照合 — **11 件中 10 件が逐語/意味論一致、1 件のみ行移動**:
+  - 一致: `amadeus-intent-autonomy.ts:581`（`SEMI_ROUTINE_INTERACTIONS: readonly InteractionKind[] = ["stage-gate", "question"]` 逐語）/ `:636-640`（`allowsOccurrence` — `occurrence.phase !== "phase-boundary"` の第 2 ガード）/ `:510-516`（`PROHIBITED_EFFECTS` 列挙）/ `:930-974`（`resolveAutoDecision` の invalid 系）/ `amadeus-intent-autonomy-production.ts:833-838`（`elect`/`recommend` が定数 `optionId: "approve"` を返す — 推奨導出が常に 1 件）/ `:713`（`Construction Autonomy Mode` の書込投影 `mode === "full" ? "autonomous" : …`）/ `:99-106`（advisory 効果分類の消費面）/ `amadeus-state.ts:1599`（park guard — `isAutonomousMode(content) && outstandingHumanTurns(pd).length === 0` で error）/ `amadeus-stop.ts:569`（`transcriptIsConversational(transcriptPath, format)` 署名）/ `amadeus-advisory-choice.ts:300-303`（`"defer-with-risk": "quality-waiver"`）
+  - 行移動: 読取側 semi→gated ハードコードは `amadeus-orchestrate.ts:2040` → **`:2046`**（逐語 `if (intentMode === "none" || intentMode === "semi") return "gated";`、`readAutonomyMode` 直下）。意味論は RFC 記載どおり不変
+- 帰結: RFC の bound-surfaces 列挙と機序記述は現 main 断面でそのまま有効。requirements/design は RFC を一次資料として引き直しなしで消費できる（行番号のみ orchestrate.ts の 1 件を `:2046` へ読み替え）。

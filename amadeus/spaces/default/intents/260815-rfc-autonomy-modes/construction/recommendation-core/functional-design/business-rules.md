@@ -20,7 +20,7 @@
 検証: fast-check による round-trip プロパティ(固定 seed・低 numRuns で PR CI に常駐)。
 
 **R-6**(ADR-11): `RecommendationBasis.fingerprint` は本 unit では不透明な SHA-256 文字列として扱い、算出規則を本 unit に置かない。正規化規則は code-generation への申し送り入力である。
-検証: 本 unit のソースに fingerprint 算出の実装が存在しないことの文書・構造検査(型定義と検証述語のみ)。
+検証: 本 unit のソースに fingerprint 算出の実装が存在しないことの文書・構造検査(型定義と検証述語のみ)。〔事後注記 2026-08-16: 「本 unit」は C1 語彙モジュール(amadeus-recommendation.ts)を指すと確定 — E-260816-R6-FINGERPRINT 1-1 tie のユーザー裁定 B。導出段 C2 での算出実装は設計意図の実現。詳細は code-generation/code-summary.md 申し送り節〕
 
 ## 梯子の規則
 

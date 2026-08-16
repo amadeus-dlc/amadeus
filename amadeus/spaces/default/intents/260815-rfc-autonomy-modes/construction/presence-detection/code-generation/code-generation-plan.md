@@ -22,3 +22,19 @@
 - swarm batch 1(recommendation-core / presence-detection / s13-zero / merge-provenance / grant-ceremony / d6-investigation を並行実装)。
 - referee: `671123786 integrate bolt-presence-detection (batch 1)` で `swarm-int-rfc0001` へ収束。
 - worktree: `.amadeus/worktrees/bolt-presence-detection`、branch `bolt-presence-detection`、base `main@2eb94f1e3`。worktree に node_modules/dist が無かったため `bun install`(261 packages)→ `bun run build` を先行実施。
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-16T11:12:08Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+presence-detection code-gen matches unit-of-work scope/budget and traces cleanly to business-rules R-1..R-7 and FR-2; two non-blocking documentation-precision gaps found.
+
+### Findings
+
+- FOLLOW-UP | code-generation-plan.md:14 vs code-summary.md:13 | Plan states t560 covers only R-2..R-7 in its 11 cases and defers R-1 (single public read port) to the commit message only, but code-summary.md claims the same 11 cases 'pin' R-1..R-7 inclusive. This is an internal-consistency mismatch between plan and summary on what was actually test-verified for R-1 — reconcile the wording (or confirm/deny an actual case added for R-1) so the verification claim is measured, not overstated.
+- FOLLOW-UP | code-generation-plan.md | Plan has no checkbox syntax (`- [ ]`) for its implementation steps as mandated by the code-generation stage contract Step 2 ('Create a detailed code generation plan ... with checkboxes for each implementation step'); content is otherwise complete and traceable, but step-completion tracking format deviates from the stage template.
+- NIT | business-logic-model.md:62 | The prior functional-design review's FOLLOW-UP (R-1's falling-proof is only an existence check, not a single-entry-point behavioral check) is still open and not explicitly re-addressed or re-deferred in the code-generation artifacts; acceptable since single-entry-point enforcement structurally depends on U4/U7 not building private read paths, but worth an explicit one-line carry-forward note in code-summary.md's 申し送り section.

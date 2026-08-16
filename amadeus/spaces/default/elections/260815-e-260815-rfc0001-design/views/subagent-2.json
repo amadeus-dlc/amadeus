@@ -1,0 +1,187 @@
+{
+  "electionId": "E-260815-RFC0001-DESIGN",
+  "voter": "subagent-2",
+  "questions": [
+    {
+      "questionId": "q2-gate-derivation",
+      "text": "RFC-0001 Q2: ゲート(stage-gate)の推奨導出器。RFC は裁定順序(専権判定→導出→unique 自動/非 unique 人間・中断)を全裁定点に課すが、ゲートを『質問』と同じ RecommendationOutcome 導出器で扱うか、決定的承認のままにするかは未裁定。現行は production.ts:833-838 が定数 approve を返す。",
+      "ordered": [
+        {
+          "internalNo": 1,
+          "label": "A: ゲートも RecommendationOutcome 導出器に載せる — 成果物検証・sensor・ノルム適合が green なら unique(approve)、red/矛盾があれば contested(候補=approve/park+事由)として裁定順序 3 へ。全裁定点で単一概念",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 2,
+          "label": "B: ゲートは決定的承認のまま — sensor/検証の green が前提条件でありゲート自体に選択肢はない(red は既存 fail-closed で停止)。RecommendationOutcome は質問・選挙・失敗裁定系のみに適用し、ゲートへの導入は型だけ共有の unique 固定",
+          "displayNo": 2
+        }
+      ]
+    },
+    {
+      "questionId": "q4-semi-effect-ceiling",
+      "text": "RFC-0001 Q4: semi の grant-less 設計の維持と効果認可上限。現行 semi は grant なしで workflow-reversible のみ認可。RFC の semi 再定義(full − 人間ゲート 2 種)で advisory 延期(quality-waiver 分類)等の自動化が必要になる。",
+      "ordered": [
+        {
+          "internalNo": 1,
+          "label": "A: grant-less 維持 + 上限の最小拡張 — semi の効果認可を workflow-reversible + advisory-defer(quality-waiver のうち advisory 延期のみを新分類 advisory-deferral として切り出し)へ。prohibited effects の一般開放はしない",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 3,
+          "label": "C: grant-less 維持 + advisory 延期は quality-waiver のまま semi の allowedEffects へ個別追加(新分類を作らない最小差分。他の quality-waiver 効果は不可のまま列挙で制御)",
+          "displayNo": 2
+        },
+        {
+          "internalNo": 2,
+          "label": "B: semi も grant 基盤へ統合 — full と同じ grant 造幣(HUMAN_TURN provenance)を semi にも要求し、効果上限は grant の scope で差別化。grant-less 特例を廃止して認可経路を一本化",
+          "displayNo": 3
+        }
+      ]
+    },
+    {
+      "questionId": "q5-full-inspection-point",
+      "text": "RFC-0001 Q5: full の自動裁定の事後検収点。現行はフェーズ境界の人間ゲートが実質の検収点だが full では消滅する。",
+      "ordered": [
+        {
+          "internalNo": 2,
+          "label": "B: workflow 完了境界に auto-decision 要約レポート(裁定点・選択・根拠の一覧)を機械生成して record へ置き、完了メッセージでユーザーへ提示する軽量検収を新設",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 1,
+          "label": "A: 専用検収点を新設しない — AUTO_DECIDED の監査列 + §12a 独立レビュー + workflow 完了時の goal reconciliation が検収を構成する(監査可能性=検収)。既存 /amadeus-replay 等の read-only スキルで事後閲覧",
+          "displayNo": 2
+        }
+      ]
+    },
+    {
+      "questionId": "q7-noninteractive-park-contract",
+      "text": "RFC-0001 Q7: 非対話中断(FR-3)の resume 契約 — 記録内容・再開者・park 会計。非対話セッションには HUMAN_TURN が存在しないため現行 park の provenance 前提が使えない。",
+      "ordered": [
+        {
+          "internalNo": 1,
+          "label": "A: 既存 park 機構を拡張 — park 理由に RecommendationOutcome(contested の候補・根拠・非一意事由)を構造化記録し、resume 時に同内容を AskUserQuestion 相当で再提示。park 会計は新 provenance 種 non-interactive-interruption(HUMAN_TURN 不要・裁定不能事由に束縛)を導入。再開者は次の対話セッションの人間または full 対話 conductor",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 2,
+          "label": "B: #1241 の一級 wait directive を park と別の状態として新設 — workflow state に waiting(理由・再提示ペイロード)を追加し、park(人間都合の中断)と裁定待ち(機構都合)を状態機械上で分離",
+          "displayNo": 2
+        }
+      ]
+    },
+    {
+      "questionId": "q8-self-park-threat",
+      "text": "RFC-0001 Q8: park guard 廃棄後の自己 park 脅威(作業回避・偽の人間実在 — #365/#3016 の脅威モデル)を何で防ぐか。",
+      "ordered": [
+        {
+          "internalNo": 2,
+          "label": "B: A + レート制約 — 同一裁定点での反復中断を検知して 2 回目以降は REPAIR/エスカレーション経路へ倒す機械ガードを追加",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 1,
+          "label": "A: 事由の構造化束縛 — 非対話中断は RecommendationOutcome の contested/none または人間専権事項の到達のみを事由として許可し、事由オブジェクト(裁定点 id・候補・導出過程)を監査へ append。自由文 park は対話セッション(実 HUMAN_TURN 承認)限定に保つ",
+          "displayNo": 2
+        }
+      ]
+    },
+    {
+      "questionId": "q10-s13-zero-mechanization",
+      "text": "RFC-0001 Q10: §13『候補 0 件』判定の機械化。現行は AI の自己申告で 0 件確認選挙(実測 79 件・情報量ほぼゼロ)。",
+      "ordered": [
+        {
+          "internalNo": 2,
+          "label": "B: A に加え conductor 追加候補の申告枠を残す — surface=0 でも conductor が候補を追加でき、その場合のみ裁定発火(自己申告は『増やす』方向のみ許可、『0 件にする』方向の申告は不可)",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 1,
+          "label": "A: surface コマンド出力を正本化 — amadeus-learnings surface の candidates 配列と diary 実エントリ数(テンプレートコメント除く)の機械判定で 0 件を確定し、0 件時は選挙・梯子を発火させない(監査に surface 出力 digest を記録)。非 0 件時のみ選定裁定",
+          "displayNo": 2
+        }
+      ]
+    },
+    {
+      "questionId": "q11-stop-hook-redefinition",
+      "text": "RFC-0001 Q11/D10: Stop hook の継続強制と質問/compose carveout の semi/full 再定義。対話モードの full は人間裁定へ到達するためターンを返せる必要がある。",
+      "ordered": [
+        {
+          "internalNo": 1,
+          "label": "A: 対話性で分岐 — セッションが対話(FR-2 検出)なら、裁定順序 3 到達時(contested/専権)の質問提示・compose 保留でターン返却を許可。非対話なら現行の継続強制を維持し FR-3 の中断へ倒す。carveout の判定は RecommendationOutcome の終端種別に束縛",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 2,
+          "label": "B: mode で分岐 — full だけ Stop hook の継続強制を全面解除し、semi/none は現行維持(対話性検出を Stop hook に持ち込まない)",
+          "displayNo": 2
+        }
+      ]
+    },
+    {
+      "questionId": "q14-park-representation",
+      "text": "RFC-0001 Q14: 修復不能停止(REPAIR_STALLED)と非対話中断を同じ park 表現に載せるか分けるか。",
+      "ordered": [
+        {
+          "internalNo": 1,
+          "label": "A: 分離 — REPAIR_STALLED は欠陥系の終端(是正が必要)、非対話中断は健全な裁定待ち。状態・監査イベント・resume 経路を別に保ち、混同による誤 resume を構造的に防ぐ",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 2,
+          "label": "B: 統合 — 単一の中断表現に reason 種別を持たせ、状態機械の分岐を増やさない",
+          "displayNo": 2
+        }
+      ]
+    },
+    {
+      "questionId": "q15-grant-ceremony",
+      "text": "RFC-0001 Q15: grant ceremony(preview-autonomy → set-autonomy の 2 段 + display digest 確認)の簡素化と、相互必須不変量・発効前プレビュー(nonAutoDecidedKinds 提示)の扱い。",
+      "ordered": [
+        {
+          "internalNo": 2,
+          "label": "B: 現行 2 段を維持(preview の人間可読提示と発効の分離が確認の実質 — 統合は確認の形骸化リスク)",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 1,
+          "label": "A: 2 段を 1 verb に統合(set-autonomy --mode が preview 内容を stdout に出し、同一実行内で digest を自己確認して発効)。ただし AskUserQuestion 等の実 HUMAN_TURN provenance 要求と nonAutoDecidedKinds の提示内容は不変 — 簡素化は往復回数のみ",
+          "displayNo": 2
+        }
+      ]
+    },
+    {
+      "questionId": "q18-consent-key-rename",
+      "text": "RFC-0001 Q18(Q17 派生): consent 軸キー(intent-mirror.github.issue.mode / finding.github.issue.creation.mode)から『mode』の語を外す改名の要否。UI 真実性の契約下で autonomy mode との語彙衝突が残る。",
+      "ordered": [
+        {
+          "internalNo": 2,
+          "label": "B: 改名しない — キー名は維持し、文書と --status 表示で consent 軸であることを明示(改名の波及コスト > 語彙混同の実害)",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 1,
+          "label": "A: 改名する — *.github.issue.consent(語彙: manual/auto 等は維持)へ。旧キーは loud fail(solo-election.trigger.mode の廃止と同じ流儀・同一 PR)。文書・テスト・投影を同一変更で同期",
+          "displayNo": 2
+        }
+      ]
+    },
+    {
+      "questionId": "q19-contested-rate-criterion",
+      "text": "RFC-0001 Q19: contested 発火率の受け入れ基準(頻度予算の機械化)。RFC は『真に人間の判断が要る面は全体の 1 割未満』を実測済み。閾値は観測レンジ内側に置く(c1-threshold-inside-observed-range)。",
+      "ordered": [
+        {
+          "internalNo": 2,
+          "label": "B: 受け入れテストは発火率でなく『機構起因クラスの contested 0 件』(172 件・79 件クラスの fixture が contested を出さないこと)で固定し、割合閾値は導入しない(母数依存の割合は fixture 構成で恣意化するため)",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 1,
+          "label": "A: 実装後の検証固定 — 本 intent の build-and-test で、代表 fixture 群(付録 B の停止クラス再現 + 通常進行)に対する contested 発火率 < 10% を受け入れテストで固定し、実運用の恒常監視は metrics スナップショットの観測項目に追加(閾値運用は次 intent で実測レンジを見て裁定)",
+          "displayNo": 2
+        }
+      ]
+    }
+  ]
+}

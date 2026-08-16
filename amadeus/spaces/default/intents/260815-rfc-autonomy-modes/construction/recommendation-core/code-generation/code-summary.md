@@ -84,5 +84,8 @@ properties, and 'humanReservedDecision' does not exist in type 'Partial<ResolveA
 
 ## 申し送り
 
-- 逸脱: none。
-- ADR-11 の fingerprint 算出規則は本 unit のソースに実装せず、code-generation への申し送り入力として構造検査のみで担保(R-6)。
+- 逸脱: none(R-6 の解釈は下記のとおり選挙 + ユーザー裁定で確定)。
+- **R-6 の解釈と構造検査(§12a iteration-1 BLOCKER の是正、E-260816-R6-FINGERPRINT 1-1 tie → ユーザー裁定 B、2026-08-16 実 HUMAN_TURN)**: R-6「算出規則を本 unit に置かない」の『本 unit』は **C1(語彙モジュール `amadeus-recommendation.ts`、表現のみ)** を指す。根拠: decisions.md:62(ADR-11 は算出を code-generation **ステージ**への申し送りと規定)、business-logic-model.md:3(U1 = C1 + C2 で、C2 = 梯子・ゲート実配線 = `amadeus-intent-autonomy.ts` / `-production.ts`)、domain-entities.md:93-96(「導出ロジック本体は C2 / C4 / C5 側」「C1 は表現のみを持つ」「型はフィールドを運ぶだけ」)、unit-of-work.md:24(CG への明示申し送り「…正規形 digest で算出すること」)。したがって `recommendationBasisFingerprint`(`amadeus-intent-autonomy.ts:1004`、導出段 C2)は設計意図の実現であり逸脱ではない。旧記載「本 unit のソースに実装せず」は C1/C2 を区別しない不正確な申告だったため本行へ訂正した。
+- **構造検査(実測、tree `795775e5` = origin/main)**: `grep -n "createHash\|autonomyDigest" packages/framework/core/tools/amadeus-recommendation.ts` → 一致 0 件・exit 1(grep の exit 1 = エラーなし不一致)。同ファイルの fingerprint 関連は書式述語 `SHA256` の 3 箇所のみ — R-6 の「型定義と検証述語のみ」を満たす。
+- **owned files の縮小(§12a iteration-1 FOLLOW-UP)**: unit-of-work.md:7 の U1 owned files にある `amadeus-bolt.ts`(decide-question 区画)は本 unit のコミットでは変更していない。梯子の実配線が `amadeus-intent-autonomy-production.ts` の `commitProductionQuestionDecision` 側で完結し(business-logic-model.md §1.3 と整合)、bolt 側の追加変更が不要になったため。スコープ縮小であり機能欠落ではない(FR-1/FR-4 の検証は上記 落ちる実証 1〜3 でカバー)。
+- **R-17(metrics 観測項目)の帰属(§12a iteration-1 FOLLOW-UP)**: contested 発火数・裁定点クラスの metrics-snapshot 観測項目は本 unit の CG スコープ外 — 集計出力面は U8 completion-report(C9、workflow 完了時の auto-decision summary)が所有し、本 unit は AUTO_DECIDED 監査列(集計の一次入力)までを提供する。

@@ -25,3 +25,18 @@
 - swarm batch 2(completion-report / waiting-interruption)。
 - referee: `b69be09db integrate bolt-waiting-interruption (batch 2)` で `swarm-int-rfc0001` へ収束。
 - worktree: `.amadeus/worktrees/bolt-waiting-interruption`、branch `bolt-waiting-interruption`、base `swarm-int-rfc0001@54baec9ce`(batch 1 統合断面)、HEAD `69a78b714`。
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-16T12:07:28Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+U3 code-gen artifacts trace cleanly to R-1..R-23/FR-3 and TDD Red/Green evidence is concrete; one carried-forward owned-files/estimate drift and one count-baseline drift are non-blocking.
+
+### Findings
+
+- FOLLOW-UP | code-summary.md states "逸脱: none" but the implementation footprint (new file amadeus-waiting.ts; edits to amadeus-intent-autonomy-runtime.ts, amadeus-intent-autonomy.ts, amadeus-intent-autonomy-production.ts, amadeus-directive.ts, amadeus-audit.ts, otel/event-registry.ts, tests/unit/t28-audit-event-sync.test.ts) exceeds unit-of-work.md's U3 owned-files list (amadeus-state.ts, amadeus-orchestrate.ts, audit-format.md+event-registry) and its ~350-line estimate — a gap already flagged twice as FOLLOW-UP in business-logic-model.md's iteration-1 and iteration-2 reviews but still not reflected back into unit-of-work.md.
+- NIT | code-generation-plan.md and code-summary.md pin the audit-event baseline at 96→98, while the functional-design artifacts this unit consumed were written against 93→95 (business-logic-model.md §5.2 and its iteration reviews) — plausibly explained by other swarm-batch units landing events first, but the drift is not explained in either code-generation artifact.

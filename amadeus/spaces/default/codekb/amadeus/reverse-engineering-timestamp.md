@@ -1,6 +1,25 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260815-stale-epoch-landed）
+## 実行メタデータ（現在: 260815-rfc-autonomy-modes）
+
+- Date: `2026-08-15`
+- Intent: `260815-rfc-autonomy-modes`
+- Repository: `amadeus`（単一 repo）
+- Scope / depth / project type: `self-feature` / Standard / Brownfield
+- Base commit: `83e1dbeefb3278a00e86f69d3c79071a35ccf043`（前回 observed = 260815-stale-epoch-landed。祖先性 `git merge-base --is-ancestor 83e1dbeef 2eb94f1e39e` → **exit 0**）
+- Observed commit: `2eb94f1e39e940c1c39a80a2181a8e03aaf31eb9`（`origin/main` tip）
+- Distance: **3** コミット（`git rev-list --count 83e1dbeef..2eb94f1e39e`）
+- 差分規模: `git diff --shortstat 83e1dbeef 2eb94f1e39e` → **71 files changed, 3187 insertions(+), 131 deletions(-)**。非 record 面（`-- ':!amadeus/' ':!metrics/'`）は **8 files +1166/−73**
+- Scope of scan: **差分リフレッシュ**（RFC-0001 bound-surfaces に焦点）
+- Focus: RFC-0001（`amadeus/spaces/default/specs/rfc/0001-intent-autonomy-modes.md`、status: approved）の実装前提 — bound-surfaces の現況と RFC 実装引用の currency
+- 区間内容の帰属: 3 コミットは**全量が intent 260815-stale-epoch-landed へ帰属**（#3113 修正 8 files + record checkpoint #3114 + metrics #3115）
+- 構造変化: **なし** — `packages/framework/core/` は **0 file 変更**（`git diff --name-only 83e1dbeef 2eb94f1e39e -- packages/framework/core/` → 空）。新規テストファイルは t3110 の 1 件のみ（coverage-registry は #3113 内で regen 済み）
+- 中核知見: RFC-0001 の bound-surfaces と機序記述は現 main 断面で**そのまま有効**。RFC Reference-level の実装引用 11 件の currency 再照合は **10/11 が逐語/意味論一致・1 件のみ行移動**（読取側 semi→gated ハードコード `amadeus-orchestrate.ts:2040` → **`:2046`**、逐語 `if (intentMode === "none" || intentMode === "semi") return "gated";`）。詳細は `architecture.md` §260815-rfc-autonomy-modes
+- 更新した codekb 面: `architecture.md`（新節 + 前 intent 節の履歴降格・解消注記）/ `code-structure.md`（同）/ 本ファイル。無変更が正: business-overview / api-documentation / component-inventory / technology-stack / dependencies / code-quality-assessment（区間の非 record 変更が pr-convergence plugin の 1 患部面に限られ、これらの面の記述へ影響しないことを diff 帰属で確認）
+- 旧 intent の未コミット RE（autonomy-refactor worktree）: **破棄** — 本スキャンが最新 main 起点の正
+- Per-intent record: `re-scans/260815-rfc-autonomy-modes.md`
+
+## 実行メタデータ（履歴: 260815-stale-epoch-landed）
 
 - Date: `2026-08-15`
 - Intent: `260815-stale-epoch-landed`

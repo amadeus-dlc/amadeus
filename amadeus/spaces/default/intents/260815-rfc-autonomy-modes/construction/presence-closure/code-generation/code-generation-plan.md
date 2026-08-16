@@ -21,3 +21,19 @@
 - swarm batch 4(config-visibility / presence-closure)。
 - referee: `dd6407456 integrate bolt-presence-closure (batch 4)` で `swarm-int-rfc0001` へ収束。base `57f40d5d5`(batch3統合断面、interactive-carveout/semi-authority-projection integrated + t481 reconcile)。
 - worktree: `.amadeus/worktrees/bolt-presence-closure`、branch `bolt-presence-closure`、HEAD `b9833d8b6`。
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-16T12:33:44Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+U6 presence-closure code-gen artifacts trace cleanly to D7/D8 rules R-1..R-7 with disclosed, justified deviations; 2 FOLLOW-UPs on doc sync/bypass switch, 1 NIT on R-5 evidence gap.
+
+### Findings
+
+- FOLLOW-UP | business-logic-model.md 統合シーム / code-summary.md 申し送り | Consumed functional design explicitly assigns 'services.md の C13 補記と依存行列への C13 行列追加' to 'コード変更と同じ変更列で…本unitの実装時タスク' (business-logic-model.md:66), but code-summary.md:83 declares this out-of-scope ('owned files外。触っていない') and redirects to the conductor with no adjudication record cited and no evidence in the reviewed artifact set that the sync was actually applied. The worktree-ownership norm plausibly explains why the code-generation subagent itself could not touch inception/application-design/ files, but the task remains genuinely undelivered against an explicit FD assignment — recommend the conductor confirm/execute the services.md and component-dependency.md sync before intent completion, or record an explicit adjudicated scope change.
+- FOLLOW-UP | code-summary.md 申し送り (:81) vs business-rules.md R-1 / security-design.md | New verifyBatchApprovalPresence carries an env-var bypass short-circuit (humanPresenceGuardDisabled()/AMADEUS_SKIP_HUMAN_PRESENCE_GUARD) added to mirror sibling amadeus-state.ts guards (G25/G26/G27), so the guard's 'must always refuse when presence is missing' R-1 guarantee is conditionally bypassable — this is disclosed with citation and justified by suite-compatibility evidence, but business-rules.md R-1 and security-design.md's fail-closed narrative do not mention the bypass switch on this new production function, leaving a design-doc/code drift for a security-relevant control. Recommend updating business-rules.md/security-design.md to document the uniform bypass pattern.
+- NIT | code-summary.md 検証(実測) table | R-5's specified 落ちる実証 (byte-identical diff of the three amadeus-state.ts call sites of humanActedSinceGate before/after this unit) is not explicitly listed among the verification runs, though the commit list and owned-files scope (amadeus-bolt.ts + amadeus-lib.ts only) implicitly satisfy it — an explicit diff-check line would close the traceability loop for R-5's stated falling proof.

@@ -1666,5 +1666,29 @@
     "dirName": "260815-e-260815-3110-fix-method",
     "createdAt": "2026-08-15T12:41:06Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-260815-RFC0001-DESIGN",
+    "dirName": "260815-e-260815-rfc0001-design",
+    "createdAt": "2026-08-15T15:51:06Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-260816-R21-PRESENCE-BYPASS",
+    "dirName": "260815-e-260816-r21-presence-by",
+    "createdAt": "2026-08-15T20:13:53Z",
+    "status": "recorded"
+  },
+  {
+    "electionId": "E-260816-R6-FINGERPRINT",
+    "dirName": "260816-e-260816-r6-fingerprint",
+    "createdAt": "2026-08-16T11:22:33Z",
+    "status": "partial"
+  },
+  {
+    "electionId": "E-260816-C9-SIGNATURE",
+    "dirName": "260816-e-260816-c9-signature",
+    "createdAt": "2026-08-16T11:52:47Z",
+    "status": "partial"
   }
 ]

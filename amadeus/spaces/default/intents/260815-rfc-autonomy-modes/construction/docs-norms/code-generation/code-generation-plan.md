@@ -22,3 +22,20 @@
 - swarm batch 5(docs-norms単独、他11 implementation unit全統合後の最終unit)。
 - referee: `fc1d16e15 integrate bolt-docs-norms (batch 5)` で `swarm-int-rfc0001` へ収束。base `040196a11`(全12実装unit統合断面)。
 - worktree: `.amadeus/worktrees/bolt-docs-norms`、branch `bolt-docs-norms`、HEAD `2149d92b4`。
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-16T12:38:34Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+docs-norms artifacts trace cleanly to FR-14/R-1..R-4, TDD falling-proof for the mode-matrix cross-check is documented, R-2 (draft-only, no direct norm edits) is honored, no unannounced deviations found.
+
+### Findings
+
+- FOLLOW-UP | pr-convergence-report.md:3,33-35 | kind: converged is recorded for a PR whose local/remote/pr head all equal the already-merged head 29fcba31d; per the team's post-#3113 convention (cid:pr-convergence:c1-2, project.md Learnings Inbox) a MERGED PR's authoritative report should be minted via the merged arm as kind: landed (bound to merge commit SHA/mergedAt). Context attests this converged copy is the intentionally-recovered authoritative record artifact, so not blocking, but a landed-kind regeneration would bring this unit's produced artifact in line with the current CLI convention.
+- FOLLOW-UP | code-summary.md:16 | Enumerates the election SKILL sync as 'SKILL.md ほかharness別6ファイル' (6 harness-specific files), which does not numerically match the conductor-attested 'all 8 harness projections' for protocol/conductor/election-SKILL sources — the summary's harness-fan-out count should be reconciled/made explicit for full traceability.
+- NIT | unit-of-work.md:18 (U12 ~150-line estimate) | Actual docs-norms diff (mode-matrix.md 113 lines + t3116 test 184 lines + norm-revision-drafts.md 126 lines + several bilingual doc-pair edits) substantially exceeds the inception-time estimate; code-summary.md does not note or reconcile this overrun, useful feedback for future units-generation sizing.
+- NIT | domain-entities.md:3 | Describes the mode×checkpoint matrix as a 'build-and-testの検証成果物' (build-and-test-stage deliverable), but it was actually authored with its own TDD red→green cycle inside this code-generation unit (t3116) — a minor stage-attribution wording mismatch between the FD artifact and where the artifact actually landed; no functional impact.

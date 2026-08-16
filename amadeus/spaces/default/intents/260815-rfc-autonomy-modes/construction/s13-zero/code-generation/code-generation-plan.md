@@ -22,3 +22,20 @@
 - swarm batch 1(recommendation-core / presence-detection / s13-zero / merge-provenance / grant-ceremony / d6-investigation)。
 - referee: `3e9bb386f integrate bolt-s13-zero (batch 1)` で `swarm-int-rfc0001` へ収束。
 - worktree: `.amadeus/worktrees/bolt-s13-zero`、base `main`。
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-16T11:45:55Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+s13-zero code-gen traces cleanly to FR-11/ADR-6/R-1..R-6; plan lacks checkbox format and summary omits Green/typecheck evidence — FOLLOW-UP only, not blocking.
+
+### Findings
+
+- FOLLOW-UP | code-generation-plan.md uses unlabelled numbered lists under "拘束"/"TDD 順序" with no [ ] checkboxes anywhere, contrary to the stage contract's Step 2 requirement ("with checkboxes for each implementation step", "Number each plan step sequentially (Step 1, Step 2, etc.)"); reduces machine/human traceability of completion status even though the plan content itself is sound.
+- FOLLOW-UP | code-summary.md §検証(実測) and §申し送り self-disclose that typecheck/lint/build exit codes and the post-implementation Green pass count were never transcribed — only the pre-implementation Red run for `confirmZeroCandidates` is recorded verbatim. The TDD-mandatory norm (project.md cid:code-generation:tdd-default-with-narrow-exceptions) expects both halves of the Red→Green vertical slice to be measured and recorded; the merged PR + `converged: true` report imply CI eventually passed, but this artifact carries no Green evidence of its own.
+- NIT | code-generation-plan.md (step 3) cites "swarm-brief rule #2" as explicit authorization to extend shared files (event-registry.ts, amadeus-audit.ts, audit-format.md) outside U9's declared owned-files column (unit-of-work.md U9 lists only amadeus-learnings.ts), and both business-logic-model.md/domain-entities.md/code-generation-plan.md cite "component-methods.md C10" for the addConductorCandidate signature — neither source is in this review's scope so the citations could not be verified independently; recommend a future pass include these paths.
+- NIT | unit-of-work.md U9 estimate is ~100 lines but code-summary.md reports the amadeus-learnings.ts change alone at +221 lines, more than double the whole-unit estimate before counting event-registry.ts(+29)/amadeus-audit.ts(+8)/docs/tests — justified by the FD-mandated audit trail (R-5) but worth an estimate-calibration note for future units of this shape.
