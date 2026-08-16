@@ -192,6 +192,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "integration/t31-help.test.ts",
     "integration/t3116-semi-answer-presence.integration.test.ts",
     "integration/t3116-walking-skeleton-stance.integration.test.ts",
+    "integration/t3121-completion-report.integration.test.ts",
     "integration/t328-adapter-auto-compose-launch.integration.test.ts",
     "integration/t33-hook-concurrency.test.ts",
     "integration/t356-journal-convert.test.ts",
