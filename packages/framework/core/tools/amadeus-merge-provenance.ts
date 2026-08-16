@@ -56,7 +56,8 @@ function main(): void {
   );
 
   if (!result.ok) {
-    jsonError(`record-delegated-merge refused: ${JSON.stringify(result.error)}`);
+    process.stderr.write(`${JSON.stringify({ error: "record-delegated-merge refused", detail: result.error })}\n`);
+    process.exit(1);
   }
   process.stdout.write(`${JSON.stringify(result.receipt)}\n`);
 }

@@ -10,7 +10,7 @@
 // decides whether the delegation condition held and never touches git/GitHub
 // (business-logic-model.md, business-rules.md R-1..R-7).
 //
-// 落ちる実証 (business-rules.md "落ちる実証"): before this unit landed,
+// Falling proof (business-rules.md "落ちる実証" section): before this unit landed,
 // `grep -rn "recordDelegatedMerge|DELEGATED_MERGE" packages/framework/core`
 // returned 0 matches (exit 1) against the pre-change tree (measured via
 // `git stash -u` / re-grep / `git stash pop`) — recorded in
@@ -19,7 +19,9 @@
 // and refuses (fail-closed) on any missing/blank evidence field.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   type DelegatedMergeEvidence,
   recordDelegatedMerge,
@@ -131,6 +133,11 @@ describe("recordDelegatedMerge (C11/FR-9)", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error).toEqual({ kind: "evidence-incomplete", missingField: "ciConclusion" });
+    // A refusal must leave no audit side-effect behind it — not even the
+    // shard file (nothing was ever appended).
+    const shard = auditFilePath(proj);
+    const body = existsSync(shard) ? readFileSync(shard, "utf-8") : "";
+    expect(countAuditEvent(body, "DELEGATED_MERGE_RECORDED")).toBe(0);
   });
 
   test("no-retrigger of the human-approval flow: an unrelated event's registration is unaffected", () => {
@@ -143,5 +150,28 @@ describe("recordDelegatedMerge (C11/FR-9)", () => {
     expect(before.ok).toBe(true);
     const body = readFileSync(auditFilePath(proj), "utf-8");
     expect(countAuditEvent(body, "GATE_APPROVED")).toBe(0);
+    // Direct registration check: GATE_APPROVED must still be a valid event
+    // type in the audit vocabulary — a deletion would silently satisfy the
+    // count-zero assertion above.
+    const auditSource = readFileSync("dist/claude/.claude/tools/amadeus-audit.ts", "utf-8");
+    const vocab = auditSource.match(/const VALID_EVENT_TYPES = new Set\(\[([\s\S]*?)\]\)/);
+    expect(vocab).not.toBeNull();
+    expect(vocab ? vocab[1] : "").toContain('"GATE_APPROVED"');
+  });
+
+  test("the generic audit CLI cannot mint DELEGATED_MERGE_RECORDED (validation bypass closed)", () => {
+    // recordDelegatedMerge refuses blank evidence — a generic `append` would
+    // bypass that refusal entirely, so the CLI minting guard must cover the
+    // event just like the presence trust anchors.
+    proj = seedProject();
+    const audit = join(import.meta.dir, "..", "..", "dist", "claude", ".claude", "tools", "amadeus-audit.ts");
+    const r = spawnSync(process.execPath, [audit, "append", "DELEGATED_MERGE_RECORDED", "--project-dir", proj], {
+      encoding: "utf-8",
+    });
+    expect(r.status).not.toBe(0);
+    expect(`${r.stdout}${r.stderr}`).toContain("presence/provenance");
+    const shard = auditFilePath(proj);
+    const body = existsSync(shard) ? readFileSync(shard, "utf-8") : "";
+    expect(countAuditEvent(body, "DELEGATED_MERGE_RECORDED")).toBe(0);
   });
 });

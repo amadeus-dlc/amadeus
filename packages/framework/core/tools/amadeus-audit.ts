@@ -1342,6 +1342,10 @@ const PRESENCE_PROTECTED_EVENTS = new Set([
   "HUMAN_TURN",
   "DELEGATED_APPROVAL",
   "DELEGATED_REJECTION",
+  // Delegated-merge provenance rows are only trustworthy when the validated
+  // writer (recordDelegatedMerge) minted them — a generic append would bypass
+  // its non-empty-evidence refusal.
+  "DELEGATED_MERGE_RECORDED",
   // Legacy event shapes remain read-only. Refuse new rows so fabricated history
   // cannot influence replay or migration projections.
   "GRANT_ISSUED",
