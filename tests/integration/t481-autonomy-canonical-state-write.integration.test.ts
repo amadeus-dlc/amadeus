@@ -28,7 +28,6 @@ import {
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import { readAutonomyMode } from "../../packages/framework/core/tools/amadeus-orchestrate.ts";
 import {
-  isQuestionCarveoutIntent,
   stopBudgetMode,
   stopContinuationDefaultCap,
 } from "../../packages/framework/core/hooks/amadeus-stop.ts";
@@ -295,6 +294,10 @@ describe("the canonical write point is unique (BR-U1-1)", () => {
 });
 
 describe("every reader of the mode sees the same declaration (FR-2d)", () => {
+  // The Stop hook's question carve-out is deliberately absent from this list:
+  // ADR-5 took the mode out of that decision entirely (it now reads session
+  // interactivity and the ruling terminal), so it is no longer a reader of the
+  // declaration. t561 pins its inputs.
   test("the six state-file readers agree after one canonical write", () => {
     projectDir = bornProject();
     appendHumanTurn(projectDir);
@@ -308,17 +311,15 @@ describe("every reader of the mode sees the same declaration (FR-2d)", () => {
 
     // 1. the state file itself
     expect(getField(content, "Intent Autonomy Mode")?.trim()).toBe("semi");
-    // 2. the Stop hook's question carve-out (amadeus-stop.ts)
-    expect(isQuestionCarveoutIntent(content, projectDir)).toBe(true);
-    // 3. the statusline segment (amadeus-lib.ts)
+    // 2. the statusline segment (amadeus-lib.ts)
     expect(autonomySegment(content)).toBe("semi");
-    // 4. the swarm scheduling reader (amadeus-orchestrate.ts)
+    // 3. the swarm scheduling reader (amadeus-orchestrate.ts)
     expect(readAutonomyMode(content)).toBe("autonomous");
-    // 5. the Stop hook's continuation budget (amadeus-stop.ts)
+    // 4. the Stop hook's continuation budget (amadeus-stop.ts)
     expect(stopContinuationDefaultCap(content)).toBe(8);
-    // 6. the Stop hook's budget mode (amadeus-stop.ts)
+    // 5. the Stop hook's budget mode (amadeus-stop.ts)
     expect(stopBudgetMode(content)).not.toBe("interactive");
-    // 7. the Construction-projection predicate (amadeus-lib.ts). It follows the
+    // 6. the Construction-projection predicate (amadeus-lib.ts). It follows the
     // projection, so semi now reads autonomous. The answer path no longer keys
     // its human-presence carve-out off it — amadeus-log.ts reads the DECLARED
     // Intent mode, so semi's answers stay under the presence guard (FR-12).

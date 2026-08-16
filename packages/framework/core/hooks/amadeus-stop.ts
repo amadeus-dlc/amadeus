@@ -53,13 +53,13 @@
 //      conductor must write a `<slug>-questions.md` with blank [Answer]: tags
 //      before asking (stage-protocol.md §3); an unanswered tag is a positive
 //      signal that a question is pending, so we ALLOW the stop then too
-//      (isPendingQuestionStop below). Strictly gated: it never fires for an
-//      Intent that holds the QUESTION CARVE-OUT — autonomy `full` with an
-//      active grant, or `semi` declared by a human command, both of which may
-//      rule on the question themselves and so must keep running (#2253) — and
-//      any miss — no file, all answered, carve-out held, or a read error —
+//      (isPendingQuestionStop below). Strictly gated: it fires only when this
+//      session has a human in it to answer, and — under `semi`/`full`, where
+//      the ladder rules on questions — only when the ladder actually handed
+//      this one back (RFC-0001 ADR-5). Any miss — no file, all answered, a
+//      non-interactive run, an auto-decidable question, or a read error —
 //      falls through to the cap-bounded block, so a genuine mid-stage quit is
-//      still nudged.
+//      still nudged and an unattended run keeps moving.
 //   4. A CONVERSATIONAL turn ends with the human's last prompt answered and NO
 //      workflow-engine engagement (the conductor ran neither amadeus-orchestrate
 //      nor amadeus-state since that prompt). Issue #365's broader reading: a human
@@ -102,7 +102,11 @@ import {
   type StopBudgetMode,
 } from "../tools/amadeus-convergence-policy.ts";
 import { reserveStageBudget } from "../tools/amadeus-convergence-runtime.ts";
-import { readProductionAutonomyProjection } from "../tools/amadeus-intent-autonomy-production.ts";
+import {
+  readProductionAutonomyProjection,
+  readProductionWaitingStop,
+} from "../tools/amadeus-intent-autonomy-production.ts";
+import { resolveSessionInteractivity } from "../tools/amadeus-intent-autonomy.ts";
 import {
   COMPOSE_MARKER_RELATIVE_PATH,
   COMPOSE_MARKER_TTL_MS,
@@ -180,27 +184,65 @@ function isFullyAutonomousIntent(
   }
 }
 
-// The QUESTION carve-out is the one carve-out `semi` opens (#2253, C11/ADR-7).
-// `full` answers exactly as isFullyAutonomousIntent does — redefining `semi`
-// never weakens `full` — while `semi` additionally demands that the mode was
-// declared by a HUMAN COMMAND: a mode that arrived as a system default carries
-// no authorization to keep running past a pending question. The other two
-// carve-out sites (compose :457, conversational :716) keep asking the full-only
-// predicate. Judgment is two-stage — state first, so a mode outside
-// {semi, full} answers without reading the projection at all — and any throw
-// answers false, which is the conservative side here (the hook merely stops).
-export function isQuestionCarveoutIntent(
-  stateContent: string,
-  resolvedProjectDir: string = projectDir,
-): boolean {
-  const mode = intentAutonomyMode(stateContent);
-  if (mode === "full") return isFullyAutonomousIntent(stateContent, resolvedProjectDir);
-  if (mode !== "semi") return false;
+// --- The two BOUND carve-outs (question, compose) ----------------------------
+//
+// RFC-0001 appendix C D10: equating `full` with "unattended" is what left an
+// interactive run with no way to hand a ruling back to the human sitting in
+// front of it. ADR-5 replaces the mode test on these two sites with two axes
+// that describe the situation instead of the configuration — is there a human
+// who will see the question, and is this a ruling they are owed?
+//
+// The human-wait and conversational carve-outs are NOT bound: neither axis is
+// applied to them, because both already allow stops that these axes would turn
+// into blocks.
+
+// Why a bound carve-out fired, recorded on the allow so a misclassification can
+// be contested rather than guessed at. Constructed only on the allow
+// path, so its existence IS "this carve-out returned the turn".
+type BoundCarveoutBasis = {
+  readonly carveout: "pending-question" | "pending-compose";
+  readonly interactivity: SessionInteractivitySignal;
+  readonly outcomeKind: "contested" | "none" | "human-prerogative" | "not-required";
+};
+
+type SessionInteractivitySignal = { readonly interactive: boolean; readonly source: string };
+
+// The audit line for an allow, carrying WHICH carve-out fired and WHAT the
+// interactivity judgment was based on (RFC-0001 Guide-level: the verdict and its
+// basis are recorded every time they are used, so a misclassification can be
+// contested).
+/** @internal */
+export function describeBoundCarveout(basis: BoundCarveoutBasis): string {
+  return `${basis.carveout} carve-out; interactivity=${basis.interactivity.source}; ruling=${basis.outcomeKind}`;
+}
+
+// C3's port is the ONLY interactivity judgment in this hook — a second
+// reading here is how the displayed verdict and the acted-on verdict drift
+// apart. The port is itself fail-closed; this wrapper covers the case where it
+// cannot even be reached, which is the same answer for the same reason.
+function sessionInteractivity(resolvedProjectDir: string): SessionInteractivitySignal {
   try {
-    const projection = readProductionAutonomyProjection(resolvedProjectDir);
-    return projection?.mode === "semi" && projection.modeProvenance.kind === "human-command";
+    const verdict = resolveSessionInteractivity(resolvedProjectDir);
+    return { interactive: verdict.interactive === true, source: verdict.source };
   } catch {
-    return false;
+    return { interactive: false, source: "undetermined" };
+  }
+}
+
+// The ruling-order terminal of the decision point this record is stopped at, or
+// null when there is none to read. `null` closes the carve-out rather than
+// opening it: a terminal that cannot be read is not evidence that a
+// human is owed a ruling, and the budget-bounded block is the safe side.
+//
+// The envelope is U3's waiting record — the one durable place a non-unique
+// terminal is written (amadeus-waiting.ts WaitingCause.outcome). A `unique`
+// terminal never lands here at all, which is what keeps an auto-decidable
+// decision point from firing the carve-out.
+function pendingRulingTerminal(resolvedProjectDir: string): "contested" | "none" | null {
+  try {
+    return readProductionWaitingStop(resolvedProjectDir)?.cause.outcome.kind ?? null;
+  } catch {
+    return null;
   }
 }
 
@@ -238,6 +280,10 @@ interface PendingComposeStopDeps {
   stat: (path: string) => { mtimeMs: number } | undefined;
   unlink: (path: string) => void;
   diagnostic: (value: JanitorDiagnostic) => void;
+  // ADR-5's interactivity axis enters through the same injection seam as the
+  // clock and the filesystem, so the carve-out stays testable without an audit
+  // shard on disk.
+  interactivity: () => SessionInteractivitySignal;
 }
 
 type MarkerJanitorOutcome =
@@ -268,6 +314,9 @@ const realPendingComposeStopDeps: PendingComposeStopDeps = {
   },
   unlink(path) {
     unlinkSync(path);
+  },
+  interactivity() {
+    return sessionInteractivity(projectDir);
   },
   diagnostic(value) {
     recordHookDrop(
@@ -407,10 +456,10 @@ export function isHumanWaitStop(stateContent: string): boolean {
 //      current stage's dir (amadeus-docs/<phase>/<slug>/, mirroring memoryPathFor)
 //      has at least one `[Answer]:` tag that is empty or underscores-only. No
 //      file, all answered, or any read error → false (fall through to the cap).
-//   2. AUTONOMY GUARD — never fires under Intent autonomy `full`. There the loop MUST keep
-//      running unattended (gates are skipped; a failure halt-and-asks via its
-//      own path), so a stray open question must not release the stop and strand
-//      the run waiting on a human who was told they weren't needed.
+//   2. BOUND (ADR-5) — the session must be interactive, and under `semi`/`full`
+//      the decision point must have reached a terminal a human is owed. A
+//      non-interactive run stops here instead and the engine takes it into
+//      waiting; an auto-decidable question keeps the loop alive.
 // Fail-open throughout: any error returns false and the cap-bounded block stands.
 
 // True when the `<slug>-questions.md` under the stage dir has an unanswered tag.
@@ -443,23 +492,40 @@ function hasPendingQuestion(slug: string, phase: string, resolvedProjectDir: str
 }
 
 // The tier-2 carve-out decision: the current stage is [-] in-progress, a
-// question is pending, and the Intent has no question carve-out (#2253: `full`
-// with an active grant, or `semi` declared by a human command).
-export function isPendingQuestionStop(stateContent: string, resolvedProjectDir: string = projectDir): boolean {
+// question is pending, somebody is there to answer it, and (outside mode
+// `none`) the ladder handed the ruling back rather than making it.
+//
+// Mode `none` does not run the ladder — every question is the human's by
+// definition — so the unanswered tag remains the whole signal there.
+/** @internal */
+export function questionCarveoutBasis(
+  stateContent: string,
+  resolvedProjectDir: string = projectDir,
+): BoundCarveoutBasis | null {
   try {
-    if (isQuestionCarveoutIntent(stateContent, resolvedProjectDir)) {
-      return false; // autonomy guard — keep the loop alive
-    }
     const slug = currentStageSlug(stateContent);
-    if (slug.length === 0) return false;
+    if (slug.length === 0) return null;
     const row = parseCheckboxes(stateContent).find((c) => c.slug === slug);
-    if (row?.state !== "in-progress") return false; // positive [-] only
+    if (row?.state !== "in-progress") return null; // positive [-] only
     const phase = getField(stateContent, "Lifecycle Phase") ?? "";
-    return hasPendingQuestion(slug, phase, resolvedProjectDir);
+    if (!hasPendingQuestion(slug, phase, resolvedProjectDir)) return null;
+    const interactivity = sessionInteractivity(resolvedProjectDir);
+    if (!interactivity.interactive) return null; // the engine waits instead
+    const mode = intentAutonomyMode(stateContent);
+    if (mode !== "semi" && mode !== "full") {
+      return { carveout: "pending-question", interactivity, outcomeKind: "not-required" };
+    }
+    const terminal = pendingRulingTerminal(resolvedProjectDir);
+    if (terminal === null) return null;
+    return { carveout: "pending-question", interactivity, outcomeKind: terminal };
   } catch {
     // Unparseable / odd content — fall through to decideBlock (never trap).
-    return false;
+    return null;
   }
+}
+
+export function isPendingQuestionStop(stateContent: string, resolvedProjectDir: string = projectDir): boolean {
+  return questionCarveoutBasis(stateContent, resolvedProjectDir) !== null;
 }
 
 // --- Tier-2b: pending in-flight compose proposal carve-out --------------------
@@ -472,20 +538,20 @@ export function isPendingQuestionStop(stateContent: string, resolvedProjectDir: 
 // for compose). POSITIVE-CONFIRMATION: the conductor writes the marker file
 // `amadeus/.amadeus-compose-pending` before presenting the gate (the engine's
 // compose dispatch print instructs it) and deletes it on approve/reject, the
-// same disk-signal discipline as tier-2's <slug>-questions.md. AUTONOMY GUARD:
-// never fires under Intent autonomy `full` (an unattended run has no human to
-// answer the gate; a stray marker must not strand it). Fail-open: any read
-// error falls through to the cap-bounded block. Front/report composes are
-// unaffected (cold start has no state file; the hook allows before this).
+// same disk-signal discipline as tier-2's <slug>-questions.md. BOUND (ADR-5):
+// the session must be interactive — a compose approval is the human's in every
+// mode (RFC-0001 ToBe row 19), so the terminal binding is satisfied the moment
+// a fresh marker exists, and what remains to establish is that somebody is
+// there to give it. Fail-open: any read error falls through to the cap-bounded
+// block. Front/report composes are unaffected (cold start has no state file;
+// the hook allows before this).
+//
+// The marker janitor runs regardless of interactivity: a stale marker is
+// garbage in either session, and sweeping it is not a carve-out decision.
 /** @internal */
-export function isPendingComposeStop(
-  stateContent: string,
+export function composeCarveoutBasis(
   deps: PendingComposeStopDeps = realPendingComposeStopDeps,
-): boolean {
-  if (isFullyAutonomousIntent(stateContent, deps.projectDir)) {
-    return false;
-  }
-
+): BoundCarveoutBasis | null {
   const markerPath = join(deps.projectDir, COMPOSE_MARKER_RELATIVE_PATH);
   let observation: MarkerObservation;
   try {
@@ -510,7 +576,27 @@ export function isPendingComposeStop(
       enforcement: "continued",
     });
   }
-  return freshness.kind === "fresh";
+  if (freshness.kind !== "fresh") return null;
+  const interactivity = interactivityOrUndetermined(deps.interactivity);
+  if (!interactivity.interactive) return null; // the engine waits instead
+  return { carveout: "pending-compose", interactivity, outcomeKind: "human-prerogative" };
+}
+
+// Same undetermined fallback as sessionInteractivity above, over the injected
+// read seam: a port that cannot be reached answers non-interactive.
+function interactivityOrUndetermined(read: () => SessionInteractivitySignal): SessionInteractivitySignal {
+  try {
+    return read();
+  } catch {
+    return { interactive: false, source: "undetermined" };
+  }
+}
+
+/** @internal */
+export function isPendingComposeStop(
+  deps: PendingComposeStopDeps = realPendingComposeStopDeps,
+): boolean {
+  return composeCarveoutBasis(deps) !== null;
 }
 
 // --- Tier-3: conversational-turn carve-out (issue #365 broader reading) -------
@@ -531,7 +617,10 @@ export function isPendingComposeStop(
 // releases a chatting human after one nudge instead of eight.
 //
 // Two strict gates make this safe (it can still only ever ALLOW, never block
-// more), mirroring isPendingQuestionStop:
+// more). The mode guard stays here after ADR-5 moved the question and compose
+// sites off it: a chat turn is not a ruling, so there is no terminal to bind to,
+// and binding it to interactivity instead would turn stops this already allows
+// under `semi` into blocks.
 //   1. POSITIVE-CONFIRMATION: allow only on a transcript we could read that
 //      shows a genuine human prompt answered with zero engine calls. A missing
 //      path, unreadable file, no human prompt found, or ANY engine call in the
@@ -973,33 +1062,34 @@ if (isHumanWaitStop(stateContent)) {
 }
 
 // Pending-question carve-out (tier 2): the current [-] stage has an unanswered
-// question in its `<slug>-questions.md`, and we are NOT in autonomous
-// Construction — so the conductor is parked on the human's answer to a
-// mid-stage clarifying question. Allow the stop instead of nudging. Strictly
-// gated and fail-open (see isPendingQuestionStop): any other state, no open
-// question, an autonomous run, or a read error falls through to the cap-bounded
-// block below, so a genuine mid-stage quit (and every autonomous run) is
-// unaffected.
-if (isPendingQuestionStop(stateContent)) {
+// question in its `<slug>-questions.md`, somebody is in this session to answer
+// it, and the ladder handed the ruling back instead of making it — so the
+// conductor is parked on the human. Allow the stop instead of nudging. Strictly
+// gated and fail-open (see questionCarveoutBasis): any other state, no open
+// question, a non-interactive session, an auto-decidable question, or a read
+// error falls through to the cap-bounded block below.
+const questionBasis = questionCarveoutBasis(stateContent);
+if (questionBasis !== null) {
   recordHookDrop(
     projectDir,
     HOOK_NAME,
-    `current stage ${currentStageSlug(stateContent)} has an unanswered question; allowing the stop (pending-question carve-out)`,
+    `current stage ${currentStageSlug(stateContent)} has an unanswered question; allowing the stop (${describeBoundCarveout(questionBasis)})`,
   );
   allowStop();
 }
 
 // Pending-compose carve-out (tier 2b): an in-flight compose proposal is
 // awaiting the human's approve/edit/reject (the conductor's marker file is on
-// disk) and Intent autonomy is not `full` - the conductor is parked on
-// the human exactly like a stage gate, so allow the turn to end instead of
-// nudging it back into stage execution mid-compose. Positive-confirmation only
-// (the marker), autonomy-guarded, fail-open (see isPendingComposeStop).
-if (isPendingComposeStop(stateContent)) {
+// disk) and this session has a human in it - the conductor is parked on them
+// exactly like a stage gate, so allow the turn to end instead of nudging it
+// back into stage execution mid-compose. Positive-confirmation only (the
+// marker), interactivity-bound, fail-open (see composeCarveoutBasis).
+const composeBasis = composeCarveoutBasis();
+if (composeBasis !== null) {
   recordHookDrop(
     projectDir,
     HOOK_NAME,
-    "an in-flight compose proposal is pending human approval (amadeus/.amadeus-compose-pending present); allowing the stop (pending-compose carve-out)",
+    `an in-flight compose proposal is pending human approval (amadeus/.amadeus-compose-pending present); allowing the stop (${describeBoundCarveout(composeBasis)})`,
   );
   allowStop();
 }

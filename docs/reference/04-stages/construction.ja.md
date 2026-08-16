@@ -43,15 +43,17 @@ Construction は **Bolt ごと**に実行され、ステージ 2.8 の `bolt-pla
 ```
 Intent自律レベル（無人裁定の前に選択）:
   none → すべてのgateも質問も人間が裁定
-  semi → phase内gateは事前承認済み、質問は無人裁定、節目（phase境界・walking skeleton・intent終端）は人間を待つ
-  full → 確認済みIntent grantが認可範囲内のgateと質問を裁定可能
+  full → 確認済みIntent grantが、導出が一意なinteraction kindをすべて裁定する。
+         専権の裁定点と一意でない導出は人間（対話）またはwaiting（非対話）へ
+  semi → fullから人間ゲート2つ（phase境界とwalking skeleton。後者はSkeleton
+         Stanceが on のときだけ）を引いたもの
 
 Bolt 1 (walking skeleton) — 同じmode表に従う:
   Questions (3.1–3.4 を Bolt のユニット横断で QUESTION-ONLY モードで)
   → Answers ゲート (Bolt レベル)
   Design artifacts (3.1–3.4 を ARTIFACT-ONLY モードで)
   Code generation (3.5 を Task 委譲でユニットごとに)
-  → Walking-skeleton gate（`full`は裁定可能、`none` / `semi`は人間を待つ）
+  → Walking-skeleton gate（stanceが発火させる場合。`full`は裁定可能、`none` / `semi`は人間を待つ）
 
 Bolt 2..N — Intent自律レベルがgateを統括する:
   (並列適格な Bolt はバッチとして実行される。単一のバッチレベルゲートが

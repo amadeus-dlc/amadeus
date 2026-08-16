@@ -5145,5 +5145,39 @@
     },
     "reason": "emitWaitingIfSuspended's emit lines run only inside the spawned engine `next` (t1241-waiting-engine drives the shipped CLI); the directive payload itself (waitingDirectiveFor) is covered in-process by the same file. Reached only through the spawned dist CLI (spawned execution is not attributed to parent Bun LCOV); the decision seams are covered in-process by tests/unit/t1241-waiting-terminals.test.ts and tests/integration/t1241-waiting-engine.integration.test.ts.",
     "expiry": "remove when Bun merges child-process coverage or the arm gains an injectable failure seam"
+  },
+  {
+    "file": "packages/framework/core/hooks/amadeus-stop.ts",
+    "selector": {
+      "function": "sessionInteractivity",
+      "fingerprint": "sha256:a63e3e36a27f6cf819b198402713c1b79b78a1a612a1180e015a74f5c0ed4ae4",
+      "anchorLines": 1,
+      "targetLines": "1",
+      "class": "catch-arm"
+    },
+    "reason": "Last-resort defensive catch around C3's interactivity port: resolveSessionInteractivity answers read failures inside its own catch (fail-closed non-interactive), so no in-process input makes it throw; this wrapper guards only an out-of-contract throw with no injectable seam. The reachable failure paths are covered in-process by t561 (EISDIR shard read through the port's internal catch).",
+    "expiry": "remove when the port is injected as a seam instead of imported directly"
+  },
+  {
+    "file": "packages/framework/core/hooks/amadeus-stop.ts",
+    "selector": {
+      "function": "<module>",
+      "fingerprint": "sha256:88c91ca059090399a8adcfbf741a71649aea09c74aa4c7c5d2b7e17b515ab22c",
+      "anchorLines": 6,
+      "targetLines": "1-6"
+    },
+    "reason": "Pending-question allow arm of the module-level stop flow: runs only inside the spawned Stop hook (spawned execution is not attributed to parent Bun LCOV). The decision seam (questionCarveoutBasis/isPendingQuestionStop) is covered in-process by t561/t121; the spawned arm end-to-end by tests/e2e/t122-stop-hook-e2e.test.ts.",
+    "expiry": "remove when Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/hooks/amadeus-stop.ts",
+    "selector": {
+      "function": "<module>",
+      "fingerprint": "sha256:4f01b4c5621bc65619f0ca633d13309f2c33c2a197d647b0c72de413bb63f524",
+      "anchorLines": 6,
+      "targetLines": "1-6"
+    },
+    "reason": "Pending-compose allow arm of the module-level stop flow: runs only inside the spawned Stop hook (spawned execution is not attributed to parent Bun LCOV). The decision seam (composeCarveoutBasis/isPendingComposeStop) is covered in-process by t561/t195; the spawned arm end-to-end by tests/e2e/t122-stop-hook-e2e.test.ts.",
+    "expiry": "remove when Bun merges child-process coverage"
   }
 ]

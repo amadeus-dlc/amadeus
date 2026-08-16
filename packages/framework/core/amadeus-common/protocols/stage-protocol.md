@@ -20,7 +20,7 @@ Before and during EVERY stage, verify:
 4. [ ] **Task transitions + state sync** — Mark previous task `completed`, then `TaskUpdate({ ..., status: "in_progress", activeForm: "Running [Stage] [slug]" })`. The `[slug]` suffix triggers the PostToolUse hook that syncs the state file. `amadeus-orchestrate.ts report --stage <slug> --result approved` auto-advances to the next in-scope stage (or completes the workflow on the final stage) — do NOT call `advance` separately after approval. (§4)
 5. [ ] **Stage ritual is ATOMIC** — once a stage starts, EVERY step in its protocol fires: questions → artifact → reviewer (if declared) → learnings → gate. No step is skippable based on inferred user intent. "Skip to stage X" means skip INTERMEDIATE stages, NOT shortcut the TARGET stage's ritual. If a user jumps forward from a stage at its gate, the current stage's learnings ritual (§13) MUST fire before the jump executes.
 6. [ ] **Autonomy is NEVER inferred** — a user saying "go with recommended" or "pick the best answers" for one stage is a ONE-TIME instruction for THAT stage only. It does NOT create a standing rule. The next stage starts fresh with its declared autonomy mode. The ONLY way to get autonomous mode is: (a) the directive explicitly carries `autonomy: autonomous`, OR (b) the human explicitly says "run this autonomous" for the specific stage being proposed. NEVER carry forward an autonomy inference from a previous stage. NEVER self-answer questions without explicit permission for THIS stage.
-7. [ ] **Route Amadeus-owned findings** — a confirmed Amadeus defect or actionable concern outside the active intent goes through the deterministic GitHub Issue creator and the resolved `finding.github.issue.creation.mode`. Never improvise a direct GitHub mutation. (§14)
+7. [ ] **Route Amadeus-owned findings** — a confirmed Amadeus defect or actionable concern outside the active intent goes through the deterministic GitHub Issue creator and the resolved `finding.github.issue.creation.consent`. Never improvise a direct GitHub mutation. (§14)
 
 ---
 
@@ -30,7 +30,9 @@ Every stage (except the 3 stages in the Initialization phase: workspace-scaffold
 
 ### HARD STOP RULE (non-negotiable)
 
-When a gate requires human adjudication (any gate under `none`, or a `semi` milestone — a phase boundary, the walking skeleton, or Intent completion), you MUST end your turn immediately after presenting it and wait for the user's explicit response. Do NOT call any tool until the user has typed their choice in a new message. A directive carrying `autonomy_auto_approve: true` is different: the audit-backed Intent authorization (a `full` grant decision, or a `semi` authorized ruling) has already selected the gate effect, so after the full quality ritual the conductor reports approval without presenting a human question or synthesizing `HUMAN_TURN`.
+When a gate requires human adjudication (any gate under `none`, or a `semi` milestone — a phase boundary, or the walking skeleton where its ceremony fires; Intent completion is the final phase boundary and travels as one), you MUST end your turn immediately after presenting it and wait for the user's explicit response. Do NOT call any tool until the user has typed their choice in a new message. A directive carrying `autonomy_auto_approve: true` is different: the audit-backed Intent authorization (a `full` grant decision, or a `semi` authorized ruling) has already selected the gate effect, so after the full quality ritual the conductor reports approval without presenting a human question or synthesizing `HUMAN_TURN`.
+
+`full` is not "never stops". A ruling point reserved to the user, and any derivation that ends contested or empty, is still owed to a person in every mode — under `full` too. In an INTERACTIVE session the rule above applies verbatim: present it and end the turn. In a NON-INTERACTIVE session there is nobody to present it to, so the engine enters **waiting** instead (`AWAITING_RULING`), recording the candidates and why none was unique; the conductor relays that terminal and stops rather than inventing an answer to keep moving.
 
 When that same directive also carries `phase_boundary`, auto-approval does not waive the phase-check artifact. Write `<record>/verification/phase-check-<phase>.md` **before** reporting the approval, exactly as on a human-adjudicated boundary. The state guard is fail-closed and knows nothing about autonomy: an auto-approve reported with that artifact absent is refused, not excused, and the refusal is a typed error on an authorization that was otherwise valid. The grant decides *who* approves; it never decides whether the boundary evidence exists.
 
@@ -102,7 +104,9 @@ Construction introduces three gate patterns that differ from the standard per-st
 
 **Walking-skeleton gate**
 
-The first Bolt in Construction follows the same Intent mode as every other gate. `full` may auto-approve it under the active Intent grant after quality is READY; `none` and `semi` require the human. The gate covers the Bolt's design artifacts and generated code together. Audit: automatic approval records `AUTO_DECIDED`; the enclosing `BOLT_COMPLETED` ties the gate to the Bolt.
+The first Bolt in Construction carries the walking-skeleton ceremony only where the **Skeleton Stance** says it should. The stance is read from the record (`Skeleton Stance`, or the scope's greenfield classification when the field is absent or says `scope-dependent`); where it resolves `off` — the incremental scopes, which have nothing to bootstrap — the stage is an ordinary stage or phase gate and the milestone does not fire at all. An unreadable record keeps the ceremony with the human.
+
+Where the ceremony does fire, the gate follows the same Intent mode as every other gate: `full` may auto-approve it under the active Intent grant after quality is READY; `none` and `semi` require the human. The gate covers the Bolt's design artifacts and generated code together. Audit: automatic approval records `AUTO_DECIDED`; the enclosing `BOLT_COMPLETED` ties the gate to the Bolt.
 
 **Mode selection**
 
@@ -116,9 +120,9 @@ options:
   - label: none
     description: A human decides gates and questions.
   - label: semi
-    description: Phase-internal gates advance automatically and questions are auto-decided through the resolution ladder; milestones (phase boundaries, the walking skeleton, Intent completion) wait for a human.
+    description: Everything full decides, minus two milestones - the phase boundary and the walking skeleton - which always wait for a human. Bolt batches still run unattended.
   - label: full
-    description: An Intent-scoped grant decides stage/phase gates and questions through Intent completion.
+    description: Every ruling point advances on its own where the derivation is unique. Where it is not, an interactive session is asked and a non-interactive one stops and waits.
 ```
 
 - The default is always `none`.
@@ -128,13 +132,32 @@ options:
 
 **Subsequent gates (per Intent mode)**
 
-`none` requires a human for stage and phase gates. `semi` auto-approves gates within a phase and resolves `question` occurrences unattended through the same five-rung ladder as `full` (confirmed-policy / norm / history / solo-election / agent-recommendation), recording each ruling as `AUTO_DECIDED` — rulings from the last two rungs enter the unreviewed queue — while milestones (phase boundaries, the walking skeleton, Intent completion) still require a human; `semi` holds no Intent grant (the current grant stays null — rulings rest on a lightweight semi-scoped authorization basis), accepts pre-decision policies via `--policies-file` as confirmed-policy material, and takes effect only when the mode was set by a human command (`modeProvenance.kind === "human-command"`). `full` auto-approves both under the active Intent grant. Mode names are the same `none` / `semi` / `full` shown on the `--status` `Autonomy:` line. For parallel batches, execution may still fan out; authorization mode and execution shape are separate axes.
+The four interaction kinds are `stage-gate`, `phase-gate`, `walking-skeleton` and `question`, and a mode is defined by which of them it decides for itself.
+
+`none` decides none of them: every gate and every question is the human's.
+
+`full` decides all four under the active Intent grant.
+
+`semi` is `full` minus exactly two: `phase-gate` and `walking-skeleton` stay with the human. The permission set is not a hand-written list — it is the complement of that milestone pair, so a new interaction kind becomes semi-decidable without either list being edited, and a caller that hands `semi` a scope naming a milestone still does not get the milestone decided. `semi` holds no Intent grant (the current grant stays null — rulings rest on a lightweight semi-scoped authorization basis), accepts pre-decision policies via `--policies-file` as confirmed-policy material, and takes effect only when the mode was set by a human command (`modeProvenance.kind === "human-command"`).
+
+Under `semi` and `full` alike, a `question` occurrence resolves through the same ruling order, and every ruling is recorded as `AUTO_DECIDED` — rulings from the last two rungs enter the unreviewed queue:
+
+1. **Reserved to the user?** A spec change, a goal revision, an election hold, a merge outside the standing delegation. Reserved points are settled before any derivation runs, so no basis — however unanimous — auto-decides one.
+2. **Confirmed policy → norm → past ruling → solo election → agent recommendation.** The first rung that singles out ONE option decides.
+3. **Not unique.** A rung that ends `contested` (candidates, none dominant) or `none` (nothing to go on) is not a decision: the ruling goes to a person. Reaching the last rung is not a licence to answer anyway.
+4. **Mechanism failure or norm conflict** parks. That is a defect, not a ruling.
+
+Terminals 1 and 3 are where the modes stop being "unattended": an INTERACTIVE session is asked, and a NON-INTERACTIVE one enters waiting with the candidates recorded. Interactivity is judged per session — this clone's own audit shard holds at least one `HUMAN_TURN` — with no freshness window, no TTY probe and no declaration flag, and an unreadable signal falls closed to non-interactive.
+
+Mode names are the same `none` / `semi` / `full` shown on the `--status` `Autonomy:` line, alongside the projection, the current interactivity verdict and the two consent-axis values. `Construction Autonomy Mode` is derived from the Intent mode by one function that the writer and the scheduler both call (`none` → `gated`, `semi` / `full` → `autonomous`); a record whose two fields disagree is refused loudly instead of quietly scheduling the lower of the two. `semi` therefore runs the Bolt swarm unattended: for parallel batches, authorization mode and execution shape remain separate axes.
 
 Quality failure is never approval. In `semi` and `full`, the conductor writes the closed blocking observations and its fresh replan context to a machine-local carrier and runs `amadeus-bolt observe-quality --input <carrier>` before each repair. `repair` / `replanned` reruns the same closed checks; `READY` may proceed; `parked` is a hard stop whose result envelope must be surfaced without another LLM repair attempt. The first-party Quality Repair contribution and Loop Monitor persist the evidence history, replan once at the first threshold, and eventually park nonproductive repair as `REPAIR_STALLED` while retaining an active `full` grant. After the user explicitly retries, or after strictly improved evidence exists, the conductor writes a machine-local resume carrier and runs `amadeus-bolt resume-quality --input <carrier>`; only a `resumed` result restarts the forwarding loop. The user is never asked to author carrier JSON.
 
-For a question under `full`, the conductor writes the normalized question, stable option IDs, applicable norm/history facts, recommendation, and (when available) the native solo-election result to a machine-local JSON carrier, then runs `amadeus-bolt decide-question --input <carrier>`. Use the returned `decided.effect.optionId` as the answer and record it in the questions file; `parked` is a hard stop, and any `human-required`, `conflict`, or `aborted` result fails closed. The user is never asked to author JSON. When no election result is available, the Core records loud degradation before using the recommendation.
+For a question under `full`, the conductor writes the normalized question, stable option IDs, applicable norm/history facts, recommendation, and (when available) the native solo-election result to a machine-local JSON carrier, then runs `amadeus-bolt decide-question --input <carrier>`. Use the returned `decided.effect.optionId` as the answer and record it in the questions file; `parked` is a hard stop, and `conflict` / `aborted` fail closed. The user is never asked to author JSON. When no election result is available, the Core records loud degradation before using the recommendation.
 
-For a question under `semi`, the conductor runs the **same** `amadeus-bolt decide-question --input <carrier>` procedure, unchanged — the carrier shape, the five-rung ladder, the `decided.effect.optionId` answer, the loud degradation when no election result exists, the hard stop on `parked`, and the fail-closed handling of `human-required` / `conflict` / `aborted` are identical. Two things differ, and neither is a step of the procedure: the authorization basis is the semi-scoped one (`semi` holds no Intent grant, so the current grant stays null), and pre-decision policies reach the ladder through `--policies-file` as confirmed-policy material rather than through a grant. Under `semi`, therefore, do **not** put a stage question to the human directly: `decide-question` is the route, and a `human-required` result is what sends the question to a person. Milestones are unaffected — a phase boundary, the walking skeleton, and Intent completion still require a human under `semi`.
+`human-required` is the one result that is not a failure. It means the ruling order reached terminal 1 or 3 — reserved to the user, or a derivation that did not single out an option — and it carries the outcome with it, so the candidates and the reason none was unique are already computed. Do not re-derive them and do not retry the carrier: present exactly what the result carries when the session is interactive, and relay the engine's waiting terminal when it is not.
+
+For a question under `semi`, the conductor runs the **same** `amadeus-bolt decide-question --input <carrier>` procedure, unchanged — the carrier shape, the ruling order, the `decided.effect.optionId` answer, the loud degradation when no election result exists, the hard stop on `parked`, the fail-closed handling of `conflict` / `aborted`, and the `human-required` handling above are identical. Two things differ, and neither is a step of the procedure: the authorization basis is the semi-scoped one (`semi` holds no Intent grant, so the current grant stays null), and pre-decision policies reach the ladder through `--policies-file` as confirmed-policy material rather than through a grant. Under `semi`, therefore, do **not** put a stage question to the human directly: `decide-question` is the route, and a `human-required` result is what sends the question to a person. Milestones are unaffected — a phase boundary and the walking skeleton still require a human under `semi`.
 
 **Halt-and-ask on failure**
 
@@ -146,10 +169,10 @@ When a Bolt's code-generation returns failure, **always halt regardless of auton
 - Skip: mark `[S]` in state with reason, proceed to next batch. Worktree at `<path>` is preserved.
 - Abort: stop Construction; user can resume later. Worktree at `<path>` is preserved.
 
-**Solo auto-election hook — which branch rules the halt.** Invalid layered config fails closed with an engine `error` before branch selection; neither an election nor a human prompt is emitted until the config is corrected. For a valid resolution, exactly one of these two branches runs, and the first one that applies wins:
+**Solo auto-election hook — which branch rules the halt.** The trigger is no longer a config leaf: `solo-election.trigger.mode` was abolished and the value is derived from the Intent Autonomy Mode, so a workspace that still carries the retired key (in any of its spellings) fails the config resolution loudly rather than being silently ignored — a setting you can see must be a setting that acts. Invalid layered config fails closed with an engine `error` before branch selection; neither an election nor a human prompt is emitted until the config is corrected. For a valid resolution, exactly one of these two branches runs, and the first one that applies wins:
 
-1. **Solo mode AND the layered config (`amadeus/config.json` → space → intent) resolves `solo-election.trigger.mode` to `auto`** — the engine emits `execute-failure-election` (not `ask`). The conductor opens an election INSTEAD OF presenting the prompt below: write a definition JSON carrying `schemaVersion: 2`, `electionId`, `kind`, `voters` and a one-element `questions[]` whose entry sets `questionId` to the fixed id `q-failure-ruling`, `text` to the failure summary the directive carries, and `choices` mapped deterministically from `directive.choices` (`internalNo` = 1-based position, `label` = the choice text) — Retry / Skip / Abort, then run `bun {{HARNESS_DIR}}/tools/amadeus-election.ts open --trigger auto --file <definition.json>`. `--file` is REQUIRED: without it the CLI exits 2 on usage and no trigger is evaluated. Drive the election to a ruling and commit it through the ordinary ask report path (`report --user-input` with the ruling (`retry` / `skip` / `abort`)). Do not present the prompt on this branch.
-2. **Every other valid-config case** — team mode, config absent or `manual`, the CLI answering `{"opened":null,"reason":"solo-election-manual-trigger-required"}` (which writes nothing), or a non-converged election (hold / split / interrupt / CLI error) — present the halt-and-ask prompt below exactly as written. This is the default branch.
+1. **Solo mode AND the Intent Autonomy Mode derives an `auto` solo-election trigger** (`semi` / `full`; `none` derives `manual`) — the engine emits `execute-failure-election` (not `ask`). The conductor opens an election INSTEAD OF presenting the prompt below: write a definition JSON carrying `schemaVersion: 2`, `electionId`, `kind`, `voters` and a one-element `questions[]` whose entry sets `questionId` to the fixed id `q-failure-ruling`, `text` to the failure summary the directive carries, and `choices` mapped deterministically from `directive.choices` (`internalNo` = 1-based position, `label` = the choice text) — Retry / Skip / Abort, then run `bun {{HARNESS_DIR}}/tools/amadeus-election.ts open --trigger auto --file <definition.json>`. `--file` is REQUIRED: without it the CLI exits 2 on usage and no trigger is evaluated. Drive the election to a ruling and commit it through the ordinary ask report path (`report --user-input` with the ruling (`retry` / `skip` / `abort`)). Do not present the prompt on this branch.
+2. **Every other case** — team mode, an Intent mode of `none` (deriving `manual`), the CLI answering `{"opened":null,"reason":"solo-election-manual-trigger-required"}` (which writes nothing), or a non-converged election (hold / split / interrupt / CLI error) — present the halt-and-ask prompt below exactly as written. This is the default branch.
 
 The orchestrator runs `bun {{HARNESS_DIR}}/tools/amadeus-worktree.ts info --slug <slug>` to obtain the worktree `<path>` and `<branch_name>` deterministically before composing the halt-and-ask question. See `SKILL.md` § "Halt-and-ask failure handling" for the full tool-call sequence and the `worktree-info-schema.md` knowledge file for the JSON contract.
 
@@ -853,7 +876,7 @@ Key terms used throughout AI-DLC documentation:
 | **Service** | A deployable process or container (API server, worker, frontend app). |
 | **Stage** | One of the 32 discrete steps in the lifecycle. Each stage has a lead agent, defined inputs/outputs, and follows the stage protocol. Stages are numbered by phase (e.g., 1.1, 2.4, 3.5). |
 | **Unit of work** | An independently implementable piece of the solution, decomposed during stage 2.7 (Units Generation). One or more Units are bundled into a Bolt for Construction. |
-| **Walking skeleton** | The first Bolt in Construction — the thinnest end-to-end slice that exercises every integration point. Its gate follows the Intent autonomy table: `full` may decide it within the confirmed grant; `none` and `semi` wait for a human. |
+| **Walking skeleton** | The first Bolt in Construction — the thinnest end-to-end slice that exercises every integration point. Its ceremony fires only where the Skeleton Stance resolves `on` (greenfield scopes); where the stance is `off` the first Construction stage carries an ordinary gate instead. When it does fire, the gate follows the Intent autonomy table: `full` may decide it within the confirmed grant; `none` and `semi` wait for a human. |
 <!-- glossary:projection:end -->
 
 ---
@@ -1065,14 +1088,37 @@ Under `none`, ask the human. Under `semi` and `full`, do **not** put the remote
 write to the human directly, and do not take it on the strength of the grant
 either: put the occurrence through `amadeus-bolt decide-question` exactly as
 for any other stage question, take `decided.effect.optionId` as the answer, and
-send it to a person only when the result is `human-required`. The ruling and its
-basis are recorded in the audit as `AUTO_DECIDED`.
+send it to a person only when the result is `human-required` — which, in a
+non-interactive session, means relaying the engine's waiting terminal rather
+than asking. The ruling and its basis are recorded in the audit as
+`AUTO_DECIDED`.
 
 Routing through the ladder never widens a grant. A remote write the occurrence
 classifies as one of the five effects a grant can never authorize returns
 `human-required` rather than being decided. A merge is not on this route at all:
 the merge question goes to a human on that specific PR, every time, and no
-verdict, grant, or ruling authorizes it.
+verdict, grant, or ruling authorizes it. Where the workspace's own norms carry a
+standing merge delegation, the delegation is exercised by the human under those
+norms and the engine's part is to RECORD it — `amadeus-merge-provenance record`
+writes the evidence the delegation rested on. That recording is not an autonomy
+mode arm, and no Intent mode makes a merge automatic.
+
+## 11d. Waiting Directive Receipt
+
+A `waiting` directive is the terminal a NON-INTERACTIVE run emits when it
+reached a ruling it may not make. It is not an error and not a park: `parked`
+says a human chose to stop and says nothing about why, while `waiting` names the
+exact ruling that is outstanding and carries the identifiers (`occurrence_id`,
+`basis_fingerprint`, `transaction_id`) of the Intent autonomy transaction
+holding the full cause.
+
+Print `directive.reason` verbatim, tell the user the run is waiting on their
+ruling and that `/amadeus --resume` re-presents it, and STOP the loop.
+
+Do not re-derive the ruling, do not answer it on the user's behalf, and do not
+paraphrase the candidates: `--resume` re-presents the SAME candidates from the
+recorded transaction, which is the whole point of recording them. Re-running
+`next` without a ruling only re-emits this directive.
 
 ## 12. Phase Boundary Verification
 
@@ -1221,11 +1267,22 @@ Trigger after Step N-1 (completion message rendered) and before Step N (approval
 
 3. **Render the structured question + free-text channel.** For each candidate, render one option whose `label` is the candidate `summary` (verbatim) and whose `description` names the routed destination (e.g. `→ project.md ## Corrections`) plus a "promote to team?" affordance. Never label an option with only the candidate id — `❌ "Persist c5 only (Recommended)"` is a protocol violation: the human cannot judge what `c5` is from the label, so the `summary` (not the id) must be the visible `label`. After `multiSelect` returns, correlate each kept label back to its candidate `id` + `source_heading`. Then **always** ask "Anything to add for next time?"; for any non-empty response, ask the user to pick one of the four diary headings (Interpretation / Deviation / Tradeoff / Open question). **The diary-heading pick is the only classification asked of the user.** From it, the orchestrator routes the learning to the fitting practice heading in the method file (KNOWLEDGE): a testing learning → `## Testing Posture`, a prohibition → `## Forbidden`, anything general → `## Corrections` (the default). The user never picks the destination heading directly — the orchestrator routes by fit, and the tool ensure-exists the heading before it writes.
 
-   **Solo auto-election hook.** In solo mode, when the layered config
-   (`amadeus/config.json` → space → intent) resolves
-   `solo-election.trigger.mode` to `auto`,
+   **Zero candidates.** When `surface` reports no candidates at all, the ritual
+   does not open — but "no candidates" is a measurement, not a self-report. Run
+   `bun {{HARNESS_DIR}}/tools/amadeus-learnings.ts confirm-zero --surface-json <path>`:
+   it mints a receipt (and emits `LEARNING_ZERO_CONFIRMED`) only when the
+   candidate list is empty AND the surface JSON's own digest recomputes from its
+   own candidates and parked questions, so a stale or edited surface cannot
+   retire the ritual. Anything else prints `not-zero` and emits nothing, and the
+   selection below runs. A candidate the conductor wants to ADD goes through
+   `add-candidate`, which is additive-only and refuses a candidate whose
+   evidence path is not on disk.
+
+   **Solo auto-election hook.** In solo mode, when the Intent Autonomy Mode
+   derives an `auto` solo-election trigger (`semi` / `full`; `none` derives
+   `manual`),
    do not settle the kept set alone — put the selection (including a zero-candidate
-   proposal) to an election. Write a definition JSON carrying `schemaVersion: 2`,
+   proposal that `confirm-zero` did NOT certify) to an election. Write a definition JSON carrying `schemaVersion: 2`,
    `electionId`, `kind`, `voters` and a one-element `questions[]` whose entry sets `questionId` to the fixed id
    `q-learnings-selection`, `text` to the selection question, and `choices`
    mapped deterministically (`internalNo` = 1-based position, `label` = the
@@ -1290,9 +1347,13 @@ Two reasons: (1) framework upgrades to a stage file would conflict with workflow
 
 When stage work exposes a confirmed defect or actionable engineering concern
 owned by Amadeus itself, route it through the deterministic GitHub Issue creator. The
-layered setting is `finding.github.issue.creation.mode` with values
+layered setting is `finding.github.issue.creation.consent` with values
 `off | prompt | auto`; its default is `prompt`. The fixed remote target is
-`amadeus-dlc/amadeus`; this setting never files application-project issues.
+`amadeus-dlc/amadeus`; this setting never files application-project issues. The
+setting is a **consent axis, not an autonomy axis**: it is read the same way in
+`none`, `semi` and `full`, and Intent autonomy neither raises nor lowers it.
+Its resolved value is shown on `--status` so what the config says and what the
+run will do can be compared without reading either.
 The upstream target is deliberate: an Amadeus-owned defect observed in ANY
 workspace — including forks and end-user projects — belongs to the framework's
 own tracker, exactly like a crash reporter. That is why the admission rules

@@ -110,8 +110,9 @@ state-transition tools directly.
   `directive.advisories[].message` and `directive.advisories[].result`, and
   stop. Opening a handoff stage never releases the hold — the hold lifts only
   when the declaring plugin's own evaluator returns no-hold on a later `next`.
-- `execute-failure-election`: Construction Unit failure under
-  `solo-election.trigger.mode=auto`. This is work, not a question: do NOT
+- `execute-failure-election`: Construction Unit failure with an Intent Autonomy
+  Mode of `semi` or `full` (which derive an `auto` solo-election trigger; `none`
+  derives `manual`). This is work, not a question: do NOT
   present Retry/Skip/Abort. Write a definition JSON carrying `electionId`,
   `kind`, `voters` and a one-element `questions[]` whose entry sets `questionId` to the fixed id `q-failure-ruling`, `text` to the failure summary the directive carries, and `choices` mapped deterministically from `directive.choices` (`internalNo` = 1-based position, `label` = the choice text), plus `schemaVersion: 2`,
   then run

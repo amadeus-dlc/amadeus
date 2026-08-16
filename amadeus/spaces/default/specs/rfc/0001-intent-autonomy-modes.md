@@ -2,7 +2,7 @@
 feature: intent-autonomy-modes
 start-date: 2026-08-15
 rfc-pr: https://github.com/amadeus-dlc/amadeus/pull/3083
-tracking-issue: (実装 intent のミラー Issue — intent 開始時に engine が生成した番号を記入)
+tracking-issue: "#3116"
 status: approved
 version: 1
 approved-by: j5ik2o(ユーザー)
