@@ -22,6 +22,7 @@ import { join } from "node:path";
 import { cleanupTestProject, setupIntegrationProject } from "../harness/fixtures.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import {
+  describeBoundCarveout,
   isConversationalStop,
   isHumanWaitStop,
   isPendingComposeStop,
@@ -301,6 +302,19 @@ describe("t561 R-2 — interactivity failures fall closed to non-interactive", (
     rmSync(shardPath, { force: true });
     mkdirSync(shardPath, { recursive: true });
     expect(isPendingQuestionStop(stateContent, proj)).toBe(false);
+  });
+});
+
+// The audit line carries WHICH carve-out fired, the interactivity source, and
+// the ruling terminal — the three facts a misclassification contest needs.
+describe("t561 the allow audit line names its basis", () => {
+  test("describeBoundCarveout renders carve-out, interactivity source, and ruling", () => {
+    const line = describeBoundCarveout({
+      carveout: "pending-question",
+      interactivity: { interactive: true, source: "human-turn-pipeline" },
+      outcomeKind: "contested",
+    });
+    expect(line).toBe("pending-question carve-out; interactivity=human-turn-pipeline; ruling=contested");
   });
 });
 
