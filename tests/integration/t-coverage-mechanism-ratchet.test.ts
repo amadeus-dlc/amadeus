@@ -283,7 +283,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "unit/t117.test.ts",
     "unit/t118.test.ts",
     "unit/t124-scope-transpose.test.ts",
-    "unit/t1241-park-guard-removal.test.ts",
+    "integration/t1241-park-guard-removal.integration.test.ts",
     "unit/t125-scope-files.test.ts",
     "unit/t125.test.ts",
     "unit/t129-stage-runner-drift.test.ts",

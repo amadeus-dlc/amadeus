@@ -1298,10 +1298,14 @@ function currentStageOf(projectDir: string): string {
 // committed by the time this runs, so a shard that cannot be written must not
 // undo it — the ledger is the record and this is its human-readable projection.
 // Same lazy require and same fail-open rationale as emitAuthorizationRefusal.
-function emitWaitingMarker(projectDir: string, event: string, fields: Record<string, string>): void {
+function emitWaitingMarker(
+  projectDir: string,
+  event: string,
+  emit: (emitAuditEvent: typeof EmitAuditEvent) => ReturnType<typeof EmitAuditEvent>,
+): void {
   try {
     const otel = require("../otel/audit-emit.ts") as { emitAuditEvent: typeof EmitAuditEvent };
-    const result = otel.emitAuditEvent(event, fields, projectDir);
+    const result = emit(otel.emitAuditEvent);
     if (!result.appended) console.error(`amadeus: could not record ${event} — the transaction ledger is unaffected`);
   } catch (cause) {
     console.error(
@@ -1325,13 +1329,14 @@ export function enterProductionWaiting(
   const entered = coordinatorFor(projectDir, resolved).enterWaiting({ cause });
   if ("error" in entered) return { error: entered.error };
   const stage = currentStageOf(projectDir);
-  emitWaitingMarker(projectDir, "WORKFLOW_WAITING_ENTERED", {
-    Stage: stage,
-    "Occurrence Id": cause.occurrenceId,
-    "Basis Fingerprint": cause.basisFingerprint,
-    "Transaction Id": entered.waitingId,
-    Timestamp: new Date().toISOString(),
-  });
+  emitWaitingMarker(projectDir, "WORKFLOW_WAITING_ENTERED", (emitAuditEvent) =>
+    emitAuditEvent("WORKFLOW_WAITING_ENTERED", {
+      Stage: stage,
+      "Occurrence Id": cause.occurrenceId,
+      "Basis Fingerprint": cause.basisFingerprint,
+      "Transaction Id": entered.waitingId,
+      Timestamp: new Date().toISOString(),
+    }, projectDir));
   return { waitingId: entered.waitingId, stage };
 }
 
@@ -1376,11 +1381,12 @@ export function resumeProductionWaiting(
     satisfiedConditionIdentity: envelope.resumeCondition.identity,
   });
   if ("error" in resumed) return { error: resumed.error };
-  emitWaitingMarker(projectDir, "WORKFLOW_WAITING_RESUMED", {
-    Stage: currentStageOf(projectDir),
-    "Transaction Id": envelope.parkTransactionId,
-    Timestamp: new Date().toISOString(),
-  });
+  emitWaitingMarker(projectDir, "WORKFLOW_WAITING_RESUMED", (emitAuditEvent) =>
+    emitAuditEvent("WORKFLOW_WAITING_RESUMED", {
+      Stage: currentStageOf(projectDir),
+      "Transaction Id": envelope.parkTransactionId,
+      Timestamp: new Date().toISOString(),
+    }, projectDir));
   return { waitingId: envelope.parkTransactionId };
 }
 

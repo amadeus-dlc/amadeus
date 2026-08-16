@@ -223,6 +223,8 @@ session フックは発行前にアクティブな intent の `amadeus-state.md`
 | `WORKFLOW_COMPLETED` | `tools/amadeus-state.ts` |  |
 | `WORKFLOW_PARKED` | `tools/amadeus-state.ts` | `park` - 後のセッション向けに実行途中で park された workflow。ステージ進行なし |
 | `WORKFLOW_UNPARKED` | `tools/amadeus-state.ts` | `unpark` - 明示的な `--resume` 再入時に park マーカーがクリアされた |
+| `WORKFLOW_WAITING_ENTERED` | `tools/amadeus-intent-autonomy-production.ts` | `enterProductionWaiting` マーカー - 非対話 run が自ら下せない裁定で停止した(RFC-0001 FR-3/ADR-4)。正本は台帳トランザクションで、この行はその投影 |
+| `WORKFLOW_WAITING_RESUMED` | `tools/amadeus-intent-autonomy-production.ts` | waiting 再開マーカー - waiting record が再提示され裁定された |
 | `INTENT_ARCHIVED` | `tools/amadeus-state.ts` | 人間が承認した archive トランザクション。operation ID ごとに1回発行 |
 | `INTENT_UNARCHIVED` | `tools/amadeus-state.ts` | 人間が承認した unarchive トランザクション。operation ID ごとに1回発行 |
 | `EXECUTION_EVENT_SET_COMMITTED` | `tools/amadeus-execution-lifecycle.ts` | 正典の audit-first 実行ライフサイクルイベントセットを原子的に記録 |

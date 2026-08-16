@@ -937,7 +937,7 @@
       "minMechanism": "none",
       "coveredBy": [
         {
-          "file": "tests/unit/t1241-park-guard-removal.test.ts",
+          "file": "tests/integration/t1241-park-guard-removal.integration.test.ts",
           "mechanism": "cli"
         },
         {
@@ -6945,11 +6945,11 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
-          "file": "tests/integration/t3016-park-provenance.integration.test.ts",
+          "file": "tests/integration/t1241-park-guard-removal.integration.test.ts",
           "mechanism": "cli"
         },
         {
-          "file": "tests/unit/t1241-park-guard-removal.test.ts",
+          "file": "tests/integration/t3016-park-provenance.integration.test.ts",
           "mechanism": "cli"
         },
         {
@@ -7137,15 +7137,15 @@
       "minMechanism": "cli",
       "coveredBy": [
         {
+          "file": "tests/integration/t1241-park-guard-removal.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/integration/t259-guard-integration.test.ts",
           "mechanism": "cli"
         },
         {
           "file": "tests/integration/t3016-park-provenance.integration.test.ts",
-          "mechanism": "cli"
-        },
-        {
-          "file": "tests/unit/t1241-park-guard-removal.test.ts",
           "mechanism": "cli"
         },
         {

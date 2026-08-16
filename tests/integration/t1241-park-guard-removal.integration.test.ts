@@ -1,5 +1,5 @@
 // covers: subcommand:amadeus-state:park, subcommand:amadeus-state:unpark, audit:WORKFLOW_PARKED
-// size: small
+// size: medium
 //
 // RFC-0001 FR-3 / ADR-4 — the park autonomy guard is GONE.
 //
