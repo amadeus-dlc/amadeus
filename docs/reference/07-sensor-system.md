@@ -75,7 +75,7 @@ command: bun .claude/tools/amadeus-sensor-required-sections.ts   # required
 default_severity: advisory                   # required
 description: Checks that stage output ...    # required
 category: document-shape                     # optional
-matches: "**/{amadeus-docs,intents}/**"                  # optional capability filter
+matches: "**/{amadeus-docs,intents,codekb}/**"           # optional capability filter
 input_schema:                                # optional
   output_path: string
   stage_slug: string
