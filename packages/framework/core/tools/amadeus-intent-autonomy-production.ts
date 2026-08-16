@@ -1307,6 +1307,7 @@ function emitWaitingMarker(projectDir: string, event: string, fields: Record<str
     console.error(
       `amadeus: could not record ${event} — the transaction ledger is unaffected: ${cause instanceof Error ? cause.message : String(cause)}`,
     );
+    return;
   }
 }
 
