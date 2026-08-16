@@ -197,8 +197,8 @@ the PostToolUse hook at fire time, not by the resolver at compile time.
 
 | Manifest | `matches` |
 |---|---|
-| `amadeus-required-sections.md` | `**/{amadeus-docs,intents}/**` |
-| `amadeus-upstream-coverage.md` | `**/{amadeus-docs,intents}/**` |
+| `amadeus-required-sections.md` | `**/{amadeus-docs,intents,codekb}/**` |
+| `amadeus-upstream-coverage.md` | `**/{amadeus-docs,intents,codekb}/**` |
 | `amadeus-answer-evidence.md` | `**/*-questions.md` |
 | `amadeus-depth-budget.md` | `**/inception/requirements-analysis/requirements.md` |
 | `amadeus-linter.md` | `**/*.{ts,js}` |
@@ -206,6 +206,10 @@ the PostToolUse hook at fire time, not by the resolver at compile time.
 | `amadeus-event-registry-drift.md` | `**/{event-registry,amadeus-audit}.ts` |
 | `amadeus-model-completeness.md` | `**/{amadeus/spaces/*/specs/tla/**,packages/framework/core/tools/amadeus-election*.ts,packages/framework/core/tools/amadeus-mirror-*.ts}` |
 | `amadeus-self-scope-consistency.md` | `**/{scopes/{amadeus-self-*.md,amadeus-installer-distribution.md},tools/data/scope-grid.json}` |
+| `amadeus-pr-convergence-report-format.md` | `**/construction/*/code-generation/pr-convergence-report.md` |
+| `amadeus-nfr-budget.md` | `**/nfr-*/*.md` |
+| `amadeus-question-budget.md` | `**/*-questions.md` |
+| `amadeus-scope-sizing.md` | `**/scope-definition/*.md` |
 
 `matches` **is** the fire filter — it is not optional in practice. The hook
 compares the path being written against the glob and fires only on a match;

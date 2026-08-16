@@ -196,8 +196,8 @@ outputs: ...
 
 | マニフェスト | `matches` |
 |---|---|
-| `amadeus-required-sections.md` | `**/{amadeus-docs,intents}/**` |
-| `amadeus-upstream-coverage.md` | `**/{amadeus-docs,intents}/**` |
+| `amadeus-required-sections.md` | `**/{amadeus-docs,intents,codekb}/**` |
+| `amadeus-upstream-coverage.md` | `**/{amadeus-docs,intents,codekb}/**` |
 | `amadeus-answer-evidence.md` | `**/*-questions.md` |
 | `amadeus-depth-budget.md` | `**/inception/requirements-analysis/requirements.md` |
 | `amadeus-linter.md` | `**/*.{ts,js}` |
@@ -205,6 +205,10 @@ outputs: ...
 | `amadeus-event-registry-drift.md` | `**/{event-registry,amadeus-audit}.ts` |
 | `amadeus-model-completeness.md` | `**/{amadeus/spaces/*/specs/tla/**,packages/framework/core/tools/amadeus-election*.ts,packages/framework/core/tools/amadeus-mirror-*.ts}` |
 | `amadeus-self-scope-consistency.md` | `**/{scopes/{amadeus-self-*.md,amadeus-installer-distribution.md},tools/data/scope-grid.json}` |
+| `amadeus-pr-convergence-report-format.md` | `**/construction/*/code-generation/pr-convergence-report.md` |
+| `amadeus-nfr-budget.md` | `**/nfr-*/*.md` |
+| `amadeus-question-budget.md` | `**/*-questions.md` |
+| `amadeus-scope-sizing.md` | `**/scope-definition/*.md` |
 
 `matches` **こそが**発火フィルタです — 実際にはオプションではありません。フックは
 書き込まれるパスをglobと比較し、一致した場合のみ発火します。
