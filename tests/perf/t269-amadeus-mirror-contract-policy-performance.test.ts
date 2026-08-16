@@ -123,7 +123,7 @@ describe("t269 selector + read + policy budget", () => {
       join(base, "spaces", "default", "intents", INTENT, "config.json"),
     ]) {
       mkdirSync(dirname(path), { recursive: true });
-      writeFileSync(path, `${JSON.stringify({ "intent-mirror": { github: { issue: { mode: "auto" } } } })}\n`, "utf-8");
+      writeFileSync(path, `${JSON.stringify({ "intent-mirror": { github: { issue: { consent: "auto" } } } })}\n`, "utf-8");
     }
     return root;
   }
@@ -150,7 +150,7 @@ describe("t269 selector + read + policy budget", () => {
         if (outcome.kind === "resolved") {
           decideMirrorAction({
             kind: "lifecycle",
-            mode: outcome.config.intentMirror.github.issue.mode,
+            mode: outcome.config.intentMirror.github.issue.consent,
             event,
             state: fixtureState,
           });

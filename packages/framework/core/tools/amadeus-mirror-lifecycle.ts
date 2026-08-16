@@ -266,7 +266,7 @@ function lifecycleRuntime(
 }
 
 // #1990 — in-progress label sync riding the boundary that already reached
-// GitHub. Runs only under the `intent-mirror.github.issue.mode = auto` standing consent (the same
+// GitHub. Runs only under the `intent-mirror.github.issue.consent = auto` standing consent (the same
 // mode that authorizes unattended mirror mutations; user ruling 2026-08-02
 // extends it to in-progress labels on the intent's related issues). Fail-open
 // by contract: label problems warn on stderr and never change the boundary
@@ -290,7 +290,7 @@ async function syncBoundaryLabels(input: SyncBoundaryLabelsInput): Promise<void>
     const config = resolveAmadeusConfig(input.projectDir, input.intentDir, input.space);
     if (
       config.kind !== "resolved" ||
-      config.config.intentMirror.github.issue.mode !== "auto"
+      config.config.intentMirror.github.issue.consent !== "auto"
     ) return;
     const document = readFileSync(input.statePath, "utf-8");
     const plan = mirrorLabelSyncPlan(

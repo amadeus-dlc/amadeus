@@ -39,6 +39,7 @@ import type {
   MirrorProjectStatusNames,
   MirrorProjectTarget,
 } from "./amadeus-mirror-types.ts";
+import type { AutonomyMode } from "./amadeus-intent-autonomy.ts";
 
 // A config file above this size is rejected rather than read into memory. The
 // bounded reader stops one byte past the limit so growth beyond it is caught.
@@ -61,17 +62,26 @@ const PROJECTS_EXPECTED =
 export type ConfigLayer = "project" | "space" | "intent";
 
 export type AmadeusConfigKey =
-  | "intent-mirror.github.issue.mode"
+  | "intent-mirror.github.issue.consent"
   | "intent-mirror.github.project.targets"
-  | "solo-election.trigger.mode"
-  | "finding.github.issue.creation.mode"
+  | "finding.github.issue.creation.consent"
   | "swarm.unit.concurrency.limit"
   | "plugin.activation.names"
   | "plugin.scope-bindings"
   | "plugin.settings"
   | "subagent.dispatch.enforced-models";
 
+// RFC-0001 ADR-8: `solo-election.trigger.mode` is not a config leaf — it is
+// DERIVED from Intent Autonomy Mode (state, not config). The value domain is
+// unchanged from the retired config leaf; only its source moved.
 export type SoloElectionTriggerMode = "manual" | "auto";
+
+// Pure: no config read, no I/O. `none` requires an explicit human trigger;
+// `semi`/`full` already carry standing delegation, so the election itself
+// may fire automatically too.
+export function deriveSoloElectionTrigger(mode: AutonomyMode): SoloElectionTriggerMode {
+  return mode === "none" ? "manual" : "auto";
+}
 
 export type PluginScopeBindings = Readonly<
   Record<string, Readonly<Record<string, readonly string[]>>>
@@ -93,16 +103,13 @@ export function requiredPluginStagesForScope(
 export type AmadeusConfig = Readonly<{
   intentMirror: Readonly<{
     github: Readonly<{
-      issue: Readonly<{ mode: MirrorMode }>;
+      issue: Readonly<{ consent: MirrorMode }>;
       project: Readonly<{ targets: readonly MirrorProjectTarget[] }>;
     }>;
   }>;
-  soloElection: Readonly<{
-    trigger: Readonly<{ mode: SoloElectionTriggerMode }>;
-  }>;
   finding: Readonly<{
     github: Readonly<{
-      issue: Readonly<{ creation: Readonly<{ mode: MirrorMode }> }>;
+      issue: Readonly<{ creation: Readonly<{ consent: MirrorMode }> }>;
     }>;
   }>;
   swarm: Readonly<{
@@ -227,7 +234,7 @@ function readFailure(
     kind: "read-failure",
     layer,
     path,
-    key: "intent-mirror.github.issue.mode",
+    key: "intent-mirror.github.issue.consent",
     summary,
     expected: "readable configuration",
   };
@@ -435,7 +442,6 @@ function parsePlugins(value: unknown): readonly string[] | null {
 
 type ConfigLeafValue =
   | MirrorMode
-  | SoloElectionTriggerMode
   | number
   | readonly MirrorProjectTarget[]
   | readonly string[]
@@ -467,12 +473,6 @@ function parseMode(value: unknown): LeafParseOutcome {
   return VALID_MODES.includes(value as MirrorMode)
     ? { ok: true, value: value as MirrorMode }
     : { ok: false, actualType: valueKind(value), expected: "off | prompt | auto" };
-}
-
-function parseElectionMode(value: unknown): LeafParseOutcome {
-  return value === "manual" || value === "auto"
-    ? { ok: true, value }
-    : { ok: false, actualType: valueKind(value), expected: "manual | auto" };
 }
 
 function parseTargets(value: unknown): LeafParseOutcome {
@@ -582,7 +582,7 @@ const ALL_LAYERS: readonly ConfigLayer[] = ["project", "space", "intent"];
 
 export const AMADEUS_CONFIG_REGISTRY: readonly AmadeusConfigRegistryEntry[] = [
   {
-    path: "intent-mirror.github.issue.mode",
+    path: "intent-mirror.github.issue.consent",
     domain: "intent-mirror",
     layers: ALL_LAYERS,
     merge: "replace",
@@ -600,19 +600,7 @@ export const AMADEUS_CONFIG_REGISTRY: readonly AmadeusConfigRegistryEntry[] = [
     legacy: { key: "mirror-projects", valueConversion: "unchanged" },
   },
   {
-    path: "solo-election.trigger.mode",
-    domain: "solo-election",
-    layers: ALL_LAYERS,
-    merge: "replace",
-    defaultValue: "manual",
-    parse: parseElectionMode,
-    legacy: {
-      key: "auto-solo-election",
-      valueConversion: "false -> manual; true -> auto",
-    },
-  },
-  {
-    path: "finding.github.issue.creation.mode",
+    path: "finding.github.issue.creation.consent",
     domain: "finding",
     layers: ALL_LAYERS,
     merge: "replace",
@@ -664,13 +652,60 @@ export const AMADEUS_CONFIG_REGISTRY: readonly AmadeusConfigRegistryEntry[] = [
   },
 ];
 
-const LEGACY_KEY_REPLACEMENTS = new Map(
-  AMADEUS_CONFIG_REGISTRY.flatMap((entry) =>
+// A legacy key either has a renamed structured replacement (case: consent-axis
+// keys, `.mode` -> `.consent` — the RFC-0001 ADR-8 "keep vocabulary, rename
+// path" case) or was abolished outright with no replacement leaf at all (case:
+// `solo-election.trigger.mode` — ADR-8 "derive from Intent Autonomy Mode,
+// don't configure it"). The two carry different `expected` text: a renamed
+// key's message names the new path; an abolished key's message never does,
+// so the reader isn't sent looking for a config leaf that doesn't exist.
+type LegacyReplacement =
+  | Readonly<{ kind: "renamed"; path: AmadeusConfigKey; valueConversion: string }>
+  | Readonly<{ kind: "abolished"; explanation: string }>;
+
+const SOLO_ELECTION_ABOLISHED_EXPLANATION =
+  "derived automatically from Intent Autonomy Mode (none -> manual, semi/full -> auto); this key no longer exists and is not configurable";
+
+// Flat aliases (no dots) and legacy full-path spellings of keys ABOLISHED
+// outright, matched only at the top of an object (prefix === "") — see
+// appendUnknownPathIssue. Keyed by the raw JSON key as written, which for a
+// flat-dotted key IS the full path (`key.includes(".")` in
+// collectSchemaIssues routes straight here without descending).
+const LEGACY_KEY_REPLACEMENTS = new Map<string, LegacyReplacement>([
+  ...AMADEUS_CONFIG_REGISTRY.flatMap((entry) =>
     entry.legacy === undefined
       ? []
-      : [[entry.legacy.key, { path: entry.path, valueConversion: entry.legacy.valueConversion }] as const],
+      : [
+          [
+            entry.legacy.key,
+            { kind: "renamed", path: entry.path, valueConversion: entry.legacy.valueConversion } as const,
+          ] as const,
+        ],
   ),
-);
+  ["auto-solo-election", { kind: "abolished", explanation: SOLO_ELECTION_ABOLISHED_EXPLANATION }],
+  // The nested spelling's own top segment: no registry entry carries a
+  // "solo-election" prefix any more, so collectSchemaIssues' recursion never
+  // reaches deeper than this segment for `{"solo-election": {...}}` input.
+  ["solo-election", { kind: "abolished", explanation: SOLO_ELECTION_ABOLISHED_EXPLANATION }],
+  ["solo-election.trigger.mode", { kind: "abolished", explanation: SOLO_ELECTION_ABOLISHED_EXPLANATION }],
+]);
+
+// Old NESTED path spellings of keys that were RENAMED (not abolished). Unlike
+// LEGACY_KEY_REPLACEMENTS this is checked regardless of nesting depth — the
+// full reconstructed dotted `path`, not just the raw JSON `key` — because the
+// old leaf's own prefix chain (`intent-mirror.github.issue`) is still valid
+// (the sibling `.consent` leaf keeps it registered), so a nested `{"mode":
+// ...}` naturally recurses all the way down to a full path match.
+const LEGACY_PATH_REPLACEMENTS = new Map<string, LegacyReplacement>([
+  [
+    "intent-mirror.github.issue.mode",
+    { kind: "renamed", path: "intent-mirror.github.issue.consent", valueConversion: "unchanged" },
+  ],
+  [
+    "finding.github.issue.creation.mode",
+    { kind: "renamed", path: "finding.github.issue.creation.consent", valueConversion: "unchanged" },
+  ],
+]);
 
 type LayerIssue = Readonly<{
   key: AmadeusConfigKey;
@@ -704,15 +739,23 @@ function appendUnknownPathIssue(
   prefix: string,
   issues: LayerIssue[],
 ): void {
-  const replacement = prefix === "" ? LEGACY_KEY_REPLACEMENTS.get(key) : undefined;
+  const replacement =
+    LEGACY_PATH_REPLACEMENTS.get(path) ?? (prefix === "" ? LEGACY_KEY_REPLACEMENTS.get(key) : undefined);
+  if (replacement === undefined) {
+    issues.push({
+      key: "intent-mirror.github.issue.consent",
+      actualType: `unknown key ${path}`,
+      expected: "documented structured configuration path",
+    });
+    return;
+  }
   issues.push({
-    key: replacement?.path ?? "intent-mirror.github.issue.mode",
-    actualType:
-      replacement === undefined ? `unknown key ${path}` : `legacy key ${key}`,
+    key: replacement.kind === "renamed" ? replacement.path : "intent-mirror.github.issue.consent",
+    actualType: `legacy key ${key}`,
     expected:
-      replacement === undefined
-        ? "documented structured configuration path"
-        : `use ${replacement.path}; value conversion: ${replacement.valueConversion}`,
+      replacement.kind === "renamed"
+        ? `use ${replacement.path}; value conversion: ${replacement.valueConversion}`
+        : replacement.explanation,
   });
 }
 
@@ -721,7 +764,7 @@ function appendPrefixTypeIssue(path: string, child: unknown, issues: LayerIssue[
     entry.path.startsWith(`${path}.`),
   );
   issues.push({
-    key: descendant?.path ?? "intent-mirror.github.issue.mode",
+    key: descendant?.path ?? "intent-mirror.github.issue.consent",
     actualType: valueKind(child),
     expected: "object",
   });
@@ -758,7 +801,7 @@ function schemaIssues(rawValue: unknown): LayerIssue[] {
   if (!isPlainObject(rawValue)) {
     return [
       {
-        key: "intent-mirror.github.issue.mode",
+        key: "intent-mirror.github.issue.consent",
         actualType: valueKind(rawValue),
         expected: "object",
       },
@@ -839,22 +882,17 @@ function resolvedConfig(values: ReadonlyMap<AmadeusConfigKey, ConfigLeafValue>):
   return {
     intentMirror: {
       github: {
-        issue: { mode: value("intent-mirror.github.issue.mode") as MirrorMode },
+        issue: { consent: value("intent-mirror.github.issue.consent") as MirrorMode },
         project: {
           targets: value("intent-mirror.github.project.targets") as readonly MirrorProjectTarget[],
         },
-      },
-    },
-    soloElection: {
-      trigger: {
-        mode: value("solo-election.trigger.mode") as SoloElectionTriggerMode,
       },
     },
     finding: {
       github: {
         issue: {
           creation: {
-            mode: value("finding.github.issue.creation.mode") as MirrorMode,
+            consent: value("finding.github.issue.creation.consent") as MirrorMode,
           },
         },
       },

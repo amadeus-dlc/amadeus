@@ -12,9 +12,11 @@ import {
   listIntents,
   listSpaces,
   loadAgents,
+  nonInteractiveMarker,
   resolveProjectDirFromHook,
   stateFilePath,
 } from "../tools/amadeus-lib.ts";
+import { resolveSessionInteractivity } from "../tools/amadeus-intent-autonomy.ts";
 import {
   initProcessObservability,
   observabilityEnabled,
@@ -260,10 +262,31 @@ function recordRuntimeAttrs(projectDir: string, input: Input): void {
 // line. A named helper (not an inline branch in main) because main's CCN is
 // ratcheted in tests/.complexity-baseline.json and only ever ratchets down;
 // naming it also keeps the anonymous-function ordinals of this file stable.
-function withAutonomySegment(line: string, state: string): string {
+// RFC-0001 C8 / FR-8: the marker rides directly on the `@<mode>` segment, so
+// it never appears standalone when the mode itself is unknown. Fail-open — a
+// read failure here must never affect the status line, matching
+// recordRuntimeAttrs' posture — since C8 adds no bespoke timeout handling of
+// its own (business-logic-model.md error-path table).
+// The statusline must render even when interactivity cannot be resolved. An
+// unreadable ledger is answered INSIDE resolveSessionInteractivity — it fails
+// closed to non-interactive (under-reporting presence is safe; fabricating it
+// is not) — so the marker then truthfully shows the effective answer the
+// runtime will act on. The catch below only guards throws outside that
+// contract, degrading to no marker rather than a broken line.
+function safeNonInteractiveMarker(projectDir: string): string {
+  try {
+    return nonInteractiveMarker(resolveSessionInteractivity(projectDir).interactive);
+  } catch {
+    return "";
+  }
+}
+
+function withAutonomySegment(line: string, state: string, projectDir: string): string {
   const autonomy = autonomySegment(state);
   let output = line;
-  if (autonomy) output += ` @${autonomy}`;
+  if (autonomy) {
+    output += ` @${autonomy}${safeNonInteractiveMarker(projectDir)}`;
+  }
   return output;
 }
 
@@ -331,7 +354,7 @@ async function main(): Promise<void> {
   if (stageDisplay) output += ` > ${stageDisplay}`;
   if (agentDisplay) output += ` -- ${agentDisplay}`;
 
-  printLine(withAutonomySegment(output, state), right);
+  printLine(withAutonomySegment(output, state, projectDir), right);
 }
 
 await main();

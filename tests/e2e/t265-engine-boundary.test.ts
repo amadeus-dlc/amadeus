@@ -206,7 +206,7 @@ describe("t265 workflow completion lifecycle", () => {
     );
     writeFileSync(
       join(project, "amadeus", "config.json"),
-      '{"intent-mirror":{"github":{"issue":{"mode":"auto"}}}}',
+      '{"intent-mirror":{"github":{"issue":{"consent":"auto"}}}}',
     );
     const record = join(
       project,

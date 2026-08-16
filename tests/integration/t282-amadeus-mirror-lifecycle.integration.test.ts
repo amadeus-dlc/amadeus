@@ -209,7 +209,7 @@ function fixture(): {
 }
 
 function completionProject(
-  config: unknown = { "intent-mirror": { github: { issue: { mode: "prompt" } } } },
+  config: unknown = { "intent-mirror": { github: { issue: { consent: "prompt" } } } },
 ): string {
   const root = mkdtempSync(join(tmpdir(), "t282-completion-"));
   roots.push(root);
@@ -276,7 +276,7 @@ function adapterFixture(
   mkdirSync(join(root, "amadeus"), { recursive: true });
   writeFileSync(
     join(root, "amadeus", "config.json"),
-    JSON.stringify({ "intent-mirror": { github: { issue: { mode: "auto" } } } }),
+    JSON.stringify({ "intent-mirror": { github: { issue: { consent: "auto" } } } }),
   );
   const real = createMirrorStateStorePorts({
     projectDir: root,
@@ -334,13 +334,12 @@ function boundaryInput(
         config: {
           intentMirror: {
             github: {
-              issue: { mode },
+              issue: { consent: mode },
               project: { targets: [] },
             },
           },
-          soloElection: { trigger: { mode: "manual" } },
           finding: {
-            github: { issue: { creation: { mode: "prompt" } } },
+            github: { issue: { creation: { consent: "prompt" } } },
           },
           swarm: { unit: { concurrency: { limit: 4 } } },
           plugin: { activation: { names: [] }, scopeBindings: {}, settings: {} },
@@ -403,7 +402,7 @@ async function seedManualCreateReconciliationPrompt(
 ): Promise<string> {
   writeFileSync(
     join(fx.root, "amadeus", "config.json"),
-    JSON.stringify({ "intent-mirror": { github: { issue: { mode: "prompt" } } } }),
+    JSON.stringify({ "intent-mirror": { github: { issue: { consent: "prompt" } } } }),
   );
   const pending = await runMirrorLifecycleBoundary(
     {
@@ -437,7 +436,7 @@ async function seedManualSyncReconciliationPrompt(
 ): Promise<string> {
   writeFileSync(
     join(fx.root, "amadeus", "config.json"),
-    JSON.stringify({ "intent-mirror": { github: { issue: { mode: "prompt" } } } }),
+    JSON.stringify({ "intent-mirror": { github: { issue: { consent: "prompt" } } } }),
   );
   const created = await runMirrorLifecycleBoundary(
     {
@@ -491,7 +490,7 @@ describe("t282 workflow completion disposition", () => {
   });
 
   test("reports invalid mirror value and read-failure configuration branches", () => {
-    const invalidValue = completionProject({ "intent-mirror": { github: { issue: { mode: true } } } });
+    const invalidValue = completionProject({ "intent-mirror": { github: { issue: { consent: true } } } });
     expect(completionMirrorDisposition(invalidValue)).toMatchObject({
       kind: "error",
       message: expect.stringContaining(
@@ -513,11 +512,11 @@ describe("t282 workflow completion disposition", () => {
     ["prompt", { kind: "defer" }],
     ["auto", { kind: "defer" }],
   ] as const)(
-    "maps intent-mirror.github.issue.mode=%s to the completion disposition",
+    "maps intent-mirror.github.issue.consent=%s to the completion disposition",
     (mode, expected) => {
       expect(
         completionMirrorDisposition(
-          completionProject({ "intent-mirror": { github: { issue: { mode: mode } } } }),
+          completionProject({ "intent-mirror": { github: { issue: { consent: mode } } } }),
         ),
       ).toEqual(expected);
     },
@@ -866,7 +865,7 @@ describe("t282 awaitable production lifecycle adapter", () => {
     const fx = adapterFixture();
     writeFileSync(
       join(fx.root, "amadeus", "config.json"),
-      JSON.stringify({ "intent-mirror": { github: { issue: { mode: "prompt" } } } }),
+      JSON.stringify({ "intent-mirror": { github: { issue: { consent: "prompt" } } } }),
     );
     const exitCode = await runMirrorLifecycleMain(
       [
@@ -919,7 +918,7 @@ describe("t282 awaitable production lifecycle adapter", () => {
     const suppressed = adapterFixture();
     writeFileSync(
       join(suppressed.root, "amadeus", "config.json"),
-      JSON.stringify({ "intent-mirror": { github: { issue: { mode: "off" } } } }),
+      JSON.stringify({ "intent-mirror": { github: { issue: { consent: "off" } } } }),
     );
     const suppressedExit = await runMirrorLifecycleMain(
       [
@@ -994,7 +993,7 @@ describe("t282 awaitable production lifecycle adapter", () => {
     const fx = adapterFixture();
     writeFileSync(
       join(fx.root, "amadeus", "config.json"),
-      JSON.stringify({ "intent-mirror": { github: { issue: { mode: "prompt" } } } }),
+      JSON.stringify({ "intent-mirror": { github: { issue: { consent: "prompt" } } } }),
     );
     const gateway = new LifecycleGateway();
     const runtime = {
@@ -1194,7 +1193,7 @@ describe("t282 awaitable production lifecycle adapter", () => {
     const fx = adapterFixture();
     writeFileSync(
       join(fx.root, "amadeus", "config.json"),
-      JSON.stringify({ "intent-mirror": { github: { issue: { mode: "prompt" } } } }),
+      JSON.stringify({ "intent-mirror": { github: { issue: { consent: "prompt" } } } }),
     );
     const gateway = new LifecycleGateway();
     const runtime = {
@@ -1299,7 +1298,7 @@ describe("t282 awaitable production lifecycle adapter", () => {
     const fx = adapterFixture();
     writeFileSync(
       join(fx.root, "amadeus", "config.json"),
-      JSON.stringify({ "intent-mirror": { github: { issue: { mode: "prompt" } } } }),
+      JSON.stringify({ "intent-mirror": { github: { issue: { consent: "prompt" } } } }),
     );
     const gateway = new LifecycleGateway();
     const request = {

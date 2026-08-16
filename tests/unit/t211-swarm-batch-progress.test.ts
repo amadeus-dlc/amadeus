@@ -336,6 +336,12 @@ function auditAttributes(proj: string): Array<Record<string, unknown>> {
 describe("t211 tryEmitSwarm excludes completed batches (#841)", () => {
   test("next asks for a ruling when the failed Unit has canonical closure evidence", () => {
     const { proj } = seedFailedSwarmUnit();
+    // This test's subject is #841 closure-evidence gating, not solo-election
+    // (t211 "#2976" describe block above). The fixture declares Intent
+    // Autonomy Mode "full" by default, which would now also derive an
+    // automatic election (RFC-0001 ADR-8) — override to "none" to keep this
+    // scenario isolated to the ask path it was written to pin.
+    writeDeclaredIntentAutonomyMode(proj, "none");
 
     expect(runNext(proj)).toMatchObject({
       kind: "ask",
@@ -773,30 +779,23 @@ describe("t211 Intent-scoped autonomy preserves batch fanout", () => {
   });
 });
 
-function writeSoloElectionMode(proj: string, mode: string): void {
-  mkdirSync(join(proj, "amadeus"), { recursive: true });
+// RFC-0001 ADR-8: the solo auto-election trigger is DERIVED from the declared
+// Intent Autonomy Mode (deriveSoloElectionTrigger: "semi"/"full" -> "auto"),
+// not read from config any more — there is no config leaf to write. The base
+// fixture (autonomousCodegenState via seedSwarmProject/seedFailedSoloUnit)
+// already declares "full", so tests only need this helper when they want a
+// DIFFERENT mode than that default.
+function writeDeclaredIntentAutonomyMode(proj: string, mode: "none" | "semi" | "full"): void {
+  const path = seededStateFile(proj);
   writeFileSync(
-    join(proj, "amadeus", "config.json"),
-    `${JSON.stringify({ "solo-election": { trigger: { mode } } }, null, 2)}\n`,
-  );
-}
-
-function writeIntentSoloElectionMode(proj: string, mode: string): void {
-  const space = activeSpace(proj);
-  const intent = activeIntent(proj, space);
-  expect(intent).not.toBeNull();
-  const intentDir = join(proj, "amadeus", "spaces", space, "intents", intent!);
-  mkdirSync(intentDir, { recursive: true });
-  writeFileSync(
-    join(intentDir, "config.json"),
-    `${JSON.stringify({ "solo-election": { trigger: { mode } } }, null, 2)}\n`,
+    path,
+    readFileSync(path, "utf-8").replace(/- \*\*Intent Autonomy Mode\*\*: \w+/, `- **Intent Autonomy Mode**: ${mode}`),
   );
 }
 
 describe("t211 #2976 solo auto-election on Unit failure", () => {
-  test("auto config emits execute-failure-election instead of ask", () => {
+  test("Intent Autonomy Mode full (the fixture default) emits execute-failure-election instead of ask", () => {
     const { proj, attempt, batch } = seedFailedSoloUnit();
-    writeSoloElectionMode(proj, "auto");
     const directive = runNext(proj);
     expect(directive.kind).not.toBe("ask");
     expect(directive).toMatchObject({
@@ -809,41 +808,26 @@ describe("t211 #2976 solo auto-election on Unit failure", () => {
     });
   });
 
-  test("manual config keeps the ordinary ask", () => {
+  test("Intent Autonomy Mode semi also emits execute-failure-election", () => {
     const { proj } = seedFailedSoloUnit();
-    writeSoloElectionMode(proj, "manual");
-    expect(runNext(proj)).toMatchObject({
-      kind: "ask",
-      question: expect.stringContaining("Retry, Skip, or Abort"),
-    });
-  });
-
-  test("absent config keeps the ordinary ask", () => {
-    const { proj } = seedFailedSoloUnit();
-    expect(runNext(proj)).toMatchObject({
-      kind: "ask",
-      question: expect.stringContaining("Retry, Skip, or Abort"),
-    });
-  });
-
-  test("intent config overrides the project layer through the active cursor", () => {
-    const { proj } = seedFailedSoloUnit();
-    writeSoloElectionMode(proj, "manual");
-    writeIntentSoloElectionMode(proj, "auto");
+    writeDeclaredIntentAutonomyMode(proj, "semi");
     expect(runNext(proj).kind).toBe("execute-failure-election");
   });
 
-  test("invalid auto-election config fails closed instead of asking", () => {
+  test("Intent Autonomy Mode none keeps the ordinary ask", () => {
     const { proj } = seedFailedSoloUnit();
-    writeSoloElectionMode(proj, "true");
-    const directive = runNext(proj);
-    expect(directive.kind).toBe("error");
-    expect(directive.kind).not.toBe("ask");
-    expect(directive).toMatchObject({
-      kind: "error",
-      message: expect.stringContaining("Invalid solo-election configuration"),
+    writeDeclaredIntentAutonomyMode(proj, "none");
+    expect(runNext(proj)).toMatchObject({
+      kind: "ask",
+      question: expect.stringContaining("Retry, Skip, or Abort"),
     });
   });
+
+  // The pre-RFC "intent config overrides project layer" and "invalid
+  // auto-election config" scenarios no longer have a structural analogue:
+  // ADR-8 collapsed the two independent axes (declared Intent Autonomy Mode,
+  // layered solo-election config) into ONE (declared mode only) — there is no
+  // second layer left to override, and no config leaf left to be invalid.
 
   test.each([
     ["Retry", "committed"],
@@ -851,7 +835,6 @@ describe("t211 #2976 solo auto-election on Unit failure", () => {
     ["Abort", "parked"],
   ] as const)("auto-election %s ruling commits through the existing report path", (ruling, kind) => {
     const { proj, attempt } = seedFailedSoloUnit();
-    writeSoloElectionMode(proj, "auto");
     expect(runNext(proj).kind).toBe("execute-failure-election");
     expect(runFailureRuling(proj, ruling)).toMatchObject({ kind });
     const audit = auditAttributes(proj);

@@ -870,16 +870,32 @@ describe("Intent-scoped autonomy production path", () => {
     const savedArgv = process.argv;
     const savedGraph = process.env.AMADEUS_STAGE_GRAPH;
     process.env.AMADEUS_STAGE_GRAPH = join(projectDir, ".claude", "tools", "data", "stage-graph.json");
+    // FR-8: the JSON contract carries the facet next to `autonomy` (null =
+    // unavailable), so machine consumers read the same surface the
+    // human-readable rendering shows. Capture stdout to assert on it.
+    const chunks: string[] = [];
+    const savedWrite = process.stdout.write;
     try {
       process.argv = [savedArgv[0], "amadeus-utility.ts", "status", "--project-dir", projectDir];
       runUtilityMain();
+      process.stdout.write = ((chunk: string | Uint8Array) => {
+        chunks.push(String(chunk));
+        return true;
+      }) as typeof process.stdout.write;
       process.argv = [savedArgv[0], "amadeus-utility.ts", "status", "--json", "--project-dir", projectDir];
       runUtilityMain();
     } finally {
+      process.stdout.write = savedWrite;
       process.argv = savedArgv;
       if (savedGraph === undefined) delete process.env.AMADEUS_STAGE_GRAPH;
       else process.env.AMADEUS_STAGE_GRAPH = savedGraph;
     }
     expect(readProductionAutonomyProjection(projectDir)?.mode).toBe("full");
+    const jsonLine = chunks.join("").split("\n").find((line) => line.startsWith("{"));
+    if (jsonLine === undefined) throw new Error("status --json wrote no JSON line");
+    const parsed = JSON.parse(jsonLine) as Record<string, unknown>;
+    expect(Object.hasOwn(parsed, "autonomyFacet")).toBe(true);
+    const facet = parsed.autonomyFacet as { mode?: string } | null;
+    if (facet !== null) expect(facet.mode).toBe("full");
   }, scaleTestTime(60_000));
 });

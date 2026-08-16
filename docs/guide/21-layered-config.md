@@ -22,7 +22,7 @@ Project defaults:
 
 ```json
 {
-  "solo-election": { "trigger": { "mode": "manual" } },
+  "intent-mirror": { "github": { "issue": { "consent": "prompt" } } },
   "swarm": { "unit": { "concurrency": { "limit": 4 } } },
   "plugin": { "activation": { "names": ["formal-model-check"] } },
   "subagent": { "dispatch": { "enforced-models": ["opus", "sonnet"] } }
@@ -33,7 +33,7 @@ Space override:
 
 ```json
 {
-  "solo-election": { "trigger": { "mode": "auto" } },
+  "intent-mirror": { "github": { "issue": { "consent": "auto" } } },
   "swarm": { "unit": { "concurrency": { "limit": 2 } } }
 }
 ```
@@ -42,20 +42,25 @@ Space override:
 
 | Path | Values | Default |
 |------|--------|---------|
-| `intent-mirror.github.issue.mode` | `off \| prompt \| auto` | `prompt` |
+| `intent-mirror.github.issue.consent` | `off \| prompt \| auto` | `prompt` |
 | `intent-mirror.github.project.targets` | Project target array | `[]` |
-| `solo-election.trigger.mode` | `manual \| auto` | `manual` |
-| `finding.github.issue.creation.mode` | `off \| prompt \| auto` | `prompt` |
+| `finding.github.issue.creation.consent` | `off \| prompt \| auto` | `prompt` |
 | `swarm.unit.concurrency.limit` | integer `1..4` | `4` |
 | `plugin.activation.names` | plugin-name array; Project only | `[]` |
 | `plugin.scope-bindings` | plugin-to-stage-to-scope map; Project only | `{}` |
 | `plugin.settings` | plugin-to-setting-key scalar map; merged per key | `{}` |
 | `subagent.dispatch.enforced-models` | model-name array (aliases match full ids) | `["opus","sonnet"]` |
 
+There is no `solo-election.trigger.mode` config path. The solo-election
+auto-trigger is DERIVED from the active Intent's Autonomy Mode (`none` ->
+manual, `semi`/`full` -> auto) — it is not configurable.
+
 Configuration is fail-closed. Unknown paths, legacy flat keys, `null`, malformed
 JSON, unreadable files, and invalid values reject the whole result. Diagnostics
-for legacy keys name the new structured path; no compatibility alias is
-provided.
+for a *renamed* legacy key (the consent-axis keys above, `.mode` -> `.consent`)
+name the new structured path; the *abolished* `solo-election.trigger.mode` key
+diagnoses without naming a replacement path, since none exists. No compatibility
+alias is provided for either case.
 
 See [Layered Configuration Resolver](../reference/19-layered-config.md) for the
 complete target and validation contract.

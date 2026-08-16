@@ -114,7 +114,7 @@ describe("layered opt-in config", () => {
   test("the observability key does not break mirror config parsing", () => {
     proj = seedProject();
     writeConfig(proj, "project", {
-      "intent-mirror": { github: { issue: { mode: "off" } } },
+      "intent-mirror": { github: { issue: { consent: "off" } } },
       observability: { enabled: true },
     });
     resetObservabilityConfigCache();
