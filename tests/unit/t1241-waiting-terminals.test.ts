@@ -292,16 +292,24 @@ describe("t1241 refusal arms are typed results, never throws", () => {
       initialProjection: createAutonomyProjection({ intentUuid: INTENT }),
       repository,
     });
-    const first = coordinator.enterWaiting({ cause: CAUSE });
-    expect("error" in first).toBe(false);
-    if ("error" in first) return;
-    // resume, then immediately try to wait again on the same cause: the rate
-    // constraint sees the prior durable entry and refuses.
-    const resumed = coordinator.resumeWaiting({
-      waitingId: first.waitingId,
-      satisfiedConditionIdentity: coordinator.readProjection().parkEnvelope?.resumeCondition.identity ?? "",
+    // Seed the ledger with an unresumed waiting entry directly (a crash or a
+    // hand-repaired record can leave the projection running while the durable
+    // entry stays open) - the rate arm, not the suspension guard, must refuse
+    // the repeat and name the prior entry.
+    const before = coordinator.readProjection();
+    const priorWaitingId = autonomyStableId("prior-waiting", [CAUSE.occurrenceId]);
+    repository.commit({
+      schemaVersion: 1,
+      transactionId: priorWaitingId,
+      intentUuid: INTENT,
+      expectedRevision: before.projectionRevision,
+      beforeProjection: before,
+      beforeProjectionDigest: basisFingerprintOf(before),
+      afterProjectionDigest: basisFingerprintOf({ ...before, projectionRevision: before.projectionRevision + 1 }),
+      events: [{ type: "WORKFLOW_WAITING_ENTERED", waitingId: priorWaitingId, cause: CAUSE }],
+      projection: { ...before, projectionRevision: before.projectionRevision + 1 },
     });
-    expect("error" in resumed).toBe(false);
+    const first = { waitingId: priorWaitingId };
     const second = coordinator.enterWaiting({ cause: CAUSE });
     expect("error" in second).toBe(true);
     if ("error" in second) {
