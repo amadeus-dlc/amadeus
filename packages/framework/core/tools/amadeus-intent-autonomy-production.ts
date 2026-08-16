@@ -233,11 +233,13 @@ export function commitProductionIntentCompletion(input: CommitProductionIntentCo
 // belongs here and not at either supply point (RFC-0001 R-17a). The suppliers
 // keep answering only "is this the first in-scope Construction stage?"; whether
 // that stage carries the ceremony is the stance's answer.
-function interactionKind(input: {
+interface InteractionKindInput {
   readonly walkingSkeleton: boolean;
   readonly phaseBoundary?: boolean;
   readonly skeletonGateFires: boolean;
-}): InteractionKind {
+}
+
+function interactionKind(input: InteractionKindInput): InteractionKind {
   if (input.walkingSkeleton && input.skeletonGateFires) return "walking-skeleton";
   return input.phaseBoundary ? "phase-gate" : "stage-gate";
 }
