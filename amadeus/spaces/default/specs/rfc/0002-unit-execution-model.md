@@ -35,7 +35,7 @@ swarm の実行モデルは「発動するか(人間の autonomy 付与+決定�
 本 RFC 承認後の世界では、利用者は次の3つの独立した概念だけを覚えればよい:
 
 1. **実行方針**(計画時の姿勢): **直列限定** — 並列の余地があっても必ず直列に計画する / **並列可**(既定) — 独立な Unit は並列 batch に、依存があれば直列に編成する。delivery planning での選択であり、実行時スイッチではない。
-2. **発動可否と進行の粒度**は Intent autonomy(RFC 0001、既定 `none`)。並列実行を有効にするのはこの状態であり、ドライバ設定ではない。`none`・`semi` は batch ごとに人間承認で停止する gated 並列、`full` は連続実行(§2 の発動条件表参照)。
+2. **発動可否と進行の粒度**は Intent autonomy(RFC 0001、既定 `none`)。並列実行を有効にするのはこの状態であり、ドライバ設定ではない。`none` は batch ごとに人間承認で停止する gated 並列、`semi`・`full` は batch 間で停止しない連続実行 — `semi` の人間承認はフェーズ境界と walking-skeleton のみ(現行実装は `semi` を暫定的に gated 扱いする移行未了のドリフト — §2 の注記参照)。
 3. **並列実行のバックエンド**はドライバ設定 `AMADEUS_PARALLEL_DRIVER=subagent|claude-ultra|codex-ultra|pi`(未設定=ハーネス既定)。既定値を明示的に書いても拒否されない。
 
 「並列にしたくない」は実行方針「直列限定」で表現し、「並列を止めながら進める」は gated(none / semi)の batch 承認で表現する。機構に固有名はなく、実行形態は「直列実行/並列実行」とだけ呼ぶ。
@@ -88,19 +88,19 @@ swarm 実行が始まるのは、次のすべてが成立するときに限る:
 2. walking-skeleton(最初の構造スライス)ではない — スケルトンは常に単一で実装する
 3. 人間が承認した delivery plan が、依存のない複数 Unit を並列 batch として宣言している
 4. Intent autonomy モード(`none` / `semi` / `full`)が state に記録されている(現行の intent 初期化は既定 `none` を記録する。未記録のときの挙動は決定表の該当2行)
-5. スケジューリングが `gated`(モードが `none` または `semi`)の場合、当該 batch への人間の承認が記録済みである
+5. スケジューリングが `gated`(正本契約ではモード `none`。実装ドリフト下では `semi` も同扱い — 決定表の注記参照)の場合、当該 batch への人間の承認が記録済みである
 
 条件が欠けたときの帰結は一様ではなく、決定表(下表)を正とする — 条件1〜3の不成立は直列実行、条件4のモード未記録は walking-skeleton 出荷前は黙認直列/出荷後は停止して宣言要求、条件5の未承認 batch は承認待ちで停止する。
 
-> **誤解しやすい点(補足)**: `none` / `semi` / `full` は Intent autonomy モード(RFC 0001 の正本)、`autonomous` / `gated` はそこから機械導出されるスケジューリング投影であり、**別の語彙**である。写像は `full → autonomous`、`none`・`semi` → `gated`(下表)。つまり **`none` を選んでも swarm は発動する**(batch ごとに人間承認で停止する gated 形態)。`none` は「並列なし」ではなく「gated 並列」を意味する。
+> **誤解しやすい点(補足)**: `none` / `semi` / `full` は Intent autonomy モード(RFC 0001 の正本)、`autonomous` / `gated` はそこから機械導出されるスケジューリング投影であり、**別の語彙**である。写像の正本は `none → gated`、`semi → batch 間非停止(full 同様)`、`full → autonomous`(下表 — 実装は現在 `semi` を暫定的に `gated` として投影するドリフト状態)。つまり **`none` を選んでも swarm は発動する**(batch ごとに人間承認で停止する gated 形態)。`none` は「並列なし」ではなく「gated 並列」を意味する。
 
-**モード対応表**(2層の語彙の写像のみを持つ。モードは sealed な3値、intent 誕生時の既定は `none`。発動可否と承認の要否は下の決定表が正):
+**モード対応表**(モードは sealed な3値、intent 誕生時の既定は `none`。発動可否と承認の要否は下の決定表が正):
 
-| Intent autonomy モード | スケジューリング投影(機械導出) |
-|---|---|
-| `none`(既定) | `gated` |
-| `semi` | `gated` |
-| `full` | `autonomous` |
+| Intent autonomy モード | 正本契約(RFC 0001)のスケジューリング | 実装の現状 |
+|---|---|---|
+| `none`(既定) | `gated`(batch ごとに人間承認) | 正本どおり |
+| `semi` | **batch 間では停止しない**(full 同様。人間承認はフェーズ境界と walking-skeleton の2箇所のみ — RFC 0001 の semi 定義) | **`gated` へ投影(実装ドリフト)** — 移行が park guard 廃棄に先行依存するとして RFC 0001 自身が記録する未完了の移行 |
+| `full` | `autonomous` | 正本どおり |
 
 **発動・不発動条件表**(1表で全ケースを網羅する決定表。各列が前提条件、右端が帰結。`—` はその条件が帰結に影響しないことを示す):
 
@@ -111,9 +111,11 @@ swarm 実行が始まるのは、次のすべてが成立するときに限る:
 | ✓ | ✓ | ✗ | — | — | **不発動** — 直列実行 変種 (c) |
 | ✓ | ✓ | ✓ | 未記録・未認識値(walking-skeleton **出荷前**) | — | **不発動** — 直列実行 変種 (c) で黙認(幅≥2でも停止しない) |
 | ✓ | ✓ | ✓ | 未記録・未認識値(walking-skeleton **出荷後**) | — | **不発動(待機)** — 停止してモードの宣言を人間に要求 |
-| ✓ | ✓ | ✓ | `none` / `semi`(= gated) | 未記録 | **不発動(待機)** — 承認を求めて停止 |
-| ✓ | ✓ | ✓ | `none` / `semi`(= gated) | 記録済み | **発動** — batch 終端で再停止(次 batch は再承認) |
-| ✓ | ✓ | ✓ | `full`(= autonomous) | 不要 | **発動** — 連続実行 |
+| ✓ | ✓ | ✓ | `none`(= gated) | 未記録 | **不発動(待機)** — 承認を求めて停止 |
+| ✓ | ✓ | ✓ | `none`(= gated) | 記録済み | **発動** — batch 終端で再停止(次 batch は再承認) |
+| ✓ | ✓ | ✓ | `semi`・`full` | 不要(`semi` の人間承認はフェーズ境界と walking-skeleton のみ) | **発動** — 連続実行 |
+
+> **実装ドリフト注記**: 現行実装は `semi` を `gated` として投影し、`none` と同じ batch 承認を要求する。これは RFC 0001 が「semi の Bolt 自律化は park guard 廃棄が先行依存」として自ら記録する**未完了の移行**であり、本決定表は正本契約(RFC 0001)を記す。実装の現状と正本の対応は evidence 参照。
 
 補足: (a) モードの値域は `none` / `semi` / `full` の3値で閉じる(RFC 0001)。現行の intent 初期化は既定 `none` を記録するが、それ以前に誕生した intent の state にはフィールド未記録が実在するため、「未記録」行はレガシーで到達しうる正常経路である(skeleton 出荷前の黙認/出荷後の宣言要求という2分岐は RFC 0001 付録の記述とも一致する) (b) 発動後にドライバ設定が認識できない値だった場合は swarm を開始せず中止して人間へ返す(§3 の拒否 — 発動判定とは別段)。
 
@@ -157,10 +159,10 @@ flowchart TD
     E -- 未記録・未認識値 --> E2{walking-skeleton は<br/>出荷済み?}
     E2 -- No --> SER
     E2 -- Yes --> HALT1[停止: モードの宣言を<br/>人間に要求]
-    E -- none / semi = gated --> F{この batch への<br/>人間の承認がある?}
+    E -- none = gated --> F{この batch への<br/>人間の承認がある?}
     F -- No --> HALT2[停止: batch 承認を人間に求める<br/>承認記録後に swarm 発動へ]
     F -- Yes --> G[swarm 発動]
-    E -- full = autonomous --> G
+    E -- semi / full --> G
     G --> H{ドライバ設定の値}
     H -- 未設定 --> SWM
     H -- この環境で走れる値 --> SWM
@@ -181,7 +183,7 @@ flowchart TD
     end
 ```
 
-テキストフォールバック: Construction の Unit 実装ステージに到達 → (1) swarm 対象ステージか(Unit ごとの反復かつ subagent 委譲 — 出荷グラフでは code-generation のみ)。No(設計系 per-unit ステージ)なら**直列実行 変種 (b)**(Unit を1つずつ順に主セッションが自ら作業・委譲なし・全 Unit 後に単一ゲート)へ (2) walking-skeleton なら**直列実行 変種 (c)** へ (3) 承認済み計画に並列 batch の宣言がなければ直列実行 変種 (c) へ (4) Intent autonomy モード(none / semi / full — 既定 none)を読む — 未記録・未認識値なら walking-skeleton の出荷済みかを見て、未出荷なら**直列実行 変種 (c)** で黙認、出荷済みなら**停止**してモードの宣言を要求 (5) `none`・`semi`(= gated)は当該 batch への人間の承認を検査し、なければ**停止**して承認を求める(承認記録後に発動)。承認済みまたは `full`(= autonomous)なら swarm 発動 → ドライバ設定で分岐: 未設定またはこの環境で走れる値は**swarm 実行の機序**へ、認識値だが走れない場合は降格を監査に記録してから同機序へ、認識できない値は**停止**(拒否)。直列実行 変種 (c) の機序 = 次の Unit を1つ取り上げ → subagent 1体へ委譲 → ステージゲートで承認 → 未実装 Unit が残る限り反復。swarm 実行の機序 = Unit ごとに隔離作業領域を準備 → 選択ドライバで N 体並列 fan-out(並列幅の上限内)→ Unit ごとの決定的検証(自己申告不採用)→ 収束主張の全 Unit を再検証して合格のみ統合 → 全収束なら batch 完了(gated は次 batch 前に再承認)、未収束が残れば型付き理由を添えて人間へ。
+テキストフォールバック: Construction の Unit 実装ステージに到達 → (1) swarm 対象ステージか(Unit ごとの反復かつ subagent 委譲 — 出荷グラフでは code-generation のみ)。No(設計系 per-unit ステージ)なら**直列実行 変種 (b)**(Unit を1つずつ順に主セッションが自ら作業・委譲なし・全 Unit 後に単一ゲート)へ (2) walking-skeleton なら**直列実行 変種 (c)** へ (3) 承認済み計画に並列 batch の宣言がなければ直列実行 変種 (c) へ (4) Intent autonomy モード(none / semi / full — 既定 none)を読む — 未記録・未認識値なら walking-skeleton の出荷済みかを見て、未出荷なら**直列実行 変種 (c)** で黙認、出荷済みなら**停止**してモードの宣言を要求 (5) `none`(= gated)は当該 batch への人間の承認を検査し、なければ**停止**して承認を求める(承認記録後に発動)。承認済み、または `semi`・`full` なら swarm 発動(正本契約 — 実装ドリフトは §2 注記) → ドライバ設定で分岐: 未設定またはこの環境で走れる値は**swarm 実行の機序**へ、認識値だが走れない場合は降格を監査に記録してから同機序へ、認識できない値は**停止**(拒否)。直列実行 変種 (c) の機序 = 次の Unit を1つ取り上げ → subagent 1体へ委譲 → ステージゲートで承認 → 未実装 Unit が残る限り反復。swarm 実行の機序 = Unit ごとに隔離作業領域を準備 → 選択ドライバで N 体並列 fan-out(並列幅の上限内)→ Unit ごとの決定的検証(自己申告不採用)→ 収束主張の全 Unit を再検証して合格のみ統合 → 全収束なら batch 完了(gated は次 batch 前に再承認)、未収束が残れば型付き理由を添えて人間へ。
 
 読み方の要点: 判定連鎖の上段(1〜3)は「どちらの機序か」を、中段(4〜5)は「swarm を今進めてよいか」を、下段(ドライバ)は「swarm 実行のバックエンド」を決める。**swarm を有効にするのは autonomy 側であり、ドライバ設定ではない** — 設定が未設定でも上・中段が揃えば swarm はフロアドライバで発動する。
 
@@ -201,7 +203,7 @@ flowchart TD
 | 設定変数 | `AMADEUS_USE_SWARM` | ドライバ選択(§3)。発動可否には関与しない | 未設定=ハーネス既定フロア |
 | 設定変数 | `AMADEUS_SWARM_RETRY_CAP` | Unit あたり再試行予算の上書き | 2(上限3) |
 | 階層設定 | `swarm.unit.concurrency.limit`(legacy 名 `max-parallel-units`) | 同時実行 Unit 数の上限(超過 Unit はキュー待ちし、slot が空き次第順に実行)。同時実行数の絞りであり、**1 にしても swarm 実行のまま**(隔離・検証・統合は残る)。project→space→intent の順で解決、呼び出しは狭める方向のみ | 上限4(範囲 1..4) |
-| 状態 | Intent Autonomy Mode(RFC 0001) | 発動可否と進行粒度を決める状態(§2)。正本は Intent 監査。`none`・`semi`=gated(batch ごとに人間承認)、`full`=autonomous | 現行 init は誕生時に `none` を記録(レガシー intent には未記録あり — §2) |
+| 状態 | Intent Autonomy Mode(RFC 0001) | 発動可否と進行粒度を決める状態(§2)。正本は Intent 監査。`none`=gated(batch ごとに人間承認)、`semi`=正本契約では batch 間非停止(実装は暫定 gated — §2 注記)、`full`=autonomous | 現行 init は誕生時に `none` を記録(レガシー intent には未記録あり — §2) |
 
 可観測性: swarm のライフサイクルは監査イベント `SWARM_STARTED`(batch 開始)/ `SWARM_UNIT_CONVERGED` / `SWARM_UNIT_FAILED`(Unit の帰結)/ `SWARM_DEGRADED`(ドライバ降格)/ `SWARM_BATON_RETURNED`(人間への返還)/ `SWARM_COMPLETED`(batch 完了)として全件記録される。
 

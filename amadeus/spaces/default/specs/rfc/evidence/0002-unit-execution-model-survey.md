@@ -50,3 +50,9 @@ swarm 対象条件は `for_each === "unit-of-work" && mode === "subagent"`(orche
 
 - 再試行の再 dispatch は新しい batch ではなく、既存の作業領域と発行済みの実行 permit に対して行う(準備をやり直さない)— prepared retry 指令(`prepared_batch` + `retry_unit` の不可分ペア、claude 面 SKILL.md:78)
 - worker の開始は permit の取得(claim)だけでは事実と認めず、実行基盤による受理の確認(`confirm-dispatch`)をもって開始と記録する(claude 面 SKILL.md:91「a claim alone is not a start fact」— pi 面には同記述なし)
+
+## semi の正本契約と実装ドリフト(§2 モード対応表・決定表の根拠)
+
+- 正本(RFC 0001、approved): semi 定義「full と同じだが、フェーズ境界ゲートと walking-skeleton ゲートの2箇所だけは必ず人間が承認する。**Bolt の並行実行はバッチ間で止まらない**」(`0001-intent-autonomy-modes.md:54`)。確認ポイント表 行16「swarm バッチ終端」= none: 人間 / semi: **自動** / full: 自動(:103)
+- 実装の現状: `readAutonomyMode` が `none`・`semi` をともに `"gated"` へ投影(`amadeus-orchestrate.ts:2046`)し、batch ごとの承認を要求する
+- この乖離は RFC 0001 自身が未完了の移行として記録: 「semi の Bolt 自律化(投影 autonomous 化)は park guard 廃棄が先行依存 — 読取側の semi→gated ハードコード…の3面同時改修」(:126)。したがって本 RFC の Part 1 は正本契約を記し、実装現状はドリフトとして本節に記録する
