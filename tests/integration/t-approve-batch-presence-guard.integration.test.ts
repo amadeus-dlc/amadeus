@@ -65,6 +65,7 @@ import {
   seededStateFile,
   seedStateFile,
 } from "../harness/fixtures.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 
 resetAidlcEnv();
 
@@ -110,7 +111,20 @@ function gateApprovedCount(p: string): number {
 function recordHumanTurn(p: string): void {
   const shard = seededAuditShard(p);
   const existing = readFileSync(shard, "utf-8");
-  const seq = existing.split("\n").filter((l) => l.trim() !== "").length + 1;
+  // Continue from the LAST recorded seq, not the line count — the shard can
+  // carry non-JSON separator lines, and a shorter count would be a sequence
+  // regression the journal health probe fatally latches on.
+  let lastSeq = 0;
+  for (const line of existing.split("\n")) {
+    if (!line.trim()) continue;
+    try {
+      const row = JSON.parse(line) as { seq?: number };
+      if (typeof row.seq === "number" && row.seq > lastSeq) lastSeq = row.seq;
+    } catch {
+      continue; // separator line
+    }
+  }
+  const seq = lastSeq + 1;
   const ts = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
   const row = `${JSON.stringify({
     schemaVersion: 1,
@@ -164,6 +178,10 @@ function boltCapture(subcommand: string, args: string[], p: string): { rc: numbe
 }
 
 beforeAll(() => {
+  // one-workspace-per-process: an ambient bootstrap against the checkout's own
+  // record (a copied active-intent cursor is enough) would make every emit in
+  // the fixture project refuse; reset before the fixture takes the slot.
+  resetOtelPerProject();
   proj = createTestProject();
   seedStateFile(proj, STATE_FIXTURE);
   seedAuditFile(proj); // SESSION_STARTED/ARTIFACT_CREATED/SUBAGENT_COMPLETED — ledger
@@ -203,7 +221,8 @@ describe("D7: approve-batch refuses without a fresh human presence (FR-12)", () 
   // batch whose presence has since been spent).
   test("setup: a fresh HUMAN_TURN legitimately approves batch 1", () => {
     recordHumanTurn(proj);
-    const { rc } = boltCapture("approve-batch", ["--batch", "1"], proj);
+    const { rc, out } = boltCapture("approve-batch", ["--batch", "1"], proj);
+    if (rc !== 0) throw new Error(`setup approve failed rc=${rc}: ${out}`);
     expect(rc).toBe(0);
     expect(getField(readState(proj), SWARM_BATCH_APPROVALS_FIELD)).toBe("1");
     expect(gateApprovedCount(proj)).toBe(1);
