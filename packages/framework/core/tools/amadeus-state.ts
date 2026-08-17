@@ -2616,9 +2616,14 @@ function mergedPrSourceWork(pd: string, birth: string, issues: string[]): boolea
 // This repo's trunk ref, for probe (d)'s fork-point boundary: local `main` if
 // it resolves, else the `origin/main` remote-tracking ref. null when neither
 // does (probe (d) then contributes nothing rather than guessing a trunk name -
-// every other probe in this file already fails closed the same way).
+// every other probe in this file already fails closed the same way). Both
+// candidates are looked up by their FULLY-QUALIFIED ref path
+// (`refs/heads/main` / `refs/remotes/origin/main`), never the bare `main` - a
+// bare name's lookup order checks `refs/tags/<name>` before
+// `refs/heads/<name>`, so a stale tag named `main` would silently outrank the
+// real branch and hand branchSourceWorkSinceTrunkFork the wrong fork point.
 function resolveTrunkRef(pd: string): string | null {
-  if (git(pd, ["rev-parse", "--verify", "--quiet", "main"]) !== null) return "main";
+  if (git(pd, ["rev-parse", "--verify", "--quiet", "refs/heads/main"]) !== null) return "refs/heads/main";
   if (git(pd, ["rev-parse", "--verify", "--quiet", "refs/remotes/origin/main"]) !== null) {
     return "refs/remotes/origin/main";
   }

@@ -491,6 +491,52 @@ test("refuses (probe (d) no-op) when neither main nor origin/main resolves", () 
   expect(gitHasSourceWork(proj)).toBe(false);
 });
 
+// CodeRabbit finding on the #3156 fix: a bare `main` lookup checks
+// `refs/tags/<name>` BEFORE `refs/heads/<name>` (gitrevisions(7) disambiguation
+// order), so a stale tag named `main` left INSIDE this branch's own history
+// would outrank the real branch and collapse the scanned range to
+// tag..HEAD - silently dropping the pre-birth code commit the tag now sits on
+// top of. resolveTrunkRef must resolve the fully-qualified `refs/heads/main`,
+// not the ambiguous bare name, so the branch (not the tag) wins.
+test("resolves the trunk to the branch, not a same-named tag left on this branch's own history (issue #3156, CodeRabbit)", () => {
+  initGitRepo();
+  commitDirectCode("README.md", "root\n"); // baseline shared by main and bugfix-solo
+  git(["checkout", "-q", "-b", "bugfix-solo"]);
+  commitDirectCodeTagged(
+    "packages/framework/core/tools/thing.ts",
+    "export const a = 1;\n",
+    "fix(thing): a\n\nFixes #697",
+  );
+  // A stale `main` tag sitting on THIS commit (e.g. left over from an unrelated
+  // release process). If resolveTrunkRef used the ambiguous bare `main`, this
+  // tag would outrank refs/heads/main and become a self-ancestor fork point,
+  // shrinking the range to exclude the code commit above.
+  git(["tag", "main", "HEAD"]);
+  commitIntentBirth([], [697]);
+  commitDoc("audit/sync.md", "chore(record): sync\n");
+  expect(gitHasSourceWork(proj)).toBe(true);
+});
+
+// Probe (d)'s bolt-ref attribution path (the second half of the identity gate,
+// alongside the issue-reference path already covered above): the pre-birth
+// code commit is an ancestor of `refs/heads/bolt-<slug>`, and the intent's
+// `Bolt Refs` field names that slug, but declares NO issues at all (so the
+// issue-reference path cannot fire for ANY commit). Probe (b)
+// (boltRefHasSourceWork) is false here because the ref is an ancestor of HEAD
+// - its merge-base-vs-HEAD diff is empty, the exact gap issue #3156 opened -
+// so only probe (d)'s bolt-ref-ancestry check can attribute this commit.
+test("recognises code attributed via a bolt ref ancestor of HEAD, with no declared issues (issue #3156, probe (d) bolt-ref path)", () => {
+  initGitRepo();
+  commitDirectCode("README.md", "root\n"); // main baseline
+  git(["checkout", "-q", "-b", "bugfix-solo"]);
+  commitDirectCode("packages/framework/core/tools/thing.ts", "export const a = 1;\n"); // no issue reference
+  const codeSha = git(["rev-parse", "HEAD"]);
+  git(["update-ref", "refs/heads/bolt-dynamic-test-size", codeSha]); // ref IS this commit
+  commitIntentBirth(["dynamic-test-size"]); // Bolt Refs names the slug, no issues declared
+  commitDoc("audit/sync.md", "chore(record): sync\n");
+  expect(gitHasSourceWork(proj)).toBe(true);
+});
+
 // --- workspaceHasSourceFile: the FS-fallback half of the same guard ------------
 // (in-process for the same coverage reason as gitHasSourceWork above)
 
