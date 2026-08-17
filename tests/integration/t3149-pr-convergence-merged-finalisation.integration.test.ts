@@ -40,7 +40,14 @@ import {
 } from "../../plugins/github-pr-convergence/tools/pr-convergence-cli.ts";
 import type { GitSpawn } from "../../plugins/github-pr-convergence/tools/pr-convergence-git-runner.ts";
 import { evaluateReportFormat } from "../../plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts";
-import { parseAttestation } from "../../plugins/github-pr-convergence/tools/pr-convergence-attestation.ts";
+import {
+  ATTESTATION_EVENT,
+  attestationId,
+  parseAttestation,
+  renderAttestation,
+  type ReportAttestation,
+  reportPayload,
+} from "../../plugins/github-pr-convergence/tools/pr-convergence-attestation.ts";
 import { projectDeliveryBoltPlan } from "../../packages/framework/core/tools/amadeus-delivery-bolts.ts";
 
 const BRANCH = "bolt/3149";
@@ -92,6 +99,9 @@ interface Fixture {
   /** The head the pull request carries (and, once merged, the head it merged). */
   prHead: string;
   merged: boolean;
+  /** The commit the pull request merged as. Rewritable so a record can be met
+   *  with a merge that is not the one it was finalised against. */
+  mergeCommit: string;
   /** The merge queue deleted the head branch and the checkout moved off it. */
   branchGone: boolean;
   dirty: boolean;
@@ -190,7 +200,7 @@ function makeFixture(units: readonly string[] = [UNIT]): Fixture {
   return {
     root, work, record, bodyFile, branchHead, advancedHead, orphanHead,
     calls: [], attested: branchHead, prHead: branchHead, merged: false,
-    branchGone: false, dirty: false, units,
+    mergeCommit: MERGE_COMMIT, branchGone: false, dirty: false, units,
   };
 }
 
@@ -275,7 +285,7 @@ function ghSpawn(f: Fixture): GhSpawn {
       ? {
           state: "MERGED",
           mergedAt: MERGED_AT,
-          mergeCommit: { oid: MERGE_COMMIT, statusCheckRollup: { state: "SUCCESS" } },
+          mergeCommit: { oid: f.mergeCommit, statusCheckRollup: { state: "SUCCESS" } },
         }
       : { state: "OPEN", mergedAt: null, mergeCommit: null };
     return ok(JSON.stringify({
@@ -356,6 +366,31 @@ async function converged(head?: (f: Fixture) => string): Promise<Fixture> {
   return f;
 }
 
+/**
+ * Rewrites one Unit's report the way a forger who knows the algorithm would:
+ * payload, receipt and audit line are all re-derived, so digest, receipt id and
+ * audit carriage agree. What it cannot repair is a binding checked between the
+ * receipt and something outside it.
+ */
+function reattest(
+  f: Fixture,
+  unit: string,
+  mutate: (receipt: ReportAttestation) => ReportAttestation,
+): void {
+  const path = reportPathFor(f.record, unit);
+  const body = readFileSync(path, "utf-8");
+  const current = parseAttestation(body);
+  if (current === null) throw new Error("fixture report carries no attestation");
+  const { id: _signature, ...fields } = mutate(current);
+  const receipt: ReportAttestation = { id: attestationId(fields), ...fields };
+  writeFileSync(path, `${reportPayload(body)}${renderAttestation(receipt)}`, "utf-8");
+  writeFileSync(
+    join(f.record, "audit", "attestation.jsonl"),
+    `${JSON.stringify({ attributes: { Event: ATTESTATION_EVENT, "Attestation Id": receipt.id } })}\n`,
+    { flag: "a" },
+  );
+}
+
 describe("#3149 class A — a converged record survives the merge and the checkout moving on", () => {
   test("the sensor accepts the converged record while the checkout still holds its head", () => {
     // The baseline the class-A defect breaks: nothing here has moved yet.
@@ -434,6 +469,22 @@ describe("#3149 class A — a converged record survives the merge and the checko
     expect(evaluateReportFormat(reportPathFor(f.record, UNIT), "pr-convergence").pass).toBe(true);
   });
 
+  test("a record already bound to another merge is refused rather than re-bound", async () => {
+    // The finalisation names one merge. Meeting the same record with a second
+    // one is a boundary that changed its answer, and re-binding would rewrite
+    // evidence rather than record it.
+    const f = await converged();
+    merge(f, f.branchHead);
+    expect((await runCli(verbArgs("report", f), seams(f))).exitCode).toBe(0);
+    const before = reportBody(f);
+    f.mergeCommit = "9".repeat(40);
+
+    const out = await runCli(verbArgs("report", f), seams(f));
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain("already bound to a different merge");
+    expect(reportBody(f)).toBe(before);
+  });
+
   test("an epoch the merge never carried is refused, and the record is untouched", async () => {
     // The evidence bar is the landed arm's, not a weaker one: no ancestry, no
     // in-place finalisation.
@@ -445,6 +496,90 @@ describe("#3149 class A — a converged record survives the merge and the checko
     expect(out.exitCode).toBe(1);
     expect(out.stderr).toContain("is not an ancestor of the merged head");
     expect(reportBody(f)).toBe(before);
+  });
+});
+
+describe("#3149 — the in-place finalisation answers for each member Unit separately", () => {
+  // Sorts after UNIT, so the owner is finalised first and the member's own
+  // refusals are what this block measures.
+  const SECOND = "second-unit";
+  const MEMBERS = `${UNIT},${SECOND}`;
+
+  const memberArgs = (verb: string, f: Fixture) => [...verbArgs(verb, f), "--units", MEMBERS];
+  const memberBody = (f: Fixture) => readFileSync(reportPathFor(f.record, SECOND), "utf-8");
+
+  /** A two-Unit delivery whose loop converged, then merged on its own head. */
+  async function convergedPair(): Promise<Fixture> {
+    const f = makeFixture([UNIT, SECOND]);
+    expect((await runCli([...createArgs(f), "--units", MEMBERS], seams(f))).exitCode).toBe(0);
+    const out = await runCli(memberArgs("report", f), seams(f));
+    expect(out.stderr).toBe("");
+    expect(out.exitCode).toBe(0);
+    for (const unit of [UNIT, SECOND]) {
+      expect(readFileSync(reportPathFor(f.record, unit), "utf-8")).toContain("- kind: converged");
+    }
+    merge(f, f.branchHead);
+    return f;
+  }
+
+  test("both member Units are finalised in place by the one run", async () => {
+    const f = await convergedPair();
+    moveCheckoutOn(f);
+
+    const out = await runCli(memberArgs("report", f), seams(f));
+    expect(out.stderr).toBe("");
+    expect(out.exitCode).toBe(0);
+    for (const unit of [UNIT, SECOND]) {
+      const body = readFileSync(reportPathFor(f.record, unit), "utf-8");
+      expect(body).toContain("- kind: converged");
+      // The multi-Unit projection is payload, so re-attesting leaves it intact.
+      expect(body).toContain("## Owner Projection");
+      expect(parseAttestation(body)?.mergeCommit).toBe(MERGE_COMMIT);
+      expect(evaluateReportFormat(reportPathFor(f.record, unit), "pr-convergence").pass).toBe(true);
+    }
+  });
+
+  test("a member Unit with no record on disk is refused, not invented", async () => {
+    const f = await convergedPair();
+    rmSync(reportPathFor(f.record, SECOND));
+
+    const out = await runCli(memberArgs("report", f), seams(f));
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain(`${SECOND} carries no final record for this merge to close`);
+  });
+
+  test("a member Unit whose bytes moved under its receipt is refused", async () => {
+    const f = await convergedPair();
+    const path = reportPathFor(f.record, SECOND);
+    writeFileSync(
+      path,
+      memberBody(f).replace("- generated at: 2026-08-17T10:00:00Z", "- generated at: 2026-08-17T23:59:00Z"),
+      "utf-8",
+    );
+    const tampered = memberBody(f);
+
+    const out = await runCli(memberArgs("report", f), seams(f));
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain("report attestation is missing, tampered, copied, or replayed");
+    expect(memberBody(f)).toBe(tampered);
+  });
+
+  test("a member Unit attested at a head the proof never measured is refused", async () => {
+    // The receipt here is internally perfect — re-derived id, matching digest,
+    // matching audit line. It just answers for a head nothing put to git.
+    const f = await convergedPair();
+    reattest(f, SECOND, (receipt) => ({
+      ...receipt,
+      localHead: f.orphanHead,
+      remoteHead: f.orphanHead,
+      prHead: f.orphanHead,
+    }));
+    const before = memberBody(f);
+
+    const out = await runCli(memberArgs("report", f), seams(f));
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain("report lifecycle stale: PR head changed");
+    expect(memberBody(f)).toBe(before);
   });
 });
 
