@@ -3746,6 +3746,10 @@ type PresenceEvent = {
   // other predicate here answers a yes/no question and ignores both fields.
   block?: string;
   shardPath?: string;
+  // Present iff this is a STAGE_AWAITING_APPROVAL — the moment a gate was PUT to
+  // a human. Only the milestone boundary (#3153) reads it: it is neither a human
+  // act nor a resolution, so every other predicate here ignores it.
+  gateOpen?: { readonly stage: string; readonly recovered: boolean };
 };
 
 // A discriminated-union Result, per project.md's Code Style convention (each
@@ -3819,6 +3823,17 @@ function scanPresenceLedger(
         if (verifyDelegatedProvenance(projectDir, blocks[pos])) {
           events.push({ ts, shard, pos, human: true, delegVerb: "reject" });
         }
+      } else if (ev === "STAGE_AWAITING_APPROVAL") {
+        events.push({
+          ts,
+          shard,
+          pos,
+          human: false,
+          gateOpen: {
+            stage: auditBlockField(blocks[pos], "Stage") ?? "",
+            recovered: auditBlockField(blocks[pos], "Recovered") === "true",
+          },
+        });
       } else if (ev === "GATE_APPROVED" || ev === "GATE_REJECTED") {
         events.push({ ts, shard, pos, human: false, res: "gate" });
       } else if (ev === "QUESTION_ANSWERED") {
@@ -3877,8 +3892,92 @@ type PresenceSlot = {
 // existing multi-slot verb branch.
 function resolveGatePresence(scan: PresenceEvent[] | null, slots: readonly PresenceSlot[]): PresenceVerdict {
   if (scan === null) return { present: false, reason: "ledger-absent" };
-  const outstanding = slots.some((slot) => humanActOutstanding(scan, slot.isHuman, slot.isResolution));
-  return outstanding ? { present: true } : { present: false, reason: "no-outstanding-human-act" };
+  return outstandingSlot(scan, slots) === null
+    ? { present: false, reason: "no-outstanding-human-act" }
+    : { present: true };
+}
+
+// WHICH slot proves presence, for the caller that must name the branch it took.
+// resolveGatePresence is this same evaluation reduced to a yes/no, so the two
+// can never disagree about what "presence" means.
+function outstandingSlot<S extends PresenceSlot>(scan: PresenceEvent[], slots: readonly S[]): S | null {
+  return slots.find((slot) => humanActOutstanding(scan, slot.isHuman, slot.isResolution)) ?? null;
+}
+
+// Which branch let a gate resolution through. Stamped on GATE_APPROVED so a
+// reader can tell "a human answered this gate" from "the engine carried it"
+// (FR-1, #3153). The two branches this module can prove live here; the two the
+// approval transaction owns (its Intent grant and the suite-wide test
+// off-switch) are named in the same union so there is one vocabulary.
+export type GateApprovalProvenance = "gate-open-turn" | "delegated" | "intent-grant" | "guard-disabled";
+
+type LedgerPresenceSlot = PresenceSlot & { readonly provenance: "gate-open-turn" | "delegated" };
+
+// Does this event open the gate for `stage` in a way a human could answer? A
+// `--recovered` backfill records a gate the engine opened after the fact, so it
+// never presented anything and cannot start a presence window.
+// (Declared on one line: bun's lcov stamps a standalone `function` header line
+// as a never-hit DA record even when the body runs, which the patch gate counts
+// as a miss.)
+function opensGateFor(event: PresenceEvent, stage: string): boolean { return event.gateOpen !== undefined && !event.gateOpen.recovered && event.gateOpen.stage === stage; }
+
+// The two slots a gate resolution ORs, stated once for both callers.
+//
+// The local HUMAN_TURN slot is consumed by any resolution; the delegate's
+// per-verb GATE slot only by a GATE_APPROVED / GATE_REJECTED (#736).
+//
+// `milestoneStage` narrows the LOCAL slot only, and only for the gate named:
+// its own STAGE_AWAITING_APPROVAL also consumes turns, so the turn must land
+// after the gate was put to the human. That is the boundary
+// targetedApprovalEvidence calls humanTurnIsFresh (amadeus-presence-reservation
+// — at-or-after the latest STAGE_AWAITING_APPROVAL of the same Stage), reached
+// here through the ledger's own append-order rule so a same-second open still
+// settles fail-closed (auditBlockIsAfter). Passing null leaves both slots
+// byte-for-byte as they were, which is what every non-milestone gate does.
+function gateResolutionSlots(
+  verb: "approve" | "reject",
+  milestoneStage: string | null,
+): readonly LedgerPresenceSlot[] {
+  const consumesTurn = milestoneStage === null
+    ? (e: PresenceEvent) => e.res !== undefined
+    : (e: PresenceEvent) => e.res !== undefined || opensGateFor(e, milestoneStage);
+  return [
+    {
+      isHuman: (e) => e.human && e.delegVerb === undefined,
+      isResolution: consumesTurn,
+      provenance: "gate-open-turn",
+    },
+    { isHuman: (e) => e.delegVerb === verb, isResolution: (e) => e.res === "gate", provenance: "delegated" },
+  ];
+}
+
+// Why a gate resolution was refused, or which branch allowed it.
+// `gate-open-missing` is the milestone-only arm: the stage has no organic gate
+// open on the ledger, so there is no window to be inside and falling back to the
+// looser boundary would hand back exactly the acceptance the narrowing removed.
+export type GateResolutionPresence =
+  | { readonly ok: true; readonly provenance: "gate-open-turn" | "delegated" }
+  | { readonly ok: false; readonly reason: "ledger-absent" | "no-outstanding-human-act" | "gate-open-missing" };
+
+// The gate-resolution presence check, with the branch it took. `milestoneStage`
+// names the stage whose own gate open bounds the window (a human-required
+// milestone, #3153); null asks the general question and is what
+// humanActedSinceGate's verb branch delegates to, so the milestone narrowing
+// cannot drift away from the predicate it narrows.
+export function resolveGateResolutionPresence(
+  projectDir: string,
+  verb: "approve" | "reject",
+  milestoneStage: string | null,
+  intent?: string,
+  space?: string,
+): GateResolutionPresence {
+  const events = scanPresenceLedger(projectDir, intent, space);
+  if (events === null) return { ok: false, reason: "ledger-absent" };
+  if (milestoneStage !== null && !events.some((e) => opensGateFor(e, milestoneStage))) {
+    return { ok: false, reason: "gate-open-missing" };
+  }
+  const slot = outstandingSlot(events, gateResolutionSlots(verb, milestoneStage));
+  return slot === null ? { ok: false, reason: "no-outstanding-human-act" } : { ok: true, provenance: slot.provenance };
 }
 
 // The approval-gate presence predicate. With a verb it is the #736/#685 gate
@@ -3895,7 +3994,9 @@ function resolveGatePresence(scan: PresenceEvent[] | null, slots: readonly Prese
 // the last resolution of any kind (local semantics, unchanged — one local turn,
 // consumed by any resolution incl. an answer), OR a verified verb-matching
 // delegation sits after the last GATE resolution (its GATE slot: a
-// QUESTION_ANSWERED does NOT consume it — the #736 fix).
+// QUESTION_ANSWERED does NOT consume it — the #736 fix). It delegates to
+// resolveGateResolutionPresence with no milestone stage, which IS this branch;
+// the milestone narrowing (#3153) is the same call with a stage named.
 //
 // Record scope (#2588): `intent`/`space` pin the predicate to a NAMED record's
 // ledger instead of the active cursor. The `--intent` reject path routes the
@@ -3929,15 +4030,12 @@ export function humanActedSinceGate(
   intent?: string,
   space?: string
 ): boolean {
-  const events = scanPresenceLedger(projectDir, intent, space);
   if (verb === undefined) {
+    const events = scanPresenceLedger(projectDir, intent, space);
     return resolveGatePresence(events, [{ isHuman: (e) => e.human, isResolution: (e) => e.res !== undefined }])
       .present;
   }
-  return resolveGatePresence(events, [
-    { isHuman: (e) => e.human && e.delegVerb === undefined, isResolution: (e) => e.res !== undefined },
-    { isHuman: (e) => e.delegVerb === verb, isResolution: (e) => e.res === "gate" },
-  ]).present;
+  return resolveGateResolutionPresence(projectDir, verb, null, intent, space).ok;
 }
 
 // verifyBatchApprovalPresence — D7 (FR-12, presence-closure unit): the

@@ -36,6 +36,7 @@ import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
 import {
   auditShardName,
   humanActedSinceGate,
+  resolveGateResolutionPresence,
   verifyDelegatedProvenance,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
@@ -177,6 +178,37 @@ describe("humanActedSinceGate — delegated approval opens the conductor gate (#
       conductor,
     );
     expect(humanActedSinceGate(root)).toBe(true);
+  });
+
+  // #3153: the same acceptance, asked so it names the slot it came from. The
+  // approval transaction stamps that answer on GATE_APPROVED as `Approval
+  // Provenance`, so "a delegate stood in for the human" is machine-readable and
+  // not merely indistinguishable from a local turn.
+  test("the delegate slot names itself as the provenance of the acceptance", () => {
+    const { root, conductor, issuer } = scaffold();
+    plantV1AuditRow("GATE_APPROVED", { Stage: "intent-capture" }, root, conductor);
+    const ht = plantV1AuditRow("HUMAN_TURN", {}, root, issuer);
+    plantV1AuditRow(
+      "DELEGATED_APPROVAL",
+      {
+        Stage: "market-research",
+        "Issuer Space": "default",
+        "Issuer Intent": issuer,
+        "Issuer Shard": auditShardName(root),
+        "Issuer Human Ts": ht.timestamp,
+      },
+      root,
+      conductor,
+    );
+    expect(resolveGateResolutionPresence(root, "approve", null)).toEqual({
+      ok: true,
+      provenance: "delegated",
+    });
+    // The verb wall holds through the provenance-carrying entry point too.
+    expect(resolveGateResolutionPresence(root, "reject", null)).toEqual({
+      ok: false,
+      reason: "no-outstanding-human-act",
+    });
   });
 
   test("a forged delegation after the last resolution does NOT open the gate", () => {

@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 633,
+    "total": 634,
     "enumeratedByClass": {
-      "function": 354,
+      "function": 355,
       "audit": 98,
       "scope": 15,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 188,
+      "function": 189,
       "audit": 49,
       "scope": 15,
       "stage": 8,
@@ -3904,6 +3904,18 @@
       "coveredBy": [
         {
           "file": "tests/integration/t166-multi-repo-construction.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:resolveGateResolutionPresence",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t188-human-presence-gate.test.ts",
           "mechanism": "cli"
         }
       ],

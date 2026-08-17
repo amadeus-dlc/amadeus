@@ -53,3 +53,13 @@
 
 - SHA: `1240d0f0b`
 - メッセージ: `fix(#3046): scope pending ballot numbering per voter to remove the append TOCTOU`(Conventional Commits, 英語, attribution なし)
+
+## 追補(2026-08-17、§12a iteration 1 BLOCKER への是正 — conductor 実測)
+
+初版は初回実装コミットのみを記録していた。ブランチの最終形は非 record 3 コミットで構成される(`git log --oneline origin/main..HEAD | grep -v "chore(record)"` 転記):
+
+1. `1240d0f0b` fix(#3046): scope pending ballot numbering per voter to remove the append TOCTOU(初版記載の実装本体)
+2. `ece3a71f1` test(#3046): strengthen race barrier and pin per-voter numbering assertions — PR #3171 の CodeRabbit 指摘3件の是正(ballot factory 共有 / バリア ready パスの index 一意化 / arrivalSequence 直接 assert + 順序保存 assert)
+3. `4988c824c` chore(#3046): resync the FormalElection implementation hash pins — model-map.json の election-store 実装ハッシュピン更新(CI の formal-verif SOURCE_DRIFT 是正)
+
+累積差分(record 面除外、`git diff --stat origin/main..HEAD -- ':!amadeus/spaces/default/intents' ':!amadeus/spaces/default/codekb' ':!amadeus/spaces/default/elections'` 転記): amadeus-election-store.ts 75(±)/ election-append-race-child.ts 72(+)/ t3046 348(+)/ t549 84(±)+ `amadeus/spaces/default/specs/tla/model-map.json` 4(±)。現在の branch HEAD = `4988c824ceffd8b7fd21d17f8ac657417956e528`(pr-convergence-report.md の attested head と一致)。検証は各コミット時点で typecheck / lint / 対象テスト green(コミット2: t3046 / t549 再実行 green、コミット3: t-formal-verif-tla-model / t404 green)。

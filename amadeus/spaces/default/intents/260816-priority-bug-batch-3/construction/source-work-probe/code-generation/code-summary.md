@@ -80,7 +80,36 @@
   うち自分の新規コードの2件(`log !== null && ...` optional-chain 提案)は
   直前の既存コード(`mergedPrSourceWork` 内の同型パターン、未変更)と同一スタイル)。
 - `bun tests/gen-coverage-registry.ts --check` → OK。
-- coverage-patch-quick(advisory): (別途追記 — バックグラウンド実行中)
+- coverage-patch-quick(advisory): `bun plugins/coverage-patch-quick/tools/coverage-patch-quick-cli.ts`
+  → exit 0(advisory は常に0)。ただし内部で「selected tests did not all pass」を報告
+  (35ファイルの mapped-tests バッチ実行で一部失敗)。追加行22行は covered:0/
+  uncovered:22 と出たが、これはテスト失敗によりカバレッジ計測自体が不完全なため
+  (advisory の既知の限界節「the selected tests did not all pass」参照)。
+  失敗内訳を切り分けたところ、**いずれも自分の変更と無関係な pre-existing 障害**
+  と確認(ablation: `git checkout HEAD~1 -- packages/framework/core/tools/
+  amadeus-state.ts` で修正前バイナリへ差し戻し、同一バッチ/同一テストを再実行して
+  同一失敗が再現することを確認、その後 `git checkout HEAD --` で復元・再ビルド):
+  - `tests/e2e/t416-nfr-kind-pruning.test.ts` — 単体実行でも修正前ベースラインで
+    同一失敗(§12a reviewer verdict 未記録ガード、`gitHasSourceWork`/
+    `workspace_requires` とは別系統のガード)。
+  - `tests/integration/t462-session-takeover.integration.test.ts` — 単体実行では
+    15/15 pass するが、他の複数ファイルと同一 `bun test` 呼び出しで束ねると
+    失敗/timeout。修正前ベースラインで同一バッチを再実行しても同一の失敗/timeout
+    (exit 124)を再現 — バッチ内 test-isolation/負荷起因の pre-existing 事象。
+  - t206(自分の対象テスト)は同バッチ内でも該当なく green。
+  - 単体実行の t206(16/16)・t185(20/20)は現行 HEAD で再確認済み(下記)。
+
+## PR 状況(自分は push/PR作成をしていない — conductor 側が record bundling を実施)
+
+作業中に conductor(main)が自分のコミット `e49ee4a33` の上へ record-bundling
+コミット `7fa3cbb1f`(`chore(record): bundle intent 260816-priority-bug-batch-3
+record for bolt 4 delivery` — `amadeus/spaces/...` のみ、63ファイル、
+`packages/`/`tests/` は無変更を `git diff --name-only e49ee4a33 7fa3cbb1f` で確認)
+を積み、push・PR #3174(`amadeus-dlc/amadeus#3174`)を作成済み。
+`gh pr view 3174` → state=OPEN, mergeable=MERGEABLE、CI(Typecheck/Lint and
+complexity/Coverage registry 等)は SUCCESS で進行中。現行 HEAD
+(`7fa3cbb1faf65978b8f897cf1e31b8452b18e97a`)で t206/t185 を再実行し
+36 pass/0 fail を再確認済み。
 
 ## コミット
 
@@ -89,8 +118,52 @@
 - メッセージ: `fix(#3156): accept post-birth record bundling by probing
   intent-attributed source work beyond the birth boundary`
 
+## §12a BLOCKER 是正(2026-08-17 追記)
+
+レビューで BLOCKER 1件(帰属キー欠落 — cherry-pick 等の非マージ経路で sibling
+コミットが誤 true になりうる)を受け、`branchSourceWorkSinceTrunkFork` を
+per-commit ループへ再構成し、各候補コミットに **identity 帰属**(宣言 issue
+参照 `intentIssueRefs` または bolt ref 到達可能性 `intentBoltSlugs` →
+`boltRefsForSlug`)を要求するよう是正した。構造ガード(fork-point 境界・
+`--no-merges`・birth 祖先性)は防御の重畳として維持。
+
+- Red 実測(是正前 = 構造ガードのみの版): cherry-pick sibling コミット
+  (宣言 issue と異なる `#999` を参照、非マージで直接コミット、birth より前)
+  に対し `Expected: false / Received: true` で過剰受理を再現(git stash による
+  実装差し戻し→build→テストの2回で、テスト順序修正の前後とも再現を確認)。
+- Green 実測(是正後): `git stash pop` → build →
+  `bun test tests/unit/t206-... tests/integration/t185-...` → **37 pass/0 fail**。
+- 新設テスト2件: (i) 正例を issue 参照付き(`Fixes #697`、`commitIntentBirth([],[697])`)
+  へ更新 (ii) cherry-pick sibling(`Fixes #999`、birth より前の非マージ直コミット)
+  が拒否されることを検証する負例を追加。
+
+## FR-4 受け入れ条件との対応表(FOLLOW-UP 2 是正)
+
+| 受け入れ条件 | 対応テスト |
+|---|---|
+| (a) #3156パターンで approve 成功 | `recognises code committed before birth once this branch diverged from main, when it references the declared issue (issue #3156)` |
+| (b) sibling のみで拒否(両側) | `refuses when only a sibling intent's code was merged in after this branch diverged from main (issue #3156)`(merge経由)/ `refuses a cherry-picked sibling commit before birth that references a different issue (issue #3156 identity attribution)`(非merge経由) |
+| (c) 新設プローブは落ちる実証を経る | 上記「§12a BLOCKER 是正」節のRed→Green、および初版実装時の「落ちる実証(1セット)」節(注入→赤→revert) |
+
+## コミット(更新)
+
+- 是正コミットは **conductor 側の cross-worktree record sync 操作
+  (`397fcd4ed2373ec2647d6ca94aa9d672d9fcb1b8`、メッセージ
+  `chore(record): sync intent record after question-budget corpus fix`)
+  へバンドルされて push 済み**であることを確認(`git diff HEAD~1 HEAD --
+  packages/framework/core/tools/amadeus-state.ts` で識別内容が意図どおりである
+  ことを確認済み)。このコミットは他 unit の record ファイル
+  (application-design-questions.md 等)も同梱しており、レビュアー指定の
+  `fix(#3156): require intent attribution for the fork-range source-work probe`
+  という専用メッセージにはなっていない — 自分は push 権限を持たないため、
+  メッセージ訂正の要否は conductor の判断に委ねる。
+- 現行 HEAD で `bun run build` → t206+t185 = 37 pass/0 fail を再確認済み。
+- model-map ピンも同コミットに含まれ最新化済み(`d07d0da40fcf` → `d624d800a1f0`)。
+
 ## 逸脱
 
-なし。既存3プローブは無変更(byte-for-byte)。互換シム・フォールバック分岐は
-追加していない。スコープ外(AMADEUS_SKIP_ARTIFACT_GUARD バイパス変更、
-docs-only 免除経路)には触れていない。
+なし(是正は §12a が指示した計画既決要求への復元であり新規裁定不要)。既存3
+プローブは無変更(byte-for-byte)。互換シム・フォールバック分岐は追加していない。
+スコープ外(AMADEUS_SKIP_ARTIFACT_GUARD バイパス変更、docs-only 免除経路)には
+触れていない。コミットメッセージの帰属(cross-worktree sync への同梱)は自分の
+制御外である旨を上記に明記。

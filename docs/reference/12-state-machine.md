@@ -263,7 +263,7 @@ The canonical event set (defined in the `audit-format.md` registry) is grouped b
 
 | Event | Emitter | Notes |
 |---|---|---|
-| `GATE_APPROVED` | `tools/amadeus-state.ts` | `--user-input` captures the exact choice |
+| `GATE_APPROVED` | `tools/amadeus-state.ts` | `--user-input` captures the exact choice; `Approval Provenance` names the branch that authorised it — `gate-open-turn` (a local HUMAN_TURN), `delegated` (a verified delegation), `intent-grant` (Intent autonomy decided it), `guard-disabled` (`AMADEUS_SKIP_HUMAN_PRESENCE_GUARD`) (#3153) |
 | `GATE_REJECTED` | `tools/amadeus-state.ts` | `--feedback` captures the rejection reason |
 | `DELEGATED_APPROVAL` | `tools/amadeus-state.ts` | `delegate-approval` records a leader session's human-grounded approval into a remote conductor intent's audit dir; carries the issuer `(space, intent, shard, HUMAN_TURN timestamp)` the conductor's gate verifies (#671) |
 | `DELEGATED_REJECTION` | `tools/amadeus-state.ts` | `delegate-rejection` records a leader session's human-grounded rejection into a remote conductor intent's audit dir; verb-scoped mirror of `DELEGATED_APPROVAL` — opens only a reject gate (#685) |

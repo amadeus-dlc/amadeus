@@ -756,6 +756,13 @@ const SEMI_HUMAN_MILESTONES: readonly InteractionKind[] = ["phase-gate", "walkin
 export const SEMI_ROUTINE_INTERACTIONS: readonly InteractionKind[] =
   ALL_INTERACTION_KINDS.filter((kind) => !SEMI_HUMAN_MILESTONES.includes(kind));
 
+// The same pair, asked as a question. The presence guard narrows its boundary
+// for milestones only (#3153), and it reads the classification from here rather
+// than restating the pair — the list above stays the only place it is named.
+export function isMilestoneInteraction(kind: InteractionKind): boolean {
+  return SEMI_HUMAN_MILESTONES.includes(kind);
+}
+
 export interface SemiAuthorityScope {
   readonly intentUuid: string;
   readonly scopeId: string;
