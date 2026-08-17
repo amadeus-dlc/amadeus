@@ -2613,17 +2613,93 @@ function mergedPrSourceWork(pd: string, birth: string, issues: string[]): boolea
   return false;
 }
 
-// Attribution rule (issue #731): when the record branch's recent history is
-// doc-only, is there source work ATTRIBUTABLE TO THIS INTENT? Three intent-scoped
-// probes, never a blanket post-birth diff (which would count a sibling intent's
-// merged code):
+// This repo's trunk ref, for probe (d)'s fork-point boundary: local `main` if
+// it resolves, else the `origin/main` remote-tracking ref. null when neither
+// does (probe (d) then contributes nothing rather than guessing a trunk name -
+// every other probe in this file already fails closed the same way). Both
+// candidates are looked up by their FULLY-QUALIFIED ref path
+// (`refs/heads/main` / `refs/remotes/origin/main`), never the bare `main` - a
+// bare name's lookup order checks `refs/tags/<name>` before
+// `refs/heads/<name>`, so a stale tag named `main` would silently outrank the
+// real branch and hand branchSourceWorkSinceTrunkFork the wrong fork point.
+function resolveTrunkRef(pd: string): string | null {
+  if (git(pd, ["rev-parse", "--verify", "--quiet", "refs/heads/main"]) !== null) return "refs/heads/main";
+  if (git(pd, ["rev-parse", "--verify", "--quiet", "refs/remotes/origin/main"]) !== null) {
+    return "refs/remotes/origin/main";
+  }
+  return null;
+}
+
+// (issue #3156) Attribution rule extending recordBranchSourceWork BACKWARD past
+// birth: the solo-Bolt-worktree convention (`cid:code-generation:c2-pr-record-in-
+// head-checkout`) commits code directly onto the SAME branch that later gets the
+// record checkpoint bundled onto it, so the code can land BEFORE birth instead of
+// after - recordBranchSourceWork (birth..HEAD) and mergedPrSourceWork (also
+// birth..HEAD) both miss it, and boltRefHasSourceWork's merge-base diff is empty
+// when the bolt ref is an ancestor of HEAD rather than a divergent sibling.
+//
+// The fix widens the window to [trunk fork point .. HEAD] - still THIS branch's
+// own first-parent, no-merge history, so a sibling's MERGE-arrived code is
+// excluded exactly as it is for probe (a) (attribution, not just recency). Three
+// safety properties keep this from over-firing:
+//   - when HEAD has not diverged from trunk (fp === HEAD, e.g. commits landed
+//     directly on trunk with no dedicated branch), the range is empty and the
+//     probe is a no-op - this is what keeps a brownfield repo's pre-birth src/
+//     (committed straight on trunk) from false-passing;
+//   - birth must lie within that same span, so a workspace accidentally checked
+//     out to an unrelated diverged branch (this intent's own birth commit not on
+//     it at all) cannot false-positive on someone else's branch history;
+//   - --no-merges only excludes MERGE-arrived code. A sibling's commit could
+//     still reach this branch via a non-merge path (cherry-pick, rebase onto
+//     this branch, etc.), so every candidate commit ALSO needs an identity tie
+//     to THIS intent - its message references one of the intent's declared
+//     issues (the same triple-gate mergedPrSourceWork already uses), OR it is
+//     reachable from one of the intent's OWN bolt branch refs (Bolt Refs field
+//     -> boltRefsForSlug, the same refs probe (b) resolves). A structurally
+//     in-range commit with neither signal is not counted.
+function branchSourceWorkSinceTrunkFork(pd: string, birth: string | null): boolean {
+  if (birth === null) return false;
+  const trunk = resolveTrunkRef(pd);
+  if (trunk === null) return false;
+  const forkPoint = git(pd, ["merge-base", "HEAD", trunk]);
+  if (forkPoint === null) return false;
+  const fp = forkPoint.trim();
+  if (git(pd, ["merge-base", "--is-ancestor", fp, birth]) === null) return false;
+
+  const shas = git(pd, ["log", "--first-parent", "--no-merges", "--pretty=format:%H", `${fp}..HEAD`]);
+  if (shas === null) return false;
+  const candidates = shas.split("\n").filter((l) => l.trim().length > 0);
+  if (candidates.length === 0) return false;
+
+  const issuePatterns = intentIssueRefs(pd).map((n) => new RegExp(`#${n}\\b`));
+  const boltRefs = intentBoltSlugs(pd).flatMap(boltRefsForSlug);
+
+  for (const sha of candidates) {
+    const files = git(pd, ["diff-tree", "--no-commit-id", "--name-only", "-r", sha]);
+    if (files === null || !files.split("\n").some(isNonDocPath)) continue;
+    const message = git(pd, ["show", "-s", "--format=%B", sha]);
+    if (message !== null && issuePatterns.some((re) => re.test(message))) return true;
+    if (boltRefs.some((ref) => git(pd, ["merge-base", "--is-ancestor", sha, ref]) !== null)) return true;
+  }
+  return false;
+}
+
+// Attribution rule (issue #731, extended by issue #3156): when the record
+// branch's recent history is doc-only, is there source work ATTRIBUTABLE TO
+// THIS INTENT? Four intent-scoped probes, never a blanket post-birth diff
+// (which would count a sibling intent's merged code):
 //   (a) code committed directly onto the record branch since birth
 //       (recordBranchSourceWork);
 //   (b) code on any of THIS intent's bolt branches (Bolt Refs -> local/remote
 //       refs), referenced via merge-base so a squash-merged branch still counts;
 //   (c) a commit since birth whose subject references THIS intent's declared
 //       issue(s) and touches non-doc files (mergedPrSourceWork) - covers a Bolt
-//       PR squash-merged to main and pulled into the record branch via a merge.
+//       PR squash-merged to main and pulled into the record branch via a merge;
+//   (d) an issue- or bolt-ref-attributed commit directly onto the CURRENT
+//       branch BEFORE birth, since it diverged from trunk
+//       (branchSourceWorkSinceTrunkFork) - covers the solo-Bolt-worktree
+//       pattern where the record checkpoint is bundled onto the branch AFTER
+//       the code it belongs to (issue #3156).
 function intentScopedSourceWork(pd: string): boolean {
   const birth = intentBirthCommit(pd);
   if (birth !== null && recordBranchSourceWork(pd, birth)) return true;
@@ -2633,6 +2709,7 @@ function intentScopedSourceWork(pd: string): boolean {
     }
   }
   if (birth !== null && mergedPrSourceWork(pd, birth, intentIssueRefs(pd))) return true;
+  if (branchSourceWorkSinceTrunkFork(pd, birth)) return true;
   return false;
 }
 

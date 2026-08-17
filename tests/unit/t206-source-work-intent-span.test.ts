@@ -56,6 +56,18 @@ function initGitRepo(): void {
   git(["config", "commit.gpgsign", "false"]);
 }
 
+// A repo with NO local `main` branch at all - for resolveTrunkRef's fallback
+// path (probe (d)'s trunk resolution): local `main` is unresolvable, so it
+// either falls back to `refs/remotes/origin/main` or, if that is absent too,
+// contributes nothing.
+function initGitRepoNoMain(): void {
+  git(["init", "-q"]);
+  git(["symbolic-ref", "HEAD", "refs/heads/solo-work"]);
+  git(["config", "user.email", "t206@example.com"]);
+  git(["config", "user.name", "t206"]);
+  git(["config", "commit.gpgsign", "false"]);
+}
+
 // Write a file at a path RELATIVE to the project (workspace) root.
 function writeFileAt(rel: string, body: string): void {
   const abs = join(proj, rel);
@@ -153,6 +165,15 @@ function commitDirectCode(path: string, body: string): void {
   writeFileAt(path, body);
   git(["add", "-A"]);
   git(["commit", "-q", "-m", `code: ${path}`]);
+}
+
+// A non-doc file committed DIRECTLY on the current branch, with a caller-chosen
+// commit message - for probe (d)'s identity-attribution cases (a message that
+// does/doesn't reference a declared issue).
+function commitDirectCodeTagged(path: string, body: string, message: string): void {
+  writeFileAt(path, body);
+  git(["add", "-A"]);
+  git(["commit", "-q", "-m", message]);
 }
 
 // Land a workspace (non-doc) file via a NON-fast-forward MERGE commit from a
@@ -368,6 +389,152 @@ test("refuses (does not throw) when the state file is unreadable", () => {
   git(["add", "-A"]); // stages the state-file deletion + a new doc
   git(["commit", "-q", "-m", "doc: replace state file"]);
   expect(gitHasSourceWork(proj)).toBe(false);
+});
+
+// --- (issue #3156) probe (d): code committed BEFORE birth, on the branch since
+// it diverged from trunk ---------------------------------------------------
+
+// The exact #3156 shape: a single branch (conductor == bolt == record) forks
+// off `main`, gets DIRECT (non-merge) code commits whose messages reference
+// this intent's declared issue (the real-world `Fixes #NNNN` convention), THEN
+// the intent birth is bundled onto it
+// (cid:code-generation:c2-pr-record-in-head-checkout), then a trailing doc-only
+// sync commit. Probes (a)/(c) only look birth..HEAD (the code is before birth)
+// and probe (b) never fires (Bolt Refs is empty, and even a same-slug ref
+// would be an ancestor of HEAD - an empty merge-base diff). Only probe (d) -
+// the trunk-fork-relative, issue-attributed scan - covers this.
+test("recognises code committed before birth once this branch diverged from main, when it references the declared issue (issue #3156)", () => {
+  initGitRepo();
+  commitDirectCode("README.md", "root\n"); // main baseline
+  git(["checkout", "-q", "-b", "bugfix-solo"]);
+  commitDirectCodeTagged(
+    "packages/framework/core/tools/thing.ts",
+    "export const a = 1;\n",
+    "fix(thing): a\n\nFixes #697",
+  );
+  commitDirectCodeTagged("tests/unit/thing.test.ts", "export const b = 1;\n", "test(thing): b\n\nFixes #697");
+  commitIntentBirth([], [697]); // birth AFTER the code, same branch, declares #697
+  commitDoc("audit/sync.md", "chore(record): sync\n");
+  expect(gitHasSourceWork(proj)).toBe(true);
+});
+
+// Two-sided negative (FR-4 acceptance (b)): on the SAME diverged-from-main
+// shape, a SIBLING intent's code arrives via a merge commit rather than a
+// direct commit. `--first-parent --no-merges` excludes it exactly as it does
+// for probe (a), so probe (d) must not attribute it to this intent - false.
+test("refuses when only a sibling intent's code was merged in after this branch diverged from main (issue #3156)", () => {
+  initGitRepo();
+  commitDirectCode("README.md", "root\n"); // main baseline
+  git(["checkout", "-q", "-b", "bugfix-solo"]);
+  commitIntentBirth(); // this intent's birth, no code of its own yet
+  mergeCodeBranch("src/sibling/feature.ts"); // sibling code arrives via --no-ff merge
+  commitDoc("audit/sync.md", "chore(record): sync\n");
+  expect(gitHasSourceWork(proj)).toBe(false);
+});
+
+// Identity-attribution negative: a sibling intent's commit reaches this branch
+// via a NON-merge path (e.g. cherry-pick) BEFORE birth - so --no-merges alone
+// cannot exclude it, and probe (a)/(c) (birth..HEAD) never see it either - but
+// its message references a DIFFERENT issue than this intent declares, and it
+// is not on any of this intent's bolt refs. Structural position alone (fork
+// point, first-parent, birth ancestry) would wrongly count it; probe (d) must
+// refuse for lack of an identity tie to THIS intent.
+test("refuses a cherry-picked sibling commit before birth that references a different issue (issue #3156 identity attribution)", () => {
+  initGitRepo();
+  commitDirectCode("README.md", "root\n"); // main baseline
+  git(["checkout", "-q", "-b", "bugfix-solo"]);
+  commitDirectCodeTagged(
+    "src/sibling/cherry.ts",
+    "export const c = 1;\n",
+    "fix(other): cherry-picked from sibling\n\nFixes #999",
+  );
+  commitIntentBirth([], [697]); // this intent declares #697, birth AFTER the sibling commit
+  commitDoc("audit/sync.md", "chore(record): sync\n");
+  expect(gitHasSourceWork(proj)).toBe(false);
+});
+
+// resolveTrunkRef fallback: no local `main` branch exists, but
+// `refs/remotes/origin/main` does (a fetched clone whose default branch was
+// never checked out locally). Probe (d) must still resolve a trunk and find
+// the #3156 shape.
+test("resolves the trunk via origin/main when no local main branch exists (probe (d) fork boundary)", () => {
+  initGitRepoNoMain();
+  commitDirectCode("README.md", "root\n"); // baseline on the non-`main` branch
+  git(["update-ref", "refs/remotes/origin/main", "HEAD"]); // simulate a known origin/main ref
+  git(["checkout", "-q", "-b", "bugfix-solo"]);
+  commitDirectCodeTagged(
+    "packages/framework/core/tools/thing.ts",
+    "export const a = 1;\n",
+    "fix(thing): a\n\nFixes #697",
+  );
+  commitIntentBirth([], [697]);
+  commitDoc("audit/sync.md", "chore(record): sync\n");
+  expect(gitHasSourceWork(proj)).toBe(true);
+});
+
+// resolveTrunkRef exhaustion: neither a local `main` branch nor
+// `refs/remotes/origin/main` resolves. Probe (d) contributes nothing (it
+// cannot pick a trunk to fork-point against) rather than guessing - and since
+// the code here predates birth, no other probe covers it either, so the
+// overall verdict is a definitive false.
+test("refuses (probe (d) no-op) when neither main nor origin/main resolves", () => {
+  initGitRepoNoMain();
+  commitDirectCode("README.md", "root\n");
+  git(["checkout", "-q", "-b", "bugfix-solo"]);
+  commitDirectCodeTagged(
+    "packages/framework/core/tools/thing.ts",
+    "export const a = 1;\n",
+    "fix(thing): a\n\nFixes #697",
+  );
+  commitIntentBirth([], [697]);
+  commitDoc("audit/sync.md", "chore(record): sync\n");
+  expect(gitHasSourceWork(proj)).toBe(false);
+});
+
+// CodeRabbit finding on the #3156 fix: a bare `main` lookup checks
+// `refs/tags/<name>` BEFORE `refs/heads/<name>` (gitrevisions(7) disambiguation
+// order), so a stale tag named `main` left INSIDE this branch's own history
+// would outrank the real branch and collapse the scanned range to
+// tag..HEAD - silently dropping the pre-birth code commit the tag now sits on
+// top of. resolveTrunkRef must resolve the fully-qualified `refs/heads/main`,
+// not the ambiguous bare name, so the branch (not the tag) wins.
+test("resolves the trunk to the branch, not a same-named tag left on this branch's own history (issue #3156, CodeRabbit)", () => {
+  initGitRepo();
+  commitDirectCode("README.md", "root\n"); // baseline shared by main and bugfix-solo
+  git(["checkout", "-q", "-b", "bugfix-solo"]);
+  commitDirectCodeTagged(
+    "packages/framework/core/tools/thing.ts",
+    "export const a = 1;\n",
+    "fix(thing): a\n\nFixes #697",
+  );
+  // A stale `main` tag sitting on THIS commit (e.g. left over from an unrelated
+  // release process). If resolveTrunkRef used the ambiguous bare `main`, this
+  // tag would outrank refs/heads/main and become a self-ancestor fork point,
+  // shrinking the range to exclude the code commit above.
+  git(["tag", "main", "HEAD"]);
+  commitIntentBirth([], [697]);
+  commitDoc("audit/sync.md", "chore(record): sync\n");
+  expect(gitHasSourceWork(proj)).toBe(true);
+});
+
+// Probe (d)'s bolt-ref attribution path (the second half of the identity gate,
+// alongside the issue-reference path already covered above): the pre-birth
+// code commit is an ancestor of `refs/heads/bolt-<slug>`, and the intent's
+// `Bolt Refs` field names that slug, but declares NO issues at all (so the
+// issue-reference path cannot fire for ANY commit). Probe (b)
+// (boltRefHasSourceWork) is false here because the ref is an ancestor of HEAD
+// - its merge-base-vs-HEAD diff is empty, the exact gap issue #3156 opened -
+// so only probe (d)'s bolt-ref-ancestry check can attribute this commit.
+test("recognises code attributed via a bolt ref ancestor of HEAD, with no declared issues (issue #3156, probe (d) bolt-ref path)", () => {
+  initGitRepo();
+  commitDirectCode("README.md", "root\n"); // main baseline
+  git(["checkout", "-q", "-b", "bugfix-solo"]);
+  commitDirectCode("packages/framework/core/tools/thing.ts", "export const a = 1;\n"); // no issue reference
+  const codeSha = git(["rev-parse", "HEAD"]);
+  git(["update-ref", "refs/heads/bolt-dynamic-test-size", codeSha]); // ref IS this commit
+  commitIntentBirth(["dynamic-test-size"]); // Bolt Refs names the slug, no issues declared
+  commitDoc("audit/sync.md", "chore(record): sync\n");
+  expect(gitHasSourceWork(proj)).toBe(true);
 });
 
 // --- workspaceHasSourceFile: the FS-fallback half of the same guard ------------
