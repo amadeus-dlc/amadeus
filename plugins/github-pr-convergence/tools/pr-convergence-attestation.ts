@@ -40,9 +40,10 @@ export interface ReportAttestation {
   readonly localHead: string;
   readonly remoteHead: string;
   readonly prHead: string;
-  // The merge a `landed` record is bound to. Present on that kind alone: every
-  // other kind is bound to a live checkout instead, and the two bindings are
-  // kept disjoint so neither can stand in for the other.
+  // The merge this record was finalised against. Present on any kind the
+  // merged arm finalised (#3149) and absent on every record still answering
+  // for a live checkout — their presence IS the binding, so a record cannot
+  // claim the merge without carrying the facts into the audit shard.
   readonly mergeCommit?: string;
   readonly mergedAt?: string;
   readonly contentDigest: string;

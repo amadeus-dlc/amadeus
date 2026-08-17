@@ -561,15 +561,38 @@ interface DeliveryWork {
   readonly units: readonly string[];
 }
 
+/** The merge a record is finalised against. Measured at the boundary and
+ *  carried into the receipt, so the record answers for the merge rather than
+ *  for a checkout that has moved on (#3149). */
+interface MergeFacts {
+  readonly commit: string;
+  readonly at: string;
+}
+
 /**
- * The delivery one report is written for: whose it is, the heads it binds, and
- * — for a landed finalisation alone — the measured proof that the created
- * epoch's head is an ancestor of the head the pull request merged.
+ * A human's ruling that a merged delivery is this one, where no ancestry proves
+ * it (#3149 class B). It names the two heads the measurement compared and the
+ * verbatim reason it could not close them, so the record states what was ruled
+ * on rather than that something was ruled.
+ */
+interface MergedEpochRuling {
+  readonly attestedPrHead: string;
+  readonly mergedHead: string;
+  readonly measured: string;
+}
+
+/**
+ * The delivery one report is written for: whose it is, the heads it binds, the
+ * merge it is finalised against (when it is), and the evidence that ties the
+ * created epoch to that merge — a measured ancestry proof, or a human ruling
+ * where none can be measured.
  */
 interface SelfDelivery {
   readonly work: DeliveryWork;
   readonly heads: DeliveryHeads;
   readonly epoch: LandedEpochProof | null;
+  readonly ruling: MergedEpochRuling | null;
+  readonly merge: MergeFacts | null;
 }
 
 type SelfContext =
@@ -593,10 +616,16 @@ interface ExistingReport {
   readonly payloadDigest: string;
 }
 
+/** The kind a report on disk declares about itself — the one reader of that
+ *  line, so no second copy of it can drift. */
+function declaredKind(body: string): string | undefined {
+  return body.match(/^- kind:\s*(\S+)\s*$/m)?.[1];
+}
+
 function existingReportKind(path: string): ExistingReport | null {
   try {
     const body = readFileSync(path, "utf-8");
-    const kind = body.match(/^- kind:\s*(\S+)\s*$/m)?.[1];
+    const kind = declaredKind(body);
     return kind === undefined ? null : {
       kind,
       attestation: parseAttestation(body),
@@ -639,9 +668,10 @@ function selfContextFor(
 
 /**
  * Which gate this verb faces. A merged pull request has no live branch and no
- * live head, so `report` — the verb that records the merge — is bound by the
- * merge facts and the epoch ancestry instead. `override` keeps the live-head
- * gate: a merge needs no ruling, and `report` records it as `landed`.
+ * live head, so both verbs that can finalise it are bound by the merge facts
+ * instead: `report` by the measured epoch ancestry, `override` by a human
+ * ruling where that ancestry cannot be measured (#3149). Everything still live
+ * keeps the live-head gate.
  */
 function currentSelfContext(
   options: ConvergenceOptions,
@@ -652,9 +682,10 @@ function currentSelfContext(
   if (prHead === undefined) {
     return { ok: false, outcome: { exitCode: 2, stdout: "", stderr: "PR head SHA is unavailable\n" } };
   }
-  return evaluation.kind === "landed" && options.verb === "report"
+  if (evaluation.kind !== "landed") return activeSelfContext(options, prHead, evaluation, seams);
+  return options.verb === "report"
     ? landedSelfContext(options, prHead, evaluation, seams)
-    : activeSelfContext(options, prHead, evaluation, seams);
+    : mergedOverrideSelfContext(options, prHead, evaluation, seams);
 }
 
 interface SelfEvidence {
@@ -723,7 +754,15 @@ function activeSelfContext(
   ) {
     return { ok: false, outcome: { exitCode: 1, stdout: "", stderr: refusalFor(receipt, body, work, heads, options.ref) } };
   }
-  return { ok: true, work, heads, epoch: null, pendingReceipt: pendingReceiptFor(options.record, receipt) };
+  return {
+    ok: true,
+    work,
+    heads,
+    epoch: null,
+    ruling: null,
+    merge: null,
+    pendingReceipt: pendingReceiptFor(options.record, receipt),
+  };
 }
 
 /**
@@ -738,10 +777,91 @@ function activeSelfContext(
 function landedSelfContext(
   options: ConvergenceOptions,
   prHead: string,
-  evaluation: Evaluation,
+  evaluation: MergedEvaluation,
   seams: CliSeams,
 ): SelfContext {
   const git = seams.gitSpawn ?? nodeGitSpawn;
+  const evidence = mergedSelfEvidence(options, evaluation, git);
+  if (!evidence.ok) return evidence;
+  const { work, receipt } = evidence.value;
+  const ancestry = verifyMergedEpochAncestry(options.record, options.ref.number, receipt.prHead, prHead, git);
+  if (!ancestry.ok) {
+    return { ok: false, outcome: { exitCode: 1, stdout: "", stderr: `landed finalisation refused: ${ancestry.message}\n` } };
+  }
+  // A landed record binds one head — the head the pull request merged. No live
+  // local or remote branch is left to tell apart from it.
+  const heads: DeliveryHeads = { localHead: prHead, remoteHead: prHead, prHead };
+  return {
+    ok: true,
+    work,
+    heads,
+    epoch: ancestry.proof,
+    ruling: null,
+    merge: mergeFactsOf(evaluation),
+    pendingReceipt: pendingReceiptFor(options.record, receipt),
+  };
+}
+
+/**
+ * The self-record gate for ruling a merged delivery forward (#3149 class B).
+ *
+ * A `created` epoch that a rebase orphaned is an ancestor of nothing the pull
+ * request merged, so no measurement can close it — and the checkout it was
+ * written from is long gone, so the live-head gate cannot open it either. What
+ * remains is a human, and what a human must be shown is the measurement they
+ * are overruling: this arm runs the same ancestry check the landed arm rests
+ * on and carries its verbatim failure into the ruling. An ancestry that DOES
+ * hold is refused here — evidence that exists is not a thing to rule on.
+ */
+function mergedOverrideSelfContext(
+  options: ConvergenceOptions,
+  prHead: string,
+  evaluation: MergedEvaluation,
+  seams: CliSeams,
+): SelfContext {
+  const git = seams.gitSpawn ?? nodeGitSpawn;
+  const evidence = mergedSelfEvidence(options, evaluation, git);
+  if (!evidence.ok) return evidence;
+  const { work, receipt } = evidence.value;
+  const ancestry = verifyMergedEpochAncestry(options.record, options.ref.number, receipt.prHead, prHead, git);
+  if (ancestry.ok) {
+    return {
+      ok: false,
+      outcome: {
+        exitCode: 1,
+        stdout: "",
+        stderr: "override refused: the created epoch reached the merged head — run the report verb to finalise it\n",
+      },
+    };
+  }
+  const heads: DeliveryHeads = { localHead: prHead, remoteHead: prHead, prHead };
+  return {
+    ok: true,
+    work,
+    heads,
+    epoch: null,
+    ruling: { attestedPrHead: receipt.prHead, mergedHead: prHead, measured: ancestry.message },
+    merge: mergeFactsOf(evaluation),
+    pendingReceipt: pendingReceiptFor(options.record, receipt),
+  };
+}
+
+function mergeFactsOf(evaluation: MergedEvaluation): MergeFacts {
+  return { commit: evaluation.facts.mergeCommitOid, at: evaluation.facts.mergedAt };
+}
+
+type MergedSelfEvidenceResult =
+  | { readonly ok: true; readonly value: { readonly work: DeliveryWork; readonly receipt: ReportAttestation } }
+  | { readonly ok: false; readonly outcome: CliOutcome };
+
+/** What both merged arms verify before either measures anything: no foreign
+ *  uncommitted work, and a report on disk whose receipt is intact and names
+ *  THIS delivery — the half of identity no push can change. */
+function mergedSelfEvidence(
+  options: ConvergenceOptions,
+  evaluation: MergedEvaluation,
+  git: GitSpawn,
+): MergedSelfEvidenceResult {
   const prerequisite = verifyLandedPrerequisites(options.record, git, options.units);
   if (!prerequisite.ok) {
     return { ok: false, outcome: { exitCode: 1, stdout: "", stderr: `delivery prerequisite failed: ${prerequisite.message}\n` } };
@@ -758,20 +878,7 @@ function landedSelfContext(
       outcome: { exitCode: 1, stdout: "", stderr: "report attestation is missing, tampered, copied, or replayed\n" },
     };
   }
-  const ancestry = verifyMergedEpochAncestry(options.record, options.ref.number, receipt.prHead, prHead, git);
-  if (!ancestry.ok) {
-    return { ok: false, outcome: { exitCode: 1, stdout: "", stderr: `landed finalisation refused: ${ancestry.message}\n` } };
-  }
-  // A landed record binds one head — the head the pull request merged. No live
-  // local or remote branch is left to tell apart from it.
-  const heads: DeliveryHeads = { localHead: prHead, remoteHead: prHead, prHead };
-  return {
-    ok: true,
-    work,
-    heads,
-    epoch: ancestry.proof,
-    pendingReceipt: pendingReceiptFor(options.record, receipt),
-  };
+  return { ok: true, value: { work, receipt } };
 }
 
 /** The receipt is self-consistent and still describes the bytes on disk. */
@@ -883,6 +990,52 @@ function measuredBy(
   return epoch !== null && epoch.attestedPrHead === attestedPrHead && epoch.mergedHead === mergedHead;
 }
 
+/** The same question for a human ruling: it speaks for the two heads a human
+ *  was shown, and for no others. */
+function ruledFor(
+  ruling: MergedEpochRuling | null,
+  attestedPrHead: string,
+  mergedHead: string,
+): boolean {
+  return ruling !== null && ruling.attestedPrHead === attestedPrHead && ruling.mergedHead === mergedHead;
+}
+
+function refuseLifecycle(message: string): SelfReportLifecycle {
+  return { kind: "refuse", outcome: { exitCode: 1, stdout: "", stderr: `${message}\n` } };
+}
+
+/**
+ * What a report may do when the head it was attested at is no longer the head
+ * the pull request carries.
+ *
+ * An epoch attested at an earlier head is not stale when the pull request
+ * merged that head: the merge closed the epoch, and the evidence that says so
+ * — a measured ancestry (#3110) or, where none can be measured, a human ruling
+ * (#3149) — was established against the merged head before this call. Either
+ * speaks for the two heads it names and no others, so a member Unit left
+ * attested at some third head was never covered and is stale. A ruling buys no
+ * kind transition the lifecycle would otherwise refuse.
+ */
+function lifecycleAtChangedHead(
+  previousKind: string,
+  attestedPrHead: string,
+  report: ConvergenceReport,
+  delivery: SelfDelivery,
+): SelfReportLifecycle {
+  const mergedHead = delivery.heads.prHead;
+  if (report.kind === "landed" && measuredBy(delivery.epoch, attestedPrHead, mergedHead)) {
+    return { kind: "write" };
+  }
+  if (report.kind === "override" && ruledFor(delivery.ruling, attestedPrHead, mergedHead)) {
+    return transitionAllowed(previousKind, report.kind)
+      ? { kind: "write" }
+      : refuseLifecycle(`report lifecycle refused: ${previousKind} -> ${report.kind}`);
+  }
+  return report.kind === "created"
+    ? { kind: "write" }
+    : refuseLifecycle("report lifecycle stale: PR head changed; run create to begin a new created epoch");
+}
+
 /** What the state already on disk allows this run to do. */
 function selfReportLifecycle(
   path: string,
@@ -891,45 +1044,125 @@ function selfReportLifecycle(
   ref: { readonly repo: string; readonly number: number },
 ): SelfReportLifecycle {
   const { heads, work } = delivery;
-  const refuse = (message: string): SelfReportLifecycle => ({
-    kind: "refuse",
-    outcome: { exitCode: 1, stdout: "", stderr: `${message}\n` },
-  });
   const previous = existingReportKind(path);
   if (previous === null) {
     return report.kind === "created"
       ? { kind: "write" }
-      : refuse("report lifecycle refused: create must establish the created state first");
+      : refuseLifecycle("report lifecycle refused: create must establish the created state first");
   }
   if (previous.attestation === null) {
-    return refuse("report lifecycle refused: current report has no valid CLI attestation");
+    return refuseLifecycle("report lifecycle refused: current report has no valid CLI attestation");
   }
   if (previous.attestation.prHead !== heads.prHead) {
-    // An epoch attested at an earlier head is not stale when the pull request
-    // merged that head: the merge closed the epoch, and the ancestry that says
-    // so was measured against the merged head before this call (#3110). The
-    // proof speaks for the two heads it measured and no others — a member Unit
-    // left attested at some third head was never measured, so it is stale.
-    if (report.kind === "landed" && measuredBy(delivery.epoch, previous.attestation.prHead, heads.prHead)) {
-      return { kind: "write" };
-    }
-    return report.kind === "created"
-      ? { kind: "write" }
-      : refuse("report lifecycle stale: PR head changed; run create to begin a new created epoch");
+    return lifecycleAtChangedHead(previous.kind, previous.attestation.prHead, report, delivery);
   }
   if (previous.kind !== report.kind) {
     return transitionAllowed(previous.kind, report.kind)
       ? { kind: "write" }
-      : refuse(`report lifecycle refused: ${previous.kind} -> ${report.kind}`);
+      : refuseLifecycle(`report lifecycle refused: ${previous.kind} -> ${report.kind}`);
   }
   const { id, ...unsigned } = previous.attestation;
   if (
     id !== attestationId(unsigned) || previous.attestation.contentDigest !== previous.payloadDigest ||
     !attestationBindsIdentity(previous.attestation, work, heads, ref)
   ) {
-    return refuse("report lifecycle refused: current attestation is stale, tampered, copied, or replayed");
+    return refuseLifecycle("report lifecycle refused: current attestation is stale, tampered, copied, or replayed");
   }
   return { kind: "resume", attestation: previous.attestation };
+}
+
+/** A report already in a state the lifecycle calls final. `created` is not one
+ *  (the merged arm records it as `landed`), and `landed` is already the merge's
+ *  own record, so a re-run of it resumes rather than finalises. */
+interface FinalRecord {
+  readonly kind: string;
+  readonly body: string;
+  readonly receipt: ReportAttestation;
+}
+
+function finalRecordOnDisk(path: string): FinalRecord | null {
+  let body: string;
+  try {
+    body = readFileSync(path, "utf-8");
+  } catch {
+    return null;
+  }
+  const kind = declaredKind(body);
+  const receipt = parseAttestation(body);
+  if (receipt === null || (kind !== "converged" && kind !== "override")) return null;
+  return { kind, body, receipt };
+}
+
+/**
+ * Finalising a record whose verdict is already final (#3149 class A).
+ *
+ * `converged` never transitions — that is what makes it the strongest verdict
+ * the loop can reach — so a merge that lands afterwards cannot be recorded by
+ * re-minting the report as another kind. It is recorded where the binding
+ * actually lives: the receipt is re-attested against the merge this run
+ * measured, over payload bytes that do not change, and the canonical audit
+ * receipt for the new attestation is appended. The verdict, and the head it was
+ * measured at, stay exactly as they were.
+ *
+ * Returns null when there is no final record to finalise, leaving the caller's
+ * ordinary landed path to write the merge's own record.
+ */
+async function finaliseMergedInPlace(
+  options: ConvergenceOptions,
+  delivery: SelfDelivery,
+  merge: MergeFacts,
+  seams: CliSeams,
+): Promise<CliOutcome | null> {
+  if (finalRecordOnDisk(reportPathFor(options.record, delivery.work.unit)) === null) return null;
+  const paths: string[] = [];
+  for (const unit of delivery.work.units) {
+    const outcome = await finaliseUnitInPlace(options, unit, delivery, merge, seams);
+    if (outcome.exitCode !== 0) return outcome;
+    paths.push(outcome.stdout.trim());
+  }
+  return { exitCode: 0, stdout: `${paths.join("\n")}\n`, stderr: "" };
+}
+
+async function finaliseUnitInPlace(
+  options: ConvergenceOptions,
+  unit: string,
+  delivery: SelfDelivery,
+  merge: MergeFacts,
+  seams: CliSeams,
+): Promise<CliOutcome> {
+  const path = reportPathFor(options.record, unit);
+  const refuse = (message: string): CliOutcome => ({ exitCode: 1, stdout: "", stderr: `${message}\n` });
+  const current = finalRecordOnDisk(path);
+  if (current === null) {
+    return refuse(`merged finalisation refused: ${unit} carries no final record for this merge to close`);
+  }
+  const { body, receipt } = current;
+  if (
+    !attestationIsIntact(receipt, body) ||
+    !attestationBindsDelivery(receipt, { ...delivery.work, unit }, options.ref)
+  ) {
+    return refuse("report attestation is missing, tampered, copied, or replayed");
+  }
+  // The proof speaks for the one attested head it measured: a member Unit left
+  // at some other head was never put to git, exactly as on the landed path.
+  if (!measuredBy(delivery.epoch, receipt.prHead, delivery.heads.prHead)) {
+    return refuse("report lifecycle stale: PR head changed; run create to begin a new created epoch");
+  }
+  if (receipt.mergeCommit === merge.commit && receipt.mergedAt === merge.at) {
+    return resumeSelfReport(options.record, path, receipt, seams, "pr-convergence");
+  }
+  if (receipt.mergeCommit !== undefined || receipt.mergedAt !== undefined) {
+    return refuse("merged finalisation refused: the record is already bound to a different merge");
+  }
+  const { id: _superseded, ...unsigned } = receipt;
+  const withoutId = { ...unsigned, mergeCommit: merge.commit, mergedAt: merge.at };
+  const attestation: ReportAttestation = { id: attestationId(withoutId), ...withoutId };
+  writeFileSync(path, `${reportPayload(body)}${renderAttestation(attestation)}`, "utf-8");
+  const emitted = await emitAttestationReceipt(options.record, attestation, seams);
+  if (emitted !== null) return emitted;
+  const fired = await fireReportSensor(options.record, path, "pr-convergence", seams);
+  if (fired !== null) return fired;
+  return { exitCode: 0, stdout: `${path}\n`, stderr: "" };
 }
 
 async function writeSelfReport(
@@ -985,11 +1218,13 @@ async function writeSelfReportProjection(
     ...(work.units.length === 1 ? {} : { memberUnits: work.units }),
     repo: report.prRef.repo, pr: report.prRef.number,
     localHead: heads.localHead, remoteHead: heads.remoteHead, prHead: heads.prHead,
-    // A landed record is bound to the merge rather than to a checkout, so the
-    // merge facts travel inside the receipt — and through it into the audit.
-    ...(report.kind === "landed"
-      ? { mergeCommit: report.mergeCommitOid, mergedAt: report.mergedAt }
-      : {}),
+    // A record finalised against a merge is bound to that merge rather than to
+    // a checkout, so the merge facts travel inside the receipt — and through it
+    // into the audit. Which records those are is the merged arm's measurement,
+    // never the report's kind (#3149).
+    ...(delivery.merge === null
+      ? {}
+      : { mergeCommit: delivery.merge.commit, mergedAt: delivery.merge.at }),
     contentDigest: reportPayloadDigest(payload),
   };
   const attestation: ReportAttestation = { id: attestationId(withoutId), ...withoutId };
@@ -1112,6 +1347,8 @@ async function recoverCreateFailure(
       work: linkedWork,
       heads: { localHead: prerequisite.localHead, remoteHead: prerequisite.remoteHead, prHead: pr.headRefOid },
       epoch: null,
+      ruling: null,
+      merge: null,
     },
     seams,
     "code-generation",
@@ -1261,6 +1498,8 @@ async function createPullRequest(options: CreateOptions, seams: CliSeams): Promi
         work: linkedWork,
         heads: { localHead: prerequisite.localHead, remoteHead: prerequisite.remoteHead, prHead: state.value.headRefOid },
         epoch: null,
+        ruling: null,
+        merge: null,
       },
       seams,
       "code-generation",
@@ -1295,6 +1534,10 @@ type Evaluation =
       readonly summary: LedgerSummary;
       readonly provenanceSource: ProvenanceSource;
     };
+
+/** An evaluation that read a merged pull request: the arm that carries the
+ *  merge facts every finalisation is bound to. */
+type MergedEvaluation = Extract<Evaluation, { readonly kind: "landed" }>;
 
 interface ProvenanceSource {
   readonly title: string;
@@ -1427,6 +1670,12 @@ async function reportOutcome(
 ): Promise<CliOutcome> {
   if (evaluation.kind === "landed") {
     const facts = evaluation.facts;
+    if (self !== null) {
+      // A verdict that is already final is closed where its binding lives, not
+      // by being rewritten as another kind (#3149).
+      const inPlace = await finaliseMergedInPlace(options, self, mergeFactsOf(evaluation), seams);
+      if (inPlace !== null) return inPlace;
+    }
     const landed: ConvergenceReport = {
       kind: "landed",
       prRef: refValue(options.ref),
@@ -1520,6 +1769,17 @@ function provenanceOutcome(
   };
 }
 
+/**
+ * What the override record states. A ruling on a merged delivery carries the
+ * ancestry measurement it overruled verbatim — both SHAs and the reason they
+ * could not be closed — so the record can be re-derived rather than trusted.
+ */
+function overrideReason(reason: string, ruling: MergedEpochRuling | null): string {
+  if (ruling === null) return reason;
+  const measured = `merged-epoch ancestry unproven: ${ruling.measured}`;
+  return reason === "" ? measured : `${reason} — ${measured}`;
+}
+
 async function runConvergence(options: ConvergenceOptions, seams: CliSeams): Promise<CliOutcome> {
   let evaluation: EvaluationResult;
   try {
@@ -1564,12 +1824,16 @@ async function runConvergence(options: ConvergenceOptions, seams: CliSeams): Pro
   if (options.verb === "report") return reportOutcome(options, seams, evaluation.value, selfContext);
 
   // override
+  const ruling = selfContext === null ? null : selfContext.ruling;
   const humanTurn = latestHumanTurn(options.record);
   if (humanTurn === null) {
+    // Name the measurement the ruling would have stood on: a human who never
+    // sees what they are overruling is a rubber stamp (#3149).
+    const measured = ruling === null ? "" : `; the ruling would stand on this measurement: ${ruling.measured}`;
     return {
       exitCode: 1,
       stdout: "",
-      stderr: "override refused: no HUMAN_TURN found in the record's audit shards\n",
+      stderr: `override refused: no HUMAN_TURN found in the record's audit shards${measured}\n`,
     };
   }
   if (verdict.converged) {
@@ -1581,9 +1845,10 @@ async function runConvergence(options: ConvergenceOptions, seams: CliSeams): Pro
   }
 
   const recordedAt = seams.now();
+  const reason = overrideReason(options.reason ?? "", ruling);
   const decision =
     `pr-convergence override: ${options.ref.repo}#${options.ref.number} unit=${options.unit} ` +
-    `converged=false humanTurn=${humanTurn.eventId} reason=${options.reason ?? ""}`;
+    `converged=false humanTurn=${humanTurn.eventId} reason=${reason}`;
   const emitted = await seams.emitDecision([
     "bun",
     options.logTool,
@@ -1593,7 +1858,7 @@ async function runConvergence(options: ConvergenceOptions, seams: CliSeams): Pro
     "--decision",
     decision,
     "--rationale",
-    options.reason ?? "",
+    reason,
   ]);
   if (emitted.code !== 0) {
     return {
@@ -1609,7 +1874,7 @@ async function runConvergence(options: ConvergenceOptions, seams: CliSeams): Pro
     prRef: refValue(options.ref),
     verdict,
     ledgerSummary: summary,
-    override: { humanTurnId: humanTurn.eventId, reason: options.reason ?? "", recordedAt },
+    override: { humanTurnId: humanTurn.eventId, reason, recordedAt },
   };
   if (selfContext !== null) {
     return writeSelfReport(options.record, report, selfContext, seams, "pr-convergence");

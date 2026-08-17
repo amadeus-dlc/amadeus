@@ -74,6 +74,28 @@ Timestamps must parse, `pull request` must read `<repo>#<number>`, and `kind`
 must agree with `converged` — a report claiming `kind: override` while also
 claiming `converged: true` contradicts itself and is reported.
 
+## Which environment a record answers for
+
+A record is bound either to the checkout it was written from or to the merge it
+was finalised against, and the receipt decides which — never the kind (#3149).
+A receipt that attests `merge commit` and `merged at` answers for that merge, so
+the local head is not compared; every other receipt answers for the checkout,
+whose HEAD must still be the head it names. Merge facts a record states in its
+body but does not attest are a finding on any kind: they would claim a merge
+the audit shard never carries.
+
+Because attesting a merge is what selects that binding, the attested values are
+checked for the shape a merge fact has — a commit object id and a timestamp
+that parses — by the same rule applied to the values a `landed` record states.
+A malformed value is a finding, never a fallback to the checkout binding.
+
+Half a merge is refused twice over, and neither refusal is a fallback to the
+checkout binding. A receipt carrying only the commit, or only the instant, is
+malformed by construction — the two fields travel together, so the receipt is
+rejected before any binding is chosen. A body that names one of them without a
+receipt attesting both still selects the merge binding, and the missing
+attestation is the finding.
+
 ## Independence from the plugin
 
 The checker re-reads the report with its own minimal line reader instead of

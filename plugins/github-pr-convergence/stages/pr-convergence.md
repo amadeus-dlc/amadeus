@@ -326,16 +326,28 @@ attested must be an ancestor of the head the pull request merged, measured from
 between `create` and the merge (a record checkpoint, a review fix) is therefore
 finalised rather than refused, while an epoch attested on a commit the merge
 never carried is still refused, and an ancestry that cannot be measured fails
-loudly rather than being assumed. The landed receipt attests the merge commit
+loudly rather than being assumed. The finalised receipt attests the merge commit
 and the merge instant, and the record is bound to those facts in the place a
 live record is bound to its checkout.
 
-The blocking sensor accepts that record at this stage, and only this stage,
-when the merge instant parses, the merge commit is a real object id, and both
-match the receipt; a `created` report, a `landed` report missing either merge
-fact, and a live report that carries merge facts all still fail. The check
-rollup is recorded but never a pass condition: a merge commit picks up
-post-merge workflow runs the pull request never carried.
+**A verdict that is already final** — `converged`, or a recorded `override` —
+is not rewritten as `landed` when the merge lands afterwards (#3149). It cannot
+be: `converged` never transitions, which is what makes it the strongest verdict
+the loop reaches. `report` finalises it **in place** instead, on the same
+evidence the landed path requires: the payload bytes and the verdict stay
+exactly as they were, and the receipt is re-attested against the merge this run
+measured, with the canonical audit receipt appended for the new attestation. A
+second `report` run finds the record already bound to that merge and replays
+only what did not complete.
+
+The blocking sensor asks the receipt, not the kind, which environment a record
+answers for: a receipt attesting the merge commit and the merge instant answers
+for that merge and is not compared against the checkout, and every other receipt
+must still name the current HEAD. A `created` report at this stage, a record
+missing either merge fact, and merge facts stated in a body its receipt never
+attested all still fail. The check rollup is recorded but never a pass
+condition: a merge commit picks up post-merge workflow runs the pull request
+never carried.
 
 `create` has no part in this. Re-pushing a merged delivery's head and running
 `create` opened a second pull request for work already on the trunk (#3109);
@@ -361,11 +373,25 @@ bun {{HARNESS_DIR}}/plugins/github-pr-convergence/tools/pr-convergence-cli.ts ov
 `override` requires a linked PR, an existing valid `created` attestation, a
 real human turn in the record's audit shards, and a non-blank reason. It
 refuses to override an already-converged pull request, records the ruling, then
-writes and attests an `override` report with `converged: false`. A merged pull
-request needs no ruling — `report` records it as `landed`, and `override` keeps
-the live-head gate for exactly that reason: the merged path belongs to the verb
-that records the merge. There is no environment variable, flag, or state field
-that skips the guard silently: a bypass that leaves no record is not offered.
+writes and attests an `override` report with `converged: false`. There is no
+environment variable, flag, or state field that skips the guard silently: a
+bypass that leaves no record is not offered.
+
+**A merged pull request whose epoch nothing can prove** is the one case
+`override` finalises (#3149). A rebase can leave the `created` epoch an ancestor
+of nothing the pull request merged, and no measurement will ever close it —
+measured on three real cases, none of them patch-equivalent to the merge. On
+this path `override` replaces the live-head prerequisites exactly as `report`
+does, and adds nothing to the evidence: it runs the same ancestry check, and
+where that check **succeeds** it refuses and sends you to `report`, because
+evidence that exists is not something to rule on. Where it fails, the verbatim
+measurement — both SHAs and why they could not be closed — is carried into the
+ruling's `reason`, so the record states what was overruled rather than that
+something was. Without a human turn in the record the ruling is refused, and
+the refusal names that same measurement. The ruling is bound to the merge, like
+any other finalised record, and the kind transitions the lifecycle forbids stay
+forbidden: a `converged` record is not overwritten by an override, merged or
+not.
 
 ## CI observation and local validation ordering
 

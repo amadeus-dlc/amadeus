@@ -466,6 +466,20 @@ function createdPayload(): string {
   });
 }
 
+const MERGE_SHA = "e".repeat(40);
+const MERGE_INSTANT = "2026-08-17T09:00:00Z";
+
+/** The converged verdict of the same delivery the receipt fixtures name. */
+function convergedPayload(): string {
+  return renderReport({
+    kind: "converged",
+    generatedAt: "2026-08-12T00:00:00Z",
+    prRef: { repo: "amadeus-dlc/amadeus", number: 2838 },
+    verdict: VERDICT as never,
+    ledgerSummary: LEDGER as never,
+  });
+}
+
 function auditRow(body: string): string {
   const id = body.match(/^- attestation id: (\S+)$/m)?.[1] ?? "";
   return `${JSON.stringify({
@@ -529,6 +543,86 @@ describe("t450 attestation checks on a self-development record", () => {
     const self = selfRecord({ audit: auditRow(body) });
     const result = evaluateReportFormat(self.reportAt(body), "code-generation");
     expect(fieldsOf(result)).not.toContain("attestation event");
+  });
+
+  test("a receipt that attests a merge answers for it, not for the checkout (#3149)", () => {
+    // The binding follows the receipt, not the kind: a converged verdict the
+    // merged arm finalised in place is bound to that merge, so the checkout it
+    // was written from — long moved on, and not a git repository here at all —
+    // is no longer the question being asked.
+    const body = attested(convergedPayload(), { mergeCommit: MERGE_SHA, mergedAt: MERGE_INSTANT });
+    const self = selfRecord({ audit: auditRow(body) });
+    const bound = fieldsOf(evaluateReportFormat(self.reportAt(body), "pr-convergence"));
+    expect(bound).not.toContain("local head");
+    expect(bound).not.toContain("attestation");
+    // The same record without the attested merge is checkout-bound, and the
+    // checkout it names is not this one: the two answers differ only in the
+    // receipt.
+    const live = attested(convergedPayload());
+    const liveSelf = selfRecord({ audit: auditRow(live) });
+    expect(fieldsOf(evaluateReportFormat(liveSelf.reportAt(live), "pr-convergence")))
+      .toContain("local head");
+  });
+
+  test("an attested merge fact must have the shape a merge fact has (#3149)", () => {
+    // The record still faces the merge binding — a malformed value does not
+    // fall back to the checkout binding — and each malformed field is named.
+    const body = attested(convergedPayload(), { mergeCommit: "nope", mergedAt: "whenever" });
+    const self = selfRecord({ audit: auditRow(body) });
+    const result = evaluateReportFormat(self.reportAt(body), "pr-convergence");
+    expect(result.findings).toContainEqual({
+      field: "merge commit",
+      reason: 'attested value is malformed — not a commit object id "nope"',
+    });
+    expect(result.findings).toContainEqual({
+      field: "merged at",
+      reason: 'attested value is malformed — unparseable timestamp "whenever"',
+    });
+  });
+
+  test("a receipt carrying half a merge is malformed before any binding is chosen (#3149)", () => {
+    // The two fields travel together, so half a merge never reaches the
+    // binding question at all: the receipt itself is refused.
+    const body = attested(convergedPayload(), { mergeCommit: MERGE_SHA });
+    const self = selfRecord({ audit: auditRow(body) });
+    const result = evaluateReportFormat(self.reportAt(body), "pr-convergence");
+    expect(result.findings).toContainEqual({
+      field: "attestation",
+      reason: "missing or malformed CLI attestation",
+    });
+  });
+
+  test("a body naming half a merge still faces the merge binding (#3149)", () => {
+    // Stating one of the two facts is not a way back to the checkout binding:
+    // the record is bound to the merge it began to claim, and owes the rest.
+    const body = attested(
+      convergedPayload().replace("- converged: true\n", `- converged: true\n- merge commit: ${MERGE_SHA}\n`),
+    );
+    const self = selfRecord({ audit: auditRow(body) });
+    const result = evaluateReportFormat(self.reportAt(body), "pr-convergence");
+    expect(result.findings).toContainEqual({
+      field: "attestation",
+      reason: "a record bound to a merge attests the merge commit and the merge instant",
+    });
+    expect(fieldsOf(result)).not.toContain("local head");
+  });
+
+  test("a record stating a merge its receipt never attested is a finding (#3149)", () => {
+    // The other side of the same rule: merge facts are evidence only where the
+    // receipt — and through it the audit shard — carries them.
+    const body = attested(
+      convergedPayload().replace(
+        "- converged: true\n",
+        `- converged: true\n- merged at: ${MERGE_INSTANT}\n- merge commit: ${MERGE_SHA}\n`,
+      ),
+    );
+    const self = selfRecord({ audit: auditRow(body) });
+    const result = evaluateReportFormat(self.reportAt(body), "pr-convergence");
+    expect(result.pass).toBe(false);
+    expect(result.findings).toContainEqual({
+      field: "attestation",
+      reason: "a record bound to a merge attests the merge commit and the merge instant",
+    });
   });
 
   test("a created report claiming convergence is a finding", () => {
