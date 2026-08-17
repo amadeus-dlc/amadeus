@@ -24,6 +24,11 @@ import {
   productionStageAutonomy,
   recordAutonomyRefusalAtGateOpen,
 } from "../../packages/framework/core/tools/amadeus-intent-autonomy-production.ts";
+import {
+  handleGateStart,
+  handleReject,
+  handleRevise,
+} from "../../packages/framework/core/tools/amadeus-state.ts";
 
 const BUN = process.execPath;
 const GRAPH_REVISION = `sha256:${"0".repeat(64)}`;
@@ -53,6 +58,32 @@ function appendHumanTurn(projectDir: string): void {
     event: "HUMAN_TURN",
     fields: {},
   })}\n`);
+}
+
+// Run one state handler in this process against `project`. Two variables make
+// that work: the handlers resolve the record through CLAUDE_PROJECT_DIR, and
+// they read the stage graph relative to their own module, which in the source
+// tree has no data/ directory — so the graph is pointed at the very copy the
+// fixture installed, the one this project's state was generated from. Both are
+// restored so no later test inherits them.
+function inProject(project: string, run: () => void): void {
+  const saved = {
+    projectDir: process.env.CLAUDE_PROJECT_DIR,
+    stageGraph: process.env.AMADEUS_STAGE_GRAPH,
+  };
+  process.env.CLAUDE_PROJECT_DIR = project;
+  process.env.AMADEUS_STAGE_GRAPH = join(project, ".claude", "tools", "data", "stage-graph.json");
+  try {
+    run();
+  } finally {
+    restoreEnv("CLAUDE_PROJECT_DIR", saved.projectDir);
+    restoreEnv("AMADEUS_STAGE_GRAPH", saved.stageGraph);
+  }
+}
+
+function restoreEnv(name: string, value: string | undefined): void {
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
 }
 
 // One CLI invocation against the project's own shipped tool tree. The target is
@@ -144,7 +175,10 @@ describe("opening a gate the mode cannot decide records the reason (FR-2a)", () 
   test("an Intent with no declared mode records the refusal at gate open", () => {
     projectDir = bornProject();
 
-    expect(tool(projectDir, "amadeus-state.ts", ["gate-start", "intent-capture"]).status).toBe(0);
+    // In process, like the rejection backfill below: the recorder runs inside
+    // the gate-open transaction, where a spawned tool puts it out of reach of
+    // any measurement.
+    inProject(projectDir, () => handleGateStart(["intent-capture"]));
 
     const rows = refusalRows(projectDir);
     expect(rows.length).toBe(1);
@@ -244,10 +278,13 @@ describe("one presentation is one row (FR-2b, #3152)", () => {
     projectDir = bornProject();
     appendHumanTurn(projectDir);
 
-    // Rejecting a stage nobody opened backfills the gate row gate-start would
-    // have written — the human being asked is the one rejecting it.
-    expect(tool(projectDir, "amadeus-state.ts", ["reject", "intent-capture", "--feedback", "redo"]).status).toBe(0);
-    expect(tool(projectDir, "amadeus-state.ts", ["revise", "intent-capture"]).status).toBe(0);
+    // Driven in process rather than through the CLI: the backfill arm lives
+    // inside the reject transaction, and a spawned tool would run it where no
+    // measurement reaches. Rejecting a stage nobody opened backfills the gate
+    // row gate-start would have written — the human being asked is the one
+    // rejecting it.
+    inProject(projectDir, () => handleReject(["intent-capture", "--feedback", "redo"]));
+    inProject(projectDir, () => handleRevise(["intent-capture"]));
 
     expect(fieldRows(projectDir, "STAGE_AWAITING_APPROVAL").length).toBe(2);
     expect(refusalRows(projectDir).length).toBe(2);
