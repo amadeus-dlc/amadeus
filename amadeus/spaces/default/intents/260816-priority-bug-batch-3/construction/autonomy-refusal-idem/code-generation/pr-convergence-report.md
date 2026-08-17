@@ -1,12 +1,28 @@
 # PR Convergence Report
 
-- kind: created
+- kind: converged
 - pull request: amadeus-dlc/amadeus#3173
-- generated at: 2026-08-17T02:55:39Z
-- converged: false
+- generated at: 2026-08-17T07:08:00Z
+- converged: true
+- merge state: CLEAN
+- mergeable resolution: resolved
+
+## Violating threads
+
+- replied-unresolved: 0
+- ignored: 0
+
+## Ledger
+
+- resolved: 3
+- outdated: 0
+- replied-unresolved: 0
+- ignored: 0
+- human-only (out of scope): 0
+- terminalized: 1
 ## CLI Attestation
 
-- attestation id: prca:15eaf6a92d3321bb4dae0500f8acedbe4057a185ae9b0fcdfeee4b83604ed8aa
+- attestation id: prca:87809bb0c61e3dd4d6d08fef9b026199fb5d75bc725ddda7e4a81ce90d1d4c82
 - intent: priority-bug-batch-3
 - intent uuid: 01a00ce8-ba28-7a94-92d5-cf7f735ff7be
 - record: amadeus/spaces/default/intents/260816-priority-bug-batch-3/
@@ -14,7 +30,7 @@
 - unit: autonomy-refusal-idem
 - repository: amadeus-dlc/amadeus
 - pr: 3173
-- local head: 73d436b7c6d90e326e63ed33367bb083505be802
-- remote head: 73d436b7c6d90e326e63ed33367bb083505be802
-- pr head: 73d436b7c6d90e326e63ed33367bb083505be802
-- content digest: sha256:ab834261b23c3a4429e0c991445a09bebbd89cc5fa59b0fd9e585f1017164deb
+- local head: 60cdfb723965256b9291658b5aaa3c554a7c1f7e
+- remote head: 60cdfb723965256b9291658b5aaa3c554a7c1f7e
+- pr head: 60cdfb723965256b9291658b5aaa3c554a7c1f7e
+- content digest: sha256:150a5961fba1614ad8310f01629dd803c85698dcd2393c1eda44239c46709ea3

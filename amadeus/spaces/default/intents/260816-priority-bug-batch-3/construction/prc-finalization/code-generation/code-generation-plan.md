@@ -16,3 +16,21 @@
 - [x] Step 10: 台帳 resync — 新規テストファイルの coverage-registry regen。plugin ツールは model-map 対象外だが、`bun run build`(plugin 投影再生成)+ typecheck / lint / 対象テスト(t450 / t481 / t482 / t534 / t3062 / t3110 系)をローカル green 確認。フルスイートは push 後 CI
 
 除外(スコープ外): rfc-autonomy-modes の実 unit 回復操作(着地後の別作業)。override の新 CLI verb 追加が必要な場合はユーザー可視契約テストを同梱(services.md 契約)。
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-17T05:39:03Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+3成果物はステージ契約・ADR-3/ADR-4の実装契約(transitionAllowed無改変・証拠水準非緩和・無ネットワーク・override新kind不使用・祖先成立時override拒否)と整合しBLOCKERなし。Red証跡の逐語不一致とunit境界の未開示差分を含む4件をFOLLOW-UP、センサー結果記載の粒度を1件NITとして指摘。
+
+### Findings
+
+- FOLLOW-UP | FR-3(b)/plan Step 6が要求するClass Bの逐語Redメッセージ「landed finalisation refused: ... not an ancestor」がcode-summary.mdのどこにも引用されていない。「Redの逐語(代表)」表のクラスB行は代わりに「delivery prerequisite failed: checked-out branch main is not the PR head branch bolt/3149」という別種のメッセージ(live checkout前提チェックに近い文言)を示しており、要件が明示的にpinした祖先失敗メッセージとの対応が読み取れない。「代表」(非網羅)である旨は示されているが、指定の受け入れ文言が実際に固定されたのか、あるいは実装過程で失敗様式そのものが変わったのかが不明。該当逐語の追記、または対応関係の明記を推奨する。
+- FOLLOW-UP | plan Step 3が想定するClass A(HEAD前進)のRed証跡「センサーFAIL(does not match the current checkout)」と、code-summaryが実際に報告するRed証跡(「報告書が - kind: landed へ書き換わる」= CLI側の無音書換)が一致しない。「副次的に閉じた穴」として主要判断節に説明はあるが、plan想定と異なる根本原因への到達を意味する場合、逸脱(deviation)として明示的に扱われていない。plan記載の期待証跡と実際証跡の差分を明記することを推奨する。
+- FOLLOW-UP | unit-of-work.mdのU1境界記述は「pr-convergence-git-runner.tsの消費点追加」を明示するが、code-summaryの変更ファイル一覧(git diff --stat)に同ファイルは一件も現れない。override実装はgit-runner.tsのverifyLandedPrerequisitesを「同等の緩和」として参照するのみで同ファイル自体は変更していない。逸脱節はADR-3/ADR-4からの逸脱なしとし、この境界差分を報告していない。機能的な問題は見当たらないが、inception成果物が明示した境界からの差分は明示開示すべき(P3 / 無申告逸脱の禁止)。
+- FOLLOW-UP | code-summary.md冒頭の「commit: 66b398a2e」と、同一unitのpr-convergence-report.mdが記すlocal/remote/pr head「6bdf0127240e89c7874bc2daee96d00107f95db2」が一致しない。record checkpoint同梱コミット等による後続コミットである可能性が高く(multiunit-pr-procedureの定型手順と整合)実害は薄いと見るが、code-summary側にその関係(どのコミットが最終PR headか)の明記がなく追跡性の観点で解消が望ましい。
+- NIT | 検証節はtypecheck/lint/complexity/build/coverage-registryのexit codeを個別記載しているが、frontmatterが宣言するevent-registry-drift・self-scope-consistency・git-drift・pr-convergence-report-formatの各センサーの結果は明示的に言及されていない。実運用ではフック発火で自動評価されるため不記載自体が欠陥ではないが、記載があれば完全性がより明確になる。
