@@ -56,6 +56,18 @@ function initGitRepo(): void {
   git(["config", "commit.gpgsign", "false"]);
 }
 
+// A repo with NO local `main` branch at all - for resolveTrunkRef's fallback
+// path (probe (d)'s trunk resolution): local `main` is unresolvable, so it
+// either falls back to `refs/remotes/origin/main` or, if that is absent too,
+// contributes nothing.
+function initGitRepoNoMain(): void {
+  git(["init", "-q"]);
+  git(["symbolic-ref", "HEAD", "refs/heads/solo-work"]);
+  git(["config", "user.email", "t206@example.com"]);
+  git(["config", "user.name", "t206"]);
+  git(["config", "commit.gpgsign", "false"]);
+}
+
 // Write a file at a path RELATIVE to the project (workspace) root.
 function writeFileAt(rel: string, body: string): void {
   const abs = join(proj, rel);
@@ -437,6 +449,44 @@ test("refuses a cherry-picked sibling commit before birth that references a diff
     "fix(other): cherry-picked from sibling\n\nFixes #999",
   );
   commitIntentBirth([], [697]); // this intent declares #697, birth AFTER the sibling commit
+  commitDoc("audit/sync.md", "chore(record): sync\n");
+  expect(gitHasSourceWork(proj)).toBe(false);
+});
+
+// resolveTrunkRef fallback: no local `main` branch exists, but
+// `refs/remotes/origin/main` does (a fetched clone whose default branch was
+// never checked out locally). Probe (d) must still resolve a trunk and find
+// the #3156 shape.
+test("resolves the trunk via origin/main when no local main branch exists (probe (d) fork boundary)", () => {
+  initGitRepoNoMain();
+  commitDirectCode("README.md", "root\n"); // baseline on the non-`main` branch
+  git(["update-ref", "refs/remotes/origin/main", "HEAD"]); // simulate a known origin/main ref
+  git(["checkout", "-q", "-b", "bugfix-solo"]);
+  commitDirectCodeTagged(
+    "packages/framework/core/tools/thing.ts",
+    "export const a = 1;\n",
+    "fix(thing): a\n\nFixes #697",
+  );
+  commitIntentBirth([], [697]);
+  commitDoc("audit/sync.md", "chore(record): sync\n");
+  expect(gitHasSourceWork(proj)).toBe(true);
+});
+
+// resolveTrunkRef exhaustion: neither a local `main` branch nor
+// `refs/remotes/origin/main` resolves. Probe (d) contributes nothing (it
+// cannot pick a trunk to fork-point against) rather than guessing - and since
+// the code here predates birth, no other probe covers it either, so the
+// overall verdict is a definitive false.
+test("refuses (probe (d) no-op) when neither main nor origin/main resolves", () => {
+  initGitRepoNoMain();
+  commitDirectCode("README.md", "root\n");
+  git(["checkout", "-q", "-b", "bugfix-solo"]);
+  commitDirectCodeTagged(
+    "packages/framework/core/tools/thing.ts",
+    "export const a = 1;\n",
+    "fix(thing): a\n\nFixes #697",
+  );
+  commitIntentBirth([], [697]);
   commitDoc("audit/sync.md", "chore(record): sync\n");
   expect(gitHasSourceWork(proj)).toBe(false);
 });
