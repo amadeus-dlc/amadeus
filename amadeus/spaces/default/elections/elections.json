@@ -1690,5 +1690,11 @@
     "dirName": "260816-e-260816-c9-signature",
     "createdAt": "2026-08-16T11:52:47Z",
     "status": "partial"
+  },
+  {
+    "electionId": "E-260817-PBB3-FIX-METHODS",
+    "dirName": "260817-e-260817-pbb3-fix-method",
+    "createdAt": "2026-08-17T00:52:46Z",
+    "status": "partial"
   }
 ]
