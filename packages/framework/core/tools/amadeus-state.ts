@@ -3609,50 +3609,6 @@ function validateSlugInState(
   }
 }
 
-// The occurrence coordinates of one stage gate. Resolved here for every caller
-// that needs them — the gate opens and the approval transaction — so the two can
-// never disagree about which occurrence a given gate is. Null for a slug the
-// graph does not know.
-function stageAutonomyInputFor(
-  pd: string,
-  content: string,
-  slug: string,
-): ProductionStageAutonomyInput | null {
-  const stage = findStageBySlug(slug);
-  if (stage === undefined) return null;
-  const scope = getField(content, "Scope") ?? "feature";
-  const next = nextInScopeStage(slug, scope, content);
-  return {
-    projectDir: pd,
-    stage: slug,
-    phase: stage.phase,
-    graphRevision: autonomyDigest(loadStageGraph()),
-    walkingSkeleton:
-      stage.phase === "construction" && firstInScopeStageOfPhase("construction", scope)?.slug === slug,
-    phaseBoundary: next === null || next.phase !== stage.phase,
-  };
-}
-
-// Record WHY this gate is being put to a human, alongside the
-// STAGE_AWAITING_APPROVAL that opens it (#3152). Called from every site that
-// emits that row — the first open, the re-presentation after a revision, and the
-// gate a rejection backfills — while each still holds its own transaction lock.
-// The recorder is fail-open, so a gate open never fails on account of this row.
-//
-// The record is named from `stateOperationTarget`, exactly as emitAudit names
-// it: a gate opened for a selected Intent must not write its refusal into
-// whichever record the active cursor points at.
-function recordGateOpenRefusal(pd: string, content: string, slug: string): void {
-  const input = stageAutonomyInputFor(pd, content, slug);
-  if (input === null) return;
-  recordAutonomyRefusalAtGateOpen({
-    ...input,
-    stateContent: content,
-    intent: stateOperationTarget?.intent,
-    space: stateOperationTarget?.space,
-  });
-}
-
 // gate-start <slug> — transition [-] → [?], emit STAGE_AWAITING_APPROVAL.
 // --recovered marks a BACKFILLED gate row (the engine opening a gate the
 // conductor skipped, e.g. report's explicit-stage recovery) with
@@ -3736,6 +3692,50 @@ function gateStartForTarget(args: string[], pd: string): void {
 
   operationWriteState(pd, content);
   console.log(JSON.stringify({ slug, new_state: "awaiting-approval", timestamp }));
+  });
+}
+
+// The occurrence coordinates of one stage gate. Resolved here for every caller
+// that needs them — the gate opens and the approval transaction — so the two can
+// never disagree about which occurrence a given gate is. Null for a slug the
+// graph does not know.
+function stageAutonomyInputFor(
+  pd: string,
+  content: string,
+  slug: string,
+): ProductionStageAutonomyInput | null {
+  const stage = findStageBySlug(slug);
+  if (stage === undefined) return null;
+  const scope = getField(content, "Scope") ?? "feature";
+  const next = nextInScopeStage(slug, scope, content);
+  return {
+    projectDir: pd,
+    stage: slug,
+    phase: stage.phase,
+    graphRevision: autonomyDigest(loadStageGraph()),
+    walkingSkeleton:
+      stage.phase === "construction" && firstInScopeStageOfPhase("construction", scope)?.slug === slug,
+    phaseBoundary: next === null || next.phase !== stage.phase,
+  };
+}
+
+// Record WHY this gate is being put to a human, alongside the
+// STAGE_AWAITING_APPROVAL that opens it (#3152). Called from every site that
+// emits that row — the first open, the re-presentation after a revision, and the
+// gate a rejection backfills — while each still holds its own transaction lock.
+// The recorder is fail-open, so a gate open never fails on account of this row.
+//
+// The record is named from `stateOperationTarget`, exactly as emitAudit names
+// it: a gate opened for a selected Intent must not write its refusal into
+// whichever record the active cursor points at.
+function recordGateOpenRefusal(pd: string, content: string, slug: string): void {
+  const input = stageAutonomyInputFor(pd, content, slug);
+  if (input === null) return;
+  recordAutonomyRefusalAtGateOpen({
+    ...input,
+    stateContent: content,
+    intent: stateOperationTarget?.intent,
+    space: stateOperationTarget?.space,
   });
 }
 

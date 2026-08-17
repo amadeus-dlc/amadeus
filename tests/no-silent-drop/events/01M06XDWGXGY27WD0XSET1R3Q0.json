@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "ulid": "01M06XDWGXGY27WD0XSET1R3Q0",
+  "op": "grant",
+  "kind": "grandfather",
+  "fingerprint": "2555ab41dece5e7fb196dc3f7b5acd779b5682155c5412808e3cedf6fdc367cf",
+  "ruleId": "NSD001",
+  "file": "packages/framework/core/tools/amadeus-intent-autonomy-production.ts",
+  "reason": "ADR-2 fail-open contract: a refusal that cannot be recorded must not block the gate open. recordAutonomyRefusalAtGateOpen writes an observation beside the STAGE_AWAITING_APPROVAL it explains; the gate is already on its way to the human, so the catch reports loudly via console.error and lets the gate open proceed.",
+  "issues": [
+    "#3152"
+  ]
+}

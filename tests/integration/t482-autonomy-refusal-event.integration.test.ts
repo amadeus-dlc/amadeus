@@ -16,6 +16,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import { cleanupTestProject, setupIntegrationProject } from "../harness/fixtures.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import {
@@ -54,9 +55,11 @@ function appendHumanTurn(projectDir: string): void {
   })}\n`);
 }
 
-// One CLI invocation against the project's own shipped tool tree.
+// One CLI invocation against the project's own shipped tool tree. The target is
+// built from a fixture path, so it carries the amadeusToolTarget marker that
+// keeps the declared coverage mechanism honest (and checks the path at runtime).
 function tool(projectDir: string, name: string, args: readonly string[]) {
-  return spawnSync(BUN, [join(projectDir, ".claude", "tools", name), ...args], {
+  return spawnSync(BUN, [amadeusToolTarget(join(projectDir, ".claude", "tools", name)), ...args], {
     cwd: projectDir,
     encoding: "utf8",
     env: { ...process.env },
