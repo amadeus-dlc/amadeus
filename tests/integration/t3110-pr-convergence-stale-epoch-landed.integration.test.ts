@@ -487,25 +487,34 @@ describe("#3110 — a landed record answers for its merge, and only for it", () 
     expect(result.pass).toBe(false);
     expect(result.findings).toContainEqual({
       field: "attestation",
-      reason: "a landed record attests the merge commit and the merge instant",
+      reason: "a record bound to a merge attests the merge commit and the merge instant",
     });
   });
 
-  test("a record that is not landed may not attest merge facts", async () => {
-    // Merge facts must not be smuggled into a live record: they would let it
-    // claim a binding it does not have while the checkout binding still applies.
+  test("merge facts written into a record its receipt never attested are refused (#3149)", async () => {
+    // Since #3149 the binding is chosen by what the receipt attests, so the
+    // forgery this rules out is the reverse of the old kind rule: a record that
+    // STATES a merge it cannot evidence. The receipt id, the content digest and
+    // the audit carriage all agree here — the attestation of the merge facts
+    // themselves is the only thing missing, and it is enough.
     const f = await delivered();
     const path = reportPathFor(f.record, UNIT);
     const before = evaluateReportFormat(path, "code-generation").findings;
     reattest(f, UNIT, (payload, receipt) => ({
-      payload,
-      receipt: { ...receipt, mergeCommit: MERGE_COMMIT, mergedAt: MERGED_AT },
+      payload: payload.replace(
+        "- converged: false\n",
+        `- converged: false\n- merged at: ${MERGED_AT}\n- merge commit: ${MERGE_COMMIT}\n`,
+      ),
+      receipt,
     }));
 
     const after = evaluateReportFormat(path, "code-generation");
     expect(after.pass).toBe(false);
     expect(after.findings.filter((finding) => !before.some((was) => was.field === finding.field)))
-      .toEqual([{ field: "attestation", reason: "only a landed record attests merge facts" }]);
+      .toEqual([{
+        field: "attestation",
+        reason: "a record bound to a merge attests the merge commit and the merge instant",
+      }]);
   });
 });
 

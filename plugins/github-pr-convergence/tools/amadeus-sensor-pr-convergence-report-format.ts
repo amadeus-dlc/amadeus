@@ -17,6 +17,10 @@
 //                commit: it records a merge that happened, it does not claim
 //                convergence.
 //
+// Which environment a record answers for is NOT read off its kind (#3149): any
+// kind may be finalised against the merge that closed it, and the receipt is
+// what says so. See `checkAttestationEnvironment`.
+//
 // Deliberately does NOT import the plugin's renderReport. Core ships to every
 // harness whether or not the plugin is installed, and a core->plugin import
 // would break the composed host the moment the plugin is dropped. The price is
@@ -275,18 +279,31 @@ function checkAttestationMembers(
   }
 }
 
+/** Whether the record touches merge facts at all — through the receipt that
+ *  attests them, or through the body that states them. */
+function touchesMergeFacts(body: string, receipt: ReportAttestation): boolean {
+  return receipt.mergeCommit !== undefined || receipt.mergedAt !== undefined ||
+    field(body, "merge commit") !== null || field(body, "merged at") !== null;
+}
+
 /**
  * What the receipt is bound to besides its own identity. A live record answers
- * for the checkout it was written from; a landed record (#3110) cannot — the
- * merge queue commonly deletes the head branch and the checkout has moved on,
- * so the merge it records stands in that place. The two bindings are exclusive:
- * neither kind may borrow the other's evidence.
+ * for the checkout it was written from; a record finalised against a merge
+ * cannot — the merge queue commonly deletes the head branch and the checkout
+ * has moved on, so the merge stands in that place.
+ *
+ * Which of the two applies is decided by the receipt, never by the kind
+ * (#3149). A `converged` verdict is final and cannot be re-minted as another
+ * kind, so binding the choice to `landed` left every merged converged record
+ * red the moment the checkout moved — with no kind it was allowed to become.
+ * The merge facts travel in the receipt, and through it in the audit shard, so
+ * "was this finalised against a merge?" is answerable from the record alone,
+ * without a network call and without consulting the kind.
  */
 function checkAttestationEnvironment(
   recordRoot: string,
   body: string,
   receipt: ReportAttestation,
-  kind: string | null,
   findings: ReportFormatFinding[],
 ): void {
   const pr = field(body, "pull request");
@@ -294,28 +311,35 @@ function checkAttestationEnvironment(
   if (receipt.localHead !== receipt.remoteHead || receipt.localHead !== receipt.prHead) {
     findings.push({ field: "head", reason: "local, remote, and PR head SHAs differ" });
   }
-  if (kind === "landed") checkMergeBinding(body, receipt, findings);
+  if (touchesMergeFacts(body, receipt)) checkMergeBinding(body, receipt, findings);
   else checkCheckoutBinding(recordRoot, receipt, findings);
   if (!auditCarriesAttestation(recordRoot, receipt)) {
     findings.push({ field: "attestation event", reason: "canonical audit receipt is missing" });
   }
 }
 
-/** The merge facts the record states are evidence only when the receipt — and
- *  through it the audit shard — attests those same values. */
+/** The merge facts are evidence only when the receipt — and through it the
+ *  audit shard — attests them. A record that merely states them in its body has
+ *  written them by hand, which is the forgery this check exists to catch; where
+ *  both state and attest, the two must agree. */
 function checkMergeBinding(
   body: string,
   receipt: ReportAttestation,
   findings: ReportFormatFinding[],
 ): void {
   if (receipt.mergeCommit === undefined || receipt.mergedAt === undefined) {
-    findings.push({ field: "attestation", reason: "a landed record attests the merge commit and the merge instant" });
+    findings.push({
+      field: "attestation",
+      reason: "a record bound to a merge attests the merge commit and the merge instant",
+    });
     return;
   }
-  if (receipt.mergeCommit !== field(body, "merge commit")) {
+  const statedCommit = field(body, "merge commit");
+  if (statedCommit !== null && statedCommit !== receipt.mergeCommit) {
     findings.push({ field: "merge commit", reason: "does not match the attestation" });
   }
-  if (receipt.mergedAt !== field(body, "merged at")) {
+  const statedAt = field(body, "merged at");
+  if (statedAt !== null && statedAt !== receipt.mergedAt) {
     findings.push({ field: "merged at", reason: "does not match the attestation" });
   }
 }
@@ -325,9 +349,6 @@ function checkCheckoutBinding(
   receipt: ReportAttestation,
   findings: ReportFormatFinding[],
 ): void {
-  if (receipt.mergeCommit !== undefined || receipt.mergedAt !== undefined) {
-    findings.push({ field: "attestation", reason: "only a landed record attests merge facts" });
-  }
   const local = spawnSync("git", ["rev-parse", "HEAD"], { cwd: recordRoot, encoding: "utf-8" });
   if (local.status !== 0 || local.stdout.trim() !== receipt.localHead) {
     findings.push({ field: "local head", reason: "does not match the current checkout" });
@@ -337,7 +358,6 @@ function checkCheckoutBinding(
 function checkAttestation(
   outputPath: string,
   body: string,
-  kind: string | null,
   findings: ReportFormatFinding[],
 ): void {
   const recordRoot = recordRootForReport(outputPath);
@@ -351,7 +371,7 @@ function checkAttestation(
   checkAttestationIntegrity(body, receipt, findings);
   const unit = checkAttestationOwner(recordRoot, outputPath, body, receipt, findings);
   checkAttestationMembers(recordRoot, unit, receipt, findings);
-  checkAttestationEnvironment(recordRoot, body, receipt, kind, findings);
+  checkAttestationEnvironment(recordRoot, body, receipt, findings);
 }
 
 /** The section body between a real `## <heading>` line (outside code fences)
@@ -403,7 +423,7 @@ export function evaluateReportFormat(outputPath: string, stage?: string): Report
   const findings: ReportFormatFinding[] = [];
   const { kind, converged } = checkCommon(body, findings);
   applyKindRules(kind, converged, body, findings, stage);
-  checkAttestation(outputPath, body, kind, findings);
+  checkAttestation(outputPath, body, findings);
   const reason = kind === "override" || kind === "landed" || kind === "created" ? kind : "converged";
   return verdict(reason, findings);
 }

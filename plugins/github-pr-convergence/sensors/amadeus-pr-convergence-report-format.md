@@ -74,6 +74,16 @@ Timestamps must parse, `pull request` must read `<repo>#<number>`, and `kind`
 must agree with `converged` — a report claiming `kind: override` while also
 claiming `converged: true` contradicts itself and is reported.
 
+## Which environment a record answers for
+
+A record is bound either to the checkout it was written from or to the merge it
+was finalised against, and the receipt decides which — never the kind (#3149).
+A receipt that attests `merge commit` and `merged at` answers for that merge, so
+the local head is not compared; every other receipt answers for the checkout,
+whose HEAD must still be the head it names. Merge facts a record states in its
+body but does not attest are a finding on any kind: they would claim a merge
+the audit shard never carries.
+
 ## Independence from the plugin
 
 The checker re-reads the report with its own minimal line reader instead of
