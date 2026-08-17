@@ -84,6 +84,11 @@ whose HEAD must still be the head it names. Merge facts a record states in its
 body but does not attest are a finding on any kind: they would claim a merge
 the audit shard never carries.
 
+Because attesting a merge is what selects that binding, the attested values are
+checked for the shape a merge fact has — a commit object id and a timestamp
+that parses — by the same rule applied to the values a `landed` record states.
+A malformed value is a finding, never a fallback to the checkout binding.
+
 ## Independence from the plugin
 
 The checker re-reads the report with its own minimal line reader instead of

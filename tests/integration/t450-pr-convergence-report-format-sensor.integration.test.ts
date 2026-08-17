@@ -564,6 +564,22 @@ describe("t450 attestation checks on a self-development record", () => {
       .toContain("local head");
   });
 
+  test("an attested merge fact must have the shape a merge fact has (#3149)", () => {
+    // The record still faces the merge binding — a malformed value does not
+    // fall back to the checkout binding — and each malformed field is named.
+    const body = attested(convergedPayload(), { mergeCommit: "nope", mergedAt: "whenever" });
+    const self = selfRecord({ audit: auditRow(body) });
+    const result = evaluateReportFormat(self.reportAt(body), "pr-convergence");
+    expect(result.findings).toContainEqual({
+      field: "merge commit",
+      reason: 'attested value is malformed — not a commit object id "nope"',
+    });
+    expect(result.findings).toContainEqual({
+      field: "merged at",
+      reason: 'attested value is malformed — unparseable timestamp "whenever"',
+    });
+  });
+
   test("a record stating a merge its receipt never attested is a finding (#3149)", () => {
     // The other side of the same rule: merge facts are evidence only where the
     // receipt — and through it the audit shard — carries them.

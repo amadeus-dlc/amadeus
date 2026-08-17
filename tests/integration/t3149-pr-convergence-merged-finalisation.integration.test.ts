@@ -437,6 +437,44 @@ describe("#3149 class A — a converged record survives the merge and the checko
     expect(result.reason).toBe("converged");
   });
 
+  test("a merge fact the receipt could not have measured does not buy the merge binding", async () => {
+    // The binding follows the attested merge facts, so their shape is what
+    // stands between "finalised against a merge" and "carries two strings".
+    // A value gh could never have returned must not skip the checkout probe.
+    const f = await converged();
+    merge(f, f.branchHead);
+    moveCheckoutOn(f);
+    expect((await runCli(verbArgs("report", f), seams(f))).exitCode).toBe(0);
+    const path = reportPathFor(f.record, UNIT);
+    expect(evaluateReportFormat(path, "pr-convergence").findings).toEqual([]);
+
+    reattest(f, UNIT, (receipt) => ({ ...receipt, mergeCommit: "not-a-commit" }));
+
+    const result = evaluateReportFormat(path, "pr-convergence");
+    expect(result.pass).toBe(false);
+    expect(result.findings).toContainEqual({
+      field: "merge commit",
+      reason: 'attested value is malformed — not a commit object id "not-a-commit"',
+    });
+  });
+
+  test("a merge instant that does not parse is refused the same way", async () => {
+    const f = await converged();
+    merge(f, f.branchHead);
+    moveCheckoutOn(f);
+    expect((await runCli(verbArgs("report", f), seams(f))).exitCode).toBe(0);
+    const path = reportPathFor(f.record, UNIT);
+
+    reattest(f, UNIT, (receipt) => ({ ...receipt, mergedAt: "whenever" }));
+
+    const result = evaluateReportFormat(path, "pr-convergence");
+    expect(result.pass).toBe(false);
+    expect(result.findings).toContainEqual({
+      field: "merged at",
+      reason: 'attested value is malformed — unparseable timestamp "whenever"',
+    });
+  });
+
   test("the finalisation is idempotent: a second report rewrites nothing", async () => {
     const f = await converged();
     merge(f, f.branchHead);
@@ -658,7 +696,11 @@ describe("#3149 class B — an orphaned epoch closes on human presence, never on
 
     const out = await runCli(verbArgs("override", f, ["--reason", "rule it forward"]), seams(f));
     expect(out.exitCode).toBe(1);
-    expect(out.stderr).toContain("report");
+    // The verbatim redirect, not merely a refusal that happens to say "report":
+    // every other refusal on this path would satisfy a looser match.
+    expect(out.stderr).toBe(
+      "override refused: the created epoch reached the merged head — run the report verb to finalise it\n",
+    );
     expect(reportBody(f)).toBe(before);
   });
 
