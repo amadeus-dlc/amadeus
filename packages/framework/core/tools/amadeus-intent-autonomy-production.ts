@@ -158,6 +158,12 @@ export interface ProductionAutonomyContext {
   readonly grantId: string | null;
   readonly authorizationReason: string;
   readonly qualityRepair: "active" | "disabled" | "error";
+  // What KIND of interaction this gate is, and whether authorization declared it
+  // one a human must answer. Both are answers this module already computes; the
+  // approval transaction consumes them instead of deriving its own (#3153,
+  // cg2-agreeing-predicate-drift).
+  readonly interactionKind: InteractionKind;
+  readonly humanRequired: boolean;
 }
 
 type ResolvedIntent = {
@@ -300,6 +306,8 @@ export interface ProductionStageAutonomyInput {
 // declaration is written from the gate open instead — see
 // recordAutonomyRefusalAtGateOpen.
 export function productionStageAutonomy(input: ProductionStageAutonomyInput): ProductionAutonomyContext {
+  const skeletonGateFires = skeletonGateFiresFor(stateContentOrNull(input.projectDir));
+  const kind = interactionKind({ ...input, skeletonGateFires });
   const projection = readProductionAutonomyProjection(input.projectDir);
   if (projection === null) {
     return {
@@ -308,9 +316,10 @@ export function productionStageAutonomy(input: ProductionStageAutonomyInput): Pr
       grantId: null,
       authorizationReason: "intent-autonomy-unavailable",
       qualityRepair: "disabled",
+      interactionKind: kind,
+      humanRequired: false,
     };
   }
-  const skeletonGateFires = skeletonGateFiresFor(stateContentOrNull(input.projectDir));
   const authorization = authorizeProductionOccurrence(
     projection,
     occurrence({ ...input, projection, skeletonGateFires }),
@@ -323,6 +332,10 @@ export function productionStageAutonomy(input: ProductionStageAutonomyInput): Pr
     grantId: projection.currentGrant?.grantId ?? null,
     authorizationReason: authorization.reason,
     qualityRepair,
+    interactionKind: kind,
+    // An Intent whose autonomy cannot be read declares nothing; only an
+    // authorization that came back human-required is a declaration.
+    humanRequired: !authorization.authorized,
   };
 }
 

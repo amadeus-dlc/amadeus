@@ -548,7 +548,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "interaction",
     requiredAttributes: ["Stage"],
-    optionalAttributes: ["User Input", "Grant Id", "Swarm batch", "Transaction Id", "Presence Reservation Id"],
+    optionalAttributes: ["User Input", "Grant Id", "Approval Provenance", "Swarm batch", "Transaction Id", "Presence Reservation Id"],
     schemaVersion: 1,
   },
   {

@@ -39,6 +39,8 @@ import {
   loadStageGraph,
   humanActedSinceGate,
   humanPresenceGuardDisabled,
+  resolveGateResolutionPresence,
+  type GateApprovalProvenance,
   isAutonomousMode,
   isoTimestamp,
   KNOWN_CODEKB_STAGES,
@@ -137,7 +139,7 @@ import {
 } from "./amadeus-graph.ts";
 import { KNOWN_HARNESS_DIRS } from "./amadeus-harness.js";
 import { detectHarnessType } from "./amadeus-harness.ts";
-import { autonomyDigest, declaredFullAutonomy } from "./amadeus-intent-autonomy.ts";
+import { autonomyDigest, declaredFullAutonomy, isMilestoneInteraction } from "./amadeus-intent-autonomy.ts";
 import {
   buildAutoDecisionSummary,
   formatSummaryBuildError,
@@ -148,6 +150,7 @@ import {
   commitProductionStageGateDecision,
   productionStageAutonomy,
   recordAutonomyRefusalAtGateOpen,
+  type ProductionAutonomyContext,
   type ProductionStageAutonomyInput,
 } from "./amadeus-intent-autonomy-production.ts";
 import {
@@ -3747,6 +3750,15 @@ function recordGateOpenRefusal(pd: string, content: string, slug: string): void 
 // delegates to handleAdvance or handleCompleteWorkflow for the remaining
 // transitions. Eliminates the t59-class bug where the orchestrator approved
 // but forgot to call advance, leaving Current Stage pointing at a [x] slug.
+// What let one gate resolution through: the Intent grant that decided it (a
+// `Grant Id` to stamp) and the branch that authorised it (an `Approval
+// Provenance` to stamp beside it). Declared at module scope so the type-only
+// lines carry no in-body coverage records.
+type GateResolutionAuthorization = {
+  readonly grantId: string | null;
+  readonly provenance: GateApprovalProvenance;
+};
+
 // Shared gate-resolution presence guard for approve AND reject (#675). A gate
 // cannot be RESOLVED (approved or rejected) unless a real human acted at THIS
 // gate since the last gate resolution. Call this BEFORE any state mutation so
@@ -3763,8 +3775,17 @@ function recordGateOpenRefusal(pd: string, content: string, slug: string): void 
 // interview QUESTION_ANSWERED no longer consumes it (a HUMAN_TURN is still
 // consumed by any resolution; see humanActedSinceGate for the full semantics).
 // Returns the Intent grant id that opened the gate (a `Grant Id` to stamp on
-// GATE_APPROVED), or null when a live human turn / test carve-out opened it. A
-// refusal exits via error().
+// GATE_APPROVED) alongside the branch that authorised it (an `Approval
+// Provenance` to stamp beside it, #3153 — so a reader can tell a human answer
+// from an engine carry). A refusal exits via error().
+//
+// Milestone boundary (#3153): where autonomy DECLARED the gate human-required
+// and the interaction is a milestone (phase-gate / walking-skeleton), the
+// boundary is this gate's own STAGE_AWAITING_APPROVAL rather than the prior
+// resolution — a turn typed before the gate existed answered a different
+// question. Only `approve` narrows (FR-1 is about the approval), the kind and
+// the declaration both come from the autonomy context rather than being
+// recomputed here, and every other gate keeps the prior-resolution boundary.
 function assertHumanPresentForGateResolution(
   pd: string,
   content: string,
@@ -3772,34 +3793,42 @@ function assertHumanPresentForGateResolution(
   verb: "approve" | "reject",
   intent?: string,
   space?: string
-): string | null {
+): GateResolutionAuthorization {
+  let autonomy: ProductionAutonomyContext | null = null;
   if (verb === "approve") {
     const stageAutonomyInput = stageAutonomyInputFor(pd, content, slug);
     if (stageAutonomyInput !== null) {
-      const context = productionStageAutonomy(stageAutonomyInput);
-      if (context.autoApprove) {
+      autonomy = productionStageAutonomy(stageAutonomyInput);
+      if (autonomy.autoApprove) {
         const decision = commitProductionStageGateDecision({
           ...stageAutonomyInput,
           stateContent: content,
         });
         if (decision.kind === "decided" || decision.kind === "already-decided") {
-          return decision.grantId;
+          return { grantId: decision.grantId, provenance: "intent-grant" };
         }
         error(`Intent autonomy refused automatic approval for "${slug}": ${decision.reason}`);
       }
     }
   }
   if (humanPresenceGuardDisabled()) {
-    // skip — suite-wide deterministic off-switch (AMADEUS_SKIP_HUMAN_PRESENCE_GUARD)
-    return null;
+    // The suite-wide deterministic off-switch (AMADEUS_SKIP_HUMAN_PRESENCE_GUARD)
+    // is recorded for what it is rather than dressed up as a human turn.
+    return { grantId: null, provenance: "guard-disabled" };
   }
-  if (humanActedSinceGate(pd, verb, intent, space)) {
-    // Ledger-event presence check: a HUMAN_TURN event was appended AFTER the last
-    // gate resolution (GATE_APPROVED / GATE_REJECTED / QUESTION_ANSWERED) in
-    // ledger order — the boundary is the prior resolution, NOT this gate's open
-    // event (one human turn drives both open and this resolution). Cascade-safety
-    // + freshness fall out of order; no marker file / turn counter.
-    return null;
+  const milestoneStage =
+    autonomy !== null && autonomy.humanRequired && isMilestoneInteraction(autonomy.interactionKind) ? slug : null;
+  const presence = resolveGateResolutionPresence(pd, verb, milestoneStage, intent, space);
+  if (presence.ok) {
+    // Ledger-event presence check: an unconsumed human act sits after this
+    // gate's boundary in ledger order. Cascade-safety + freshness fall out of
+    // that order; no marker file / turn counter.
+    return { grantId: null, provenance: presence.provenance };
+  }
+  if (presence.reason === "gate-open-missing") {
+    error(
+      `Refusing to ${verb} "${slug}": this milestone gate has no recorded opening for a human to answer (no organic STAGE_AWAITING_APPROVAL; a --recovered backfill does not count). Run gate-start "${slug}", put the gate to a human, then ${verb}.`
+    );
   }
   error(
     `Refusing to ${verb} "${slug}": a real human has not acted at this gate since it opened. The approval gate requires a typed human turn before it can commit. Acknowledge the gate as a human, then ${verb}. (autonomous Construction is exempt)`
@@ -4175,6 +4204,10 @@ type ApprovalAuthorization = {
   readonly audit: string;
   readonly committedRevision: number | null;
   readonly grantId: string | null;
+  // The branch that authorised this approval, or null on the paths that never
+  // asked (an already-committed revision, or an override whose caller carries
+  // its own evidence — a presence reservation).
+  readonly provenance: GateApprovalProvenance | null;
   readonly recovery: GateRevisionRecovery | null;
   readonly override?: ApprovalAuthorizationOverride;
 };
@@ -4208,15 +4241,19 @@ function authorizeApproval(
   const committedRevision = recovery.kind === "recovered"
     ? completedRecoveryRevision(audit, stage.slug, stage.name, recovery.transactionId, recovery.nextRevisionCount)
     : null;
-  const grantId = committedRevision === null
-    ? override === undefined
-      ? assertHumanPresentForGateResolution(pd, content, stage.slug, "approve")
-      : override.grantId
+  const authorized = committedRevision === null && override === undefined
+    ? assertHumanPresentForGateResolution(pd, content, stage.slug, "approve")
     : null;
+  const grantId = committedRevision !== null
+    ? null
+    : override === undefined
+      ? authorized?.grantId ?? null
+      : override.grantId;
   return {
     audit,
     committedRevision,
     grantId,
+    provenance: authorized?.provenance ?? null,
     recovery,
     ...(override === undefined ? {} : { override }),
   };
@@ -4259,6 +4296,9 @@ function emitApprovalAudit(pd: string, input: ApprovalAuditInput): void {
     const gateFields: Record<string, string> = { Stage: input.slug };
     if (input.userInput) gateFields["User Input"] = input.userInput;
     if (input.authorization.grantId) gateFields["Grant Id"] = input.authorization.grantId;
+    if (input.authorization.provenance) {
+      gateFields["Approval Provenance"] = input.authorization.provenance;
+    }
     if (input.authorization.override?.presenceReservationId) {
       gateFields["Presence Reservation Id"] =
         input.authorization.override.presenceReservationId;

@@ -1,4 +1,4 @@
-// covers: cli:amadeus-state(approve,reject,gate-start), cli:amadeus-log(answer), cli:amadeus-audit(append), function:handleApprove, function:handleReject, function:assertHumanPresentForGateResolution, function:handleGateStart, function:handleAnswer, function:humanActedSinceGate, function:humanActedSinceLastAnswer, function:hasOpenGate, function:isAutonomousMode, function:humanPresenceGuardDisabled, file:hooks/amadeus-mint-presence.ts
+// covers: cli:amadeus-state(approve,reject,gate-start), cli:amadeus-log(answer), cli:amadeus-audit(append), function:handleApprove, function:handleReject, function:assertHumanPresentForGateResolution, function:handleGateStart, function:handleAnswer, function:humanActedSinceGate, function:resolveGateResolutionPresence, function:isMilestoneInteraction, function:humanActedSinceLastAnswer, function:hasOpenGate, function:isAutonomousMode, function:humanPresenceGuardDisabled, file:hooks/amadeus-mint-presence.ts
 //
 // t188 - human-presence approval gate (ledger-event design).
 //
@@ -55,7 +55,7 @@ import {
 import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { hostname } from "node:os";
 import { dirname } from "node:path";
-import { findAllEvents, readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { auditBlockField, findAllEvents, readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const BUN = process.execPath;
 const STATE = join(AMADEUS_SRC, "tools", "amadeus-state.ts");
@@ -325,6 +325,156 @@ describe("t188: human-presence approval gate (ledger-event design)", () => {
       "utf-8",
     );
     expect(humanActedSinceGate(proj)).toBe(true);
+  });
+
+  // --- Scenario M: milestone gates (#3153) -----------------------------------
+  //
+  // A gate autonomy DECLARED human-required at a MILESTONE (interaction kind
+  // phase-gate or walking-skeleton) must be answered at THAT gate. Under the
+  // general boundary — any HUMAN_TURN after the last resolution — a turn typed
+  // for some other purpose, before the gate was ever opened, commits the
+  // milestone: the run stops to ask, and a turn that predates the asking
+  // answered a different question (#3153).
+  //
+  // For those gates only the boundary moves to THIS gate's own
+  // STAGE_AWAITING_APPROVAL. Routine stage gates keep the prior-resolution
+  // boundary byte-for-byte, which is what the control pins: same fixture, same
+  // placement of the turn, opposite verdict.
+  describe("milestone gate presence (#3153)", () => {
+    const MILESTONE = "approval-handoff"; // last in-scope ideation stage -> phase-gate
+    const ROUTINE = "feasibility"; // mid-phase -> stage-gate
+
+    const extraProjects: string[] = [];
+    afterEach(() => {
+      while (extraProjects.length > 0) cleanupTestProject(extraProjects.pop()!);
+    });
+
+    // A second/third project for the sibling placements: approve advances the
+    // workflow, so each placement needs its own untouched fixture.
+    function freshProject(): string {
+      const p = createTestProject();
+      seedStateFile(p, MID_IDEATION);
+      extraProjects.push(p);
+      return p;
+    }
+
+    // The value of `name` on the newest GATE_APPROVED block, or "" when the
+    // event carries no such field.
+    function gateApprovedField(p: string, name: string): string {
+      const rows = findAllEvents(readAllAuditShards(p), "GATE_APPROVED");
+      const last = rows[rows.length - 1];
+      if (last === undefined) throw new Error("no GATE_APPROVED on the ledger");
+      return auditBlockField(last.block, name) ?? "";
+    }
+
+    // The three placements are pinned in ONE test on purpose: a one-sided
+    // assertion here would pass for a guard that simply refuses everything, or
+    // for one that changed the boundary of every gate (ADR-1 contract 6).
+    // The two ACCEPTING placements run first so an unfixed tree reaches all
+    // three: the log then shows the controls green and only the milestone
+    // refusal red, which is what makes the red an isolated verdict rather than
+    // an assertion that happened to be first.
+    test("M: a turn from BEFORE the milestone open cannot approve it; the same placement on a routine gate still can; a turn AFTER the open does", () => {
+      // (ii) routine stage gate, turn before the open -> COMMITS (the boundary
+      // this change must leave alone).
+      const routine = freshProject();
+      guarded(routine, ["checkbox", `${ROUTINE}=in-progress`]);
+      recordHumanTurn(routine);
+      guarded(routine, ["gate-start", ROUTINE]);
+      expect(guarded(routine, ["approve", ROUTINE, "--user-input", "ok"]).rc).toBe(0);
+      expect(eventCount(routine, "GATE_APPROVED")).toBe(1);
+
+      // (iii) milestone, turn AFTER the gate open -> COMMITS.
+      const answered = freshProject();
+      guarded(answered, ["checkbox", `${MILESTONE}=in-progress`]);
+      guarded(answered, ["gate-start", MILESTONE]);
+      recordHumanTurn(answered); // the human answers the gate that was put to them
+      expect(guarded(answered, ["approve", MILESTONE, "--user-input", "ok"]).rc).toBe(0);
+      expect(eventCount(answered, "GATE_APPROVED")).toBe(1);
+
+      // (i) milestone, IDENTICAL fixture, turn BEFORE the gate open -> REFUSE
+      // (the #3153 hole).
+      const stale = freshProject();
+      guarded(stale, ["checkbox", `${MILESTONE}=in-progress`]);
+      recordHumanTurn(stale); // typed for something else, before the gate exists
+      guarded(stale, ["gate-start", MILESTONE]);
+      const refused = guarded(stale, ["approve", MILESTONE, "--user-input", "ok"]);
+      expect(refused.rc).not.toBe(0);
+      expect(refused.out).toContain("Refusing to approve");
+      expect(eventCount(stale, "GATE_APPROVED")).toBe(0);
+    });
+
+    // Contract 3: a milestone whose gate open is not on the ledger must not fall
+    // back to the looser boundary. The state file can reach [?] without a
+    // STAGE_AWAITING_APPROVAL (a hand edit, a restored record), and a backfilled
+    // open (`--recovered`) records a gate the conductor skipped rather than one
+    // that was ever put to a human. Both refuse, and both say how to recover.
+    test("M2: a milestone with no organic gate open REFUSES and asks for a gate-start", () => {
+      // No STAGE_AWAITING_APPROVAL at all: flip the checkbox in the file.
+      const unopened = freshProject();
+      recordHumanTurn(unopened);
+      const sf = seededStateFile(unopened);
+      writeFileSync(
+        sf,
+        readFileSync(sf, "utf-8").replace(`- [ ] ${MILESTONE} — EXECUTE`, `- [?] ${MILESTONE} — EXECUTE`),
+        "utf-8",
+      );
+      const noOpen = guarded(unopened, ["approve", MILESTONE, "--user-input", "ok"]);
+      expect(noOpen.rc).not.toBe(0);
+      expect(noOpen.out).toContain("gate-start");
+      expect(eventCount(unopened, "GATE_APPROVED")).toBe(0);
+
+      // Backfill only: --recovered marks a gate the engine opened after the
+      // fact, so a turn that follows it still answered nothing.
+      const backfilled = freshProject();
+      guarded(backfilled, ["checkbox", `${MILESTONE}=in-progress`]);
+      guarded(backfilled, ["gate-start", MILESTONE, "--recovered"]);
+      recordHumanTurn(backfilled);
+      const backfill = guarded(backfilled, ["approve", MILESTONE, "--user-input", "ok"]);
+      expect(backfill.rc).not.toBe(0);
+      expect(backfill.out).toContain("gate-start");
+      expect(eventCount(backfilled, "GATE_APPROVED")).toBe(0);
+    });
+
+    // Which kinds the narrowing applies to is one classification, shared with
+    // the pair semi leaves to the human. The end-to-end scenarios above drive
+    // the phase-gate kind; walking-skeleton rides the same predicate, so pinning
+    // the predicate is what says the second milestone kind is included.
+    test("M0: both milestone kinds are narrowed, and no routine kind is", async () => {
+      const { isMilestoneInteraction } = await import(
+        "../../dist/claude/.claude/tools/amadeus-intent-autonomy.ts"
+      );
+      expect(isMilestoneInteraction("phase-gate")).toBe(true);
+      expect(isMilestoneInteraction("walking-skeleton")).toBe(true);
+      expect(isMilestoneInteraction("stage-gate")).toBe(false);
+      expect(isMilestoneInteraction("question")).toBe(false);
+    });
+
+    // Contract 4: GATE_APPROVED says WHICH branch let the resolution through, so
+    // "a human answered" and "the engine passed it" are machine-distinguishable
+    // (FR-1). The two branches reachable from this fixture are pinned here; the
+    // delegated slot is pinned on the predicate in t112 and the Intent grant on
+    // the semi approve path in t435.
+    test("M3: GATE_APPROVED carries the branch that authorised it", () => {
+      const answered = freshProject();
+      guarded(answered, ["checkbox", `${ROUTINE}=in-progress`]);
+      recordHumanTurn(answered);
+      guarded(answered, ["gate-start", ROUTINE]);
+      expect(guarded(answered, ["approve", ROUTINE, "--user-input", "ok"]).rc).toBe(0);
+      expect(gateApprovedField(answered, "Approval Provenance")).toBe("gate-open-turn");
+
+      // The suite-wide off-switch is recorded honestly rather than dressed up as
+      // a human turn: this run has no HUMAN_TURN at all.
+      const bypassed = freshProject();
+      const env = { ...process.env };
+      env.AMADEUS_SKIP_ARTIFACT_GUARD = "1";
+      env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = "1";
+      for (const args of [["checkbox", `${ROUTINE}=in-progress`], ["gate-start", ROUTINE], ["approve", ROUTINE, "--user-input", "ok"]]) {
+        const r = spawnSync(BUN, [STATE, ...args, "--project-dir", bypassed], { encoding: "utf-8", env });
+        expect(r.status ?? -1).toBe(0);
+      }
+      expect(gateApprovedField(bypassed, "Approval Provenance")).toBe("guard-disabled");
+    });
   });
 
   // --- hasOpenGate (the preToolUse floors' gate-open predicate) ---------------

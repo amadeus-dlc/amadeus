@@ -3662,7 +3662,7 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "assertHumanPresentForGateResolution",
-      "fingerprint": "sha256:3ee6cf2d69465706c4c69b4396d00b2b445e75a52dff488b162a50311f32dc7d",
+      "fingerprint": "sha256:7a316789a44611c2a14bd5a547c167cb31e9867a10d0de3c0392a80a19eb485b",
       "anchorLines": 2,
       "targetLines": "1-2"
     },

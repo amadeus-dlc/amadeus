@@ -85,6 +85,25 @@ function auditEvents(projectDir: string): string[] {
     .map((row) => String(row.event ?? (row.attributes as Record<string, unknown> | undefined)?.Event ?? ""));
 }
 
+// The value of `name` on the newest GATE_APPROVED row across the record's
+// shards, or "" when the row carries no such field. Reads v1 (`fields`) and v2
+// (`attributes`) rows alike, as auditEvents above does.
+function gateApprovedField(projectDir: string, name: string): string {
+  const auditDir = join(recordDir(projectDir), "audit");
+  const rows = readdirSync(auditDir)
+    .flatMap((shard) => readFileSync(join(auditDir, shard), "utf8").split("\n"))
+    .filter(Boolean)
+    .map((line) => JSON.parse(line) as {
+      event?: string;
+      fields?: Record<string, string>;
+      attributes?: Record<string, string>;
+    })
+    .filter((row) => (row.event ?? row.attributes?.Event) === "GATE_APPROVED");
+  const last = rows[rows.length - 1];
+  if (last === undefined) throw new Error("no GATE_APPROVED on the ledger");
+  return last.fields?.[name] ?? last.attributes?.[name] ?? "";
+}
+
 function selectFullAutonomy(projectDir: string): { readonly status: number; readonly output: string } {
   const preview = run(projectDir, "amadeus-bolt.ts", ["preview-autonomy"]);
   expect(preview.status).toBe(0);
@@ -589,6 +608,10 @@ describe("Intent-scoped autonomy production path", () => {
     expect(parsed.intent_autonomy_mode).toBe("semi");
     expect(parsed.autonomy_auto_approve).toBe(true);
     expect(parsed.quality_repair).toBe("active");
+    // The milestone semi keeps for the human, read through the context the
+    // approval transaction consumes: it says WHICH kind the gate is and that
+    // authorization declared it human-required, so the presence guard does not
+    // recompute either (#3153).
     expect(productionStageAutonomy({
       projectDir,
       stage: "approval-handoff",
@@ -596,7 +619,7 @@ describe("Intent-scoped autonomy production path", () => {
       graphRevision: `sha256:${"a".repeat(64)}`,
       walkingSkeleton: false,
       phaseBoundary: true,
-    }).autoApprove).toBe(false);
+    })).toMatchObject({ autoApprove: false, interactionKind: "phase-gate", humanRequired: true });
 
     const stage = String(parsed.stage);
     expect(run(projectDir, "amadeus-state.ts", ["gate-start", stage]).status).toBe(0);
@@ -611,6 +634,9 @@ describe("Intent-scoped autonomy production path", () => {
     expect(reported.output).toContain('"kind":"committed"');
     expect(auditEvents(projectDir).filter((event) => event === "INTENT_AUTONOMY_TRANSACTION_COMMITTED").length)
       .toBeGreaterThanOrEqual(2);
+    // The routine gate semi decided on its own says so on the ledger: this
+    // approval was carried by the Intent grant, not answered by a human (#3153).
+    expect(gateApprovedField(projectDir, "Approval Provenance")).toBe("intent-grant");
   });
 
   test("full emits an active Intent grant and authorizes the walking-skeleton gate", () => {
