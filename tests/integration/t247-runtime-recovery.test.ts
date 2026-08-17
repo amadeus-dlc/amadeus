@@ -785,11 +785,10 @@ describe("t247 recovery in-process coverage seams", () => {
     expect(result.stderr).toContain("Recovery batch validation failed");
     const auditAfter = readFileSync(auditPath, "utf-8");
     expect(auditAfter.startsWith(auditBefore)).toBe(true);
-    // The refusal-visibility observation (fail-open, pre-validation) is the
-    // only row allowed to land; no transaction event may commit.
-    expect(parseRecords(auditAfter.slice(auditBefore.length)).map((r) => r.event)).toEqual([
-      "INTENT_AUTONOMY_HUMAN_REQUIRED",
-    ]);
+    // Nothing lands: the approval path only READS the autonomy projection
+    // (#3152 moved the refusal-visibility row to the gate open), and no
+    // transaction event may commit.
+    expect(parseRecords(auditAfter.slice(auditBefore.length)).map((r) => r.event)).toEqual([]);
     expect(readFileSync(statePath, "utf-8")).toBe(stateBefore);
   });
 
@@ -821,10 +820,9 @@ describe("t247 recovery in-process coverage seams", () => {
     expect(result.stderr).toContain("Recovery batch validation failed: completion details");
     const auditAfter = readFileSync(auditPath, "utf-8");
     expect(auditAfter.startsWith(auditBefore)).toBe(true);
-    // Only the fail-open refusal observation may land before the rejection.
-    expect(parseRecords(auditAfter.slice(auditBefore.length)).map((r) => r.event)).toEqual([
-      "INTENT_AUTONOMY_HUMAN_REQUIRED",
-    ]);
+    // Nothing may land before the rejection: reading the autonomy projection
+    // writes no row (#3152).
+    expect(parseRecords(auditAfter.slice(auditBefore.length)).map((r) => r.event)).toEqual([]);
     expect(readFileSync(statePath, "utf-8")).toBe(stateBefore);
   });
 
@@ -896,10 +894,9 @@ describe("t247 recovery in-process coverage seams", () => {
     expect(readFileSync(statePath, "utf-8")).toBe(stateBefore);
     const auditAfter = readFileSync(auditPath, "utf-8");
     expect(auditAfter.startsWith(auditBefore)).toBe(true);
-    // Only the fail-open refusal observation may land before the rejection.
-    expect(parseRecords(auditAfter.slice(auditBefore.length)).map((r) => r.event)).toEqual([
-      "INTENT_AUTONOMY_HUMAN_REQUIRED",
-    ]);
+    // Nothing may land before the rejection: reading the autonomy projection
+    // writes no row (#3152).
+    expect(parseRecords(auditAfter.slice(auditBefore.length)).map((r) => r.event)).toEqual([]);
   });
 
   test("authored approve completes the workflow when no next stage exists", () => {

@@ -1,22 +1,40 @@
-// covers: file:packages/framework/core/tools/amadeus-intent-autonomy-production.ts(productionStageAutonomy), event:INTENT_AUTONOMY_HUMAN_REQUIRED
+// covers: audit:INTENT_AUTONOMY_HUMAN_REQUIRED
 // size: medium
 //
-// FR-2a (u1-autonomy-core). authorizeInteraction has always answered WHY it
-// refused — SCOPE_OUT or MODE_REQUIRES_HUMAN — but nothing consumed the answer,
-// so a run that stopped for a human left no record of what stopped it. These
-// tests read the emitted row straight out of the audit shard, and pin that the
-// authorization result itself is unchanged by the observation.
+// The claim above is the audit event; the subject behind it is
+// recordAutonomyRefusalAtGateOpen in amadeus-intent-autonomy-production.ts,
+// which the registry does not enumerate as a function unit (it enumerates
+// amadeus-lib, amadeus-graph and a named list from amadeus-state), so naming it
+// as a claim would leave a claim with no unit to join.
+//
+// FR-2a (u1-autonomy-core) and FR-2 (#3152). authorizeInteraction has always
+// answered WHY it refused — SCOPE_OUT or MODE_REQUIRES_HUMAN — but nothing
+// consumed the answer, so a run that stopped for a human left no record of what
+// stopped it. These tests read the emitted row straight out of the audit shard.
+//
+// Where the row is written from is the #3152 half: the declaration belongs to
+// the moment the gate is PRESENTED, not to every read of the projection. So the
+// suite pins three things at once — the row still carries its reason, reading
+// the projection writes nothing at all, and one presentation produces exactly
+// one row however many times it is read or re-opened.
 
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { appendFileSync, chmodSync, existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { amadeusToolTarget } from "../harness/cli-target.ts";
 import { cleanupTestProject, setupIntegrationProject } from "../harness/fixtures.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 import {
   applyProductionAutonomyMode,
   productionStageAutonomy,
+  recordAutonomyRefusalAtGateOpen,
 } from "../../packages/framework/core/tools/amadeus-intent-autonomy-production.ts";
+import {
+  handleGateStart,
+  handleReject,
+  handleRevise,
+} from "../../packages/framework/core/tools/amadeus-state.ts";
 
 const BUN = process.execPath;
 const GRAPH_REVISION = `sha256:${"0".repeat(64)}`;
@@ -48,21 +66,66 @@ function appendHumanTurn(projectDir: string): void {
   })}\n`);
 }
 
+// Run one state handler in this process against `project`. Two variables make
+// that work: the handlers resolve the record through CLAUDE_PROJECT_DIR, and
+// they read the stage graph relative to their own module, which in the source
+// tree has no data/ directory — so the graph is pointed at the very copy the
+// fixture installed, the one this project's state was generated from. Both are
+// restored so no later test inherits them.
+function inProject(project: string, run: () => void): void {
+  const saved = {
+    projectDir: process.env.CLAUDE_PROJECT_DIR,
+    stageGraph: process.env.AMADEUS_STAGE_GRAPH,
+  };
+  process.env.CLAUDE_PROJECT_DIR = project;
+  process.env.AMADEUS_STAGE_GRAPH = join(project, ".claude", "tools", "data", "stage-graph.json");
+  try {
+    run();
+  } finally {
+    restoreEnv("CLAUDE_PROJECT_DIR", saved.projectDir);
+    restoreEnv("AMADEUS_STAGE_GRAPH", saved.stageGraph);
+  }
+}
+
+function restoreEnv(name: string, value: string | undefined): void {
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+}
+
+// One CLI invocation against the project's own shipped tool tree. The target is
+// built from a fixture path, so it carries the amadeusToolTarget marker that
+// keeps the declared coverage mechanism honest (and checks the path at runtime).
+function tool(projectDir: string, name: string, args: readonly string[]) {
+  return spawnSync(BUN, [amadeusToolTarget(join(projectDir, ".claude", "tools", name)), ...args], {
+    cwd: projectDir,
+    encoding: "utf8",
+    env: { ...process.env },
+  });
+}
+
 function bornProject(): string {
   const projectDir = setupIntegrationProject({ noAidlcDocs: true, stripEnvScope: true });
-  const result = spawnSync(
-    BUN,
-    [
-      join(projectDir, ".claude", "tools", "amadeus-utility.ts"),
-      "intent-birth",
-      "--scope",
-      "feature",
-      "--project-dir",
-      projectDir,
-    ],
-    { cwd: projectDir, encoding: "utf8", env: { ...process.env } },
-  );
+  const result = tool(projectDir, "amadeus-utility.ts", [
+    "intent-birth",
+    "--scope",
+    "feature",
+    "--project-dir",
+    projectDir,
+  ]);
   expect(result.status ?? -1).toBe(0);
+  return projectDir;
+}
+
+// A born Intent whose mode is semi — the mode that decides routine stage gates
+// on its own and still stops at the milestones.
+function semiProject(): string {
+  const projectDir = bornProject();
+  appendHumanTurn(projectDir);
+  expect(applyProductionAutonomyMode({
+    projectDir,
+    stateContent: state(projectDir),
+    mode: "semi",
+  })).toMatchObject({ ok: true, projection: { mode: "semi" } });
   return projectDir;
 }
 
@@ -79,17 +142,21 @@ function auditRows(projectDir: string): readonly Record<string, unknown>[] {
 // The canonical writer emits v2 rows: the event name lives in `attributes.Event`
 // and the payload is `attributes` itself (v1 rows, which the fixtures append by
 // hand, carry `event` / `fields` instead).
-function refusalRows(projectDir: string): readonly Record<string, string>[] {
+function fieldRows(projectDir: string, event: string): readonly Record<string, string>[] {
   return auditRows(projectDir)
     .map((row) => (row.attributes ?? row.fields) as Record<string, string> | undefined)
-    .filter((fields): fields is Record<string, string> => fields?.Event === "INTENT_AUTONOMY_HUMAN_REQUIRED");
+    .filter((fields): fields is Record<string, string> => fields?.Event === event);
+}
+
+function refusalRows(projectDir: string): readonly Record<string, string>[] {
+  return fieldRows(projectDir, "INTENT_AUTONOMY_HUMAN_REQUIRED");
 }
 
 function stageAutonomy(projectDir: string, over: { stage?: string; phaseBoundary?: boolean } = {}) {
   return productionStageAutonomy({
     projectDir,
-    stage: over.stage ?? "code-generation",
-    phase: "construction",
+    stage: over.stage ?? "intent-capture",
+    phase: "ideation",
     graphRevision: GRAPH_REVISION,
     walkingSkeleton: false,
     phaseBoundary: over.phaseBoundary,
@@ -110,18 +177,40 @@ afterEach(() => {
 // An Intent with no declared mode refuses at :734 — MODE_REQUIRES_HUMAN.
 // (requirements.md FR-2a names these the other way round; the values below are
 // the measured ones, and the discrepancy is reported rather than papered over.)
-describe("a refusal to auto-approve is recorded with its reason (FR-2a)", () => {
-  test("a semi Intent stopping at a phase gate records the out-of-scope reason", () => {
+describe("opening a gate the mode cannot decide records the reason (FR-2a)", () => {
+  test("an Intent with no declared mode records the refusal at gate open", () => {
     projectDir = bornProject();
-    appendHumanTurn(projectDir);
-    expect(applyProductionAutonomyMode({
-      projectDir,
-      stateContent: state(projectDir),
-      mode: "semi",
-    })).toMatchObject({ ok: true, projection: { mode: "semi" } });
 
-    const context = stageAutonomy(projectDir, { phaseBoundary: true });
-    expect(context.autoApprove).toBe(false);
+    // In process, like the rejection backfill below: the recorder runs inside
+    // the gate-open transaction, where a spawned tool puts it out of reach of
+    // any measurement.
+    inProject(projectDir, () => handleGateStart(["intent-capture"]));
+
+    const rows = refusalRows(projectDir);
+    expect(rows.length).toBe(1);
+    expect(rows[0]).toMatchObject({
+      "Interaction Kind": "stage-gate",
+      "Stage slug": "intent-capture",
+      Reason: "MODE_REQUIRES_HUMAN",
+      Mode: "none",
+    });
+    expect(rows[0]?.["Idempotency Key"]).toMatch(/^autonomy-refusal-[0-9a-f]{32}$/);
+    // The vocabulary is exactly two values (finding 3: AUTHORITY_BOUNDARY does
+    // not exist), so anything else here is a new reason nobody declared.
+    expect(["SCOPE_OUT", "MODE_REQUIRES_HUMAN"]).toContain(rows[0]?.Reason);
+  });
+
+  test("a semi Intent stopping at a phase gate records the out-of-scope reason", () => {
+    projectDir = semiProject();
+
+    // approval-handoff is the last ideation stage in a feature scope, so its
+    // gate is the phase boundary semi leaves to the human.
+    expect(tool(projectDir, "amadeus-state.ts", [
+      "checkbox",
+      "intent-capture=completed",
+      "approval-handoff=in-progress",
+    ]).status).toBe(0);
+    expect(tool(projectDir, "amadeus-state.ts", ["gate-start", "approval-handoff"]).status).toBe(0);
 
     const rows = refusalRows(projectDir);
     expect(rows.length).toBe(1);
@@ -132,93 +221,127 @@ describe("a refusal to auto-approve is recorded with its reason (FR-2a)", () => 
     });
   });
 
-  test("an Intent with no declared mode records the refusal too", () => {
-    projectDir = bornProject();
+  test("a semi Intent opening a routine stage gate records nothing", () => {
+    projectDir = semiProject();
 
-    const context = stageAutonomy(projectDir);
-    expect(context.autoApprove).toBe(false);
+    expect(tool(projectDir, "amadeus-state.ts", ["gate-start", "intent-capture"]).status).toBe(0);
 
-    const rows = refusalRows(projectDir);
-    expect(rows.length).toBe(1);
-    expect(rows[0]).toMatchObject({
-      "Interaction Kind": "stage-gate",
-      "Stage slug": "code-generation",
-      Reason: "MODE_REQUIRES_HUMAN",
-      Mode: "none",
-    });
-    // The vocabulary is exactly two values (finding 3: AUTHORITY_BOUNDARY does
-    // not exist), so anything else here is a new reason nobody declared.
-    expect(["SCOPE_OUT", "MODE_REQUIRES_HUMAN"]).toContain(rows[0]?.Reason);
-  });
-
-  test("a semi Intent auto-approving a routine stage gate records nothing", () => {
-    projectDir = bornProject();
-    appendHumanTurn(projectDir);
-    expect(applyProductionAutonomyMode({
-      projectDir,
-      stateContent: state(projectDir),
-      mode: "semi",
-    })).toMatchObject({ ok: true, projection: { mode: "semi" } });
-
-    expect(stageAutonomy(projectDir).autoApprove).toBe(true);
     expect(refusalRows(projectDir)).toEqual([]);
   });
 });
 
-describe("the observation cannot change the authorization (FR-2a iii, BR-U1-5)", () => {
-  test("the context is identical whether or not the row lands", () => {
+// The #3152 defect: the declaration was written from the projection READ, so
+// every `next` — a read that presents nothing to anyone — appended another row.
+describe("reading the projection writes nothing (FR-2b, #3152)", () => {
+  test("five `next` runs with no gate open leave the ledger untouched", () => {
     projectDir = bornProject();
-    appendHumanTurn(projectDir);
-    expect(applyProductionAutonomyMode({
-      projectDir,
-      stateContent: state(projectDir),
-      mode: "semi",
-    })).toMatchObject({ ok: true, projection: { mode: "semi" } });
 
-    const withEmit = stageAutonomy(projectDir, { phaseBoundary: true });
-    expect(refusalRows(projectDir).length).toBe(1);
-
-    // Take the shards away from the writer (read-only on the files themselves —
-    // a read-only DIRECTORY does not stop an append to a file already in it).
-    // The emit fails; the authorization must not notice (fail-open — BR-U1-6).
-    const auditDir = join(recordDir(projectDir), "audit");
-    const shards = readdirSync(auditDir).filter((name) => name.endsWith(".jsonl"));
-    expect(shards.length).toBeGreaterThan(0);
-    for (const name of shards) chmodSync(join(auditDir, name), 0o444);
-    chmodSync(auditDir, 0o500);
-    let withoutEmit: ReturnType<typeof stageAutonomy>;
-    try {
-      withoutEmit = stageAutonomy(projectDir, { phaseBoundary: true });
-    } finally {
-      chmodSync(auditDir, 0o700);
-      for (const name of shards) chmodSync(join(auditDir, name), 0o644);
+    for (let run = 0; run < 5; run += 1) {
+      expect(tool(projectDir, "amadeus-orchestrate.ts", ["next"]).status).toBe(0);
     }
 
-    expect(withoutEmit).toEqual(withEmit);
-    // Still exactly the one row from before: the second attempt wrote nothing.
-    expect(refusalRows(projectDir).length).toBe(1);
+    expect(refusalRows(projectDir)).toEqual([]);
+    // The gate really was never opened — otherwise the count above would be
+    // measuring the wrong absence.
+    expect(fieldRows(projectDir, "STAGE_AWAITING_APPROVAL")).toEqual([]);
+  });
+
+  test("the in-process read seam is pure and answers the same every time", () => {
+    projectDir = bornProject();
+
+    const first = stageAutonomy(projectDir);
+    for (let read = 0; read < 4; read += 1) {
+      expect(stageAutonomy(projectDir)).toEqual(first);
+    }
+
+    expect(first.autoApprove).toBe(false);
+    expect(first.authorizationReason).toBe("MODE_REQUIRES_HUMAN");
+    expect(refusalRows(projectDir)).toEqual([]);
   });
 });
 
-describe("an unreadable record falls to the human side, never throws (R-17a stance input)", () => {
-  test("a missing state file resolves the skeleton stance without an error", () => {
+// The occurrence boundary (ADR-2 contract 5). A presentation ends when the gate
+// is RESOLVED, so re-opening an unresolved gate — a retried gate-start, a
+// backfilled gate row — is the same stop and collapses to one row, while a
+// re-presentation after a rejection is a second stop and earns its own.
+describe("one presentation is one row (FR-2b, #3152)", () => {
+  test("re-opening and re-reading inside one presentation collapse to a single row", () => {
+    projectDir = bornProject();
+
+    expect(tool(projectDir, "amadeus-state.ts", ["gate-start", "intent-capture"]).status).toBe(0);
+    stageAutonomy(projectDir);
+    stageAutonomy(projectDir);
+    // The gate open is retried — the shape a gate-start whose state write never
+    // landed leaves behind.
+    expect(tool(projectDir, "amadeus-state.ts", ["checkbox", "intent-capture=in-progress"]).status).toBe(0);
+    expect(tool(projectDir, "amadeus-state.ts", ["gate-start", "intent-capture"]).status).toBe(0);
+    stageAutonomy(projectDir);
+
+    expect(refusalRows(projectDir).length).toBe(1);
+  });
+
+  test("a gate backfilled by a rejection counts as the presentation it records", () => {
     projectDir = bornProject();
     appendHumanTurn(projectDir);
-    expect(applyProductionAutonomyMode({
+
+    // Driven in process rather than through the CLI: the backfill arm lives
+    // inside the reject transaction, and a spawned tool would run it where no
+    // measurement reaches. Rejecting a stage nobody opened backfills the gate
+    // row gate-start would have written — the human being asked is the one
+    // rejecting it.
+    inProject(projectDir, () => handleReject(["intent-capture", "--feedback", "redo"]));
+    inProject(projectDir, () => handleRevise(["intent-capture"]));
+
+    expect(fieldRows(projectDir, "STAGE_AWAITING_APPROVAL").length).toBe(2);
+    expect(refusalRows(projectDir).length).toBe(2);
+  });
+
+  test("a re-presentation after a rejection is a new occurrence with its own row", () => {
+    projectDir = bornProject();
+    appendHumanTurn(projectDir);
+
+    expect(tool(projectDir, "amadeus-state.ts", ["gate-start", "intent-capture"]).status).toBe(0);
+    expect(tool(projectDir, "amadeus-state.ts", ["reject", "intent-capture", "--feedback", "redo"]).status).toBe(0);
+    expect(tool(projectDir, "amadeus-state.ts", ["revise", "intent-capture"]).status).toBe(0);
+
+    const rows = refusalRows(projectDir);
+    // Two presentations, two rows: the count is what "how often was a human
+    // stopped here" reads off the ledger.
+    expect(rows.length).toBe(2);
+    expect(fieldRows(projectDir, "STAGE_AWAITING_APPROVAL").length).toBe(2);
+    expect(new Set(rows.map((row) => row["Idempotency Key"])).size).toBe(2);
+  });
+});
+
+// Fail-open (BR-U1-6): the refusal is the safe answer and the caller is already
+// on its way to the human gate, so nothing about recording it may raise.
+describe("recording the refusal can never break the gate open (BR-U1-6)", () => {
+  test("a project with no active Intent records nothing and does not throw", () => {
+    projectDir = setupIntegrationProject({ noAidlcDocs: true, stripEnvScope: true });
+
+    expect(() => recordAutonomyRefusalAtGateOpen({
       projectDir,
+      stage: "intent-capture",
+      phase: "ideation",
+      graphRevision: GRAPH_REVISION,
+      walkingSkeleton: false,
+      stateContent: "",
+    })).not.toThrow();
+  });
+
+  test("an occurrence that cannot even be built records nothing and does not throw", () => {
+    projectDir = bornProject();
+
+    // A graph revision that is not a sha256 makes createInteractionOccurrence
+    // throw — the deepest failure this path can hit before any emit.
+    expect(() => recordAutonomyRefusalAtGateOpen({
+      projectDir,
+      stage: "intent-capture",
+      phase: "ideation",
+      graphRevision: "not-a-digest",
+      walkingSkeleton: false,
       stateContent: state(projectDir),
-      mode: "semi",
-    })).toMatchObject({ ok: true, projection: { mode: "semi" } });
-    const statePath = join(recordDir(projectDir), "amadeus-state.md");
-    chmodSync(statePath, 0o000);
-    try {
-      const context = stageAutonomy(projectDir, { phaseBoundary: true });
-      expect(context.autoApprove).toBe(false);
-      // Reaching the stance read proves the projection survived the unreadable
-      // state file; an unavailable projection would return before it.
-      expect(context.authorizationReason).not.toBe("intent-autonomy-unavailable");
-    } finally {
-      chmodSync(statePath, 0o644);
-    }
+    })).not.toThrow();
+    expect(refusalRows(projectDir)).toEqual([]);
   });
 });

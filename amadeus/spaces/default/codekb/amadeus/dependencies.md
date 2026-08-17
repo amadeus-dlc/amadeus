@@ -243,7 +243,7 @@ amadeus-sensor-pr-convergence-report-format.ts:391-393 / :289
 
 機序は `architecture.md`、patch surface は `code-structure.md`、テスト空白と台帳は `code-quality-assessment.md` の各対応節を参照。
 
-## 区間の依存エッジ変化と、オープンバグ 3 件の依存方向（260816-open-bug-batch-7、現在、observed `5c5911ee3`）
+## 区間の依存エッジ変化と、オープンバグ 3 件の依存方向（260816-open-bug-batch-7、履歴、observed `5c5911ee3`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260816-priority-bug-batch-3 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **外部依存の変化なし**（`git diff --stat 83e1dbee..HEAD -- package.json bun.lock '**/package.json'` の**出力は空**）。内部エッジは新規 core tool 5 本の分だけ増えた（本節の実測: 各ファイルの `from "..."` を列挙）。
 
@@ -290,3 +290,66 @@ C. #3097 — センサー docs（導出可能なのに手書き、検査は片�
 テキストフォールバック: **A** は配布集合の定義が 3 箇所（package 集合 / self-install 集合 / dist→ツリー写像 / 生成ルート allowlist）に分散し、どれもが他から導出されていない。唯一のガード（t531）は「self-install に載っているものは package にもある」方向しか見ないため、package 側にしか居ない pi は検査を通過する。doctor の鮮度検査も self-install 集合から引くので同じ盲点を持つ。**B** は CI から入る通常経路が events 台帳の存在によって `assertStrictAncestorOfHead` 側へ分岐するため、`validateBootstrapHistory` とその配下の到達性検査には到達しない。`postRevision` は到達性を一切見られず、文字列等値だけで通る。`baselineAtRevision` は存在しないファイルを参照するので必ず throw し、その throw を negative test だけが保持している。**C** はセンサーの実在コーパスが core ディレクトリと plugin 宣言から機械導出できるにもかかわらず、2 つの docs が同じ表を手書きしており、検査（t3028）は `docs/harness-engineering` 側だけを読む。`docs/reference/07-sensor-system.md` は誰からも参照されず drift する。
 
 **3 領域の間に依存エッジは無い**（ファイル交差ゼロ）。機序は `architecture.md`、配置は `code-structure.md`、コンポーネント境界は `component-inventory.md` の各対応節を参照。
+
+## 区間の依存エッジ変化と、優先バグ 5 件の依存方向（260816-priority-bug-batch-3、現在、observed `89053172e`）
+
+**外部依存の変化なし**（`git diff --stat 5c5911ee3 89053172e -- package.json bun.lock '**/package.json'` の**出力は空**、exit 0。本節の実測）。
+
+**内部エッジの変化も 1 件のみ。** 本区間は新規モジュールがゼロなので、前区間のような依存グラフの拡張は起きていない。追加されたのは `amadeus-state.ts` → `amadeus-intent-autonomy.ts` の**既存エッジへの named import 追加** 1 行（`git diff -U0` の追加行 逐語 `import { autonomyDigest, declaredFullAutonomy } from "./amadeus-intent-autonomy.ts";`）である。`autonomyDigest` は元から import されていたので、**モジュール間のエッジ本数は不変**である。
+
+### 本 intent の 5 領域の依存方向
+
+```
+A. #3153 / #3152 — 共有された呼び出し鎖（宣言が承認へ流れない / 監査へ流れすぎる）
+   amadeus-orchestrate.ts:2822  routeMainWorkflowDirective（next ごと）
+        └─┐
+   amadeus-state.ts:3744        assertHumanPresentForGateResolution（approve 試行ごと）
+        └─┴─→ amadeus-intent-autonomy-production.ts:295  productionStageAutonomy
+                    ├─→ :314 → :354  emitAuthorizationRefusal   ← #3152（冪等鍵なし、毎回 append）
+                    │        └─→ audit shard（INTENT_AUTONOMY_HUMAN_REQUIRED）
+                    └─→ 戻り値 authorizationReason
+                             ✗ amadeus-state.ts:3755-3756 で捨てられる  ← #3153（結線されていない）
+   amadeus-state.ts:3761 → amadeus-lib.ts:3926  humanActedSinceGate  ← 承認可否を単独で決める
+        └─→ scanPresenceLedger / resolveGatePresence（問いの同一性は見ない）
+
+B. #3149 — CLI と sensor が同じ record を独立に読む（両立不能な契約）
+   pr-convergence-cli.ts:610-617  transitionAllowed（converged = final）
+        ├─→ :920-924  遷移拒否
+        └─→ :763 → pr-convergence-git-runner.ts:213-243  verifyMergedEpochAncestry（:236 拒否文言）
+   record/…/pr-convergence-report.md
+        └─→ amadeus-sensor-pr-convergence-report-format.ts:297-298  kind による binding 分岐
+                 ├─ landed     → checkMergeBinding
+                 └─ non-landed → checkCheckoutBinding :331-334（live head 一致を要求）← 恒久 FAIL
+        └─→ sensors/amadeus-pr-convergence-report-format.md（blocking / code-generation を止める）
+
+C. #3156 — 3 プローブが単一起点へ収束する（冗長でない冗長化）
+   amadeus-state.ts:2498  intentBirthCommit  ← 単一起点
+        ├─→ :2511 (a) recordBranchSourceWork   birth..HEAD
+        ├─→ :2525 intentBoltSlugs → :2542 boltRefsForSlug → :2556 (b) boltRefHasSourceWork
+        └─→ :2568 intentIssueRefs → :2595 (c) mergedPrSourceWork   birth..HEAD
+                 └─→ :2622 intentScopedSourceWork（短絡合成）
+                         └─→ :2650 gitHasSourceWork（export、テストシーム）
+                                 └─→ :2685 workspaceHasWork → :2726 evaluateStageArtifacts
+   tests/unit/t206-source-work-intent-span.test.ts:33
+        └─→ dist/claude/.claude/tools/amadeus-state.ts   ← 検証は build 済み dist に依存
+
+D. #3046 — 読取スコープと書込スコープの非対称
+   amadeus-election.ts:318（本番の唯一の呼出元）
+        └─→ amadeus-election-store.ts:1032  appendPending
+                 ├─→ :1042 readAllPending（:527-549、全 voter を読む）  ← 窓の始点
+                 │        └─→ :545-547 横断の一意性検査（fail-closed、恒久 corrupt）
+                 ├─→ :1063 max+1 で採番
+                 └─→ :1088 writeStoreFile(pendingPath(dir, voter))     ← 窓の終点、voter 単位
+                          └─→ tmp+rename（単一ファイル内の torn write のみ防ぐ）
+   :990 / :1106 / :1221 も readAllPending に依存（tally / integrate 系）
+```
+
+テキストフォールバック: **A** では 2 つの入口（`next` directive の発行点と approve 試行）が同一の `productionStageAutonomy` へ収束する。その戻り値のうち副作用（監査行の発行）だけが下流へ届き、値（`authorizationReason`）は呼出側で捨てられる。承認可否は別系統の `humanActedSinceGate` が単独で決める。**B** では CLI と sensor が同じ record ファイルを独立に読み、CLI は「`converged` から先へ進めない」、sensor は「`landed` でない kind は live head と一致していなければならない」と主張する。両者に共通の上位機構が無いため、record が `converged` になった時点で両方向が塞がる。**C** では 3 つのプローブが分離された関数として書かれているが、判定範囲の起点をすべて `intentBirthCommit` から得るため独立していない。加えて検証経路が `dist/` を経由するので、修正の確認には build が要る。**D** では読みが全 voter スコープ、書きが 1 voter スコープであり、その間に他プロセスが同じ読みを行うと採番が衝突する。防御機構（tmp+rename）のスコープは単一ファイル内なので作用せず、検出機構（一意性検査）は永続化後にしか働かないため恒久 corrupt になる。
+
+### 領域間の依存
+
+**A（#3153 / #3152）は 1 つの鎖を共有する**ため独立に修正できない — 別 unit にすると `amadeus-state.ts` と `amadeus-intent-autonomy-production.ts` の 2 ファイルで write scope が衝突する。**C（#3156）は A と同一ファイル `amadeus-state.ts` を触る**が行域は非重複（`:2491-2691` vs `:3721-3772`）で、依存エッジとしての交差はない。**B（#3149）と D（#3046）は他のどの領域とも交差しない**（ファイル交差ゼロ）。
+
+台帳同期の観点（`cid:build-and-test:bt-ledger-resync`）: **#3152 の方式が `amadeus-orchestrate.ts:2822` を変える場合のみ**、`amadeus/spaces/default/specs/tla/model-map.json` の impl ハッシュピンと `tests/.coverage-patch-allowlist.json` の意味的セレクタが発火する。他 4 件は現時点で該当しない。
+
+機序は `architecture.md`、配置は `code-structure.md`、コンポーネント境界は `component-inventory.md` の各対応節を参照。

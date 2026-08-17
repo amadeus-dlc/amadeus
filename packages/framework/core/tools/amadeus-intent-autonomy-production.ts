@@ -12,6 +12,7 @@ import {
   ALL_INTERACTION_KINDS,
   CONSTRUCTION_AUTONOMY_MODE_FIELD,
   autonomyDigest,
+  autonomyStableId,
   firesWalkingSkeletonGate,
   autonomyScopeFingerprint,
   authorizeInteraction,
@@ -283,7 +284,7 @@ function qualityState(projection: AutonomyProjection): ProductionAutonomyContext
   return activation.kind;
 }
 
-interface ProductionStageAutonomyInput {
+export interface ProductionStageAutonomyInput {
   readonly projectDir: string;
   readonly stage: string;
   readonly phase: string;
@@ -292,6 +293,12 @@ interface ProductionStageAutonomyInput {
   readonly phaseBoundary?: boolean;
 }
 
+// What the active mode can do with one stage gate. A READ, and only a read
+// (#3152): the orchestrator asks this on every `next` and the approval
+// transaction asks it on every attempt, so a ledger write here recorded "a
+// human was required" once per question rather than once per gate. The
+// declaration is written from the gate open instead — see
+// recordAutonomyRefusalAtGateOpen.
 export function productionStageAutonomy(input: ProductionStageAutonomyInput): ProductionAutonomyContext {
   const projection = readProductionAutonomyProjection(input.projectDir);
   if (projection === null) {
@@ -310,14 +317,6 @@ export function productionStageAutonomy(input: ProductionStageAutonomyInput): Pr
     "intent",
   );
   const qualityRepair = qualityState(projection);
-  if (!authorization.authorized) {
-    emitAuthorizationRefusal(input.projectDir, {
-      kind: interactionKind({ ...input, skeletonGateFires }),
-      stage: input.stage,
-      reason: authorization.reason,
-      mode: projection.mode,
-    });
-  }
   return {
     mode: projection.mode,
     autoApprove: authorization.authorized && qualityRepair !== "error",
@@ -339,7 +338,113 @@ type AuthorizationRefusal = {
   readonly stage: string;
   readonly reason: string;
   readonly mode: AutonomyMode;
+  readonly idempotencyKey: string;
 };
+
+// The events that END a presentation. A gate stops being open the moment it is
+// resolved, either way.
+const GATE_RESOLUTION_EVENTS = ["GATE_APPROVED", "GATE_REJECTED"] as const;
+
+/** The coordinates one refusal row is keyed by. Declared at module scope so the
+ *  type-only lines carry no in-body coverage records. */
+type RefusalIdentity = {
+  readonly occurrence: ReturnType<typeof occurrence>;
+  readonly mode: AutonomyMode;
+  readonly presentationEpoch: number;
+};
+
+// The identity of one refusal row, minted HERE and nowhere else so no second
+// site can decide what "the same refusal" means (ADR-2 contract 1).
+//
+// Two halves, and both are load-bearing:
+//
+//   the occurrence — occurrenceId already folds intentUuid, kind, stage, phase,
+//     bolt, interactionId, optionIds and graphRevision; the selector is added
+//     because occurrenceId does not carry it — plus the mode that could not
+//     decide it, since a mode change is a different answer about the same gate;
+//   the presentation epoch — WHICH presentation of that occurrence this is,
+//     counted as the number of times this gate has already been RESOLVED.
+//
+// The epoch is what makes the count mean "how often was a human stopped here".
+// Re-opening a gate nobody has answered yet — a retried gate-start, a backfilled
+// gate row — shares the epoch and collapses onto the existing row; a legitimate
+// re-presentation after a rejection sits in the next epoch and is a new stop, so
+// it earns a row of its own.
+function refusalIdempotencyKey(identity: RefusalIdentity): string {
+  return autonomyStableId("autonomy-refusal", [
+    identity.occurrence.occurrenceId,
+    identity.occurrence.selector,
+    identity.mode,
+    identity.occurrence.graphRevision,
+    identity.presentationEpoch,
+  ]);
+}
+
+function gateResolutionCount(audit: string, stage: string): number {
+  return GATE_RESOLUTION_EVENTS.reduce(
+    (total, event) =>
+      total + findAllEvents(audit, event).filter((row) => auditBlockField(row.block, "Stage") === stage).length,
+    0,
+  );
+}
+
+// Whether this exact refusal is already on the ledger. Scoped to the Intent's
+// own shards, like every other replay in this file: cross-clone uniqueness is
+// not claimed, and a shard that cannot be read yields no match, which lets the
+// row land twice rather than letting a read failure suppress it.
+function refusalAlreadyRecorded(audit: string, idempotencyKey: string): boolean {
+  return findAllEvents(audit, "INTENT_AUTONOMY_HUMAN_REQUIRED")
+    .some((row) => auditBlockField(row.block, "Idempotency Key") === idempotencyKey);
+}
+
+// The gate whose opening is being recorded. The caller names the record rather
+// than letting this resolve one: a gate may be opened for a record that is NOT
+// the one the active cursor points at (a reserved owner Intent), and the row
+// belongs beside the STAGE_AWAITING_APPROVAL it explains, not beside whatever
+// the cursor happens to select. The caller's `stateContent` is passed in for the
+// same reason.
+export interface GateOpenRefusalInput extends ProductionStageAutonomyInput {
+  readonly stateContent: string;
+  readonly intent?: string;
+  readonly space?: string;
+}
+
+// The gate has just been opened, so a mode that cannot decide it is stopping a
+// human right here — and this is where that stop is recorded (#3152). Callers
+// emit the STAGE_AWAITING_APPROVAL this row explains and hold that transaction's
+// lock, so the two land together or not at all.
+//
+// Fail-open end to end: the refusal is already the safe answer and the gate is
+// on its way to the human, so nothing about recording it may raise.
+export function recordAutonomyRefusalAtGateOpen(input: GateOpenRefusalInput): void {
+  try {
+    const resolved = resolveIntent(input.projectDir, input.intent, input.space);
+    if (resolved === null) return;
+    const projection = coordinatorFor(input.projectDir, resolved).readProjection();
+    const skeletonGateFires = skeletonGateFiresFor(input.stateContent);
+    const target = occurrence({ ...input, projection, skeletonGateFires });
+    const authorization = authorizeProductionOccurrence(projection, target, "intent");
+    if (authorization.authorized) return;
+    const audit = readAllAuditShards(input.projectDir, resolved.intentDir, resolved.space);
+    const idempotencyKey = refusalIdempotencyKey({
+      occurrence: target,
+      mode: projection.mode,
+      presentationEpoch: gateResolutionCount(audit, input.stage),
+    });
+    if (refusalAlreadyRecorded(audit, idempotencyKey)) return;
+    emitAuthorizationRefusal(input.projectDir, {
+      kind: target.kind,
+      stage: input.stage,
+      reason: authorization.reason,
+      mode: projection.mode,
+      idempotencyKey,
+    }, input.intent, input.space);
+  } catch (cause) {
+    console.error(
+      `amadeus: could not record why autonomy stopped at the "${input.stage}" gate — the gate is unaffected: ${cause instanceof Error ? cause.message : String(cause)}`,
+    );
+  }
+}
 
 // Why the run stopped, written where the rest of the Intent's history lives.
 //
@@ -351,7 +456,12 @@ type AuthorizationRefusal = {
 // The emitter is required lazily — a module-scope import would pull the OTel
 // graph into every authorization — and bound through the type-only import above
 // so the cast stays on one line.
-function emitAuthorizationRefusal(projectDir: string, refusal: AuthorizationRefusal): void {
+function emitAuthorizationRefusal(
+  projectDir: string,
+  refusal: AuthorizationRefusal,
+  intent?: string,
+  space?: string,
+): void {
   if (!REFUSAL_REASONS.some((known) => known === refusal.reason)) return;
   try {
     const otel = require("../otel/audit-emit.ts") as { emitAuditEvent: typeof EmitAuditEvent };
@@ -360,7 +470,8 @@ function emitAuthorizationRefusal(projectDir: string, refusal: AuthorizationRefu
       "Stage slug": refusal.stage,
       Reason: refusal.reason,
       Mode: refusal.mode,
-    }, projectDir);
+      "Idempotency Key": refusal.idempotencyKey,
+    }, projectDir, intent, space);
     if (!result.appended) console.error(`amadeus: could not record why autonomy stopped (${refusal.reason}) — the gate is unaffected`);
   } catch (cause) {
     console.error(

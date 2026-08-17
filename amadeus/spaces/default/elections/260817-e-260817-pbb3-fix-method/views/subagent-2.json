@@ -1,0 +1,106 @@
+{
+  "electionId": "E-260817-PBB3-FIX-METHODS",
+  "voter": "subagent-2",
+  "questions": [
+    {
+      "questionId": "q1-3153-binding",
+      "text": "#3153 (P1/S2): autonomy が human-required と宣言した milestone ゲート(phase-gate / walking-skeleton)の承認を、その occurrence への人間の応答へ結線する方式を選ぶ。現行: assertHumanPresentForGateResolution (amadeus-state.ts:3721-3772) は autoApprove 偽のとき authorizationReason を読まず素通りし、humanActedSinceGate (amadeus-lib.ts:3926-3941) は『直前の任意の解決イベント以降に未消費 HUMAN_TURN があるか』のみを問う。gate-open 以降限定の presence は targeted-human 経路 (amadeus-presence-reservation.ts の humanTurnIsFresh) に実装済み。どの方式でも GATE_APPROVED へ承認根拠の機械識別フィールドを追加する(FR-1 完了条件(2))。",
+      "ordered": [
+        {
+          "internalNo": 3,
+          "label": "C: occurrence-bound 応答トークン新設 — ゲート提示時に occurrence id を発行し、承認入力がそれを引用したときのみ承認(宣言と応答の明示対応付け。新機構の追加)",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 1,
+          "label": "A: targeted presence reservation の適用拡大 — human-required 宣言 occurrence の milestone ゲートに既存 reservation 経路(gate-open 以降のターン限定)の成立を必須化する。assertHumanPresentForGateResolution が authorizationReason を読み、human-required なら通常 presence でなく reservation 経路を要求",
+          "displayNo": 2
+        },
+        {
+          "internalNo": 2,
+          "label": "B: milestone 限定の boundary 変更 — human-required 宣言 occurrence に限り、presence 境界を『当該ゲートの STAGE_AWAITING_APPROVAL 以降の未消費 HUMAN_TURN』へ狭める(一般ゲートの prior-resolution 境界は不変。reservation 機構は使わない)",
+          "displayNo": 3
+        }
+      ]
+    },
+    {
+      "questionId": "q2-3152-idempotency",
+      "text": "#3152 (P2/S3): INTENT_AUTONOMY_HUMAN_REQUIRED の発行を同一 occurrence 高々1行・ゲート未提示0行にする方式を選ぶ。現行: productionStageAutonomy (amadeus-intent-autonomy-production.ts:295-328) が呼ばれるたび emitAuthorizationRefusal (:354-370) が無条件 append。呼出元は routeMainWorkflowDirective (amadeus-orchestrate.ts:2822 — next の directive 発行ごと、ゲート未開設でも) と assertHumanPresentForGateResolution (amadeus-state.ts:3744 — approve 試行ごと)。idempotencyKey は発行ごと新規 UUID。audit-format.md:297 の契約は『an occurrence』(単数)。",
+      "ordered": [
+        {
+          "internalNo": 2,
+          "label": "B: occurrence 由来の決定的冪等鍵のみ — 発火点(2箇所)は現状維持し、emit 層で occurrence キー(intent, stage, kind, mode, graphRevision 等)の既存行があれば skip",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 3,
+          "label": "C: 発火点移動のみ — emit をゲート提示(STAGE_AWAITING_APPROVAL 発行点)へ移し、read 経路と approve 再試行から除去(鍵なし)",
+          "displayNo": 2
+        },
+        {
+          "internalNo": 1,
+          "label": "A: 発火点分離 + 冪等鍵の両方 — read 経路(next の projection 読取)からの emit を分離し、ゲート到達経路のみで emit。さらに occurrence 由来の決定的冪等鍵で既存行を dedup(防御の二重化)",
+          "displayNo": 3
+        }
+      ]
+    },
+    {
+      "questionId": "q3-3149-authority",
+      "text": "#3149 クラスA (P2/S3): 『converged は final』(CLI transitionAllowed、pr-convergence-cli.ts:610-617)と『non-landed report は live checkout 束縛』(センサー amadeus-sensor-pr-convergence-report-format.ts:294/:331-334 checkCheckoutBinding)の矛盾でマージ後 HEAD 前進 checkout の converged report が恒久 FAIL×遷移不能の閉路になる。どちらを正とするか。センサーの :278-284 は landed/live の2束縛を排他と明記。",
+      "ordered": [
+        {
+          "internalNo": 1,
+          "label": "A: CLI を正とする(converged = final 維持)— センサー側を変更し、PR が MERGED の converged report は checkout 束縛でなく merge-commit 束縛(checkMergeBinding 系)で検査する",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 2,
+          "label": "B: センサーを正とする(converged = live 束縛維持)— CLI に converged → landed 遷移を追加し、attested prHead == merged headRefOid(または祖先証明成立)を条件に landed へ最終化する(mint し直しで record は landed が最終形)",
+          "displayNo": 2
+        }
+      ]
+    },
+    {
+      "questionId": "q4-3149-orphan-recovery",
+      "text": "#3149 クラスB (P2/S3): レーン rebase で孤児化した created epoch は verifyMergedEpochAncestry (pr-convergence-git-runner.ts:213-243) の git merge-base --is-ancestor が不成立で landed 最終化できない(#3113 経路は祖先健全が前提)。回復経路の形を選ぶ。クラスB実例3件の現存性は実装時に再実測(AUTO_DECIDED 済み)。",
+      "ordered": [
+        {
+          "internalNo": 2,
+          "label": "B: 明示の人間承認付き override のみ — 機械証明は追加せず、human-presence 付き override 経路でのみ最終化",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 3,
+          "label": "C: 二段構え — 機械的同値証明を第一経路とし、証明不能な残余のみ human-presence 付き override で最終化",
+          "displayNo": 2
+        },
+        {
+          "internalNo": 1,
+          "label": "A: rebase 耐性の機械的同値証明 — merged head との tree 同一性または patch 等価(git patch-id 等)を実測できた場合に landed 最終化を許可(人間介入なし)",
+          "displayNo": 3
+        }
+      ]
+    },
+    {
+      "questionId": "q5-3046-concurrency",
+      "text": "#3046 (P3/S3): 選挙 store appendPending の TOCTOU(全体読み :1042 → 全体 max+1 採番 :1063 → 自 voter ファイルのみ書き :1088)で並行 voter が同一 arrivalSequence を採番し、readAllPending の全体一意性検査 (:545-547) が恒久 corrupt を返す。修正方式を選ぶ。破壊的変更許容(過去の選挙データが読めなくなってよい、互換シム禁止)。本番呼出元は amadeus-election.ts:318 の1箇所。",
+      "ordered": [
+        {
+          "internalNo": 3,
+          "label": "C: 採番廃止 — arrivalSequence を辞めて (submittedAt, voter) 等の複合順序キーで全体順序を導出(スキーマ変更最大)",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 1,
+          "label": "A: 採番の voter スコープ化 — arrivalSequence を voter ローカル片単調にし、全体順序は (arrivalSequence, voter) の辞書式で決定的に導出。一意性検査を (voter, seq) 複合キーへ変更(ロック不要のまま並行安全)",
+          "displayNo": 2
+        },
+        {
+          "internalNo": 2,
+          "label": "B: mkdir ベース portable lock — audit ロックと同方式で appendPending の read→write 区間を相互排除(D-09 単一 writer 前提を改訂)",
+          "displayNo": 3
+        }
+      ]
+    }
+  ]
+}

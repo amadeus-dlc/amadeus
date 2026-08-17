@@ -159,7 +159,7 @@ merge queue + auto-merge を使う運用で、PR が `report` 実行より先に
 
 回復には `AMADEUS_SKIP_BLOCKING_SENSOR_GUARD` という緊急バイパスしかなく、これは record に「escape hatch」として自己認識される性質の操作である。加えて既に `260814-plugins-rename-drift` の 3 unit が `kind: created` のまま恒久残置しており、**過去の完了済み intent にも record drift として残留している**。機序は `architecture.md`、テスト空白と台帳は `code-quality-assessment.md` の各対応節を参照。
 
-## オープンバグ 3 件の業務影響（260816-open-bug-batch-7、現在、observed `5c5911ee3`）
+## オープンバグ 3 件の業務影響（260816-open-bug-batch-7、履歴、observed `5c5911ee3`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260816-priority-bug-batch-3 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **業務境界そのものの変化なし。** base `83e1dbeef` → observed `5c5911ee3` の 28 コミットは RFC-0001 intent autonomy modes（#3116）の全 unit 着地と #3110 の是正（PR #3113）であり、いずれもエンジン内部の権限・監査・記録の機構である。製品の対象ユーザー・提供価値・スコープ境界は動いていない。
 
@@ -174,5 +174,27 @@ autonomy の着地が業務上もつ意味は「**無人実行の権限を Inten
 | [#3097](https://github.com/amadeus-dlc/amadeus/issues/3097) | センサー機構を docs から学ぶ開発者・エージェント | `docs/reference/07-sensor-system.md` の `matches` 表が実在 manifest と乖離（**4 件欠落・2 件の値が陳腐化**）。読者は「宣言されていないセンサーは存在しない」と誤読しうる。docs は AI エージェントの一次入力でもあるため、誤った表は誤った実装判断へ直結する |
 
 **3 件に共通する運用上の性質**は、いずれも「壊れていることが誰にも通知されない」点である。#2363 は逆向きガードが無く、#3097 は検査射程の外にあり、#2162 は分岐によって検証コードに到達しない。**修正の価値の半分は欠陥そのものの解消ではなく、同じ drift を次回は検知できるようにすること**にある。
+
+機序は `architecture.md`、コンポーネント境界は `component-inventory.md`、テスト空白は `code-quality-assessment.md` の各対応節を参照。
+
+## 優先バグ 5 件の業務影響 — 権限・記録・自動化の信頼性（260816-priority-bug-batch-3、現在、observed `89053172e`）
+
+**業務境界そのものの変化なし。** base `5c5911ee3` → observed `89053172e` の 15 コミットは、直前 intent `260816-open-bug-batch-7` の 3 unit 着地と `260815-rfc-autonomy-modes` の R-22 修正であり、いずれも自リポジトリの開発運用機構である。製品の対象ユーザー・提供価値・スコープ境界は動いていない。
+
+区間で唯一、業務上の意味を持つ観測は**オープンバグ数が 4 → 11 に増えた**ことである（metrics snapshot の `collectors.bugs.values.open` 直読、測定元は `metrics/2026-08-16T11-04-41-875Z-3e1c6a19ed5b.json` と `metrics/2026-08-16T20-57-24-618Z-2555e5b42914.json`）。本 intent が扱う 5 件はこの増分を含む。既存バグを潰した区間ではなく、**バグ探索で新しく可視化された欠陥が積み上がった区間**である。
+
+### 5 件の業務影響
+
+| Issue | 誰が困るか | 損失 |
+|---|---|---|
+| [#3153](https://github.com/amadeus-dlc/amadeus/issues/3153)（P1 / S2-CRITICAL） | 承認ゲートを信頼する全員 | autonomy が「この場面は人間が要る」と宣言しても承認可否には効かず、**別目的で打たれた 1 ターンが milestone 承認として消費されうる**。監査に残るのは「人間が答えた」か「engine が未消費ターンで通した」かを区別しない `GATE_APPROVED` 1 行だけなので、**事後に見分ける手段もない**。承認という制度の意味そのものが目減りする |
+| [#3152](https://github.com/amadeus-dlc/amadeus/issues/3152)（P2 / S3-MAJOR） | 監査ログを読む全員 | 「人間へ落ちた occurrence」を 1 件記録するはずの監査行が、**読み取りのたびに append される**。実測で 1 つの `(intent, stage, kind, mode)` に最大 20 行。監査ログは何が起きたかを数える台帳なので、**同じ事象が 20 倍に見えることは計数を根拠にした判断を壊す** |
+| [#3149](https://github.com/amadeus-dlc/amadeus/issues/3149)（P2 / S3-MAJOR） | Bolt を PR で配送する全員 | マージ前に収束を確定させた unit が、マージ後に **CLI からも sensor からも回復不能**になる（CLI は `converged` からの遷移を拒み、sensor は前進した checkout を通さない）。code-generation の stage approve が blocking sensor で止まるため、**ワークフローが恒久停止する**。緊急バイパス以外の逃げ道がない点は #3110 と同型で、**本欠陥は区間内で当該 intent が park した実績を持つ** |
+| [#3156](https://github.com/amadeus-dlc/amadeus/issues/3156)（P2 / S3-MAJOR） | degrade スコープで solo Bolt を回す開発者 | 実際にコードを書いたのに `workspace_requires` ガードが「作業が無い」と誤判定してステージを止める。**チームのノルムどおり（record checkpoint を head checkout へ後から積む手順）に運用するほど踏みやすい**形状であり、回復は環境変数によるガード無効化しかない — すなわち**正しく働いているガードを毎回切る運用**へ誘導する |
+| [#3046](https://github.com/amadeus-dlc/amadeus/issues/3046)（P3 / S3-MAJOR） | 選挙で合意を作るチーム全員 | 並行 voter が同じ採番を取ると、**その選挙の pending 台帳が以後恒久的に `corrupt` を返す**。チームの意思決定機構（P1「判断は独立検証された合意で行う」）そのものが止まるため、影響は 1 選挙に留まらず裁定待ちの作業全体へ波及する。現時点では潜在欠陥（実発生の記録はない）だが、設計前提「single writer」が運用実態と乖離している |
+
+### 5 件に共通する業務上の性質
+
+3 つある。第一に、**いずれもユーザー配布物の欠陥ではない** — 損失は自リポジトリの開発運用の信頼性に閉じる。第二に、**#3153 / #3152 / #3149 / #3156 の 4 件は「記録と権限」の欠陥**であり、壊れ方が「間違った結果が出る」ではなく「**正しさを事後に確認できない / 進めなくなる**」形を取る。第三に、**#3149 と #3156 は回復手段が緊急バイパスしかない** — バイパスは本来 escape hatch として設計されたものなので、常用は制度の摩耗を意味する。
 
 機序は `architecture.md`、コンポーネント境界は `component-inventory.md`、テスト空白は `code-quality-assessment.md` の各対応節を参照。

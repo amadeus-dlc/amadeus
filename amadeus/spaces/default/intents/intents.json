@@ -1285,5 +1285,12 @@
     "dirName": "260816-open-bug-batch-7",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "01a00ce8-ba28-7a94-92d5-cf7f735ff7be",
+    "slug": "priority-bug-batch-3",
+    "dirName": "260816-priority-bug-batch-3",
+    "scope": "self-fix",
+    "status": "in-flight"
   }
 ]
