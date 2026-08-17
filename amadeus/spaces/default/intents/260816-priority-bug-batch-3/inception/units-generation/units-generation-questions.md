@@ -20,17 +20,11 @@ A. 独立 unit の並行を許す(真の実装依存のみエッジ化) / B. 厳
 
 [Answer]: A — 真の実装依存は milestone-presence → autonomy-refusal-idem の1本のみ(decisions.md ADR-1 実装契約2)。同一ファイル交差(amadeus-state.ts)による直列化は 2.8 の経済判断へ委ねる(トポロジーと経済順序の分離 — 本ステージ NOTE)。
 
-## Q4: unit 間の統合点
+## Q4: unit 間の統合点とデプロイモデル
 
-A. 共有 engine ファイルの write scope 境界で統合(API 変更なし) / B. 新規契約の導入 / X. Other
+統合点: A. 共有 engine ファイルの write scope 境界で統合(API 変更なし) / B. 新規契約の導入。 デプロイ: A. 単一リポジトリの monolithic(現行どおり)。 / X. Other
 
-[Answer]: A — 全 unit が既存コンポーネントの欠陥修正で新規公開 API なし(component-methods.md 横断事項)。統合点は ProductionAutonomyContext の戻り値拡張(U-autonomy-refusal-idem が供給、U-milestone-presence が消費)のみ。
-
-## Q5: デプロイモデル
-
-A. 単一リポジトリの monolithic(現行どおり) / X. Other
-
-[Answer]: A — デプロイ基盤なし(project.md Deployment)。全 unit が同一リポジトリ・同一配布経路。
+[Answer]: 統合点 = A、デプロイ = A — 全 unit が既存コンポーネントの欠陥修正で新規公開 API なし(component-methods.md 横断事項)。統合点は ProductionAutonomyContext の戻り値拡張(U-autonomy-refusal-idem が供給、U-milestone-presence が消費)のみ。デプロイ基盤なし(project.md Deployment)、全 unit が同一リポジトリ・同一配布経路。
 
 ## 曖昧性分析
 

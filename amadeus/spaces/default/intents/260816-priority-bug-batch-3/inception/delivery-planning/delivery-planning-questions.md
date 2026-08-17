@@ -20,17 +20,11 @@ A. 実装は並行可(交差なしレーンのみ)、着地は直列 / B. 厳密
 
 [Answer]: A — prc-finalization / election-append は amadeus-state.ts 群と write scope 交差なし(unit-of-work-dependency.md)。着地は record 同梱 PR の構造的競合により直列(cid:pr-convergence:serial-landing-rebase-shape)。
 
-## Q4: 外部依存
+## Q4: 外部依存と walking skeleton
 
-A. GitHub(PR 作成・merge queue・CI)のみ — 常設・リードタイム CI 実行時間のみ / X. Other
+外部依存: A. GitHub(PR 作成・merge queue・CI)のみ — 常設・リードタイム CI 実行時間のみ。 walking skeleton: A. スキップ(スコープ既定) / B. 実施。 / X. Other
 
-[Answer]: A — external-dependency-map.md に詳細。外部チーム・API 承認・データ待ちは存在しない。
-
-## Q5: walking skeleton
-
-A. スキップ(スコープ既定) / B. 実施 / X. Other
-
-[Answer]: A — org.md Walking Skeleton 節: bugfix 系(self-fix)はスケルトンのセレモニーをスキップ。State の Skeleton Stance = scope-dependent → スコープ既定でオフ。
+[Answer]: 外部依存 = A、walking skeleton = A(スキップ) — external-dependency-map.md に詳細、外部チーム・API 承認・データ待ちは存在しない。org.md Walking Skeleton 節: bugfix 系(self-fix)はスケルトンのセレモニーをスキップ。State の Skeleton Stance = scope-dependent → スコープ既定でオフ。
 
 ## 曖昧性分析
 
