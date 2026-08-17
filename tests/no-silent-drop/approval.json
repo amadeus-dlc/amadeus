@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "censusDigest": "c00325bc01a4b145b1b402449c69134483d114380122aed75cb6042ff8cf91a1",
+  "censusDigest": "5c057cac67778f3b150b4e32a6e2124936ac917b6cff51a260092d0807c60a50",
   "entries": [
     {
       "fingerprint": "03c9e430ecf3c1b1dabee31906cf795d605efa4db2d7330390274a5c29675a45",
@@ -1696,6 +1696,14 @@
       "reason": "FR-2a refusal visibility emit is fail-open by design (BR-U1-6); stderr warning only, authorization result untouched.",
       "issues": [
         "#2378"
+      ]
+    },
+    {
+      "fingerprint": "2555ab41dece5e7fb196dc3f7b5acd779b5682155c5412808e3cedf6fdc367cf",
+      "classification": "TP",
+      "reason": "ADR-2 fail-open contract: a refusal that cannot be recorded must not block the gate open. recordAutonomyRefusalAtGateOpen writes an observation beside the STAGE_AWAITING_APPROVAL it explains; the gate is already on its way to the human, so the catch reports loudly via console.error and lets the gate open proceed.",
+      "issues": [
+        "#3152"
       ]
     }
   ]

@@ -117,8 +117,11 @@ describe("t413 no-silent-drop blocking CI structure", () => {
     // baseline returns to 213. 213 -> 212 is the canonical election replacement:
     // deleting the legacy migration CLI (scripts/amadeus-election-migrate.ts)
     // deleted its NSD001 identity faacb3ea, whose grant is now explicitly revoked.
-    expect(result.evidence.counts).toEqual({ C_pre: 212, B_pre: 212, B0: 212 });
-    expect(folded.grandfather).toHaveLength(212);
+    // 212 -> 213 is #3152: the gate-open refusal recorder carries the ADR-2
+    // fail-open catch (a refusal that cannot be recorded must not block the gate
+    // open), entered as the granted NSD001 identity 2555ab41.
+    expect(result.evidence.counts).toEqual({ C_pre: 213, B_pre: 213, B0: 213 });
+    expect(folded.grandfather).toHaveLength(213);
 
     // A shrink is only auditable when the ledger states it: every revoked identity
     // must have left the census, and no revoked identity may still be granted.
