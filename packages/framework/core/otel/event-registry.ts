@@ -255,7 +255,7 @@ export const REGISTERED_EVENTS = [
     auditEvent: "INTENT_AUTONOMY_HUMAN_REQUIRED",
     durability: "canonical",
     category: "grant",
-    requiredAttributes: ["Interaction Kind", "Stage slug", "Reason", "Mode"],
+    requiredAttributes: ["Interaction Kind", "Stage slug", "Reason", "Mode", "Idempotency Key"],
     optionalAttributes: [],
     schemaVersion: 1,
   },

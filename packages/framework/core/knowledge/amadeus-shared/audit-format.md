@@ -289,12 +289,14 @@ Emitted by stage-protocol §13 (Learnings Ritual). The runtime-graph compile emi
 
 The event set is the atomic canonical stream for delivery observation, cycle trigger, Judge reservation/result, closed route application, and latch transitions. The per-clone Replay Index is a repairable secondary projection and never replaces this audit source of truth.
 
+`INTENT_AUTONOMY_HUMAN_REQUIRED` is written when a gate is PRESENTED, not when the autonomy projection is read — reading it (every `next`, every approval attempt) writes nothing. Its `Idempotency Key` is derived from the occurrence, the mode that could not decide it, and how many times that gate has already been resolved, so re-opening a gate nobody has answered yet collapses onto the existing row while a re-presentation after a rejection earns its own. The row count is therefore how often a human was actually stopped at that gate.
+
 | Event | When | Required | Optional | Emitter |
 |-------|------|----------|----------|---------|
 | `LOOP_MONITOR_EVENT_SET_COMMITTED` | One atomic Loop Monitor delivery/Judge/latch transition commits | Partition Key, Event Set Id, Event Set | — | `tools/amadeus-loop-monitor-replay.ts` |
 | `QUALITY_REPAIR_TRANSACTION_COMMITTED` | One Quality snapshot/progress/replan/stall/resume transaction and its generic Monitor effects commit atomically | Quality Scope Id, Transaction Id, Transaction | — | `tools/amadeus-quality-repair-replay.ts` |
 | `INTENT_AUTONOMY_TRANSACTION_COMMITTED` | One Intent-scoped mode/grant/decision/effect/park transaction commits atomically | Intent Uuid, Transaction Id, Transaction Digest, Transaction | Principal, Decider, Actor, Basis | `tools/amadeus-intent-autonomy-replay.ts` |
-| `INTENT_AUTONOMY_HUMAN_REQUIRED` | An occurrence the active mode could not decide on its own, recorded with the reason it fell to a human | Interaction Kind, Stage slug, Reason, Mode | — | `tools/amadeus-intent-autonomy-production.ts` |
+| `INTENT_AUTONOMY_HUMAN_REQUIRED` | A gate opens on an occurrence the active mode could not decide on its own, recorded with the reason it fell to a human | Interaction Kind, Stage slug, Reason, Mode, Idempotency Key | — | `tools/amadeus-intent-autonomy-production.ts` |
 | `AUTO_DECISION_REVIEWED` | A real human accepts or flags one immutable automatic decision; completed Intent reviews extend the review chain without changing the completion seal | Intent Uuid, Decision Id, Review Id, Choice, Lifecycle, Review Principal, Review Actor, Source Human Turn, Audit Transaction Id, Payload Digest, Payload V1 | Decision Principal, Decision Actor, Decision Source, Basis Digest, Grant Id, Remediation, Note Digest, Redaction Status, Event Identity, Projection Revision, Trace Id, Span Id | `tools/amadeus-autonomy-review-production.ts` |
 | `INTENT_COMPLETION_TRANSACTION_COMMITTED` | The Core Intent completion transaction commits and seals the Intent record with its evidence digest | Intent Uuid, Transaction Id, Evidence Id, Evidence Digest, Completion Seal Digest, Transaction | — | `tools/amadeus-intent-completion.ts` |
 

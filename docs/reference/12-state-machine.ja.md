@@ -434,7 +434,7 @@ Loop Monitor は、配送の観測、サイクルのトリガー、Judge の予�
 | `LOOP_MONITOR_EVENT_SET_COMMITTED` | `tools/amadeus-loop-monitor-replay.ts` | 1つのアトミックな Loop Monitor の配送、Judge、または latch 遷移がコミットされた |
 | `QUALITY_REPAIR_TRANSACTION_COMMITTED` | `tools/amadeus-quality-repair-replay.ts` | 1つの品質スナップショット、進捗、replan、stall、または resume のトランザクションと、その汎用 Monitor 効果がアトミックにコミットされた |
 | `INTENT_AUTONOMY_TRANSACTION_COMMITTED` | `tools/amadeus-intent-autonomy-replay.ts` | 1つの Intent スコープのモード、グラント、決定、workflow-effect、park、resume、または invocation-failure のトランザクションがアトミックにコミットされた |
-| `INTENT_AUTONOMY_HUMAN_REQUIRED` | `tools/amadeus-intent-autonomy-production.ts` | 現在のモードでは自動裁定できなかった occurrence を、人間へ委ねた理由(`SCOPE_OUT` または `MODE_REQUIRES_HUMAN`)とともに記録した |
+| `INTENT_AUTONOMY_HUMAN_REQUIRED` | `tools/amadeus-intent-autonomy-production.ts` | 現在のモードでは自動裁定できなかった occurrence のゲートが開いた。人間へ委ねた理由(`SCOPE_OUT` または `MODE_REQUIRES_HUMAN`)とともに、提示ごとに1行記録する |
 | `AUTO_DECISION_REVIEWED` | `tools/amadeus-autonomy-review-production.ts` | 人間がレビューサーフェス上で1つの不変な auto decision を受理またはフラグした(append-only。決定済みの効果を決して再実行しない) |
 | `INTENT_COMPLETION_TRANSACTION_COMMITTED` | `tools/amadeus-intent-completion.ts` | Core の Intent 完了トランザクションがアトミックにコミットされ、Intent record をそのエビデンスダイジェストで封印した |
 
