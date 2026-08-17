@@ -164,14 +164,18 @@ describe("t549 election v2 store", () => {
     const mismatched = JSON.parse(readFileSync(pendingPath, "utf8"));
     mismatched.electionId = "OTHER";
     writeFileSync(pendingPath, JSON.stringify(mismatched, null, 2));
-    expect(ElectionStore.appendPending(root, DEFINITION.electionId, ballot("bob"))).toMatchObject({
+    // ADR-5 (#3046): appendPending now reads only the CALLING voter's own
+    // pending file (read set == write set), so probing this forged
+    // alice.json requires calling appendPending AS alice — a "bob" call
+    // would never touch alice's file and so could never observe the forgery.
+    expect(ElectionStore.appendPending(root, DEFINITION.electionId, ballot("alice"))).toMatchObject({
       ok: false,
       error: "corrupt",
     });
     mismatched.electionId = DEFINITION.electionId;
     mismatched.voter = "bob";
     writeFileSync(pendingPath, JSON.stringify(mismatched, null, 2));
-    expect(ElectionStore.appendPending(root, DEFINITION.electionId, ballot("bob"))).toMatchObject({
+    expect(ElectionStore.appendPending(root, DEFINITION.electionId, ballot("alice"))).toMatchObject({
       ok: false,
       error: "corrupt",
     });
@@ -188,7 +192,13 @@ describe("t549 election v2 store", () => {
     expect(failed).toMatchObject({ ok: false, error: "io-error" });
     expect(existsSync(join(electionDir(), "pending", "alice.json"))).toBe(true);
     const durableLedger = JSON.parse(readFileSync(join(electionDir(), "ledger.json"), "utf8"));
-    expect(durableLedger.ballots.map((entry: CanonicalBallot) => entry.voter)).toEqual(["bob", "alice"]);
+    // ADR-5 (#3046): arrivalSequence is now scoped per voter, so bob's and
+    // alice's first-ever ballots both land arrivalSequence 0 (each is the
+    // first entry in its own file) rather than a globally incrementing
+    // counter tied to call order. The tie is broken by the shared
+    // (arrivalSequence, voter) lexicographic order, so alice sorts before
+    // bob even though bob's appendPending call happened first.
+    expect(durableLedger.ballots.map((entry: CanonicalBallot) => entry.voter)).toEqual(["alice", "bob"]);
 
     rmSync(join(electionDir(), "ballots"));
     const repaired = ElectionStore.integratePending(root, DEFINITION.electionId, ["alice", "bob"]);
@@ -422,7 +432,10 @@ describe("t549 election v2 store", () => {
       voter: "alice",
       events: [{ arrivalSequence: -1, ballot: ballot("alice") }],
     }));
-    expect(ElectionStore.appendPending(root, DEFINITION.electionId, ballot("bob"))).toMatchObject({
+    // ADR-5 (#3046): probe as alice — appendPending only reads the calling
+    // voter's own file, so this negative-sequence forgery in alice.json is
+    // only observable when alice herself appends.
+    expect(ElectionStore.appendPending(root, DEFINITION.electionId, ballot("alice"))).toMatchObject({
       ok: false,
       error: "corrupt",
     });
@@ -535,26 +548,55 @@ describe("t549 election v2 store", () => {
     }
   });
 
-  test("readAllPending fail-closes on duplicate arrival sequences across voters", () => {
+  // ADR-5 (#3046) revised this pin: arrivalSequence used to be a single
+  // global counter (read across every voter's pending file), so two voters
+  // reusing the same value was corruption. It is now scoped per voter, so
+  // the SAME raw value recurring across different voters is the expected
+  // shape (each voter numbers independently) — readAllPending's
+  // (voter, arrivalSequence) composite key must accept it. Only a duplicate
+  // arrivalSequence WITHIN one voter's own file remains corrupt.
+  test("readAllPending accepts the same raw arrivalSequence reused across different voters (ADR-5 contract 2)", () => {
+    state("collecting");
+    // Pin the arrivalSequence values directly on the append results — a
+    // regression back to global numbering would give bob arrivalSequence 1
+    // (not 0), which a voter-membership-only assertion below would miss.
+    expect(ElectionStore.appendPending(root, DEFINITION.electionId, ballot("alice"))).toMatchObject({
+      ok: true,
+      value: { idempotent: false, arrivalSequence: 0 },
+    });
+    // bob's own first-ever ballot legitimately lands arrivalSequence 0 too —
+    // no forgery needed, this is just two voters' independent numbering.
+    expect(ElectionStore.appendPending(root, DEFINITION.electionId, ballot("bob", 2))).toMatchObject({
+      ok: true,
+      value: { idempotent: false, arrivalSequence: 0 },
+    });
+    const snapshot = ElectionStore.readSnapshot(root, DEFINITION.electionId);
+    expect(snapshot.ok).toBe(true);
+    // Assert the actual returned order (no .sort() here, which would discard
+    // the ordering the (arrivalSequence, voter) comparator produced): alice
+    // and bob tie at arrivalSequence 0, so the voter tiebreak puts alice
+    // first — deterministic and worth pinning verbatim.
+    if (snapshot.ok) expect(snapshot.value.pending.map((b) => b.voter)).toEqual(["alice", "bob"]);
+    expect(ElectionStore.verify(root, DEFINITION.electionId).ok).toBe(true);
+  });
+
+  test("readAllPending still fail-closes on a duplicate arrivalSequence WITHIN one voter's own file (ADR-5 contract 2)", () => {
     state("collecting");
     expect(ElectionStore.appendPending(root, DEFINITION.electionId, ballot("alice")).ok).toBe(true);
-    // Forge bob's pending file reusing alice's arrival sequence: two CLI runs
-    // that raced the global counter (#3046). The next global pending read must
-    // refuse the store instead of silently picking a winner.
-    const alicePending = JSON.parse(
-      readFileSync(join(electionDir(), "pending", "alice.json"), "utf8"),
-    ) as { events: { arrivalSequence: number; ballot: Record<string, unknown> }[] };
-    const forged = {
-      schemaVersion: 2,
-      electionId: DEFINITION.electionId,
-      voter: "bob",
-      events: alicePending.events.map((event) => ({
-        arrivalSequence: event.arrivalSequence,
-        ballot: { ...event.ballot, voter: "bob" },
-      })),
+    // Forge a second event into alice's own file reusing her own sequence 0 —
+    // this can never happen through the real append path (own-file
+    // monotonicity is enforced), only via direct corruption of the file.
+    const alicePath = join(electionDir(), "pending", "alice.json");
+    const alicePending = JSON.parse(readFileSync(alicePath, "utf8")) as {
+      events: { arrivalSequence: number; ballot: Record<string, unknown> }[];
     };
-    writeFileSync(join(electionDir(), "pending", "bob.json"), JSON.stringify(forged, null, 2));
-    expect(ElectionStore.appendPending(root, DEFINITION.electionId, ballot("bob", 2))).toMatchObject({
+    const forged = {
+      ...JSON.parse(readFileSync(alicePath, "utf8")),
+      events: [...alicePending.events, { arrivalSequence: 0, ballot: { ...alicePending.events[0]?.ballot } }],
+    };
+    writeFileSync(alicePath, JSON.stringify(forged, null, 2));
+    // Probe as alice — appendPending only reads the calling voter's own file.
+    expect(ElectionStore.appendPending(root, DEFINITION.electionId, ballot("alice", 2))).toMatchObject({
       ok: false,
       error: "corrupt",
     });

@@ -14,10 +14,21 @@
 //       timeline.json   append-only tally event list
 //       views/          per-voter blind distribution views
 //
-// Single writer (conductor) by decision D-09 — no locking; torn writes are
-// prevented by tmp+rename (writeStoreFile). Every read is fail-closed: a file
-// that does not decode as the canonical schema is rejected, never re-parsed
-// under an older shape and never silently re-initialized.
+// Per-voter writers by decision D-09 (revised for #3046, ADR-5) — no locking.
+// Each voter's pending ballots live in a single file, and appendPending
+// derives the next arrivalSequence purely from that voter's own file (read
+// set == write set), so concurrent appends from DIFFERENT voters never race:
+// they touch independent files and number independently of one another.
+// Concurrent appends from the SAME voter are last-write-wins: every write
+// replaces the whole file via tmp+rename (writeStoreFile), so the store never
+// tears — the losing write's ballot is simply not persisted. arrivalSequence
+// is therefore unique per voter, not globally; cross-voter overlap is
+// expected. Global ordering is a deterministic (arrivalSequence, voter)
+// lexicographic comparison applied once at read time (readAllPending), not a
+// property stored on disk. Every read is fail-closed: a file that does not
+// decode as the canonical schema, or whose own arrivalSequence values are not
+// strictly increasing, is rejected — never re-parsed under an older shape and
+// never silently re-initialized or re-sorted.
 
 import {
   existsSync,
@@ -509,6 +520,7 @@ function readPendingVoter(
     return err("corrupt");
   }
   const events: PendingEvent[] = [];
+  let previousSequence = -1;
   for (const event of read.value.raw.events) {
     if (
       !isRecord(event) ||
@@ -517,11 +529,30 @@ function readPendingVoter(
     ) {
       return err("corrupt");
     }
+    const arrivalSequence = event.arrivalSequence as number;
+    // ADR-5 contract 2/3: a voter's own arrivalSequence values must be
+    // strictly increasing — appendPending only ever appends a new maximum, so
+    // any other shape on disk (out of order, repeated, or otherwise) is
+    // corruption, never silently re-sorted.
+    if (arrivalSequence <= previousSequence) return err("corrupt");
+    previousSequence = arrivalSequence;
     const ballot = decodeBallot(event.ballot, definition);
     if (!ballot.ok || ballot.value.voter !== voter) return err("corrupt");
-    events.push({ arrivalSequence: event.arrivalSequence as number, ballot: ballot.value });
+    events.push({ arrivalSequence, ballot: ballot.value });
   }
   return ok(events);
+}
+
+// ADR-5 contract 3: the single shared definition of cross-voter pending
+// order, applied once at read time. arrivalSequence is only unique per
+// voter, so ties are broken by voter — deterministic regardless of on-disk
+// write order or directory-listing order.
+function comparePendingEvents(left: PendingEvent, right: PendingEvent): number {
+  if (left.arrivalSequence !== right.arrivalSequence) {
+    return left.arrivalSequence - right.arrivalSequence;
+  }
+  if (left.ballot.voter === right.ballot.voter) return 0;
+  return left.ballot.voter < right.ballot.voter ? -1 : 1;
 }
 
 function readAllPending(
@@ -542,10 +573,17 @@ function readAllPending(
     if (!rows.ok) return rows;
     events.push(...rows.value);
   }
-  if (new Set(events.map((event) => event.arrivalSequence)).size !== events.length) {
+  // ADR-5 contract 2: arrivalSequence is scoped per voter, so overlapping
+  // values across DIFFERENT voters are expected, not corruption. Only a
+  // duplicate (voter, arrivalSequence) pair is fail-closed — and since each
+  // voter's own file is already checked for strict monotonicity above, that
+  // can only happen if two voter files somehow decoded the same voter twice
+  // (defence in depth against a future reader change, not reachable today).
+  const compositeKeys = events.map((event) => `${event.ballot.voter}:${event.arrivalSequence}`);
+  if (new Set(compositeKeys).size !== compositeKeys.length) {
     return err("corrupt");
   }
-  return ok(events.sort((left, right) => left.arrivalSequence - right.arrivalSequence));
+  return ok(events.sort(comparePendingEvents));
 }
 
 function readLedger(
@@ -1039,9 +1077,18 @@ export const ElectionStore = {
     if (!loaded.ok) return loaded;
     const encoded = encodeBallot(ballot, loaded.value.definition);
     if (!encoded.ok) return encoded;
-    const pending = readAllPending(loaded.value.resolved.dir, loaded.value.definition);
-    if (!pending.ok) return pending;
-    const sameIdentity = pending.value.find((event) => identity(event.ballot) === identity(ballot));
+    // ADR-5 contract 1: read set == write set. Numbering and the same-pending
+    // identity check both come from the calling voter's own file only — an
+    // identity match can never live in another voter's file anyway, since
+    // identity() embeds ballot.voter. This is what removes the cross-voter
+    // TOCTOU: two different voters' appendPending calls never share a read.
+    const voterPending = readPendingVoter(
+      loaded.value.resolved.dir,
+      ballot.voter,
+      loaded.value.definition,
+    );
+    if (!voterPending.ok) return voterPending;
+    const sameIdentity = voterPending.value.find((event) => identity(event.ballot) === identity(ballot));
     const pendingRetry = idempotentBallot(
       sameIdentity?.ballot,
       encoded.value,
@@ -1054,13 +1101,7 @@ export const ElectionStore = {
     const integrated = ledger.value.find((candidate) => identity(candidate) === identity(ballot));
     const ledgerRetry = idempotentBallot(integrated, encoded.value, loaded.value.definition, -1);
     if (ledgerRetry !== null) return ledgerRetry;
-    const voterPending = readPendingVoter(
-      loaded.value.resolved.dir,
-      ballot.voter,
-      loaded.value.definition,
-    );
-    if (!voterPending.ok) return voterPending;
-    const arrivalSequence = Math.max(-1, ...pending.value.map((event) => event.arrivalSequence)) + 1;
+    const arrivalSequence = Math.max(-1, ...voterPending.value.map((event) => event.arrivalSequence)) + 1;
     try {
       mkdirSync(join(loaded.value.resolved.dir, "pending"), { recursive: true });
     } catch {

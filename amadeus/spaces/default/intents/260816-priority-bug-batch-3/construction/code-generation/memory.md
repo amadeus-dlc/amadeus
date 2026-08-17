@@ -7,6 +7,7 @@
 <!-- example: 2026-05-29T10:14:32Z — chose REST over GraphQL; the consuming team only needs CRUD, revisit if subscriptions land -->
 
 ## Deviations
+- 2026-08-17T10:32:00Z — 手順ミス: #3174 を converged 未成立(status exit 1、スレッド2件)のまま queue 投入し DELEGATED_MERGE_RECORDED を created-report digest で記録した。即時 dequeue で是正(queue 空を実測)。正しい provenance は実収束後に再記録する。常任承認条件(CI green ∧ converged:true 実測)の順序を崩さないこと
 - 2026-08-17T04:50:00Z — B4 の BLOCKER 是正差分が conductor の record sync コミット(397fcd4ed、chore(record) メッセージ)へ同梱された(builder の staged 変更を巻き込む git add/commit 運用ミス)。内容は builder が diff 実読で意図どおりと検証済み・テスト 37 pass。squash 着地で中間メッセージは消えるため履歴修正はしない。以後の record sync は `git commit -- amadeus/` のパス限定で行う
 <!-- example: 2026-05-29T10:14:32Z — skipped the optional caching layer the stage prose suggested; the dataset is small enough that it adds risk -->
 

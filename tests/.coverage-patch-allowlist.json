@@ -5190,5 +5190,16 @@
     },
     "reason": "Pending-compose allow arm of the module-level stop flow: runs only inside the spawned Stop hook (spawned execution is not attributed to parent Bun LCOV). The decision seam (composeCarveoutBasis/isPendingComposeStop) is covered in-process by t561/t195; the spawned arm end-to-end by tests/e2e/t122-stop-hook-e2e.test.ts.",
     "expiry": "remove when Bun merges child-process coverage"
+  },
+  {
+    "file": "tests/helpers/election-append-race-child.ts",
+    "selector": {
+      "function": "<module>",
+      "fingerprint": "sha256:2c71f6549d996393a5b70a351f39d68e0f1df592410402b3a3ce39e826b89c99",
+      "anchorLines": 31,
+      "targetLines": "1-31"
+    },
+    "reason": "The import.meta.main block is a race driver that only runs as a spawned subprocess (bun --coverage does not instrument spawned subprocesses). Its actual execution is proven by the parent-side assertions in t3046 (the pre-fix collision reproduces, and the same driver is pinned green post-fix). Issue #3046.",
+    "expiry": "remove when Bun attributes spawned-process coverage to the parent LCOV report"
   }
 ]
