@@ -557,13 +557,26 @@ describe("t549 election v2 store", () => {
   // arrivalSequence WITHIN one voter's own file remains corrupt.
   test("readAllPending accepts the same raw arrivalSequence reused across different voters (ADR-5 contract 2)", () => {
     state("collecting");
-    expect(ElectionStore.appendPending(root, DEFINITION.electionId, ballot("alice")).ok).toBe(true);
+    // Pin the arrivalSequence values directly on the append results — a
+    // regression back to global numbering would give bob arrivalSequence 1
+    // (not 0), which a voter-membership-only assertion below would miss.
+    expect(ElectionStore.appendPending(root, DEFINITION.electionId, ballot("alice"))).toMatchObject({
+      ok: true,
+      value: { idempotent: false, arrivalSequence: 0 },
+    });
     // bob's own first-ever ballot legitimately lands arrivalSequence 0 too —
     // no forgery needed, this is just two voters' independent numbering.
-    expect(ElectionStore.appendPending(root, DEFINITION.electionId, ballot("bob", 2)).ok).toBe(true);
+    expect(ElectionStore.appendPending(root, DEFINITION.electionId, ballot("bob", 2))).toMatchObject({
+      ok: true,
+      value: { idempotent: false, arrivalSequence: 0 },
+    });
     const snapshot = ElectionStore.readSnapshot(root, DEFINITION.electionId);
     expect(snapshot.ok).toBe(true);
-    if (snapshot.ok) expect(snapshot.value.pending.map((b) => b.voter).sort()).toEqual(["alice", "bob"]);
+    // Assert the actual returned order (no .sort() here, which would discard
+    // the ordering the (arrivalSequence, voter) comparator produced): alice
+    // and bob tie at arrivalSequence 0, so the voter tiebreak puts alice
+    // first — deterministic and worth pinning verbatim.
+    if (snapshot.ok) expect(snapshot.value.pending.map((b) => b.voter)).toEqual(["alice", "bob"]);
     expect(ElectionStore.verify(root, DEFINITION.electionId).ok).toBe(true);
   });
 

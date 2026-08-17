@@ -25,6 +25,7 @@ import { join } from "node:path";
 import fc from "fast-check";
 import type { CanonicalElectionDefinition } from "../../packages/framework/core/tools/amadeus-election-codec.ts";
 import { ElectionStore, resolveElectionDir } from "../../packages/framework/core/tools/amadeus-election-store.ts";
+import { raceBallot } from "../helpers/election-append-race-child.ts";
 import { resolveTestTimeFactor, scaleTestTime } from "../lib/test-time-factor.ts";
 
 const BUN = process.execPath;
@@ -59,10 +60,16 @@ interface RaceResult {
  * barrier until all have signalled readiness, then release the barrier so
  * every process enters ElectionStore.appendPending at (near) the same
  * instant. Returns each child's raw stdout (one JSON line) in entry order.
+ *
+ * Ready paths are keyed by each entry's ARRAY INDEX, not by voter: contract
+ * 4 races two entries for the SAME voter, and keying by voter would collapse
+ * both ready signals onto one path — the barrier would then release as soon
+ * as the first sibling signalled, before the second had even started its
+ * busy-wait, silently weakening the race.
  */
 async function race(root: string, entries: readonly RaceEntry[]): Promise<RaceResult[]> {
   const barrierPath = join(root, `barrier-${Math.random().toString(36).slice(2)}`);
-  const procs = entries.map((entry) =>
+  const procs = entries.map((entry, index) =>
     Bun.spawn({
       cmd: [
         BUN,
@@ -72,13 +79,14 @@ async function race(root: string, entries: readonly RaceEntry[]): Promise<RaceRe
         entry.voter,
         String(entry.choice),
         entry.submittedAt,
+        String(index),
         barrierPath,
       ],
       stdout: "pipe",
       stderr: "pipe",
     }),
   );
-  const readyPaths = entries.map((entry) => `${barrierPath}.ready.${entry.voter}`);
+  const readyPaths = entries.map((_, index) => `${barrierPath}.ready.${index}`);
   const deadline = Date.now() + scaleTestTime(10_000, resolveTestTimeFactor());
   while (!readyPaths.every((p) => existsSync(p))) {
     if (Date.now() > deadline) throw new Error("t3046: siblings never signalled ready");
@@ -108,17 +116,11 @@ function freshRoot(): string {
   return root;
 }
 
+// Delegates to the same factory the race child uses, so a ballot built here
+// (for direct in-process appendPending calls and forged pending files) can
+// never drift from what the spawned siblings build for themselves.
 function ballotFor(voter: string, choice: number, submittedAt: string) {
-  return {
-    schemaVersion: 2 as const,
-    kind: "original" as const,
-    electionId: DEFINITION.electionId,
-    voter,
-    voterKind: "member" as const,
-    responses: [{ questionId: "q1", choiceInternalNo: choice, goa: 1 as const, reservation: null, rationale: null }],
-    submittedAt,
-    receivedAt: submittedAt,
-  };
+  return raceBallot(DEFINITION.electionId, voter, choice, submittedAt);
 }
 
 describe("t3046 concurrent-voter appendPending numbering (#3046, ADR-5)", () => {
