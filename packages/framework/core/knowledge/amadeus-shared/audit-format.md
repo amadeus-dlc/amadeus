@@ -147,7 +147,7 @@ number of discarded run-now receipts.
 | Event | When | Required | Optional | Emitter |
 |-------|------|----------|----------|---------|
 | `DECISION_RECORDED` | Before presenting a structured question, to record the options shown | Stage, Decision | Options, Rationale | `tools/amadeus-log.ts decision` |
-| `GATE_APPROVED` | Human approved at gate | Stage | User Input, Grant Id, Approval Provenance, Swarm batch, Transaction Id, Presence Reservation Id | `tools/amadeus-state.ts approve` |
+| `GATE_APPROVED` | Gate resolution approved — `Approval Provenance` names the deciding branch (`gate-open-turn` / `delegated` / `intent-grant` / `guard-disabled`) | Stage | User Input, Grant Id, Approval Provenance, Swarm batch, Transaction Id, Presence Reservation Id | `tools/amadeus-state.ts approve` |
 | `GATE_REJECTED` | Human requested changes | Stage | Feedback, Recovered, Transaction Id | `tools/amadeus-state.ts reject` |
 | `QUESTION_ANSWERED` | Question answered by user | Stage, Details | Resolution Route, Decision Id | `tools/amadeus-log.ts answer` |
 | `DELEGATED_APPROVAL` | Leader session records a human-grounded approval into a remote conductor intent's audit dir (agent-team topology, #671) | Stage, Issuer Space, Issuer Intent, Issuer Shard, Issuer Human Ts | User Input, Grant Id | `tools/amadeus-state.ts delegate-approval` |
