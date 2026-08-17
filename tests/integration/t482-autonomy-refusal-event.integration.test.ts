@@ -1,5 +1,11 @@
-// covers: file:packages/framework/core/tools/amadeus-intent-autonomy-production.ts(recordAutonomyRefusalAtGateOpen), event:INTENT_AUTONOMY_HUMAN_REQUIRED
+// covers: audit:INTENT_AUTONOMY_HUMAN_REQUIRED
 // size: medium
+//
+// The claim above is the audit event; the subject behind it is
+// recordAutonomyRefusalAtGateOpen in amadeus-intent-autonomy-production.ts,
+// which the registry does not enumerate as a function unit (it enumerates
+// amadeus-lib, amadeus-graph and a named list from amadeus-state), so naming it
+// as a claim would leave a claim with no unit to join.
 //
 // FR-2a (u1-autonomy-core) and FR-2 (#3152). authorizeInteraction has always
 // answered WHY it refused — SCOPE_OUT or MODE_REQUIRES_HUMAN — but nothing
