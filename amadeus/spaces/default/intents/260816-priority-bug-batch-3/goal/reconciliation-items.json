@@ -1,0 +1,18 @@
+[
+  {
+    "id": "goal-statement",
+    "verdict": "ACHIEVED",
+    "evidence": [
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260816-priority-bug-batch-3/verification/phase-check-construction.md",
+        "digest": "774075485a010465c0f3de30bcf055a7b62a12fbadacac92fd80b2d01290fd20"
+      },
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260816-priority-bug-batch-3/inception/requirements-analysis/requirements.md",
+        "digest": "2e18a339914cedfb3335cd94f997d9a9f2d847d8f39e0aa376dee12d9a092b98"
+      }
+    ]
+  }
+]
