@@ -96,7 +96,7 @@ Biome `2.5.5` は formatter 無効、cognitive complexity 15超を warning と�
 
 本 intent の患部（`plugins/github-pr-convergence/` の CLI・sensor・stage 文書）は既存スタック内に閉じており、外部依存として使うのは `gh` CLI のみ（optional dependency として既存の扱いのまま）。新しいランタイム依存・新しい検証系を必要としない。
 
-## 区間の技術スタック（260816-open-bug-batch-7、現在、observed `5c5911ee3`）
+## 区間の技術スタック（260816-open-bug-batch-7、履歴、observed `5c5911ee3`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260816-priority-bug-batch-3 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **外部依存の変化なし。** base `83e1dbeef` → observed `5c5911ee3` で `git diff --stat 83e1dbee..HEAD -- package.json bun.lock '**/package.json'` の**出力は空**（本節の実測）。区間で core が +2342 行、新規 core tool が 5 本増えたが、いずれも既存スタック（Bun / TypeScript / ESM、Biome、`tsc --noEmit`、`tests/run-tests.sh` の 4 層）の内側に閉じている。新規 tool の import も `node:crypto` / `node:fs` / `node:path` と自リポジトリ内モジュールのみである。
 
@@ -109,3 +109,20 @@ Biome `2.5.5` は formatter 無効、cognitive complexity 15超を warning と�
 | #3097（センサー docs） | Markdown の docs 面と、`tests/integration/` の bun test。導出は `readdirSync` + `plugins/*/plugin.json` の JSON 読取のみ |
 
 `.github/` は区間内で 0 件変更（`git diff --name-only 83e1dbee..HEAD -- .github/` が空出力・exit 0）であり、CI の構成そのものも本区間で動いていない。
+
+## 区間の技術スタック（260816-priority-bug-batch-3、現在、observed `89053172e`）
+
+**外部依存の変化なし。** base `5c5911ee3` → observed `89053172e` で `git diff --stat 5c5911ee3 89053172e -- package.json bun.lock '**/package.json'` の**出力は空**（本節の実測、exit 0）。ランタイム（Bun / TypeScript / ESM）、リンター（Biome、フォーマッタ無効）、型検査（`tsc --noEmit`）、テストランナー（`tests/run-tests.sh` の 4 層）の構成はいずれも不変である。
+
+本区間は core tool の**新規追加がゼロ**（変更 4 本のみ）なので、前区間のような新規モジュールによる import 面の拡張も起きていない。唯一の新しいエッジは `amadeus-state.ts` が `./amadeus-intent-autonomy.ts` から `declaredFullAutonomy` を追加 import した 1 行（`git diff -U0` の追加行 逐語 `import { autonomyDigest, declaredFullAutonomy } from "./amadeus-intent-autonomy.ts";`、本節の実測）で、これは**既存エッジへの named import 追加**であり新規依存ではない。
+
+本 intent の 5 領域が触れるスタック面は次のとおりで、**新しいランタイム依存・新しい検証系はいずれも不要**である。
+
+| 領域 | 触れるスタック面 |
+|---|---|
+| #3153 / #3152（autonomy × presence） | `packages/framework/core/tools/` の TypeScript と、OpenTelemetry 系の audit 発行（`packages/framework/core/otel/`）。監査面へ届く方式なら `tests/integration/event-registry-drift.test.ts` の基数 pin が blocking で発火する |
+| #3149（pr-convergence） | `plugins/github-pr-convergence/tools/` の TypeScript（Bun 直接実行）と、`spawnSync` 経由の `git rev-parse` / `git merge-base` / `git fetch`。GitHub 側は `gh` CLI（既存の optional dependency の扱いのまま） |
+| #3156（`workspace_requires` ガード） | 同 core tools と `spawnSync` 経由の `git log` / `git diff` / `git merge-base` / `git show-ref`。**検証は `dist/` 経由の import を含む**（`tests/unit/t206-source-work-intent-span.test.ts:33`）ため `bun run build` がテスト前提になる |
+| #3046（election store） | `node:fs` の読書きと tmp+rename。**並行性の再現に別プロセス（`spawn`）が要る**ため、落ちる実証は filesystem / process を使う medium test = integration 層に置く（`cid:code-generation:c2-doctor-seam`） |
+
+**CI 構成の変化は 1 行のみ。** `git diff --name-only 5c5911ee3 89053172e -- .github/` → `.github/workflows/ci.yml` の 1 ファイル（本節の実測）で、内容は self-install 面リストへの `.pi` 追加 **+1 行**（`@@ -402,6 +402,7 @@`。Developer scan §1.5 からの転記）。blocking の正本である集約ジョブ `ci-success` の構成そのものは動いていない。

@@ -453,7 +453,7 @@ patch surface のファイル規模（`wc -l`、observed 断面）: `pr-converge
 
 機序の解説は `architecture.md` の対応節、テスト空白と台帳は `code-quality-assessment.md` の対応節を参照。
 
-## 差分リフレッシュで観測した構造変化と、オープンバグ 3 件の患部配置（260816-open-bug-batch-7、現在、observed `5c5911ee3`）
+## 差分リフレッシュで観測した構造変化と、オープンバグ 3 件の患部配置（260816-open-bug-batch-7、履歴、observed `5c5911ee3`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260816-priority-bug-batch-3 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: base `83e1dbeefb3278a00e86f69d3c79071a35ccf043` → observed `5c5911ee3f107152c3173701caf178a746b6e3aa`。区間は **28 コミット / 399 files changed, 22808 insertions(+), 1198 deletions(-)**（Developer scan §1 からの転記）。
 
@@ -502,5 +502,115 @@ patch surface のファイル規模（`wc -l`、observed 断面）: `pr-converge
 | 導出元コーパス | `packages/framework/core/sensors/`（11）+ `plugins/*/plugin.json` の `sensors` 配列（3） |
 
 **paths-ignore の盲点は無い** — `.github/workflows/ci.yml:14-15` の `paths-ignore` は `metrics/**` のみで、docs は除外されていない（`cid:build-and-test:ci-paths-ignore-doc-guard-blindspot` の該当なし）。
+
+機序は `architecture.md`、コンポーネント境界は `component-inventory.md`、テスト空白と台帳は `code-quality-assessment.md` の各対応節を参照。
+
+## 構造変化ゼロの区間と、優先バグ 5 件の患部配置（260816-priority-bug-batch-3、現在、observed `89053172e`）
+
+**観測 ref**: base `5c5911ee3f107152c3173701caf178a746b6e3aa` → observed `89053172ed8b5bb270e254aea029a13291d10b6b`。区間は **15 コミット / 229 files changed, 6597 insertions(+), 17613 deletions(-)**（本節の実測）。
+
+### 区間の構造変化 — 新規 0 / 削除 0 / 変更 4、ディレクトリ再編なし
+
+`git diff --name-status 5c5911ee3 89053172e -- packages/framework/core/tools/`（本節の実測、exit 0）の出力は **`M` 4 行のみ**である。
+
+```
+M	packages/framework/core/tools/amadeus-intent-autonomy.ts
+M	packages/framework/core/tools/amadeus-sensor-self-scope-consistency.ts
+M	packages/framework/core/tools/amadeus-state.ts
+M	packages/framework/core/tools/data/self-install-allowlist.ts
+```
+
+`plugins/` と `packages/framework/harness/` はいずれも**空出力・exit 0**（本節の実測）。パッケージ追加・ディレクトリ移動はなく、`packages/framework/core/` と `packages/framework/harness/<name>/` の境界は不変である。
+
+区間全体の分類は **A 118 / D 11 / M 100**（`git diff --name-status ... | awk '{print $1}' | sort | uniq -c`、本節の実測）で、追加 118 の大半は record 面、削除 11 の主体は #3155 による no-silent-drop bootstrap fixture である。非 record 面（`-- ':!amadeus/' ':!metrics/'`）は **65 files / +689 −17509** と、**削除が挿入の 25 倍を超える**特異な区間である。削除上位は `tests/no-silent-drop/bootstrap/pre-classification.json`（3185 行）/ `post-classification.json`（3045 行）/ `bootstrap-provenance.json`（2152 行）ほか（Developer scan §1.3 の `--numstat` 上位表からの転記）。
+
+`tests/**` の増減は **新規 1 / 削除 10 / 変更 33**（`--diff-filter=A|D|M` の各 `wc -l`、本節の実測）。新規 1 件は `tests/integration/t2363-pi-self-install-delivery.integration.test.ts`。observed 断面のテスト総数は unit **432** / integration **597** / e2e **97** / smoke **16**（`git ls-files tests/<dir> | grep -c "\.test\.ts$"`、本節の実測）。
+
+### 本 intent の patch surface — 5 領域、うち 3 領域が `amadeus-state.ts` を共有
+
+行番号はすべて observed `89053172e` 断面の値で、本節の起草時に `sed -n` で逐語確認した。
+
+**A. #3153（autonomy×presence 接合部）**
+
+| 役割 | ファイル / 行 |
+|---|---|
+| 接合部を含むガード本体 | `packages/framework/core/tools/amadeus-state.ts:3721-3772`（宣言 `:3721`、ドキュメンテーション `:3703-3720`） |
+| autonomy 呼出 | 同 `:3744` |
+| **結論が捨てられる箇所** | 同 `:3755-3756` |
+| off-switch | 同 `:3757-3760` |
+| presence 述語の呼出 | 同 `:3761` |
+| 拒否 | 同 `:3769-3771` |
+| presence 述語の実体 | `packages/framework/core/tools/amadeus-lib.ts:3926-3941` |
+| ガードの全呼出元 | `amadeus-state.ts:4178`（approve 経路）/ `:4860`（reject 経路） |
+| 監査契約（専用フィールド不在） | `packages/framework/core/knowledge/amadeus-shared/audit-format.md:150` |
+| 先行事例（R-22） | `packages/framework/core/tools/amadeus-state.ts:4165`、`amadeus-intent-autonomy.ts` の `declaredFullAutonomy` |
+
+**B. #3152（拒否イベントの無条件発火）**
+
+| 役割 | ファイル / 行 |
+|---|---|
+| 発火経路 | `packages/framework/core/tools/amadeus-intent-autonomy-production.ts:295-328`（宣言 `:295`） |
+| 発行関数 | 同 `:354-370`、呼出点 `:314-319` |
+| 唯一のガード（閉語彙） | 同 `:333` `REFUSAL_REASONS` |
+| **対照される冪等な認可側** | 同 `:901-913`（`already-decided` arm、`:913`） |
+| occurrence キーの構成 | 同 `:246-249`（`interactionKind`）/ `:261`（`occurrence`） |
+| kind の閉語彙 | `packages/framework/core/tools/amadeus-intent-autonomy.ts:113` |
+| 本番呼出元 | `packages/framework/core/tools/amadeus-orchestrate.ts:2822`（宣言 `:2814`、import `:219`）/ `amadeus-state.ts:3744`（import `:149`） |
+| 監査契約（単数宣言） | `packages/framework/core/knowledge/amadeus-shared/audit-format.md:297` |
+
+**C. #3149（report lifecycle の閉路 + 祖先孤児化）** — 患部は区間内で 1 行も動いていない。
+
+| 役割 | ファイル / 行 |
+|---|---|
+| lifecycle 定義 | `plugins/github-pr-convergence/tools/pr-convergence-cli.ts:610-617` |
+| 遷移拒否点 | 同 `:920-924`（`:921` 判定 / `:923` メッセージ） |
+| stale 判定と #3110 経路 | 同 `:907-919`（`measuredBy` の定義は `:878`） |
+| landed 最終化の拒否点 | 同 `:763` |
+| `converged` を組み立てる箇所 | 同 `:120`（型）/ `:1454` |
+| sensor の binding 分岐 | `plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts:285-302`（`:294-295` head 一致、`:297-298` 分岐） |
+| checkout binding | 同 `:323-335`（`:331` `git rev-parse HEAD` / `:332-333` 不一致検出） |
+| 排他性の宣言 | 同 `:278-284` |
+| 祖先証明 | `plugins/github-pr-convergence/tools/pr-convergence-git-runner.ts:213-243`（`:224` / `:231` 判定、`:236` メッセージ、`:220-222` 短絡） |
+| sensor manifest（blocking / matches） | `plugins/github-pr-convergence/sensors/amadeus-pr-convergence-report-format.md`（frontmatter `default_severity: blocking`、`matches: "**/construction/*/code-generation/pr-convergence-report.md"`。本節で逐語確認） |
+
+**D. #3156（`workspace_requires` ガードの誤拒否）** — すべて `packages/framework/core/tools/amadeus-state.ts`。
+
+| 役割 | 行 |
+|---|---|
+| git repo 判定 | `:2491-2493` |
+| **共通起点** `intentBirthCommit` | `:2498-2504` |
+| プローブ (a) | `:2511-2521` |
+| `intentBoltSlugs` | `:2525-2536` |
+| `boltRefsForSlug`（4 候補） | `:2542-2549` |
+| プローブ (b) | `:2556-2563` |
+| `intentIssueRefs` | `:2568-2580` |
+| プローブ (c) | `:2595-2609` |
+| 合成 | `:2622-2632` |
+| テストシーム（export 済み） | `:2650-2679` `gitHasSourceWork` |
+| FS fallback 付き入口 | `:2685-2691` |
+| 判定点と拒否メッセージ | `:2726` / docs-only 免除 `:2734-2736` / メッセージ `:2738` |
+| 文書化済みバイパス | `:2712`（`AMADEUS_SKIP_ARTIFACT_GUARD`。文書は `docs/reference/12-state-machine.md §Artifact guard`） |
+
+**E. #3046（election store の TOCTOU）**
+
+| 役割 | ファイル / 行 |
+|---|---|
+| 設計前提のコメント（D-09） | `packages/framework/core/tools/amadeus-election-store.ts:17-20` |
+| `pendingPath` | 同 `:489-491` |
+| `readPendingVoter` | 同 `:493-525` |
+| 全体読み + **一意性検査** | 同 `:527-549`（検査は `:545-547`、ソートして返すのは `:548`） |
+| `appendPending` 本体 | 同 `:1032-1092` |
+| **窓の始点**（全体読み） | 同 `:1042` |
+| **採番** | 同 `:1063` |
+| **窓の終点**（自 voter のみ書込） | 同 `:1087-1090` |
+| `schemaVersion` | 同 `:1082` / `:504` |
+| `readAllPending` の内部呼出元 | 同 `:990` / `:1042` / `:1106` / `:1221` |
+| 本番の外部呼出元（1 箇所のみ） | `packages/framework/core/tools/amadeus-election.ts:318` |
+
+### 配置から読める構造上の含意
+
+**`amadeus-state.ts` に 3 領域が同居する。** 同ファイルは observed 断面で **6457 行**（`wc -l`、本節の実測）あり、#3153（`:3721-3772`）/ #3152 の呼出点（`:3744`）/ #3156（`:2491-2691`）が載る。行域は重ならないが、**PR 単位では直列化が安全**である（`cid:units-generation:c1` の「同一ファイル・進行中 PR との交差は直列化する」）。他の主要ファイルの規模は `amadeus-lib.ts` 9148 行 / `amadeus-intent-autonomy-production.ts` 1596 行 / `amadeus-election-store.ts` 1232 行 / `pr-convergence-cli.ts` 1634 行（同実測）。
+
+**dist 経由 import が 1 本ある。** `tests/unit/t206-source-work-intent-span.test.ts:33` 逐語 `import { gitHasSourceWork, workspaceHasSourceFile } from "../../dist/claude/.claude/tools/amadeus-state.ts";`（本節で逐語確認）。**#3156 の修正を検証するには `bun run build` を経て dist を再生成する必要がある**（`cid:code-generation:c1-mirror-and-rebuild-before-review` / `cid:code-generation:c5-regen-needs-build`）。
 
 機序は `architecture.md`、コンポーネント境界は `component-inventory.md`、テスト空白と台帳は `code-quality-assessment.md` の各対応節を参照。

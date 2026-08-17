@@ -5502,7 +5502,7 @@ record checkpoint を同梱すれば head は必ず前進するため、両者�
 
 配置と patch surface は `code-structure.md`、テスト空白と台帳は `code-quality-assessment.md` の各対応節を参照。
 
-## RFC-0001 autonomy の全 unit 着地と、オープンバグ 3 件のアーキテクチャ上の位置づけ（260816-open-bug-batch-7、現在、observed `5c5911ee3`）
+## RFC-0001 autonomy の全 unit 着地と、オープンバグ 3 件のアーキテクチャ上の位置づけ（260816-open-bug-batch-7、履歴、observed `5c5911ee3`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260816-priority-bug-batch-3 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: base `83e1dbeefb3278a00e86f69d3c79071a35ccf043`（前回 observed = 260815-stale-epoch-landed）→ observed `5c5911ee3f107152c3173701caf178a746b6e3aa`（`git rev-parse HEAD`、`origin/main` 一致断面）。区間規模は **28 コミット / 399 files changed, 22808 insertions(+), 1198 deletions(-)**（Developer scan §1 からの転記）。
 
@@ -5574,5 +5574,215 @@ pi ハーネスは packager 側では第一級だが、**自己インストー�
 #2363 と #3097 は**同じクラス**である — 導出可能な集合を手書きで複製し、その複製に対する検査が片側にしか掛かっていない（#2363 は「self-install ⊆ package」の一方向、#3097 は「06 のみ」の一部分）。是正の型も共通で、**正本から導出する**か、**検査を全数・双方向にする**かのいずれかになる。
 
 #2162 は別クラスで、正本そのものが移行で消えたのに参照と記録が残った「移行の残滓」である。是正は同期ではなく、死んだ経路の削除と、欠けている到達性検査の追加になる。
+
+配置と patch surface は `code-structure.md`、コンポーネント境界は `component-inventory.md`、テスト空白と台帳は `code-quality-assessment.md` の各対応節を参照。
+
+## 優先バグ 5 件のアーキテクチャ上の位置づけ — 権限・記録・並行性の 3 層（260816-priority-bug-batch-3、現在、observed `89053172e`）
+
+**観測 ref**: base `5c5911ee3f107152c3173701caf178a746b6e3aa`（前回 observed = 260816-open-bug-batch-7）→ observed `89053172ed8b5bb270e254aea029a13291d10b6b`（`git rev-parse HEAD`、`origin/main` と同一コミット）。区間規模は **15 コミット / 229 files changed, 6597 insertions(+), 17613 deletions(-)**（本節の実測: `git rev-list --count` と `git diff --shortstat`）。
+
+対象は [#3153](https://github.com/amadeus-dlc/amadeus/issues/3153) / [#3152](https://github.com/amadeus-dlc/amadeus/issues/3152) / [#3149](https://github.com/amadeus-dlc/amadeus/issues/3149) / [#3156](https://github.com/amadeus-dlc/amadeus/issues/3156) / [#3046](https://github.com/amadeus-dlc/amadeus/issues/3046) の 5 件。行番号はすべて observed 断面で本節の起草時に `sed -n` により逐語確認した。
+
+### 1. 区間の主変化 — 構造は動かず、削除が主体の区間
+
+前区間（28 コミット / 新規 core tool 5 本）と対照的に、本区間は**構造変化ゼロ**である。`git diff --name-status 5c5911ee3 89053172e -- packages/framework/core/tools/` は新規 0 / 削除 0 / **変更 4** のみで、`plugins/` と `packages/framework/harness/` はいずれも**空 diff・exit 0**（本節の実測）。
+
+変更 4 本の内訳は次のとおりで、いずれも小さい（Developer scan §1.4 からの転記、hunk 位置は同スキャンの実読）。
+
+| ファイル | 規模 | 内容 |
+|---|---|---|
+| `packages/framework/core/tools/amadeus-intent-autonomy.ts` | +10 −0 | `declaredFullAutonomy(stateContent)` を新規 export（R-22 / PR #3146） |
+| `packages/framework/core/tools/amadeus-state.ts` | +5 −2 | import 1 行と `authorizeApproval`（`:4165` 付近）の `isAutonomousMode` → `declaredFullAutonomy` 置換。hunk は `@@ -140 +140 @@` と `@@ -4162,7 +4162,10 @@` の 2 箇所のみ |
+| `packages/framework/core/tools/amadeus-sensor-self-scope-consistency.ts` | 小 | `SELF_HARNESSES` へ `".pi"` 追加（5 → 6 面、#2363 の着地） |
+| `packages/framework/core/tools/data/self-install-allowlist.ts` | 小 | `GENERATED_SELF_INSTALL_ROOTS` へ `".pi"` 追加（6 → 7 ルート、同上） |
+
+削除 17,509 行（非 record 面）の大半は #3155 による no-silent-drop bootstrap fixture 群の退役であり、これは**機構の削除であって置換ではない** — 正本は既に ULID event 台帳へ移っていた（前節 §3 参照）。
+
+**R-22 が本 intent の先行事例である。** `amadeus-state.ts:4165` の変更は「human checkpoint を落とす判断は**宣言**された Intent mode を見るべきで、Construction projection（semi も autonomous へ投影する）を見てはならない」という趣旨で、コメント逐語は「R-22: recovery is skipped only under DECLARED full — semi keeps its [R] revise loop, so the Construction projection (autonomous for semi too) must not decide this.」である（Developer scan §3.1 からの転記）。**#3153 が問う「autonomy の宣言を承認可否へどう効かせるか」と同じ論点系に属する**。
+
+### 2. #3153 — autonomy の宣言と presence の応答が結線されていない
+
+`assertHumanPresentForGateResolution`（`packages/framework/core/tools/amadeus-state.ts:3721-3772`）の制御フローには、autonomy 層の結論が承認可否へ流れる経路が**存在しない**。
+
+1. `verb === "approve"` のとき `productionStageAutonomy(stageAutonomyInput)` を呼ぶ（`:3744`）。
+2. `context.autoApprove` が真なら `commitProductionStageGateDecision` へ進み `grantId` を返す（`:3745-3754`）。
+3. **偽（= human-required）のとき、返り値はここで捨てられ、そのまま下の presence チェックへ落ちる**（`:3755-3756`）。
+4. `humanPresenceGuardDisabled()` の suite-wide off-switch（`:3757-3760`）。
+5. `humanActedSinceGate(pd, verb, intent, space)` が真なら `return null`（承認可）（`:3761`）。
+6. 偽なら `error(...)` で拒否（`:3769-3771`）。
+
+**接合部の正確な所在はステップ 3 と 5 の間**であり、autonomy が返す `authorizationReason`（`SCOPE_OUT` / `MODE_REQUIRES_HUMAN`）は本関数の中でただの一度も読まれない。すなわち autonomy 層の「この場面は人間が要る」という宣言は、**監査へ 1 行書く副作用としてのみ存在する**（その副作用が #3152 である）。
+
+承認可否を単独で決める `humanActedSinceGate`（`packages/framework/core/tools/amadeus-lib.ts:3926-3941`）の述語は「**直前の任意の解決イベント**（`GATE_APPROVED` / `GATE_REJECTED` / `QUESTION_ANSWERED`）以降に HUMAN_TURN があるか」であり、**どの問いに対する応答かを一切見ない**（Developer scan §3.1 の逐語引用）。したがって別目的で打たれた 1 ターンが milestone 承認として消費されうる。空 ledger は D8 により fail CLOSED である点は健全に働いている。
+
+**監査面の不在も構造の一部である。** `packages/framework/core/knowledge/amadeus-shared/audit-format.md:150` が定める `GATE_APPROVED` の任意フィールドは `User Input` / `Grant Id` / `Swarm batch` / `Transaction Id` の 4 つで、「人間が答えた」か「engine が未消費ターンで通した」かを表すフィールドは存在しない。すなわち**事前に区別できないだけでなく、事後にも区別できない**。
+
+区間内の currency は健全である — `amadeus-state.ts` の 2 hunk は `:140` と `:4162-4165` のみで、`:3721-3772` は**無変更**（本節の実測により行番号を再確認）。
+
+### 3. #3152 — 監査行の発行に occurrence 冪等鍵が無い
+
+`productionStageAutonomy`（`packages/framework/core/tools/amadeus-intent-autonomy-production.ts:295-328`）は、`authorizeProductionOccurrence` が非認可を返すたびに `emitAuthorizationRefusal`（`:354-370`、呼出点 `:314-319`）を呼ぶ。この関数の**唯一のガードは reason が `REFUSAL_REASONS`（`:333` = `["SCOPE_OUT", "MODE_REQUIRES_HUMAN"]`）に含まれるかどうかだけ**で、occurrence 単位の冪等鍵も既存行の探索も持たない（fail-open、emit 失敗はエラーにしない）。
+
+対照的に、**認可側は冪等である** — `commitProductionStageGateDecision`（`:901-913`）は既決の occurrence に対し `{ kind: "already-decided", grantId: ... }` を返す（`:913` 逐語）。すなわち同一ファイル内で**認可経路は occurrence 冪等、拒否経路は毎回 append** という非対称がある。これが本欠陥のアーキテクチャ上の核心である。
+
+呼出頻度がこの非対称を増幅する。`productionStageAutonomy` の本番呼出元は 2 つで、いずれも「occurrence あたり 1 回」ではない。
+
+| 呼出元 | 頻度 |
+|---|---|
+| `packages/framework/core/tools/amadeus-orchestrate.ts:2822`（`routeMainWorkflowDirective` 内） | **`next` の directive 発行ごと**（ゲート未開設でも発火） |
+| `packages/framework/core/tools/amadeus-state.ts:3744`（`assertHumanPresentForGateResolution` 内） | **approve 試行ごと**（失敗時も含む） |
+
+監査コーパスでの実測（本節の再実行、述語は `re-scans/260816-priority-bug-batch-3.md` §2.2 に再実行可能な形で記録）: `INTENT_AUTONOMY_HUMAN_REQUIRED` は **372 行**、distinct `idempotencyKey` も **372**（= 冪等抑止が一切効いていない）、`(intentId, Stage slug, Interaction Kind, Mode)` の最大重複は **20**。
+
+`packages/framework/core/knowledge/amadeus-shared/audit-format.md:297` の契約は「**an occurrence** the active mode could not decide on its own」（単数）と述べており、**実装はこの宣言に違反している**。`idempotencyKey` の枠は emit 層に存在するが、occurrence 由来の決定的な値が渡されていない（発行行は毎回新規 UUID。逐語は Developer scan §3.2）。
+
+方式裁定の材料となる occurrence キーの構成要素は `interactionKind`（`:246-249`。`walkingSkeleton && skeletonGateFires` → `"walking-skeleton"`、それ以外は `phaseBoundary ? "phase-gate" : "stage-gate"`）と `occurrence(...)`（`:261`。`projection / stage / phase / graphRevision / walkingSkeleton / phaseBoundary / skeletonGateFires` から構成）である。`InteractionKind` の閉語彙は `amadeus-intent-autonomy.ts:113` の 4 値。
+
+### 4. #3149 — CLI の lifecycle 契約と sensor の attestation 契約が正面衝突する
+
+本件は**単一機構のバグではなく、独立した 2 コンポーネントが両立不能な契約を宣言している**という構造の問題である。患部は区間内で 1 行も動いていない（`plugins/` の空 diff・exit 0）。
+
+**クラス A: `converged` が final でありながら、sensor は live-head 一致を要求する。**
+
+CLI 側（`plugins/github-pr-convergence/tools/pr-convergence-cli.ts:610-617`）の `transitionAllowed` は `created` からのみ `converged` / `override` / `landed` への遷移を許し、`current === "converged"` を起点とする遷移を持たない（コメント逐語「Nothing transitions OUT of a final state, and no final state is rewritten as another.」）。違反は `:920-924` で `report lifecycle refused: converged -> landed` として拒否される。
+
+sensor 側（`plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts`）は `kind === "landed"` なら `checkMergeBinding`、**それ以外はすべて `checkCheckoutBinding`** へ振り分ける（`:297-298`）。後者は `git rev-parse HEAD` を record root で実行し `receipt.localHead` との一致を要求する（`:331-334`）。同ファイル `:278-284` のドキュメンテーションが両 binding の排他性を明示している（逐語「The two bindings are exclusive: neither kind may borrow the other's evidence.」）。
+
+したがって **`converged` report はマージ後に前進した checkout では恒久 FAIL** する。sensor は `default_severity: blocking` で `matches: "**/construction/*/code-generation/pr-convergence-report.md"` を宣言するため、code-generation の stage approve を fail-closed で止める。**CLI は遷移を拒み、sensor は現状を通さない** — これが閉路である。
+
+**クラス B: 祖先孤児化した created epoch。**
+
+`verifyMergedEpochAncestry`（`plugins/github-pr-convergence/tools/pr-convergence-git-runner.ts:213-243`）は `refs/pull/<n>/head` を fetch したうえで `git merge-base --is-ancestor` を判定し（`:224` / `:231`）、不成立なら `:236` のメッセージを返す（呼出側 `pr-convergence-cli.ts:763`）。CLI の stale 判定（`:907-919`）は `report.kind === "landed" && measuredBy(...)` のとき `{ kind: "write" }` を返す #3110 経路を持つが、**この経路は created epoch の祖先性が健全であることを前提とする**ため、レーン rebase で孤児化した場合には成立しない。
+
+**#3110 との関係が本件の位置づけを決める。** 前区間で着地した PR #3113 は「report が created のままマージが先行した」stale 経路に `landed` 最終化を与えたが、**マージ前に converged を確定させた経路は救っていない**。むしろ `converged` を final とする定義が #3113 と同時に確認された（`cid:pr-convergence:converged-final-no-landed-rewrite`）。すなわち #3149 は #3110 の残余ではなく、**#3110 の是正が前提とした lifecycle 定義そのものと sensor 契約の衝突**である。
+
+### 5. #3156 — 3 プローブが単一の起点を共有しているため同時に失効する
+
+`workspace_requires` ガードの判定は 4 段の合成である（すべて `packages/framework/core/tools/amadeus-state.ts`）。
+
+| 関数 | 行 | 役割 |
+|---|---|---|
+| `intentBirthCommit` | `:2498-2504` | record `amadeus-state.md` を**追加した**コミット（`--diff-filter=A` の最古） |
+| `recordBranchSourceWork` | `:2511-2521` | プローブ (a)。`birth..HEAD` に非 doc パスがあるか（`--first-parent --no-merges`） |
+| `boltRefHasSourceWork` | `:2556-2563` | プローブ (b)。`refs/heads/bolt-<slug>` 等 4 候補を解決し `merge-base HEAD ref` からの diff に非 doc があるか |
+| `mergedPrSourceWork` | `:2595-2609` | プローブ (c)。`birth..HEAD` の commit subject が宣言 issue（`intentIssueRefs` `:2568-2580`）を参照し、かつ非 doc に触れるか |
+| `intentScopedSourceWork` | `:2622-2632` | (a) → (b) → (c) の短絡合成 |
+| `gitHasSourceWork` | `:2650-2679` | **export 済み**（テストシーム）。porcelain → `HEAD~1..HEAD` → doc-only なら `intentScopedSourceWork` |
+| `workspaceHasWork` | `:2685-2691` | `isGitRepo`（`:2491-2493`）なら上記、null なら FS fallback |
+| `evaluateStageArtifacts` | `:2710-` | `:2726` が `stage.workspace_requires && !workspaceHasWork(pd)` を判定。`:2734-2736` に docs-only 免除（#499 / #848）、`:2738` から拒否メッセージ |
+
+**構造的原因は「3 プローブが独立でない」ことにある。** (a) と (c) は判定範囲の起点が `intentBirthCommit` に固定され、(b) も同じ intent record から `Bolt Refs` を読む。したがって**record 初コミットがコードコミット群より後**という 1 つの形状が、3 つのプローブを**同時に**不成立にする。冗長化されているように見えて、実際には単一障害点を共有している。
+
+各プローブの失効理由（Developer scan §3.4 の実読による）: (a) は範囲 `birth..HEAD` の外にコードコミットがあるため false、(b) は bolt ブランチが HEAD の祖先だと merge-base = ref 先端で diff が空になり false（加えて `Bolt Refs` が空なら `:2625` のループ自体が回らない二重の不成立）、(c) は birth 以降の subject が record checkpoint のみで issue 参照を含まないため false（squash マージ後の main 側 subject は PR 番号のみ）。
+
+**この形状はチームのノルムが推奨する手順そのものである** — `cid:code-generation:c2-pr-record-in-head-checkout` が定める degrade スコープ solo Bolt の手順は record checkpoint を後から head checkout へ積む。すなわちノルム準拠の運用が構造的に guard を誤発火させる。現存する逃げ道は `:2712` の `artifactGuardDisabled()`（`AMADEUS_SKIP_ARTIFACT_GUARD`）のみで、これは `docs/reference/12-state-machine.md §Artifact guard` に文書化済みのバイパスである。
+
+### 6. #3046 — 「single writer」という設計前提が並行 voter で崩れる
+
+`packages/framework/core/tools/amadeus-election-store.ts:17-20` の設計コメントが前提を明示している（逐語）: 「Single writer (conductor) by decision D-09 — no locking; torn writes are prevented by tmp+rename (writeStoreFile).」
+
+この前提のもとで `appendPending`（`:1032-1092`）は次の順で動く（Developer scan §3.5 の実読）: voter file id 検証（`:1037`）→ `load`（`:1038`）→ `encodeBallot`（`:1040`）→ **`readAllPending`（`:1042`、pending ディレクトリ全体を読む）** → 冪等判定（`:1044-1056`）→ `readPendingVoter`（`:1057-1062`）→ **全体 max+1 で採番（`:1063`）** → 既存イベント再エンコード + push（`:1069-1080`）→ **`writeStoreFile(pendingPath(dir, ballot.voter), ...)`（`:1087-1090`、当該 voter のファイルのみ）**。
+
+**TOCTOU の窓は「全体を読む `:1042`」と「自分のファイルだけ書く `:1088`」の間**にある。異なる voter の 2 プロセスが同時に `:1042` を通れば同じ max を観測し、同じ `arrivalSequence` を採番する。**それぞれ別ファイルへ書くため、`writeStoreFile` の tmp+rename は無力である** — 同機構が防ぐのは単一ファイル内の torn write であって、複数ファイル間の採番衝突ではない。防御と脅威のスコープがずれている。
+
+被害が恒久化する理由は一意性検査の位置にある。`readAllPending`（`:527-549`）は全 voter 横断で `if (new Set(events.map((event) => event.arrivalSequence)).size !== events.length) return err("corrupt");`（`:545-547`）を課す。**衝突が一度でも永続化されると、以後 `readAllPending` は恒久的に `err("corrupt")` を返す**。これに依存するのは append 経路だけではない（内部呼出元は `:990` / `:1042` / `:1106` / `:1221` で tally / integrate 系を含む）ため、当該選挙は全経路で停止する。
+
+**本番の外部呼出元は 1 箇所のみ**である（`git grep -n "appendPending"` の本番ヒット）: `packages/framework/core/tools/amadeus-election.ts:318`。残りはすべてテスト。これは是正の射程が狭いことを意味する一方、**現行テストがすべて逐次呼出であり並行 append を再現するテストが存在しない**（Developer scan §3.5 の grep 結果）ため、落ちる実証には別プロセス（`spawn`）か `readAllPending` と `writeStoreFile` の間へ割り込むシームが要る。
+
+Issue は破壊的変更を明示的に許容している（「過去の選挙データが新スキーマで読めなくなってもよい。互換レイヤー・移行シム・旧形式の再解釈は追加しない」）ため、`schemaVersion: 2`（`:1082` / `:504`）の変更も選択肢に入る。この許容は `memory/team.md` の Forbidden（要求されていない後方互換レイヤーを足さない）と整合する。
+
+### 7. 5 件の構造クラスと交差
+
+**3 つのクラスに分かれる。**
+
+- **権限層（#3153 / #3152）** — autonomy の宣言が、承認可否へは効かず（#3153）、監査へは効きすぎる（#3152）。**同一の呼び出し鎖の裏表**である。同じ `productionStageAutonomy` の戻り値が、片や捨てられ、片や無制限に記録される。
+- **記録層（#3149 / #3156）** — 実際に起きた事実（マージした / コードを書いた）を、機構が記録・判定できない。両者とも**回復手段が緊急バイパスのみ**で、両者とも**ノルムどおりの運用ほど踏みやすい**。
+- **並行性層（#3046）** — 設計前提（single writer）と運用実態（並行 voter）の乖離。他 4 件と異なり、現時点では潜在欠陥である。
+
+**交差**（unit 分割・直列化の判断材料）:
+
+| 領域 | 主要ファイル | 交差 |
+|---|---|---|
+| #3153 | `amadeus-state.ts:3721-3772`、`amadeus-lib.ts:3926-3941` | **#3152 と呼び出し鎖を共有**。#3156 とは同一ファイルだが行域は非重複（`:2498-2632` vs `:3721-3772`） |
+| #3152 | `amadeus-intent-autonomy-production.ts:295-370`、`amadeus-orchestrate.ts:2822`、`amadeus-state.ts:3744` | **#3153 と同一鎖**。別 unit にすると 2 ファイルで write scope が衝突 |
+| #3149 | `plugins/github-pr-convergence/tools/` 3 本 | **他 4 件と交差なし**。ただし本 intent 自身の PR 配送に使う機構であり自己適用の運用注意あり |
+| #3156 | `amadeus-state.ts:2491-2691` | #3153 / #3152 と同一ファイル。行域は非重複だが**同一ファイル PR は直列化が安全** |
+| #3046 | `amadeus-election-store.ts`、`amadeus-election.ts:318` | **他 4 件と交差なし** |
+
+台帳の係り（`cid:build-and-test:bt-ledger-resync`）: **#3152 の方式が `amadeus-orchestrate.ts:2822` を変える場合**、`amadeus/spaces/default/specs/tla/model-map.json` の impl ハッシュピンと `tests/.coverage-patch-allowlist.json` の意味的セレクタの resync が発火する。他 4 件は現時点で該当しない。
+
+### Interaction Diagrams
+
+#### #3153 / #3152 — 共有された呼び出し鎖の裏表
+
+```mermaid
+sequenceDiagram
+    participant U as approve verb / next directive
+    participant S as amadeus-state.ts assertHumanPresentForGateResolution
+    participant P as productionStageAutonomy (:295)
+    participant E as emitAuthorizationRefusal (:354)
+    participant L as amadeus-lib.ts humanActedSinceGate (:3926)
+    U->>S: approve(slug)
+    S->>P: 呼出 (:3744)
+    P->>E: reason が SCOPE_OUT か MODE_REQUIRES_HUMAN のとき (:314)
+    E-->>P: 監査 1 行を append（毎回あたらしい UUID の idempotencyKey）
+    P-->>S: autoApprove false と authorizationReason
+    Note over S: バグ 3153 — authorizationReason はここで捨てられる (:3755-3756)
+    S->>L: humanActedSinceGate(pd, verb) (:3761)
+    L-->>S: 直前の任意の解決以降に HUMAN_TURN があれば true
+    S-->>U: null（承認可）または error（拒否）
+```
+
+テキストフォールバック: approve verb と next directive の両方が `productionStageAutonomy` を呼ぶ。非認可のときは `emitAuthorizationRefusal` が監査行を 1 行 append するが、occurrence 冪等鍵を持たないため呼ばれた回数だけ行が増える（**#3152**）。呼出側へ返る `authorizationReason` は `assertHumanPresentForGateResolution` の中で読まれずに捨てられ、承認可否は下流の `humanActedSinceGate` が単独で決める（**#3153**）。両バグは同じ鎖の別の断面を指している。
+
+#### #3149 — CLI と sensor が同時に塞ぐ閉路
+
+```mermaid
+flowchart TD
+    A["create — report kind: created"] --> B["PR が pre-merge で収束"]
+    B --> C["report kind: converged を record へ書く"]
+    C --> D["PR がマージされ checkout が前進"]
+    D --> E["report で landed へ最終化を試みる"]
+    E --> F["CLI transitionAllowed :610-617 が拒否<br/>converged は final state"]
+    D --> G["blocking sensor が record を読む"]
+    G --> H["non-landed kind → checkCheckoutBinding :331-334<br/>local head 不一致で FAIL"]
+    F --> I["前進経路なし（緊急バイパスのみ）"]
+    H --> I
+```
+
+テキストフォールバック: `created` epoch から始まり、マージ前に収束が確定すると record は `converged` になる。マージ後に checkout が前進すると、(1) `landed` への書き換えは CLI の `transitionAllowed`（`converged` を final と定義）が拒否し、(2) 現状のまま置くと blocking sensor が `checkCheckoutBinding` で local head 不一致を検出して FAIL する。どちらの向きにも出口がなく、閉路が成立する。
+
+#### #3156 — 単一起点を共有する 3 プローブ
+
+```mermaid
+flowchart LR
+    B["intentBirthCommit :2498<br/>record 初コミット"] --> P1["(a) recordBranchSourceWork :2511<br/>birth..HEAD の非 doc パス"]
+    B --> P2["(b) boltRefHasSourceWork :2556<br/>bolt ref の merge-base..ref"]
+    B --> P3["(c) mergedPrSourceWork :2595<br/>birth..HEAD の subject が issue 参照"]
+    P1 --> S["intentScopedSourceWork :2622<br/>(a) → (b) → (c) の短絡合成"]
+    P2 --> S
+    P3 --> S
+    S --> G["workspaceHasWork :2685 → evaluateStageArtifacts :2726"]
+```
+
+テキストフォールバック: 3 つのプローブはいずれも `intentBirthCommit`（record 初コミット）を起点に持つ。したがって「コードコミットが record 初コミットより前にある」という 1 つの形状が 3 プローブを同時に不成立にし、合成関数 `intentScopedSourceWork` が false を返して `workspace_requires` ガードが誤拒否する。冗長に見えて単一障害点を共有している。
+
+#### #3046 — 全体読みと個別書きの間の TOCTOU 窓
+
+```mermaid
+sequenceDiagram
+    participant V1 as voter A のプロセス
+    participant FS as pending/ ディレクトリ
+    participant V2 as voter B のプロセス
+    V1->>FS: readAllPending (:1042)
+    FS-->>V1: 観測した max arrivalSequence は n
+    V2->>FS: readAllPending (:1042)
+    FS-->>V2: 観測した max arrivalSequence も n
+    V1->>FS: pending/A.json へ seq n+1 を書く (:1088)
+    V2->>FS: pending/B.json へ seq n+1 を書く (:1088)
+    Note over FS: 以後 readAllPending の一意性検査 (:545-547) が恒久的に corrupt を返す
+```
+
+テキストフォールバック: `appendPending` は pending ディレクトリ全体を読んで最大 `arrivalSequence` を求め（`:1042`）、max+1 を採番し（`:1063`）、自分の voter ファイルだけを書く（`:1088`）。読みと書きの間に別プロセスが同じ読みを行うと、同一 `arrivalSequence` が別ファイルへ 2 つ永続化される。`writeStoreFile` の tmp+rename は単一ファイル内の torn write を防ぐ機構なので、この衝突には作用しない。衝突が永続化されると `readAllPending` の全 voter 横断の一意性検査が `err("corrupt")` を返し続け、tally / integrate を含む全経路が停止する。
 
 配置と patch surface は `code-structure.md`、コンポーネント境界は `component-inventory.md`、テスト空白と台帳は `code-quality-assessment.md` の各対応節を参照。

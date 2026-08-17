@@ -2153,7 +2153,7 @@ base `78146f435a` → observed `83e1dbeef`。区間で動いた公開契約は *
 
 是正が公開契約に触れうる面は 2 つあり、いずれも方式選択に依存する — (1) `:746-748` の stale 拒否文言（ユーザー可視のエラー contract。現行文言は誤った回復手順を指示している）(2) `report` が MERGED × stale created で `kind: landed` を書けるようになる場合の verb 挙動。詳細は `architecture.md` / `code-quality-assessment.md` の各対応節を参照。
 
-## 区間の公開契約の変化（260816-open-bug-batch-7、現在、observed `5c5911ee3`）
+## 区間の公開契約の変化（260816-open-bug-batch-7、履歴、observed `5c5911ee3`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260816-priority-bug-batch-3 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 base `83e1dbeefb3278a00e86f69d3c79071a35ccf043` → observed `5c5911ee3f107152c3173701caf178a746b6e3aa`。本区間は**公開契約が大きく動いた区間**である（前 2 区間はいずれもほぼ無変化だった）。動いた面は 5 つ。
 
@@ -2186,5 +2186,63 @@ base `83e1dbeefb3278a00e86f69d3c79071a35ccf043` → observed `5c5911ee3f107152c3
 - **#2363**: `SELF_INSTALL_HARNESSES`（`scripts/plugin-projection.ts:59`）は `export const` の公開値で、複数テストが**逐語ピン**している（`toEqual(["claude","codex","cursor","kimi","opencode"])` / `toHaveLength(5)`）。派生する生成物契約は `.gitignore` の ignore 行と `.gitattributes`（導出元は `packages/framework/core/tools/data/self-install-allowlist.ts:12-19`）。**外部ユーザー向けの導入契約は無傷** — `docs/guide/harnesses/pi.md:36-48` の `bunx @amadeus-dlc/setup install --harness pi` は完全な導入経路を提供しており、欠落しているのは本リポジトリの dogfood self-install だけである。
 - **#2162**: `bootstrap-provenance.json` のフィールド契約（`bootstrapBaseRevision` / `preRevision` / `postRevision`。型は `tests/no-silent-drop/bootstrap.ts:53`、パースは `:186`）。`postRevision` に git 到達性の要求は**現行契約に存在しない**（`:283` の文字列等値のみ）ため、到達性を課す是正は契約の追加になる。
 - **#3097**: docs 自体は契約ではないが、`t3028` の `toEqual` 比較（`:47-51`）が「doc の表 = 導出コーパス」を契約として固定している。07 を射程へ入れる是正はこの契約の適用範囲を広げる形になる。対象集合は 14 ではなく **`matches` 宣言を持つ 13 件**（根拠は `docs/reference/07-sensor-system.md:210-212` の発火規約）。
+
+詳細は `architecture.md` / `component-inventory.md` / `code-structure.md` の各対応節を参照。
+
+## 区間の公開契約の変化と、優先バグ 5 件が触れる契約面（260816-priority-bug-batch-3、現在、observed `89053172e`）
+
+base `5c5911ee3f107152c3173701caf178a746b6e3aa` → observed `89053172ed8b5bb270e254aea029a13291d10b6b`。**本区間は公開契約がほぼ動かなかった区間**である（前区間は 5 面が動いた）。
+
+### 1. 区間の変化 — 実質なし
+
+| 契約面 | 実測（本節の再実行） | 判定 |
+|---|---|---|
+| audit イベント基数 pin | `git grep -n "EXPECTED_CANONICAL_COUNT).toBe" 89053172e -- tests/integration/event-registry-drift.test.ts` → `:51 expect(EXPECTED_CANONICAL_COUNT).toBe(98);` | **不変（98）** |
+| audit イベント registry 本体 | `git diff --name-only 5c5911ee3 89053172e -- 'packages/framework/core/tools/data/'` → `self-install-allowlist.ts` のみ | **不変** |
+| CLI verb | 変更 4 ファイルはいずれも verb dispatch を含まない。`amadeus-{orchestrate,log,bolt,config}.ts` は変更ファイル一覧に不在 | **不変** |
+| config leaf | 同上（`amadeus-config.ts` 無変更） | **不変** |
+| plugin | `git diff --name-only 5c5911ee3 89053172e -- 'plugins/'` → **空出力・exit 0** | **不変** |
+| harness | 同述語を `packages/framework/harness/` へ → **空出力・exit 0** | **不変** |
+| CI | `.github/workflows/ci.yml` に **+1 行**（self-install 面リストへの `.pi` 追加、`@@ -402,6 +402,7 @@`。Developer scan §1.5 からの転記） | 実質不変 |
+
+**内部 export が 1 件増えた**: `packages/framework/core/tools/amadeus-intent-autonomy.ts` の `declaredFullAutonomy(stateContent)`（+10 −0、R-22 / PR #3146）。これは framework 内部の関数 export であり、CLI・config・audit のいずれの外部契約にも現れない。
+
+### 2. 本 intent（5 バグ）が触れる契約面
+
+是正方式は未決（`memory/team.md` P1 の裁定事項）だが、**どの方式を採っても影響しうる契約面**は次のとおり。
+
+**#3153 — 監査スキーマと拒否メッセージ**
+
+- `GATE_APPROVED` の任意フィールドは `User Input` / `Grant Id` / `Swarm batch` / `Transaction Id` の 4 つ（`packages/framework/core/knowledge/amadeus-shared/audit-format.md:150` 逐語）。**「人間が答えた」か「engine が未消費ターンで通した」かを区別するフィールドは存在しない**。Issue の完了条件 (2) はこの不在を指すため、**是正はほぼ確実に監査スキーマの追加を伴う**（新フィールドか新イベントか）。新イベントを足す方式なら `tests/integration/event-registry-drift.test.ts:51` の基数 pin（98）が blocking で発火する。
+- ユーザー可視のエラー contract は `packages/framework/core/tools/amadeus-state.ts:3770` の拒否文言（逐語冒頭 `Refusing to ${verb} "${slug}": a real human has not acted at this gate since it opened.` … 末尾 `(autonomous Construction is exempt)`。本節で逐語確認）。autonomy の宣言を効かせる方式では、**この末尾の免除句が指す条件そのものが変わる**ため文言の同期が要る。
+
+**#3152 — 監査イベントの発行契約**
+
+- `packages/framework/core/knowledge/amadeus-shared/audit-format.md:297` が `INTENT_AUTONOMY_HUMAN_REQUIRED` を「**an occurrence** the active mode could not decide on its own」（単数）と宣言する。**現行実装（読み取りごとに 1 行）はこの宣言に違反している**ため、是正は契約の変更ではなく契約への復帰である。
+- `Reason` の値域は `REFUSAL_REASONS`（`amadeus-intent-autonomy-production.ts:333` = `["SCOPE_OUT", "MODE_REQUIRES_HUMAN"]`）、`Interaction Kind` の値域は `amadeus-intent-autonomy.ts:113` の 4 値（`"stage-gate" | "phase-gate" | "walking-skeleton" | "question"`）。**冪等鍵を occurrence から導出する方式ではこの 2 つの閉語彙がキーの構成要素になる**。
+- 新イベントを足さず既存行の冪等化に留める方式なら基数 pin（98）は発火しない。
+
+**#3149 — pr-convergence CLI の lifecycle 語彙とエラー contract**
+
+- report kind の閉語彙は **`created` / `converged` / `override` / `landed`** の 4 値（型宣言は `plugins/github-pr-convergence/tools/pr-convergence-cli.ts:114` / `:120` / `:130` / `:142`。本節で逐語確認）。
+- 遷移規則は `:610-617` の `transitionAllowed`（`created` からのみ 3 方向、`override → converged` のみ追加で許可）。**この規則自体がユーザー可視の契約**であり、`converged` を non-final にする方式は契約変更になる。
+- ユーザー可視のエラー文言は 3 本: `:923` `report lifecycle refused: ${previous.kind} -> ${report.kind}`、`:918` `report lifecycle stale: PR head changed; run create to begin a new created epoch`、`:763` `landed finalisation refused: ${ancestry.message}`（`ancestry.message` の実体は `pr-convergence-git-runner.ts:236`）。いずれも**回復手順を指示する文言**なので、経路が変われば文言も同期対象になる。
+- sensor manifest の宣言（`plugins/github-pr-convergence/sensors/amadeus-pr-convergence-report-format.md` の `default_severity: blocking` と `matches: "**/construction/*/code-generation/pr-convergence-report.md"`。本節で逐語確認）は、**この sensor が code-generation の stage approve を fail-closed で止める**という契約である。sensor 側で解く方式はこの宣言に触れる。
+
+**#3156 — ガードの拒否契約とテストシーム**
+
+- `gitHasSourceWork`（`amadeus-state.ts:2650-2679`）は **export 済みのテストシーム**であり、`tests/unit/t206-source-work-intent-span.test.ts` が dist 経由で import する（`:33` 逐語 `import { gitHasSourceWork, workspaceHasSourceFile } from "../../dist/claude/.claude/tools/amadeus-state.ts";`）。**シグネチャ変更は dist 再生成を伴う契約変更**になる。
+- `boolean | null` の三値契約（null = git 判定不能 → FS fallback）は `tests/integration/t185-stage-artifact-guard.test.ts:432-435` が固定している（`gitHasSourceWork` header contract。Developer scan §3.4 からの転記）。
+- 文書化済みバイパス `AMADEUS_SKIP_ARTIFACT_GUARD`（`:2712`、文書は `docs/reference/12-state-machine.md §Artifact guard`）は**ユーザー可視の運用契約**であり、是正後も残すか否かが判断点になる。
+
+**#3046 — election store の永続化スキーマ**
+
+- pending イベントの `schemaVersion` は **2**（書込 `amadeus-election-store.ts:1082`、検証 `:504`）。`readPendingVoter`（`:493-525`）は `schemaVersion !== 2` / `electionId` 不一致 / `arrivalSequence` が非負整数でない場合に `err("corrupt")` を返す **fail-closed** 契約を持つ。
+- **Issue が破壊的変更を明示的に許容している**（逐語「過去の選挙データが新スキーマで読めなくなってもよい。互換レイヤー・移行シム・旧形式の再解釈は追加しない」）ため、`schemaVersion` の繰り上げは選択肢に入る。これは `memory/team.md` の Forbidden（要求されていない後方互換レイヤーを足さない）と整合する。
+- `appendPending` の戻り値契約は `ElectionStoreResult<{ idempotent: boolean; arrivalSequence: number }>`（`:1032-1036`）。本番の外部呼出元は `packages/framework/core/tools/amadeus-election.ts:318` の 1 箇所のみなので、**戻り値を変える方式でも呼出側の追随範囲は狭い**。
+
+### 3. 契約面から見た方式選択の制約
+
+**基数 pin（98）が blocking の門番である。** 5 件のうち #3153 と #3152 は監査面へ届きうるが、**新イベントを増やす方式だけが `tests/integration/event-registry-drift.test.ts:51` を発火させる**。既存イベントへのフィールド追加や既存行の冪等化はこの pin を通過する。方式裁定時にこの分岐を明示すること。
 
 詳細は `architecture.md` / `component-inventory.md` / `code-structure.md` の各対応節を参照。

@@ -3873,7 +3873,7 @@ allowlist の 3 セレクタ（`tests/.coverage-patch-allowlist.json:4388` / `:4
 
 機序は `architecture.md`、patch surface の配置は `code-structure.md` の各対応節を参照。一次記録は Issue #3110 の 2 件のクロスレビューコメント。
 
-## 品質指標の区間差分と、オープンバグ 3 件のテスト空白（260816-open-bug-batch-7、現在、observed `5c5911ee3`）
+## 品質指標の区間差分と、オープンバグ 3 件のテスト空白（260816-open-bug-batch-7、履歴、observed `5c5911ee3`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260816-priority-bug-batch-3 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: base `83e1dbeefb3278a00e86f69d3c79071a35ccf043` → observed `5c5911ee3f107152c3173701caf178a746b6e3aa`。
 
@@ -3929,5 +3929,115 @@ allowlist の 3 セレクタ（`tests/.coverage-patch-allowlist.json:4388` / `:4
 | C（docs + t3028） | 0 | 0 | 0 | 台帳の係りなし。ただし t3028 を拡張して**新規テストファイルを足す場合は registry regen**が要る |
 
 いずれの領域も `amadeus-orchestrate.ts` を触らないため、`cid:build-and-test:bt-ledger-resync` が指す model-map の実装ハッシュピン resync は現時点では不要である（是正が同ファイルへ及んだ場合は再判定）。
+
+機序は `architecture.md`、コンポーネント境界は `component-inventory.md`、配置は `code-structure.md` の各対応節を参照。
+
+## 品質指標の区間差分と、優先バグ 5 件のテスト空白（260816-priority-bug-batch-3、現在、observed `89053172e`）
+
+**観測 ref**: base `5c5911ee3f107152c3173701caf178a746b6e3aa` → observed `89053172ed8b5bb270e254aea029a13291d10b6b`。
+
+### 1. 品質指標の差分 — coverage は微減、オープンバグは急増
+
+**測定元**: `metrics/2026-08-16T11-04-41-875Z-3e1c6a19ed5b.json`（base 側 = base コミット時点で tracked な最後の snapshot）と `metrics/2026-08-16T20-57-24-618Z-2555e5b42914.json`（observed 側 = 区間内で最後の snapshot）。**取得述語**: 各 JSON の `collectors.<name>.values` を `bun -e` で直読（本節の起草時に実行、exit 0）。区間内の snapshot は 4 件（`git diff --name-only 5c5911ee3 89053172e -- metrics/`）。
+
+| 指標 | collector | base | observed | 差 |
+|---|---|---|---|---|
+| coverage percent | `coverage` | 93.41934476465595 | 93.39685396775708 | **−0.0225pp** |
+| coverage hits / lines | `coverage` | 95724 / 102467 | 95474 / 102224 | −250 / −243 |
+| test files | `tests` | 1044 | 1045 | +1 |
+| assertions | `tests` | 13879 | 13891 | +12 |
+| failed files / assertions | `tests` | 0 / 0 | 0 / 0 | 横ばい（緑） |
+| unit_small / integration_medium | `test_pyramid` | 270 / 580 | 270 / 581 | ±0 / +1 |
+| loc core | `loc` | 148942 | 148956 | +14 |
+| loc tests | `loc` | 401163 | 384400 | **−16763** |
+| 関数数 / 閾値超過 | `ccn` | 7301 / 32 | 7295 / 32 | −6 / **±0** |
+| **open bugs** | `bugs` | 4 | **11** | **+7** |
+
+**読み方の注意が 2 点ある。**
+
+第一に、**coverage の微減（−0.0225pp）は退行ではなく母集団の縮小に伴う変動である。** loc tests が 16,763 行減っており、これは #3155 による no-silent-drop bootstrap fixture（JSON 群）の退役に対応する。hits と lines が同時に減っている（−250 / −243）ことから、`cid:build-and-test:bt-coverage-universe-inflation` が記す「大きなソースを 1 本のテストが import して母集団が膨らむ」クラスとは逆向きの、削除に伴う縮小である。**ただし Project Coverage Gate の相対条件（許容 0.02pp）に対して −0.0225pp は超過幅にある**ため、本 intent の実装 PR では merge-base 相対の再測定が要る（絶対下限と相対条件は AND 条件）。
+
+第二に、**open bugs の 4 → 11 は本区間がバグを増やしたのではなく、バグ探索で新規に可視化された結果である。** 本 intent が扱う 5 件はこの 11 件に含まれる。
+
+### 2. 台帳の同期状況 — 区間内で 2 台帳のみ動いた
+
+`git diff --stat 5c5911ee3 89053172e -- <5 台帳>`（本節の実測）:
+
+| 台帳 | 区間内の状態 |
+|---|---|
+| `amadeus/spaces/default/specs/tla/model-map.json` | **+2 −2**（`amadeus-state.ts` 変更に対応する impl ハッシュピンの resync。`cid:build-and-test:bt-ledger-resync` どおり同一変更で同期済み） |
+| `tests/.coverage-patch-allowlist.json` | **+0 −11**（エントリ削除のみ、追加なし） |
+| `tests/.coverage-registry.json` | **無変更** |
+| `tests/.complexity-baseline.json` | **無変更** |
+| `tests/.coverage-ratchet.json` | **無変更** |
+
+**上流の要確認事項を 1 件解消した。** Developer scan §1.7 / §5 は「新規テストファイル 1 件（`tests/integration/t2363-pi-self-install-delivery.integration.test.ts`）が入ったのに registry が regen されていない」を `cid:build-and-test:c1` に照らして要確認としていたが、**regen 不要が正しい**。根拠は 3 つの実測（すべて本節の起草時、observed 断面）:
+
+- registry の `unitClasses` は `["function","audit","scope","stage","hook","subcommand","render-surface"]` の **7 クラス**で `contract` を含まない（`bun -e` による JSON 直読、exit 0）
+- t2363 の `covers:` ヘッダは `contract:pi-self-install-delivery` の **1 件のみ**（`sed -n '1,6p'` の逐語）
+- `grep -c '"contract:' tests/.coverage-registry.json` → **0**（exit 1 = エラーなく不一致）。対照として `covers:` に `contract:` を宣言するテストファイルは **12 件**存在する（`git grep -l "^// covers:.*contract:" -- 'tests/**' | wc -l`）
+
+すなわち `contract:` 宣言は enumeration universe に寄与しないため、そのクラスだけを宣言するテストの追加は registry を動かさない。**ただし本 intent が `function:` / `audit:` / `subcommand:` 等の 7 クラスを宣言するテストを新規追加する場合は、`cid:build-and-test:c1` どおり regen 同梱が必須**である。
+
+### 3. 領域別のテスト空白
+
+**A. #3153 — 主座テストは厚いが、「宣言が効くか」の観点が無い**
+
+主座は `tests/unit/t188-human-presence-gate.test.ts` で、`// covers:` に `function:assertHumanPresentForGateResolution` / `function:humanActedSinceGate` / `function:hasOpenGate` / `function:isAutonomousMode` / `function:humanPresenceGuardDisabled` / `file:hooks/amadeus-mint-presence.ts` を宣言する。D8 の fail-closed（`:288`）、reject guard の同一述語経路（`:487`）、record scope seam（`:656-669`）を固定している（Developer scan §3.1 からの転記）。周辺は `t112-delegated-approval` / `t-delegate-answer-consume` / `t509-presence-legacy-shard` / `t208-presence-crossshard-tiebreak` / `t203-mint-presence-classify` / `t-approve-batch-presence-guard` / `t481-autonomy-canonical-state-write`（すべて実在を本節で確認）。
+
+**空白は「autonomy が human-required を宣言した状態で、無関係な HUMAN_TURN が承認を通してしまう」ケースである。** 既存テストは presence 述語の正しさ（誰の、どのレーンのターンか）を検査するが、**autonomy の結論と presence の結論が食い違う組み合わせを固定するテストが無い**。落ちる実証はこの組み合わせを作る形になる。
+
+**B. #3152 — 冪等性の assert は認可側にしか無い**
+
+主座は `tests/integration/t435-intent-autonomy-production.integration.test.ts` で、`productionStageAutonomy` と `commitProductionStageGateDecision` の両方を直接呼ぶ。**`:150` / `:162` / `:243-244` に `decided` → `already-decided` の冪等 assert がある**（Developer scan §3.2 からの転記）。すなわち**認可側の冪等性はテストで固定されているのに、拒否側には対応する assert が存在しない** — これがテスト空白の正確な形である。
+
+落ちる実証は「同一 occurrence に対し `productionStageAutonomy` を 2 回呼び、監査行が 1 行であること」を assert する形が自然で、既存テストが同関数を直接呼ぶ座を持つため seam は既にある。監査面へ新イベントを足す方式なら `tests/integration/event-registry-drift.test.ts` の基数 pin（98）が blocking で発火する。
+
+**C. #3149 — 個別の kind は厚くカバーされているが、衝突の組み合わせが無い**
+
+lifecycle 側の主座は `tests/unit/t481-pr-convergence-lifecycle.test.ts`、sensor 側の主座は `tests/integration/t450-pr-convergence-report-format-sensor.integration.test.ts`（`:294` / `:331-334` の検査）。周辺に `t3062-pr-convergence-landed-finalization`（#3062 の `created → landed`）、**`t3110-pr-convergence-stale-epoch-landed`（クラス B の直接の先行実装）**、`t534-pr-convergence-report-attestation`、`t541-pr-convergence-epoch-resume`、`t482-pr-convergence-landed`、`t534-pr-convergence-mandatory-lifecycle`、`t446-pr-convergence-predicate` / `t413-convergence-policy` ほか（Developer scan §3.3 の一覧。主要 6 本の実在を本節で確認）。
+
+**空白は「`converged` を確定させたあとにマージされ checkout が前進した」という組み合わせである。** CLI 側の遷移拒否も sensor 側の checkout binding も個別にはテストされているが、**両者が同時に塞ぐ状態を再現するテストが無い**。#3110 のテスト（t3110）は `created` 起点の stale 経路を扱っており、`converged` 起点は射程外である。
+
+**D. #3156 — 3 プローブの個別挙動は固定されているが、同時失効の形状が無い**
+
+主座は `tests/unit/t206-source-work-intent-span.test.ts`（`// covers: function:gitHasSourceWork`。ヘッダ `:6` / `:16` に 3 プローブの説明、`:190` に `recordBranchSourceWork` の first-parent 挙動、`:358` に `intentBoltSlugs` のディレクトリ置換ケース）。ガード全体は `tests/integration/t185-stage-artifact-guard.test.ts`（`:432-435` に「`HEAD~1` が無い場合は null を返し FS fallback へ落ちる」契約）。
+
+**空白は「record 初コミットがコードコミット群より後」という形状そのものである。** 3 プローブが同時に false になる fixture が無いため、誤拒否が再現されない。
+
+**検証上の制約が 1 つある**: t206 は `dist/claude/.claude/tools/amadeus-state.ts` から import する（`:33` 逐語、本節で確認）ため、**本領域の修正を検証するには `bun run build` を経て dist を再生成する必要がある**（`cid:code-generation:c1-mirror-and-rebuild-before-review` / `cid:code-generation:c5-regen-needs-build`）。
+
+**E. #3046 — 並行 append を再現するテストが 1 本も無い**
+
+主座は `tests/integration/t549-election-v2-store.integration.test.ts`（`:150-184` に冪等リトライ / duplicate / 複数 voter の append、`:263` / `:425-431` にエラー系、`:512` に canonical encoded form の保持）。周辺は `t235-election-store`（`:129-158`）と `t373-election-ballot-blind-storage`（`:103-155`）。いずれも実在を本節で確認。
+
+**空白は明確である — 現行テストはすべて逐次呼出であり、並行 append を再現するものが存在しない**（Developer scan §3.5 の grep 結果に該当なし）。落ちる実証には別プロセス（`spawn`）か、`readAllPending` と `writeStoreFile` の間へ割り込むシームが要る。**filesystem / process を使う medium test は integration 層に置く**（`cid:code-generation:c2-doctor-seam`）ため、主座 t549 と同じ層が置き場になる。
+
+### 4. 是正時に同期を要する台帳（領域別、実測）
+
+`grep -c <キー>` の転記（本節の起草時に実行、対象 tree = observed `89053172e`）:
+
+| キー | allowlist hit | registry hit | model-map hit | complexity-baseline hit |
+|---|---|---|---|---|
+| `amadeus-state` | **48** | **33** | **2** | **4** |
+| `amadeus-lib` | 2 | 0 | 0 | 0 |
+| `amadeus-intent-autonomy-production` | **9** | 0 | 0 | 0 |
+| `pr-convergence` | 4 | 2 | 0 | 0 |
+| `amadeus-election-store` | **15** | 0 | **1** | 0 |
+| `amadeus-orchestrate` | **30** | 0 | **2** | 0 |
+
+**判定**:
+
+- **A / B / D（`amadeus-state.ts` を触る 3 領域）** — allowlist 48 件・registry 33 件・model-map 2 件・complexity-baseline 4 件のすべてが係る。**行シフトを伴う修正では allowlist の意味的セレクタの再アンカーが要る**（`cid:code-generation:c5-ratchet-census-at-final-base` に従い census は**マージ先の最終 base** で採る）。model-map の impl ハッシュピンは `cid:build-and-test:bt-ledger-resync` どおり同一変更で resync する（是正は `bun plugins/formal-model-check/tools/amadeus-sensor-model-completeness.ts updateModelMap --impl-only`）。
+- **B が `amadeus-orchestrate.ts:2822` へ及ぶ場合** — allowlist 30 件と model-map 2 件が追加で発火する。**方式裁定の時点でこの分岐を明示すること**。
+- **C（`plugins/github-pr-convergence/`）** — allowlist 4 / registry 2 と係りは小さい。
+- **E（`amadeus-election-store.ts`）** — allowlist 15 / model-map 1。並行性テストの追加は新規テストファイルになる可能性が高く、その場合 **registry regen が必須**（`cid:build-and-test:c1`）。
+
+### 5. 本 intent の運用上の注意（後段への申し送り）
+
+- **単一 intent に 5 unit を載せる構成の制約**: `cid:code-generation:oq-singleton` により degrade スコープ（`self-fix`）では pr-convergence の Delivery Bolt authority が construction 配下の unit ディレクトリを**ちょうど 1 つ**であることを要求する。units-generation / delivery-planning を EXECUTE するか、`cid:code-generation:multiunit-pr-procedure` の per-unit PR 定型に従う必要がある。
+- **自己適用の注意（#3149）**: 本 intent の Bolt PR も pr-convergence 機構で収束させるため、**修正中の CLI を自 intent の配送に使う**。attestation は self-install 投影（`.claude/plugins/...`）からの起動を要する（`cid:code-generation:c2-pr-record-in-head-checkout`）。
+- **coverage の相対条件**: 区間で −0.0225pp の変動が既にあるため、実装 PR では merge-base 相対の再測定が要る（`cid:code-generation:coverage-patch-quick-pre-push-standard` の advisory 往復は push 後に CI と並列で回す — `cid:code-generation:push-first`）。
+- **フルスイート未実行**: 本スキャンはテストを一切実行していない（読取専用）。上記の「関連する既存テストファイル」は grep とヘッダ実読による同定であり、赤／緑は未測定である。
 
 機序は `architecture.md`、コンポーネント境界は `component-inventory.md`、配置は `code-structure.md` の各対応節を参照。

@@ -1,6 +1,33 @@
 # リバースエンジニアリング実施記録
 
-## 実行メタデータ（現在: 260816-open-bug-batch-7）
+## 実行メタデータ（現在: 260816-priority-bug-batch-3）
+
+- Date: `2026-08-17`
+- Intent: `260816-priority-bug-batch-3`
+- Repository: `amadeus`（単一 repo、root `/Users/j5ik2o/orca/workspaces/amadeus/bugfix-0817-1`）
+- Scope / depth / project type: `self-fix` / Minimal / Brownfield
+- Base commit: `5c5911ee3f107152c3173701caf178a746b6e3aa`（前回 observed = 260816-open-bug-batch-7。祖先性 `git merge-base --is-ancestor 5c5911ee3f107152c3173701caf178a746b6e3aa HEAD` → **exit 0**、本 synthesis の再実行）
+- Observed commit: `89053172ed8b5bb270e254aea029a13291d10b6b`（`git rev-parse HEAD`。`origin/main` と**同一コミット**で drift 0 — Developer scan §0.1 が `git rev-list --count` の双方向 0 を実測。`cid:reverse-engineering:c2-observed-mainline-commit`）
+- Distance: **15** コミット（`git rev-list --count 5c5911ee3..89053172e`、本 synthesis の再実行）
+- 差分規模: `git diff --shortstat 5c5911ee3 89053172e` → **229 files changed, 6597 insertions(+), 17613 deletions(-)**。非 record 面（`-- ':!amadeus/' ':!metrics/'`）は **65 files / +689 −17509**。`--name-status` の分類は **A 118 / D 11 / M 100**（いずれも本 synthesis の再実行）
+- 削除が挿入を大きく上回る区間: 削除 17,509 行の大半は #3155（no-silent-drop bootstrap provenance の退役）による fixture 削除（`tests/no-silent-drop/bootstrap/*.json` 群と `bootstrap-provenance.json`。Developer scan §1.3 の `--numstat` 上位表からの転記）
+- Scope of scan: **差分リフレッシュ**（base..observed 全域の棚卸し + 対象 5 バグ領域の深掘り）
+- Focus: オープンバグ 5 件 — [#3153](https://github.com/amadeus-dlc/amadeus/issues/3153)（autonomy の `human-required` 宣言が承認可否に効かない）/ [#3152](https://github.com/amadeus-dlc/amadeus/issues/3152)（`INTENT_AUTONOMY_HUMAN_REQUIRED` が読み取りごとに 1 行 append）/ [#3149](https://github.com/amadeus-dlc/amadeus/issues/3149)（pr-convergence の `converged` 閉路と祖先孤児化）/ [#3156](https://github.com/amadeus-dlc/amadeus/issues/3156)（`workspace_requires` ガードの 3 プローブが record 後追い形状を取りこぼす）/ [#3046](https://github.com/amadeus-dlc/amadeus/issues/3046)（election store の read-then-write TOCTOU）
+- 区間内容の帰属: 主体は intent `260816-open-bug-batch-7` の 3 unit 着地（#3155 / #2363 / #3097 = PR #3157 / #3161 / #3158）と `260815-rfc-autonomy-modes` の R-22 修正（#3146）。**本 intent の #3149 は区間内の `03fcd00ec`（`chore(record): checkpoint intent 260815-rfc-autonomy-modes — code-generation park at #3149`）で明示的に park された当の欠陥**であり、未修正のまま持ち越されている
+- 構造変化: **なし**。`git diff --name-status 5c5911ee3 89053172e -- packages/framework/core/tools/` は新規 0 / 削除 0 / **変更 4**（`amadeus-intent-autonomy.ts` / `amadeus-sensor-self-scope-consistency.ts` / `amadeus-state.ts` / `data/self-install-allowlist.ts`）。`plugins/` と `packages/framework/harness/` はいずれも**空 diff・exit 0**（本 synthesis の再実行）
+- 公開契約の変化: **実質なし**。audit イベント基数 pin は **98 で不変**（`git grep -n "EXPECTED_CANONICAL_COUNT).toBe" 89053172e -- tests/integration/event-registry-drift.test.ts` → `:51 toBe(98)`、本 synthesis の再実行）。CLI verb / config leaf / plugin / harness は不変。`.github/workflows/ci.yml` の +1 行（self-install 面リストへの `.pi` 追加）のみ
+- 中核知見（5 バグ）: **#3153** — `assertHumanPresentForGateResolution`（`amadeus-state.ts:3721-3772`）で autonomy が返す `authorizationReason` が制御フロー上どこにも読まれず、承認可否は `humanActedSinceGate`（`amadeus-lib.ts:3926-3941`）1 本が単独で決める。接合部の所在は `:3755-3756` と `:3761` の間。**#3152** — `emitAuthorizationRefusal`（`amadeus-intent-autonomy-production.ts:354-370`）の唯一のガードは `REFUSAL_REASONS`（`:333`）の閉語彙照合だけで occurrence 冪等鍵が無く、監査コーパスで **372 行 / distinct idempotencyKey 372**（本 synthesis の再実行、述語は re-scan §2.2）。**#3149** — CLI の `transitionAllowed`（`pr-convergence-cli.ts:610-617`）が `converged` を final と定義する一方、sensor（`amadeus-sensor-pr-convergence-report-format.ts:294` / `:331-334`）は non-landed kind へ live-head 一致を要求する正面衝突。**#3156** — 3 プローブ（`amadeus-state.ts:2511` / `:2556` / `:2595`）がすべて `intentBirthCommit`（`:2498`）起点で、record 初コミットがコードコミットより後の形状を原理的に取りこぼす。**#3046** — `appendPending`（`amadeus-election-store.ts:1032-1092`）が全体読み（`:1042`）→ max+1 採番（`:1063`）→ 自 voter ファイルのみ書き（`:1088`）で、`readAllPending` の一意性検査（`:545-547`）が衝突永続化後に恒久 `err("corrupt")` を返す
+- 品質指標: coverage **93.41934 → 93.39685**（**−0.0225pp**）、test files 1044 → 1045、assertions 13879 → 13891、loc core 148942 → 148956、loc tests **401163 → 384400**（−16763、#3155 の fixture 削除）、複雑度閾値超過 **32 → 32**（横ばい）、**open bugs 4 → 11**（+7）。測定元は区間境界の metrics snapshot JSON（`metrics/2026-08-16T11-04-41-875Z-3e1c6a19ed5b.json` / `metrics/2026-08-16T20-57-24-618Z-2555e5b42914.json`）の `collectors.<name>.values` 直読（本 synthesis の再実行）
+- 台帳: 区間内で `model-map.json` **+2 −2**（`amadeus-state.ts` 変更への impl ハッシュピン resync）/ `coverage-patch-allowlist.json` **+0 −11**（削除のみ）。`coverage-registry.json` と `complexity-baseline.json` は**無変更**
+- 上流の未決事項を 1 件解消: Developer scan §1.7 / §5 が「新規テスト 1 件（t2363）が入ったのに registry が regen されていない」を要確認としていたが、**regen 不要が正しい**。registry の `unitClasses` は `["function","audit","scope","stage","hook","subcommand","render-surface"]` の 7 クラスで `contract` を含まず（`bun -e` による JSON 直読、exit 0）、t2363 の `covers:` は `contract:pi-self-install-delivery` 1 件のみ（`sed -n '1,6p'`）。`grep -c '"contract:' tests/.coverage-registry.json` → **0**（exit 1 = エラーなく不一致）。すなわち enumeration universe に寄与しない
+- 未検証面: 5 件の是正方式は**本スキャンでは一切決めていない**（後続の裁定事項、`memory/team.md` P1）。テスト実行・`bun run build`・coverage・#3149 の閉路の実再現はいずれも未実行（本スキャンは読取専用）
+- 申し送り（重要）: `cid:code-generation:oq-singleton` により degrade スコープ（`self-fix`）は construction 配下の unit ディレクトリを**ちょうど 1 つ**であることを要求するため、**5 バグを 1 intent に載せる本構成では units-generation / delivery-planning を EXECUTE するか `cid:code-generation:multiunit-pr-procedure` の per-unit PR 定型に従う必要がある**。あわせて #3153 と #3152 は同一の呼び出し鎖（`amadeus-state.ts:3744` → `productionStageAutonomy:295` → `emitAuthorizationRefusal:314`）を共有し、#3156 も同一ファイル `amadeus-state.ts` を触るため、この 3 件は write scope の直列化が要る
+- Verification: git 状態変更（commit / branch / checkout / stash / merge / fetch）・GitHub 読書き・engine/state ツール実行（`amadeus-orchestrate.ts` / `amadeus-state.ts` / `amadeus-log.ts` / `amadeus-bolt.ts`）・`bun run build`・テスト実行は**すべてゼロ**。書き込みは `amadeus/spaces/default/codekb/amadeus/` 配下のみ
+- Updated artifacts: 本体 8 面すべてに本 intent の節を追記 + `reverse-engineering-timestamp.md`（本節）+ `re-scans/260816-priority-bug-batch-3.md`（新規）
+- 構造補修: 直前 intent `260816-open-bug-batch-7` の現在時制マーカー **8 件**を履歴へ降格（`api-documentation.md` / `architecture.md` / `business-overview.md` / `code-quality-assessment.md` / `code-structure.md` / `component-inventory.md` / `dependencies.md` / `technology-stack.md`。本文と行番号は保持、`cid:reverse-engineering:c1`）。降格対象の列挙述語は `grep -n "^## .*、現在、" *.md`（対象 = 本 codekb ディレクトリの 9 面、追記前）→ **8 行**
+- Per-intent record: `re-scans/260816-priority-bug-batch-3.md`
+
+## 実行メタデータ（履歴: 260816-open-bug-batch-7）
 
 - Date: `2026-08-16`
 - Intent: `260816-open-bug-batch-7`
