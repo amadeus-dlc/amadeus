@@ -155,6 +155,15 @@ function commitDirectCode(path: string, body: string): void {
   git(["commit", "-q", "-m", `code: ${path}`]);
 }
 
+// A non-doc file committed DIRECTLY on the current branch, with a caller-chosen
+// commit message - for probe (d)'s identity-attribution cases (a message that
+// does/doesn't reference a declared issue).
+function commitDirectCodeTagged(path: string, body: string, message: string): void {
+  writeFileAt(path, body);
+  git(["add", "-A"]);
+  git(["commit", "-q", "-m", message]);
+}
+
 // Land a workspace (non-doc) file via a NON-fast-forward MERGE commit from a
 // throwaway branch - models a sibling intent's PR pulled into the record branch.
 function mergeCodeBranch(path: string): void {
@@ -374,21 +383,26 @@ test("refuses (does not throw) when the state file is unreadable", () => {
 // it diverged from trunk ---------------------------------------------------
 
 // The exact #3156 shape: a single branch (conductor == bolt == record) forks
-// off `main`, gets DIRECT (non-merge) code commits, THEN the intent birth is
-// bundled onto it (cid:code-generation:c2-pr-record-in-head-checkout), then a
-// trailing doc-only sync commit with no issue reference in its subject. Probes
-// (a)/(c) only look birth..HEAD (the code is before birth) and probe (b) never
-// fires (Bolt Refs is empty, and even a same-slug ref would be an ancestor of
-// HEAD - an empty merge-base diff). Only probe (d) - the trunk-fork-relative
-// scan - covers this.
-test("recognises code committed before birth once this branch diverged from main (issue #3156)", () => {
+// off `main`, gets DIRECT (non-merge) code commits whose messages reference
+// this intent's declared issue (the real-world `Fixes #NNNN` convention), THEN
+// the intent birth is bundled onto it
+// (cid:code-generation:c2-pr-record-in-head-checkout), then a trailing doc-only
+// sync commit. Probes (a)/(c) only look birth..HEAD (the code is before birth)
+// and probe (b) never fires (Bolt Refs is empty, and even a same-slug ref
+// would be an ancestor of HEAD - an empty merge-base diff). Only probe (d) -
+// the trunk-fork-relative, issue-attributed scan - covers this.
+test("recognises code committed before birth once this branch diverged from main, when it references the declared issue (issue #3156)", () => {
   initGitRepo();
   commitDirectCode("README.md", "root\n"); // main baseline
   git(["checkout", "-q", "-b", "bugfix-solo"]);
-  commitDirectCode("packages/framework/core/tools/thing.ts", "export const a = 1;\n");
-  commitDirectCode("tests/unit/thing.test.ts", "export const b = 1;\n");
-  commitIntentBirth(); // birth AFTER the code, same branch, empty Bolt Refs
-  commitDoc("audit/sync.md", "chore(record): sync\n"); // no issue ref in the message
+  commitDirectCodeTagged(
+    "packages/framework/core/tools/thing.ts",
+    "export const a = 1;\n",
+    "fix(thing): a\n\nFixes #697",
+  );
+  commitDirectCodeTagged("tests/unit/thing.test.ts", "export const b = 1;\n", "test(thing): b\n\nFixes #697");
+  commitIntentBirth([], [697]); // birth AFTER the code, same branch, declares #697
+  commitDoc("audit/sync.md", "chore(record): sync\n");
   expect(gitHasSourceWork(proj)).toBe(true);
 });
 
@@ -402,6 +416,27 @@ test("refuses when only a sibling intent's code was merged in after this branch 
   git(["checkout", "-q", "-b", "bugfix-solo"]);
   commitIntentBirth(); // this intent's birth, no code of its own yet
   mergeCodeBranch("src/sibling/feature.ts"); // sibling code arrives via --no-ff merge
+  commitDoc("audit/sync.md", "chore(record): sync\n");
+  expect(gitHasSourceWork(proj)).toBe(false);
+});
+
+// Identity-attribution negative: a sibling intent's commit reaches this branch
+// via a NON-merge path (e.g. cherry-pick) BEFORE birth - so --no-merges alone
+// cannot exclude it, and probe (a)/(c) (birth..HEAD) never see it either - but
+// its message references a DIFFERENT issue than this intent declares, and it
+// is not on any of this intent's bolt refs. Structural position alone (fork
+// point, first-parent, birth ancestry) would wrongly count it; probe (d) must
+// refuse for lack of an identity tie to THIS intent.
+test("refuses a cherry-picked sibling commit before birth that references a different issue (issue #3156 identity attribution)", () => {
+  initGitRepo();
+  commitDirectCode("README.md", "root\n"); // main baseline
+  git(["checkout", "-q", "-b", "bugfix-solo"]);
+  commitDirectCodeTagged(
+    "src/sibling/cherry.ts",
+    "export const c = 1;\n",
+    "fix(other): cherry-picked from sibling\n\nFixes #999",
+  );
+  commitIntentBirth([], [697]); // this intent declares #697, birth AFTER the sibling commit
   commitDoc("audit/sync.md", "chore(record): sync\n");
   expect(gitHasSourceWork(proj)).toBe(false);
 });

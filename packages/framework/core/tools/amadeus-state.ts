@@ -2634,8 +2634,8 @@ function resolveTrunkRef(pd: string): string | null {
 // when the bolt ref is an ancestor of HEAD rather than a divergent sibling.
 //
 // The fix widens the window to [trunk fork point .. HEAD] - still THIS branch's
-// own first-parent, no-merge history, so a sibling's merge-arrived code is
-// excluded exactly as it is for probe (a) (attribution, not just recency). Two
+// own first-parent, no-merge history, so a sibling's MERGE-arrived code is
+// excluded exactly as it is for probe (a) (attribution, not just recency). Three
 // safety properties keep this from over-firing:
 //   - when HEAD has not diverged from trunk (fp === HEAD, e.g. commits landed
 //     directly on trunk with no dedicated branch), the range is empty and the
@@ -2643,7 +2643,15 @@ function resolveTrunkRef(pd: string): string | null {
 //     (committed straight on trunk) from false-passing;
 //   - birth must lie within that same span, so a workspace accidentally checked
 //     out to an unrelated diverged branch (this intent's own birth commit not on
-//     it at all) cannot false-positive on someone else's branch history.
+//     it at all) cannot false-positive on someone else's branch history;
+//   - --no-merges only excludes MERGE-arrived code. A sibling's commit could
+//     still reach this branch via a non-merge path (cherry-pick, rebase onto
+//     this branch, etc.), so every candidate commit ALSO needs an identity tie
+//     to THIS intent - its message references one of the intent's declared
+//     issues (the same triple-gate mergedPrSourceWork already uses), OR it is
+//     reachable from one of the intent's OWN bolt branch refs (Bolt Refs field
+//     -> boltRefsForSlug, the same refs probe (b) resolves). A structurally
+//     in-range commit with neither signal is not counted.
 function branchSourceWorkSinceTrunkFork(pd: string, birth: string | null): boolean {
   if (birth === null) return false;
   const trunk = resolveTrunkRef(pd);
@@ -2652,15 +2660,23 @@ function branchSourceWorkSinceTrunkFork(pd: string, birth: string | null): boole
   if (forkPoint === null) return false;
   const fp = forkPoint.trim();
   if (git(pd, ["merge-base", "--is-ancestor", fp, birth]) === null) return false;
-  const log = git(pd, [
-    "log",
-    "--first-parent",
-    "--no-merges",
-    "--pretty=format:",
-    "--name-only",
-    `${fp}..HEAD`,
-  ]);
-  return log !== null && log.split("\n").some(isNonDocPath);
+
+  const shas = git(pd, ["log", "--first-parent", "--no-merges", "--pretty=format:%H", `${fp}..HEAD`]);
+  if (shas === null) return false;
+  const candidates = shas.split("\n").filter((l) => l.trim().length > 0);
+  if (candidates.length === 0) return false;
+
+  const issuePatterns = intentIssueRefs(pd).map((n) => new RegExp(`#${n}\\b`));
+  const boltRefs = intentBoltSlugs(pd).flatMap(boltRefsForSlug);
+
+  for (const sha of candidates) {
+    const files = git(pd, ["diff-tree", "--no-commit-id", "--name-only", "-r", sha]);
+    if (files === null || !files.split("\n").some(isNonDocPath)) continue;
+    const message = git(pd, ["show", "-s", "--format=%B", sha]);
+    if (message !== null && issuePatterns.some((re) => re.test(message))) return true;
+    if (boltRefs.some((ref) => git(pd, ["merge-base", "--is-ancestor", sha, ref]) !== null)) return true;
+  }
+  return false;
 }
 
 // Attribution rule (issue #731, extended by issue #3156): when the record
@@ -2674,10 +2690,11 @@ function branchSourceWorkSinceTrunkFork(pd: string, birth: string | null): boole
 //   (c) a commit since birth whose subject references THIS intent's declared
 //       issue(s) and touches non-doc files (mergedPrSourceWork) - covers a Bolt
 //       PR squash-merged to main and pulled into the record branch via a merge;
-//   (d) code committed directly onto the CURRENT branch BEFORE birth, since it
-//       diverged from trunk (branchSourceWorkSinceTrunkFork) - covers the solo-
-//       Bolt-worktree pattern where the record checkpoint is bundled onto the
-//       branch AFTER the code it belongs to (issue #3156).
+//   (d) an issue- or bolt-ref-attributed commit directly onto the CURRENT
+//       branch BEFORE birth, since it diverged from trunk
+//       (branchSourceWorkSinceTrunkFork) - covers the solo-Bolt-worktree
+//       pattern where the record checkpoint is bundled onto the branch AFTER
+//       the code it belongs to (issue #3156).
 function intentScopedSourceWork(pd: string): boolean {
   const birth = intentBirthCommit(pd);
   if (birth !== null && recordBranchSourceWork(pd, birth)) return true;
