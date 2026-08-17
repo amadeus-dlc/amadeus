@@ -370,6 +370,42 @@ test("refuses (does not throw) when the state file is unreadable", () => {
   expect(gitHasSourceWork(proj)).toBe(false);
 });
 
+// --- (issue #3156) probe (d): code committed BEFORE birth, on the branch since
+// it diverged from trunk ---------------------------------------------------
+
+// The exact #3156 shape: a single branch (conductor == bolt == record) forks
+// off `main`, gets DIRECT (non-merge) code commits, THEN the intent birth is
+// bundled onto it (cid:code-generation:c2-pr-record-in-head-checkout), then a
+// trailing doc-only sync commit with no issue reference in its subject. Probes
+// (a)/(c) only look birth..HEAD (the code is before birth) and probe (b) never
+// fires (Bolt Refs is empty, and even a same-slug ref would be an ancestor of
+// HEAD - an empty merge-base diff). Only probe (d) - the trunk-fork-relative
+// scan - covers this.
+test("recognises code committed before birth once this branch diverged from main (issue #3156)", () => {
+  initGitRepo();
+  commitDirectCode("README.md", "root\n"); // main baseline
+  git(["checkout", "-q", "-b", "bugfix-solo"]);
+  commitDirectCode("packages/framework/core/tools/thing.ts", "export const a = 1;\n");
+  commitDirectCode("tests/unit/thing.test.ts", "export const b = 1;\n");
+  commitIntentBirth(); // birth AFTER the code, same branch, empty Bolt Refs
+  commitDoc("audit/sync.md", "chore(record): sync\n"); // no issue ref in the message
+  expect(gitHasSourceWork(proj)).toBe(true);
+});
+
+// Two-sided negative (FR-4 acceptance (b)): on the SAME diverged-from-main
+// shape, a SIBLING intent's code arrives via a merge commit rather than a
+// direct commit. `--first-parent --no-merges` excludes it exactly as it does
+// for probe (a), so probe (d) must not attribute it to this intent - false.
+test("refuses when only a sibling intent's code was merged in after this branch diverged from main (issue #3156)", () => {
+  initGitRepo();
+  commitDirectCode("README.md", "root\n"); // main baseline
+  git(["checkout", "-q", "-b", "bugfix-solo"]);
+  commitIntentBirth(); // this intent's birth, no code of its own yet
+  mergeCodeBranch("src/sibling/feature.ts"); // sibling code arrives via --no-ff merge
+  commitDoc("audit/sync.md", "chore(record): sync\n");
+  expect(gitHasSourceWork(proj)).toBe(false);
+});
+
 // --- workspaceHasSourceFile: the FS-fallback half of the same guard ------------
 // (in-process for the same coverage reason as gitHasSourceWork above)
 
