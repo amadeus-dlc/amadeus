@@ -243,7 +243,12 @@ function gitSpawn(f: Fixture): GitSpawn {
         ? { code: 2, stdout: "" }
         : { code: 0, stdout: `${f.attested}\trefs/heads/${BRANCH}\n` },
     };
-    return { ...(table[key] ?? { code: 1, stdout: "" }), stderr: "" };
+    const answer = table[key];
+    // A silent exit-1 for an unscripted call would let a changed git sequence
+    // fail somewhere later, as a refusal that looks like the behaviour under
+    // test. Name the call instead.
+    if (answer === undefined) throw new Error(`t3149 fixture: unscripted git call "git ${key}"`);
+    return { ...answer, stderr: "" };
   };
 }
 
@@ -391,22 +396,40 @@ function reattest(
   );
 }
 
+/**
+ * The state every class-A finalisation starts from: a converged delivery the
+ * queue merged, the head branch deleted with it, and the conductor's checkout
+ * moved past the head the verdict was attested at.
+ */
+async function mergedAndMovedOn(mergedHead: (f: Fixture) => string = (f) => f.branchHead): Promise<Fixture> {
+  const f = await converged();
+  merge(f, mergedHead(f));
+  f.branchGone = true;
+  expect(moveCheckoutOn(f)).not.toBe(f.branchHead);
+  return f;
+}
+
+/** The same delivery once `report` has finalised its record in place. */
+async function finalised(mergedHead?: (f: Fixture) => string): Promise<Fixture> {
+  const f = await mergedAndMovedOn(mergedHead);
+  const out = await runCli(verbArgs("report", f), seams(f));
+  expect(out.stderr).toBe("");
+  expect(out.exitCode).toBe(0);
+  return f;
+}
+
 describe("#3149 class A — a converged record survives the merge and the checkout moving on", () => {
-  test("the sensor accepts the converged record while the checkout still holds its head", () => {
+  test("the sensor accepts the converged record while the checkout still holds its head", async () => {
     // The baseline the class-A defect breaks: nothing here has moved yet.
-    return converged().then((f) => {
-      const result = evaluateReportFormat(reportPathFor(f.record, UNIT), "pr-convergence");
-      expect(result.findings).toEqual([]);
-      expect(result.pass).toBe(true);
-    });
+    const f = await converged();
+
+    const result = evaluateReportFormat(reportPathFor(f.record, UNIT), "pr-convergence");
+    expect(result.findings).toEqual([]);
+    expect(result.pass).toBe(true);
   });
 
   test("report finalises the converged record in place against the merge it measured", async () => {
-    const f = await converged();
-    merge(f, f.branchHead);
-    f.branchGone = true;
-    const moved = moveCheckoutOn(f);
-    expect(moved).not.toBe(f.branchHead);
+    const f = await mergedAndMovedOn();
 
     const out = await runCli(verbArgs("report", f), seams(f));
     expect(out.stderr).toBe("");
@@ -424,12 +447,10 @@ describe("#3149 class A — a converged record survives the merge and the checko
   });
 
   test("the sensor accepts the finalised record though the checkout has moved on", async () => {
-    const f = await converged();
-    merge(f, f.branchHead);
-    f.branchGone = true;
-    const moved = moveCheckoutOn(f);
-    expect((await runCli(verbArgs("report", f), seams(f))).exitCode).toBe(0);
-    expect(git(["rev-parse", "HEAD"], f.work)).toBe(moved);
+    const f = await finalised();
+    // The record answers for the merge; the checkout it was written from is
+    // somewhere else entirely.
+    expect(git(["rev-parse", "HEAD"], f.work)).not.toBe(f.branchHead);
 
     const result = evaluateReportFormat(reportPathFor(f.record, UNIT), "pr-convergence");
     expect(result.findings).toEqual([]);
@@ -441,10 +462,7 @@ describe("#3149 class A — a converged record survives the merge and the checko
     // The binding follows the attested merge facts, so their shape is what
     // stands between "finalised against a merge" and "carries two strings".
     // A value gh could never have returned must not skip the checkout probe.
-    const f = await converged();
-    merge(f, f.branchHead);
-    moveCheckoutOn(f);
-    expect((await runCli(verbArgs("report", f), seams(f))).exitCode).toBe(0);
+    const f = await finalised();
     const path = reportPathFor(f.record, UNIT);
     expect(evaluateReportFormat(path, "pr-convergence").findings).toEqual([]);
 
@@ -459,10 +477,7 @@ describe("#3149 class A — a converged record survives the merge and the checko
   });
 
   test("a merge instant that does not parse is refused the same way", async () => {
-    const f = await converged();
-    merge(f, f.branchHead);
-    moveCheckoutOn(f);
-    expect((await runCli(verbArgs("report", f), seams(f))).exitCode).toBe(0);
+    const f = await finalised();
     const path = reportPathFor(f.record, UNIT);
 
     reattest(f, UNIT, (receipt) => ({ ...receipt, mergedAt: "whenever" }));
@@ -476,10 +491,7 @@ describe("#3149 class A — a converged record survives the merge and the checko
   });
 
   test("the finalisation is idempotent: a second report rewrites nothing", async () => {
-    const f = await converged();
-    merge(f, f.branchHead);
-    moveCheckoutOn(f);
-    expect((await runCli(verbArgs("report", f), seams(f))).exitCode).toBe(0);
+    const f = await finalised();
     const first = reportBody(f);
 
     const again = await runCli(verbArgs("report", f), seams(f));
@@ -491,14 +503,8 @@ describe("#3149 class A — a converged record survives the merge and the checko
   test("an epoch the merge carried by ancestry finalises in place, still converged", async () => {
     // The other axis: the branch advanced after the verdict, and the queue
     // merged the later head. `refs/pull/<n>/head` proves the epoch reached it.
-    const f = await converged();
-    merge(f, f.advancedHead);
-    f.branchGone = true;
-    moveCheckoutOn(f);
+    const f = await finalised((fixture) => fixture.advancedHead);
 
-    const out = await runCli(verbArgs("report", f), seams(f));
-    expect(out.stderr).toBe("");
-    expect(out.exitCode).toBe(0);
     const body = reportBody(f);
     expect(body).toContain("- kind: converged");
     const receipt = parseAttestation(body);
@@ -511,9 +517,7 @@ describe("#3149 class A — a converged record survives the merge and the checko
     // The finalisation names one merge. Meeting the same record with a second
     // one is a boundary that changed its answer, and re-binding would rewrite
     // evidence rather than record it.
-    const f = await converged();
-    merge(f, f.branchHead);
-    expect((await runCli(verbArgs("report", f), seams(f))).exitCode).toBe(0);
+    const f = await finalised();
     const before = reportBody(f);
     f.mergeCommit = "9".repeat(40);
 
@@ -589,12 +593,15 @@ describe("#3149 — the in-place finalisation answers for each member Unit separ
   test("a member Unit whose bytes moved under its receipt is refused", async () => {
     const f = await convergedPair();
     const path = reportPathFor(f.record, SECOND);
-    writeFileSync(
-      path,
-      memberBody(f).replace("- generated at: 2026-08-17T10:00:00Z", "- generated at: 2026-08-17T23:59:00Z"),
-      "utf-8",
+    const original = memberBody(f);
+    const tampered = original.replace(
+      "- generated at: 2026-08-17T10:00:00Z",
+      "- generated at: 2026-08-17T23:59:00Z",
     );
-    const tampered = memberBody(f);
+    // A replace that matched nothing would leave the record intact and test the
+    // happy path under a name that promises otherwise.
+    expect(tampered).not.toBe(original);
+    writeFileSync(path, tampered, "utf-8");
 
     const out = await runCli(memberArgs("report", f), seams(f));
     expect(out.exitCode).toBe(1);

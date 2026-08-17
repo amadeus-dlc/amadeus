@@ -580,6 +580,33 @@ describe("t450 attestation checks on a self-development record", () => {
     });
   });
 
+  test("a receipt carrying half a merge is malformed before any binding is chosen (#3149)", () => {
+    // The two fields travel together, so half a merge never reaches the
+    // binding question at all: the receipt itself is refused.
+    const body = attested(convergedPayload(), { mergeCommit: MERGE_SHA });
+    const self = selfRecord({ audit: auditRow(body) });
+    const result = evaluateReportFormat(self.reportAt(body), "pr-convergence");
+    expect(result.findings).toContainEqual({
+      field: "attestation",
+      reason: "missing or malformed CLI attestation",
+    });
+  });
+
+  test("a body naming half a merge still faces the merge binding (#3149)", () => {
+    // Stating one of the two facts is not a way back to the checkout binding:
+    // the record is bound to the merge it began to claim, and owes the rest.
+    const body = attested(
+      convergedPayload().replace("- converged: true\n", `- converged: true\n- merge commit: ${MERGE_SHA}\n`),
+    );
+    const self = selfRecord({ audit: auditRow(body) });
+    const result = evaluateReportFormat(self.reportAt(body), "pr-convergence");
+    expect(result.findings).toContainEqual({
+      field: "attestation",
+      reason: "a record bound to a merge attests the merge commit and the merge instant",
+    });
+    expect(fieldsOf(result)).not.toContain("local head");
+  });
+
   test("a record stating a merge its receipt never attested is a finding (#3149)", () => {
     // The other side of the same rule: merge facts are evidence only where the
     // receipt — and through it the audit shard — carries them.

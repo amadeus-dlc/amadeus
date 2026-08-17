@@ -89,6 +89,13 @@ checked for the shape a merge fact has — a commit object id and a timestamp
 that parses — by the same rule applied to the values a `landed` record states.
 A malformed value is a finding, never a fallback to the checkout binding.
 
+Half a merge is refused twice over, and neither refusal is a fallback to the
+checkout binding. A receipt carrying only the commit, or only the instant, is
+malformed by construction — the two fields travel together, so the receipt is
+rejected before any binding is chosen. A body that names one of them without a
+receipt attesting both still selects the merge binding, and the missing
+attestation is the finding.
+
 ## Independence from the plugin
 
 The checker re-reads the report with its own minimal line reader instead of
