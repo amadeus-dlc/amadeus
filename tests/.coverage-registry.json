@@ -32,7 +32,7 @@
     },
     "coveredByClass": {
       "function": 189,
-      "audit": 48,
+      "audit": 49,
       "scope": 15,
       "stage": 8,
       "hook": 15,
@@ -351,8 +351,13 @@
       "unitClass": "audit",
       "unitId": "INTENT_AUTONOMY_HUMAN_REQUIRED",
       "minMechanism": "none",
-      "coveredBy": [],
-      "status": "UNCOVERED"
+      "coveredBy": [
+        {
+          "file": "tests/integration/t482-autonomy-refusal-event.integration.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "audit",

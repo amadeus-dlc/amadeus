@@ -3916,9 +3916,10 @@ type LedgerPresenceSlot = PresenceSlot & { readonly provenance: "gate-open-turn"
 // Does this event open the gate for `stage` in a way a human could answer? A
 // `--recovered` backfill records a gate the engine opened after the fact, so it
 // never presented anything and cannot start a presence window.
-function opensGateFor(event: PresenceEvent, stage: string): boolean {
-  return event.gateOpen !== undefined && !event.gateOpen.recovered && event.gateOpen.stage === stage;
-}
+// (Declared on one line: bun's lcov stamps a standalone `function` header line
+// as a never-hit DA record even when the body runs, which the patch gate counts
+// as a miss.)
+function opensGateFor(event: PresenceEvent, stage: string): boolean { return event.gateOpen !== undefined && !event.gateOpen.recovered && event.gateOpen.stage === stage; }
 
 // The two slots a gate resolution ORs, stated once for both callers.
 //

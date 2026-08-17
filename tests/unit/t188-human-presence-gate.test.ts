@@ -436,6 +436,66 @@ describe("t188: human-presence approval gate (ledger-event design)", () => {
       expect(eventCount(backfilled, "GATE_APPROVED")).toBe(0);
     });
 
+    // The decision the scenarios above reach through a spawned CLI, asked
+    // directly of the predicate that makes it. Two things this pins that the
+    // end-to-end runs cannot: the verdict is a REASON (not just a refusal), and
+    // the SAME ledger answers differently depending on whether a milestone stage
+    // is named — which is the narrowing itself, isolated from every other guard
+    // the approve transaction runs. Imports the framework source rather than the
+    // shipped copy: the scenarios above already cover the distributable, and the
+    // milestone arms are otherwise only ever executed inside a child process.
+    test("M1: the presence predicate reports WHY, and narrows only when a milestone stage is named", async () => {
+      const { resolveGateResolutionPresence } = await import(
+        "../../packages/framework/core/tools/amadeus-lib.ts"
+      );
+
+      // No STAGE_AWAITING_APPROVAL for the stage at all.
+      const unopened = freshProject();
+      recordHumanTurn(unopened);
+      guarded(unopened, ["checkbox", `${ROUTINE}=in-progress`]);
+      guarded(unopened, ["gate-start", ROUTINE]); // a DIFFERENT stage's gate
+      expect(resolveGateResolutionPresence(unopened, "approve", MILESTONE)).toEqual({
+        ok: false,
+        reason: "gate-open-missing",
+      });
+
+      // A --recovered backfill is an opening nobody was shown.
+      const backfilled = freshProject();
+      guarded(backfilled, ["checkbox", `${MILESTONE}=in-progress`]);
+      guarded(backfilled, ["gate-start", MILESTONE, "--recovered"]);
+      recordHumanTurn(backfilled);
+      expect(resolveGateResolutionPresence(backfilled, "approve", MILESTONE)).toEqual({
+        ok: false,
+        reason: "gate-open-missing",
+      });
+
+      // Organic opening, turn typed BEFORE it: the milestone question refuses
+      // and the general question — same ledger, same call, no stage named —
+      // still accepts. This pair IS the narrowing.
+      const stale = freshProject();
+      guarded(stale, ["checkbox", `${MILESTONE}=in-progress`]);
+      recordHumanTurn(stale);
+      guarded(stale, ["gate-start", MILESTONE]);
+      expect(resolveGateResolutionPresence(stale, "approve", MILESTONE)).toEqual({
+        ok: false,
+        reason: "no-outstanding-human-act",
+      });
+      expect(resolveGateResolutionPresence(stale, "approve", null)).toEqual({
+        ok: true,
+        provenance: "gate-open-turn",
+      });
+
+      // Organic opening, turn typed after it: both questions accept.
+      const answered = freshProject();
+      guarded(answered, ["checkbox", `${MILESTONE}=in-progress`]);
+      guarded(answered, ["gate-start", MILESTONE]);
+      recordHumanTurn(answered);
+      expect(resolveGateResolutionPresence(answered, "approve", MILESTONE)).toEqual({
+        ok: true,
+        provenance: "gate-open-turn",
+      });
+    });
+
     // Which kinds the narrowing applies to is one classification, shared with
     // the pair semi leaves to the human. The end-to-end scenarios above drive
     // the phase-gate kind; walking-skeleton rides the same predicate, so pinning

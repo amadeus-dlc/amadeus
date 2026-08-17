@@ -3683,6 +3683,28 @@
   {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
+      "function": "assertHumanPresentForGateResolution",
+      "fingerprint": "sha256:3353e69026e9c4600fb042b93bc088fa6bd748f311325bece7f635528ba39dca",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "#3153 milestone presence: the arm that returns after the ledger proved presence. Every in-process test runs under the suite-wide AMADEUS_SKIP_HUMAN_PRESENCE_GUARD=1 and returns at the guard-disabled arm above, so this line is only ever reached with the guard ENABLED - which no test can do in-process (the enabled path is driven by t188 through spawned dist tools, and Bun does not merge child-process coverage into the parent LCOV report). Behaviour is asserted in t188 scenario M (exit code plus the GATE_APPROVED count) and its Approval Provenance value in t188 scenario M3; the presence decision itself is covered in-process through resolveGateResolutionPresence (amadeus-lib.ts).",
+    "expiry": "remove when an in-process driver can run the approve transaction with the presence guard enabled, or Bun merges child-process coverage"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
+      "function": "assertHumanPresentForGateResolution",
+      "fingerprint": "sha256:62666070740900af67707f1c55fa050abb22da4909c9cf53693c55dbaff123e6",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "#3153 milestone presence: the refusal for a milestone gate whose opening is not on the ledger. Doubly unreachable in-process - it sits past the guard-disabled arm that every in-process test takes, and error() terminates the process via process.exit(1), so an in-process test that reached it would kill the runner. The error path is NOT deferred: t188 scenario M2 drives both arms (no STAGE_AWAITING_APPROVAL at all, and a --recovered backfill only) through the spawned CLI and asserts the non-zero exit, the gate-start instruction in the message, and zero GATE_APPROVED; the gate-open-missing verdict it reports is covered in-process through resolveGateResolutionPresence (amadeus-lib.ts).",
+    "expiry": "remove when an in-process driver can run the approve transaction with the presence guard enabled, or error() becomes throw-based so refusals are observable in-process"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-state.ts",
+    "selector": {
       "function": "rejectUngroundedDelegation",
       "fingerprint": "sha256:ae58c0fa5cff70b7e808e1f5b5fb932edaea3c9b48e65e170e6b5413f684b349",
       "anchorLines": 1,
