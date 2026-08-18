@@ -27,6 +27,7 @@
 // path live in tests/integration/t511-blocking-sensor-gate.integration.test.ts.
 
 import { describe, expect, test } from "bun:test";
+import type { SpawnSyncReturns } from "node:child_process";
 import {
   resolveSensorsForStage,
   type SensorFile,
@@ -34,9 +35,9 @@ import {
 import type { SensorSeverity } from "../../dist/claude/.claude/tools/amadeus-sensor-schema.ts";
 import { evaluateBlockingSensors } from "../../dist/claude/.claude/tools/amadeus-state.ts";
 import {
-  digestFile,
-  resolveScriptPath,
-  spawnFailedOutcome,
+	digestFile,
+	decideOutcomeOrScriptError,
+	resolveScriptPath,
 } from "../../dist/claude/.claude/tools/amadeus-sensor.ts";
 
 // --- Layer 1 helpers: a minimal sensor roster -------------------------------
@@ -469,14 +470,25 @@ describe("t511 — evaluateBlockingSensors decision table (#2671 c)", () => {
   });
 
   test("spawn-failed remains a distinct script-error and is rejected by the blocking gate (#3029)", () => {
-    const outcome = spawnFailedOutcome("ENOENT", 1);
+    const error = Object.assign(new Error("spawn ENOENT"), { code: "ENOENT" });
+    const outcome = decideOutcomeOrScriptError(
+      {} as never,
+      60_000,
+      Date.now(),
+      () => ({
+        pid: 1,
+        output: ["", "", ""],
+        stdout: "",
+        stderr: "",
+        status: null,
+        signal: null,
+        error,
+      }) as SpawnSyncReturns<string>,
+    );
     expect(outcome.kind).toBe("passed");
-    if (outcome.kind !== "passed") throw new Error("spawnFailedOutcome must produce a passed audit outcome");
-    expect(outcome).toEqual({
-      kind: "passed",
-      durationMs: 1,
-      note: "script-error: spawn-failed: ENOENT",
-    });
+    if (outcome.kind !== "passed") throw new Error("spawn failure must produce a passed audit outcome");
+    expect(outcome.durationMs).toBeGreaterThanOrEqual(0);
+    expect(outcome.note).toBe("script-error: spawn-failed: ENOENT");
     const note = outcome.note ?? "";
     expect(note).toBe("script-error: spawn-failed: ENOENT");
     const fields = {

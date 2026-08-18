@@ -1,18 +1,20 @@
 # PR Convergence Report
 
-## 判定
+- kind: created
+- pull request: amadeus-dlc/amadeus#3204
+- generated at: 2026-08-18T11:47:35Z
+- converged: false
+## CLI Attestation
 
-本 Unit のローカル実装と検証を完了した。PR の作成・レビュー・CI 収束は後続の pr-convergence stage で実施する。
-
-## 実行証拠
-
-- Unit: `sensor-gate`
-- Requirements: `FR-1`〜`FR-8` を実装面・テスト面・文書面へ追跡。
-- Build: `bun run build` — 成功。
-- Typecheck: `bun run typecheck` — 成功。
-- Lint: `bun run lint` — 成功（既存 warning 474 件、exit 0）。
-- Target tests: `bun test --timeout 120000 tests/unit/t511-blocking-sensor-severity.test.ts tests/integration/t511-blocking-sensor-gate.integration.test.ts tests/integration/t92.test.ts` — 111 pass / 0 fail。
-- Blocking regression: exit 127 の `tool-unavailable` が t511 unit/integration で refusal となり、state を変更しないことを確認。
-- Audit regression: t92 が `SENSOR_PASSED` + `Note: tool-unavailable` を維持することを確認。
-- Spawn-failed separation: t511 unit `spawn-failed remains a distinct script-error and is rejected by the blocking gate` が `spawnFailedOutcome("ENOENT", 1)` → `script-error: spawn-failed: ENOENT` と blocking evaluator の `script-error` refusal を検証。t92 Group E test 19 の exit 2 は別分岐としてのみ確認し、spawn-failed の証拠には使用しない。
-- Test configuration: 既存の Bun test、`tsconfig.json` / `tsconfig.tests.json`、Biome 設定を確認し、設定ファイルの変更なし。
+- attestation id: prca:3d971199bd8fd2b1fd49a0e5d79e7a298a315372b3b2854982444a7eea67fc60
+- intent: issue-3029-sensor-gate
+- intent uuid: 01a01415-7f62-7ec7-93f8-57f64692b65f
+- record: amadeus/spaces/default/intents/260818-issue-3029-sensor-gate/
+- bolt: issue-3029-sensor-gate
+- unit: sensor-gate
+- repository: amadeus-dlc/amadeus
+- pr: 3204
+- local head: 27cf8a5b0b8b7d167de26922169c6bb59b1b17a7
+- remote head: 27cf8a5b0b8b7d167de26922169c6bb59b1b17a7
+- pr head: 27cf8a5b0b8b7d167de26922169c6bb59b1b17a7
+- content digest: sha256:1786481220b4f4f95be4b3917de950e797a6731310e2699f025401b12ff9d6c3

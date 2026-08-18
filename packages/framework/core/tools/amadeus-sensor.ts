@@ -762,10 +762,11 @@ function decideOutcome(
 	// Branch 0 — true spawn failure: error set AND status null AND signal null
 	// (e.g., bun off PATH → ENOENT). Narrowed so timeouts can't sneak in.
 	if (result.error && result.status === null && result.signal === null) {
-		return spawnFailedOutcome(
-			(result.error as NodeJS.ErrnoException).code,
-			elapsedMs,
-		);
+		return {
+			kind: "passed",
+			durationMs: elapsedMs,
+			note: `script-error: spawn-failed: ${(result.error as NodeJS.ErrnoException).code ?? "unknown"}`,
+		};
 	}
 
 	// Branch b — exit 127 (per-sensor script signalled tool-unavailable)
@@ -874,14 +875,6 @@ export function scriptErrorOutcome(err: unknown, elapsedMs: number): FireOutcome
 		kind: "passed",
 		durationMs: elapsedMs,
 		note: `script-error: spawn-threw: ${errorMessage(err)}`,
-	};
-}
-
-export function spawnFailedOutcome(errorCode: string | undefined, durationMs: number): FireOutcome {
-	return {
-		kind: "passed",
-		durationMs,
-		note: `script-error: spawn-failed: ${errorCode ?? "unknown"}`,
 	};
 }
 
