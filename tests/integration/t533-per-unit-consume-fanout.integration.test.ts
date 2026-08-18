@@ -1,12 +1,13 @@
 // covers: subcommand:amadeus-orchestrate:next, audit:UNIT_OUTCOME_SETTLED
 // size: large
 
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   consumePresentOnDisk,
+  handleNext,
   loadRuntimeUnitBatches,
   readPerUnitConsumePopulation,
   resolveConsumes,
@@ -288,6 +289,52 @@ function cancelSoloUnitThroughRuling(project: string, unit: string): void {
   });
   expect(ruled.status, ruled.stderr).toBe(0);
   expect(JSON.parse(ruled.stdout).kind, ruled.stdout).toBe("committed");
+}
+
+// Drive `next` IN-PROCESS over the project's own compiled graph and return the
+// directive it emitted. The spawned `next()` above crosses a process boundary
+// the parent LCOV cannot see, so the settle emitter's read of its OWN ledger is
+// also driven through the exported seam — the shape t367 uses for the same
+// reason.
+function nextInProcess(project: string): { kind: string } {
+  const previousGraph = process.env.AMADEUS_STAGE_GRAPH;
+  const previousGuard = process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
+  process.env.AMADEUS_STAGE_GRAPH = join(project, ".claude/tools/data/stage-graph.json");
+  process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = "1";
+  __resetGraphCache();
+  let raw = "";
+  const log = spyOn(console, "log").mockImplementation((value) => {
+    raw = String(value);
+  });
+  try {
+    handleNext([], project);
+  } finally {
+    log.mockRestore();
+    if (previousGraph === undefined) delete process.env.AMADEUS_STAGE_GRAPH;
+    else process.env.AMADEUS_STAGE_GRAPH = previousGraph;
+    if (previousGuard === undefined) delete process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
+    else process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = previousGuard;
+    __resetGraphCache();
+  }
+  return JSON.parse(raw) as { kind: string };
+}
+
+// Every settled per-unit outcome row on the ledger, as [idempotency key,
+// outcome] in the order the shard carries them.
+function settledLedger(project: string): (string | undefined)[][] {
+  return parseAuditRecords(readFileSync(seededAuditShard(project), "utf8"))
+    .filter((record) => record.event === "UNIT_OUTCOME_SETTLED")
+    .map((record) => [record.fields["Idempotency Key"], record.fields.Outcome]);
+}
+
+// Re-entry: a fresh solo attempt deletes the cancelled terminal, so the engine
+// observes a Unit in flight again rather than a cancelled one.
+function restartSoloUnit(project: string, unit: string): void {
+  const restarted = spawnSync(process.execPath, [
+    join(project, ".claude/tools/amadeus-bolt.ts"),
+    "start", "--name", unit, "--batch", "1", "--project-dir", project,
+  ], { encoding: "utf8", env: { ...process.env, AMADEUS_SKIP_HUMAN_PRESENCE_GUARD: "1" } });
+  expect(restarted.status, restarted.stderr).toBe(0);
 }
 
 describe("t533 orchestrator per-unit consume fan-out", () => {
@@ -915,25 +962,15 @@ describe("t533 orchestrator per-unit consume fan-out", () => {
     cancelSoloUnitThroughRuling(project, "unit-z");
     expect(next(project).status).toBe(0);
 
-    const settledKeys = () =>
-      parseAuditRecords(readFileSync(seededAuditShard(project), "utf8"))
-        .filter((record) => record.event === "UNIT_OUTCOME_SETTLED")
-        .map((record) => [record.fields["Idempotency Key"], record.fields.Outcome]);
-    expect(settledKeys()).toEqual([
+    expect(settledLedger(project)).toEqual([
       ["code-generation unit-a 1", "succeeded"],
       ["code-generation unit-z 1", "cancelled"],
     ]);
 
-    // Re-entry: a fresh solo attempt deletes the cancelled terminal, so the
-    // engine observes a Unit in flight again rather than a cancelled one.
-    const restarted = spawnSync(process.execPath, [
-      join(project, ".claude/tools/amadeus-bolt.ts"),
-      "start", "--name", "unit-z", "--batch", "1", "--project-dir", project,
-    ], { encoding: "utf8", env: { ...process.env, AMADEUS_SKIP_HUMAN_PRESENCE_GUARD: "1" } });
-    expect(restarted.status, restarted.stderr).toBe(0);
+    restartSoloUnit(project, "unit-z");
 
     expect(next(project).status).toBe(0);
-    expect(settledKeys()).toEqual([
+    expect(settledLedger(project)).toEqual([
       ["code-generation unit-a 1", "succeeded"],
       ["code-generation unit-z 1", "cancelled"],
       ["code-generation unit-z 1 #2", "succeeded"],
@@ -941,7 +978,7 @@ describe("t533 orchestrator per-unit consume fan-out", () => {
     // A settled observation that has not changed appends nothing, revision or no
     // revision.
     expect(next(project).status).toBe(0);
-    expect(settledKeys().length).toBe(3);
+    expect(settledLedger(project).length).toBe(3);
 
     // One row per Unit in the population — three ledger rows collapse to two
     // outcomes, and unit-z's is the one that superseded.
@@ -959,6 +996,55 @@ describe("t533 orchestrator per-unit consume fan-out", () => {
         `amadeus/spaces/default/intents/${DEFAULT_RECORD_DIR}/construction/${unit}/code-generation/${artifact}.md`
       )
     ));
+  });
+
+  // #3106 supersession, driven through the exported `handleNext` seam. The
+  // subprocess case above pins the sequence end to end; this one drives the
+  // SAME sequence in process, where the settle emitter's read of the ledger it
+  // already wrote is observable to the parent LCOV. What that read decides is
+  // asserted, not merely reached: which revision a changed observation lands
+  // as, and that an unchanged one lands nothing at all.
+  test("numbers a superseding revision off the rows it already settled, in-process", () => {
+    const project = seedPerUnitProject(undefined, "code-generation");
+    cancelSoloUnitThroughRuling(project, "unit-z");
+
+    // First settle: nothing is on the ledger yet, so both Units land at
+    // revision 1 — the bare triple, the key #3099 wrote.
+    expect(nextInProcess(project).kind).toBe("run-stage");
+    expect(settledLedger(project)).toEqual([
+      ["code-generation unit-a 1", "succeeded"],
+      ["code-generation unit-z 1", "cancelled"],
+    ]);
+
+    restartSoloUnit(project, "unit-z");
+
+    // Second settle: unit-z's observation CHANGED, so it lands beside the row
+    // it replaces as the NEXT revision of that triple — a number the emitter
+    // can only get from the rows already there. unit-a's observation is
+    // unchanged, so it appends nothing.
+    expect(nextInProcess(project).kind).toBe("run-stage");
+    expect(settledLedger(project)).toEqual([
+      ["code-generation unit-a 1", "succeeded"],
+      ["code-generation unit-z 1", "cancelled"],
+      ["code-generation unit-z 1 #2", "succeeded"],
+    ]);
+
+    // Third settle: no observation changed, so the ledger is untouched — with
+    // no history to compare against, both Units would re-settle at revision 1.
+    expect(nextInProcess(project).kind).toBe("run-stage");
+    expect(settledLedger(project)).toEqual([
+      ["code-generation unit-a 1", "succeeded"],
+      ["code-generation unit-z 1", "cancelled"],
+      ["code-generation unit-z 1 #2", "succeeded"],
+    ]);
+
+    // Three rows, two Units: the population carries the LAST observation of
+    // each, so unit-z reaches its consumers as the outcome that superseded.
+    expect([...(readPerUnitConsumePopulation(project)?.outcomes ?? [])]
+      .sort((a, b) => a.unit.localeCompare(b.unit))).toEqual([
+        { unit: "unit-a", outcome: "succeeded" },
+        { unit: "unit-z", outcome: "succeeded" },
+      ]);
   });
 
   // #3106 — the ground for the settle emitter having no `failed` arm: this path
