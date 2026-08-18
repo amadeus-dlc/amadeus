@@ -13,3 +13,20 @@
 ## 実行中の裁量確定(設計が実装時実測へ委譲した点 — 逸脱ではない)
 
 - `component-methods.md` C7 の但し書き「逐語は実装時に git 実測で確定」に従い、5クラス一律 `:(exclude,glob)` 形へ統一(metrics の素形 `:(exclude)metrics/**` 混在案を不採用)。根拠: 空間スコープ4クラスの素形は 0 件無音マッチの実測、形式統一による可読性。fixture+実履歴の両方で動作を実測済み
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-18T03:41:47Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+CG record artifacts for U2 re-input-exclusion are internally consistent with unit-of-work.md's ownership boundary and requirements.md's FR-EXC-1..6/FR-MEAS-2, carry measured verification (exit codes, ablation-based failure attribution, 2-arm falling proof) and a disclosed non-deviation discretion point; no circular dependency, no undisclosed deviation, no verification theater found within scope.
+
+### Findings
+
+- FOLLOW-UP | code-summary.md's file-change table rows sum to 525 insertions (56+29+248+167+25) but its total row states 523 insertions / 2 deletions - a 2-line mismatch in a section explicitly labeled as a literal transcription of git diff --stat ceca3f2f4..HEAD. Recommend re-verifying the exact command output against team.md's numbers-from-command-output-only norm.
+- FOLLOW-UP | FR-EXC-2/4/5/6 and FR-MEAS-2 carry explicit (FR-EXC-N AC) evidence tags in code-summary.md, but FR-EXC-1 (exclusion rule placed in Step 2 scan-target definition) and FR-EXC-3 (design-provenance citation disposition, only implicitly addressed via the ADR-3 no-new-citation mention) lack the same explicit tagging. Recommend adding an explicit FR-EXC-1..6 + FR-MEAS-2 AC coverage table for full traceability.
+- FOLLOW-UP | The single implementation-time discretion point (uniform :(exclude,glob) form) cites component-methods.md C7, components.md C5-U2, and ADR-2/ADR-3 - none of these application-design artifacts are in this reviewer's authorized read scope, so the citation chain could not be independently verified this pass. Artifacts are internally self-consistent; flagging as an unverified facet, not a defect.
+- NIT | code-generation-plan.md does not use the stage contract's literal sequential Step 1, Step 2, ... numbering (code-generation.md Step 2); it uses narrative headings instead. Acceptable as Minimal-depth compression but noting for format consistency.
