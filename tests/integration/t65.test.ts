@@ -172,8 +172,14 @@ beforeAll(() => {
   const produces = new Set<string>();
   const badSlugs: Aggregate["badSlugs"] = [];
   for (const p of parsed) {
-    if (Array.isArray(p.obj.produces)) {
-      for (const name of p.obj.produces as unknown[]) {
+    // Both output lists, for parity with the engine: producersOf
+    // (amadeus-graph.ts) resolves a producer from produces[] OR
+    // optional_produces[], so a model reading only the first would report a
+    // legitimately-produced artifact as an orphan consume.
+    for (const field of ["produces", "optional_produces"] as const) {
+      const list = p.obj[field];
+      if (!Array.isArray(list)) continue;
+      for (const name of list as unknown[]) {
         produces.add(name as string);
         if (typeof name !== "string" || !ARTIFACT_RE.test(name)) {
           badSlugs.push({ slug: p.slug, artifact: name });
