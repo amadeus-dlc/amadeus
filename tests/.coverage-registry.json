@@ -20,23 +20,23 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 634,
+    "total": 637,
     "enumeratedByClass": {
-      "function": 355,
+      "function": 357,
       "audit": 98,
       "scope": 15,
       "stage": 32,
       "hook": 15,
-      "subcommand": 112,
+      "subcommand": 113,
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 189,
+      "function": 191,
       "audit": 49,
       "scope": 15,
       "stage": 8,
       "hook": 15,
-      "subcommand": 86,
+      "subcommand": 87,
       "render-surface": 7
     }
   },
@@ -2669,6 +2669,18 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:issueEvidencePath",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t3181-issue-evidence-path.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:isValidRepoName",
       "minMechanism": "none",
       "coveredBy": [],
@@ -3723,6 +3735,18 @@
         {
           "file": "tests/unit/t203-codekb-rescan.test.ts",
           "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:relativeIssueEvidencePath",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/t3181-issue-evidence-path.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
@@ -7523,6 +7547,18 @@
       "coveredBy": [
         {
           "file": "tests/integration/t171-birth-gate-registry.test.ts",
+          "mechanism": "cli"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "subcommand",
+      "unitId": "amadeus-utility issue-evidence",
+      "minMechanism": "cli",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t3181-issue-evidence-fetch.integration.test.ts",
           "mechanism": "cli"
         }
       ],

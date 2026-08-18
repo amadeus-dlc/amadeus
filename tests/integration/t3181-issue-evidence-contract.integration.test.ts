@@ -42,6 +42,14 @@ function frontmatter(phase: string, slug: string): Record<string, unknown> {
   return parsed as unknown as Record<string, unknown>;
 }
 
+function consumedArtifacts(
+  phase: string,
+  slug: string,
+): Array<{ artifact: string; required: boolean }> {
+  const consumes = frontmatter(phase, slug).consumes;
+  return Array.isArray(consumes) ? consumes : [];
+}
+
 describe("t3181 issue-evidence is a produced artifact kind (FR-EVD-2)", () => {
   test("intent-capture declares it as an optional output in the source contract", () => {
     const optional = frontmatter("ideation", "intent-capture").optional_produces;
@@ -53,5 +61,54 @@ describe("t3181 issue-evidence is a produced artifact kind (FR-EVD-2)", () => {
     expect(producersOf("issue-evidence").map((s) => s.slug)).toEqual([
       "intent-capture",
     ]);
+  });
+
+  test("intent-capture points at the capture verb for issue-first intents", () => {
+    const body = stageSource("ideation", "intent-capture");
+    expect(body).toContain("issue-evidence fetch --issues");
+  });
+});
+
+describe("t3181 requirements-analysis consumes the evidence (FR-EVD-3)", () => {
+  test("declares it as an optional upstream input", () => {
+    expect(consumedArtifacts("inception", "requirements-analysis")).toContainEqual({
+      artifact: "issue-evidence",
+      required: false,
+    });
+  });
+
+  test("tells the stage to read it instead of re-deriving established facts", () => {
+    const body = stageSource("inception", "requirements-analysis");
+    expect(body).toContain("issue-evidence.md");
+    expect(body).toContain(
+      "Facts a cross-review has already established — mechanisms, `file:line` citations, acceptance criteria — are consumed, never re-derived",
+    );
+  });
+
+  test("keeps the upstream-coverage note in step with the whole consumes list", () => {
+    const body = stageSource("inception", "requirements-analysis");
+    const declared = consumedArtifacts("inception", "requirements-analysis").map(
+      (c) => c.artifact,
+    );
+    const note = body.slice(body.indexOf("- **`upstream-coverage`**"));
+    const parenthetical = note.slice(0, note.indexOf("\n"));
+    for (const artifact of declared) {
+      expect(parenthetical).toContain(`\`${artifact}\``);
+    }
+  });
+});
+
+describe("t3181 reverse-engineering consumes the evidence (FR-EVD-4)", () => {
+  test("declares it as an optional upstream input", () => {
+    expect(consumedArtifacts("inception", "reverse-engineering")).toContainEqual({
+      artifact: "issue-evidence",
+      required: false,
+    });
+  });
+
+  test("derives the recorded scan focus from it when it is present", () => {
+    const body = stageSource("inception", "reverse-engineering");
+    const scanRecord = body.slice(body.indexOf("**Per-intent scan record"));
+    expect(scanRecord).toContain("issue-evidence.md");
   });
 });

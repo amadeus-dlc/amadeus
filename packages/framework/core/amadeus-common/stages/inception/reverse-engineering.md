@@ -17,7 +17,9 @@ produces:
   - dependencies
   - code-quality-assessment
   - reverse-engineering-timestamp
-consumes: []
+consumes:
+  - artifact: issue-evidence
+    required: false
 requires_stage:
   - state-init
 sensors:
@@ -169,7 +171,16 @@ overwrite or git-conflict). Write into it: this intent's **base commit** (the co
 PREVIOUS scan observed, or the newest observed commit across `re-scans/` if this
 intent has no prior scan, or `none` when no re-scan record exists at all), the
 **observed commit** (repo HEAD at this scan), the **focus**
-(scan scope), and the **date**. On a later differential refresh, resolve this intent's
+(scan scope), and the **date**.
+
+Derive the **focus** from `<record>/ideation/intent-capture/issue-evidence.md`
+when that file is present: the filing Issue and its cross-review comments already
+name the mechanisms, paths and `file:line` citations under investigation, so the
+scan scope follows from them rather than from a fresh reading of the request.
+Record which of those the focus covers. Facts the cross-review established are
+consumed as given — scan to confirm the CURRENT shape of the code they name, not
+to rediscover the claim. Without that file (a non-issue-first intent, or a
+capture that failed), derive the focus from the user's request as before. On a later differential refresh, resolve this intent's
 base point by reading its OWN re-scan record; if this intent has no prior re-scan
 record, use the newest **observed commit** across the other records in
 `re-scans/` (or `none` — a first full scan — when that directory has no records) —

@@ -27,6 +27,8 @@ consumes:
     conditional_on: brownfield
   - artifact: team-practices
     required: false
+  - artifact: issue-evidence
+    required: false
 requires_stage:
   - approval-handoff
   - reverse-engineering
@@ -68,7 +70,11 @@ Load amadeus-product-agent persona from `agents/amadeus-product-agent.md` and kn
 ### Step 2: Load Prior Context
 
 - If brownfield: Read RE artifacts from `amadeus/spaces/<active-space>/codekb/<repo>/` (the directory `codekb-path --repo <repo>` prints)
+- If present, read `<record>/ideation/intent-capture/issue-evidence.md` as a PRIMARY input: it carries the filing Issue's body verbatim plus the independent cross-review comments.
+  - Facts a cross-review has already established — mechanisms, `file:line` citations, acceptance criteria — are consumed, never re-derived. Cite the evidence file and move on; re-derive only what the evidence leaves open, or what you can show has since changed.
 - Read user's project description from `<record>/audit/<host>-<clone>.jsonl`
+  (this is the whole input when the intent is not issue-first, or when the
+  capture failed)
 
 ### Step 3: Analyze User Request
 
@@ -182,7 +188,7 @@ This stage's outputs are markdown artefacts under `<record>/inception/requiremen
 The imported sensors check those outputs:
 
 - **`required-sections`** verifies the output contains the registry default (≥2 H2 headings). Failure mode: missing headings emit `SENSOR_FAILED` with detail at `<record>/.amadeus-sensors/<stage-slug>/required-sections-<iso>.md`.
-- **`upstream-coverage`** verifies the output prose references each artefact declared in this stage's `consumes:` frontmatter. Failure mode: missing upstream references emit `SENSOR_FAILED` listing each unreferenced artefact (this stage consumes `intent-statement`, `scope-document`, `team-practices`).
+- **`upstream-coverage`** verifies the output prose references each artefact declared in this stage's `consumes:` frontmatter. The sensor threads only the consumes whose artefact EXISTS on disk, so an input a lean scope never produced is not demanded. Failure mode: missing upstream references emit `SENSOR_FAILED` listing each unreferenced artefact (this stage consumes `intent-statement`, `scope-document`, `business-overview`, `architecture`, `code-structure`, `team-practices`, `issue-evidence`).
 - **`depth-budget`** measures `requirements.md` only: bytes per numbered `FR-n` against the ceiling for the resolved depth (Minimal 1,800 B/FR, Standard 2,400 B/FR; Comprehensive declares none). Failure mode: an overrun, or a written document carrying no `FR-n` ids, emits `SENSOR_FAILED` with the measurement and the ceiling. Advisory guidance, not a contract — it never blocks the gate, and it passes when the file is absent or empty, when no depth resolves, and at Comprehensive.
 
 ## Learn

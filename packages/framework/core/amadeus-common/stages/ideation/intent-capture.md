@@ -82,6 +82,23 @@ Create `<record>/ideation/intent-capture/stakeholder-map.md` containing:
 - Decision-makers vs. influencers
 - Communication requirements
 
+#### Issue-first intents: capture the filing evidence
+
+When this initiative starts from a GitHub Issue, capture that Issue and its
+cross-review comments into the record so the inception stages consume the
+established facts instead of re-deriving them:
+
+```
+bun {{HARNESS_DIR}}/tools/amadeus-utility.ts issue-evidence fetch --issues <n[,n...]>
+```
+
+It writes `<record>/ideation/intent-capture/issue-evidence.md` — the whole batch
+or nothing — and prints the path. The verb is read-only and idempotent: rerun it
+to refresh. A `gh` that is missing, unauthenticated, or failing exits non-zero
+and writes nothing; that is not a reason to stop. Record the failure in this
+stage's memory.md and continue on the user's free-text request, which is what
+every non-issue-first intent runs on anyway.
+
 ### Step 6: Update State
 
 Update `<record>/amadeus-state.md`:
