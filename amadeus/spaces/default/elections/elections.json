@@ -1696,5 +1696,11 @@
     "dirName": "260817-e-260817-pbb3-fix-method",
     "createdAt": "2026-08-17T00:52:46Z",
     "status": "partial"
+  },
+  {
+    "electionId": "E-260818-PBB4-FIX-METHODS",
+    "dirName": "260818-e-260818-pbb4-fix-method",
+    "createdAt": "2026-08-18T08:08:15Z",
+    "status": "recorded"
   }
 ]

@@ -5787,7 +5787,7 @@ sequenceDiagram
 
 配置と patch surface は `code-structure.md`、コンポーネント境界は `component-inventory.md`、テスト空白と台帳は `code-quality-assessment.md` の各対応節を参照。
 
-## 是正済み 5 欠陥の着地形と、inception コストが露出する 2 つの契約面（260817-inception-cost-batch、現在、observed `23d4ae767`）
+## 是正済み 5 欠陥の着地形と、inception コストが露出する 2 つの契約面（260817-inception-cost-batch、履歴、observed `23d4ae767`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260818-priority-bug-batch-4 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: base `89053172ed8b5bb270e254aea029a13291d10b6b`（前回 observed = 260816-priority-bug-batch-3）→ observed `23d4ae767956cd56fc28fa78abe28096712eff8a`（`git rev-parse HEAD` = `git rev-parse origin/main`、drift 0）。祖先性 `git merge-base --is-ancestor 89053172e HEAD` → **exit 0**。区間規模は **12 コミット / 123 files changed, 8023 insertions(+), 351 deletions(-)**（`git rev-list --count` と `git diff --shortstat`、本節の実測）。行番号はすべて observed 断面で本節の起草時に `git show ... | sed -n` により逐語確認した。
 
@@ -5960,3 +5960,125 @@ git diff --numstat 89053172e..23d4ae767 \
 **仮説（後続ステージの裁定事項として明示）**: #2415 の除外規則の挿入点が Preflight（`:81-95`）ではなく Step 2 の入力列挙（`:104-112` 付近）であること、#3181 が新規 gh 呼出でなく 3 つ目の read-only adapter として実装されること。いずれも本スキャンでは決めていない。
 
 配置と patch surface は `code-structure.md`、コンポーネント境界は `component-inventory.md`、公開契約は `api-documentation.md`、品質指標と台帳は `code-quality-assessment.md` の各対応節を参照。
+
+## 前 intent の 2 unit 着地が作った上流入力チェーンと、focus 2 件のアーキテクチャ上の位置づけ（260818-priority-bug-batch-4、現在、observed `127be70c5`）
+
+**観測 ref**: base `23d4ae767956cd56fc28fa78abe28096712eff8a`（前回 observed = 260817-inception-cost-batch）→ observed `127be70c5d7a584016f88a5d44e8715904020721`（`git rev-parse HEAD` = `git rev-parse origin/main`、drift 0）。祖先性 `git merge-base --is-ancestor 23d4ae767 HEAD` → **exit 0**。距離 **5**。区間規模は **99 files changed, 7314 insertions(+), 61 deletions(-)**（本節の実測）。行番号はすべて observed 断面で本節の起草時に確認した。
+
+区間の内容は、直前 intent `260817-inception-cost-batch` の 2 unit 着地（PR [#3190](https://github.com/amadeus-dlc/amadeus/pull/3190) = [#3181](https://github.com/amadeus-dlc/amadeus/issues/3181)、PR [#3191](https://github.com/amadeus-dlc/amadeus/pull/3191) = [#2415](https://github.com/amadeus-dlc/amadeus/issues/2415)）と、その直後の metrics snapshot 2 件・record checkpoint 1 件である。**前スキャンが「仮説 H1 / H2」として残した 2 点は、どちらも予測どおりの形で着地した** — H2（gateway を 3 つ目の read-only adapter として再利用する）はそのまま、H1（除外規則の置き場は Step 2 の入力列挙付近）は「入力列挙の直後に新設サブセクション」という形で。
+
+### 1. 新しい上流入力チェーン — 1 artifact・3 つの消費モード
+
+`issue-evidence` は、**同じ 1 ファイルが 3 つの異なる強度で消費される**という、これまでのどの artifact とも違う結線を持って着地した。
+
+```
+[Stage 1.1 intent-capture]  optional_produces: issue-evidence
+      │   （issue-first の intent だけが produce する。それ以外は produce しない）
+      │   書込: <record>/ideation/intent-capture/issue-evidence.md
+      │   生成: bun amadeus-utility.ts issue-evidence fetch --issues <n[,n...]>
+      │
+      ├──────────────→ [Stage 2.3 requirements-analysis]
+      │                    consumes: - artifact: issue-evidence / required: false
+      │                    → upstream-coverage sensor の引用義務が **かかる**
+      │                      （ただしディスク上に存在するときだけ）
+      │
+      └──────────────→ [Stage 2.1 reverse-engineering]
+                           consumes: [] のまま（frontmatter に載せない）
+                           → 本文レベルの読取。upstream-coverage の義務は **かからない**
+                           → 用途: scan focus の導出と、確立事実の所与消費
+```
+
+テキストフォールバック: `intent-capture` が `optional_produces` として 1 ファイルを書き、`requirements-analysis` は宣言 consume（`required: false`）として読み、`reverse-engineering` は宣言せず本文レベルで読む。
+
+**この非対称は意図的であり、契約に明文の理由がある。** `stages/inception/reverse-engineering.md`（observed `:239`）の逐語:
+
+```
+This read is deliberately body-level and NOT a `consumes:` entry. A declared
+consume would put all nine codekb outputs under the upstream-coverage citation
+obligation the moment an evidence file exists — inception ceremony, which is
+what this capture exists to remove. Do not add the frontmatter entry.
+```
+
+**アーキテクチャ上の含意**: 宣言 consume は「引用義務」という副作用を伴う結線であり、**入力の有用性と引用義務は分離できる**ことがここで初めて明示された。9 成果物を produce する stage が 1 件の入力を宣言すると、義務が 9 面へ波及する — したがって義務を望まない読取は本文レベルに置く、という設計判断である。前区間 §3.3 が「consume だけの artifact は graph の hard error」という制約を記したが、その裏面として「produce 側だけを宣言し consume 側を宣言しない」形が正規化された。
+
+**`optional_produces` の実運用が 2 → 3 stage へ**（census の正本は `tests/integration/t212-optional-produces.test.ts:275`、逐語 `.toEqual(["intent-capture", "functional-design", "infrastructure-design"])`）。それまで `optional_produces` は construction phase の 2 stage だけが使う面だったが、**ideation phase の stage が初めて加わった**。
+
+**graph モデルの是正が同時に必要だった。** `producersOf`（`amadeus-graph.ts:856`）は `produces[]` と `optional_produces[]` の**両方**から producer を解決するが、`tests/integration/t65.test.ts` の孤児 consume モデルは `produces[]` しか読んでいなかった。本区間で `:175-182` が両リストを走査する形へ是正された（逐語コメント `Both output lists, for parity with the engine: producersOf … resolves a producer from produces[] OR optional_produces[], so a model reading only the first would report a legitimately-produced artifact as an orphan consume.`）。**graph 不変量の検査モデルが engine の実装より狭かった、という種類のドリフト**であり、新しい結線が初めてそれを露出させた。
+
+### 2. RE スキャン入力の除外機構 — 散文とコードの二重定義を drift guard で固定する形
+
+`#2415` の是正は、**契約散文とコード定数を「同じ集合の 2 つの表現」として持ち、両者の一致をテストで固定する**形をとった。
+
+| 層 | 所在 | 役割 |
+|---|---|---|
+| 契約散文 | `stages/inception/reverse-engineering.md`（Scan input exclusions 節、+56 行） | conductor が読む正本。5 pathspec を逐語で載せる |
+| コード定数 | `packages/framework/core/tools/amadeus-lib.ts:1540` `RE_SCAN_EXCLUDED_PATHSPECS` | 機械が読む唯一の定義 |
+| drift guard | `tests/integration/t2415-re-scan-exclusion-contract.integration.test.ts:96` / `:159` | 両者の一致を固定。**source 断面だけでなく全 delivered tree** を検証 |
+| 挙動テスト | `tests/integration/t2415-re-scan-exclusion.integration.test.ts` | 実際の除外挙動（`:163` で宣言クラスとの一致、`:168` 以降で kept 集合） |
+
+**3 つの境界が契約に明記された**（いずれも `reverse-engineering.md` の逐語）:
+
+1. **`:(glob)` は load-bearing**。`amadeus/spaces/*/intents/` という裸の形は「有効な pathspec だが `*` が `/` を跨がないため何にも一致せず、何も除外せず、成功を返す」— 無音の fail-open。契約とコードコメント（`amadeus-lib.ts:1533-1535`）の両方が同じ警告を持つ。
+2. **`amadeus/spaces/*/specs/` は除外しない**。`specs/tla/model-map.json` と `specs/tla-evidence/` は `amadeus/spaces/` 配下にあるが、コード変更が resync 義務を負う build 台帳＝コード知識である（`cid:build-and-test:bt-ledger-resync` の対象面）。**前区間 §1.4 が「`amadeus/spaces/**` の前方一致は TLA ビルド台帳を巻き添えにする」と記した観測が、そのまま実装の制約として着地した。**
+3. **base-point 解決は除外の外**。base commit の解決は `re-scans/` を読む（codekb ストアの読取）ものであり diff 入力ではない。codekb を diff から除いても base 解決には影響しない。
+
+**4 つ目の規範が同時に入った**（逐語）: `Never cite a workflow process record the codekb does not already cite.` — 9 成果物はコードを記述するものであり、process record（intent record・選挙ストア・他 intent の stage 成果物）はもはやスキャン入力ではないため、**新規の引用は「この stage が見られないもの」を指すことになる**。既存の引用は履歴として残す。自 intent の確立事実は `issue-evidence.md` を経由して届く。
+
+**アーキテクチャ上の含意**: これは「スキャン対象の縮小」ではなく、**codekb が引ける情報源の閉包を定義する変更**である。差分入力から除いた面を成果物が引用すれば、成果物は自分が観測できないものを主張することになる。除外規則と引用規則が対で入っているのは、この閉包を保つためである。
+
+### 3. focus 2 件のアーキテクチャ上の位置づけ
+
+両 focus とも本区間で是正は着地していない（`git grep -n "3106" 127be70c5 -- packages/ plugins/ tests/ docs/` → **exit 1**。`"2837"` は `tests/.coverage-patch-allowlist.json:183` / `:566` の sha256 値の内部文字列 2 hit のみ）。両 Issue の確立事実は、独立クロスレビュー 2 名が成立した `issue-evidence.md`（本 intent の record、`ideation/intent-capture/`）から所与として消費し、本節はその名指す機構の**現在形**だけを observed 断面で確認した。
+
+#### 3.1 #2837 — 「directive が唯一の routing 経路」という規約と、その規約が運ばない値
+
+engine は「stage 間の routing をすべて所有し、conductor は散文でそれを再導出しない」という規約を持つ（`amadeus-directive.ts:306-311` 逐語 `the conductor reads the rest of the batch context off the compiled runtime graph, so this shape stays minimal.`）。**問題は「読める」と言っている先に読取経路が無いことである。**
+
+| 層 | 現況（observed の実測） |
+|---|---|
+| directive 契約 | `amadeus-directive.ts:312-331` の 6 面。閉語彙は `:555` の `INVOKE_SWARM_FIELDS` |
+| engine 内部 | `amadeus-orchestrate.ts:3906` `firstUncoveredBatch` が `{units, batchNumber}` を返し、`:4294` が `pick.units` だけを `emitConfiguredSwarm`（`:4074`）へ渡す |
+| conductor 面 | 8 harness face 中 **7 面**が `--batch <n>` の手動指定を要求（述語別 census は `component-inventory.md` の対応節） |
+| 読取経路 | `amadeus-swarm.ts:1419` の有効 subcommand 14 件に `context` / `status` 相当は**不在** |
+| 対称面 | 同じ engine が `execute-failure-election`（`amadeus-directive.ts:644-649`）では `batch` を必須搬送し、retry arm（`amadeus-orchestrate.ts:4092-4106`）では `prepared_batch` を搬送する |
+
+**位置づけ**: これは「directive にフィールドが足りない」より一段深い、**engine が保持している値を、engine が所有すると宣言した境界の外へ落としている**という形である。engine は batch identity を持ち（`firstUncoveredBatch` の戻り値）、gate 提示では人へ 1-origin 番号を開示し（`:3889` `batchGateQuestion`）、別 kind では directive へ載せている。**落ちるのは 1 経路（初回 fan-out の emit）だけ**である。
+
+**下流での意味の重さ**: batch 値は表示用の番号ではなく **durable な pool identity** である（`amadeus-swarm.ts:638` 逐語 `idempotencyKey: unit-pool:${flags.batch}:initial-enqueue`）。conductor が推測した値は `prepare` で「正の整数か」しか検査されず、そのまま pool 鍵になる — つまり**推測は fail-closed に弾かれず黙って採用される**。是正方式（directive を広げるか read verb を足すか）はいずれも公開契約の追加であり、未決である。
+
+#### 3.2 #3106 — 1 つの監査ストリームに対する 2 つの読み口の食い違い
+
+```
+                     ┌─ 検出側 ─────────────────────────────────┐
+                     │ cancelledConstructionUnits (:3934)        │
+   record/audit/ ───→│   → canonical projection を読む            │→ solo cancelled を **見る**
+   （単一の真実）      │     (amadeus-construction-outcome-        │
+                     │      projection.ts)                       │
+                     └───────────────────────────────────────────┘
+                     ┌─ 母集団側 ───────────────────────────────┐
+                     │ readPerUnitConsumePopulation (:2513)      │
+                  ───→│   → pool event set（実在行のみ）           │→ solo cancelled を **見ない**
+                     │   → readSettledUnitOutcomes (:2499)       │
+                     │       :2508 で "succeeded" 一語に閉じる      │
+                     └───────────────────────────────────────────┘
+```
+
+テキストフォールバック: 同一の監査ストリームを、検出側（`cancelledConstructionUnits`、`:3934`）は canonical projection 経由で読むため solo の cancelled terminal を見るが、母集団側（`readPerUnitConsumePopulation`、`:2513`）は pool 行と settle 行だけを読み、settle 行は `succeeded` に閉じている（`:2508`）ため solo cancelled を見ない。
+
+**位置づけ**: これは「語彙が 1 語足りない」ではなく、**同じ台帳に対する 2 つの読み口が、片方だけ canonical projection を通っている**という構造の問題である。発行側（`settlePerUnitOutcomes` `:4686`）は検出側の判定（`cancelledUnits`）を使って発行を抑止するため、**検出側が見た事実が母集団側へ渡らない**。結果として同じ Unit が「cancelled だから settle 不要」かつ「行が無いから pending」という矛盾した状態を構造的に取る。
+
+**下流は既に受け入れ準備ができている**: `amadeus-per-unit-consume-fanout.ts:199` の `KNOWN_OUTCOMES` は `cancelled` を正規値として持ち、`:224-228` の pending 述語は「行が無い」ことだけを見る。**行さえ届けば fail-closed は解ける** — つまり是正は上流（発行と読み口）に閉じ、fanout 側の契約は動かない。
+
+**是正方式は 2 系統ありうるが未決である**（`memory/team.md` P1 の裁定事項）: (a) settle 側に cancelled 語彙を足す（`:2475` の発行値と `:2508` の拒否条件を**同時に**開く必要がある）、(b) 母集団側を canonical projection から読むよう広げる。(a) は「engine が観測した事実を前へ記録する」という既存の設計線に沿い、(b) は読み口の分裂そのものを閉じる。**本スキャンはこの選択を行わない。**
+
+### 4. アーキテクチャ境界の不変性
+
+| 境界 | 述語 | 結果 |
+|---|---|---|
+| `packages/framework/core/` ⇔ `packages/framework/harness/<name>/` | `git diff --name-only 23d4ae767..127be70c5 -- packages/framework/harness/` | **空出力・exit 0** |
+| `plugins/<name>/{tools,stages,sensors}/` | 区間の変更ファイル一覧に `plugins/` は不在 | **不変** |
+| CI ワークフロー | `git diff --name-only 23d4ae767..127be70c5 -- .github/` | **空出力・exit 0** |
+| 外部依存 | `git diff --stat 23d4ae767..127be70c5 -- package.json bun.lock '**/package.json'` | **空出力・exit 0** |
+| audit イベント基数 | `tests/integration/event-registry-drift.test.ts:51` | **98（不変）** |
+
+**2 区間連続でディレクトリ再編ゼロ**である。本区間の変更はすべて既存モジュール内の責務追加と、stage 契約散文の追記に収まっている。
