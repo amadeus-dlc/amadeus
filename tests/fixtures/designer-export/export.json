@@ -844,12 +844,7 @@
         "code-quality-assessment",
         "reverse-engineering-timestamp"
       ],
-      "consumes": [
-        {
-          "artifact": "issue-evidence",
-          "required": false
-        }
-      ],
+      "consumes": [],
       "requires_stage": [
         "state-init"
       ],

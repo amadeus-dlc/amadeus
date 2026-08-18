@@ -76,7 +76,7 @@ Reverse Engineering はブラウンフィールドプロジェクトの既存コ
 ### 入力
 
 - `<record>/amadeus-state.md`(プロジェクトタイプの確認)
-- `<record>/ideation/intent-capture/issue-evidence.md`(存在する場合のオプション consume): 記録するスキャン focus は、そこに載る Issue とクロスレビューコメントから導出する
+- `<record>/ideation/intent-capture/issue-evidence.md`(存在する場合): 記録するスキャン focus は、そこに載る Issue とクロスレビューコメントから導出する。本文レベルの読取であり、意図的に `consumes:` 宣言にはしない — 宣言すると codekb 9 成果物すべてが upstream-coverage の引用義務下に入るため
 
 ### 手順
 

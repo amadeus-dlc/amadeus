@@ -119,9 +119,11 @@ artifacts reflect the current state of the codebase, not a stale snapshot.
 ### Inputs
 
 - `<record>/amadeus-state.md` (project type confirmation)
-- `<record>/ideation/intent-capture/issue-evidence.md`, if present (optional
-  consume): the recorded scan focus is derived from the Issue and cross-review
-  comments it carries
+- `<record>/ideation/intent-capture/issue-evidence.md`, if present: the recorded
+  scan focus is derived from the Issue and cross-review comments it carries.
+  Read at the body level, deliberately NOT a declared `consumes:` entry — a
+  declared consume would put all nine codekb outputs under the
+  upstream-coverage citation obligation
 
 ### Steps
 

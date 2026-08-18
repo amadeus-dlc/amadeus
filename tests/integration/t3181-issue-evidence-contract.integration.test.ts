@@ -112,16 +112,22 @@ describe("t3181 requirements-analysis consumes the evidence (FR-EVD-3)", () => {
 });
 
 describe("t3181 reverse-engineering consumes the evidence (FR-EVD-4)", () => {
-  test("declares it as an optional upstream input", () => {
-    expect(consumedArtifacts("inception", "reverse-engineering")).toContainEqual({
-      artifact: "issue-evidence",
-      required: false,
-    });
-  });
-
   test("derives the recorded scan focus from it when it is present", () => {
     const body = stageSource("inception", "reverse-engineering");
     const scanRecord = body.slice(body.indexOf("**Per-intent scan record"));
     expect(scanRecord).toContain("issue-evidence.md");
+  });
+
+  // Deliberately NOT a declared consume. A frontmatter entry would put every
+  // one of this stage's nine codekb outputs under the upstream-coverage
+  // citation obligation the moment an evidence file exists — exactly the
+  // inception ceremony this intent removes. FR-EVD-4's acceptance is a body
+  // grep, and the paragraph above satisfies it. Pinned so the entry cannot
+  // reappear by reflex.
+  test("does NOT declare it in frontmatter consumes", () => {
+    const declared = consumedArtifacts("inception", "reverse-engineering").map(
+      (c) => c.artifact,
+    );
+    expect(declared).not.toContain("issue-evidence");
   });
 });
