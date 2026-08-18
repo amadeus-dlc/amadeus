@@ -1,5 +1,14 @@
 # コード品質評価
 
+## Issue #3029 の品質観測（2026-08-18）
+
+- **回帰の存在**: dispatcher の exit 127 分類は `tests/integration/t92.test.ts` Group D で `SENSOR_PASSED / tool-unavailable` として固定され、blocking gate の approve 挙動は `tests/integration/t511-blocking-sensor-gate.integration.test.ts:369-374` で成功として固定されている。
+- **unit evaluator の期待**: `tests/unit/t511-blocking-sensor-severity.test.ts:512-527` は `tool-unavailable` を `null`（pass）と期待する。一方 `script-error: exit-2`、malformed output、non-string Note は拒否されるため、問題は exit 127 の意味付けに限定される。
+- **診断の分離**: spawn failure は `script-error: spawn-failed` として別の検査経路にあり、Issue #3029 の実害例へ混同してはならない。
+- **変更時の品質条件**: fail-closed を採る場合は unit evaluator、filesystem-backed approve、dispatcher truth table の三層を反転し、pass 維持の場合は `audit-format.md:267-272`、sensor schema、blocking guard の散文を同一契約に更新する。いずれも requirements の裁定後に実装する。
+
+RE 時点ではテスト全体を再実行していない。`bun install && bun run build` は成功し、対象ファイルは base `23d4ae767956cd56fc28fa78abe28096712eff8` から現行 HEAD まで変更されていないため、今回の観測は現行コードの読み取りと既存 regression corpus の対応付けである。
+
 ## ガードの適用境界が原理を持たない — 契約が doc 止まりで違反を検出できない（260814-copytree-guard-boundary、履歴、observed `f60b3f4c8`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 対象: [Issue #3014](https://github.com/amadeus-dlc/amadeus/issues/3014)（`copyTreeWithRetry` のガード適用境界が非対称）。測定 ref = observed `f60b3f4c868f3b7608a06f08393b8e2f10287fad`（`git rev-parse HEAD`。`origin/main` 系譜上のコミットであり `git merge-base HEAD origin/main` = 同一 SHA。ローカル `origin/main` は本 scan 時点で 2 commits 先行 = `cd64486a6`、いずれも患部非交差）、差分 base = `5b12d96e99cbf46711acd3dc2b8c103be1b0f801`。正本は `re-scans/260814-copytree-guard-boundary.md`。以下の file:line は Architect が observed 断面で `sed` / `git grep` により verbatim 再照合した。

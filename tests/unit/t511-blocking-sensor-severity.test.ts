@@ -36,6 +36,7 @@ import { evaluateBlockingSensors } from "../../dist/claude/.claude/tools/amadeus
 import {
   digestFile,
   resolveScriptPath,
+  spawnFailedOutcome,
 } from "../../dist/claude/.claude/tools/amadeus-sensor.ts";
 
 // --- Layer 1 helpers: a minimal sensor roster -------------------------------
@@ -467,6 +468,36 @@ describe("t511 — evaluateBlockingSensors decision table (#2671 c)", () => {
     });
   });
 
+  test("spawn-failed remains a distinct script-error and is rejected by the blocking gate (#3029)", () => {
+    const outcome = spawnFailedOutcome("ENOENT", 1);
+    expect(outcome.kind).toBe("passed");
+    if (outcome.kind !== "passed") throw new Error("spawnFailedOutcome must produce a passed audit outcome");
+    expect(outcome).toEqual({
+      kind: "passed",
+      durationMs: 1,
+      note: "script-error: spawn-failed: ENOENT",
+    });
+    const note = outcome.note ?? "";
+    expect(note).toBe("script-error: spawn-failed: ENOENT");
+    const fields = {
+      "Fire id": "spawn-failed",
+      "Sensor ID": "blocking-probe",
+      "Stage slug": "requirements-analysis",
+      "Output path": OUT,
+      Note: note,
+    };
+    const audit = [
+      auditLine("SENSOR_FIRED", fields, "2026-08-10T01:00:00Z"),
+      auditLine("SENSOR_PASSED", fields, "2026-08-10T01:00:01Z"),
+    ].join("\n");
+    expect(evaluateBlockingSensors(["blocking-probe"], audit, "requirements-analysis")).toEqual({
+      kind: "script-error",
+      sensorId: "blocking-probe",
+      outputPath: OUT,
+      note: "script-error: spawn-failed: ENOENT",
+    });
+  });
+
   test("SENSOR_PASSED with Note script-error: bad-output is not a pass (#2988)", () => {
     const fields = {
       "Fire id": "badout",
@@ -509,7 +540,7 @@ describe("t511 — evaluateBlockingSensors decision table (#2671 c)", () => {
     });
   });
 
-  test("SENSOR_PASSED with Note tool-unavailable remains a pass (#2988)", () => {
+  test("SENSOR_PASSED with Note tool-unavailable fails closed for blocking sensors (#3029)", () => {
     const fields = {
       "Fire id": "tu127",
       "Sensor ID": "blocking-probe",
@@ -523,7 +554,12 @@ describe("t511 — evaluateBlockingSensors decision table (#2671 c)", () => {
     ].join("\n");
     expect(
       evaluateBlockingSensors(["blocking-probe"], audit, "requirements-analysis"),
-    ).toBeNull();
+    ).toEqual({
+      kind: "tool-unavailable",
+      sensorId: "blocking-probe",
+      outputPath: OUT,
+      note: "tool-unavailable",
+    });
   });
 
   test("note-less SENSOR_PASSED remains a pass (#2988)", () => {

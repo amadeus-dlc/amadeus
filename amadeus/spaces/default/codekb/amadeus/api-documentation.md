@@ -1,5 +1,17 @@
 # API ドキュメント
 
+## Issue #3029 に関係する内部契約
+
+### Sensor dispatcher の truth table
+
+`amadeus-sensor.ts` の `fire` は per-sensor script の終了状態を `FireOutcome` に分類し、監査イベントへ射影する。branch 0（`error`、`status === null`、`signal === null`）は `script-error: spawn-failed`、branch b（`status === 127`）は `SENSOR_PASSED` と `Note: tool-unavailable`、exit 0 の malformed output やその他の非ゼロ終了は `SENSOR_PASSED` と `script-error:` note になる。
+
+### Blocking completion predicate
+
+`evaluateBlockingSensors(blockingSensorIds, audit, stageSlug, currentDigest?)` は `never-fired`、`unresolved`、`stale`、`script-error` のいずれかを返すか `null` を返す。現行の `null` 条件は最新 terminal が `SENSOR_PASSED`、fire receipt と digest が一致し、note が `script-error:` で始まらないこと。したがって `tool-unavailable` は `null` となり、blocking stage completion を拒否しない。
+
+この API の意味を exit 127 に対して変更する場合、戻り値の finding 種別・拒否メッセージ・t511 の unit/integration fixture・audit-format の `SENSOR_PASSED` 説明を同時に更新する必要がある。RE では互換性の裁定を保留する。
+
 ## Lifecycle Guard Runtime の公開契約と新設リファレンス（260814-fmc-macos-provider、履歴、observed `5f6b5bf97`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: observed = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`、差分 base = `89532174c30ef9cc7ff29496cd6916586fdda00a`（9 commits）。正本は `re-scans/260814-fmc-macos-provider.md`。

@@ -1,5 +1,20 @@
 # リバースエンジニアリング実施記録
 
+## 実行メタデータ（最新: 260818-issue-3029-sensor-gate）
+
+- Date: `2026-08-18`（UTC）
+- Intent: `260818-issue-3029-sensor-gate`
+- Repository: `amadeus`（単一 repo、root `/Users/j5ik2o/orca/workspaces/amadeus/intent-3029`）
+- Scope / depth / project type: `self-fix` / Minimal / Brownfield
+- Base commit: `23d4ae767956cd56fc28fa78abe28096712eff8`（既存 `re-scans/260817-inception-cost-batch.md` の最新 observed。HEAD の祖先、距離 6）
+- Observed commit: `c8c393bba927e4c00a8c6de9ef2da76068d04bfa`（本 worktree HEAD。対象実装面は origin/main 起点から不変）
+- 差分規模: base..observed は 155 files / +7,316 −3,968。workflow exhaust 除外後は +2,551 −53（`amadeus/spaces/*/intents/**`, `elections/**`, `codekb/**`, `memory/**`, `metrics/**` を除外）
+- Focus: Issue #3029 の blocking sensor gate。`amadeus-sensor.ts:772-778` branch b、`amadeus-state.ts:2008-2014`、plugin sensor manifest `:5`、t511/t92 の exit 127 回帰と audit-format を確認した。
+- 中核知見: exit 127 は `SENSOR_PASSED` + `Note: tool-unavailable` になり、guard は `script-error:` のみ拒否するため blocking completion を通す。Bun 不在の `script-error: spawn-failed` は branch 0 の別分岐。
+- 設計保留: fail-closed 化か pass 維持かは requirements の裁定。前者は t511 integration `:369-374` / unit `:512-527` の期待値反転、後者は `audit-format.md:267-272` との整合明文化を要する。
+- Verification: `mise trust`、`bun install`、`bun run build` は成功。RE 本体ではコード・テスト・文書を変更せず、既存 codekb へ観測結果のみ追記した。
+- Per-intent record: `re-scans/260818-issue-3029-sensor-gate.md`
+
 ## 実行メタデータ（現在: 260817-inception-cost-batch）
 
 - Date: `2026-08-17`（UTC）

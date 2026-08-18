@@ -1299,5 +1299,12 @@
     "dirName": "260817-inception-cost-batch",
     "scope": "self-feature",
     "status": "complete"
+  },
+  {
+    "uuid": "01a01415-7f62-7ec7-93f8-57f64692b65f",
+    "slug": "issue-3029-sensor-gate",
+    "dirName": "260818-issue-3029-sensor-gate",
+    "scope": "self-fix",
+    "status": "in-flight"
   }
 ]

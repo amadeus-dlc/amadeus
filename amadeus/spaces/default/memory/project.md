@@ -40,6 +40,9 @@
 - verdict では検証した面と未検証の面を書き分ける(起動の成立を配送の成立へ昇格させない)。未検証面が受け入れ基準の外にあると requirements/RAID の実文照合で確認できる場合は無条件 READY としてよく、未検証面は申し送り節に列挙する <!-- cid:build-and-test:verdict-names-unverified-facets -->
 - 要件・RAID が「実装時に実測確認」と規定した項目を後続 intent へ先送りしない。受け入れ基準が名指す経路そのもので確認し、内部関数の単体実行や部分経路で代替しない <!-- cid:build-and-test:no-silent-scope-narrowing -->
 
+- 監査互換性を保つ SENSOR_PASSED + tool-unavailable 行を維持しつつ、blocking guard では usable evidence でない診断として fail-closed に扱う。 (learned 2026-08-18) <!-- cid:code-generation:c2-issue3029 -->
+- Comprehensive strategyでも、性能・security の NFR が宣言されていない変更では、N/A 判定と根拠を instruction に記録し、目標なきテストを発明しない。 (learned 2026-08-18) <!-- cid:build-and-test:c1-build3029 -->
+- ローカル targeted validation と baseline 比較を済ませた後は、full CI の反復ではなく push-first でリモート CI を正本にする。 (learned 2026-08-18) <!-- cid:build-and-test:c2-build3029 -->
 ## Deployment
 
 デプロイ基盤は持たず、リリースは npm パッケージ配布、GitHub Release Asset、タグ / PR 履歴で管理する。GitHub Actions は push と pull_request で typecheck、lint、隔離2回ビルドの再現性検査、source-only 境界検査、グラフ不変量検査、smoke + unit + integration tests を実行する。
@@ -143,6 +146,7 @@ TypeScript / ESM と Bun 直接実行を前提に、既存の `amadeus-` プレ�
 - 再現・検証用の scratch スクリプトは repo 外で実行し、audit / record を書くツールの実験では project-root override を scratch に向ける。resolver・path 解決系の段順を変更するときは、env 変数がテスト隔離シームとして機能している既存契約を変更前に棚卸しする — 段順変更の失敗様式はテストの赤ではなく実 record への無音の書込汚染であり、閉包は当該テストを1本実行して実 record の不変量(audit 行数、memory 層と state の md5)が不変であることで確認する <!-- cid:code-generation:c2-env-isolation-seam-inventory -->
 - 台帳ファイルのマージ衝突は、マーカー行の貼り合わせでなく3ステージ blob 全文から再構成する。解決後は競合マーカーの機械検査(`<<<<<<<` / `>>>>>>>` / `|||||||`)を独立ステップで通し、構造化ファイルは parse 検証を併用する。追記型の監査シャードをマージした後は同一行の完全重複検査を1手挟み、重複行は後発出現のみ除去する <!-- cid:code-generation:cg-ledger-blob-reconstruction -->
 
+- self-fix は既存コードベースへの incremental brownfield 作業なので walking-skeleton を off とし、units-generation を skip する場合も Issue 単位の unit ディレクトリを作る。 (learned 2026-08-18) <!-- cid:code-generation:c1-issue3029 -->
 ## Learnings Inbox(未蒸留)
 
 日常の §13 学習・些細なノルム追加はまずこの節へ追記する。定期蒸留ラウンドで本文への昇格(一般化・機械化)または削除を裁定する。蒸留済み本文と未蒸留の具象学習を混在させない。

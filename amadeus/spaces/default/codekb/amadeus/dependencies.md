@@ -28,6 +28,22 @@ pr-convergence-report.md
   -> artifact coverage/state completion
 ```
 
+## Issue #3029 の依存差分
+
+```text
+plugin sensor manifest (blocking)
+  -> compiled stage graph (severity)
+  -> PostToolUse sensor dispatcher
+      -> per-sensor script exit status
+      -> SENSOR_PASSED / SENSOR_FAILED audit row
+  -> amadeus-state evaluateBlockingSensors
+      -> approve completion guard
+```
+
+exit 127 の現在の依存は `amadeus-sensor.ts:772-778` が `tool-unavailable` を pass note にすること、`amadeus-state.ts:2008-2014` が `script-error:` だけを blocking refusal にすること、そして plugin manifest が blocking severity を宣言することの組み合わせで成立する。Bun の spawn failure は branch 0 の `script-error: spawn-failed` であり、exit 127 のツール欠如シグナルとは独立している。
+
+変更影響は方針で分岐する。fail-closed なら dispatcher の event kind/note は維持して guard predicate と finding/テスト期待値を変える案、または dispatcher の terminal event を変える案があり、audit-format との互換性を requirements で決める必要がある。pass 維持なら gate の「blocking」は script availability を含まないと明示し、plugin schema と audit-format の説明を同期する必要がある。
+
 ## External Dependencies
 
 | Dependency | Usage | Failure Mode |

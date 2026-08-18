@@ -1,5 +1,29 @@
 # アーキテクチャ
 
+## Issue #3029 の blocking sensor 経路（最新観測）
+
+```mermaid
+sequenceDiagram
+    participant H as PostToolUse hook
+    participant D as amadeus-sensor.ts fire
+    participant S as per-sensor script
+    participant A as audit shard
+    participant G as amadeus-state.ts completion guard
+    H->>D: blocking manifest の matches に一致する出力
+    D->>S: spawnSync(command)
+    S-->>D: exit 127
+    D->>A: SENSOR_PASSED / Note=tool-unavailable
+    G->>A: 最新 terminal と digest を評価
+    G-->>G: 現行述語は script-error: のみ拒否
+    G-->>H: tool-unavailable は pass として完了許可
+```
+
+`amadeus-sensor.ts:772-778` は exit 127 を `kind: "passed"` と `tool-unavailable` note に変換し、`amadeus-state.ts:2008-2014` は `SENSOR_PASSED`、receipt 一致、digest 一致、`script-error:` でないことを pass 条件にしている。この二つの境界が Issue #3029 の欠陥面であり、sensor schema の severity は compiled graph 経由で gate に到達するが、exit 127 の意味は audit note と guard predicate の間で別扱いになっている。
+
+### 設計裁定の境界
+
+RE は fail-closed 化を選択しない。requirements が exit 127 を「blocking evidence 不成立」と定義するか、「診断付き advisory pass」として維持するかを決める。選択に応じて、dispatcher の分類、guard の pass predicate、t511 の unit/integration 回帰、audit-format と plugin sensor schema の説明を同じ契約へ揃える必要がある。
+
 ## park の provenance 境界: 拒否点・受理材料・承認境界の切り分け（260814-park-provenance、履歴、observed `1d08374cd`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: observed = `1d08374cd7e4ef89637b4a8000bab3fcf1a0f780`（`origin/main`、PR #3037 着地）。差分 base = `cd64486a68c6a1144db50fbe3fde8273f5e18455`（observed の祖先で距離 **6**）。本 worktree HEAD は observed を merge した conductor tree で、非 `amadeus/` ツリーは observed とバイト等価（`git diff --stat 1d08374cd HEAD -- ':!amadeus/'` 空 / exit 0）。検索述語と全数列挙は `re-scans/260814-park-provenance.md` を正本とし、本節は構造だけを転記する。

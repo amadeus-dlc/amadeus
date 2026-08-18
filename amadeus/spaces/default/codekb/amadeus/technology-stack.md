@@ -1,5 +1,12 @@
 # 技術スタック
 
+## Issue #3029 の実行技術断面（2026-08-18）
+
+- **ランタイム**: Bun 1.3.13、ESM TypeScript。sensor script は `spawnSync` で起動され、dispatcher と監査 writer は短命 CLI として動く。
+- **検証**: Bun Test の unit / integration / e2e 層、配布済み `dist/claude/.claude` を介した seam テスト。t511 は pure evaluator と filesystem-backed approve path を分離する。
+- **静的検査**: TypeScript `tsc --noEmit` と Biome。新しい外部依存は不要で、Issue の変更面は既存 core tool・plugin manifest・監査文書・回帰テストに閉じる。
+- **配布**: `bun run build` が `dist/<harness>` を生成し self-install 面を promote する。RE 実行時の `bun install && bun run build` は成功した。
+
 ## Runtime and Language
 
 | 技術 | バージョン/契約 | 用途 |
