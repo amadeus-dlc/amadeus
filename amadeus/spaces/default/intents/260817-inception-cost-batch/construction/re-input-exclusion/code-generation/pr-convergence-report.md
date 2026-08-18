@@ -22,7 +22,7 @@
 - terminalized: 0
 ## CLI Attestation
 
-- attestation id: prca:7a14ab4895d1bd00b4005e8a4066023fa9214a2b8b7af470ee86209222666054
+- attestation id: prca:bdb3fa09f8c417d2f885dbeac84f152dfde17dae01d68326c288f800d0548c84
 - intent: inception-cost-batch
 - intent uuid: 01a010da-7539-7819-a353-52441c94cb02
 - record: amadeus/spaces/default/intents/260817-inception-cost-batch/
@@ -33,4 +33,6 @@
 - local head: 531a8bd28312435c5e49079cc18c32ba43a13ca4
 - remote head: 531a8bd28312435c5e49079cc18c32ba43a13ca4
 - pr head: 531a8bd28312435c5e49079cc18c32ba43a13ca4
+- merge commit: 43a2e2978678924a0af59164284ec1be32f66f1e
+- merged at: 2026-08-18T04:40:02Z
 - content digest: sha256:190019f55b532aa4a91e953ad0feb1be0421cf786967125837d000c55e476f6d
