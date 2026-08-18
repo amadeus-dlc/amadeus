@@ -482,7 +482,7 @@ describe("t511 — evaluateBlockingSensors decision table (#2671 c)", () => {
         status: null,
         signal: null,
         error,
-      }) as Parameters<typeof decideOutcomeOrScriptError>[3],
+      }) as ReturnType<Parameters<typeof decideOutcomeOrScriptError>[3]>,
     );
     expect(outcome.kind).toBe("passed");
     if (outcome.kind !== "passed") throw new Error("spawn failure must produce a passed audit outcome");
