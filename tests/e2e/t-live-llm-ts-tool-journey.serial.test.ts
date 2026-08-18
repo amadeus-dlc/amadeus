@@ -8,6 +8,7 @@ import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { claudePrintLiveSkipReason } from "../harness/claude-print-live.ts";
 import {
   codexExecLiveSkipReason,
@@ -59,7 +60,7 @@ function binarySkipReason(binary: string): string | null {
   const probe = spawnSync(binary, ["--version"], {
     encoding: "utf8",
     env: process.env,
-    timeout: 15_000,
+    timeout: scaleTestTime(15_000),
   });
   return probe.status === 0 ? null : `${binary} is not available`;
 }
