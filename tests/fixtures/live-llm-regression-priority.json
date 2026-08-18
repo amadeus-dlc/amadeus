@@ -1,0 +1,105 @@
+[
+  {
+    "priority": 1,
+    "tool": "packages/framework/core/tools/amadeus-orchestrate.ts",
+    "issues": [3197, 3099, 3106, 2985, 3153, 2912, 2837],
+    "severity": ["S1-FATAL", "S2-CRITICAL", "S3-MAJOR"],
+    "failureModes": [
+      "false-green convergence",
+      "per-unit transition stuck",
+      "missing batch or terminal outcome identity",
+      "autonomy gate acceptance drift"
+    ],
+    "coverage": {
+      "status": "partial",
+      "test": "tests/e2e/t-live-llm-ts-tool-journey.serial.test.ts",
+      "journey": "Claude Code and Codex read the report error, create the named phase-boundary artifact, and retry the shipped report command"
+    },
+    "nextScenario": "Reuse the same provider/result-observation loop for swarm finalize and per-unit cancellation/settlement paths"
+  },
+  {
+    "priority": 2,
+    "tool": "packages/framework/core/tools/amadeus-state.ts",
+    "issues": [3153, 2588, 2567, 2747],
+    "severity": ["S1-FATAL", "S2-CRITICAL", "S3-MAJOR"],
+    "failureModes": [
+      "wrong-intent human presence",
+      "gate accepts an unrelated turn",
+      "completion guard chooses the wrong unit",
+      "blocking sensor not wired to every completion path"
+    ],
+    "coverage": {
+      "status": "partial",
+      "test": "tests/e2e/t-live-llm-ts-tool-journey.serial.test.ts",
+      "journey": "Both providers directly invoke amadeus-state.ts, read the missing-artifact result, create the named phase-check, and retry with completion pending"
+    },
+    "nextScenario": "Add a two-record fixture and let both providers observe a targeted-state error before asserting that the unrelated record remains unchanged"
+  },
+  {
+    "priority": 3,
+    "tool": "packages/framework/core/tools/amadeus-audit.ts",
+    "issues": [1991, 1960],
+    "severity": ["S1-FATAL"],
+    "failureModes": [
+      "orphan delta reported as success",
+      "fatal-latch merge disappears from the ledger"
+    ],
+    "coverage": {
+      "status": "next",
+      "test": "tests/e2e/t-live-llm-ts-tool-journey.serial.test.ts",
+      "journey": "Not yet provider-driven; the existing audit assertion is only the evidence seam for the report recovery journey"
+    },
+    "nextScenario": "Give the provider an audit command result with a failed append and require it to stop or retry without treating jsonSuccess as a completed audit"
+  },
+  {
+    "priority": 3,
+    "tool": "packages/framework/core/tools/amadeus-bolt.ts",
+    "issues": [1959, 1991, 2985],
+    "severity": ["S1-FATAL"],
+    "failureModes": [
+      "fatal-latch audit drop",
+      "attestation and one-unit-per-PR mismatch"
+    ],
+    "coverage": {
+      "status": "next",
+      "test": "tests/e2e/t-live-llm-ts-tool-journey.serial.test.ts",
+      "journey": "Not yet provider-driven"
+    },
+    "nextScenario": "Use a pre-seeded Bolt fixture and assert provider behavior from the actual attestation/audit tool result"
+  },
+  {
+    "priority": 4,
+    "tool": "packages/framework/core/tools/amadeus-plugin.ts",
+    "issues": [2823, 3078, 3026],
+    "severity": ["S2-CRITICAL", "S4-MINOR"],
+    "failureModes": [
+      "consumer workspace manifest resolution",
+      "undeclared plugin tools",
+      "silent advisory hold"
+    ],
+    "coverage": {
+      "status": "supporting",
+      "test": "tests/e2e/t-live-llm-ts-tool-journey.serial.test.ts",
+      "journey": "The fixture is composed by the shipped plugin tool before the live provider starts"
+    },
+    "nextScenario": "Move compose into the provider journey and branch on the actual consumer-layout error result"
+  },
+  {
+    "priority": 5,
+    "tool": "packages/framework/core/tools/amadeus-election.ts",
+    "issues": [3183, 3046, 3077, 1450],
+    "severity": ["S1-FATAL", "S3-MAJOR", "S4-MINOR"],
+    "failureModes": [
+      "concurrent voter temp-file collision",
+      "arrival-sequence collision",
+      "hold and re-tally cannot commit",
+      "wrong default project directory"
+    ],
+    "coverage": {
+      "status": "next",
+      "test": "tests/e2e/t-live-llm-ts-tool-journey.serial.test.ts",
+      "journey": "Not yet provider-driven"
+    },
+    "nextScenario": "Pre-seed a held election and require both providers to follow the actual re-tally result without inventing a successful commit"
+  }
+]
