@@ -177,7 +177,7 @@ autonomy の着地が業務上もつ意味は「**無人実行の権限を Inten
 
 機序は `architecture.md`、コンポーネント境界は `component-inventory.md`、テスト空白は `code-quality-assessment.md` の各対応節を参照。
 
-## 優先バグ 5 件の業務影響 — 権限・記録・自動化の信頼性（260816-priority-bug-batch-3、現在、observed `89053172e`）
+## 優先バグ 5 件の業務影響 — 権限・記録・自動化の信頼性（260816-priority-bug-batch-3、履歴、observed `89053172e`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260817-inception-cost-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する。本節が記す 5 件の業務影響は本区間の是正により解消済み — 現況は本ファイル末尾の 260817-inception-cost-batch 節を参照））
 
 **業務境界そのものの変化なし。** base `5c5911ee3` → observed `89053172e` の 15 コミットは、直前 intent `260816-open-bug-batch-7` の 3 unit 着地と `260815-rfc-autonomy-modes` の R-22 修正であり、いずれも自リポジトリの開発運用機構である。製品の対象ユーザー・提供価値・スコープ境界は動いていない。
 
@@ -198,3 +198,44 @@ autonomy の着地が業務上もつ意味は「**無人実行の権限を Inten
 3 つある。第一に、**いずれもユーザー配布物の欠陥ではない** — 損失は自リポジトリの開発運用の信頼性に閉じる。第二に、**#3153 / #3152 / #3149 / #3156 の 4 件は「記録と権限」の欠陥**であり、壊れ方が「間違った結果が出る」ではなく「**正しさを事後に確認できない / 進めなくなる**」形を取る。第三に、**#3149 と #3156 は回復手段が緊急バイパスしかない** — バイパスは本来 escape hatch として設計されたものなので、常用は制度の摩耗を意味する。
 
 機序は `architecture.md`、コンポーネント境界は `component-inventory.md`、テスト空白は `code-quality-assessment.md` の各対応節を参照。
+
+## 前区間の 5 件が解消し、焦点が inception のコスト構造へ移った（260817-inception-cost-batch、現在、observed `23d4ae767`）
+
+**業務境界そのものの変化なし。** base `89053172e` → observed `23d4ae767` の 12 コミットは、直前 intent `260816-priority-bug-batch-3` の 5 unit 着地（PR [#3173](https://github.com/amadeus-dlc/amadeus/pull/3173) / [#3175](https://github.com/amadeus-dlc/amadeus/pull/3175) / [#3172](https://github.com/amadeus-dlc/amadeus/pull/3172) / [#3174](https://github.com/amadeus-dlc/amadeus/pull/3174) / [#3171](https://github.com/amadeus-dlc/amadeus/pull/3171)）と付随する metrics snapshot・record checkpoint であり、いずれも自リポジトリの開発運用機構である。製品の対象ユーザー・提供価値・スコープ境界は動いていない。
+
+### 前節の 5 件は解消した
+
+前節が「承認という制度の意味そのものが目減りする」「監査の計数を根拠にした判断が壊れる」「ワークフローが恒久停止する」「正しく働いているガードを毎回切る運用へ誘導する」「チームの意思決定機構そのものが止まる」と記した 5 件の業務影響は、本区間の 5 PR で解消された（機序は `architecture.md` の対応節）。業務の言葉での要点だけを記す。
+
+| Issue | 業務影響の解消形 |
+|---|---|
+| [#3153](https://github.com/amadeus-dlc/amadeus/issues/3153) | milestone 級の承認は「その gate が人間へ提示された後に打たれたターン」でしか成立しなくなり、`GATE_APPROVED` に **`Approval Provenance`**（人間のターン / 委任 / Intent grant / テスト用 off-switch の 4 値）が刻まれるようになった。**事後に「誰が通したか」を見分けられる** |
+| [#3152](https://github.com/amadeus-dlc/amadeus/issues/3152) | 監査行は「autonomy を読むたび」ではなく「**gate が提示されたとき**」に、提示エポック単位で 1 行だけ書かれるようになった。**行数がそのまま「人間が実際に何回止められたか」を意味する** |
+| [#3149](https://github.com/amadeus-dlc/amadeus/issues/3149) | マージ前に収束を確定させた unit が、マージ後もその verdict のまま記録を最終化できるようになった。**恒久停止と緊急バイパス常用への誘導が消えた** |
+| [#3156](https://github.com/amadeus-dlc/amadeus/issues/3156) | ノルムどおりの手順（record checkpoint を後から積む）で運用しても、ガードが「作業が無い」と誤判定しなくなった。**正しく働くガードを毎回切る運用**への誘導が消えた |
+| [#3046](https://github.com/amadeus-dlc/amadeus/issues/3046) | 並行 voter の採番衝突が構造的に起きなくなり、選挙 pending 台帳の恒久 corrupt という潜在欠陥が閉じた。**チームの意思決定機構（P1）の可用性が回復した** |
+
+**バグ計数の読み方に注意が要る。** metrics の `collectors.bugs.values` は base 側 snapshot（`metrics/2026-08-16T20-57-24-618Z-2555e5b42914.json`）で open **11** / closed **387**、observed 側（`metrics/2026-08-17T12-24-08-673Z-0b652d2cd1a6.json`）で open **13** / closed **387** である。**closed が不変**なので、上記 5 件の Issue クローズはこの snapshot より後に行われており、指標にはまだ現れていない。open の +2 は `s4_minor` の +2 と一致する（新規起票 2 件と読める）。
+
+### 本 intent の焦点 — inception 工程そのもののコスト
+
+本 intent が扱う 2 件は、前区間までの「機構が壊れている」系の欠陥とは性質が異なり、**ワークフローを回すこと自体のコストと入力品質**を対象とする。
+
+| Issue | 誰が困るか | 損失 |
+|---|---|---|
+| [#2415](https://github.com/amadeus-dlc/amadeus/issues/2415) | reverse-engineering を回すすべての intent | RE のスキャン対象に**ワークフロー自身が吐いた工程記録が含まれたまま**である。本区間で実測すると、区間の挿入行 8,023 のうち **4,955 行（61.76%）/ 123 ファイルのうち 88 ファイル（71.5%）** が intent record・codekb・metrics・elections の workflow exhaust であり、**codekb に何も寄与しない**。intent を重ねるほどこの比率は構造的に増えるので、スキャンの時間・トークン・注意のコストが単調に膨らむ |
+| [#3181](https://github.com/amadeus-dlc/amadeus/issues/3181) | Issue 起点で requirements-analysis を回す全員 | Issue の内容が RA へ届く経路が、**監査シャードに書かれた散文 1 行**（`requirements-analysis.md:71` が読む `<record>/audit/<host>-<clone>.jsonl`）しか無い。構造化されず検証もされないので、**要件が Issue の主張とずれても機械的には検出できない**。RA の `consumes:`（`:14-29`、6 件）に Issue 由来の一級入力はゼロである |
+
+### 2 件に共通する業務上の性質
+
+3 つある。
+
+第一に、**いずれもユーザー配布物の欠陥ではない** — 損失は AI-DLC ワークフローを運用する側のコストと信頼性に閉じる。この点は前区間の 5 件と同じである。
+
+第二に、**壊れ方が「間違った結果が出る」ではなく「正しい判断のコストが上がる」形を取る。** #2415 はスキャンの入力に無関係な量を混ぜることで注意を薄め、#3181 は要件の根拠を検証不能な散文に置くことで齟齬の検出を人間の読解に依存させる。どちらも症状が出ないまま劣化が進むクラスであり、**実測しない限り可視化されない**。本節が測定述語つきで 61.76% を記録しているのはそのためである。
+
+第三に、**両者はワークフローの入口（inception）に位置するので、下流のすべての intent に効く。** 逆に言えば、是正の効果は 1 intent では測りにくく、**複数 intent にわたる指標（スキャン対象量、RA の上流参照の検証可能性）でしか確認できない**点は、受け入れ基準の設計時に留意が要る。
+
+**未決事項**: 2 件の是正方式はいずれも本スキャンでは決めていない（`memory/team.md` P1 の裁定事項）。特に #2415 は除外規則の**置き場**（stage 契約のどの節か）と**述語の粒度**（`amadeus/spaces/**` の前方一致では TLA ビルド台帳を巻き添えにする — `architecture.md` §1 の reconciliation を参照）、#3181 は**どの stage が Issue 証跡を produce するか**（consume だけの artifact は graph の hard error）が主要な争点である。
+
+機序は `architecture.md`、コンポーネント境界は `component-inventory.md`、公開契約は `api-documentation.md`、テスト空白は `code-quality-assessment.md` の各対応節を参照。

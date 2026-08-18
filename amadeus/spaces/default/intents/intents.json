@@ -1292,5 +1292,12 @@
     "dirName": "260816-priority-bug-batch-3",
     "scope": "self-fix",
     "status": "complete"
+  },
+  {
+    "uuid": "01a010da-7539-7819-a353-52441c94cb02",
+    "slug": "inception-cost-batch",
+    "dirName": "260817-inception-cost-batch",
+    "scope": "self-feature",
+    "status": "in-flight"
   }
 ]

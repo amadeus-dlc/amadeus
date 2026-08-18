@@ -291,7 +291,7 @@ C. #3097 — センサー docs（導出可能なのに手書き、検査は片�
 
 **3 領域の間に依存エッジは無い**（ファイル交差ゼロ）。機序は `architecture.md`、配置は `code-structure.md`、コンポーネント境界は `component-inventory.md` の各対応節を参照。
 
-## 区間の依存エッジ変化と、優先バグ 5 件の依存方向（260816-priority-bug-batch-3、現在、observed `89053172e`）
+## 区間の依存エッジ変化と、優先バグ 5 件の依存方向（260816-priority-bug-batch-3、履歴、observed `89053172e`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260817-inception-cost-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する。現況は本ファイル末尾の 260817-inception-cost-batch 節を参照））
 
 **外部依存の変化なし**（`git diff --stat 5c5911ee3 89053172e -- package.json bun.lock '**/package.json'` の**出力は空**、exit 0。本節の実測）。
 
@@ -351,5 +351,141 @@ D. #3046 — 読取スコープと書込スコープの非対称
 **A（#3153 / #3152）は 1 つの鎖を共有する**ため独立に修正できない — 別 unit にすると `amadeus-state.ts` と `amadeus-intent-autonomy-production.ts` の 2 ファイルで write scope が衝突する。**C（#3156）は A と同一ファイル `amadeus-state.ts` を触る**が行域は非重複（`:2491-2691` vs `:3721-3772`）で、依存エッジとしての交差はない。**B（#3149）と D（#3046）は他のどの領域とも交差しない**（ファイル交差ゼロ）。
 
 台帳同期の観点（`cid:build-and-test:bt-ledger-resync`）: **#3152 の方式が `amadeus-orchestrate.ts:2822` を変える場合のみ**、`amadeus/spaces/default/specs/tla/model-map.json` の impl ハッシュピンと `tests/.coverage-patch-allowlist.json` の意味的セレクタが発火する。他 4 件は現時点で該当しない。
+
+機序は `architecture.md`、配置は `code-structure.md`、コンポーネント境界は `component-inventory.md` の各対応節を参照。
+
+## 区間の依存エッジ変化と、focus 2 件の依存方向（260817-inception-cost-batch、現在、observed `23d4ae767`）
+
+**外部依存の変化なし**（`git diff --stat 89053172e..23d4ae767 -- package.json bun.lock '**/package.json'` の**出力は空**、exit 0。本節の実測）。ランタイム・開発依存・CI 構成（`.github/` も空 diff・exit 0）はいずれも不変である。
+
+**内部エッジの変化も 1 件のみで、エッジ本数は不変。** 区間の全ソース diff から import 行の増減を抽出した述語（本節の実測）:
+
+```bash
+git diff -U0 89053172e..23d4ae767 -- 'packages/framework/core/tools/*.ts' 'plugins/**/*.ts' \
+  | grep -E '^[+-]import '
+```
+
+→ 出力は **2 行（1 対の置換）のみ**:
+
+```
+-import { autonomyDigest, declaredFullAutonomy } from "./amadeus-intent-autonomy.ts";
++import { autonomyDigest, declaredFullAutonomy, isMilestoneInteraction } from "./amadeus-intent-autonomy.ts";
+```
+
+`packages/framework/core/tools/amadeus-state.ts:142` の 1 行で、**既存エッジ（`amadeus-state.ts` → `amadeus-intent-autonomy.ts`）への named import 追加**である。同エッジは前区間でも `declaredFullAutonomy` の追加で同じ形の変化をしており、**2 区間連続でモジュール間のエッジ本数が動いていない**。
+
+なお `amadeus-state.ts` が `amadeus-lib` から取り込む名前は 2 件増えているが（`:42` `resolveGateResolutionPresence` / `:43` `type GateApprovalProvenance`。区間 diff の `@@ -39,6 +39,8 @@ import {` hunk）、これは**複数行 import の内部への追加**であり上の述語には現れない。エッジ自体は既存である — 当該ブロックは `:113` の逐語 `} from "./amadeus-lib.js";` で閉じ、`KNOWN_CODEKB_STAGES`（`:46`）など多数の名前を既に取り込んでいる。**単一行 import だけを見る述語には多行 import の内部追加が現れない**点は、依存棚卸しの述語設計上の注意として記録する（`cid:application-design:dual-key-consumer-inventory` の同族）。
+
+### 区間で変化した依存の向き（是正後）
+
+```
+A. #3153 / #3152 — 宣言が承認へ結線され、拒否の発行点が gate 提示側へ移った
+   amadeus-state.ts:3866   assertHumanPresentForGateResolution
+        ├─→ amadeus-intent-autonomy.ts:762      isMilestoneInteraction   ← 新エッジ（既存 import 内）
+        ├─→ (autonomy.humanRequired × interactionKind) → :3896-3897 milestoneStage
+        └─→ amadeus-lib.ts:3967  resolveGateResolutionPresence(pd, verb, milestoneStage, ...)
+                 └─→ GateResolutionPresence（判別ユニオン）→ provenance を承認記録へ
+
+   amadeus-lib.ts:4038  humanActedSinceGate（verb 分岐）
+        └─→ 同 :3967 へ milestoneStage=null で委譲   ← 狭めた述語と元の述語が同一関数
+
+   STAGE_AWAITING_APPROVAL 発行サイト（初回 open / 改訂後の再提示 / reject の backfill）
+        └─→ amadeus-state.ts:3811  recordGateOpenRefusal          ← 新設
+                 └─→ amadeus-intent-autonomy-production.ts:432  recordAutonomyRefusalAtGateOpen
+                          ├─→ :442-446  冪等鍵（occurrence, mode, presentationEpoch）
+                          ├─→ :408-411  refusalAlreadyRecorded（既存行なら return）
+                          └─→ audit shard（INTENT_AUTONOMY_HUMAN_REQUIRED、fail-open）
+```
+
+**前区間との差**: 前節が「`productionStageAutonomy` を読むたびに監査へ流れる」と記した向きは切断され、監査への矢印は**gate 提示サイトからのみ**出るようになった。読み取り（`next` ごと、承認試行ごと）は監査へ何も書かない。
+
+```
+B. #3149 — 束縛判定が kind ではなく receipt から出るようになった
+   amadeus-sensor-pr-convergence-report-format.ts:322  checkAttestationEnvironment
+        └─→ :303  touchesMergeFacts(body, receipt)
+                 ├─ true  → :344  checkMergeBinding      （merge 事実を検査、local HEAD は見ない）
+                 └─ false → :372  checkCheckoutBinding   （git rev-parse HEAD と照合）
+
+   pr-convergence-cli.ts:1110  finaliseMergedInPlace → :1126 finaliseUnitInPlace
+        └─→ :1083  finalRecordOnDisk（converged / override を拾う）
+        └─→ receipt のみ再 attest（payload バイトと verdict は不変）→ audit receipt を append
+
+   ※ :639 transitionAllowed / :1040 selfReportLifecycle の遷移規則そのものは不変
+```
+
+```
+C. #3046 — 読みのスコープが書きのスコープへ揃った
+   amadeus-election-store.ts:1070  appendPending
+        └─→ :504  readPendingVoter（自 voter のファイルのみ）   ← 旧: readAllPending 全体読み
+                 └─→ :537  voter 内単調性検査（fail-closed）
+        └─→ :1104  Math.max(...voterPending) + 1
+
+   同 :558  readAllPending（tally / integrate 経路）
+        ├─→ :582  複合鍵 (voter, arrivalSequence) の一意性検査   ← 旧: arrivalSequence 単独
+        └─→ :550  comparePendingEvents で (arrivalSequence, voter) の全順序を読み時に付与
+```
+
+**依存方向の要点**: append 経路から `readAllPending` への矢印が消え、**書きと同じスコープのみを読む**形になった。全順序はディスク上のプロパティではなく読み時の計算になったので、順序の正しさは書き込み順への依存を失っている。
+
+```
+D. #3156 — 4 番目の probe が trunk fork point を新しい起点として持ち込んだ
+   amadeus-state.ts:2703  intentScopedSourceWork
+        ├─→ :2516  recordBranchSourceWork          （birth..HEAD）
+        ├─→ :2561  boltRefHasSourceWork            （bolt ref、merge-base）
+        ├─→ :2600  mergedPrSourceWork              （birth..HEAD、Issue 参照）
+        └─→ :2660  branchSourceWorkSinceTrunkFork  ← 新設
+                 ├─→ :2625  resolveTrunkRef（refs/heads/main → refs/remotes/origin/main、完全修飾）
+                 └─→ birth は「範囲の妥当性検査」にのみ使う（起点には使わない）
+```
+
+**前区間との差**: 前節が「3 プローブが `intentBirthCommit` を共有する単一障害点」と記した集中は、**probe (d) が起点を trunk fork point へ移した**分だけ分散した。ただし `birth === null` なら (d) も false を返すため、依存が完全に切れたわけではない。
+
+### 本 intent の focus 2 件の依存方向
+
+```
+E. #2415 — RE の入力面（現状、consume 依存はゼロ）
+   reverse-engineering.md:20   consumes: []          ← RE はいかなる artifact にも依存しない
+   reverse-engineering.md:104-112  スキャン対象の列挙  ← 入力面はここだけ
+        └─→ :114  templates/re-artifacts.md（Developer scan テンプレート）
+   reverse-engineering.md:81-95   Preflight            ← base の更新方針であって入力面ではない
+   除外規則: 不在（git grep -iE "exclude|excluded|exclusion|workflow exhaust|process record" → exit 1）
+```
+
+**依存上の含意**: RE は上流 artifact に依存しないので、除外規則を入れても**上流方向の新しいエッジは生じない**。生じるのは「stage 契約 → Developer scan の実行入力」という**契約から実行への一方向の拘束**だけである。
+
+```
+F. #3181 — RA の consume 面と、Issue 取り込みが要求する新しい依存
+   requirements-analysis.md:14-29  consumes（6 件、Issue 由来ゼロ、全件 required: false）
+        └─→ :68-71  Step 2 で読む
+                 ├─ :70  codekb（RE artifact）
+                 └─ :71  <record>/audit/<host>-<clone>.jsonl   ← 唯一の issue 的入力（散文）
+
+   artifact 種別を足す場合の依存制約:
+   amadeus-orchestrate.ts:2411  resolveConsumePath
+        └─→ amadeus-graph.ts:856  producersOf(name)[0]        ← パスは producing stage が決める
+   amadeus-graph.ts:1192-1198   producer 不在の consume は hard error
+        ⇒ Issue を取り込む stage が produces: に宣言する依存が必須
+
+   GitHub 側（既存の一方向依存、read path は実装済み）:
+   <新しい consumer> ─→ amadeus-github-gateway.ts:175  viewArgv
+                     ─→ 同 :418  parseIssueObject → RemoteGitHubIssue
+                     ─→ 同 :799  readiness（gh --version → gh auth status）
+   既存 adapter 2 種: :944 createMirrorGitHubGatewayAdapter / :950 createFindingGitHubGatewayAdapter
+   port 宣言: amadeus-finding-types.ts:19 / amadeus-mirror-types.ts:427
+   呼出:     amadeus-finding.ts:94 / amadeus-mirror-executor.ts:754-793（readiness 失敗は fail-open の警告）
+```
+
+**依存上の含意**: Issue の読取に**新しい外部依存は生じない**（`gh` は既に optional dependency として扱われ、gateway が唯一のプロセス境界である）。生じうるのは「Issue 証跡を produce する stage → gateway」という内部エッジ 1 本と、「RA → その artifact」という consume エッジ 1 本である。**consume エッジだけを足すと graph の hard error になる**点が、依存グラフ上の最も強い制約である。
+
+### 台帳同期の観点
+
+`cid:build-and-test:bt-ledger-resync` の発火条件を focus 2 件へ当てると:
+
+| 触る面 | 発火する台帳 |
+|---|---|
+| `packages/framework/core/tools/amadeus-orchestrate.ts` | `amadeus/spaces/default/specs/tla/model-map.json` の impl ハッシュピン + `tests/.coverage-patch-allowlist.json` の意味的セレクタ |
+| `packages/framework/core/tools/amadeus-state.ts` / `amadeus-election-store.ts` | 同 model-map（本区間で **3 ピン**が実際に更新された） |
+| 新規テストファイルの追加 | `tests/.coverage-registry.json` の regen（`cid:build-and-test:c1`） |
+| `packages/framework/core/amadeus-common/stages/**` の frontmatter のみ | 上記いずれも発火しない。代わりに runtime graph の再 compile と `/amadeus --doctor` の参照検査が門番になる |
 
 機序は `architecture.md`、配置は `code-structure.md`、コンポーネント境界は `component-inventory.md` の各対応節を参照。

@@ -2910,7 +2910,7 @@ pi は **packager 側では第一級**である（`scripts/plugin-projection.ts:
 
 **3 領域はファイル交差ゼロ**（A は `scripts/` + allowlist + harness manifest、B は `tests/no-silent-drop/`、C は `docs/reference/07-*` + t3028）。機序は `architecture.md`、配置は `code-structure.md`、テスト空白と台帳は `code-quality-assessment.md` の各対応節を参照。
 
-## 優先バグ 5 件のコンポーネント棚卸しと、区間のコンポーネント増減（260816-priority-bug-batch-3、現在、observed `89053172e`）
+## 優先バグ 5 件のコンポーネント棚卸しと、区間のコンポーネント増減（260816-priority-bug-batch-3、履歴、observed `89053172e`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260817-inception-cost-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する。本節が記す 5 欠陥は本区間で是正済み — 現況は本ファイル末尾の 260817-inception-cost-batch 節を参照））
 
 **観測 ref**: base `5c5911ee3f107152c3173701caf178a746b6e3aa` → observed `89053172ed8b5bb270e254aea029a13291d10b6b`。file:line はすべて observed 断面で本節の起草時に `sed -n` により逐語確認した。
 
@@ -3001,3 +3001,109 @@ pi は **packager 側では第一級**である（`scripts/plugin-projection.ts:
 ### 5 領域の交差
 
 **#3153 / #3152 / #3156 が `amadeus-state.ts`（6457 行、`wc -l` 実測）を共有する。** #3153（`:3721-3772`）と #3152 の呼出点（`:3744`）は**同一関数内**、#3156（`:2491-2691`）は離れた行域にある。#3149（`plugins/github-pr-convergence/`）と #3046（`amadeus-election-store.ts`）は他と交差しない。機序は `architecture.md`、配置は `code-structure.md`、テスト空白と台帳は `code-quality-assessment.md` の各対応節を参照。
+
+## 区間のコンポーネント増減ゼロと、focus 2 件が触れる既存コンポーネント（260817-inception-cost-batch、現在、observed `23d4ae767`）
+
+**観測 ref**: base `89053172ed8b5bb270e254aea029a13291d10b6b` → observed `23d4ae767956cd56fc28fa78abe28096712eff8a`。file:line はすべて observed 断面で本節の起草時に逐語確認した。
+
+### A. 区間のコンポーネント増減 — ゼロ（2 区間連続）
+
+`git diff --name-status 89053172e..23d4ae767 -- packages/ plugins/ docs/ .github/`（本節の実測、exit 0）の出力は **14 行すべてが `M`** である。新規（`A`）**0** / 削除（`D`）**0**。`packages/framework/harness/` と `.github/` は**空 diff・exit 0**。**コンポーネント境界は 2 区間連続で 1 つも動いていない**。
+
+変更 14 面の内訳:
+
+| 面 | ファイル | 規模 |
+|---|---|---|
+| core tools | `packages/framework/core/tools/amadeus-state.ts` | +198 −39 |
+| core tools | `packages/framework/core/tools/amadeus-intent-autonomy-production.ts` | +136 −12 |
+| core tools | `packages/framework/core/tools/amadeus-lib.ts` | +106 −8 |
+| core tools | `packages/framework/core/tools/amadeus-election-store.ts` | +58 −17 |
+| core tools | `packages/framework/core/tools/amadeus-intent-autonomy.ts` | +7 −0 |
+| core otel | `packages/framework/core/otel/event-registry.ts` | +2 −2 |
+| core knowledge | `packages/framework/core/knowledge/amadeus-shared/audit-format.md` | +4 −2 |
+| plugin tools | `plugins/github-pr-convergence/tools/pr-convergence-cli.ts` | +318 −53 |
+| plugin tools | `plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts` | +70 −25 |
+| plugin tools | `plugins/github-pr-convergence/tools/pr-convergence-attestation.ts` | +4 −3 |
+| plugin stages | `plugins/github-pr-convergence/stages/pr-convergence.md` | +38 −12 |
+| plugin sensors | `plugins/github-pr-convergence/sensors/amadeus-pr-convergence-report-format.md` | +22 −0 |
+| docs 対訳 | `docs/reference/12-state-machine.md` / `.ja.md` | 各 +2 −2 |
+
+（`git diff --numstat 89053172e..23d4ae767 -- packages/ plugins/ docs/`、本節の実測）
+
+### B. gate 解決 presence の 3 コンポーネント（#3153 / #3152 の着地形）
+
+前節 §B が記した「autonomy 層 / presence 述語 / ledger 走査」の分担は保たれたまま、**presence 述語が bool から判別ユニオンへ、autonomy の結論が窓幅の入力へ**変わった。
+
+| コンポーネント | file:line（observed） | 責務 | 前節からの変化 |
+|---|---|---|---|
+| gate resolution guard | `packages/framework/core/tools/amadeus-state.ts:3866` 以降（`assertHumanPresentForGateResolution`） | approve / reject の直前に承認可否と provenance を決める | autonomy の `humanRequired` × interaction kind を `milestoneStage` へ合成（`:3896-3897`）し、presence の戻り値 provenance を承認記録へ運ぶ |
+| presence resolver | `packages/framework/core/tools/amadeus-lib.ts:3967-3981`（`resolveGateResolutionPresence`） | ledger を走査し「通ったか / なぜ通らなかったか」を返す | **新設**。`humanActedSinceGate` の verb 分岐（`:4038`）が milestone `null` で同関数へ委譲するので、狭めた述語と元の述語が drift しえない |
+| presence 語彙 | 同 `:3912`（`GateApprovalProvenance`）/ `:3958-3960`（`GateResolutionPresence`） | 「何が通したか」「なぜ通らなかったか」の閉語彙 | **新設**。provenance 4 値 / 拒否理由 3 値 |
+| slot 定義 | 同 `:3937-3952`（`gateResolutionSlots`）/ `:3922`（`opensGateFor`） | ローカル HUMAN_TURN と delegate GATE の 2 スロット合成、`--recovered` backfill の除外 | milestone 指定時のみローカルスロットを当該 gate の open 以降へ狭める |
+| milestone 判定 | `packages/framework/core/tools/amadeus-intent-autonomy.ts:762`（`isMilestoneInteraction`） | interaction kind が milestone 級か | **新設**。`phase-gate` / `walking-skeleton` が true、`stage-gate` / `question` が false（`tests/unit/t188-human-presence-gate.test.ts:507-510` の逐語アサーション） |
+| 拒否記録 | `packages/framework/core/tools/amadeus-state.ts:3811`（`recordGateOpenRefusal`）→ `packages/framework/core/tools/amadeus-intent-autonomy-production.ts:432-450`（`recordAutonomyRefusalAtGateOpen`） | 「なぜこの gate が人間へ落ちたか」を gate 提示時に 1 行だけ記録 | **発行点が移動**。読み取り時（`productionStageAutonomy`）ではなく `STAGE_AWAITING_APPROVAL` 発行サイトから、冪等鍵（`:442-446`）と既存行検出（`:408-411` `refusalAlreadyRecorded`）付きで |
+
+**承認記録側の型**: `amadeus-state.ts:3834-3837` `GateResolutionAuthorization`（`grantId` + `provenance`）と `:4287` `ApprovalAuthorization.provenance: GateApprovalProvenance | null`。null は「そもそも presence を問わなかった経路」を表す。
+
+### C. pr-convergence の 4 コンポーネントと、束縛判定の所在（#3149 の着地形）
+
+前節 §D が「CLI と sensor の両立不能な契約」と記した境界は、**両者から `kind` 依存を外し、receipt を判定入力にする**ことで整合した。
+
+| コンポーネント | file:line（observed） | 責務 |
+|---|---|---|
+| lifecycle 遷移表 | `plugins/github-pr-convergence/tools/pr-convergence-cli.ts:639`（`transitionAllowed`）/ `:1040`（`selfReportLifecycle`）/ `:1019`（`lifecycleAtChangedHead`） | kind 遷移の可否。**本区間で規則自体は不変**（`converged` は依然 final） |
+| merged 最終化 | 同 `:1083`（`finalRecordOnDisk`）/ `:1110`（`finaliseMergedInPlace`）/ `:1126`（`finaliseUnitInPlace`） | **新設**。final な verdict を payload バイト不変のまま当該 merge へ再 attest し、canonical audit receipt を append |
+| merged 用の証跡照合 | 同 `:816`（`mergedOverrideSelfContext`）/ `:849`（`mergeFactsOf`）/ `:860`（`mergedSelfEvidence`）/ `:885`（`attestationIsIntact`）/ `:893`（`attestationBindsDelivery`）/ `:919`（`attestationBindsIdentity`） | **新設・拡張**。live-head 前提を merge 事実の照合へ置換 |
+| 束縛環境の判定（sensor） | `plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts:322-338`（`checkAttestationEnvironment`） | **receipt が merge 事実に触れるか**（`:303-306` `touchesMergeFacts`）で `checkMergeBinding`（`:344-370`）と `checkCheckoutBinding`（`:372-381`）へ分岐 |
+| 契約散文 | `plugins/github-pr-convergence/sensors/amadeus-pr-convergence-report-format.md` の新設節「Which environment a record answers for」（+22 行）/ `plugins/github-pr-convergence/stages/pr-convergence.md`（+38 −12） | 「the receipt decides which — never the kind (#3149)」 |
+
+**半端な merge 事実は fail-closed である**: `mergeCommit` と `mergedAt` の片方だけを持つ receipt は `checkMergeBinding` の冒頭（`:349-354`）で malformed finding となり、**checkout 束縛へフォールバックしない**。
+
+### D. election store の採番コンポーネント（#3046 の着地形）
+
+前節 §F が記した「読み全体 / 書き voter 単位」の非対称は解消され、**読みと書きが同一スコープ**になった。
+
+| コンポーネント | file:line（observed） | 責務 | 変化 |
+|---|---|---|---|
+| D-09 契約ヘッダ | `packages/framework/core/tools/amadeus-election-store.ts:17-31` | store の並行性前提を宣言 | **改訂**（`revised for #3046, ADR-5`）。`arrivalSequence` は voter 単位で一意、グローバルには非一意 |
+| append 経路 | 同 `:1070`（`appendPending`）、採番は `:1104` | 自 voter ファイルのみを読んで max+1 を採番 | **read set == write set** へ変更（旧: `readAllPending` 全体読み） |
+| voter 単位の読み | 同 `:504`（`readPendingVoter`）、単調性検査 `:537` | 1 voter ファイルの decode | **狭義単調でない並びを `err("corrupt")`**（再ソートしない） |
+| 全 voter 読みと順序 | 同 `:558`（`readAllPending`）、複合鍵検査 `:582`、比較子 `:550-556`（`comparePendingEvents`） | 全 pending の decode と全順序付与 | 一意性検査が `(voter, arrivalSequence)` の**複合鍵**へ。順序は `(arrivalSequence, voter)` の辞書式比較 |
+
+**全順序はディスク上のプロパティではなく読み時の決定的計算になった** — 書き込み順・ディレクトリ列挙順に依存しない。
+
+### E. `workspace_requires` ガードの probe 群（#3156 の着地形）
+
+前節 §E が「3 プローブが `intentBirthCommit` を共有する単一障害点」と記した構成は、**4 probe 構成**になった。
+
+| probe | file:line（observed） | 窓 |
+|---|---|---|
+| (a) `recordBranchSourceWork` | `packages/framework/core/tools/amadeus-state.ts:2516` | `birth..HEAD`（record ブランチ直上） |
+| (b) `boltRefHasSourceWork` | 同 `:2561` | 当該 intent の bolt ref（merge-base 経由） |
+| (c) `mergedPrSourceWork` | 同 `:2600` | `birth..HEAD` のうち宣言 Issue を参照するコミット |
+| **(d) `branchSourceWorkSinceTrunkFork`** | 同 `:2660` | **`[trunk fork point .. HEAD]`**（`--first-parent --no-merges`）。**新設** |
+| 合成 | 同 `:2703-2711`（`intentScopedSourceWork`） | 4 probe の OR |
+| trunk 解決 | 同 `:2625`（`resolveTrunkRef`） | `refs/heads/main` → `refs/remotes/origin/main` の**完全修飾** ref 解決。**新設** |
+| birth 起点 | 同 `:2503`（`intentBirthCommit`） | 不変 |
+| ガード呼出 | 同 `:2732`（`gitHasSourceWork`）/ `:2767`（`workspaceHasWork`） | 不変 |
+
+**probe (d) は birth を窓の起点でなく妥当性検査にのみ使う** — birth が fork point と HEAD の間に無ければ false を返す。前節が指摘した単一障害点は、この 1 probe が birth より前を見られるようになった分だけ緩和された（birth が null なら (d) も false を返す点は不変）。
+
+### F. focus 2 件が触れる既存コンポーネント（新規コンポーネントの追加は本スキャンでは未決）
+
+| コンポーネント | file:line（observed） | focus との関係 |
+|---|---|---|
+| RE stage 契約 | `packages/framework/core/amadeus-common/stages/inception/reverse-engineering.md`（237 行）。`consumes: []` は `:20`、スキャン対象列挙は `:104-112`、Preflight は `:81-95` | **#2415** — 除外規則の置き場。現状**規則は不在**（`git grep -n -iE "exclude\|excluded\|exclusion\|workflow exhaust\|process record"` → exit 1） |
+| Developer scan テンプレート | `packages/framework/core/amadeus-common/templates/re-artifacts.md`（RE 契約 `:114` から引き渡し） | 同上。同じ grep で **exit 1**（不在） |
+| RA stage 契約 | `packages/framework/core/amadeus-common/stages/inception/requirements-analysis.md`（217 行）。`consumes:` は `:14-29`（6 件、いずれも Issue 由来でない）、読み口は `:68-71` | **#3181** — Issue 証跡の consume 追加先。今日 issue 的入力は `:71` の audit shard 散文のみ |
+| artifact パス解決 | `packages/framework/core/tools/amadeus-orchestrate.ts:2378-2400`（`resolveArtifactPath`）/ `:2411-2420`（`resolveConsumePath`） | **レジストリファイルは存在しない**（規約が実装で計算される）。新 artifact 種別は resolver 側 0 行 |
+| graph 不変量 | `packages/framework/core/tools/amadeus-graph.ts:856`（`producersOf`）/ `:1192-1198`（producer 不在は hard error）/ `:1200-1206`（経路外は advisory、strict で error） | **consume のみの artifact は graph エラー**。producing stage の宣言が必須 |
+| stage schema | `packages/framework/core/tools/amadeus-stage-schema.ts:39-43` | `consumes` の型と `conditional_on` 語彙 |
+| codekb stage 集合 | `packages/framework/core/tools/amadeus-lib.ts:1461` | 逐語 `new Set(["reverse-engineering"])` — **単一要素集合** |
+| GitHub プロセス境界 | `packages/framework/core/tools/amadeus-github-gateway.ts`（1,034 行）。`viewArgv` `:175-180` / `parseIssueObject` `:418-446` / `readiness` `:799-830` / adapter 2 種 `:944` `:950` | **#3181** — Issue の read path は既存。新 transport 不要。3 つ目の adapter を足す形かは design の裁定事項（仮説） |
+
+### 5 領域の交差（是正後）
+
+**`amadeus-state.ts` は observed で 6,616 行**（`git show 23d4ae767:packages/framework/core/tools/amadeus-state.ts | wc -l`、本節の実測。base の 6,457 行から +159 = 区間 diff の +198 −39 と一致）。#3153 / #3152 / #3156 の是正は同ファイル内の非重複行域（gate 系 `:3782-3930` 付近、source-work 系 `:2503-2770`）へ着地した。
+
+**focus 2 件の患部は上表 §F のとおり `amadeus-state.ts` を含まない**（RE/RA の stage 契約、`amadeus-orchestrate.ts` の resolver、`amadeus-graph.ts` の不変量、`amadeus-github-gateway.ts`）。ただしこれは**現時点で同定できた患部集合についての観測**であって、実装が触る面の確定ではない — 是正方式が未決である以上、write scope の最終的な交差有無は design 以降の裁定に依存する。機序は `architecture.md`、配置は `code-structure.md`、テスト面と台帳は `code-quality-assessment.md` の各対応節を参照。

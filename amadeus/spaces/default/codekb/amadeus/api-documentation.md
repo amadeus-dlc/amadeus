@@ -2189,7 +2189,7 @@ base `83e1dbeefb3278a00e86f69d3c79071a35ccf043` → observed `5c5911ee3f107152c3
 
 詳細は `architecture.md` / `component-inventory.md` / `code-structure.md` の各対応節を参照。
 
-## 区間の公開契約の変化と、優先バグ 5 件が触れる契約面（260816-priority-bug-batch-3、現在、observed `89053172e`）
+## 区間の公開契約の変化と、優先バグ 5 件が触れる契約面（260816-priority-bug-batch-3、履歴、observed `89053172e`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260817-inception-cost-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する。本節 §3 が予測した「基数 pin を通過する方式」は本区間で実際にそのとおり着地した — 現況は本ファイル末尾の 260817-inception-cost-batch 節を参照））
 
 base `5c5911ee3f107152c3173701caf178a746b6e3aa` → observed `89053172ed8b5bb270e254aea029a13291d10b6b`。**本区間は公開契約がほぼ動かなかった区間**である（前区間は 5 面が動いた）。
 
@@ -2244,5 +2244,117 @@ base `5c5911ee3f107152c3173701caf178a746b6e3aa` → observed `89053172ed8b5bb270
 ### 3. 契約面から見た方式選択の制約
 
 **基数 pin（98）が blocking の門番である。** 5 件のうち #3153 と #3152 は監査面へ届きうるが、**新イベントを増やす方式だけが `tests/integration/event-registry-drift.test.ts:51` を発火させる**。既存イベントへのフィールド追加や既存行の冪等化はこの pin を通過する。方式裁定時にこの分岐を明示すること。
+
+詳細は `architecture.md` / `component-inventory.md` / `code-structure.md` の各対応節を参照。
+
+## 区間の公開契約の変化と、focus 2 件が触れる契約面（260817-inception-cost-batch、現在、observed `23d4ae767`）
+
+base `89053172ed8b5bb270e254aea029a13291d10b6b` → observed `23d4ae767956cd56fc28fa78abe28096712eff8a`。**本区間は前区間と異なり、監査スキーマと sensor 契約が実際に動いた区間**である。
+
+### 1. 前節の予測がそのまま実現した — 基数 pin は通過し、属性が増えた
+
+前節 §3 は「新イベントを増やす方式だけが `tests/integration/event-registry-drift.test.ts:51` を発火させる。既存イベントへのフィールド追加や既存行の冪等化はこの pin を通過する」と記していた。**着地した方式は後者である。**
+
+| 契約面 | 実測（本節の再実行） | 判定 |
+|---|---|---|
+| audit イベント基数 pin | `git grep -n "EXPECTED_CANONICAL_COUNT).toBe" 23d4ae767 -- tests/integration/event-registry-drift.test.ts` → `:51 expect(EXPECTED_CANONICAL_COUNT).toBe(98);` | **不変（98）** |
+| audit イベント **属性** | `packages/framework/core/otel/event-registry.ts` +2 −2 | **2 イベントの属性集合が変化**（下表） |
+| CLI verb | `pr-convergence-cli.ts` は既存 verb（`report` / `override`）の**挙動**のみ変更。新 verb なし。`amadeus-{orchestrate,log,bolt,config}.ts` は変更ファイル一覧に不在 | **不変** |
+| config leaf | `amadeus-config.ts` 無変更 | **不変** |
+| harness | `git diff --name-only 89053172e..23d4ae767 -- packages/framework/harness/` → **空出力・exit 0** | **不変** |
+| CI | `git diff --name-only 89053172e..23d4ae767 -- .github/` → **空出力・exit 0** | **不変** |
+| 外部依存 | `git diff --stat 89053172e..23d4ae767 -- package.json bun.lock '**/package.json'` → **空出力・exit 0** | **不変** |
+
+### 2. audit イベントの属性契約の変化 — 2 イベント
+
+`packages/framework/core/otel/event-registry.ts` の逐語 diff（本節の実測）:
+
+| イベント | 変化 | 行 |
+|---|---|---|
+| `INTENT_AUTONOMY_HUMAN_REQUIRED` | `requiredAttributes` に **`"Idempotency Key"` を追加**（`["Interaction Kind", "Stage slug", "Reason", "Mode"]` → 同 + `"Idempotency Key"`） | `event-registry.ts` の `@@ -255,7 +255,7 @@` hunk |
+| `GATE_APPROVED` | `optionalAttributes` に **`"Approval Provenance"` を追加**（`["User Input", "Grant Id", "Swarm batch", "Transaction Id", "Presence Reservation Id"]` の 2 番目の後へ挿入） | 同 `@@ -548,7 +548,7 @@` hunk |
+
+いずれも `schemaVersion: 1` のまま。**必須属性の追加（`Idempotency Key`）は既存行を読む消費者にとって破壊的でありうる**点は記録しておく — 区間内で発行された行は新属性を持つが、それ以前の 372 行（前節 §2.2 の実測値）は持たない。
+
+**正本側の同期**（`cid:build-and-test:bt-ledger-resync` 系の対訳同期）:
+
+- `packages/framework/core/knowledge/amadeus-shared/audit-format.md`（+4 −2）— `GATE_APPROVED` 行の When 列と Optional 列、`INTENT_AUTONOMY_HUMAN_REQUIRED` 行の Required 列を更新。あわせて**発行契約の散文が 1 段落新設**された。逐語冒頭: `INTENT_AUTONOMY_HUMAN_REQUIRED is written when a gate is PRESENTED, not when the autonomy projection is read — reading it (every next, every approval attempt) writes nothing.`
+- `docs/reference/12-state-machine.md` / `.ja.md`（各 +2 −2）— 対訳同時更新。`GATE_APPROVED` の Notes に provenance 4 値の説明、`INTENT_AUTONOMY_HUMAN_REQUIRED` の Notes に「recorded once per presentation」を追記
+
+`Approval Provenance` の閉語彙は `packages/framework/core/tools/amadeus-lib.ts:3912` の型が正本である。逐語 `export type GateApprovalProvenance = "gate-open-turn" | "delegated" | "intent-grant" | "guard-disabled";`
+
+### 3. 内部 export の増加 — 7 シンボル
+
+`git grep` による observed 断面の確認（本節の実測、exit 0）。いずれも core tools 内の TypeScript export で、**CLI / config / audit のどの外部契約にも新しい面を作らない**。
+
+| シンボル | file:line | 種別 |
+|---|---|---|
+| `ProductionStageAutonomyInput` | `packages/framework/core/tools/amadeus-intent-autonomy-production.ts:293` | interface |
+| `GateOpenRefusalInput` | 同 `:419` | interface（`ProductionStageAutonomyInput` を extends） |
+| `recordAutonomyRefusalAtGateOpen` | 同 `:432` | function（`(input: GateOpenRefusalInput): void`） |
+| `isMilestoneInteraction` | `packages/framework/core/tools/amadeus-intent-autonomy.ts:762` | function（`(kind: InteractionKind): boolean`） |
+| `GateApprovalProvenance` | `packages/framework/core/tools/amadeus-lib.ts:3912` | type（閉語彙 4 値） |
+| `GateResolutionPresence` | 同 `:3958-3960` | type（判別ユニオン。`ok: true` は provenance、`ok: false` は `"ledger-absent" \| "no-outstanding-human-act" \| "gate-open-missing"`） |
+| `resolveGateResolutionPresence` | 同 `:3967-3981` | function |
+
+### 4. pr-convergence の sensor 契約の変化 — 束縛環境の判定規則が新設された
+
+`plugins/github-pr-convergence/sensors/amadeus-pr-convergence-report-format.md` に節「Which environment a record answers for」が **+22 行**で新設された（削除ゼロ）。契約の逐語要点:
+
+- `A record is bound either to the checkout it was written from or to the merge it was finalised against, and the receipt decides which — never the kind (#3149).`
+- merge commit と merged at の**両方**を attest する receipt はその merge に答え、local head は比較されない。それ以外の receipt は checkout に答え、HEAD が receipt の名指す head であることを要する
+- body が述べるが receipt が attest しない merge 事実は、**kind を問わず finding**
+- attested 値は commit object id / parse 可能な timestamp の形状を検査され、malformed は finding。**checkout 束縛へのフォールバックはない**
+- 片方だけの merge 事実は「二重に拒否」される — receipt 段で malformed、body 段で attestation 欠落
+
+`plugins/github-pr-convergence/stages/pr-convergence.md`（+38 −12）側の対応する契約:
+
+- final な verdict（`converged` / 記録済み `override`）はマージ後も `landed` へ書き換えられない。`report` が**その場で最終化**する — payload バイトと verdict は不変、receipt のみ当該 merge へ再 attest、canonical audit receipt を append。2 度目の `report` は未完了分のみ replay
+- check rollup は**記録するが合否条件にはしない**（merge commit は PR が持たなかった post-merge workflow run を拾うため）
+- `override` の merged arm は同じ祖先性検査を実行し、**成功する場合は拒否して `report` を案内する**。失敗時は逐語の測定値（両 SHA と閉じられない理由）を ruling の `reason` へ運ぶ。record に human turn が無ければ ruling は拒否される。「無音で guard を飛ばす環境変数・フラグ・state フィールドは提供しない」と明記
+
+**実装側の判定点**: `plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts:322-338`（`checkAttestationEnvironment`）が `:303-306`（`touchesMergeFacts`）の結果で `checkMergeBinding`（`:344-370`）と `checkCheckoutBinding`（`:372-381`）へ分岐する。
+
+### 5. focus 2 件が触れる契約面
+
+是正方式は未決（`memory/team.md` P1 の裁定事項）だが、**どの方式でも通る契約面**は次のとおり。
+
+**#2415 — RE stage 契約の入力面**
+
+| 面 | 現況（observed の実測） |
+|---|---|
+| `consumes:` | `reverse-engineering.md:20` 逐語 `consumes: []` — **RE は何も consume しない** |
+| `produces:` | 同 `:10-19` の 9 artifact |
+| `sensors:` | 同 `:23-27`（`required-sections` / `upstream-coverage` / `answer-evidence` / `question-budget`） |
+| スキャン対象の列挙 | 同 `:104-112`（`Developer scans <repo>'s codebase ... for:` + 7 bullet） |
+| Developer テンプレート | 同 `:114` → `packages/framework/core/amadeus-common/templates/re-artifacts.md` |
+| 除外規則 | **不在**。`git grep -n -iE "exclude\|excluded\|exclusion\|workflow exhaust\|process record" 23d4ae767 -- <RE 契約> <re-artifacts.md>` → **exit 1**（一致なし・エラーなし） |
+
+**#3181 — RA stage 契約の consume 面と artifact 語彙**
+
+| 面 | 現況（observed の実測） |
+|---|---|
+| `consumes:` | `requirements-analysis.md:14-29` の 6 件。`intent-statement`(`:15`) / `scope-document`(`:17`) / `business-overview`(`:19`, brownfield) / `architecture`(`:22`, brownfield) / `code-structure`(`:25`, brownfield) / `team-practices`(`:28`)。**全件 `required: false`、Issue 由来はゼロ** |
+| 読み口 | 同 `:68-71`（Step 2）。`:70` が codekb、**`:71` が `<record>/audit/<host>-<clone>.jsonl` の散文** |
+| `upstream-coverage` の義務 | 同 `:185` — 出力散文が `consumes:` の各 artifact を参照すること。**現行の括弧書きは 3 件のみを列挙**（逐語 `(this stage consumes intent-statement, scope-document, team-practices)`）ため、consume を増やすならこの散文自体の同期も要る |
+| `consumes` の型 | `packages/framework/core/tools/amadeus-stage-schema.ts:39-43`（`artifact` / `required` 必須 / `conditional_on?: "brownfield" \| "greenfield"`）。検証は同 `:277-316` |
+| artifact → path | `packages/framework/core/tools/amadeus-orchestrate.ts:2378-2400`（`resolveArtifactPath`）。**レジストリファイルは存在しない**（規約が実装で計算される） |
+| producer 必須 | `packages/framework/core/tools/amadeus-graph.ts:1192-1198` — producer がどの stage にも無い consume は **hard error** |
+| 追加手順の正本 | `docs/reference/16-artifact-vocabulary.md:212-226` — producing stage の `produces:` / `optional_produces:` へ名前追加 → `bun amadeus-graph.ts artifacts` で確認 → `/amadeus --doctor` で参照検査 |
+
+**#3181 の GitHub 読取契約**（既存、`packages/framework/core/tools/amadeus-github-gateway.ts`）:
+
+| 契約 | file:line | 内容 |
+|---|---|---|
+| 単一 Issue GET | `:175-180` `viewArgv(repo, issueNumber)` | `["api", "--include", "--method", "GET", "repos/<owner>/<repo>/issues/<n>"]` |
+| DTO | `:418-446` `parseIssueObject` | `RemoteGitHubIssue { repository, number, title, body, state }`。`body` の null は `""` へ、`state` は `open`/`closed` → `OPEN`/`CLOSED`、`:439-442` で `repository_url` の repo 一致を cross-check |
+| readiness | `:799-830` | `gh --version`（`versionArgv()` `:112`）→ `gh auth status --hostname github.com`（`authArgv()` `:116`）。非 0 exit で `"not-installed"` / `"unauthenticated"` + `"no-effect-confirmed"` certainty。raw stdout/stderr を運ばない |
+| port 宣言 | `amadeus-finding-types.ts:19` / `amadeus-mirror-types.ts:427` | `readiness(repository): Promise<...<void>>` |
+
+### 6. 契約面から見た方式選択の制約
+
+**基数 pin（98）は本区間で門番として作動しなかった** — 属性追加という方式が選ばれたためである。focus 2 件は現時点で audit イベントに触れる兆候がないので、この pin は本 intent でも発火しない見込みだが、**証跡取り込みを監査イベント化する方式を採る場合はこの限りでない**。
+
+**#3181 側の実質的な門番は graph 不変量である。** `consumes` に名前を足すだけでは `amadeus-graph.ts:1192-1198` の hard error になるため、**Issue を取り込む stage が `produces:` にそれを宣言する**必要がある。あわせて `upstream-coverage` の散文参照義務（`requirements-analysis.md:185`）が `requirements.md` 側へ波及する。
 
 詳細は `architecture.md` / `component-inventory.md` / `code-structure.md` の各対応節を参照。
