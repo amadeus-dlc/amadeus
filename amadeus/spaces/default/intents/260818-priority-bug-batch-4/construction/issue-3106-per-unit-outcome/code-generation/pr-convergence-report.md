@@ -1,8 +1,8 @@
 # PR Convergence Report
 
 - kind: converged
-- pull request: amadeus-dlc/amadeus#3202
-- generated at: 2026-08-18T13:02:03Z
+- pull request: amadeus-dlc/amadeus#3203
+- generated at: 2026-08-18T13:02:29Z
 - converged: true
 - merge state: CLEAN
 - mergeable resolution: resolved
@@ -22,15 +22,15 @@
 - terminalized: 0
 ## CLI Attestation
 
-- attestation id: prca:aa6dee3a3b478db1ad15ad3e279cc1459eeb0cb5b5a3048126deb6f220f0274a
+- attestation id: prca:b985f3a39fc5c474e46fb11d8f532935f1d9a9c3f20c90f75f666db0a61b55d2
 - intent: priority-bug-batch-4
 - intent uuid: 01a013af-0055-7f5b-b9b8-9e12b8c1f7bd
 - record: amadeus/spaces/default/intents/260818-priority-bug-batch-4/
-- bolt: 1
-- unit: issue-2837-invoke-swarm-context
+- bolt: 2
+- unit: issue-3106-per-unit-outcome
 - repository: amadeus-dlc/amadeus
-- pr: 3202
-- local head: 7924e19146b020c635a9194b1a29cbfb3f875bcd
-- remote head: 7924e19146b020c635a9194b1a29cbfb3f875bcd
-- pr head: 7924e19146b020c635a9194b1a29cbfb3f875bcd
-- content digest: sha256:4e96083a5ad499b800ecc1ad9a3add085174599cbaa74d118327c288fb69a20f
+- pr: 3203
+- local head: 980cb6b063d2f17ab533a9ab8b43653feb16c5b7
+- remote head: 980cb6b063d2f17ab533a9ab8b43653feb16c5b7
+- pr head: 980cb6b063d2f17ab533a9ab8b43653feb16c5b7
+- content digest: sha256:68abcb0304a6e746f0b6750eace79a6df1594bc85867188c1da15a288e591f8b
