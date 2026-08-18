@@ -275,9 +275,9 @@ If the worktree was already gone (idempotent path), `emitted` is `null` and `rea
 
 ## How AIDLC reads strategy from team practices
 
-The dispatch protocol described in this section is implemented by **SKILL.md Step 0** (worktree create) and **Step 6.5** (worktree merge). `amadeus-bolt complete --merge` orchestrates around the dispatch (forkState merge-back, forkAudit merge-back) but does not call `amadeus-worktree merge` directly — the dispatch lives in SKILL.md prose.
+The dispatch protocol described in this section is invoked at the two Bolt boundaries — worktree create when a Bolt starts, worktree merge when it completes. `amadeus-bolt complete --merge` orchestrates around the dispatch (forkState merge-back, forkAudit merge-back) but does not call `amadeus-worktree merge` directly. No shipped conductor face carries that dispatch today (`amadeus-worktree` appears in none of them), so treat this section as the agent's contract for when it IS dispatched, not as a description of prose that exists.
 
-When a Bolt starts (Step 0) or completes (Step 6.5), the orchestrator dispatches a Task call to **amadeus-pipeline-deploy-agent** with two inputs:
+At either boundary, the orchestrator dispatches a Task call to **amadeus-pipeline-deploy-agent** with two inputs:
 
 1. The contents of `{{HARNESS_DIR}}/rules/amadeus-team.md`'s `## Way of Working` section (or `amadeus-org.md` if `amadeus-team.md` is empty — fallback chain in `shared/rules-reading.md`).
 2. The Bolt's metadata (slug, source branch, optional target-line hint for release-branch teams).

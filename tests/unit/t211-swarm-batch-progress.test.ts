@@ -282,6 +282,59 @@ function seedFailedSwarmUnit(withClosure = true): { proj: string; attempt: strin
   return { proj, attempt };
 }
 
+/**
+ * A batch whose Unit Pool identity is already SPENT (#2837). The compiled batch
+ * declares two units; the pool was only ever prepared for `alpha`, which failed,
+ * was ruled Skip, and left the pool terminal. `beta` is still uncovered and
+ * carries no pool terminal, so the batch is offered again — with a batch
+ * identity whose durable pool (`unit-pool:1:initial-enqueue`) cannot be
+ * initialised a second time.
+ */
+function seedSpentPoolBatch(): string {
+  const proj = seedSwarmProject([["alpha", "beta"]]);
+  const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(proj));
+  expect(pool.initialEnqueue({
+    idempotencyKey: "unit-pool:1:initial-enqueue",
+    batchId: "1",
+    cap: 1,
+    units: [{ unitId: "alpha", dependsOn: [] }],
+  }).ok).toBe(true);
+  expect(pool.acquire({ idempotencyKey: "spent:acquire", batchId: "1" }).ok).toBe(true);
+  const attempt = pool.readProjection("1").active[0].attemptId;
+  expect(pool.confirmDispatch({
+    idempotencyKey: "spent:confirm",
+    batchId: "1",
+    attemptId: attempt,
+    nativeHandle: "native-alpha",
+  }).ok).toBe(true);
+  expect(pool.settleRelease({
+    idempotencyKey: "spent:settle",
+    batchId: "1",
+    attemptId: attempt,
+    outcome: "failed",
+  }).ok).toBe(true);
+  emitAuditEventGuarded("BOLT_FAILED", {
+    "Failed Bolt": "alpha",
+    "Bolt slug": "alpha",
+    "Error summary": "red",
+    Stage: "code-generation",
+    "Attempt Id": attempt,
+    "Batch Id": "1",
+  }, proj);
+  emitAuditEventGuarded("SWARM_BATON_RETURNED", {
+    "Batch number": "1",
+    "Unit name": "alpha",
+    Reason: "error",
+    Stage: "code-generation",
+    "Attempt Id": attempt,
+  }, proj);
+  // The failure is RULED (Skip), so nothing is owed the human any more — the
+  // engine walks on to the batch selection with the pool already terminal.
+  expect(runFailureRuling(proj, "Skip")).toMatchObject({ kind: "committed" });
+  expect(pool.readProjection("1").phase).toBe("terminal");
+  return proj;
+}
+
 function seedFailedSoloUnit(): { proj: string; attempt: string; batch: string } {
   const proj = seedSwarmProject([["alpha"]]);
   writeFileSync(
@@ -555,6 +608,33 @@ describe("t211 tryEmitSwarm excludes completed batches (#841)", () => {
     // The crux of #841: the offered batch is the FIRST with uncovered units, not
     // the static batches[0]. Pre-fix this was ["alpha"] (batch 1 re-offered).
     expect(directive.units).toEqual(["beta"]);
+  });
+
+  // #2837 FR-2837-1 / FR-2837-4(a). The engine holds the 1-origin batch number
+  // (firstUncoveredBatch) and the conductor needs it verbatim for
+  // `prepare --batch`; before this contract the emit dropped it and the
+  // conductor had to re-derive engine-owned routing. Batch 1 is covered here, so
+  // a hardcoded "1" cannot satisfy the assertion — the identity is DERIVED.
+  test("a1: the offered batch carries its 1-origin identity for `prepare --batch`", () => {
+    const proj = seedSwarmProject([["alpha"], ["beta"]]);
+    coverUnit(proj, "alpha");
+    const directive = runNext(proj);
+    expect(directive.kind).toBe("invoke-swarm");
+    expect(directive.units).toEqual(["beta"]);
+    expect(directive.batch).toBe("2");
+  });
+
+  // #2837 FR-2837-4(b). The batch identity is also the DURABLE pool identity
+  // (`unit-pool:<batch>:initial-enqueue`), so re-offering a batch whose pool is
+  // already terminal hands the conductor an identity a fresh `prepare` cannot
+  // take: the second initial-enqueue replays the spent pool or conflicts. The
+  // engine owns the identity now, so it refuses instead of emitting one that
+  // collides.
+  test("a1b: a batch whose Unit Pool is already terminal is never offered for a fresh prepare", () => {
+    const directive = runNext(seedSpentPoolBatch());
+    expect(directive.kind).toBe("error");
+    expect(String(directive.message)).toContain("batch 1");
+    expect(String(directive.message)).toContain("Unit Pool");
   });
 
   test("a2: a lone recorded repo is propagated with the selected batch", () => {
