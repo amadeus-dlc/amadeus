@@ -27,7 +27,6 @@
 // path live in tests/integration/t511-blocking-sensor-gate.integration.test.ts.
 
 import { describe, expect, test } from "bun:test";
-import type { SpawnSyncReturns } from "node:child_process";
 import {
   resolveSensorsForStage,
   type SensorFile,
@@ -483,7 +482,7 @@ describe("t511 — evaluateBlockingSensors decision table (#2671 c)", () => {
         status: null,
         signal: null,
         error,
-      }) as SpawnSyncReturns<string>,
+      }) as Parameters<typeof decideOutcomeOrScriptError>[3],
     );
     expect(outcome.kind).toBe("passed");
     if (outcome.kind !== "passed") throw new Error("spawn failure must produce a passed audit outcome");
