@@ -40,7 +40,10 @@ import {
   seedStateFile,
 } from "../harness/fixtures.ts";
 import { amadeusToolTarget } from "../harness/cli-target.ts";
-import { runIssueEvidenceFetch } from "../../packages/framework/core/tools/amadeus-utility.ts";
+import {
+  defaultIssueEvidenceDeps,
+  runIssueEvidenceFetch,
+} from "../../packages/framework/core/tools/amadeus-utility.ts";
 import { issueEvidencePath } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import type {
   EvidenceGitHubGateway,
@@ -289,6 +292,90 @@ describe("t3181 issue-evidence fetch — loud failure (FR-EVD-5)", () => {
     expect(outcome.kind).toBe("error");
     if (outcome.kind !== "error") throw new Error("expected an error");
     expect(outcome.message).toContain("--repo");
+  });
+});
+
+describe("t3181 issue-evidence fetch — default dependencies", () => {
+  // The production deps are what the CLI arm actually runs with, so their
+  // construction and the repository resolver behind them are exercised here
+  // rather than being taken on trust. Constructing the gateway spawns nothing —
+  // the runner is built lazily — so no `gh` is invoked by any of this.
+  function gitRepo(originUrl: string | null): string {
+    const dir = mkdtempSync(join(tmpdir(), "amadeus-t3181-git-"));
+    fakeBins.push(dir);
+    const run = (...args: string[]): void => {
+      const result = spawnSync("git", args, { cwd: dir, encoding: "utf-8" });
+      if (result.status !== 0) throw new Error(`git ${args.join(" ")}: ${result.stderr}`);
+    };
+    run("init", "--quiet");
+    if (originUrl !== null) run("remote", "add", "origin", originUrl);
+    return dir;
+  }
+
+  test("hands back a gateway, a clock and a repository resolver", () => {
+    const deps = defaultIssueEvidenceDeps();
+    expect(typeof deps.gateway.readiness).toBe("function");
+    expect(typeof deps.gateway.viewIssue).toBe("function");
+    expect(typeof deps.gateway.listComments).toBe("function");
+    expect(typeof deps.resolveRepository).toBe("function");
+    expect(deps.now()).toBeInstanceOf(Date);
+  });
+
+  test.each([
+    ["the SSH remote form", "git@github.com:Amadeus-DLC/Amadeus.git"],
+    ["the HTTPS remote form", "https://github.com/amadeus-dlc/amadeus.git"],
+    ["a remote without the .git suffix", "https://github.com/amadeus-dlc/amadeus"],
+  ])("reads the repository out of %s", (_label, originUrl) => {
+    const resolved = defaultIssueEvidenceDeps().resolveRepository(gitRepo(originUrl));
+    expect(resolved?.canonical).toBe("amadeus-dlc/amadeus");
+  });
+
+  test("returns nothing outside a git checkout", () => {
+    const bare = mkdtempSync(join(tmpdir(), "amadeus-t3181-nogit-"));
+    fakeBins.push(bare);
+    expect(defaultIssueEvidenceDeps().resolveRepository(bare)).toBeNull();
+  });
+
+  test("returns nothing when the origin is not a GitHub remote", () => {
+    const resolved = defaultIssueEvidenceDeps().resolveRepository(
+      gitRepo("git@gitlab.example.com:team/thing.git"),
+    );
+    expect(resolved).toBeNull();
+  });
+
+  test("accepts a well-formed --repo without consulting the resolver", async () => {
+    const bare = mkdtempSync(join(tmpdir(), "amadeus-t3181-repoflag-"));
+    fakeBins.push(bare);
+    const outcome = await runIssueEvidenceFetch(
+      bare,
+      ["fetch"],
+      { issues: "3181", repo: "amadeus-dlc/amadeus" },
+      {
+        gateway: fakeGateway(),
+        now: () => new Date("2026-08-18T01:02:03Z"),
+        resolveRepository: () => {
+          throw new Error("the resolver must not run when --repo is given");
+        },
+      },
+    );
+    // It gets past the repository step on the flag alone and stops at the
+    // intent, which this bare directory does not have.
+    expect(outcome.kind).toBe("error");
+    if (outcome.kind !== "error") throw new Error("expected an error");
+    expect(outcome.message).toContain("no active intent resolves");
+  });
+
+  test("refuses before any request when no intent resolves", async () => {
+    const bare = mkdtempSync(join(tmpdir(), "amadeus-t3181-nointent-"));
+    fakeBins.push(bare);
+    const outcome = await runIssueEvidenceFetch(bare, ["fetch"], { issues: "3181" }, {
+      gateway: fakeGateway(),
+      now: () => new Date("2026-08-18T01:02:03Z"),
+      resolveRepository: () => REPO,
+    });
+    expect(outcome.kind).toBe("error");
+    if (outcome.kind !== "error") throw new Error("expected an error");
+    expect(outcome.message).toContain("no active intent resolves");
   });
 });
 

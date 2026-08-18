@@ -147,6 +147,26 @@ describe("t3181 parseIssueComments", () => {
       "an element bound to another repository",
       [comment(11, { issue_url: "https://api.github.com/repos/other/repo/issues/1" })],
     ],
+    // The issue_url guards, one arm each: unparsable, wrong scheme, wrong host,
+    // wrong path shape. Each would otherwise let a comment from somewhere else
+    // into this intent's evidence.
+    ["an unparsable issue url", [comment(11, { issue_url: "not a url" })]],
+    [
+      "an issue url that is not https",
+      [comment(11, { issue_url: "http://api.github.com/repos/amadeus-dlc/amadeus/issues/1" })],
+    ],
+    [
+      "an issue url on another host",
+      [comment(11, { issue_url: "https://example.com/repos/amadeus-dlc/amadeus/issues/1" })],
+    ],
+    [
+      "an issue url with too few path segments",
+      [comment(11, { issue_url: "https://api.github.com/repos/amadeus-dlc/amadeus" })],
+    ],
+    [
+      "an issue url whose path is not issue-scoped",
+      [comment(11, { issue_url: "https://api.github.com/repos/amadeus-dlc/amadeus/pulls/1" })],
+    ],
   ])("rejects %s", (_label, payload) => {
     const parsed = parseIssueComments(payload, REPO);
     expect(parsed.kind).toBe("failure");
@@ -165,6 +185,14 @@ describe("t3181 evidence adapter", () => {
       ["--version"],
       ["auth", "status", "--hostname", "github.com"],
     ]);
+  });
+
+  test("reports a gh that is not installed", async () => {
+    const { runner } = fakeRunner([exited(1)]);
+    const outcome = await createEvidenceGitHubGatewayAdapter(runner).readiness();
+    expect(outcome.kind).toBe("failure");
+    if (outcome.kind !== "failure") throw new Error("expected a failure");
+    expect(outcome.classification).toBe("not-installed");
   });
 
   test("reports an unauthenticated gh without leaking its stderr", async () => {

@@ -5201,5 +5201,41 @@
     },
     "reason": "The import.meta.main block is a race driver that only runs as a spawned subprocess (bun --coverage does not instrument spawned subprocesses). Its actual execution is proven by the parent-side assertions in t3046 (the pre-fix collision reproduces, and the same driver is pinned green post-fix). Issue #3046.",
     "expiry": "remove when Bun attributes spawned-process coverage to the parent LCOV report"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "selector": {
+      "function": "runUtilityMain",
+      "fingerprint": "sha256:c215a232c326b47cf76516fd5a25dbe264458c5fec213f298f536793c6a88abf",
+      "anchorLines": 5,
+      "targetLines": "1-5",
+      "class": "dispatch-case"
+    },
+    "reason": "The issue-evidence dispatch arm's call and success continuation. A switch arm in runUtilityMain runs only in a spawned CLI process, which bun --coverage does not count, so no in-process test can reach these lines; the verb is covered at the cli mechanism by tests/integration/t3181-issue-evidence-fetch.integration.test.ts, which spawns amadeus-utility and asserts both the routing and the loud-fail exit (#3181). Range measured uncovered by a targeted lcov run over the t3181 suite.",
+    "expiry": "remove if runUtilityMain becomes drivable in-process, or if bun starts counting spawned subprocesses"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "selector": {
+      "function": "runUtilityMain",
+      "fingerprint": "sha256:8ee15e6b13080a4dc00cb1067e819ae9622a95e39ffa47ebe2b117cde17de48c",
+      "anchorLines": 2,
+      "targetLines": "1-2",
+      "class": "dispatch-case"
+    },
+    "reason": "The issue-evidence dispatch arm's rejection continuation. Same spawned-CLI limit as the success arm above; the rejection path itself is proven end-to-end by tests/integration/t3181-issue-evidence-fetch.integration.test.ts 'fails loud when the write itself throws', which spawns the CLI against an unwritable record dir and asserts a non-zero exit (#3181). Range measured uncovered by a targeted lcov run over the t3181 suite.",
+    "expiry": "remove if runUtilityMain becomes drivable in-process, or if bun starts counting spawned subprocesses"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-utility.ts",
+    "selector": {
+      "function": "runUtilityMain",
+      "fingerprint": "sha256:628277f630e0af84580dade43d7da51e2323d2c7054926a86d7a9e401c683224",
+      "anchorLines": 1,
+      "targetLines": "1",
+      "class": "dispatch-case"
+    },
+    "reason": "The top-level usage string in runUtilityMain's default arm, edited by #3181 to list the issue-evidence verb. The arm ends in die(), which exits the process, so no in-process test can execute it; tests/integration/t3181-issue-evidence-fetch.integration.test.ts 'lists the verb in the top-level usage line' spawns the CLI and asserts the string at the cli mechanism.",
+    "expiry": "remove if the usage arm becomes drivable in-process, or if bun starts counting spawned subprocesses"
   }
 ]
