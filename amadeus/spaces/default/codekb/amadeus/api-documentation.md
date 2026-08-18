@@ -2247,7 +2247,7 @@ base `5c5911ee3f107152c3173701caf178a746b6e3aa` → observed `89053172ed8b5bb270
 
 詳細は `architecture.md` / `component-inventory.md` / `code-structure.md` の各対応節を参照。
 
-## 区間の公開契約の変化と、focus 2 件が触れる契約面（260817-inception-cost-batch、現在、observed `23d4ae767`）
+## 区間の公開契約の変化と、focus 2 件が触れる契約面（260817-inception-cost-batch、履歴、observed `23d4ae767`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260818-priority-bug-batch-4 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 base `89053172ed8b5bb270e254aea029a13291d10b6b` → observed `23d4ae767956cd56fc28fa78abe28096712eff8a`。**本区間は前区間と異なり、監査スキーマと sensor 契約が実際に動いた区間**である。
 
@@ -2356,5 +2356,131 @@ base `89053172ed8b5bb270e254aea029a13291d10b6b` → observed `23d4ae767956cd56fc
 **基数 pin（98）は本区間で門番として作動しなかった** — 属性追加という方式が選ばれたためである。focus 2 件は現時点で audit イベントに触れる兆候がないので、この pin は本 intent でも発火しない見込みだが、**証跡取り込みを監査イベント化する方式を採る場合はこの限りでない**。
 
 **#3181 側の実質的な門番は graph 不変量である。** `consumes` に名前を足すだけでは `amadeus-graph.ts:1192-1198` の hard error になるため、**Issue を取り込む stage が `produces:` にそれを宣言する**必要がある。あわせて `upstream-coverage` の散文参照義務（`requirements-analysis.md:185`）が `requirements.md` 側へ波及する。
+
+詳細は `architecture.md` / `component-inventory.md` / `code-structure.md` の各対応節を参照。
+
+## 区間の公開契約の変化と、focus 2 件が触れる契約面（260818-priority-bug-batch-4、現在、observed `127be70c5`）
+
+base `23d4ae767956cd56fc28fa78abe28096712eff8a` → observed `127be70c5d7a584016f88a5d44e8715904020721`（5 コミット）。**本区間は CLI verb が 1 件増え、artifact 語彙が 1 件増え、gateway の export が 5 件増えた区間**である。前区間で動いた監査スキーマと sensor 契約は、本区間では動いていない。
+
+区間の全体像は `re-scans/260818-priority-bug-batch-4.md` §1〜§2 に、再実行可能な述語つきで記録した。
+
+### 1. 変化した契約と不変の契約
+
+| 契約面 | 実測（本節の再実行、observed 断面） | 判定 |
+|---|---|---|
+| CLI verb | `amadeus-utility.ts` の usage 逐語に `issue-evidence` が加わった（`:7045` の `Usage: amadeus-utility <help\|version\|…\|codekb-path\|issue-evidence\|detect\|…>`） | **+1**（下表） |
+| artifact 語彙 | `git grep -n "export element counts" 127be70c5 -- tests/integration/t66.test.ts` → `:1032 test("export element counts: stages=32, scopes=15, artifacts=123, agents=15", …)` | **122 → 123** |
+| stage 数 / scope 数 / agent 数 | 同上（32 / 15 / 15） | **不変** |
+| audit イベント基数 pin | `git grep -n "EXPECTED_CANONICAL_COUNT).toBe" 127be70c5 -- tests/integration/event-registry-drift.test.ts` → `:51 expect(EXPECTED_CANONICAL_COUNT).toBe(98);`。`packages/framework/core/otel/event-registry.ts` は区間の変更ファイル一覧に**不在** | **不変（98）** |
+| config leaf | `amadeus-config.ts` 無変更 | **不変** |
+| harness | `git diff --name-only 23d4ae767..127be70c5 -- packages/framework/harness/` → **空出力・exit 0** | **不変** |
+| CI | `git diff --name-only 23d4ae767..127be70c5 -- .github/` → **空出力・exit 0** | **不変** |
+| 外部依存 | `git diff --stat 23d4ae767..127be70c5 -- package.json bun.lock '**/package.json'` → **空出力・exit 0** | **不変** |
+
+### 2. 新 CLI verb `issue-evidence fetch`（#3181、PR [#3190](https://github.com/amadeus-dlc/amadeus/pull/3190)）
+
+`packages/framework/core/tools/amadeus-utility.ts` に read-only の取り込み verb が 1 件加わった。
+
+| 面 | file:line（observed） | 契約 |
+|---|---|---|
+| dispatch arm | `:6981`（`case "issue-evidence":`） | 直前 `:6977-6980` のコメント逐語 `Reads the filing Issue(s) through the gateway and writes ONE record artifact. No state, no audit transition; a gh failure exits non-zero and writes nothing, leaving the conductor to continue on the free-text fallback.` |
+| 実装 | `:6824` `runIssueEvidenceFetch(projectDir, argv, flags)` | **verb は `fetch` の 1 語のみ**。`:6834` 逐語 `issue-evidence: unknown verb …— the only verb is "fetch".` |
+| 必須フラグ | `:6843` | `--issues <n[,n...]>`（正の整数のカンマ区切り、非空必須） |
+| 任意フラグ | `:6849` / `:6856` | `--repo <owner>/<name>`。省略時は checkout から解決し、解決できなければ error |
+| 事前条件 | `:6867` / `:6873` | active intent が解決すること / `gh` が usable であること（gateway の `readiness` 経由）。いずれも満たさなければ **何も書かずに非 0 終了** |
+| 出力 | `:6985-6987` | 書込先の相対パスと `(N issue(s))` を 1 行で stdout へ |
+| 失敗の伝播 | `:6989-6995` | Promise の reject も `die()` へ寄せ、他 verb と同じ `ERROR_LOGGED` 行と exit 形にそろえる |
+| usage | `:7045` | 上表のとおり verb 名が列挙に加わった |
+
+**契約上の位置づけ**: state 遷移も audit 遷移も起こさない **read-only 照会 verb** であり、既存の `codekb-path` と同じ系統である。書込先は record 配下の 1 ファイルのみ（下記 `issueEvidencePath`）。
+
+### 3. `amadeus-github-gateway.ts` の新 export — 5 件（23 → 28）
+
+export 総数の census（本節の実測）: `git show <c>:packages/framework/core/tools/amadeus-github-gateway.ts | grep -c '^export '` → base `23d4ae767` **23** / observed `127be70c5` **28**。増分 5 件は次のとおりで、いずれも **read 面のみ**である。
+
+| シンボル | file:line | 契約 |
+|---|---|---|
+| `commentsArgv(repo, issueNumber)` | `:189` | 1 issue の全コメントを 1 リクエストで取る argv。`["api","--paginate","--method","GET","<issues>/<n>/comments","-f","per_page=<FIND_PER_PAGE>"]` |
+| `RemoteGitHubIssueComment` | `:478` | `Readonly<{ id: number; body: string; createdAt: string; authorLogin: string; htmlUrl: string }>` |
+| `parseIssueComments(payload, repo)` | `:550` | コメントページの parser。**fail-closed** |
+| `EvidenceGitHubGateway` | `:1077` | `readiness()` / `viewIssue(repository, n)` / `listComments(repository, n)` の 3 面のみを持つ port 型 |
+| `createEvidenceGitHubGatewayAdapter(runner)` | `:1089` | **3 つ目の adapter**。既存 2 種（`createMirrorGitHubGatewayAdapter` `:1058` / `createFindingGitHubGatewayAdapter` `:1064`）に並ぶ |
+
+**`commentsArgv` は `--include` を意図的に持たない。** 既存の read verb（`viewArgv` `:175-180` など）はすべて `--include` を付けるが、コメント取得だけは付けない。`:182-188` のコメント逐語:
+
+```
+`--include` is deliberately ABSENT here, unlike every other verb above: gh
+interleaves the per-page HTTP blocks with the per-page arrays under
+`--paginate`, which is not a shape parseHttpEnvelope can read back … Without
+`--include`, gh merges the pages into ONE plain JSON array, so the comment walk
+reads a bare body and classifies failure from the exit code alone — no HTTP
+status is available to it.
+```
+
+**すなわち本 verb の失敗分類は HTTP status ではなく exit code のみに依る。** これは gateway 内で唯一の例外であり、契約面として記録に値する。
+
+**`parseIssueComments` の fail-closed**（`:547-549` の逐語）: `Fail-closed: one bad element rejects the WHOLE list rather than yielding a shortened one, because a partial evidence capture would read as a complete record of the cross-review.` 実装は `:556-560` で 1 要素でも parse 失敗すれば `invalidResponse("read-only")` を返し、短縮リストを返さない。
+
+**`createEvidenceGitHubGatewayAdapter` は permit を取らない**（`:1070-1075` の逐語）: `The third adapter, and the only wholly read-only one … No mutation reaches it, so it takes no permit — the permit machinery guards writes, and there are none here.` 既存の mutation permit（`validateMirrorMutationPermit` / `validateFindingMutationPermit`）は write のみを gate するという前区間の観測（`260817-inception-cost-batch` 節 §5）が、実装として確認された形である。
+
+### 4. `amadeus-lib.ts` の新 export — 3 件
+
+| シンボル | file:line | 契約 |
+|---|---|---|
+| `RE_SCAN_EXCLUDED_PATHSPECS` | `:1540` | `readonly string[]`。RE 差分スキャンの除外 pathspec 5 件の**コード側で唯一の定義**（#2415） |
+| `issueEvidencePath(projectDir, intent?, space?)` | `:5043` | `string \| null`。active intent が解決しなければ `null` |
+| `relativeIssueEvidencePath(projectDir, intent?, space?)` | `:5051` | 同上の posix 相対形。契約散文が載せる形 |
+
+`RE_SCAN_EXCLUDED_PATHSPECS` の値（逐語、observed `:1541-1545`。定義行は `:1540`）:
+
+```
+":(exclude,glob)amadeus/spaces/*/intents/**",
+":(exclude,glob)amadeus/spaces/*/elections/**",
+":(exclude,glob)amadeus/spaces/*/codekb/**",
+":(exclude,glob)amadeus/spaces/*/memory/**",
+":(exclude,glob)metrics/**",
+```
+
+**`:(glob)` は装飾ではない。** 同ファイル `:1533-1535` の逐語コメント: `The bare form amadeus/spaces/*/intents/ is a valid pathspec whose * does not cross a /: it matches nothing and excludes nothing, silently. Never drop it (FR-EXC-5).` また `:1537-1539` は `amadeus/spaces/*/specs/` を**意図的に除外しない**理由（model-map.json と tla-evidence は resync 義務のある build 台帳＝コード知識）を宣言する。前区間 `260817-inception-cost-batch` 節が「`amadeus/spaces/**` の前方一致は TLA ビルド台帳を巻き添えにする」と記した観測が、そのまま実装の制約として着地している。
+
+### 5. stage 契約 frontmatter の変化 — 3 面
+
+| 契約ファイル | 変化 | 行（observed） |
+|---|---|---|
+| `stages/ideation/intent-capture.md` | **`optional_produces: [issue-evidence]` を新設** | `:14-15` |
+| `stages/inception/requirements-analysis.md` | `consumes:` に `issue-evidence`（`required: false`）を追加。6 → **7 件** | `:30-31` |
+| `stages/inception/reverse-engineering.md` | frontmatter は**不変**（`consumes: []` のまま）。追加は本文側のみ | — |
+
+**RE 契約が本文側にとどまるのは意図的である。** 同契約 `:239` の逐語: `This read is deliberately body-level and NOT a consumes: entry. A declared consume would put all nine codekb outputs under the upstream-coverage citation obligation the moment an evidence file exists — inception ceremony, which is what this capture exists to remove. Do not add the frontmatter entry.`
+
+**`upstream-coverage` の括弧書きが同期された。** `requirements-analysis.md:191` は前区間まで 3 artifact しか列挙していなかったが、本区間で **7 件全列挙**へ更新され、あわせて「ディスク上に存在する consume だけを sensor が要求する」という挙動が明文化された（逐語 `The sensor threads only the consumes whose artefact EXISTS on disk, so an input a lean scope never produced is not demanded.`）。前区間 §5 が「consume を増やすならこの散文自体の同期も要る」と記した点が、そのとおり閉じられた。
+
+### 6. focus 2 件が触れる契約面（是正未着地）
+
+**両 focus とも本区間で修正は着地していない**（`git grep -n "3106" 127be70c5 -- packages/ plugins/ tests/ docs/` → **exit 1**。`"2837"` は allowlist の sha256 偶然一致 2 hit のみで、`tests/.coverage-patch-allowlist.json:183` / `:566` の `fingerprint` 値の内部文字列である）。
+
+**#2837 — `invoke-swarm` directive の閉語彙**
+
+| 面 | file:line（observed） | 現況 |
+|---|---|---|
+| 型 | `packages/framework/core/tools/amadeus-directive.ts:312-331` `InvokeSwarmDirective` | `kind` / `units` / `cap` / `repo?` / `prepared_batch?` / `retry_unit?` の **6 面のみ**。`batch` / `check_cmd` / `test_file` は不在 |
+| 閉語彙（validator） | 同 `:555` 逐語 | `const INVOKE_SWARM_FIELDS = ["kind", "units", "cap", "repo", "prepared_batch", "retry_unit"] as const;` |
+| 語彙表への結線 | 同 `:587` | `"invoke-swarm": INVOKE_SWARM_FIELDS` |
+| 対称面（batch を運ぶ別 kind） | 同 `:644-649`（`execute-failure-election`） | 同じ engine が別 kind では `batch` を**必須フィールド**として搬送している |
+| retry arm | `packages/framework/core/tools/amadeus-orchestrate.ts:4092-4106` `preparedSwarmRetryDirective` | `prepared_batch` / `retry_unit` を搬送。**batch identity を運ぶ経路は既に存在する** |
+| swarm CLI の read verb | `packages/framework/core/tools/amadeus-swarm.ts:1419` | 有効 subcommand は 14 件（`prepare, check, retry, finalize, resolve, initial-enqueue, acquire, confirm-dispatch, record-reconciliation, settle-release, settle-release-requeue, settle-release-cancel-dependents, terminate-batch, late-result-observed`）。**`context` / `status` に相当する read-only verb は不在** |
+
+**#3106 — settle 行の閉語彙**
+
+| 面 | file:line（observed） | 現況 |
+|---|---|---|
+| 発行側 | `packages/framework/core/tools/amadeus-orchestrate.ts:4706` 逐語 | `if (batch === undefined \|\| cancelledUnits.has(unit)) continue;` — cancelled unit は発行対象から外れる |
+| 値の閉語彙 | 同 `:2475` 逐語 | `const SETTLED_UNIT_OUTCOME = "succeeded";` |
+| 読み側の拒否 | 同 `:2508` 逐語 | `if (outcome !== SETTLED_UNIT_OUTCOME) throw new Error(INVALID_SETTLED_ROW);` |
+| 下流の受理語彙 | `packages/framework/core/tools/amadeus-per-unit-consume-fanout.ts:199` | `KNOWN_OUTCOMES = new Set(["succeeded", "failed", "cancelled", "pending", "ambiguous"])` — **`cancelled` は既に正規の受理値** |
+| 文書化された限界 | `docs/guide/15-troubleshooting.md:143` 逐語 | `**Cancelled Units are not settled.** … closing that asymmetry is tracked as a follow-up issue.` **対訳 `.ja.md` に同一文字列は 0 hit**（`git grep -n "Cancelled Units are not settled" 127be70c5 -- docs/guide/15-troubleshooting.ja.md` → **exit 1**）— 対訳の文言そのものを確認していないため、対訳側の記載有無は**未判定**である |
+
+**契約面から見た制約**: #3106 の是正は `SETTLED_UNIT_OUTCOME`（発行側の 1 値）と `readSettledUnitOutcomes` の拒否条件（読み側の 1 行）を**同時に**開く必要がある — 片方だけを開くと、発行された cancelled 行が読み側で `INVALID_SETTLED_ROW` になる。下流の `KNOWN_OUTCOMES` は既に `cancelled` を受理するため、fanout 側の語彙拡張は不要である。#2837 の是正は `INVOKE_SWARM_FIELDS` の閉語彙を広げるか、`amadeus-swarm.ts` に read verb を足すかの分岐であり、**いずれも公開契約の追加**になる（是正方式は未決）。
 
 詳細は `architecture.md` / `component-inventory.md` / `code-structure.md` の各対応節を参照。

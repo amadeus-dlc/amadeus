@@ -1,12 +1,13 @@
 // covers: subcommand:amadeus-orchestrate:next, audit:UNIT_OUTCOME_SETTLED
 // size: large
 
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   consumePresentOnDisk,
+  handleNext,
   loadRuntimeUnitBatches,
   readPerUnitConsumePopulation,
   resolveConsumes,
@@ -236,6 +237,146 @@ function next(project: string) {
       AMADEUS_STAGE_GRAPH: join(project, ".claude/tools/data/stage-graph.json"),
     },
   });
+}
+
+// Seed the solo (per-unit) failure lifecycle the engine itself correlates: a
+// BOLT_STARTED/BOLT_FAILED pair under a `solo:<batch>:<unit>` batch identity.
+// The Unit pool is never touched — that is what makes this the per-unit path.
+function seedSoloFailure(project: string, unit: string): void {
+  const attempt = `attempt-${unit}`;
+  const stage = "code-generation";
+  emitAuditEventGuarded("BOLT_STARTED", {
+    "Bolt names": unit,
+    "Bolt slug": unit,
+    "Batch number": "1",
+    "Batch Id": `solo:1:${unit}`,
+    "Attempt Id": attempt,
+    Stage: stage,
+    "Walking skeleton": "no",
+  }, project);
+  emitAuditEventGuarded("BOLT_FAILED", {
+    "Failed Bolt": unit,
+    "Bolt slug": unit,
+    "Error summary": "seeded per-unit failure",
+    "Batch number": "1",
+    "Batch Id": `solo:1:${unit}`,
+    "Attempt Id": attempt,
+    Stage: stage,
+    Reason: "failed",
+  }, project);
+}
+
+// Cancel a Unit the only way the per-unit path can: the engine's own failure
+// ruling. The solo arm writes BOLT_COMPLETED(Outcome: cancelled) and no Unit
+// pool event at all, so the canonical projection carries the terminal while the
+// pool stream stays empty.
+function cancelSoloUnitThroughRuling(project: string, unit: string): void {
+  seedSoloFailure(project, unit);
+  const ruled = spawnSync(process.execPath, [
+    join(project, ".claude/tools/amadeus-orchestrate.ts"),
+    "resolve-failure",
+    "--user-input",
+    "Skip",
+    "--project-dir",
+    project,
+  ], {
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      AMADEUS_SKIP_HUMAN_PRESENCE_GUARD: "1",
+      AMADEUS_STAGE_GRAPH: join(project, ".claude/tools/data/stage-graph.json"),
+    },
+  });
+  expect(ruled.status, ruled.stderr).toBe(0);
+  expect(JSON.parse(ruled.stdout).kind, ruled.stdout).toBe("committed");
+}
+
+// Drive `next` IN-PROCESS over the project's own compiled graph and return the
+// directive it emitted. The spawned `next()` above crosses a process boundary
+// the parent LCOV cannot see, so the settle emitter's read of its OWN ledger is
+// also driven through the exported seam — the shape t367 uses for the same
+// reason.
+function nextInProcess(project: string): { kind: string } {
+  const previousGraph = process.env.AMADEUS_STAGE_GRAPH;
+  const previousGuard = process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
+  process.env.AMADEUS_STAGE_GRAPH = join(project, ".claude/tools/data/stage-graph.json");
+  process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = "1";
+  __resetGraphCache();
+  const emitted: string[] = [];
+  const log = spyOn(console, "log").mockImplementation((value) => {
+    emitted.push(String(value));
+  });
+  try {
+    handleNext([], project);
+  } finally {
+    log.mockRestore();
+    if (previousGraph === undefined) delete process.env.AMADEUS_STAGE_GRAPH;
+    else process.env.AMADEUS_STAGE_GRAPH = previousGraph;
+    if (previousGuard === undefined) delete process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD;
+    else process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = previousGuard;
+    __resetGraphCache();
+  }
+  // One `next` emits exactly one directive. Collecting every line and asserting
+  // the count is what keeps a future second stdout line from being swallowed:
+  // keeping only the last one would leave the test verifying a directive that is
+  // not the one under test, and saying nothing about it.
+  expect(emitted).toHaveLength(1);
+  return JSON.parse(emitted[0] as string) as { kind: string };
+}
+
+// Every settled per-unit outcome row on the ledger, as [idempotency key,
+// outcome] in the order the shard carries them.
+function settledLedger(project: string): (string | undefined)[][] {
+  return parseAuditRecords(readFileSync(seededAuditShard(project), "utf8"))
+    .filter((record) => record.event === "UNIT_OUTCOME_SETTLED")
+    .map((record) => [record.fields["Idempotency Key"], record.fields.Outcome]);
+}
+
+// Append one settled row straight to the ledger, in the shape the emitter
+// writes, so a test can seed a history the emitter's own sequence cannot reach.
+function seedSettledRow(
+  project: string,
+  unit: string,
+  revision: number,
+  outcome: "succeeded" | "cancelled",
+): void {
+  const triple = `code-generation ${unit} 1`;
+  emitAuditEventGuarded("UNIT_OUTCOME_SETTLED", {
+    Stage: "code-generation",
+    Unit: unit,
+    Batch: "1",
+    Outcome: outcome,
+    "Idempotency Key": revision === 1 ? triple : `${triple} #${revision}`,
+  }, project);
+}
+
+// Pin every settled row on the ledger to ONE timestamp, so the reader's order
+// has nothing but the rows themselves to separate them. This is not an exotic
+// state: audit timestamps are second-precision, so two `next` runs inside one
+// second already land here without a test arranging it.
+function pinSettledTimestamps(project: string, timestamp: string): void {
+  const path = seededAuditShard(project);
+  const pinned = readFileSync(path, "utf8")
+    .split("\n")
+    .map((line) => {
+      if (!line.trim().startsWith("{")) return line;
+      const row = JSON.parse(line) as Record<string, unknown>;
+      const attributes = (row.attributes ?? {}) as Record<string, string>;
+      if (attributes.Event !== "UNIT_OUTCOME_SETTLED") return line;
+      return JSON.stringify({ ...row, timestamp });
+    })
+    .join("\n");
+  writeFileSync(path, pinned);
+}
+
+// Re-entry: a fresh solo attempt deletes the cancelled terminal, so the engine
+// observes a Unit in flight again rather than a cancelled one.
+function restartSoloUnit(project: string, unit: string): void {
+  const restarted = spawnSync(process.execPath, [
+    join(project, ".claude/tools/amadeus-bolt.ts"),
+    "start", "--name", unit, "--batch", "1", "--project-dir", project,
+  ], { encoding: "utf8", env: { ...process.env, AMADEUS_SKIP_HUMAN_PRESENCE_GUARD: "1" } });
+  expect(restarted.status, restarted.stderr).toBe(0);
 }
 
 describe("t533 orchestrator per-unit consume fan-out", () => {
@@ -579,6 +720,33 @@ describe("t533 orchestrator per-unit consume fan-out", () => {
     expect(readFileSync(statePath, "utf8")).toBe(before);
   });
 
+  // #3106 — the vocabulary is a closed set of exactly three, so a `failed` row
+  // is a row the reader UNDERSTANDS even though no emitter arm writes one. What
+  // it can do is bounded: an outcome outside `succeeded` only ever stops a
+  // consumer, so an edited ledger still cannot decide that one runs.
+  test("reads the third settled outcome as the failure the fan-out already knows", () => {
+    const project = seedPerUnitProject(undefined, "code-generation");
+    expect(next(project).status).toBe(0);
+    const shard = seededAuditShard(project);
+    writeFileSync(shard, readFileSync(shard, "utf8")
+      .split("\n")
+      .map((line) => {
+        if (!line.includes("UNIT_OUTCOME_SETTLED") || !line.includes("unit-z")) return line;
+        const record = JSON.parse(line);
+        if (record.attributes !== undefined) record.attributes.Outcome = "failed";
+        if (record.fields !== undefined) record.fields.Outcome = "failed";
+        return JSON.stringify(record);
+      })
+      .join("\n"));
+    moveCursorTo(project, "build-and-test");
+
+    const result = next(project);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("producer-outcome-failed: unit-z");
+  });
+
   test("refuses a settled-outcome row carrying an outcome the engine never writes", () => {
     const project = seedPerUnitProject(undefined, "code-generation");
     expect(next(project).status).toBe(0);
@@ -798,6 +966,192 @@ describe("t533 orchestrator per-unit consume fan-out", () => {
     ].map((artifact) =>
       `amadeus/spaces/default/intents/${DEFAULT_RECORD_DIR}/construction/unit-a/code-generation/${artifact}.md`
     ));
+  });
+
+  // #3106 — the per-unit twin of the pool case right above. A Unit cancelled on
+  // the engine's own dispatch path carries a canonical terminal and no pool
+  // event, so before the settle emitter learned the `cancelled` vocabulary the
+  // consumer stopped with producer-outcome-pending instead of simply dropping
+  // that Unit's paths.
+  test("does not emit paths for a Unit cancelled on the per-unit path, and keeps the consumer running", () => {
+    const project = seedPerUnitProject(undefined, "code-generation");
+    cancelSoloUnitThroughRuling(project, "unit-z");
+
+    const construction = next(project);
+    expect(construction.status, construction.stderr).toBe(0);
+
+    moveCursorTo(project, "build-and-test");
+    const result = next(project);
+
+    expect(result.status, result.stderr).toBe(0);
+    const directive = JSON.parse(result.stdout);
+    expect(directive.kind, JSON.stringify(directive)).toBe("run-stage");
+    expect(directive.consumes).toEqual([
+      "code-generation-plan",
+      "code-summary",
+    ].map((artifact) =>
+      `amadeus/spaces/default/intents/${DEFAULT_RECORD_DIR}/construction/unit-a/code-generation/${artifact}.md`
+    ));
+  });
+
+  // #3106 supersession — the ledger has to follow the Unit, not freeze at its
+  // first verdict. A cancelled Unit put back in flight (`amadeus-bolt start`
+  // clears its terminal) and carried to coverage must end up succeeded for the
+  // consumer, with the cancelled row still on the ledger as the observation it
+  // superseded — and with exactly ONE outcome in the population.
+  test("supersedes a cancelled Unit's row when a restart carries it back to coverage", () => {
+    const project = seedPerUnitProject(undefined, "code-generation");
+    cancelSoloUnitThroughRuling(project, "unit-z");
+    expect(next(project).status).toBe(0);
+
+    expect(settledLedger(project)).toEqual([
+      ["code-generation unit-a 1", "succeeded"],
+      ["code-generation unit-z 1", "cancelled"],
+    ]);
+
+    restartSoloUnit(project, "unit-z");
+
+    expect(next(project).status).toBe(0);
+    expect(settledLedger(project)).toEqual([
+      ["code-generation unit-a 1", "succeeded"],
+      ["code-generation unit-z 1", "cancelled"],
+      ["code-generation unit-z 1 #2", "succeeded"],
+    ]);
+    // A settled observation that has not changed appends nothing, revision or no
+    // revision.
+    expect(next(project).status).toBe(0);
+    expect(settledLedger(project).length).toBe(3);
+
+    // One row per Unit in the population — three ledger rows collapse to two
+    // outcomes, and unit-z's is the one that superseded.
+    expect([...(readPerUnitConsumePopulation(project)?.outcomes ?? [])]
+      .sort((a, b) => a.unit.localeCompare(b.unit))).toEqual([
+        { unit: "unit-a", outcome: "succeeded" },
+        { unit: "unit-z", outcome: "succeeded" },
+      ]);
+
+    moveCursorTo(project, "build-and-test");
+    const result = next(project);
+    expect(result.status, result.stderr).toBe(0);
+    expect(JSON.parse(result.stdout).consumes).toEqual(["unit-z", "unit-a"].flatMap((unit) =>
+      ["code-generation-plan", "code-summary"].map((artifact) =>
+        `amadeus/spaces/default/intents/${DEFAULT_RECORD_DIR}/construction/${unit}/code-generation/${artifact}.md`
+      )
+    ));
+  });
+
+  // #3106 supersession, driven through the exported `handleNext` seam. The
+  // subprocess case above pins the sequence end to end; this one drives the
+  // SAME sequence in process, where the settle emitter's read of the ledger it
+  // already wrote is observable to the parent LCOV. What that read decides is
+  // asserted, not merely reached: which revision a changed observation lands
+  // as, and that an unchanged one lands nothing at all.
+  test("numbers a superseding revision off the rows it already settled, in-process", () => {
+    const project = seedPerUnitProject(undefined, "code-generation");
+    cancelSoloUnitThroughRuling(project, "unit-z");
+
+    // First settle: nothing is on the ledger yet, so both Units land at
+    // revision 1 — the bare triple, the key #3099 wrote.
+    expect(nextInProcess(project).kind).toBe("run-stage");
+    expect(settledLedger(project)).toEqual([
+      ["code-generation unit-a 1", "succeeded"],
+      ["code-generation unit-z 1", "cancelled"],
+    ]);
+
+    restartSoloUnit(project, "unit-z");
+
+    // Second settle: unit-z's observation CHANGED, so it lands beside the row
+    // it replaces as the NEXT revision of that triple — a number the emitter
+    // can only get from the rows already there. unit-a's observation is
+    // unchanged, so it appends nothing.
+    expect(nextInProcess(project).kind).toBe("run-stage");
+    expect(settledLedger(project)).toEqual([
+      ["code-generation unit-a 1", "succeeded"],
+      ["code-generation unit-z 1", "cancelled"],
+      ["code-generation unit-z 1 #2", "succeeded"],
+    ]);
+
+    // Third settle: no observation changed, so the ledger is untouched — with
+    // no history to compare against, both Units would re-settle at revision 1.
+    expect(nextInProcess(project).kind).toBe("run-stage");
+    expect(settledLedger(project)).toEqual([
+      ["code-generation unit-a 1", "succeeded"],
+      ["code-generation unit-z 1", "cancelled"],
+      ["code-generation unit-z 1 #2", "succeeded"],
+    ]);
+
+    // Three rows, two Units: the population carries the LAST observation of
+    // each, so unit-z reaches its consumers as the outcome that superseded.
+    expect([...(readPerUnitConsumePopulation(project)?.outcomes ?? [])]
+      .sort((a, b) => a.unit.localeCompare(b.unit))).toEqual([
+        { unit: "unit-a", outcome: "succeeded" },
+        { unit: "unit-z", outcome: "succeeded" },
+      ]);
+  });
+
+  // #3106 — the next revision comes off the HIGHEST revision the ledger carries,
+  // not off how many rows it carries. A history with a gap in it (a shard that
+  // could not be read, rows lost to a bad merge) makes those two numbers part
+  // company, and counting then re-derives a key that is already on the ledger:
+  // two rows claiming one idempotency key, which is the identity the append-once
+  // emission rests on.
+  test("numbers the next revision off the highest one a gapped ledger carries", () => {
+    const project = seedPerUnitProject(undefined, "code-generation");
+    cancelSoloUnitThroughRuling(project, "unit-z");
+
+    expect(nextInProcess(project).kind).toBe("run-stage");
+    // The gap: revision 3 with no revision 2 behind it, so unit-z's row COUNT
+    // (2) and its highest revision (3) no longer agree.
+    seedSettledRow(project, "unit-z", 3, "cancelled");
+
+    restartSoloUnit(project, "unit-z");
+    expect(nextInProcess(project).kind).toBe("run-stage");
+
+    const keys = settledLedger(project).map(([key]) => key);
+    expect(keys).toEqual([
+      "code-generation unit-a 1",
+      "code-generation unit-z 1",
+      "code-generation unit-z 1 #3",
+      "code-generation unit-z 1 #4",
+    ]);
+    // Every key on the ledger is its own: no revision re-derives one already there.
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  // #3106 — two revisions of ONE triple that share a timestamp are separated by
+  // their revision NUMBER, not by their key text. Lexicographically
+  // "<triple> #10" sorts BEFORE "<triple> #2", so a reader that breaks the tie
+  // on the key string adopts the row that revision 10 superseded.
+  test("orders two revisions of one triple by number when they share a timestamp", () => {
+    const project = seedPerUnitProject(undefined, "code-generation");
+    seedSettledRow(project, "unit-z", 2, "cancelled");
+    seedSettledRow(project, "unit-z", 10, "succeeded");
+    pinSettledTimestamps(project, "2026-08-18T00:00:00Z");
+
+    expect([...(readPerUnitConsumePopulation(project)?.outcomes ?? [])]
+      .filter((outcome) => outcome.unit === "unit-z"))
+      .toEqual([{ unit: "unit-z", outcome: "succeeded" }]);
+  });
+
+  // #3106 — the ground for the settle emitter having no `failed` arm: this path
+  // cannot reach one. A solo BOLT_FAILED is recorded together with its batch
+  // closure, so it is always an UNRESOLVED failure, and the producing stage
+  // answers with the ruling prompt before the per-unit loop settles anything.
+  // The only ways out of that prompt are retry, cancel, or park.
+  test("stops at the failure ruling instead of settling a failed Unit on the per-unit path", () => {
+    const project = seedPerUnitProject(undefined, "code-generation");
+    seedSoloFailure(project, "unit-z");
+
+    const producer = next(project);
+
+    expect(producer.status, producer.stderr).toBe(0);
+    const directive = JSON.parse(producer.stdout);
+    expect(directive.kind, producer.stdout).toBe("ask");
+    expect(directive.question).toContain('Unit "unit-z" failed during code-generation');
+    expect(
+      parseAuditRecords(readFileSync(seededAuditShard(project), "utf8"))
+        .filter((record) => record.event === "UNIT_OUTCOME_SETTLED"),
+    ).toEqual([]);
   });
 
   test("emits no partial directive and keeps the cursor when consumer inventory drifts", () => {
