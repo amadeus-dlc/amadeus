@@ -1516,6 +1516,35 @@ export function codekbReScanFile(
   return join(codekbReScanDir(projectDir, repo, sp), `${record}.md`);
 }
 
+// The git pathspecs that take the workflow's own exhaust out of a
+// reverse-engineering differential refresh's DIFF INPUT (#2415). Excluded:
+// intent records, election stores, the codekb this stage itself writes, the
+// method files, and the metrics snapshots — none of them are code knowledge, so
+// scanning them makes every refresh pay for the previous one.
+//
+// The prose mirror is Step 2 of
+// `packages/framework/core/amadeus-common/stages/inception/reverse-engineering.md`,
+// which is what actually executes: the scan is run by a subagent reading that
+// contract, not by a function here. This array is the single machine-checkable
+// definition the contract block is pinned against
+// (tests/integration/t2415-re-scan-exclusion-contract.integration.test.ts); the
+// two drifting apart is the failure this constant exists to make impossible.
+//
+// `:(glob)` magic is load-bearing. The bare form `amadeus/spaces/*/intents/`
+// is a valid pathspec whose `*` does not cross a `/`: it matches nothing and
+// excludes nothing, silently. Never drop it (FR-EXC-5).
+//
+// `amadeus/spaces/*/specs/` is deliberately absent — model-map.json and the
+// tla-evidence ledgers live under amadeus/spaces/ but a change has to resync
+// them, so they are code knowledge and stay in the scan (FR-EXC-2).
+export const RE_SCAN_EXCLUDED_PATHSPECS: readonly string[] = [
+  ":(exclude,glob)amadeus/spaces/*/intents/**",
+  ":(exclude,glob)amadeus/spaces/*/elections/**",
+  ":(exclude,glob)amadeus/spaces/*/codekb/**",
+  ":(exclude,glob)amadeus/spaces/*/memory/**",
+  ":(exclude,glob)metrics/**",
+];
+
 // Relative analog of codekbReScanFile (posix slashes). Returns null on the same
 // no-intent-resolves condition as codekbReScanFile.
 export function relativeCodekbReScanFile(
