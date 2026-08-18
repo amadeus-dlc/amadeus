@@ -67,6 +67,19 @@ describe("t3181 issue-evidence is a produced artifact kind (FR-EVD-2)", () => {
     const body = stageSource("ideation", "intent-capture");
     expect(body).toContain("issue-evidence fetch --issues");
   });
+
+  // FR-MEAS-1/2: the capture is a cost intervention, so the contract carries the
+  // number it is measured against, the target, and the method — a later
+  // measurement that does not restate its own tree and command is not evidence.
+  test("fixes the baseline, the target and the measurement method", () => {
+    const body = stageSource("ideation", "intent-capture");
+    expect(body).toContain("**Effect measurement.**");
+    expect(body).toContain("47 minutes");
+    expect(body).toContain("215855ea7");
+    expect(body).toContain("under 35 minutes");
+    expect(body).toContain("`STAGE_STARTED`/`STAGE_COMPLETED`");
+    expect(body).toContain("900 s");
+  });
 });
 
 describe("t3181 requirements-analysis consumes the evidence (FR-EVD-3)", () => {

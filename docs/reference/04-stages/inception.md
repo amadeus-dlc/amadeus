@@ -119,6 +119,9 @@ artifacts reflect the current state of the codebase, not a stale snapshot.
 ### Inputs
 
 - `<record>/amadeus-state.md` (project type confirmation)
+- `<record>/ideation/intent-capture/issue-evidence.md`, if present (optional
+  consume): the recorded scan focus is derived from the Issue and cross-review
+  comments it carries
 
 ### Steps
 
@@ -332,6 +335,9 @@ itself.
 
 - Reverse Engineering artifacts from Stage 2.1
   (`<record>/inception/reverse-engineering/`), if brownfield
+- `<record>/ideation/intent-capture/issue-evidence.md`, if present (optional
+  consume): facts an independent cross-review already established are consumed,
+  never re-derived
 - User's project description from the intent's `audit/` shards
 
 ### Steps
@@ -341,8 +347,10 @@ itself.
    `.claude/knowledge/amadeus-product-agent/`.
 
 2. **Load Prior Context** -- If brownfield: read RE artifacts from
-   `<record>/inception/reverse-engineering/`. Read user's project
-   description from the intent's `audit/` shards.
+   `<record>/inception/reverse-engineering/`. If present, read
+   `issue-evidence.md` as a primary input and cite it rather than re-deriving
+   its established mechanisms, `file:line` citations and acceptance criteria.
+   Read user's project description from the intent's `audit/` shards.
 
 3. **Analyze User Request** -- Assess the request for:
    - **Clarity**: How well-defined is the request?

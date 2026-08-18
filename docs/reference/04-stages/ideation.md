@@ -94,7 +94,7 @@ as seed context so the stage does not re-ask "what do you want to build?"
 2. **Load Prior Context** -- Read user's project description. Check for existing artifacts. Load guardrails.
 3. **Generate Clarifying Questions** -- Create `<record>/ideation/intent-capture/intent-capture-questions.md` with questions covering business problem, customer, success metrics, initiative trigger, project type. Uses `[Answer]:` tag format with A-E options plus X (Other). Offers the interaction-mode question flow.
 4. **Collect and Analyze Answers** -- Confirm all tags filled. Run ambiguity/contradiction analysis.
-5. **Generate Artifacts** -- Produce intent statement and stakeholder map.
+5. **Generate Artifacts** -- Produce intent statement and stakeholder map. For an issue-first intent, also run `issue-evidence fetch --issues <n[,n...]>` to capture the filing Issue and its cross-review comments into the record; a `gh` failure exits non-zero and writes nothing, and the stage continues on the free-text request.
 6. **Update State** -- Mark 1.1 as `[x]` completed.
 7. **Present Completion & Request Approval** -- Standard 2-option gate.
 
@@ -105,6 +105,7 @@ as seed context so the stage does not re-ask "what do you want to build?"
 | `intent-statement.md`         | Problem Statement, Target Customer, Success Metrics, Initiative Trigger, Project Type, Initial Scope Signal |
 | `stakeholder-map.md`          | Key stakeholders and interests, decision-makers vs. influencers, communication requirements |
 | `intent-capture-questions.md` | Clarifying questions with `[Answer]:` tags (input artifact) |
+| `issue-evidence.md`           | Optional (`optional_produces`). Filing Issue body plus cross-review comments, verbatim, with fetch provenance -- the upstream input Stages 2.1 and 2.3 consume instead of re-deriving |
 
 ### Notes
 

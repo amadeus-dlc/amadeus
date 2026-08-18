@@ -99,6 +99,17 @@ and writes nothing; that is not a reason to stop. Record the failure in this
 stage's memory.md and continue on the user's free-text request, which is what
 every non-issue-first intent runs on anyway.
 
+**Effect measurement.** This capture exists to remove a measured cost, so the
+number it is judged against is fixed here. Baseline: 47 minutes of
+reverse-engineering + requirements-analysis active time per intent — the median
+over 4 issue-first self-fix intents, measured at record tree `215855ea7` by
+pairing `STAGE_STARTED`/`STAGE_COMPLETED` audit events per stage, capping the
+gap between consecutive events at 900 s, and deducting parked time. Target: a
+median under 35 minutes over the next 5 issue-first intents, re-measured by that
+same method. Any later measurement must state its own tree/SHA and the
+aggregation command it was read from; a figure that cannot be re-derived is a
+claim, not a measurement.
+
 ### Step 6: Update State
 
 Update `<record>/amadeus-state.md`:

@@ -265,11 +265,14 @@ describe("t212 optional_produces compile carry-through", () => {
         "shared-infrastructure",
       ]);
       expect(infrastructure?.produces).not.toContain("shared-infrastructure");
+      // The whole census of optional producers, in graph order. intent-capture
+      // joined it with issue-evidence (#3181): an issue-first intent captures
+      // the filing Issue, every other intent legitimately produces nothing.
       expect(
         graph
           .filter((stage) => stage.optional_produces !== undefined)
           .map((stage) => stage.slug),
-      ).toEqual(["functional-design", "infrastructure-design"]);
+      ).toEqual(["intent-capture", "functional-design", "infrastructure-design"]);
     } finally {
       for (const key of envKeys) {
         const value = previous[key];
