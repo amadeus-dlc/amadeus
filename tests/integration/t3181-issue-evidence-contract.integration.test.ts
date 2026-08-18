@@ -42,14 +42,6 @@ function frontmatter(phase: string, slug: string): Record<string, unknown> {
   return parsed as unknown as Record<string, unknown>;
 }
 
-function consumedArtifacts(phase: string, slug: string): Array<{
-  artifact: string;
-  required: boolean;
-}> {
-  const consumes = frontmatter(phase, slug).consumes;
-  return Array.isArray(consumes) ? consumes : [];
-}
-
 describe("t3181 issue-evidence is a produced artifact kind (FR-EVD-2)", () => {
   test("intent-capture declares it as an optional output in the source contract", () => {
     const optional = frontmatter("ideation", "intent-capture").optional_produces;
