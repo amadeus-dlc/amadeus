@@ -160,7 +160,7 @@ afterAll(() => {
 
 describe("t2415 the canonical pathspecs bite (FR-EXC-5)", () => {
   test("the constant is exactly the five declared classes", () => {
-    expect([...RE_SCAN_EXCLUDED_PATHSPECS]).toEqual(DECLARED_CLASSES);
+    expect([...RE_SCAN_EXCLUDED_PATHSPECS]).toEqual([...DECLARED_CLASSES]);
   });
 
   test("applying them to a known non-zero interval removes a known positive count", () => {

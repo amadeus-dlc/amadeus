@@ -93,6 +93,8 @@ Reverse Engineering はブラウンフィールドプロジェクトの既存コ
    - コード品質の指標(リンティング、CI/CD、ドキュメント)
    - 技術的負債のシグナル
 
+   差分リフレッシュでは、ワークフロー自身の排出物 — intent record、選挙ストア、このステージ自身が書く codekb、method ファイル、metrics スナップショット — を先に diff 入力から除外する。ステージ契約が `:(glob)` pathspec を逐語で保持し、コード側の唯一の定義は `tools/amadeus-lib.ts` の `RE_SCAN_EXCLUDED_PATHSPECS` で、両者は drift 検査で固定されている。除外には3つの境界が伴う: `amadeus/spaces/` 配下の `specs/` build 台帳は明示的に除外しない、base 解決は除外の外で `re-scans/` を読む(diff 入力ではなく codekb の読取)、codekb は既に引用済みでないワークフロー工程記録を新規に引用しない — 自 intent の確定事実は `issue-evidence.md` を経由して届く。
+
    developer は `templates/re-artifacts.md` の Developer Code Scan テンプレートに従って構造化されたスキャン結果を返す。
 
 3. **Architect 合成** -- Task ツールで amadeus-architect-agent サブエージェント(`subagent_type="amadeus-architect-agent"`)に委譲する。委譲プロンプトには `agents/amadeus-architect-agent.md` の amadeus-architect-agent ペルソナと `.claude/knowledge/amadeus-architect-agent/` の知識を含める。完全な developer スキャン結果をコンテキストとして渡す。`amadeus-state.md` のワークスペース状態を含める。
