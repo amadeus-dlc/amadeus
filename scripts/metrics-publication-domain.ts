@@ -165,6 +165,22 @@ function missingEvidence(entries: Array<[isPresent: boolean, label: string]>): s
   return entries.filter(([isPresent]) => !isPresent).map(([, label]) => label);
 }
 
+// gh renders a GitHub App author as `app/<slug>`, while the git identity, the REST login and the
+// `--bot-login` argument all name that same account as `<slug>[bot]`. Comparing the raw strings
+// never matches, so the publisher stops recognising its own pull request and fails closed forever.
+// Folding the gh surface form onto the canonical bot login compares accounts instead of spellings.
+// A bare `<slug>` is deliberately left alone: it names a human in the same namespace, and folding
+// it in would widen the very accept set this evidence exists to keep closed.
+const APP_AUTHOR_PREFIX = "app/";
+
+function canonicalAuthorLogin(login: string): string {
+  return login.startsWith(APP_AUTHOR_PREFIX) ? `${login.slice(APP_AUTHOR_PREFIX.length)}[bot]` : login;
+}
+
+function isPublishingBot(author: string, botLogin: string): boolean {
+  return canonicalAuthorLogin(author) === canonicalAuthorLogin(botLogin);
+}
+
 function snapshotPullRequestEvidence(raw: JsonRecord, context: OwnershipContext, targetSha: string): string[] {
   const repository = requireString(requireRecord(raw.headRepository, "headRepository").nameWithOwner, "headRepository.nameWithOwner");
   const author = requireString(requireRecord(raw.author, "author").login, "author.login");
@@ -176,7 +192,7 @@ function snapshotPullRequestEvidence(raw: JsonRecord, context: OwnershipContext,
   const legacyMarker = branchTarget?.length === 12 && title.startsWith("メトリクススナップショットを記録する");
   return missingEvidence([
     [repository === context.repository, "head repository"],
-    [author === context.botLogin, "author"],
+    [isPublishingBot(author, context.botLogin), "author"],
     [branchTarget !== null && targetSha.startsWith(branchTarget), "branch"],
     [currentMarker || legacyMarker, "machine marker"],
   ]);
@@ -228,7 +244,7 @@ function maintenancePullRequestEvidence(raw: JsonRecord, context: OwnershipConte
   const body = typeof raw.body === "string" ? raw.body : "";
   return missingEvidence([
     [repository === context.repository, "head repository"],
-    [author === context.botLogin, "author"],
+    [isPublishingBot(author, context.botLogin), "author"],
     [requireString(raw.headRefName, "headRefName") === MAINTENANCE_BRANCH, "stable branch"],
     [`${title}\n${body}`.includes(MAINTENANCE_MARKER), "machine marker"],
   ]);

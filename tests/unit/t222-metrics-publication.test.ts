@@ -708,3 +708,33 @@ describe("t222 maintenance publisher orchestration", () => {
     });
   });
 });
+
+// gh CLI renders a GitHub App author as `app/<slug>` while the workflow passes the same account
+// as `<slug>[bot]`; a raw string comparison never matches, so ownership evidence stays missing and
+// the publisher fails closed forever against its own pull request.
+describe("t222 app author surface forms name one account", () => {
+  const APP_AUTHOR = { login: "app/amadeus-metrics" };
+  const context = { repository: REPOSITORY, botLogin: BOT_LOGIN, targetSha: TARGET_SHA };
+
+  test("snapshot pull request authored as app/<slug> is owned by <slug>[bot]", () => {
+    expect(verifySnapshotOwnership(snapshotPr({ author: APP_AUTHOR }), context)).toEqual({ ok: true });
+  });
+
+  test("maintenance pull request authored as app/<slug> is owned by <slug>[bot]", () => {
+    expect(verifyMaintenanceOwnership(maintenancePr({ author: APP_AUTHOR }), { repository: REPOSITORY, botLogin: BOT_LOGIN })).toEqual({ ok: true });
+  });
+
+  test("a different app is still an ownership problem", () => {
+    const foreign = { login: "app/someone-else" };
+    expect(verifySnapshotOwnership(snapshotPr({ author: foreign }), context)).toEqual({ ok: false, missing: ["author"] });
+    expect(verifyMaintenanceOwnership(maintenancePr({ author: foreign }), { repository: REPOSITORY, botLogin: BOT_LOGIN })).toEqual({ ok: false, missing: ["author"] });
+  });
+
+  // A bare `<slug>` is a human account, not the app account `<slug>[bot]`, so it stays a problem:
+  // the fix folds gh's surface form onto the bot login, it does not widen who counts as the bot.
+  test("a human whose login matches the app slug is still an ownership problem", () => {
+    const human = { login: "amadeus-metrics" };
+    expect(verifySnapshotOwnership(snapshotPr({ author: human }), context)).toEqual({ ok: false, missing: ["author"] });
+    expect(verifyMaintenanceOwnership(maintenancePr({ author: human }), { repository: REPOSITORY, botLogin: BOT_LOGIN })).toEqual({ ok: false, missing: ["author"] });
+  });
+});
