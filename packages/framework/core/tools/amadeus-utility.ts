@@ -10,6 +10,7 @@ import {
   openSync,
   readdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   symlinkSync,
   writeFileSync,
@@ -83,6 +84,8 @@ import {
   inspectComposeMarker,
   isoTimestamp,
   isPackageJson,
+  issueEvidencePath,
+  relativeIssueEvidencePath,
   codekbRepoName,
   relativeCodekbDir,
   relativeCodekbReScanFile,
@@ -176,6 +179,19 @@ import {
   createInitialGoalLineage,
   writeInitialGoalLineage,
 } from "./amadeus-goal-reconciliation.ts";
+import {
+  createEvidenceGitHubGatewayAdapter,
+  parseGitHubRepository,
+} from "./amadeus-github-gateway.ts";
+import type {
+  EvidenceGitHubGateway,
+  RemoteGitHubIssueComment,
+} from "./amadeus-github-gateway.ts";
+import type {
+  GitHubRepository,
+  RemoteGitHubIssue,
+} from "./amadeus-github-types.ts";
+import { createGitHubProcessRunner } from "./amadeus-process-runner.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -6588,6 +6604,306 @@ export function handlePluginDelegate(
 }
 
 // ---------------------------------------------------------------------------
+// issue-evidence — read-only Issue evidence capture (#3181)
+// ---------------------------------------------------------------------------
+//
+// `issue-evidence fetch` pulls the filing Issue's body and its cross-review
+// comments into ONE record artifact so requirements-analysis and
+// reverse-engineering consume the already-established facts instead of
+// re-deriving them. The verb owns no state: it reads through the gateway's
+// read-only surface, renders the artifact, and writes it atomically. Nothing
+// here mutates the workflow, so there is no permit and no audit transition —
+// failure is loud (non-zero exit + stderr) and leaves no partial file.
+
+/** Provenance the cross-review protocol stamps into each reviewer comment as an
+ *  HTML marker. Absent keys stay null: an unstamped comment must not be
+ *  rendered as if it carried a run id or a target SHA. */
+export type IssueEvidenceCrossReviewMarker = Readonly<{
+  reviewRunId: string | null;
+  reviewerId: string | null;
+  targetSha: string | null;
+}>;
+
+/** One issue with the comments fetched alongside it. */
+export type IssueEvidenceEntry = Readonly<{
+  issue: RemoteGitHubIssue;
+  comments: readonly RemoteGitHubIssueComment[];
+}>;
+
+export type IssueEvidenceRenderInput = Readonly<{
+  intentSlug: string;
+  repo: GitHubRepository;
+  fetchedAt: string;
+  entries: readonly IssueEvidenceEntry[];
+}>;
+
+const CROSS_REVIEW_MARKER_RE = /<!--\s*issue-cross-review\b([\s\S]*?)-->/;
+
+/** Read the `<!-- issue-cross-review ... -->` block a cross-review comment
+ *  carries. Returns null when the comment has no marker at all — the caller
+ *  files those under "other comments" rather than counting them as reviews. */
+export function parseCrossReviewMarker(
+  body: string,
+): IssueEvidenceCrossReviewMarker | null {
+  const match = CROSS_REVIEW_MARKER_RE.exec(body);
+  if (match === null) return null;
+  const fields = new Map<string, string>();
+  for (const line of match[1].split("\n")) {
+    const sep = line.indexOf(":");
+    if (sep <= 0) continue;
+    const key = line.slice(0, sep).trim();
+    const value = line.slice(sep + 1).trim();
+    if (key.length > 0 && value.length > 0) fields.set(key, value);
+  }
+  return {
+    reviewRunId: fields.get("review-run-id") ?? null,
+    reviewerId: fields.get("reviewer-id") ?? null,
+    targetSha: fields.get("target-sha") ?? null,
+  };
+}
+
+function issueHtmlUrl(repo: GitHubRepository, issueNumber: number): string {
+  return `https://github.com/${repo.canonical}/issues/${issueNumber}`;
+}
+
+function renderComment(comment: RemoteGitHubIssueComment): string[] {
+  return [
+    `#### ${comment.authorLogin} — ${comment.createdAt} — ${comment.htmlUrl}`,
+    "",
+    comment.body,
+    "",
+  ];
+}
+
+function renderEntry(repo: GitHubRepository, entry: IssueEvidenceEntry): string[] {
+  const reviewed: RemoteGitHubIssueComment[] = [];
+  const others: RemoteGitHubIssueComment[] = [];
+  let marker: IssueEvidenceCrossReviewMarker | null = null;
+  for (const comment of entry.comments) {
+    const parsed = parseCrossReviewMarker(comment.body);
+    if (parsed === null) {
+      others.push(comment);
+      continue;
+    }
+    marker ??= parsed;
+    reviewed.push(comment);
+  }
+
+  const lines = [
+    `## Issue #${entry.issue.number}: ${entry.issue.title}`,
+    "",
+    // labels are outside the pinned viewIssue DTO (RemoteGitHubIssue), so the
+    // field records that it was never fetched instead of claiming "none".
+    `- state: ${entry.issue.state} / labels: 未取得(本 verb の read 面は本文・状態・コメントのみ) / url: ${issueHtmlUrl(repo, entry.issue.number)} / target-sha: ${marker?.targetSha ?? "n/a"}`,
+    `- review-run-id: ${marker?.reviewRunId ?? "n/a"} / 独立レビュアー: ${reviewed.length}名(marker 計数)`,
+    "",
+    "### 本文(verbatim)",
+    "",
+    entry.issue.body,
+    "",
+    "### クロスレビューコメント(verbatim、コメント URL 併記)",
+    "",
+  ];
+  if (reviewed.length === 0) lines.push("(なし)", "");
+  for (const comment of reviewed) lines.push(...renderComment(comment));
+  lines.push("### その他コメント(verbatim、任意)", "");
+  if (others.length === 0) lines.push("(なし)", "");
+  for (const comment of others) lines.push(...renderComment(comment));
+  return lines;
+}
+
+/** Injection seam for the fetch. Every impure edge the verb touches is here:
+ *  the GitHub read surface, the clock stamped into the artifact, and the
+ *  repository the checkout belongs to. Unit tests pass fakes; nothing in the
+ *  test suite reaches GitHub. */
+export type IssueEvidenceDeps = Readonly<{
+  gateway: EvidenceGitHubGateway;
+  now: () => Date;
+  resolveRepository: (projectDir: string) => GitHubRepository | null;
+}>;
+
+export type IssueEvidenceOutcome =
+  | Readonly<{ kind: "ok"; path: string; issues: number }>
+  | Readonly<{ kind: "error"; message: string }>;
+
+// `git remote get-url origin` -> owner/name. The mirror lifecycle resolves the
+// same fact for its own request shape (repositoryFromOrigin, which additionally
+// honours the intent's recorded repo list); this verb needs only the checkout's
+// origin, and both funnel through the gateway's one repository parser.
+const ORIGIN_REPO_RE = /github\.com[/:]([^/]+)\/([^/]+)$/u;
+
+function repositoryFromGitOrigin(projectDir: string): GitHubRepository | null {
+  const result = Bun.spawnSync({
+    cmd: ["git", "remote", "get-url", "origin"],
+    cwd: projectDir,
+    stdout: "pipe",
+    stderr: "ignore",
+  });
+  if (result.exitCode !== 0) return null;
+  const url = result.stdout.toString().trim().replace(/\.git$/u, "");
+  const match = ORIGIN_REPO_RE.exec(url);
+  if (match === null) return null;
+  return parseGitHubRepository(match[1], match[2]);
+}
+
+export function defaultIssueEvidenceDeps(): IssueEvidenceDeps {
+  return {
+    gateway: createEvidenceGitHubGatewayAdapter(createGitHubProcessRunner()),
+    now: () => new Date(),
+    resolveRepository: repositoryFromGitOrigin,
+  };
+}
+
+const ISSUE_NUMBER_RE = /^[1-9][0-9]*$/;
+
+function parseIssueList(raw: string | undefined): number[] | null {
+  if (raw === undefined || raw === "true" || raw.length === 0) return null;
+  const numbers: number[] = [];
+  for (const part of raw.split(",")) {
+    const trimmed = part.trim();
+    if (!ISSUE_NUMBER_RE.test(trimmed)) return null;
+    numbers.push(Number(trimmed));
+  }
+  return numbers.length > 0 ? numbers : null;
+}
+
+function parseRepoFlag(raw: string | undefined): GitHubRepository | null | "invalid" {
+  if (raw === undefined || raw === "true") return null;
+  const parts = raw.split("/");
+  if (parts.length !== 2) return "invalid";
+  return parseGitHubRepository(parts[0], parts[1]) ?? "invalid";
+}
+
+// Second-precision UTC, matching the timestamp shape the record uses elsewhere.
+function evidenceTimestamp(now: Date): string {
+  return `${now.toISOString().slice(0, 19)}Z`;
+}
+
+async function collectIssueEvidence(
+  repo: GitHubRepository,
+  issueNumbers: readonly number[],
+  gateway: EvidenceGitHubGateway,
+): Promise<IssueEvidenceEntry[] | { error: string }> {
+  const entries: IssueEvidenceEntry[] = [];
+  for (const number of issueNumbers) {
+    const issue = await gateway.viewIssue(repo, number);
+    if (issue.kind === "failure") {
+      return { error: `issue-evidence fetch: reading issue #${number} failed — ${issue.summary}` };
+    }
+    const comments = await gateway.listComments(repo, number);
+    if (comments.kind === "failure") {
+      return {
+        error: `issue-evidence fetch: reading comments on issue #${number} failed — ${comments.summary}`,
+      };
+    }
+    entries.push({ issue: issue.value, comments: comments.value });
+  }
+  return entries;
+}
+
+// Write through a sibling temp file and rename: the artifact is either the
+// PREVIOUS capture or the complete new one, never a truncated file a consuming
+// stage could read as the whole cross-review.
+function writeAtomically(path: string, body: string): void {
+  mkdirSync(dirname(path), { recursive: true });
+  const tmp = `${path}.tmp-${process.pid}`;
+  try {
+    writeFileSync(tmp, body, "utf-8");
+    renameSync(tmp, path);
+  } finally {
+    if (existsSync(tmp)) rmSync(tmp, { force: true });
+  }
+}
+
+/** `issue-evidence fetch` — capture the filing Issue(s) into the record.
+ *
+ *  Returns an outcome rather than exiting so the whole verb is drivable
+ *  in-process. The CLI arm below owns the exit code: gh trouble is loud
+ *  (non-zero), and whether the WORKFLOW continues on the free-text fallback is
+ *  the conductor's call, not this verb's. */
+export async function runIssueEvidenceFetch(
+  projectDir: string,
+  positional: readonly string[],
+  flags: Record<string, string>,
+  deps: IssueEvidenceDeps = defaultIssueEvidenceDeps(),
+): Promise<IssueEvidenceOutcome> {
+  const verb = positional[0];
+  if (verb !== "fetch") {
+    return {
+      kind: "error",
+      message: `issue-evidence: unknown verb ${verb ? `"${verb}"` : "(none)"} — the only verb is "fetch".`,
+    };
+  }
+
+  const issueNumbers = parseIssueList(flags.issues);
+  if (issueNumbers === null) {
+    return {
+      kind: "error",
+      message:
+        "issue-evidence fetch: --issues <n[,n...]> is required and must be a comma-separated list of positive issue numbers.",
+    };
+  }
+
+  const repoFlag = parseRepoFlag(flags.repo);
+  if (repoFlag === "invalid") {
+    return { kind: "error", message: "issue-evidence fetch: --repo must be <owner>/<name>." };
+  }
+  const repo = repoFlag ?? deps.resolveRepository(projectDir);
+  if (repo === null) {
+    return {
+      kind: "error",
+      message:
+        "issue-evidence fetch: no GitHub repository resolves from this checkout — pass --repo <owner>/<name>.",
+    };
+  }
+
+  const space = activeSpace(projectDir);
+  const intentSlug = activeIntent(projectDir, space);
+  const path = issueEvidencePath(projectDir, intentSlug ?? undefined, space);
+  if (intentSlug === null || path === null) {
+    return {
+      kind: "error",
+      message:
+        "issue-evidence fetch: no active intent resolves — the evidence belongs to an intent's record.",
+    };
+  }
+
+  const readiness = await deps.gateway.readiness();
+  if (readiness.kind === "failure") {
+    return { kind: "error", message: `issue-evidence fetch: gh is not usable — ${readiness.summary}` };
+  }
+
+  const collected = await collectIssueEvidence(repo, issueNumbers, deps.gateway);
+  if (!Array.isArray(collected)) return { kind: "error", message: collected.error };
+
+  writeAtomically(
+    path,
+    renderIssueEvidence({
+      intentSlug,
+      repo,
+      fetchedAt: evidenceTimestamp(deps.now()),
+      entries: collected,
+    }),
+  );
+  return { kind: "ok", path, issues: collected.length };
+}
+
+/** Render the issue-evidence artifact. Pure: every value comes from the input,
+ *  so the file is byte-reproducible for a given fetch. */
+export function renderIssueEvidence(input: IssueEvidenceRenderInput): string {
+  const lines = [
+    `# Issue Evidence — ${input.intentSlug}`,
+    "",
+    "## メタデータ",
+    "",
+    `- fetched-at: ${input.fetchedAt} / repo: ${input.repo.canonical} / tool: issue-evidence fetch`,
+    "",
+  ];
+  for (const entry of input.entries) lines.push(...renderEntry(input.repo, entry));
+  return `${lines.join("\n").trimEnd()}\n`;
+}
+
+// ---------------------------------------------------------------------------
 // CLI entry point
 // ---------------------------------------------------------------------------
 
@@ -6658,6 +6974,26 @@ export function runUtilityMain(): void {
     case "codekb-path":
       handleCodekbPath(projectDir, flags);
       break;
+    // issue-evidence — read-only capture verb (#3181). Reads the filing
+    // Issue(s) through the gateway and writes ONE record artifact. No state, no
+    // audit transition; a gh failure exits non-zero and writes nothing, leaving
+    // the conductor to continue on the free-text fallback.
+    case "issue-evidence":
+      void runIssueEvidenceFetch(projectDir, positional.slice(1), flags)
+        .then((outcome) => {
+          if (outcome.kind === "error") die(outcome.message);
+          process.stdout.write(
+            `${relativeIssueEvidencePath(projectDir) ?? outcome.path} (${outcome.issues} issue(s))\n`,
+          );
+        })
+        // A throw rather than an error outcome — an unwritable record dir, a
+        // gateway that raises — would otherwise surface as a bare unhandled
+        // rejection, skipping die() and the ERROR_LOGGED row every other verb
+        // emits. Same exit shape as the handled failures.
+        .catch((error: unknown) =>
+          die(`issue-evidence fetch: ${errorMessage(error)}`),
+        );
+      break;
     // detect - read-only query verb. Prints the workspace scan
     // (greenfield/brownfield, languages) + the resolved scope-registry paths so
     // the composer agent is told where scope data lives. No mutation, no audit.
@@ -6706,7 +7042,7 @@ export function runUtilityMain(): void {
       break;
     default:
       die(
-        `Usage: amadeus-utility <help|version|status|doctor|migrate|intent-birth|intent|intent-select-response|space|space-create|codekb-path|detect|recompose|scope-change|config-change|set-status|detect-scope|resolve-env-scope|scope-table|plugin> [--project-dir <path>] [--scope <scope>] [--json]`
+        `Usage: amadeus-utility <help|version|status|doctor|migrate|intent-birth|intent|intent-select-response|space|space-create|codekb-path|issue-evidence|detect|recompose|scope-change|config-change|set-status|detect-scope|resolve-env-scope|scope-table|plugin> [--project-dir <path>] [--scope <scope>] [--json]`
       );
   }
 }

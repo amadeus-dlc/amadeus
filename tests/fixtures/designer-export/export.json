@@ -168,6 +168,9 @@
         "stakeholder-map",
         "intent-capture-questions"
       ],
+      "optional_produces": [
+        "issue-evidence"
+      ],
       "consumes": [],
       "requires_stage": [],
       "sensors": [
@@ -1070,6 +1073,10 @@
         },
         {
           "artifact": "team-practices",
+          "required": false
+        },
+        {
+          "artifact": "issue-evidence",
           "required": false
         }
       ],
@@ -4064,6 +4071,7 @@
     "intent-capture-questions",
     "intent-statement",
     "interaction-spec",
+    "issue-evidence",
     "load-test-plan",
     "load-test-results",
     "log-queries",

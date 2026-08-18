@@ -4997,6 +4997,34 @@ export function memoryFilePath(projectDir: string, phase: string, stageSlug: str
   return join(docsRoot(projectDir, intent, space), phase, stageSlug, "memory.md");
 }
 
+// `<record>/ideation/intent-capture/issue-evidence.md` — the captured Issue
+// evidence (filing body + cross-review comments) reverse-engineering and
+// requirements-analysis consume instead of re-deriving (#3181). The directory
+// is the PRODUCING stage's own (intent-capture, ideation), matching the
+// artifact vocabulary's owner rule, so the sensor's producer-directory probe
+// finds it. Pure like codekbReScanFile — no git, no mkdir — because the
+// `issue-evidence fetch` verb runs outside the orchestrate loop and so cannot
+// reach the engine's graph-compiled resolveArtifactPath. Returns null on the
+// same no-intent-resolves condition: a per-intent record cannot be named
+// without an intent.
+// One definition of the leaf, as segments, so the absolute builder (native
+// separators) and the relative one (posix) cannot drift apart.
+const ISSUE_EVIDENCE_SEGMENTS = ["ideation", "intent-capture", "issue-evidence.md"] as const;
+
+export function issueEvidencePath(projectDir: string, intent?: string, space?: string): string | null {
+  const dir = recordDir(projectDir, intent, space);
+  if (dir === null) return null;
+  return join(dir, ...ISSUE_EVIDENCE_SEGMENTS);
+}
+
+// Relative analog of issueEvidencePath (posix slashes) — the form the contracts
+// and the verb's stdout name. Same null contract.
+export function relativeIssueEvidencePath(projectDir: string, intent?: string, space?: string): string | null {
+  const rel = relativeRecordDir(projectDir, intent, space);
+  if (rel === null) return null;
+  return `${rel}/${ISSUE_EVIDENCE_SEGMENTS.join("/")}`;
+}
+
 // `<root>/inception/units-generation/unit-of-work-dependency.md` — the fenced
 // edge block the Bolt-DAG node is computed from.
 export function unitDependencyPath(projectDir: string, intent?: string, space?: string): string {

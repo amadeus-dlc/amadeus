@@ -76,6 +76,7 @@ Reverse Engineering はブラウンフィールドプロジェクトの既存コ
 ### 入力
 
 - `<record>/amadeus-state.md`(プロジェクトタイプの確認)
+- `<record>/ideation/intent-capture/issue-evidence.md`(存在する場合): 記録するスキャン focus は、そこに載る Issue とクロスレビューコメントから導出する。本文レベルの読取であり、意図的に `consumes:` 宣言にはしない — 宣言すると codekb 9 成果物すべてが upstream-coverage の引用義務下に入るため
 
 ### 手順
 
@@ -212,13 +213,14 @@ Requirements Analysis は、ユーザーの intent とリバースエンジニ�
 ### 入力
 
 - ステージ 2.1 の Reverse Engineering 成果物(`<record>/inception/reverse-engineering/`)、ブラウンフィールドの場合
+- `<record>/ideation/intent-capture/issue-evidence.md`(存在する場合のオプション consume): 独立クロスレビューで確定済みの事実は再導出せず消費する
 - intent の `audit/` シャードからのユーザーのプロジェクト記述
 
 ### 手順
 
 1. **エージェントペルソナのロード** -- `agents/amadeus-product-agent.md` の amadeus-product-agent ペルソナと `.claude/knowledge/amadeus-product-agent/` の知識をロードする。
 
-2. **事前コンテキストのロード** -- ブラウンフィールドの場合: `<record>/inception/reverse-engineering/` から RE 成果物を読む。intent の `audit/` シャードからユーザーのプロジェクト記述を読む。
+2. **事前コンテキストのロード** -- ブラウンフィールドの場合: `<record>/inception/reverse-engineering/` から RE 成果物を読む。`issue-evidence.md` が存在する場合は一次入力として読み、確定済みの機序・`file:line`・受け入れ基準は再導出せず引用する。intent の `audit/` シャードからユーザーのプロジェクト記述を読む。
 
 3. **ユーザーリクエストの分析** -- リクエストを以下について評価する:
    - **Clarity(明確さ)**: リクエストがどれだけ明確に定義されているか

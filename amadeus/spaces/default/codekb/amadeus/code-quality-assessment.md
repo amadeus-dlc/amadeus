@@ -3932,7 +3932,7 @@ allowlist の 3 セレクタ（`tests/.coverage-patch-allowlist.json:4388` / `:4
 
 機序は `architecture.md`、コンポーネント境界は `component-inventory.md`、配置は `code-structure.md` の各対応節を参照。
 
-## 品質指標の区間差分と、優先バグ 5 件のテスト空白（260816-priority-bug-batch-3、現在、observed `89053172e`）
+## 品質指標の区間差分と、優先バグ 5 件のテスト空白（260816-priority-bug-batch-3、履歴、observed `89053172e`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260817-inception-cost-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する。本節が記すテスト空白は本区間で埋められた — 現況は本ファイル末尾の 260817-inception-cost-batch 節を参照））
 
 **観測 ref**: base `5c5911ee3f107152c3173701caf178a746b6e3aa` → observed `89053172ed8b5bb270e254aea029a13291d10b6b`。
 
@@ -4039,5 +4039,98 @@ lifecycle 側の主座は `tests/unit/t481-pr-convergence-lifecycle.test.ts`、s
 - **自己適用の注意（#3149）**: 本 intent の Bolt PR も pr-convergence 機構で収束させるため、**修正中の CLI を自 intent の配送に使う**。attestation は self-install 投影（`.claude/plugins/...`）からの起動を要する（`cid:code-generation:c2-pr-record-in-head-checkout`）。
 - **coverage の相対条件**: 区間で −0.0225pp の変動が既にあるため、実装 PR では merge-base 相対の再測定が要る（`cid:code-generation:coverage-patch-quick-pre-push-standard` の advisory 往復は push 後に CI と並列で回す — `cid:code-generation:push-first`）。
 - **フルスイート未実行**: 本スキャンはテストを一切実行していない（読取専用）。上記の「関連する既存テストファイル」は grep とヘッダ実読による同定であり、赤／緑は未測定である。
+
+機序は `architecture.md`、コンポーネント境界は `component-inventory.md`、配置は `code-structure.md` の各対応節を参照。
+
+## 品質指標の区間差分と、focus 2 件のテスト空白（260817-inception-cost-batch、現在、observed `23d4ae767`）
+
+**観測 ref**: base `89053172ed8b5bb270e254aea029a13291d10b6b` → observed `23d4ae767956cd56fc28fa78abe28096712eff8a`。
+
+### 1. 品質指標の差分 — 前区間の悪化が反転した
+
+**測定元**: `metrics/2026-08-16T20-57-24-618Z-2555e5b42914.json`（base 側 = base コミット時点で最後の snapshot）と `metrics/2026-08-17T12-24-08-673Z-0b652d2cd1a6.json`（observed 側 = 区間内で最後の snapshot、commit `0b652d2cd` 対応）。**取得述語**: 各 JSON の `collectors.<name>.values` を `bun -e` で直読（本節の起草時に実行、exit 0）。区間内の snapshot は **5 件**（`git diff --name-only 89053172e..23d4ae767 -- metrics/`、5 本の bugfix PR に 1:1 対応）。
+
+| 指標 | collector | base | observed | 差 |
+|---|---|---|---|---|
+| coverage percent | `coverage` | 93.39685396775708 | 93.39885723200531 | **+0.0020pp** |
+| coverage hits / lines | `coverage` | 95474 / 102224 | 95788 / 102558 | **+314 / +334** |
+| test files | `tests` | 1045 | 1047 | +2 |
+| assertions | `tests` | 13891 | 13939 | +48 |
+| failed files / assertions | `tests` | 0 / 0 | 0 / 0 | 横ばい（緑） |
+| unit_small / integration_medium | `test_pyramid` | 270 / 581 | 270 / 583 | ±0 / **+2** |
+| loc core | `loc` | 148956 | 149387 | +431 |
+| loc tests | `loc` | 384400 | 386333 | +1933 |
+| loc scripts | `loc` | 13092 | 13092 | ±0 |
+| 関数数 / 閾値超過 / 最大 | `ccn` | 7295 / 32 / 38 | 7320 / 32 / 38 | +25 / **±0** / ±0 |
+| bugs total / open / closed | `bugs` | 398 / 11 / 387 | 400 / **13** / 387 | +2 / **+2** / ±0 |
+
+**読み方の注意が 3 点ある。**
+
+第一に、**coverage は前区間の −0.0225pp から +0.0020pp へ反転した。** 母集団は +334 行に対しヒットが +314 行なので、区間で追加されたコードの被覆率は **約 94.0%**（314/334、派生値）である。前区間で問題になった Project Coverage Gate の相対条件（許容 0.02pp）に対して、本区間の変動は**符号が逆かつ幅が 1/10 以下**である。
+
+第二に、**複雑度は関数を 25 本増やしながら閾値超過を 32 のまま維持している。** ccn の `max` も 38 で不変。198 行を足した `amadeus-state.ts` を含めて、既存の複雑関数を悪化させていない。
+
+第三に、**open bugs 11 → 13 は「5 件を直したのに 2 件増えた」ではない。** `closed` は 387 で**不変**であり、区間内 5 件の Issue クローズはこの snapshot（区間内最後、commit `0b652d2cd` 時点）より後に行われている。増分 +2 は `s4_minor` の +2（79 → 81）と一致するので、**区間内に新規起票された S4 が 2 件ある**という読みが指標と整合する。本 intent が扱う 2 件がこれに含まれるかは metrics からは判定できない。
+
+### 2. 是正の品質面での作り込み — 5 件すべてが落ちる実証形のテストを伴っている
+
+`cid:code-generation:falling-proof-injection-one-set` の観点から、区間の各 PR がどのテスト面を伴ったかを記録する（`git diff --numstat 89053172e..23d4ae767 -- 'tests/**'`、本節の実測）。
+
+| Issue | 新規 | 拡張 |
+|---|---|---|
+| #3149 | `tests/integration/t3149-pr-convergence-merged-finalisation.integration.test.ts`（+739、**区間最大のテスト追加**） | `t450-pr-convergence-report-format-sensor`（+94）/ `t3110-pr-convergence-stale-epoch-landed`（+16 −7） |
+| #3046 | `tests/integration/t3046-election-append-voter-race.integration.test.ts`（+348）+ `tests/helpers/election-append-race-child.ts`（+72） | `t549-election-v2-store`（+63 −21） |
+| #3153 | — | `tests/unit/t188-human-presence-gate.test.ts`（+212 −2）/ `tests/unit/t112-delegated-approval.test.ts`（+32） |
+| #3152 | — | `tests/integration/t482-autonomy-refusal-event.integration.test.ts`（+229 −106）/ `t435-intent-autonomy-production`（+27 −1） |
+| #3156 | — | `tests/unit/t206-source-work-intent-span.test.ts`（+167、**既存ファイルの拡張**） |
+
+**2 つの最大ソース変更が 2 つの最大テスト追加と対応している** — `pr-convergence-cli.ts`（+318 −53）↔ t3149（+739）、`amadeus-state.ts`（+198 −39）↔ t188（+212）+ t206（+167）。
+
+**#3046 の落ちる実証には実プロセスが使われた。** 前節の申し送りが「並行 append を再現するテストが存在せず `spawn` かシームが要る、置き場は integration 層」と記していたとおり、`tests/helpers/election-append-race-child.ts` が子プロセスを駆動する形で integration 層に置かれた（`cid:code-generation:c2-doctor-seam` に整合）。
+
+**上流入力の訂正 1 件**: Developer scan §3 は t206 を「1 new unit suite」と記すが、**新規ではなく既存ファイルの拡張**である（`git diff --name-status` → `M`、base に 402 行で実在、observed 569 行）。unit 層の総数が base / observed とも **432** で不変であることが裏づける。**区間の新規テストスイートは integration 2 本のみ。**
+
+### 3. 台帳の同期 — 5 クラスすべてが同一区間内で resync された
+
+`cid:build-and-test:bt-ledger-resync` / `cid:build-and-test:c1` / `cid:code-generation:c1-260803-state-integrity` が要求する台帳同期は、本区間ですべて in-band に行われている（`git diff --numstat`、本節の実測）。
+
+| 台帳 | 規模 | 発火要因 |
+|---|---|---|
+| `tests/.coverage-registry.json` | +23 −6 | 新規テストファイル 2 件の追加（`bun tests/gen-coverage-registry.ts` の freshness 検査。`cid:build-and-test:c1`） |
+| `tests/.coverage-patch-allowlist.json` | +34 −1 | 意味的セレクタの再アンカー + #3153 の in-process 到達不能 arm 2 件の新規免除 |
+| `tests/.coverage-ratchet.json` | +2 −2 | shrink-only ratchet |
+| `tests/no-silent-drop/approval.json` + `tests/no-silent-drop/events/01M06XDWGXGY27WD0XSET1R3Q0.json` | +9 −1 / +13（新規 ULID event 1 件） | `recordAutonomyRefusalAtGateOpen` の fail-open catch（ADR-2 契約） |
+| `amadeus/spaces/default/specs/tla/model-map.json` + `specs/tla-evidence/fb1029e4….json` | +3 −3 / +1 | `amadeus-state.ts` と `amadeus-election-store.ts` の impl ハッシュピン **3 箇所**の更新 |
+
+**上流入力への追補**: Developer scan §3 は「4 つの ledger クラス」と数えているが、**TLA の `model-map.json` / `tla-evidence` を含めると 5 クラス**である。この 2 面は `amadeus/spaces/` 配下にあるため path 接頭辞で workflow exhaust と誤分類されやすい（#2415 の述語設計に直結。`architecture.md` §1 の reconciliation を参照）。
+
+**新規免除の内容**（`tests/.coverage-patch-allowlist.json`、observed の `:3691` / `:3702` を実読）: いずれも #3153 の milestone presence 判定で、スイート全体が `AMADEUS_SKIP_HUMAN_PRESENCE_GUARD=1` 下で走るため in-process では guard-disabled arm で return してしまい到達不能な 2 行。**免除の reason は代替の被覆先を明示している** — 挙動は t188 シナリオ M / M2 / M3 が spawn した dist ツール経由で assert し、presence 判定自体は `resolveGateResolutionPresence`（`amadeus-lib.ts`）を通じて in-process で被覆される、と述べる。`cid:code-generation:c-measure-not-prose` の観点では、この reason は散文根拠ではなく**代替測定先を名指す**形式であり、免除の妥当性が検証可能である。
+
+### 4. focus 2 件のテスト空白
+
+**是正方式は未決**（`memory/team.md` P1 の裁定事項）なので、ここでは**現況として存在するテスト面と、存在しない面**だけを記録する。
+
+| focus | 現存するテスト面 | 空白 |
+|---|---|---|
+| **#2415**（RE スキャン入力の除外） | stage 契約の構造検査は `question-budget` sensor の corpus sweep（`tests/integration/t517-question-budget-sensor.integration.test.ts`）など、**契約ファイルの形式面**を見るテスト群が存在する | **入力面（何を読むか）を拘束するテストは同定できていない。** 除外規則そのものが不在（grep exit 1）なので、規則を追加する側が落ちる実証の形を新規に設計する必要がある。散文契約の変更に対する落ちる実証は、契約を機械消費する面（sensor / corpus sweep）を経由しないと成立しない点に注意 |
+| **#3181**（Issue 証跡の一級化） | `consumes` の schema 検証は `packages/framework/core/tools/amadeus-stage-schema.ts:277-316`、graph 不変量は `packages/framework/core/tools/amadeus-graph.ts:1192-1206` に実装があり、いずれも既存テストの射程 | **Issue 証跡を artifact として読む経路が存在しない**ため、その round-trip（`cid:build-and-test:pbt-developer-testing-posture` が新設の永続化境界に要求する write⇔read プロパティ）は当然ゼロ。gateway 側の `parseIssueObject` / `readiness` には既存の被覆があるが、**「Issue → artifact → RA の consume」という経路全体を通す検証は無い** |
+
+**共通の注意**: `upstream-coverage` sensor（RA 契約 `:185`）は出力散文が `consumes:` の各 artifact を参照することを要求する。consume を 1 件増やすと、**frontmatter の変更だけでは sensor が赤になる** — `requirements.md` 側の散文と、`:185` の括弧書き（現状 3 件のみ列挙）の両方が同期対象である。
+
+### 5. 検証の未実施面
+
+- **フルスイート未実行**: 本スキャンはテストを一切実行していない（読取専用）。上記の「拡張されたスイート」は `git diff --numstat` とファイル冒頭の `covers:` ヘッダ実読による同定であり、赤／緑は未測定である
+- **`bun run build` 未実行**: `tests/unit/t206-source-work-intent-span.test.ts` は `dist/` 経由の import を含むため（前節が逐語確認済み）、当該テストの実行には build が要る。本スキャンでは実行していない
+- **coverage / TLC 未実行**: 指標はすべて region 内の metrics snapshot JSON からの転記であり、本スキャンで再計測したものではない
+
+### 6. 是正時に同期を要する台帳（本 intent の focus 面）
+
+| 触る面 | 発火する台帳 / ゲート |
+|---|---|
+| `packages/framework/core/amadeus-common/stages/**` の frontmatter | runtime graph の再 compile、`/amadeus --doctor` の参照検査、`bun amadeus-graph.ts artifacts` |
+| 新規テストファイルの追加 | `tests/.coverage-registry.json` の regen（`bun tests/gen-coverage-registry.ts`。`cid:build-and-test:c1`） |
+| `packages/framework/core/tools/amadeus-orchestrate.ts` の変更 | `amadeus/spaces/default/specs/tla/model-map.json` の impl ハッシュピン + `tests/.coverage-patch-allowlist.json` の意味的セレクタ（`cid:build-and-test:bt-ledger-resync`） |
+| `packages/framework/core/**` の変更全般 | 全ハーネス向け `bun run build` と隔離 2 回ビルドの再現性検査、`source-only:check`（`cid:build-and-test:bt-dist-regen-seven-harnesses`） |
+| docs 対訳面（`docs/reference/16-artifact-vocabulary.md` 等）を触る場合 | 対訳同時更新と、doc を消費するテストの paths-ignore 盲点（`cid:build-and-test:ci-paths-ignore-doc-guard-blindspot`） |
 
 機序は `architecture.md`、コンポーネント境界は `component-inventory.md`、配置は `code-structure.md` の各対応節を参照。
