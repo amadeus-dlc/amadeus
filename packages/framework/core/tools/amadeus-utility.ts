@@ -176,6 +176,11 @@ import {
   createInitialGoalLineage,
   writeInitialGoalLineage,
 } from "./amadeus-goal-reconciliation.ts";
+import type { RemoteGitHubIssueComment } from "./amadeus-github-gateway.ts";
+import type {
+  GitHubRepository,
+  RemoteGitHubIssue,
+} from "./amadeus-github-types.ts";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -6585,6 +6590,130 @@ export function handlePluginDelegate(
   deps: PluginDelegateDeps = defaultPluginDelegateDeps,
 ): number {
   return deps.spawn(["bun", join(TOOLS_DIR, "amadeus-plugin.ts"), ...rest]);
+}
+
+// ---------------------------------------------------------------------------
+// issue-evidence — read-only Issue evidence capture (#3181)
+// ---------------------------------------------------------------------------
+//
+// `issue-evidence fetch` pulls the filing Issue's body and its cross-review
+// comments into ONE record artifact so requirements-analysis and
+// reverse-engineering consume the already-established facts instead of
+// re-deriving them. The verb owns no state: it reads through the gateway's
+// read-only surface, renders the artifact, and writes it atomically. Nothing
+// here mutates the workflow, so there is no permit and no audit transition —
+// failure is loud (non-zero exit + stderr) and leaves no partial file.
+
+/** Provenance the cross-review protocol stamps into each reviewer comment as an
+ *  HTML marker. Absent keys stay null: an unstamped comment must not be
+ *  rendered as if it carried a run id or a target SHA. */
+export type IssueEvidenceCrossReviewMarker = Readonly<{
+  reviewRunId: string | null;
+  reviewerId: string | null;
+  targetSha: string | null;
+}>;
+
+/** One issue with the comments fetched alongside it. */
+export type IssueEvidenceEntry = Readonly<{
+  issue: RemoteGitHubIssue;
+  comments: readonly RemoteGitHubIssueComment[];
+}>;
+
+export type IssueEvidenceRenderInput = Readonly<{
+  intentSlug: string;
+  repo: GitHubRepository;
+  fetchedAt: string;
+  entries: readonly IssueEvidenceEntry[];
+}>;
+
+const CROSS_REVIEW_MARKER_RE = /<!--\s*issue-cross-review\b([\s\S]*?)-->/;
+
+/** Read the `<!-- issue-cross-review ... -->` block a cross-review comment
+ *  carries. Returns null when the comment has no marker at all — the caller
+ *  files those under "other comments" rather than counting them as reviews. */
+export function parseCrossReviewMarker(
+  body: string,
+): IssueEvidenceCrossReviewMarker | null {
+  const match = CROSS_REVIEW_MARKER_RE.exec(body);
+  if (match === null) return null;
+  const fields = new Map<string, string>();
+  for (const line of match[1].split("\n")) {
+    const sep = line.indexOf(":");
+    if (sep <= 0) continue;
+    const key = line.slice(0, sep).trim();
+    const value = line.slice(sep + 1).trim();
+    if (key.length > 0 && value.length > 0) fields.set(key, value);
+  }
+  return {
+    reviewRunId: fields.get("review-run-id") ?? null,
+    reviewerId: fields.get("reviewer-id") ?? null,
+    targetSha: fields.get("target-sha") ?? null,
+  };
+}
+
+function issueHtmlUrl(repo: GitHubRepository, issueNumber: number): string {
+  return `https://github.com/${repo.canonical}/issues/${issueNumber}`;
+}
+
+function renderComment(comment: RemoteGitHubIssueComment): string[] {
+  return [
+    `#### ${comment.authorLogin} — ${comment.createdAt} — ${comment.htmlUrl}`,
+    "",
+    comment.body,
+    "",
+  ];
+}
+
+function renderEntry(repo: GitHubRepository, entry: IssueEvidenceEntry): string[] {
+  const reviewed: RemoteGitHubIssueComment[] = [];
+  const others: RemoteGitHubIssueComment[] = [];
+  let marker: IssueEvidenceCrossReviewMarker | null = null;
+  for (const comment of entry.comments) {
+    const parsed = parseCrossReviewMarker(comment.body);
+    if (parsed === null) {
+      others.push(comment);
+      continue;
+    }
+    marker ??= parsed;
+    reviewed.push(comment);
+  }
+
+  const lines = [
+    `## Issue #${entry.issue.number}: ${entry.issue.title}`,
+    "",
+    // labels are outside the pinned viewIssue DTO (RemoteGitHubIssue), so the
+    // field records that it was never fetched instead of claiming "none".
+    `- state: ${entry.issue.state} / labels: 未取得(本 verb の read 面は本文・状態・コメントのみ) / url: ${issueHtmlUrl(repo, entry.issue.number)} / target-sha: ${marker?.targetSha ?? "n/a"}`,
+    `- review-run-id: ${marker?.reviewRunId ?? "n/a"} / 独立レビュアー: ${reviewed.length}名(marker 計数)`,
+    "",
+    "### 本文(verbatim)",
+    "",
+    entry.issue.body,
+    "",
+    "### クロスレビューコメント(verbatim、コメント URL 併記)",
+    "",
+  ];
+  if (reviewed.length === 0) lines.push("(なし)", "");
+  for (const comment of reviewed) lines.push(...renderComment(comment));
+  lines.push("### その他コメント(verbatim、任意)", "");
+  if (others.length === 0) lines.push("(なし)", "");
+  for (const comment of others) lines.push(...renderComment(comment));
+  return lines;
+}
+
+/** Render the issue-evidence artifact. Pure: every value comes from the input,
+ *  so the file is byte-reproducible for a given fetch. */
+export function renderIssueEvidence(input: IssueEvidenceRenderInput): string {
+  const lines = [
+    `# Issue Evidence — ${input.intentSlug}`,
+    "",
+    "## メタデータ",
+    "",
+    `- fetched-at: ${input.fetchedAt} / repo: ${input.repo.canonical} / tool: issue-evidence fetch`,
+    "",
+  ];
+  for (const entry of input.entries) lines.push(...renderEntry(input.repo, entry));
+  return `${lines.join("\n").trimEnd()}\n`;
 }
 
 // ---------------------------------------------------------------------------

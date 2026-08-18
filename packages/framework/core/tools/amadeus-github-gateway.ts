@@ -445,6 +445,20 @@ export function parseIssueObject(
   return { repository: repo, number, title, body, state };
 }
 
+// --- G6b Issue comment parser (evidence read surface, #3181) -----------------
+
+// One issue comment, reduced to what the issue-evidence artifact records:
+// identity, verbatim body, authorship, time, and the permalink the artifact
+// cites. Declared here rather than in amadeus-github-types.ts because only the
+// evidence adapter below produces it.
+export type RemoteGitHubIssueComment = Readonly<{
+  id: number;
+  body: string;
+  createdAt: string;
+  authorLogin: string;
+  htmlUrl: string;
+}>;
+
 // --- G7 Failure Normalizer / Redactor ---------------------------------------
 
 type OpKind = "read-only" | "mutation";

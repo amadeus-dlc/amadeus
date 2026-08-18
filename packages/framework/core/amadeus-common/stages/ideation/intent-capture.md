@@ -11,6 +11,8 @@ produces:
   - intent-statement
   - stakeholder-map
   - intent-capture-questions
+optional_produces:
+  - issue-evidence
 consumes: []
 requires_stage: []
 sensors:
