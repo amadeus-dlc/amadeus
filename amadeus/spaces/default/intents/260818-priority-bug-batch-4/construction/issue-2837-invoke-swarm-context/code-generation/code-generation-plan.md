@@ -25,3 +25,34 @@ Intent: 260818-priority-bug-batch-4(depth Minimal、Test Strategy Comprehensive�
 - check_cmd/test_file を directive に載せない(契約1)。後方互換レイヤー・移行シム禁止(契約8)。join 一部修正の禁止 — 全数 sweep(契約3)。配送先ツリーでの受け入れ(契約6)
 - 実装は bolt worktree(base main)で行い、conductor ツリー・他 worktree の git 状態に触れない。scratch は repo 外
 - コミットは英語 Conventional Commits。push-first(commit 次第 push、フルスイートはリモート CI 正)
+
+## Review — Iteration 1
+
+- **Verdict:** NOT-READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-18T10:11:42Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+FR-2837-1〜5の実測証跡・census・配送先ツリー受け入れは強固だが、code-summary.mdの逸脱欄がdocs/reference/17-skill-system.md(英日)への変更を無申告のままplan未記載の作業として残しており、code-generation.md Step 5の逸脱申告要件に反する
+
+### Findings
+
+- BLOCKER | code-summary.md「変更ファイル」節が docs/reference/17-skill-system.md / .ja.md(directive 表への identity 搬送・check_cmd 非搬送の明記)を挙げているが、plan の全11 stepはこの2ファイルに言及せず逸脱欄も branching-strategies.md のみ開示 — Step 5 の逸脱申告要件と P3(無申告の逸脱)に反する
+- FOLLOW-UP | R4(t181 落ちる実証)は復元後のテスト再緑化のみを残渣ゼロの根拠にしており、git status/diff 等の機械確認の記載がない
+- FOLLOW-UP | 逸脱欄が引く reviewer C12 は requirements の Out of Scope 節では別件(finalize 偽 green)の識別子であり、branching-strategies.md 2 行との対応が本スコープ内資料から確認できない
+- NIT | self-install 6 面の列挙で kiro-ide が現れない理由が無記載(.kiro 除外の理由のみ)
+
+## Review — Iteration 2
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-18T10:15:37Z
+- **Iteration:** 2
+- **Scope decision:** none
+
+iteration-1の全4所見(BLOCKER1・FOLLOW-UP2・NIT1)が実測込みで是正され新規BLOCKERの混入もないためREADY
+
+### Findings
+
+- None

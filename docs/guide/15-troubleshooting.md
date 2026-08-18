@@ -135,12 +135,12 @@ The engine now settles each Unit's outcome itself, at the moment it observes the
 
 1. Update the engine so it carries the fix (pull, then `bun run build` if you develop against a source checkout).
 2. Put the cursor back on the per-unit Construction stage the consumer reads from — usually `code-generation`: run `/amadeus --stage code-generation`, then run the `amadeus-jump.ts execute` command it prints.
-3. Run `/amadeus`. The engine re-derives coverage from the record, settles every covered, non-cancelled Unit's outcome, and — since all Units are already covered — presents the stage gate again. Approve it.
+3. Run `/amadeus`. The engine re-derives coverage from the record, settles every covered Unit's outcome (and every cancelled Unit's, see below), and — since all Units are already covered — presents the stage gate again. Approve it.
 4. Run `/amadeus`. The consumer stage now fans out over the Units and the workflow continues.
 
 Steps 2–4 add no artifacts and rewrite no history; the only new rows are the settled outcomes, stamped when they are observed.
 
-**Cancelled Units are not settled.** The engine settles a Unit only when it is covered *and* not cancelled, so a batch containing a cancelled Unit still reports `producer-outcome-pending` for that Unit after the steps above. The swarm path differs here — its Unit pool records a cancelled terminal — and closing that asymmetry is tracked as a follow-up issue.
+**Cancelled Units are settled too.** The engine records a `cancelled` outcome for a Unit its failure ruling cancelled, whether or not that Unit's artifacts survived on disk, so the batch keeps running: the consumer drops that Unit's paths and fans out over the rest — the same behaviour the swarm path has always had through its Unit pool terminal (#3106). If the Unit is later restarted (`amadeus-bolt.ts start`) and carried back to coverage, the next `next` records the new outcome as a revision that supersedes the cancelled row; both rows stay on the ledger, and the later one is the one that counts.
 
 > `/amadeus --stage code-generation --single` does **not** work here. A single-stage run is isolated by contract — it emits one directive for the stage and never enters the engine's per-unit loop — so it settles nothing.
 
