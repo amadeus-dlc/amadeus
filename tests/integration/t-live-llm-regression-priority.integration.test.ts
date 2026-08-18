@@ -27,10 +27,18 @@ describe("live LLM regression priority registry", () => {
   test("keeps historical tool targets ordered and tied to real source/test seams", () => {
     const targets = readRegistry();
     const priorities = targets.map((target) => target.priority);
+    const expectedTools = [
+      "packages/framework/core/tools/amadeus-orchestrate.ts",
+      "packages/framework/core/tools/amadeus-state.ts",
+      "packages/framework/core/tools/amadeus-audit.ts",
+      "packages/framework/core/tools/amadeus-bolt.ts",
+      "packages/framework/core/tools/amadeus-plugin.ts",
+      "packages/framework/core/tools/amadeus-election.ts",
+    ];
 
     expect(priorities).toEqual([...priorities].sort((left, right) => left - right));
     expect(new Set(targets.map((target) => target.tool)).size).toBe(targets.length);
-    expect(targets[0]?.tool).toBe("packages/framework/core/tools/amadeus-orchestrate.ts");
+    expect(targets.map((target) => target.tool)).toEqual(expectedTools);
 
     for (const target of targets) {
       expect(target.tool).toMatch(/\/tools\/[^/]+\.ts$/u);

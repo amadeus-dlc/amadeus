@@ -8,12 +8,24 @@
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, join } from "node:path";
+import { tmpdir } from "node:os";
 import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { claudePrintLiveSkipReason } from "../harness/claude-print-live.ts";
 import {
   codexExecLiveSkipReason,
+  codexExecChildEnvironment,
   setupCodexExecProject,
   type CodexExecProject,
 } from "../harness/codex-exec-live.ts";
@@ -33,6 +45,10 @@ const CLAUDE_DIST = join(REPO_ROOT, "dist", "claude");
 const CODEX_DIST = join(REPO_ROOT, "dist", "codex");
 const TIMEOUT_MS = Number.parseInt(process.env.AMADEUS_LLM_TOOL_E2E_TIMEOUT ?? "900000", 10);
 const STATE_FIXTURE = "state-formal-model-check.md";
+const CLAUDE_SANDBOX_SETTINGS = JSON.stringify({
+  sandbox: { enabled: true, failIfUnavailable: true },
+});
+const CHILD_PATH = `${dirname(process.execPath)}:/opt/homebrew/bin:/usr/bin:/bin`;
 const PROMPT = (harnessDir: ".claude" | ".codex"): string => [
   "You are driving a pre-seeded Amadeus test workspace.",
   "Use the shipped TypeScript tools through the shell; do not merely describe actions.",
@@ -91,8 +107,93 @@ function codexSkipReason(): string | null {
   );
 }
 
-const CLAUDE_SKIP_REASON = claudeSkipReason();
-const CODEX_SKIP_REASON = codexSkipReason();
+function claudeSubscriptionAuthSkipReason(): string | null {
+  const home = process.env.HOME;
+  if (!home) return "HOME is unavailable for subscription auth isolation";
+  if (
+    (!existsSync(join(home, ".claude", ".claude.json")) &&
+      !existsSync(join(home, ".claude.json"))) ||
+    !existsSync(join(home, ".claude", ".credentials.json"))
+  ) {
+    return "Claude subscription auth files are unavailable";
+  }
+  return null;
+}
+
+function codexSubscriptionAuthSkipReason(): string | null {
+  const home = process.env.HOME;
+  if (!home) return "HOME is unavailable for subscription auth isolation";
+  const codexHome = process.env.CODEX_HOME ?? join(home, ".codex");
+  if (!existsSync(join(codexHome, "auth.json")) && !process.env.OPENAI_API_KEY) {
+    return "Codex subscription auth is unavailable and no API-key fallback is set";
+  }
+  return null;
+}
+
+const CLAUDE_SKIP_REASON = claudeSkipReason() ?? claudeSubscriptionAuthSkipReason();
+const CODEX_SKIP_REASON = codexSkipReason() ?? codexSubscriptionAuthSkipReason();
+
+interface ChildEnvironment {
+  readonly env: NodeJS.ProcessEnv;
+  readonly cleanup: () => void;
+}
+
+function installChildBun(home: string): void {
+  const bin = join(home, ".nix-profile", "bin");
+  mkdirSync(bin, { recursive: true });
+  symlinkSync(process.execPath, join(bin, "bun"));
+}
+
+function isolatedClaudeEnvironment(projectDir: string): ChildEnvironment {
+  const sourceHome = process.env.HOME;
+  if (!sourceHome) throw new Error("HOME is unavailable for Claude subscription auth isolation");
+  const root = mkdtempSync(join(tmpdir(), "amadeus-claude-child-"));
+  const home = join(root, "home");
+  const claudeHome = join(home, ".claude");
+  try {
+    mkdirSync(claudeHome, { recursive: true });
+    installChildBun(home);
+    cpSync(join(sourceHome, ".claude", ".credentials.json"), join(claudeHome, ".credentials.json"));
+    const accountPath = existsSync(join(sourceHome, ".claude", ".claude.json"))
+      ? join(sourceHome, ".claude", ".claude.json")
+      : join(sourceHome, ".claude.json");
+    const account = JSON.parse(readFileSync(accountPath, "utf8")) as {
+      readonly hasAvailableSubscription?: boolean;
+      readonly oauthAccount?: unknown;
+    };
+    writeFileSync(
+      join(claudeHome, ".claude.json"),
+      `${JSON.stringify({
+        hasAvailableSubscription: account.hasAvailableSubscription,
+        oauthAccount: account.oauthAccount,
+        projects: { [projectDir]: { hasTrustDialogAccepted: true } },
+      })}\n`,
+      "utf8",
+    );
+    return {
+      env: {
+        PATH: CHILD_PATH,
+        LANG: process.env.LANG,
+        LC_ALL: process.env.LC_ALL,
+        NO_COLOR: process.env.NO_COLOR,
+        HOME: home,
+        CLAUDE_CONFIG_DIR: claudeHome,
+      },
+      cleanup: () => rmSync(root, { recursive: true, force: true }),
+    };
+  } catch (error) {
+    rmSync(root, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+function prepareCodexSubscriptionAuth(home: string): void {
+  installChildBun(home);
+  const sourceHome = process.env.HOME;
+  const sourceCodexHome = process.env.CODEX_HOME ?? (sourceHome ? join(sourceHome, ".codex") : undefined);
+  if (!sourceCodexHome || !existsSync(join(sourceCodexHome, "auth.json"))) return;
+  cpSync(join(sourceCodexHome, "auth.json"), join(home, "auth.json"));
+}
 
 /**
  * Seed the exact fixture needed by the report-repair journey. This is test data
@@ -193,8 +294,22 @@ function readAuditRows(projectDir: string): AuditRow[] {
     );
 }
 
+function eventIndexAfter(
+  audit: readonly AuditRow[],
+  event: string,
+  afterIndex: number,
+): number {
+  return audit.findIndex((row, index) =>
+    index > afterIndex &&
+    (row.eventName === event || row.attributes?.Event === event) &&
+    row.attributes?.Stage === "formal-model-check",
+  );
+}
+
 function assertRepairJourney(projectDir: string, run: ToolRun): void {
-  expect(run.exitCode).toBe(0);
+  if (run.exitCode !== 0) {
+    throw new Error(`LLM report recovery failed with exit ${run.exitCode}\nstdout:\n${run.stdout}\nstderr:\n${run.stderr}`);
+  }
   const phaseCheck = join(seededRecordDir(projectDir), "verification", "phase-check-construction.md");
   if (!existsSync(phaseCheck)) {
     throw new Error(`LLM did not create ${phaseCheck}\nstdout:\n${run.stdout}\nstderr:\n${run.stderr}`);
@@ -210,10 +325,18 @@ function assertRepairJourney(projectDir: string, run: ToolRun): void {
     row.attributes.Error?.includes("phase-check-construction.md"),
   );
   expect(failedReport).toBeGreaterThanOrEqual(0);
+  const gateApproved = eventIndexAfter(audit, "GATE_APPROVED", failedReport);
+  expect(gateApproved).toBeGreaterThan(failedReport);
+  if (state.includes("- **Status**: Completed")) {
+    const stageCompleted = eventIndexAfter(audit, "STAGE_COMPLETED", failedReport);
+    expect(stageCompleted).toBeGreaterThan(failedReport);
+  }
 }
 
 function assertStateApprovalJourney(projectDir: string, run: ToolRun): void {
-  expect(run.exitCode).toBe(0);
+  if (run.exitCode !== 0) {
+    throw new Error(`LLM state approval failed with exit ${run.exitCode}\nstdout:\n${run.stdout}\nstderr:\n${run.stderr}`);
+  }
   const phaseCheck = join(seededRecordDir(projectDir), "verification", "phase-check-construction.md");
   if (!existsSync(phaseCheck)) {
     throw new Error(`LLM did not create ${phaseCheck}\nstdout:\n${run.stdout}\nstderr:\n${run.stderr}`);
@@ -230,40 +353,68 @@ function assertStateApprovalJourney(projectDir: string, run: ToolRun): void {
     row.attributes.Error?.includes("phase-check-construction.md"),
   );
   expect(failedApproval).toBeGreaterThanOrEqual(0);
+  const gateApproved = eventIndexAfter(audit, "GATE_APPROVED", failedApproval);
+  expect(gateApproved).toBeGreaterThan(failedApproval);
+  // The direct state journey deliberately uses --defer-workflow-completion;
+  // that terminal handoff records GATE_APPROVED and leaves the completion
+  // boundary pending, so STAGE_COMPLETED is emitted by the later completion
+  // command rather than by this approval command.
 }
 
 function runClaude(projectDir: string, prompt = PROMPT(".claude")): ToolRun {
-  const result = spawnSync(
-    CLAUDE_BIN,
-    [
-      "--dangerously-skip-permissions",
-      "-p",
-      prompt,
-      "--setting-sources",
-      "project",
-      "--tools",
-      "Bash",
-      "--no-session-persistence",
-      "--output-format",
-      "json",
-    ],
-    {
-      cwd: projectDir,
-      encoding: "utf8",
-      env: process.env,
-      timeout: TIMEOUT_MS,
-    },
-  );
-  return { exitCode: result.status ?? -1, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
+  const child = isolatedClaudeEnvironment(projectDir);
+  try {
+    const result = spawnSync(
+      CLAUDE_BIN,
+      [
+        "--dangerously-skip-permissions",
+        "-p",
+        prompt,
+        "--setting-sources",
+        "project",
+        "--settings",
+        CLAUDE_SANDBOX_SETTINGS,
+        "--tools",
+        "Bash",
+        "--no-session-persistence",
+        "--output-format",
+        "json",
+      ],
+      {
+        cwd: projectDir,
+        encoding: "utf8",
+        env: child.env,
+        timeout: TIMEOUT_MS,
+      },
+    );
+    return { exitCode: result.status ?? -1, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
+  } finally {
+    child.cleanup();
+  }
 }
 
 function runCodex(project: CodexExecProject, prompt = PROMPT(".codex")): ToolRun {
-  const result = spawnSync(CODEX_BIN, ["exec", prompt], {
-    cwd: project.proj,
-    encoding: "utf8",
-    env: process.env,
-    timeout: TIMEOUT_MS,
-  });
+  prepareCodexSubscriptionAuth(project.home);
+  const childEnvironment = codexExecChildEnvironment(project.home);
+  childEnvironment.PATH = CHILD_PATH;
+  const result = spawnSync(
+    CODEX_BIN,
+    [
+      "exec",
+      "--sandbox",
+      "workspace-write",
+      "-c",
+      "sandbox_workspace_write.network_access=false",
+      "--ephemeral",
+      prompt,
+    ],
+    {
+      cwd: project.proj,
+      encoding: "utf8",
+      env: childEnvironment,
+      timeout: TIMEOUT_MS,
+    },
+  );
   return { exitCode: result.status ?? -1, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
 }
 
