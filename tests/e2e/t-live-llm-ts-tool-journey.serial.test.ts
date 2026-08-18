@@ -6,7 +6,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { claudePrintLiveSkipReason } from "../harness/claude-print-live.ts";
@@ -17,11 +17,9 @@ import {
 } from "../harness/codex-exec-live.ts";
 import {
   cleanupTestProject,
-  DEFAULT_RECORD_DIR,
   seedAuditFile,
   seedStateFile,
   seedWorkspaceShell,
-  seededAuditShard,
   seededRecordDir,
   setupIntegrationProject,
 } from "../harness/fixtures.ts";
@@ -38,7 +36,7 @@ const PROMPT = (harnessDir: ".claude" | ".codex"): string => [
   "Use the shipped TypeScript tools through the shell; do not merely describe actions.",
   "Do not create, birth, select, or switch an Intent. Do not use git, GitHub, or the network.",
   `Run exactly: bun ${harnessDir}/tools/amadeus-orchestrate.ts report --stage formal-model-check --result completed`,
-  `If the command reports that amadeus/spaces/default/intents/${DEFAULT_RECORD_DIR}/verification/phase-check-construction.md is missing, create that exact file with a concise markdown verification note, then rerun the same report command.`,
+  "Read the tool result. If it reports a missing verification artifact, create the exact path named in that result with a concise markdown verification note, then rerun the same report command.",
   "Continue until the report command succeeds, then stop and summarize the tool commands executed.",
 ].join(" ");
 
@@ -120,74 +118,38 @@ function prepareFormalModelCheckFixture(projectDir: string, harnessDir: ".claude
   if (compose.status !== 0) {
     throw new Error(`plugin fixture compose failed: ${compose.stderr || compose.stdout}`);
   }
-  const shard = seededAuditShard(projectDir);
-  const rows = readFileSync(shard, "utf8").trimEnd();
-  const seq = rows.split("\n").filter(Boolean).length;
-  writeFileSync(
-    shard,
-    `${rows}\n${JSON.stringify({
-      schemaVersion: 2,
-      eventId: "fixture-gate-approved-pr-convergence",
-      seq: seq + 1,
-      timestamp: "2025-06-18T14:19:00Z",
-      eventName: "amadeus.gate.approved",
-      attributes: { "Approval Provenance": "intent-grant", Event: "GATE_APPROVED", "Grant Id": "fixture-grant", Stage: "pr-convergence" },
-      intentId: "fixture-0f14ce29",
-      space: "default",
-      cloneId: "fixturecloneid01",
-      traceId: null,
-      spanId: null,
-      traceFlags: 0,
-      idempotencyKey: "fixture:pr-convergence:gate-approved",
-      canonical: true,
-    })}\n${JSON.stringify({
-      schemaVersion: 2,
-      eventId: "fixture-stage-started-formal-model-check",
-      seq: seq + 2,
-      timestamp: "2025-06-18T14:20:00Z",
-      eventName: "amadeus.stage.started",
-      attributes: { Agent: "amadeus-quality-agent", Event: "STAGE_STARTED", Stage: "formal-model-check" },
-      intentId: "fixture-0f14ce29",
-      space: "default",
-      cloneId: "fixturecloneid01",
-      traceId: null,
-      spanId: null,
-      traceFlags: 0,
-      idempotencyKey: "fixture:formal-model-check:stage-started",
-      canonical: true,
-    })}\n${JSON.stringify({
-      schemaVersion: 2,
-      eventId: "fixture-stage-awaiting-formal-model-check-organic",
-      seq: seq + 3,
-      timestamp: "2025-06-18T14:21:00Z",
-      eventName: "amadeus.stage.awaiting.approval",
-      attributes: { Event: "STAGE_AWAITING_APPROVAL", Stage: "formal-model-check" },
-      intentId: "fixture-0f14ce29",
-      space: "default",
-      cloneId: "fixturecloneid01",
-      traceId: null,
-      spanId: null,
-      traceFlags: 0,
-      idempotencyKey: "fixture:formal-model-check:awaiting-approval-organic",
-      canonical: true,
-    })}\n${JSON.stringify({
-      schemaVersion: 2,
-      eventId: "fixture-stage-awaiting-formal-model-check-recovered",
-      seq: seq + 4,
-      timestamp: "2025-06-18T14:22:00Z",
-      eventName: "amadeus.stage.awaiting.approval",
-      attributes: { Event: "STAGE_AWAITING_APPROVAL", Recovered: "true", Stage: "formal-model-check" },
-      intentId: "fixture-0f14ce29",
-      space: "default",
-      cloneId: "fixturecloneid01",
-      traceId: null,
-      spanId: null,
-      traceFlags: 0,
-      idempotencyKey: "fixture:formal-model-check:awaiting-approval-recovered",
-      canonical: true,
-    })}\n`,
-    "utf8",
+  const gateStart = spawnSync(
+    process.execPath,
+    [join(projectDir, harnessDir, "tools", "amadeus-state.ts"), "gate-start", "formal-model-check", "--project-dir", projectDir],
+    { cwd: projectDir, encoding: "utf8" },
   );
+  if (gateStart.status !== 0) {
+    throw new Error(`fixture gate-start failed: ${gateStart.stderr || gateStart.stdout}`);
+  }
+  const presence = spawnSync(
+    process.execPath,
+    harnessDir === ".claude"
+      ? [join(projectDir, harnessDir, "hooks", "amadeus-mint-presence.ts")]
+      : [join(projectDir, harnessDir, "hooks", "amadeus-codex-adapter.ts"), "mint"],
+    {
+      cwd: projectDir,
+      encoding: "utf8",
+      input: JSON.stringify({
+        hook_event_name: "UserPromptSubmit",
+        prompt: "fixture human gate acknowledgement",
+        session_id: "fixture-session",
+        cwd: projectDir,
+      }),
+    },
+  );
+  if (presence.status !== 0) {
+    throw new Error(`fixture human presence failed: ${presence.stderr || presence.stdout}`);
+  }
+  if (!readAuditRows(projectDir).some((row) =>
+    row.eventName === "amadeus.human.turn" || row.attributes?.Event === "HUMAN_TURN",
+  )) {
+    throw new Error("fixture human presence did not append a HUMAN_TURN audit event");
+  }
   const compile = spawnSync(
     process.execPath,
     [join(projectDir, harnessDir, "tools", "amadeus-runtime.ts"), "compile"],
@@ -204,6 +166,23 @@ function readIntentEntries(projectDir: string): unknown[] {
   ) as unknown[];
 }
 
+interface AuditRow {
+  readonly eventName?: string;
+  readonly attributes?: Readonly<Record<string, string>>;
+}
+
+function readAuditRows(projectDir: string): AuditRow[] {
+  return readdirSync(join(seededRecordDir(projectDir), "audit"))
+    .filter((name) => name.endsWith(".jsonl"))
+    .flatMap((name) =>
+      readFileSync(join(seededRecordDir(projectDir), "audit", name), "utf8")
+        .trim()
+        .split("\n")
+        .filter(Boolean)
+        .map((line) => JSON.parse(line) as AuditRow),
+    );
+}
+
 function assertRepairJourney(projectDir: string, run: ToolRun): void {
   expect(run.exitCode).toBe(0);
   const phaseCheck = join(seededRecordDir(projectDir), "verification", "phase-check-construction.md");
@@ -213,7 +192,14 @@ function assertRepairJourney(projectDir: string, run: ToolRun): void {
   expect(readIntentEntries(projectDir)).toHaveLength(1);
   const state = readFileSync(join(seededRecordDir(projectDir), "amadeus-state.md"), "utf8");
   expect(state).toContain("- [x] formal-model-check — EXECUTE");
-  expect(readFileSync(seededAuditShard(projectDir), "utf8")).toContain('"Stage":"formal-model-check"');
+  const audit = readAuditRows(projectDir);
+  const failedReport = audit.findIndex((row) =>
+    row.eventName === "amadeus.operation.failed" &&
+    row.attributes?.Event === "ERROR_LOGGED" &&
+    row.attributes.Command?.includes("report --stage formal-model-check --result completed") &&
+    row.attributes.Error?.includes("phase-check-construction.md"),
+  );
+  expect(failedReport).toBeGreaterThanOrEqual(0);
 }
 
 function runClaude(projectDir: string): ToolRun {

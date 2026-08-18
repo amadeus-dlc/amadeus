@@ -88,7 +88,7 @@ Per unit: [TBD]
 - [ ] ci-pipeline — SKIP
 - [x] tla-authoring — EXECUTE
 - [x] pr-convergence — EXECUTE
-- [?] formal-model-check — EXECUTE
+- [-] formal-model-check — EXECUTE
 
 ### OPERATION PHASE
 - [ ] deployment-pipeline — SKIP
