@@ -2462,33 +2462,56 @@ export interface PerUnitConsumePopulation {
 // pool stream in every respect — its own event type, its own batch field, no
 // entry in the pool's batchId namespace.
 interface SettledUnitOutcome {
+  readonly stage: string;
   readonly batch: string;
   readonly unit: string;
-  readonly outcome: typeof SETTLED_UNIT_OUTCOME;
+  readonly outcome: SettledUnitOutcomeValue;
   readonly key: string;
 }
 
-// The one outcome the engine settles: coverage on disk is what it observes, and
-// a covered Unit succeeded. The emitter writes this value and the reader accepts
-// no other — a closed vocabulary, as the pool projection keeps for its own
-// terminals — so an edited ledger cannot decide whether a consumer runs.
-const SETTLED_UNIT_OUTCOME = "succeeded";
+// The outcomes the engine settles on this path: EXACTLY three, the same closed
+// set the downstream fan-out already reads (#3106). Coverage on disk is what the
+// engine observes for a Unit it dispatched, and a covered Unit succeeded; the
+// canonical Construction projection is what it observes for a Unit the failure
+// ruling cancelled. `failed` completes the vocabulary and no emitter arm writes
+// it — settlePerUnitOutcomes documents why this path cannot reach one. The
+// reader accepts these three and nothing else — a closed vocabulary, as the pool
+// projection keeps for its own terminals — so an edited ledger cannot decide
+// that a consumer runs.
+const SETTLED_UNIT_OUTCOMES = ["succeeded", "cancelled", "failed"] as const;
+type SettledUnitOutcomeValue = (typeof SETTLED_UNIT_OUTCOMES)[number];
+
+function isSettledUnitOutcome(value: string | null): value is SettledUnitOutcomeValue {
+  return (SETTLED_UNIT_OUTCOMES as readonly (string | null)[]).includes(value);
+}
 
 // Refusal for a row that does not carry the shape the emitter writes: a missing
 // join key, or an outcome outside the vocabulary above.
 const INVALID_SETTLED_ROW = "invalid-unit-outcome-audit-row: not the shape the engine writes";
 
-// The idempotency key of one settled per-unit outcome. The intent is implicit —
-// the row lands in the active intent's own audit shard — so the key spans the
-// remaining three axes. Re-entering `next` re-derives the same key and finds the
-// row already there, which is what keeps the emission append-once.
-function perUnitOutcomeKey(stage: string, unit: string, batch: string): string {
+// The three axes one Unit's outcome is settled on. The intent is implicit — the
+// row lands in the active intent's own audit shard — so this is the whole
+// identity of "what this stage has recorded about this Unit in this batch".
+function perUnitOutcomeTriple(stage: string, unit: string, batch: string): string {
   return `${stage} ${unit} ${batch}`;
 }
 
-// Stage is read for its PRESENCE only. Outcomes collapse across the per-unit
-// stages a Unit clears, so the value is not a join key — but the emitter writes
-// it on every row, and a row without it is not a row the engine produced.
+// The idempotency key of one settled per-unit outcome: the triple above plus the
+// revision that observation is. Re-entering `next` on an UNCHANGED observation
+// re-derives the same key and finds the row already there, which is what keeps
+// the emission append-once. A CHANGED observation — the ruling cancelled a Unit
+// and a restart put it back in flight (#3106) — is a new revision, so the row
+// that supersedes lands beside the one it replaces instead of colliding with its
+// key. Revision 1 is the bare triple, byte for byte the key #3099 wrote.
+function perUnitOutcomeKey(stage: string, unit: string, batch: string, revision: number): string {
+  const triple = perUnitOutcomeTriple(stage, unit, batch);
+  return revision === 1 ? triple : `${triple} #${revision}`;
+}
+
+// Stage never joins a row to the CONSUME population — outcomes collapse across
+// the per-unit stages a Unit clears — but it is the first axis of the triple the
+// emitter settles on, so the row carries it and a row without it is not a row
+// the engine produced.
 //
 // Every settled row carries all five keys — emitEvent refuses an emit that omits
 // a required attribute — so a row missing one, or carrying an outcome the
@@ -2498,16 +2521,36 @@ function perUnitOutcomeKey(stage: string, unit: string, batch: string): string {
 // the wrong thing entirely. Both are worse than refusing.
 function readSettledUnitOutcomes(projectDir: string): SettledUnitOutcome[] {
   return findAllEvents(readAllAuditShards(projectDir), "UNIT_OUTCOME_SETTLED")
-    .map(({ block }) => {
+    .map(({ timestamp, block }) => {
       const batch = auditBlockField(block, "Batch");
       const unit = auditBlockField(block, "Unit");
       const outcome = auditBlockField(block, "Outcome");
       const key = auditBlockField(block, "Idempotency Key");
       const stage = auditBlockField(block, "Stage");
       if (batch === null || unit === null || key === null || stage === null) throw new Error(INVALID_SETTLED_ROW);
-      if (outcome !== SETTLED_UNIT_OUTCOME) throw new Error(INVALID_SETTLED_ROW);
-      return { batch, unit, outcome, key };
-    });
+      if (!isSettledUnitOutcome(outcome)) throw new Error(INVALID_SETTLED_ROW);
+      return { timestamp, row: { stage, batch, unit, outcome, key } };
+    })
+    .sort(compareSettledRows)
+    .map(({ row }) => row);
+}
+
+// Supersession order (#3106): whoever reads these rows adopts the LAST one for a
+// Unit, so the order has to be a property of the rows themselves. Buffer order
+// is not — readAllAuditShards concatenates per-clone shards in FILENAME order,
+// so a row's position depends on which clone wrote it. Both terms here ride the
+// row: the journal envelope's timestamp, then the idempotency key. One `next`
+// settles a given stage+Unit+batch at most once, so two revisions of one triple
+// are always separated by a process boundary and therefore by the timestamp; the
+// key breaks the remaining ties (Units settled in the same millisecond by one
+// run), whose relative order no reader depends on.
+function compareSettledRows(
+  left: { timestamp: string; row: SettledUnitOutcome },
+  right: { timestamp: string; row: SettledUnitOutcome },
+): number {
+  if (left.timestamp !== right.timestamp) return left.timestamp < right.timestamp ? -1 : 1;
+  if (left.row.key === right.row.key) return 0;
+  return left.row.key < right.row.key ? -1 : 1;
 }
 
 export function readPerUnitConsumePopulation(
@@ -2543,6 +2586,11 @@ export function readPerUnitConsumePopulation(
     // the population carries a Unit's outcome, not a Unit-and-stage's. The
     // batch join is the SAME currentUnits membership the pool loop applies, so a
     // Unit outside the current runtime population stays ignored.
+    //
+    // Collapsing keeps the LAST row a Unit has under the reader's own order, so
+    // a revision supersedes what it replaced (#3106): a Unit cancelled by a
+    // ruling and then restarted back to coverage carries both rows, and the one
+    // that stands is the later observation.
     const pooled = new Set(projection.terminal.map((terminal) => terminal.unitId));
     const engineSettled = new Map<string, string>();
     for (const row of settled) {
@@ -4704,13 +4752,77 @@ function reviewerRecoveryForCoveredUnit(
   );
 }
 
+// What the engine has observed about ONE Unit at this stage, or undefined while
+// it has nothing to record. Both values come from the engine's own observations
+// and nothing else: cancellation from the canonical Construction projection —
+// the very set cancelledConstructionUnits resolves — and success from the
+// coverage of the stage's required artifacts on disk. No conductor-supplied
+// verdict reaches this row.
+//
+// Cancellation is read FIRST, so the coverage predicate gates the `succeeded`
+// arm alone (#3106): the ruling has already reached its verdict, and whether the
+// abandoned Unit's artifacts happen to survive on disk cannot change it. Gating
+// it on coverage would leave exactly the Units whose work was abandoned with no
+// outcome at all — the shape that stopped consumers with producer-outcome-pending.
+function observedUnitOutcome(
+  projectDir: string,
+  node: GraphStage,
+  unit: string,
+  cancelledUnits: ReadonlySet<string>,
+  recordPrefix: string | null,
+  codekbCtx: CodekbCtx,
+  unitKind: UnitKind | undefined,
+): SettledUnitOutcomeValue | undefined {
+  if (cancelledUnits.has(unit)) return "cancelled";
+  return unitCovered(projectDir, node, unit, recordPrefix, codekbCtx, unitKind)
+    ? "succeeded"
+    : undefined;
+}
+
 // Append the engine's own outcome row for every Unit of this stage whose
-// required artifacts are on disk and that is not cancelled (#3099). Emission is
-// keyed by stage + Unit + batch and reads the existing rows first, so re-running
-// `next` over an already-covered stage appends nothing. A Unit outside the
+// terminal state it can observe: covered (#3099) or cancelled (#3106). Emission
+// is keyed by stage + Unit + batch + revision and reads the existing rows first,
+// so re-running `next` over an unchanged observation appends nothing while a
+// changed one lands as the revision that supersedes it. A Unit outside the
 // compiled batches has no batch identity to record under and is skipped: the
 // consume population joins on that identity, and a row it cannot join is a row
 // no reader can use.
+//
+// There is deliberately no `failed` arm. A solo terminal `failed` carries its
+// batch closure out of the same normalization step that records it, so it is
+// always an UNRESOLVED failure — emitConstructionFailureIfPresent resolves it to
+// await-unit-ruling and stops `next` above, before the per-unit loop reaches
+// here (measured on the per-unit fixture: the producing stage answers `ask` and
+// the ledger holds zero settled rows). The ruling is the only way out, and it
+// leaves the Unit retried, cancelled, or the workflow parked — never failed and
+// settled. Writing an arm no series can reach would be test theatre; the reader
+// still knows the value, because the downstream fan-out does.
+// The 1-origin batch identity each Unit is recorded under, first occurrence
+// wins — the same number the consume population joins its rows on.
+function batchIdentityOfUnits(batches: readonly (readonly string[])[]): Map<string, string> {
+  const batchOf = new Map<string, string>();
+  for (const [index, batchUnits] of batches.entries()) {
+    for (const unit of batchUnits) {
+      if (!batchOf.has(unit)) batchOf.set(unit, String(index + 1));
+    }
+  }
+  return batchOf;
+}
+
+// Every settled row already on the ledger, grouped by the triple it settles and
+// kept in the reader's supersession order, so the emitter can ask what the last
+// observation of one Unit at one stage was.
+function settledOutcomeHistory(projectDir: string): Map<string, SettledUnitOutcome[]> {
+  const history = new Map<string, SettledUnitOutcome[]>();
+  for (const row of readSettledUnitOutcomes(projectDir)) {
+    const triple = perUnitOutcomeTriple(row.stage, row.unit, row.batch);
+    const rows = history.get(triple) ?? [];
+    rows.push(row);
+    history.set(triple, rows);
+  }
+  return history;
+}
+
 function settlePerUnitOutcomes(
   projectDir: string,
   node: GraphStage,
@@ -4722,27 +4834,26 @@ function settlePerUnitOutcomes(
 ): void {
   const batches = loadRuntimeUnitBatches(projectDir);
   if (batches === null) return;
-  const batchOf = new Map<string, string>();
-  for (const [index, batchUnits] of batches.entries()) {
-    for (const unit of batchUnits) {
-      if (!batchOf.has(unit)) batchOf.set(unit, String(index + 1));
-    }
-  }
-  const appended = new Set(readSettledUnitOutcomes(projectDir).map((row) => row.key));
+  const batchOf = batchIdentityOfUnits(batches);
+  const history = settledOutcomeHistory(projectDir);
   for (const unit of units) {
     const batch = batchOf.get(unit);
-    if (batch === undefined || cancelledUnits.has(unit)) continue;
-    if (!unitCovered(projectDir, node, unit, recordPrefix, codekbCtx, unitKinds.get(unit))) {
-      continue;
-    }
-    const key = perUnitOutcomeKey(node.slug, unit, batch);
-    if (appended.has(key)) continue;
+    if (batch === undefined) continue;
+    const outcome = observedUnitOutcome(
+      projectDir, node, unit, cancelledUnits, recordPrefix, codekbCtx, unitKinds.get(unit),
+    );
+    if (outcome === undefined) continue;
+    const triple = perUnitOutcomeTriple(node.slug, unit, batch);
+    const recorded = history.get(triple) ?? [];
+    if (recorded[recorded.length - 1]?.outcome === outcome) continue;
+    const key = perUnitOutcomeKey(node.slug, unit, batch, recorded.length + 1);
     emitAuditEventGuarded(
       "UNIT_OUTCOME_SETTLED",
-      { Stage: node.slug, Unit: unit, Batch: batch, Outcome: SETTLED_UNIT_OUTCOME, "Idempotency Key": key },
+      { Stage: node.slug, Unit: unit, Batch: batch, Outcome: outcome, "Idempotency Key": key },
       projectDir,
     );
-    appended.add(key);
+    recorded.push({ stage: node.slug, unit, batch, outcome, key });
+    history.set(triple, recorded);
   }
 }
 
