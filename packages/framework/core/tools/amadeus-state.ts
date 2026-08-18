@@ -6116,9 +6116,11 @@ export function handleFork(args: string[]): void {
 
     // Dedup BEFORE emit: if the slug is already in Bolt Refs, fail without
     // emitting a phantom audit row. Recovery from a stale ref entry is the
-    // caller's responsibility (see SKILL.md Step 0.6 recovery seam — discard
-    // + re-fork is supported because the next fork sees the slug already
-    // present and exits without poisoning audit).
+    // CALLER's responsibility, and the refusal below names the two moves it
+    // has (discard + re-fork, or removing the stale entry). Re-forking is safe
+    // because the next fork sees the slug already present and exits here
+    // without poisoning audit — a property of this dedup, not of any numbered
+    // step in conductor prose.
     const currentRefs = getField(mainContent, "Bolt Refs") ?? "";
     if (parseRefsList(currentRefs).includes(slug)) {
       errorWithSlug(slug, `slug already in Bolt Refs (current: ${currentRefs.trim()}). If a prior fork failed mid-operation, run 'amadeus-worktree discard --slug ${slug}' and 'amadeus-state.ts merge --slug ${slug}' (which will exit "already merged" cleanly) or remove the stale entry from main state, then retry.`);

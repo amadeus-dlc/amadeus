@@ -303,18 +303,38 @@ export interface DispatchSubagentDirective {
 // invoke-swarm — fan out N parallel workers across N worktrees for a build
 // batch; converge each on a signal. `units` is the build batch to fan out.
 //
-// invoke-swarm shape is intentionally minimal. The engine now EMITS this kind
-// (amadeus-orchestrate `next` answers with it for an eligible Construction batch
-// under an autonomy grant) and the conductor CONSUMES it (runs amadeus-swarm.ts,
-// takes the baton back on the failure envelope). `units` is the only field both
-// sides need: the conductor reads the rest of the batch context off the compiled
-// runtime graph, so this shape stays minimal.
+// The engine EMITS this kind (amadeus-orchestrate `next` answers with it for an
+// eligible Construction batch under an autonomy grant) and the conductor
+// CONSUMES it (runs amadeus-swarm.ts, takes the baton back on the failure
+// envelope). It carries exactly the ENGINE-OWNED routing the conductor may not
+// re-derive: which units fan out, how wide, which repo, and the batch/pool
+// identity every `amadeus-swarm.ts` call is keyed by (issue #2837).
+//
+// What it deliberately does NOT carry is the convergence check: `check_cmd` and
+// the protected `--test-file` spec are the CONDUCTOR's knowledge — the project's
+// own build/test command, which `amadeus-swarm.ts` treats as a trusted user
+// input and the engine has no authoritative declaration of. Their canonical
+// source is named in every conductor face's swarm step; putting a field here the
+// engine cannot populate would be a contract that reads as supplied and never is.
 export interface InvokeSwarmDirective {
   kind: "invoke-swarm";
   units: string[];
   // Effective fixed-pool width, already bounded by the resolved layered
   // configuration and this batch's size.
   cap: number;
+  // batch — the fresh fan-out arm's identity, and the engine's single authority
+  // for it: the 1-origin number of the batch in the compiled Bolt DAG, the same
+  // base the batch-end gate and the approval ledger use. The conductor passes it
+  // verbatim to `prepare --batch` (and to every later acquire/settle/finalize
+  // call for the batch), so it is emitted in the exact token that referee accepts
+  // — a positive integer string. It is also the DURABLE pool identity
+  // (`unit-pool:<batch>:initial-enqueue`), which is why the engine refuses to
+  // offer a batch whose pool is already terminal rather than emit an identity a
+  // second `prepare` would collide with.
+  //
+  // Exclusive with the prepared retry pair below: `batch` opens a NEW pool,
+  // `prepared_batch` names one that already exists. Exactly one arm is present.
+  batch?: string;
   // repo — OPTIONAL. The sibling repo NAME this batch targets, present only when
   // the engine can resolve it deterministically: the intent records exactly one
   // repo (the lone sibling). Absent for a legacy/single-projectDir intent (no
@@ -552,7 +572,13 @@ const EXECUTE_FAILURE_ELECTION_FIELDS = [
   "choices",
 ] as const;
 
-const INVOKE_SWARM_FIELDS = ["kind", "units", "cap", "repo", "prepared_batch", "retry_unit"] as const;
+const INVOKE_SWARM_FIELDS = ["kind", "units", "cap", "batch", "repo", "prepared_batch", "retry_unit"] as const;
+
+// The batch identity token both the engine and `amadeus-swarm.ts prepare`
+// accept. Declared once here so the directive boundary rejects anything that
+// referee would reject — the engine must never emit an identity the conductor
+// cannot use (issue #2837).
+const BATCH_IDENTITY = /^[1-9][0-9]*$/;
 const PRESENT_GATE_FIELDS = ["kind", "stage", "phase", "memory_path"] as const;
 const ASK_FIELDS = ["kind", "question"] as const;
 const SELECT_INTENT_FIELDS = ["kind", "selection_token", "question", "options"] as const;
@@ -631,6 +657,28 @@ function checkPreparedRetryCorrelation(
   }
 }
 
+// The two identity arms, checked as ONE rule (issue #2837). A fresh fan-out
+// carries `batch` and opens a pool under it; a prepared retry carries the
+// correlation pair and reuses the pool that already exists. Neither arm present
+// is the pre-#2837 shape — a directive that leaves the conductor to guess the
+// engine's routing — and both arms present would be two names for one concept,
+// so each is refused here rather than surfaced later as a pool collision.
+function checkInvokeSwarmIdentity(o: Record<string, unknown>, errors: string[]): void {
+  const preparedRetry = "prepared_batch" in o || "retry_unit" in o;
+  if (!("batch" in o)) {
+    if (!preparedRetry) errors.push("invoke-swarm: missing required field: batch");
+    return;
+  }
+  if (typeof o.batch !== "string" || !BATCH_IDENTITY.test(o.batch)) {
+    errors.push(
+      `invoke-swarm: batch must be a positive integer string (the token \`prepare --batch\` accepts), got ${describe(o.batch)}`,
+    );
+  }
+  if (preparedRetry) {
+    errors.push("invoke-swarm: batch and the prepared retry pair are mutually exclusive");
+  }
+}
+
 const FIELD_CHECKS_BY_KIND: Readonly<Record<DirectiveKind, DirectiveFieldCheck>> = {
   "run-stage": (o, errors) => checkRunStageShared(o, "run-stage", errors),
   "dispatch-subagent": (o, errors) => {
@@ -668,6 +716,7 @@ const FIELD_CHECKS_BY_KIND: Readonly<Record<DirectiveKind, DirectiveFieldCheck>>
       errors.push("invoke-swarm: cap must not exceed units.length");
     }
     checkOptionalString(o, "repo", "invoke-swarm", errors);
+    checkInvokeSwarmIdentity(o, errors);
     checkPreparedRetryCorrelation(o, errors);
   },
   "present-gate": (o, errors) => {
@@ -1369,12 +1418,14 @@ export const directiveSelfCheckExamples: Directive[] = [
       kind: "invoke-swarm",
       units: ["auth", "billing", "notifications"],
       cap: 3,
+      batch: "1",
     },
     // invoke-swarm carrying the optional repo (the single-recorded-repo case).
     {
       kind: "invoke-swarm",
       units: ["auth", "billing"],
       cap: 2,
+      batch: "2",
       repo: "repo-a",
     },
     {

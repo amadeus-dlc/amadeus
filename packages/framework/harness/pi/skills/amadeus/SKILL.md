@@ -229,6 +229,7 @@ For each granted batch:
    attempt exactly once.
 5. Finalize only after the pool is terminal. A failed or unverifiable unit halts
    for the shared failure protocol; it is never promoted as converged.
+6. `--batch` is never guessed or re-derived: pass `directive.batch`, the engine's 1-origin batch identity and the durable Unit Pool id every later call for this batch is keyed by. `--check-cmd` and the optional `--test-file` are the opposite — the engine never supplies them, the convergence check is conductor knowledge: take the project's own build/test command from the team practice files under `amadeus/spaces/<space>/memory/` (Testing Posture / Tech Stack) and the protected spec from the unit's own test plan in the intent record. When neither names one, ask the human before dispatching rather than inventing a command.
 
 Every child is confined to its assigned worktree and must not run Git operations
 outside it. Retry authority comes only from the referee's retry command and its

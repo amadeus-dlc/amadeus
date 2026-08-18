@@ -4065,16 +4065,40 @@ function autonomySwarmOutcome(
   return { kind: "emitted" };
 }
 
+// The batch identity is ALSO the durable Unit Pool identity: `prepare --batch`
+// keys `unit-pool:<batch>:initial-enqueue` and the pool's own batchId off it
+// (amadeus-swarm.ts handlePrepare). A pool that has left `open` cannot be
+// initialised a second time (proposeInitialEnqueue refuses an already-initialised
+// projection), so handing that identity back for a fresh fan-out gives the
+// conductor a command that cannot run: same units replay the spent pool, changed
+// units conflict on the idempotency key. Issue #2837 — the engine owns this
+// identity now, so it refuses to emit a spent one instead of leaving the
+// conductor to guess a free number and silently correlate with the old pool.
+function spentPoolRefusal(projectDir: string, batch: string, units: string[]): string | null {
+  const projection = createUnitPoolCoordinator(createAuditUnitPoolRepository(projectDir)).readProjection(batch);
+  if (projection.batchId === null || projection.phase === "open") return null;
+  const result = projection.result === null ? "" : ` (${projection.result})`;
+  const observed = `Swarm batch ${batch} cannot fan out: its Unit Pool is already ${projection.phase}${result}, and \`prepare --batch ${batch}\` would re-open that spent identity rather than start a new fan-out.`;
+  const remaining = `Still uncovered in this batch: ${units.join(", ")}.`;
+  const exit = "Rule the batch's recorded failure with `resolve-failure` (Retry re-opens the pool and answers with a prepared-retry directive), or land the outstanding Units' artifacts, then re-run `next`.";
+  return `${observed} ${remaining} ${exit}`;
+}
+
 function swarmConfigIssue(issue: Extract<ReturnType<typeof resolveAmadeusConfig>, { kind: "invalid" }>["issues"][number]): string {
   return issue.kind === "read-failure"
     ? `${issue.layer} (${issue.path}): ${issue.summary}`
     : `${issue.layer} (${issue.path}): expected ${issue.expected}, got ${issue.actualType}`;
 }
 
-function emitConfiguredSwarm(projectDir: string, units: string[]): void {
+function emitConfiguredSwarm(projectDir: string, units: string[], batch: string): void {
   const config = resolveAmadeusConfig(projectDir);
   if (config.kind === "invalid") {
     emit(errorDirective(`Invalid swarm configuration: ${config.issues.map(swarmConfigIssue).join(" | ")}`));
+    return;
+  }
+  const spent = spentPoolRefusal(projectDir, batch, units);
+  if (spent !== null) {
+    emit(errorDirective(spent));
     return;
   }
   const directive = {
@@ -4084,6 +4108,10 @@ function emitConfiguredSwarm(projectDir: string, units: string[]): void {
       units.length,
       config.config.swarm.unit.concurrency.limit,
     ),
+    // The conductor passes this straight to `prepare --batch` and every later
+    // pool call for the batch; it is the 1-origin number the approval ledger and
+    // the batch-end gate already use, so no side converts it.
+    batch,
   };
   const repos = intentRepos(projectDir);
   emit(repos.length === 1 ? { ...directive, repo: repos[0] } : directive);
@@ -4291,7 +4319,7 @@ function tryEmitSwarm(
   //     (the three-concerns tenet). The SKILL.md prose tells it to supply --repo
   //     from the intent's recorded set; `prepare` errors without it on a multi-repo
   //     intent, surfacing the choice rather than guessing.
-  emitConfiguredSwarm(projectDir, selection.value.pick.units);
+  emitConfiguredSwarm(projectDir, selection.value.pick.units, String(selection.value.pick.batchNumber));
   return { kind: "emitted" };
 }
 

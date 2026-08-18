@@ -80,7 +80,7 @@ function dispatchSubagent(): Record<string, unknown> {
 }
 
 function invokeSwarm(): Record<string, unknown> {
-  return { kind: "invoke-swarm", units: ["auth", "billing"], cap: 2 };
+  return { kind: "invoke-swarm", units: ["auth", "billing"], cap: 2, batch: "1" };
 }
 
 function presentGate(): Record<string, unknown> {
@@ -300,9 +300,34 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
     const d = invokeSwarm();
     d.units = ["auth"];
     d.cap = 1;
+    delete d.batch;
     d.prepared_batch = "1";
     d.retry_unit = "auth";
     expect(errs(d)).toBe("VALID");
+  });
+
+  // #2837: the fresh fan-out arm carries the engine's batch identity, in the
+  // exact token `amadeus-swarm.ts prepare --batch` accepts — the engine may
+  // never emit a value the referee would reject. The two identity arms are
+  // exclusive: `batch` opens a NEW Unit Pool, the prepared pair names one that
+  // already owns its worktrees and pool.
+  test("invoke-swarm requires a prepare-shaped batch identity on the fresh arm", () => {
+    const { batch: _batch, ...withoutBatch } = invokeSwarm();
+    expect(errs(withoutBatch)).toContain("invoke-swarm: missing required field: batch");
+    expect(errs({ ...invokeSwarm(), batch: "0" })).toContain(
+      "invoke-swarm: batch must be a positive integer string",
+    );
+    expect(errs({ ...invokeSwarm(), batch: "1.2" })).toContain(
+      "invoke-swarm: batch must be a positive integer string",
+    );
+    expect(errs({ ...invokeSwarm(), batch: 1 })).toContain(
+      "invoke-swarm: batch must be a positive integer string",
+    );
+  });
+
+  test("invoke-swarm rejects a batch identity beside a prepared retry", () => {
+    expect(errs({ ...invokeSwarm(), units: ["auth"], cap: 1, prepared_batch: "1", retry_unit: "auth" }))
+      .toContain("invoke-swarm: batch and the prepared retry pair are mutually exclusive");
   });
 
   test("invoke-swarm rejects partial or mismatched prepared retry correlation", () => {
