@@ -179,6 +179,26 @@ export function viewArgv(
   return ["api", "--include", "--method", "GET", `${issuesPath(repo)}/${issueNumber}`];
 }
 
+// Every comment on one issue, in one request (#3181). `--include` is
+// deliberately ABSENT here, unlike every other verb above: gh interleaves the
+// per-page HTTP blocks with the per-page arrays under `--paginate`, which is
+// not a shape parseHttpEnvelope can read back (the same measurement that made
+// findArgv walk explicit pages). Without `--include`, gh merges the pages into
+// ONE plain JSON array, so the comment walk reads a bare body and classifies
+// failure from the exit code alone — no HTTP status is available to it.
+export function commentsArgv(
+  repo: GitHubRepository,
+  issueNumber: number,
+): readonly string[] {
+  return [
+    "api",
+    "--paginate",
+    "--method",
+    "GET",
+    `${issuesPath(repo)}/${issueNumber}/comments`,
+  ];
+}
+
 export function editArgv(
   repo: GitHubRepository,
   issueNumber: number,
@@ -459,6 +479,61 @@ export type RemoteGitHubIssueComment = Readonly<{
   htmlUrl: string;
 }>;
 
+// Validate one remote comment element, binding it to the request repository the
+// same way parseIssueObject binds an issue: the remote `issue_url` names the
+// repo the comment actually hangs off, so a response for another repository is
+// rejected rather than transcribed into this intent's evidence.
+function parseIssueCommentObject(
+  element: unknown,
+  repo: GitHubRepository,
+): RemoteGitHubIssueComment | null {
+  if (typeof element !== "object" || element === null) return null;
+  const obj = element as Record<string, unknown>;
+
+  const id = parseIssueNumber(obj.id);
+  if (id === null) return null;
+
+  const rawBody = obj.body;
+  if (rawBody !== null && typeof rawBody !== "string") return null;
+
+  if (typeof obj.created_at !== "string") return null;
+  if (typeof obj.html_url !== "string") return null;
+  if (typeof obj.issue_url !== "string") return null;
+  if (!obj.issue_url.startsWith(`https://api.github.com/repos/${repo.canonical}/issues/`)) {
+    return null;
+  }
+
+  const user = obj.user;
+  if (typeof user !== "object" || user === null) return null;
+  const authorLogin = (user as Record<string, unknown>).login;
+  if (typeof authorLogin !== "string") return null;
+
+  return {
+    id,
+    body: rawBody === null ? "" : rawBody,
+    createdAt: obj.created_at,
+    authorLogin,
+    htmlUrl: obj.html_url,
+  };
+}
+
+// Parse a comments page. Fail-closed: one bad element rejects the WHOLE list
+// rather than yielding a shortened one, because a partial evidence capture
+// would read as a complete record of the cross-review.
+export function parseIssueComments(
+  payload: unknown,
+  repo: GitHubRepository,
+): GitHubGatewayOutcome<readonly RemoteGitHubIssueComment[]> {
+  if (!Array.isArray(payload)) return invalidResponse("read-only");
+  const comments: RemoteGitHubIssueComment[] = [];
+  for (const element of payload) {
+    const parsed = parseIssueCommentObject(element, repo);
+    if (parsed === null) return invalidResponse("read-only");
+    comments.push(parsed);
+  }
+  return ok<readonly RemoteGitHubIssueComment[]>(comments);
+}
+
 // --- G7 Failure Normalizer / Redactor ---------------------------------------
 
 type OpKind = "read-only" | "mutation";
@@ -626,6 +701,35 @@ function interpretApiResult(
 
 function invalidResponse(op: OpKind): Failure {
   return failure("invalid-response", false, effectForOp(op, true), null, null);
+}
+
+// Tool readiness: gh installed, then gh authenticated. One definition shared by
+// every adapter below — the mirror gateway exposes it per-repository (the repo
+// is ignored: readiness probes the tool, not a mutation target) and the
+// evidence adapter exposes it bare.
+async function probeReadiness(
+  runner: MirrorProcessRunner,
+): Promise<GitHubGatewayOutcome<void>> {
+  const version = await runner.run({
+    executable: "gh",
+    args: versionArgv(),
+    profile: "version-auth",
+  });
+  if (version.kind !== "exited") return processFailure(version, "read-only");
+  if (version.exitCode !== 0) {
+    return failure("not-installed", false, "no-effect-confirmed", version.exitCode, null);
+  }
+
+  const auth = await runner.run({
+    executable: "gh",
+    args: authArgv(),
+    profile: "version-auth",
+  });
+  if (auth.kind !== "exited") return processFailure(auth, "read-only");
+  if (auth.exitCode !== 0) {
+    return failure("unauthenticated", false, "no-effect-confirmed", auth.exitCode, null);
+  }
+  return ok<void>(undefined);
 }
 
 // --- GraphQL body interpretation (BR-U1-7) -----------------------------------
@@ -810,40 +914,9 @@ function createCombinedGitHubGateway(
   });
 
   return {
-    async readiness(repository) {
+    readiness(repository) {
       void repository; // readiness probes the tool, not a repo mutation target
-      const version = await runner.run({
-        executable: "gh",
-        args: versionArgv(),
-        profile: "version-auth",
-      });
-      if (version.kind !== "exited") return processFailure(version, "read-only");
-      if (version.exitCode !== 0) {
-        return failure(
-          "not-installed",
-          false,
-          "no-effect-confirmed",
-          version.exitCode,
-          null,
-        );
-      }
-
-      const auth = await runner.run({
-        executable: "gh",
-        args: authArgv(),
-        profile: "version-auth",
-      });
-      if (auth.kind !== "exited") return processFailure(auth, "read-only");
-      if (auth.exitCode !== 0) {
-        return failure(
-          "unauthenticated",
-          false,
-          "no-effect-confirmed",
-          auth.exitCode,
-          null,
-        );
-      }
-      return ok<void>(undefined);
+      return probeReadiness(runner);
     },
 
     async createIssue(permit, input) {
@@ -965,6 +1038,69 @@ export function createFindingGitHubGatewayAdapter(
   runner: MirrorProcessRunner,
 ): FindingGitHubGateway {
   return createCombinedGitHubGateway(runner);
+}
+
+// --- Evidence read adapter (#3181) -------------------------------------------
+//
+// The third adapter, and the only wholly read-only one: it captures a filing
+// Issue's body and its cross-review comments for the issue-evidence artifact.
+// No mutation reaches it, so it takes no permit — the permit machinery guards
+// writes, and there are none here.
+
+export type EvidenceGitHubGateway = Readonly<{
+  readiness(): Promise<GitHubGatewayOutcome<void>>;
+  viewIssue(
+    repository: GitHubRepository,
+    issueNumber: number,
+  ): Promise<GitHubGatewayOutcome<RemoteGitHubIssue>>;
+  listComments(
+    repository: GitHubRepository,
+    issueNumber: number,
+  ): Promise<GitHubGatewayOutcome<readonly RemoteGitHubIssueComment[]>>;
+}>;
+
+export function createEvidenceGitHubGatewayAdapter(
+  runner: MirrorProcessRunner,
+): EvidenceGitHubGateway {
+  const readOnly = createCombinedGitHubGateway(runner);
+  return {
+    readiness: () => probeReadiness(runner),
+    viewIssue: (repository, issueNumber) => readOnly.viewIssue(repository, issueNumber),
+    async listComments(repository, issueNumber) {
+      const number = parseIssueNumber(issueNumber);
+      if (number === null) return invalidResponse("read-only");
+      const result = await runner.run({
+        executable: "gh",
+        args: commentsArgv(repository, number),
+        profile: "paginated",
+      });
+      if (result.kind !== "exited") return processFailure(result, "read-only");
+      // No `--include` on this transport (see commentsArgv), so there is no
+      // HTTP status to classify against: a non-zero exit is all the signal
+      // there is, and only an OS transport signature narrows it to `network`.
+      if (result.exitCode !== 0) {
+        const classification: Classification = hasNetworkSignal(result.stderrTail)
+          ? "network"
+          : "command";
+        return failure(
+          classification,
+          classification === "network",
+          effectForOp("read-only", true),
+          result.exitCode,
+          null,
+        );
+      }
+      const jsonText = result.stdout.toString("utf-8");
+      if (scanBodies(jsonText) !== "ok") return invalidResponse("read-only");
+      let payload: unknown;
+      try {
+        payload = JSON.parse(jsonText);
+      } catch {
+        return invalidResponse("read-only");
+      }
+      return parseIssueComments(payload, repository);
+    },
+  };
 }
 
 // --- Label sync gateway (#1990) ----------------------------------------------
