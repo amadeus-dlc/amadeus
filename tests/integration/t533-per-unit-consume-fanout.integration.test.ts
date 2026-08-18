@@ -241,8 +241,9 @@ function next(project: string) {
 // Seed the solo (per-unit) failure lifecycle the engine itself correlates: a
 // BOLT_STARTED/BOLT_FAILED pair under a `solo:<batch>:<unit>` batch identity.
 // The Unit pool is never touched — that is what makes this the per-unit path.
-function seedSoloFailure(project: string, unit: string, stage = "code-generation"): string {
+function seedSoloFailure(project: string, unit: string): void {
   const attempt = `attempt-${unit}`;
+  const stage = "code-generation";
   emitAuditEventGuarded("BOLT_STARTED", {
     "Bolt names": unit,
     "Bolt slug": unit,
@@ -262,7 +263,6 @@ function seedSoloFailure(project: string, unit: string, stage = "code-generation
     Stage: stage,
     Reason: "failed",
   }, project);
-  return attempt;
 }
 
 // Cancel a Unit the only way the per-unit path can: the engine's own failure
