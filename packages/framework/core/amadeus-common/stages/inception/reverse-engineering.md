@@ -111,6 +111,62 @@ single-repo intent this is the whole codebase) for:
 - Code quality indicators (linting, CI/CD, documentation)
 - Technical debt signals
 
+#### Scan input exclusions (differential refresh)
+
+A differential refresh diffs the interval between this intent's base commit and
+the observed commit (Step 3). On a repo that runs this workflow on itself, most
+of what lands in that interval is the workflow's own exhaust — intent records,
+election stores, the codekb this stage itself writes, the method files, the
+metrics snapshots. None of it is code knowledge, so scanning it makes every
+refresh pay for the one before it. Take these classes out of the diff input,
+verbatim:
+
+```
+:(exclude,glob)amadeus/spaces/*/intents/**
+:(exclude,glob)amadeus/spaces/*/elections/**
+:(exclude,glob)amadeus/spaces/*/codekb/**
+:(exclude,glob)amadeus/spaces/*/memory/**
+:(exclude,glob)metrics/**
+```
+
+`:(glob)` is load-bearing, not decoration. The bare form
+`amadeus/spaces/*/intents/` is a valid pathspec whose `*` does not cross a `/`:
+it matches nothing, excludes nothing, and reports success. Measure a pathspec on
+a known non-zero interval before trusting it. These lines have one definition in
+code — `RE_SCAN_EXCLUDED_PATHSPECS` in `tools/amadeus-lib.ts` — and a drift test
+fails when the two disagree.
+
+**Not excluded: `amadeus/spaces/*/specs/`.** `specs/tla/model-map.json` and
+`specs/tla-evidence/` sit under `amadeus/spaces/` but are build ledgers a code
+change has to resync, so they are code knowledge and stay in the scan. Never
+exclude `amadeus/spaces/**` wholesale.
+
+**Base-point resolution is outside this exclusion.** Resolving the base commit
+reads this intent's record under `re-scans/` (Step 3) — a read of the codekb
+store, not diff input. Excluding codekb from the diff changes nothing about how
+the base point is found.
+
+**Never cite a workflow process record the codekb does not already cite.** The
+nine artifacts describe the code; process records (intent records, election
+stores, another intent's stage artifacts) are no longer scan input, so a new
+citation would point at something this stage cannot see. Citations that already
+exist stay as history — do not go and remove them. When this intent's own
+established facts belong in the scan, they arrive through
+`<record>/ideation/intent-capture/issue-evidence.md`, which is the channel for
+exactly that.
+
+**Record the reduction** in the per-intent scan record (Step 3), naming the
+interval it was measured on:
+
+```
+git diff --numstat <base> <observed> | awk '{ins+=$1} END {print ins}'
+git diff --numstat <base> <observed> -- . <the pathspecs above> | awk '{ins+=$1} END {print ins}'
+```
+
+First measurement on this repo, interval `89053172e..23d4ae767` (2026-08-18):
+8023 insertions before the exclusion, 3066 after — 61.8% of the interval was
+exhaust.
+
 Developer returns structured scan results following the Developer Code Scan Template in `templates/re-artifacts.md`.
 
 ### Step 3: Architect Synthesis

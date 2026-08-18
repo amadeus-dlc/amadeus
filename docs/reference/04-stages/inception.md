@@ -146,6 +146,18 @@ artifacts reflect the current state of the codebase, not a stale snapshot.
    - Code quality indicators (linting, CI/CD, documentation)
    - Technical debt signals
 
+   On a differential refresh the workflow's own exhaust leaves the diff input
+   first — intent records, election stores, the codekb this stage itself
+   writes, the method files and the metrics snapshots. The stage contract
+   carries the `:(glob)` pathspecs verbatim and
+   `RE_SCAN_EXCLUDED_PATHSPECS` in `tools/amadeus-lib.ts` is their one
+   definition in code; a drift test pins the two together. Three boundaries go
+   with the exclusion: the `specs/` build ledgers under `amadeus/spaces/` are
+   explicitly NOT excluded, base-point resolution still reads `re-scans/`
+   (a codekb read, not diff input), and the codekb never cites a workflow
+   process record it does not already cite — this intent's own established
+   facts arrive through `issue-evidence.md` instead.
+
    Developer returns structured scan results following the Developer Code Scan
    Template in `templates/re-artifacts.md`.
 

@@ -47,6 +47,22 @@ bun .claude/tools/amadeus-utility.ts issue-evidence fetch --issues 3181,2415
 
 生成物の実測: メタデータ(fetched-at 2026-08-18T01:34:06Z / repo / tool)、per-issue 節(state・labels 未取得明示・url・target-sha・review-run-id・独立レビュアー2名)、本文 verbatim、`issue-cross-review` marker 9 箇所保持。**取り込み経路の全層(gateway → verb → path resolver → record artifact)が本番データで貫通** — bolt-plan の confidence hypothesis を実証。
 
+## FR → AC トレーサビリティ(§12a iteration-1 FOLLOW-UP への追補)
+
+| FR | AC の実測面 |
+|---|---|
+| FR-EVD-1 | t3181-issue-evidence-fetch「writes one artifact carrying every requested issue and its comments」+ 上書き冪等 + tmp 残渣ゼロ |
+| FR-EVD-2 | t3181-issue-evidence-contract が配送 dist の `artifactsRegistry()` に issue-evidence 実在と `producersOf("issue-evidence") == ["intent-capture"]` を assert。**graph compile は optional_produces を producer として読む**(`amadeus-graph.ts:860` — intent-capture への optional_produces 追加が producer 登録の機構)。`graph export --check` exit 0 がグラフ不変量側の裏 |
+| FR-EVD-3 | 同 contract テスト(RA の consumes エントリ・再導出禁止文・Sensors 列挙同期の逐語 assert) |
+| FR-EVD-4 | 同 contract テスト(RE 本文の Focus 導出 — frontmatter 非宣言の regression pin 付き、裁定 auto-decision-81cb5ecf) |
+| FR-EVD-5 | fetch テストの loud-failure 10 ケース(not-installed / unauth / mid-batch / parse / malformed ×6)— 全ケース no-file or 先行 capture 不変 |
+| FR-EVD-6 | t3181-issue-evidence-artifact(provenance 全項目 + marker 無し時 n/a) |
+| FR-EVD-7 | t3181-issue-evidence-upstream-coverage(実 dispatcher で引用欠落 fixture が FAILED) |
+| FR-EVD-8 | 落ちる実証1セット(注入→赤→revert 残渣ゼロ→緑) |
+| FR-MEAS-1/2 | intent-capture.md の効果測定節(N=5・35分未満・baseline 47分・測定述語)を contract テストが pin |
+
+補足(FOLLOW-UP 3 対応): U2 面(RE Step 2 走査対象)への非接触は、U1 断面の `git diff origin/main...b44fadce3 -- packages/framework/core/amadeus-common/stages/inception/reverse-engineering.md` が frontmatter consumes(後に撤去)と per-intent scan-record 節の Focus 導出のみで、Step 2 の走査対象列挙(:104-112 相当)に触れていないことを diff 実読で確認済み。code-generation-plan.md の圧縮様式は depth Standard での要点集約(FOLLOW-UP 2 の申告)。
+
 ## 未検証面(申し送り)
 
 - リモート CI の blocking 集合(フルスイート・coverage gates・complexity・再現性検査)は PR 作成後に実測する — 起動の成立を配送の成立へ昇格させない
