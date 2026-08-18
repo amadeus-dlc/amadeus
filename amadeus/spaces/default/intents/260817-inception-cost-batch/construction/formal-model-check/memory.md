@@ -24,3 +24,4 @@
 ## Tradeoffs
 
 ## Open questions
+- 2026-08-18T04:50:00Z — (Interpretations) 本線ステージとしての実行: 直前の tla-authoring applicability outcome = not-applicable(applicability-assessment.md が正)につき、stage body の規定どおり NOT_APPLICABLE を記録し TLC は起動しない。参考: 本 intent 冒頭の advisory run-now では全登録2モデルの完全探索を別途実測済み(NOT_DETECTED、single-stage record)— 本判定はそれと独立
