@@ -302,9 +302,9 @@ function nextInProcess(project: string): { kind: string } {
   process.env.AMADEUS_STAGE_GRAPH = join(project, ".claude/tools/data/stage-graph.json");
   process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = "1";
   __resetGraphCache();
-  let raw = "";
+  const emitted: string[] = [];
   const log = spyOn(console, "log").mockImplementation((value) => {
-    raw = String(value);
+    emitted.push(String(value));
   });
   try {
     handleNext([], project);
@@ -316,7 +316,12 @@ function nextInProcess(project: string): { kind: string } {
     else process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD = previousGuard;
     __resetGraphCache();
   }
-  return JSON.parse(raw) as { kind: string };
+  // One `next` emits exactly one directive. Collecting every line and asserting
+  // the count is what keeps a future second stdout line from being swallowed:
+  // keeping only the last one would leave the test verifying a directive that is
+  // not the one under test, and saying nothing about it.
+  expect(emitted).toHaveLength(1);
+  return JSON.parse(emitted[0] as string) as { kind: string };
 }
 
 // Every settled per-unit outcome row on the ledger, as [idempotency key,
@@ -325,6 +330,43 @@ function settledLedger(project: string): (string | undefined)[][] {
   return parseAuditRecords(readFileSync(seededAuditShard(project), "utf8"))
     .filter((record) => record.event === "UNIT_OUTCOME_SETTLED")
     .map((record) => [record.fields["Idempotency Key"], record.fields.Outcome]);
+}
+
+// Append one settled row straight to the ledger, in the shape the emitter
+// writes, so a test can seed a history the emitter's own sequence cannot reach.
+function seedSettledRow(
+  project: string,
+  unit: string,
+  revision: number,
+  outcome: "succeeded" | "cancelled",
+): void {
+  const triple = `code-generation ${unit} 1`;
+  emitAuditEventGuarded("UNIT_OUTCOME_SETTLED", {
+    Stage: "code-generation",
+    Unit: unit,
+    Batch: "1",
+    Outcome: outcome,
+    "Idempotency Key": revision === 1 ? triple : `${triple} #${revision}`,
+  }, project);
+}
+
+// Pin every settled row on the ledger to ONE timestamp, so the reader's order
+// has nothing but the rows themselves to separate them. This is not an exotic
+// state: audit timestamps are second-precision, so two `next` runs inside one
+// second already land here without a test arranging it.
+function pinSettledTimestamps(project: string, timestamp: string): void {
+  const path = seededAuditShard(project);
+  const pinned = readFileSync(path, "utf8")
+    .split("\n")
+    .map((line) => {
+      if (!line.trim().startsWith("{")) return line;
+      const row = JSON.parse(line) as Record<string, unknown>;
+      const attributes = (row.attributes ?? {}) as Record<string, string>;
+      if (attributes.Event !== "UNIT_OUTCOME_SETTLED") return line;
+      return JSON.stringify({ ...row, timestamp });
+    })
+    .join("\n");
+  writeFileSync(path, pinned);
 }
 
 // Re-entry: a fresh solo attempt deletes the cancelled terminal, so the engine
@@ -1045,6 +1087,50 @@ describe("t533 orchestrator per-unit consume fan-out", () => {
         { unit: "unit-a", outcome: "succeeded" },
         { unit: "unit-z", outcome: "succeeded" },
       ]);
+  });
+
+  // #3106 — the next revision comes off the HIGHEST revision the ledger carries,
+  // not off how many rows it carries. A history with a gap in it (a shard that
+  // could not be read, rows lost to a bad merge) makes those two numbers part
+  // company, and counting then re-derives a key that is already on the ledger:
+  // two rows claiming one idempotency key, which is the identity the append-once
+  // emission rests on.
+  test("numbers the next revision off the highest one a gapped ledger carries", () => {
+    const project = seedPerUnitProject(undefined, "code-generation");
+    cancelSoloUnitThroughRuling(project, "unit-z");
+
+    expect(nextInProcess(project).kind).toBe("run-stage");
+    // The gap: revision 3 with no revision 2 behind it, so unit-z's row COUNT
+    // (2) and its highest revision (3) no longer agree.
+    seedSettledRow(project, "unit-z", 3, "cancelled");
+
+    restartSoloUnit(project, "unit-z");
+    expect(nextInProcess(project).kind).toBe("run-stage");
+
+    const keys = settledLedger(project).map(([key]) => key);
+    expect(keys).toEqual([
+      "code-generation unit-a 1",
+      "code-generation unit-z 1",
+      "code-generation unit-z 1 #3",
+      "code-generation unit-z 1 #4",
+    ]);
+    // Every key on the ledger is its own: no revision re-derives one already there.
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  // #3106 — two revisions of ONE triple that share a timestamp are separated by
+  // their revision NUMBER, not by their key text. Lexicographically
+  // "<triple> #10" sorts BEFORE "<triple> #2", so a reader that breaks the tie
+  // on the key string adopts the row that revision 10 superseded.
+  test("orders two revisions of one triple by number when they share a timestamp", () => {
+    const project = seedPerUnitProject(undefined, "code-generation");
+    seedSettledRow(project, "unit-z", 2, "cancelled");
+    seedSettledRow(project, "unit-z", 10, "succeeded");
+    pinSettledTimestamps(project, "2026-08-18T00:00:00Z");
+
+    expect([...(readPerUnitConsumePopulation(project)?.outcomes ?? [])]
+      .filter((outcome) => outcome.unit === "unit-z"))
+      .toEqual([{ unit: "unit-z", outcome: "succeeded" }]);
   });
 
   // #3106 — the ground for the settle emitter having no `failed` arm: this path

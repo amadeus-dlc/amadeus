@@ -2467,6 +2467,7 @@ interface SettledUnitOutcome {
   readonly unit: string;
   readonly outcome: SettledUnitOutcomeValue;
   readonly key: string;
+  readonly revision: number;
 }
 
 // The outcomes the engine settles on this path: EXACTLY three, the same closed
@@ -2508,6 +2509,16 @@ function perUnitOutcomeKey(stage: string, unit: string, batch: string, revision:
   return revision === 1 ? triple : `${triple} #${revision}`;
 }
 
+// The inverse: the revision a key on the ledger carries. Revision rides the ROW,
+// read back off the key that recorded it, rather than being counted from how
+// many rows a triple has. The two agree only while the history is contiguous,
+// and nothing keeps it so — an unreadable shard or a row lost to a bad merge
+// leaves a gap, and a count would then re-derive a key already on the ledger.
+function perUnitOutcomeRevision(key: string): number {
+  const suffix = /\s#(\d+)$/.exec(key);
+  return suffix === null ? 1 : Number(suffix[1]);
+}
+
 // Stage never joins a row to the CONSUME population — outcomes collapse across
 // the per-unit stages a Unit clears — but it is the first axis of the triple the
 // emitter settles on, so the row carries it and a row without it is not a row
@@ -2529,7 +2540,7 @@ function readSettledUnitOutcomes(projectDir: string): SettledUnitOutcome[] {
       const stage = auditBlockField(block, "Stage");
       if (batch === null || unit === null || key === null || stage === null) throw new Error(INVALID_SETTLED_ROW);
       if (!isSettledUnitOutcome(outcome)) throw new Error(INVALID_SETTLED_ROW);
-      return { timestamp, row: { stage, batch, unit, outcome, key } };
+      return { timestamp, row: { stage, batch, unit, outcome, key, revision: perUnitOutcomeRevision(key) } };
     })
     .sort(compareSettledRows)
     .map(({ row }) => row);
@@ -2538,17 +2549,27 @@ function readSettledUnitOutcomes(projectDir: string): SettledUnitOutcome[] {
 // Supersession order (#3106): whoever reads these rows adopts the LAST one for a
 // Unit, so the order has to be a property of the rows themselves. Buffer order
 // is not — readAllAuditShards concatenates per-clone shards in FILENAME order,
-// so a row's position depends on which clone wrote it. Both terms here ride the
-// row: the journal envelope's timestamp, then the idempotency key. One `next`
-// settles a given stage+Unit+batch at most once, so two revisions of one triple
-// are always separated by a process boundary and therefore by the timestamp; the
-// key breaks the remaining ties (Units settled in the same millisecond by one
-// run), whose relative order no reader depends on.
+// so a row's position depends on which clone wrote it. Every term here rides the
+// row: the journal envelope's timestamp, then the revision, then the key.
+//
+// The timestamp alone does NOT separate two revisions of one triple. Journal
+// timestamps are second-precision, so two `next` runs inside one second carry
+// the same one, and the key text cannot break that tie correctly: sorted as a
+// string, `<triple> #10` lands BEFORE `<triple> #2`, which would hand the reader
+// the row that revision 10 superseded. Within one triple the revision NUMBER is
+// therefore the tie-break. Across different triples the key still breaks the
+// remaining ties (Units settled in the same second by one run), whose relative
+// order no reader depends on.
 function compareSettledRows(
   left: { timestamp: string; row: SettledUnitOutcome },
   right: { timestamp: string; row: SettledUnitOutcome },
 ): number {
   if (left.timestamp !== right.timestamp) return left.timestamp < right.timestamp ? -1 : 1;
+  const leftTriple = perUnitOutcomeTriple(left.row.stage, left.row.unit, left.row.batch);
+  const rightTriple = perUnitOutcomeTriple(right.row.stage, right.row.unit, right.row.batch);
+  if (leftTriple === rightTriple && left.row.revision !== right.row.revision) {
+    return left.row.revision < right.row.revision ? -1 : 1;
+  }
   if (left.row.key === right.row.key) return 0;
   return left.row.key < right.row.key ? -1 : 1;
 }
@@ -4779,24 +4800,6 @@ function observedUnitOutcome(
     : undefined;
 }
 
-// Append the engine's own outcome row for every Unit of this stage whose
-// terminal state it can observe: covered (#3099) or cancelled (#3106). Emission
-// is keyed by stage + Unit + batch + revision and reads the existing rows first,
-// so re-running `next` over an unchanged observation appends nothing while a
-// changed one lands as the revision that supersedes it. A Unit outside the
-// compiled batches has no batch identity to record under and is skipped: the
-// consume population joins on that identity, and a row it cannot join is a row
-// no reader can use.
-//
-// There is deliberately no `failed` arm. A solo terminal `failed` carries its
-// batch closure out of the same normalization step that records it, so it is
-// always an UNRESOLVED failure — emitConstructionFailureIfPresent resolves it to
-// await-unit-ruling and stops `next` above, before the per-unit loop reaches
-// here (measured on the per-unit fixture: the producing stage answers `ask` and
-// the ledger holds zero settled rows). The ruling is the only way out, and it
-// leaves the Unit retried, cancelled, or the workflow parked — never failed and
-// settled. Writing an arm no series can reach would be test theatre; the reader
-// still knows the value, because the downstream fan-out does.
 // The 1-origin batch identity each Unit is recorded under, first occurrence
 // wins — the same number the consume population joins its rows on.
 function batchIdentityOfUnits(batches: readonly (readonly string[])[]): Map<string, string> {
@@ -4823,6 +4826,24 @@ function settledOutcomeHistory(projectDir: string): Map<string, SettledUnitOutco
   return history;
 }
 
+// Append the engine's own outcome row for every Unit of this stage whose
+// terminal state it can observe: covered (#3099) or cancelled (#3106). Emission
+// is keyed by stage + Unit + batch + revision and reads the existing rows first,
+// so re-running `next` over an unchanged observation appends nothing while a
+// changed one lands as the revision that supersedes it. A Unit outside the
+// compiled batches has no batch identity to record under and is skipped: the
+// consume population joins on that identity, and a row it cannot join is a row
+// no reader can use.
+//
+// There is deliberately no `failed` arm. A solo terminal `failed` carries its
+// batch closure out of the same normalization step that records it, so it is
+// always an UNRESOLVED failure — emitConstructionFailureIfPresent resolves it to
+// await-unit-ruling and stops `next` above, before the per-unit loop reaches
+// here (measured on the per-unit fixture: the producing stage answers `ask` and
+// the ledger holds zero settled rows). The ruling is the only way out, and it
+// leaves the Unit retried, cancelled, or the workflow parked — never failed and
+// settled. Writing an arm no series can reach would be test theatre; the reader
+// still knows the value, because the downstream fan-out does.
 function settlePerUnitOutcomes(
   projectDir: string,
   node: GraphStage,
@@ -4846,13 +4867,14 @@ function settlePerUnitOutcomes(
     const triple = perUnitOutcomeTriple(node.slug, unit, batch);
     const recorded = history.get(triple) ?? [];
     if (recorded[recorded.length - 1]?.outcome === outcome) continue;
-    const key = perUnitOutcomeKey(node.slug, unit, batch, recorded.length + 1);
+    const revision = recorded.reduce((highest, row) => Math.max(highest, row.revision), 0) + 1;
+    const key = perUnitOutcomeKey(node.slug, unit, batch, revision);
     emitAuditEventGuarded(
       "UNIT_OUTCOME_SETTLED",
       { Stage: node.slug, Unit: unit, Batch: batch, Outcome: outcome, "Idempotency Key": key },
       projectDir,
     );
-    recorded.push({ stage: node.slug, unit, batch, outcome, key });
+    recorded.push({ stage: node.slug, unit, batch, outcome, key, revision });
     history.set(triple, recorded);
   }
 }
