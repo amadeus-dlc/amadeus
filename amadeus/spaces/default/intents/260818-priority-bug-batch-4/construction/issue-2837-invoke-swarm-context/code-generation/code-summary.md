@@ -60,7 +60,7 @@ Intent: 260818-priority-bug-batch-4 / Unit: issue-2837-invoke-swarm-context / de
 | R1 | identity 搬送(t211 a1 / a1b) | `bun test tests/unit/t211-swarm-batch-progress.test.ts -t "a1"` | **exit 1** / 0 pass 2 fail。a1: `expect(directive.batch)` → `Expected: "2" / Received: undefined`、a1b: `Expected: "error" / Received: "invoke-swarm"` |
 | R2 | validator(t113) | `bun test tests/unit/t113.test.ts` | **exit 1** / 59 pass 4 fail(`invoke-swarm: unknown key: batch` ほか) |
 | R3 | emit 実物(t135 1b) | `bun test tests/integration/t135-invoke-swarm.test.ts -t "1b"` | **exit 1** / 0 pass 1 fail(`Expected: "1" / Received: undefined`) |
-| R4 | 8 面パリティゲートの落ちる実証(注入 → 赤 → revert の 1 セット) | `git checkout -- .../claude/skills/amadeus/SKILL.md` → `bun test tests/unit/t181-conductor-skill-parity.test.ts -t "transcribes the batch identity"` → 復元 | **注入時 exit 1**(`missing: directive.batch` / `missing: the convergence check is conductor knowledge` / `still hand-types --batch <n>`)→ 復元後 `bun test tests/unit/t181-...` **exit 0** / 10 pass 0 fail(残渣ゼロ) |
+| R4 | 8 面パリティゲートの落ちる実証(注入 → 赤 → revert の 1 セット) | `git checkout -- .../claude/skills/amadeus/SKILL.md` → `bun test tests/unit/t181-conductor-skill-parity.test.ts -t "transcribes the batch identity"` → 復元 | **注入時 exit 1**(`missing: directive.batch` / `missing: the convergence check is conductor knowledge` / `still hand-types --batch <n>`)→ 復元後 `bun test tests/unit/t181-...` **exit 0** / 10 pass 0 fail。残渣ゼロの機械確認: commit 後の worktree で `git status --porcelain` → **出力 0 行**、`git diff HEAD --stat` → 空(2026-08-18 §12a iteration-1 FOLLOW-UP を受けて実測追記 — 注入対象の SKILL.md は `git checkout --` による復元後に実装 commit `9d275d912` の一部としてコミット済みであり、現 tree に未申告差分なし) |
 | G1 | Green(4 ファイル一括) | `bun test tests/unit/t113.test.ts tests/unit/t181-conductor-skill-parity.test.ts tests/unit/t211-swarm-batch-progress.test.ts tests/integration/t135-invoke-swarm.test.ts` | **exit 0** / 127 pass 0 fail |
 | G2 | 連動面 | `bun test tests/unit/t186-foreach-per-unit-iteration.test.ts tests/unit/t129-stage-runner-drift.test.ts …` (t113/t181/t211 と同一 run) | **exit 0** / 139 pass 0 fail |
 | G3 | swarm 経路の integration | `bun test tests/integration/{t135-invoke-swarm,t166-multi-repo-construction,t251-swarm-and-next-stage}.test.ts` | **exit 0** / 45 pass 0 fail |
@@ -80,7 +80,7 @@ Intent: 260818-priority-bug-batch-4 / Unit: issue-2837-invoke-swarm-context / de
 
 ## 受け入れ実測(配送先ツリー、FR-2837-2 / 3 / 5)
 
-対象 14 面 = dist 8 面(`dist/<harness>/…/skills/amadeus/SKILL.md` ないし `commands/amadeus.md`)+ self-install 6 面(`.claude` / `.agents` / `.cursor` / `.kimi-code` / `.opencode` / `.pi`。`.kiro` はこの clone に self-install されていない)。
+対象 14 面 = dist 8 面(`dist/<harness>/…/skills/amadeus/SKILL.md` ないし `commands/amadeus.md`)+ self-install 6 面(`.claude` / `.agents` / `.cursor` / `.kimi-code` / `.opencode` / `.pi`。`.kiro` と kiro-ide 系の self-install 面はこの clone に存在しない — `ls -d .kiro .kiro-ide` 両方 No such file or directory(2026-08-18 実測)。self-install の対象は promote-self がこの clone へ生成した面のみで、dist 8 面とは母集団が異なる)。
 
 - A4 `grep -c -- "--batch <n>" <face>` → **全 14 面 0**(手動指定の残存なし)
 - A5 `grep -c "the convergence check is conductor knowledge" <face>` → **全 14 面 1**(正規取得元の 1 節、pi 面含む。FR-2837-2 の「0 件の面が残れば fail」を満たす)
@@ -93,7 +93,8 @@ grep の空出力はすべて exit code で不一致(1)と確認済み。ERE の
 ## 逸脱
 
 - **なし(ADR-1 実装契約 1〜8 の範囲内)**。契約2の選択肢のうち「pool generation を織り込んで非数値化する」形は採らず、数値のまま + spent identity の emit 拒否で閉じた(上記「FR-2837-4(b) の閉じ方と残余」)
-- plan Step 7 は code コメント 2 箇所を名指すが、FR-2837-5 の受け入れ述語が `packages/` 全域であるため `knowledge/amadeus-pipeline-deploy-agent/branching-strategies.md` の同根参照 2 行も同一変更で訂正した(reviewer C12 が同根と実測した面。挙動不変)
+- plan Step 7 は code コメント 2 箇所を名指すが、FR-2837-5 の受け入れ述語が `packages/` 全域であるため `knowledge/amadeus-pipeline-deploy-agent/branching-strategies.md` の同根参照 2 行も同一変更で訂正した(issue-evidence.md #2837 クロスレビュー claim ledger の C12 — branching-strategies.md:278 の逐語「the dispatch lives in SKILL.md prose」を引いて手順消失の根を特定した claim — が同根と実測した面。requirements Out of Scope 節の「C11/C12 finalize 偽 green」は同じ claim ledger の隣接番号で別件。挙動不変)
+- **plan 未記載の追加変更(申告)**: `docs/reference/17-skill-system.md` / `.ja.md` の directive 表 `invoke-swarm` 行に identity 搬送と check_cmd 非搬送を明記した。plan の 11 step はこの 2 ファイルを名指していないが、directive 契約の変更は project.md Mandated「framework source、全ハーネス配布、self-install 面、tests、対訳ドキュメントを同じ変更で更新する」により対訳 docs の同期が義務であり、契約変更(Step 3)の同一変更として実施した。§12a iteration-1 BLOCKER を受けて本欄に申告を追記(2026-08-18)
 
 ## 未検証面
 
