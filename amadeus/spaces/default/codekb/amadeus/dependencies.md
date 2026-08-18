@@ -354,7 +354,7 @@ D. #3046 — 読取スコープと書込スコープの非対称
 
 機序は `architecture.md`、配置は `code-structure.md`、コンポーネント境界は `component-inventory.md` の各対応節を参照。
 
-## 区間の依存エッジ変化と、focus 2 件の依存方向（260817-inception-cost-batch、現在、observed `23d4ae767`）
+## 区間の依存エッジ変化と、focus 2 件の依存方向（260817-inception-cost-batch、履歴、observed `23d4ae767`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260818-priority-bug-batch-4 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **外部依存の変化なし**（`git diff --stat 89053172e..23d4ae767 -- package.json bun.lock '**/package.json'` の**出力は空**、exit 0。本節の実測）。ランタイム・開発依存・CI 構成（`.github/` も空 diff・exit 0）はいずれも不変である。
 
@@ -489,3 +489,132 @@ F. #3181 — RA の consume 面と、Issue 取り込みが要求する新しい�
 | `packages/framework/core/amadeus-common/stages/**` の frontmatter のみ | 上記いずれも発火しない。代わりに runtime graph の再 compile と `/amadeus --doctor` の参照検査が門番になる |
 
 機序は `architecture.md`、配置は `code-structure.md`、コンポーネント境界は `component-inventory.md` の各対応節を参照。
+
+## 区間の依存エッジ変化と、focus 2 件の依存方向（260818-priority-bug-batch-4、現在、observed `127be70c5`）
+
+**外部依存の変化なし**（`git diff --stat 23d4ae767..127be70c5 -- package.json bun.lock '**/package.json'` の**出力は空**、exit 0。本節の実測）。ランタイム・開発依存・CI 構成（`.github/` も空 diff・exit 0）はいずれも不変である。
+
+### 1. 内部エッジは 3 本増えた — 2 区間連続の「エッジ本数不変」が終わった
+
+区間の全ソース diff から単一行 import の増減を抽出した述語（本節の実測）:
+
+```bash
+git diff -U0 23d4ae767..127be70c5 -- 'packages/framework/core/tools/*.ts' 'plugins/**/*.ts' \
+  | grep -E '^[+-]import '
+```
+
+→ 出力は **4 行（すべて `+`、`-` はゼロ）**。うち 3 行は複数行 import の開始行なので、実体は次の 4 ブロックである（`amadeus-utility.ts:182-194` の逐語）:
+
+```
++import {
++  createEvidenceGitHubGatewayAdapter,
++  parseGitHubRepository,
++} from "./amadeus-github-gateway.ts";
++import type {
++  EvidenceGitHubGateway,
++  RemoteGitHubIssueComment,
++} from "./amadeus-github-gateway.ts";
++import type {
++  GitHubRepository,
++  RemoteGitHubIssue,
++} from "./amadeus-github-types.ts";
++import { createGitHubProcessRunner } from "./amadeus-process-runner.ts";
+```
+
+**3 本とも新規のモジュール間エッジである**（本節の実測）:
+
+| 述語 | base `23d4ae767` | observed `127be70c5` |
+|---|---|---|
+| `git show <c>:packages/framework/core/tools/amadeus-utility.ts \| grep -n "amadeus-github-gateway\|amadeus-github-types\|amadeus-process-runner"` | **出力なし・exit 1** | **4 行**（`:185` / `:189` gateway、`:193` types、`:194` process-runner） |
+
+すなわち `amadeus-utility.ts` は base 時点で GitHub 面へのエッジを **1 本も持っていなかった**。前区間・前々区間はいずれも「既存エッジへの named import 追加」でエッジ本数が動かなかったが、**本区間は 3 本の新設**である。
+
+### 2. 新しい依存の向き
+
+```
+packages/framework/core/tools/amadeus-utility.ts
+   （issue-evidence fetch verb — :6824 runIssueEvidenceFetch / dispatch :6981）
+        ├─→ ./amadeus-github-gateway.ts   ← 新エッジ
+        │      createEvidenceGitHubGatewayAdapter (:1089)  … 3 つ目の adapter
+        │      parseGitHubRepository
+        │      type EvidenceGitHubGateway (:1077) / RemoteGitHubIssueComment (:478)
+        │
+        ├─→ ./amadeus-github-types.ts     ← 新エッジ（型のみ）
+        │      type GitHubRepository / RemoteGitHubIssue
+        │
+        ├─→ ./amadeus-process-runner.ts   ← 新エッジ
+        │      createGitHubProcessRunner   … runner の合成点
+        │
+        └─→ ./amadeus-lib.ts              ← 既存エッジ（本区間で名前が増えた）
+               issueEvidencePath (:5043) / relativeIssueEvidencePath (:5051)
+```
+
+テキストフォールバック: `amadeus-utility.ts` が GitHub gateway・GitHub types・process runner の 3 モジュールへ新規に依存し、gateway 側では 3 つ目の adapter（`createEvidenceGitHubGatewayAdapter`）を経由する。runner の合成は utility 側で行われ、gateway は runner を注入されて受け取る。
+
+**方向は逆転していない。** `amadeus-github-gateway.ts` は `amadeus-utility.ts` を知らない（依存は一方向）。gateway 自身は「GitHub と話す唯一のプロセス境界」という既存の位置づけを保っており、**新しい消費者が 1 つ増えただけ**である。循環は生じていない。
+
+**注入の形**: `createEvidenceGitHubGatewayAdapter(runner)` は `MirrorProcessRunner` を引数に取り、内部で `createCombinedGitHubGateway(runner)` へ委譲する（`:1092`）。utility 側が `createGitHubProcessRunner` を呼んで runner を作り、adapter へ渡す — **port / adapter の注入形が既存 2 種と同じ**である。
+
+### 3. `RE_SCAN_EXCLUDED_PATHSPECS` の依存 — コードと散文の対
+
+`packages/framework/core/tools/amadeus-lib.ts:1540` の定数は、実行時に他モジュールから import されているわけではない。**消費者はテストと散文である**（`git grep -n "RE_SCAN_EXCLUDED_PATHSPECS" 127be70c5 -- 'packages/**' 'plugins/**' 'tests/**'` の実測、hit の内訳）:
+
+| 消費者 | 種別 |
+|---|---|
+| `tests/integration/t2415-re-scan-exclusion-contract.integration.test.ts:24` `:96` `:159` | drift guard（散文との一致を固定） |
+| `tests/integration/t2415-re-scan-exclusion.integration.test.ts:28` `:163` `:168` `:202` `:208` `:218` `:223` `:242` `:243` | 挙動テスト |
+| `packages/framework/core/amadeus-common/stages/inception/reverse-engineering.md:136` | 散文からの参照（逐語 `RE_SCAN_EXCLUDED_PATHSPECS in tools/amadeus-lib.ts`） |
+| `tests/.coverage-registry.json:3533` | 台帳登録（`"unitId": "function:RE_SCAN_EXCLUDED_PATHSPECS"`） |
+
+**プロダクションコードからの import はゼロである。** この定数は「散文が正本の値をコード側で機械照合可能にするためのアンカー」であり、実行時の依存ではない — 依存棚卸しの観点では **テストのみが実行時消費者**という珍しい形として記録しておく。
+
+### 4. focus 2 件の依存方向
+
+**是正は本区間で着地していない**（`git grep -n "3106" 127be70c5 -- packages/ plugins/ tests/ docs/` → **exit 1**、`"2837"` は allowlist の sha256 内部文字列 2 hit のみ）。
+
+#### 4.1 #2837 — engine → directive → conductor の一方向経路で値が落ちる
+
+```
+amadeus-orchestrate.ts:3906  firstUncoveredBatch → { units, batchNumber }
+        │
+        │  （batchNumber は :4026 の SwarmSelection.pick に保持されている）
+        ▼
+amadeus-orchestrate.ts:4294  emitConfiguredSwarm(projectDir, pick.units)
+        │                     ← 第2引数は units のみ。batchNumber はここで落ちる
+        ▼
+amadeus-directive.ts:312-331  InvokeSwarmDirective（6 面）
+        │  閉語彙 :555 INVOKE_SWARM_FIELDS
+        ▼
+harness conductor face（8 面）
+        └─→ amadeus-swarm.ts prepare --batch <n>   ← 7 面が **人手での値の供給**を前提に書かれている
+                 └─→ :638  idempotencyKey: unit-pool:<batch>:initial-enqueue（durable な pool 識別子）
+```
+
+テキストフォールバック: engine 内部には batch 番号があるが、directive の閉語彙にその面が無いため、conductor まで届かない。conductor は `prepare --batch <n>` を実行する必要があり、値の出所は engine ではなく人手または推測になる。その値はそのまま pool の idempotency key になる。
+
+**依存上の含意**: この経路には**逆向きの読取経路が無い**。conductor が engine の保持値を後から引く手段（`amadeus-swarm.ts` の read verb など）が存在しないため（`:1419` の 14 verb に `context` / `status` 相当は不在）、是正は「directive の面を広げる」か「読取エッジを新設する」かのどちらかになる。前者は既存の一方向経路の中で閉じ、後者は新しい依存方向を導入する。
+
+#### 4.2 #3106 — 同一データ源に対する 2 本の読取エッジが非対称
+
+```
+record/audit/*.jsonl（単一のデータ源）
+     │
+     ├─→ amadeus-orchestrate.ts:3934  cancelledConstructionUnits
+     │        └─→ amadeus-construction-outcome-projection.ts（canonical projection）
+     │                 → solo の cancelled terminal を **見る**
+     │
+     └─→ amadeus-orchestrate.ts:2513  readPerUnitConsumePopulation
+              ├─→ pool event set（実在行のみ）
+              └─→ :2499 readSettledUnitOutcomes（:2508 で "succeeded" のみ受理）
+                       → solo の cancelled terminal を **見ない**
+
+  発行 amadeus-orchestrate.ts:4686 settlePerUnitOutcomes
+        └─→ :4706 が cancelledConstructionUnits の結果を使って発行を抑止
+              （＝検出側の事実が、母集団側へ渡らないまま消える）
+
+  下流 amadeus-per-unit-consume-fanout.ts:199 KNOWN_OUTCOMES（cancelled を受理）
+```
+
+テキストフォールバック: 検出側は canonical projection を経由するため solo の cancelled を見るが、母集団側は projection を経由せず pool 行と settle 行だけを読むため見ない。発行側は検出側の結果を使って settle 行の発行を止めるので、検出側が見た事実は母集団側へ届かない。下流の fanout は `cancelled` を正規値として受理できる。
+
+**依存上の含意**: 是正方式 (b)（母集団側を canonical projection から読むよう広げる）は、`readPerUnitConsumePopulation` から `amadeus-construction-outcome-projection.ts` への**新しい読取エッジ**を作る。方式 (a)（settle 側に cancelled 語彙を足す）は既存のエッジ構成を変えず、`amadeus-orchestrate.ts` 内部の 2 定数を開くだけで済む。**エッジ構成の観点では (a) が最小変更**だが、読み口の分裂という根は残る。方式選定は未決である。

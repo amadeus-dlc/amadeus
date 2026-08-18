@@ -4042,7 +4042,7 @@ lifecycle 側の主座は `tests/unit/t481-pr-convergence-lifecycle.test.ts`、s
 
 機序は `architecture.md`、コンポーネント境界は `component-inventory.md`、配置は `code-structure.md` の各対応節を参照。
 
-## 品質指標の区間差分と、focus 2 件のテスト空白（260817-inception-cost-batch、現在、observed `23d4ae767`）
+## 品質指標の区間差分と、focus 2 件のテスト空白（260817-inception-cost-batch、履歴、observed `23d4ae767`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260818-priority-bug-batch-4 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: base `89053172ed8b5bb270e254aea029a13291d10b6b` → observed `23d4ae767956cd56fc28fa78abe28096712eff8a`。
 
@@ -4134,3 +4134,87 @@ lifecycle 側の主座は `tests/unit/t481-pr-convergence-lifecycle.test.ts`、s
 | docs 対訳面（`docs/reference/16-artifact-vocabulary.md` 等）を触る場合 | 対訳同時更新と、doc を消費するテストの paths-ignore 盲点（`cid:build-and-test:ci-paths-ignore-doc-guard-blindspot`） |
 
 機序は `architecture.md`、コンポーネント境界は `component-inventory.md`、配置は `code-structure.md` の各対応節を参照。
+
+## 品質指標の区間差分と、focus 2 件のテスト空白（260818-priority-bug-batch-4、現在、observed `127be70c5`）
+
+**観測 ref**: base `23d4ae767956cd56fc28fa78abe28096712eff8a` → observed `127be70c5d7a584016f88a5d44e8715904020721`（5 コミット）。
+
+### 1. 指標の区間差分
+
+**測定元**: `metrics/2026-08-17T12-24-08-673Z-0b652d2cd1a6.json`（base 側 = base 以前の最後の snapshot）と `metrics/2026-08-18T04-53-24-170Z-43a2e2978678.json`（observed 側 = 区間内最後）の `collectors.<name>.values` を `bun -e` で直読（本節の実行、exit 0）。**区間内 snapshot は 2 件**（`git diff --name-only 23d4ae767..127be70c5 -- metrics/` の実測）。
+
+| 指標 | base 側 | observed 側 | 差 |
+|---|---|---|---|
+| coverage percent | 93.39885723200531 | 93.41203240015948 | **+0.0132pp** |
+| coverage hits / lines | 95788 / 102558 | 96064 / 102839 | +276 / +281 |
+| test files / assertions | 1047 / 13939 | 1055 / 14030 | **+8** / +91 |
+| failed files / assertions | 0 / 0 | 0 / 0 | 横ばい |
+| unit_small / integration_medium | 270 / 583 | 273 / 588 | **+3 / +5** |
+| loc core / tests / scripts | 149387 / 386333 / 13092 | 150065 / 388125 / 13092 | +678 / +1792 / ±0 |
+| ccn 関数数 / 閾値超過 / max | 7320 / 32 / 38 | 7340 / 32 / 38 | +20 / **±0** / ±0 |
+| bugs total / open / closed | 400 / 13 / 387 | 405 / **13** / 392 | +5 / **±0** / +5 |
+
+**coverage は 2 区間連続で上昇**した（前区間 +0.0020pp → 本区間 +0.0132pp）。新規行の被覆率は **約 98.2%**（276/281、派生値、算出式併記）。前区間の約 94.0% を上回る。
+
+**test files +8 は新規テスト 8 ファイルと一致**し、その内訳（unit_small +3 / integration_medium +5）も新規ファイルの層分布（unit 3 本 / integration 5 本）と一致する。
+
+**bugs は total +5 / closed +5 / open ±0** である。区間内で 5 件がクローズされ、同数が新規に total へ入った形ではなく、`closed` の +5（387 → 392）と `total` の +5 が同期しているので、**open は動かず 13 のまま**である。重大度分布では `s3_major` 191 → 192（+1）、`s4_minor` 81 → 85（+4）。
+
+**ccn の閾値超過は 32 で不変、max も 38 で不変**である。関数数 +20 に対し閾値超過が増えていないので、新規コードは複雑度の面で既存分布の内側に収まっている。
+
+### 2. 台帳の resync — 5 面
+
+| 台帳 | 規模（本節の実測） | 内容 |
+|---|---|---|
+| `tests/.coverage-registry.json` | **+48 −5** | 新規 unitId 4 件（`function:issueEvidencePath` / `function:relativeIssueEvidencePath` / `function:RE_SCAN_EXCLUDED_PATHSPECS` / subcommand `amadeus-utility issue-evidence`）ほか |
+| `tests/.coverage-patch-allowlist.json` | **+36 −0** | 免除エントリの追加（削除ゼロ） |
+| `tests/.coverage-ratchet.json` | **+2 −2** | `function` **189 → 191** / `subcommand` **86 → 87** |
+| `tests/integration/t-coverage-mechanism-ratchet.test.ts` | **+2 −0** | mechanism honesty 台帳へ integration 2 件を追加（`t3181-issue-evidence-fetch` / `t3181-issue-evidence-upstream-coverage`） |
+| `tests/fixtures/designer-export/export.json` | **+8 −0** | artifact 語彙 122 → 123 の投影同期 |
+
+**TLA の `model-map.json` は本区間で動いていない**（区間の変更ファイル一覧に `amadeus/spaces/default/specs/` は不在）。前区間では impl ハッシュピン 3 行が resync されていたが、本区間の変更ファイルに `model-map.json` の `entries[].implPath` に載る面（`amadeus-orchestrate.ts` / `amadeus-state.ts` / `amadeus-election-store.ts`）が含まれないためである。**#3106 の是正は `amadeus-orchestrate.ts` を触るので、この台帳が発火する見込みである**（`cid:build-and-test:bt-ledger-resync`）。
+
+**mechanism honesty 台帳への 2 件追加は、新規 integration が「実行結果から導出した検証」であることの申告**である（`memory/team.md` P2 の系）。台帳に載ることで、当該テストが検証劇場でないことがゲートの検査対象になる。
+
+### 3. focus 2 件のテスト空白
+
+**両 focus とも是正が着地していないため、空白はそのまま残っている**（`git grep -n "3106" 127be70c5 -- packages/ plugins/ tests/ docs/` → **exit 1**、`"2837"` は `tests/.coverage-patch-allowlist.json:183` / `:566` の sha256 値の内部文字列 2 hit のみ）。
+
+#### 3.1 #2837 — batch 番号の**導出**をテストしている面が存在しない
+
+| 既存テスト | 何をテストしているか | 空白 |
+|---|---|---|
+| `tests/integration/t135-invoke-swarm.test.ts` | `invoke-swarm` directive の `kind` / `units` / `cap` の 3 面。**`--batch` は全てハードコード** | batch 番号が engine のどの値から導かれるかを検証していない |
+| `tests/integration/t379-swarm-canonical-emit.test.ts` | canonical emit | 同上 |
+| `tests/unit/t211-swarm-batch-progress.test.ts` | batch progress。**`tests/unit/` 配下**（`git ls-tree -r --name-only 127be70c5 tests/` の実測。`tests/integration/` には存在しない） | 同上 |
+| `tests/e2e/t134-swarm-referee.test.ts` | referee の verdict | 同上 |
+| `tests/unit/t113.test.ts:303-322` | `prepared_batch` / `retry_unit` の **pair 整合のみ** | 初回 fan-out の batch 搬送は対象外 |
+
+**2 種類の空白がある**:
+
+1. **batch 導出テストの不在** — `firstUncoveredBatch`（`amadeus-orchestrate.ts:3906`）が返す `batchNumber` が directive へ届くかを検証する面がどこにもない。届いていない現況が「仕様」なのか「欠陥」なのかをテストが判別していない。
+2. **failed batch → replan → 同一 Unit redispatch の回帰テスト不在** — 旧 batch が terminal の状態で同じ Unit を再実行する経路を固定するテストが存在しない。これは Issue 本文が明示的に要求している面である。
+
+#### 3.2 #3106 — per-unit 経路 × cancelled の対が存在しない
+
+`tests/integration/t533-per-unit-consume-fanout.integration.test.ts:786-801` に **pool 経路の cancelled** テストが 1 本ある（逐語 `test("does not emit paths for a cancelled producer Unit even when files remain", …)`、本節の実測）。**per-unit（solo）経路の対が無い。**
+
+| 経路 | cancelled のテスト | 現況 |
+|---|---|---|
+| pool（swarm） | `t533:786-801` | あり。cancelled Unit は consumer を止めない |
+| **per-unit（solo）** | **なし** | 空白 |
+
+**是正時に置くべき位置**: 同ファイル `:786-801` の直後（対になる位置）。fixture は同ファイルの `seedPerUnitProject`（`:101-167`）を使い、cancel は `resolve-failure --user-input Skip` で駆動する形が最短である。
+
+**落ちる実証の設計上の注意**（`memory/team.md` § 検証・実測規律）: 是正は発行側（`amadeus-orchestrate.ts:4706` / `:2475`）と読み側（`:2508`）の**2 面を同時に**開く必要があるため、片方だけを直した中間状態でも Red が正しく赤くなることを確認する必要がある。`cid:code-generation:cg2-agreeing-predicate-drift`（同一述語の複数箇所への手書き複製）と同族の形であり、**修正前に全複製箇所を grep で列挙する**のが定型である。
+
+### 4. 検証面の健全性
+
+| 面 | 状態 |
+|---|---|
+| CI ワークフロー | 区間で**変更なし**（`git diff --name-only 23d4ae767..127be70c5 -- .github/` → 空出力・exit 0） |
+| blocking gate 集合 | 不変 |
+| failed files / assertions | **0 / 0**（両 snapshot） |
+| dist parity | **本スキャンでは未測定**（`bun run build` は read-only 制約により未実行）。追跡ファイルの `dist/` 面は区間の変更ファイル一覧に不在 |
+
+**新規テストが drift guard を持つ点を記録する。** `tests/integration/t2415-re-scan-exclusion-contract.integration.test.ts` は契約散文とコード定数の一致を検査するが、その検査を **source 断面だけでなく全 delivered tree** に対して行う（`:159` 近傍）。ソース断面だけの green が配送路の退行を隠す形（`cid:requirements-analysis:c2-acceptance-at-delivery-tree`）に対する、正しい形の実装である。
