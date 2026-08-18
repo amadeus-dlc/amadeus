@@ -3,6 +3,8 @@
 // Real-LLM E2E: Claude Code and Codex drive the shipped Amadeus TypeScript
 // tools against a pre-seeded fixture workspace. The fixture is not born or
 // selected by the provider, so this test never creates a live Intent.
+// Historical regression targets and their next live journeys are recorded in
+// tests/fixtures/live-llm-regression-priority.json.
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -38,6 +40,14 @@ const PROMPT = (harnessDir: ".claude" | ".codex"): string => [
   `Run exactly: bun ${harnessDir}/tools/amadeus-orchestrate.ts report --stage formal-model-check --result completed`,
   "Read the tool result. If it reports a missing verification artifact, create the exact path named in that result with a concise markdown verification note, then rerun the same report command.",
   "Continue until the report command succeeds, then stop and summarize the tool commands executed.",
+].join(" ");
+const STATE_APPROVE_PROMPT = (harnessDir: ".claude" | ".codex"): string => [
+  "You are driving a pre-seeded Amadeus test workspace.",
+  "Use the shipped TypeScript tools through the shell; do not merely describe actions.",
+  "Do not create, birth, select, or switch an Intent. Do not use git, GitHub, or the network.",
+  `Run exactly: bun ${harnessDir}/tools/amadeus-state.ts approve formal-model-check --defer-workflow-completion --project-dir .`,
+  "Read the tool result. If it reports a missing verification artifact, create the exact path named in that result with a concise markdown verification note, then rerun the same command.",
+  "Continue until the command succeeds, then stop and summarize the tool commands executed.",
 ].join(" ");
 
 interface ToolRun {
@@ -202,13 +212,33 @@ function assertRepairJourney(projectDir: string, run: ToolRun): void {
   expect(failedReport).toBeGreaterThanOrEqual(0);
 }
 
-function runClaude(projectDir: string): ToolRun {
+function assertStateApprovalJourney(projectDir: string, run: ToolRun): void {
+  expect(run.exitCode).toBe(0);
+  const phaseCheck = join(seededRecordDir(projectDir), "verification", "phase-check-construction.md");
+  if (!existsSync(phaseCheck)) {
+    throw new Error(`LLM did not create ${phaseCheck}\nstdout:\n${run.stdout}\nstderr:\n${run.stderr}`);
+  }
+  expect(readIntentEntries(projectDir)).toHaveLength(1);
+  const state = readFileSync(join(seededRecordDir(projectDir), "amadeus-state.md"), "utf8");
+  expect(state).toContain("- [x] formal-model-check — EXECUTE");
+  expect(state).toContain("- **Workflow Completion Status**: pending");
+  const audit = readAuditRows(projectDir);
+  const failedApproval = audit.findIndex((row) =>
+    row.eventName === "amadeus.operation.failed" &&
+    row.attributes?.Event === "ERROR_LOGGED" &&
+    row.attributes.Command?.includes("approve formal-model-check") &&
+    row.attributes.Error?.includes("phase-check-construction.md"),
+  );
+  expect(failedApproval).toBeGreaterThanOrEqual(0);
+}
+
+function runClaude(projectDir: string, prompt = PROMPT(".claude")): ToolRun {
   const result = spawnSync(
     CLAUDE_BIN,
     [
       "--dangerously-skip-permissions",
       "-p",
-      PROMPT(".claude"),
+      prompt,
       "--setting-sources",
       "project",
       "--tools",
@@ -227,8 +257,8 @@ function runClaude(projectDir: string): ToolRun {
   return { exitCode: result.status ?? -1, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
 }
 
-function runCodex(project: CodexExecProject): ToolRun {
-  const result = spawnSync(CODEX_BIN, ["exec", PROMPT(".codex")], {
+function runCodex(project: CodexExecProject, prompt = PROMPT(".codex")): ToolRun {
+  const result = spawnSync(CODEX_BIN, ["exec", prompt], {
     cwd: project.proj,
     encoding: "utf8",
     env: process.env,
@@ -265,6 +295,40 @@ describe("real-LLM Amadeus tools repair journey without live Intent birth", () =
       });
       try {
         assertRepairJourney(project.proj, runCodex(project));
+      } finally {
+        project.cleanup();
+      }
+    },
+    TIMEOUT_MS,
+  );
+
+  test.skipIf(CLAUDE_SKIP_REASON !== null)(
+    `Claude Code follows a direct state-tool error result${CLAUDE_SKIP_REASON ? ` [SKIP: ${CLAUDE_SKIP_REASON}]` : ""}`,
+    () => {
+      const projectDir = setupIntegrationProject();
+      try {
+        prepareFormalModelCheckFixture(projectDir, ".claude");
+        assertStateApprovalJourney(projectDir, runClaude(projectDir, STATE_APPROVE_PROMPT(".claude")));
+      } finally {
+        cleanupTestProject(projectDir);
+      }
+    },
+    TIMEOUT_MS,
+  );
+
+  test.skipIf(CODEX_SKIP_REASON !== null)(
+    `Codex follows a direct state-tool error result${CODEX_SKIP_REASON ? ` [SKIP: ${CODEX_SKIP_REASON}]` : ""}`,
+    () => {
+      const project = setupCodexExecProject({
+        prefix: "amadeus-codex-state-journey-",
+        distributionDir: CODEX_DIST,
+        repositoryRoot: REPO_ROOT,
+        model: process.env.AMADEUS_CODEX_EXEC_MODEL ?? "gpt-5.6-sol",
+        rulesDir: ".codex/amadeus-rules",
+        prepareProject: (projectDir) => prepareFormalModelCheckFixture(projectDir, ".codex"),
+      });
+      try {
+        assertStateApprovalJourney(project.proj, runCodex(project, STATE_APPROVE_PROMPT(".codex")));
       } finally {
         project.cleanup();
       }
