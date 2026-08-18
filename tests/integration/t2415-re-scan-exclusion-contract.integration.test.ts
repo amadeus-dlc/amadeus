@@ -101,6 +101,14 @@ describe("t2415 the contract declares the exclusion classes (FR-EXC-1)", () => {
     expect(section).toContain("differential");
     expect(section).toContain("diff input");
   });
+
+  // A reader who copies the bare form gets an exclusion that reports success
+  // and removes nothing, so the warning has to travel with the pathspecs.
+  test("warns that the bare pathspec form is a silent no-op (FR-EXC-5)", () => {
+    const section = exclusionSection(source());
+    expect(section).toContain("`amadeus/spaces/*/intents/`");
+    expect(section).toContain("matches nothing, excludes nothing");
+  });
 });
 
 describe("t2415 the contract keeps build ledgers in scope (FR-EXC-2)", () => {
@@ -112,23 +120,22 @@ describe("t2415 the contract keeps build ledgers in scope (FR-EXC-2)", () => {
     expect(section).toContain("amadeus/spaces/**");
   });
 
-  test("warns that the bare pathspec form is a silent no-op", () => {
-    expect(exclusionSection(source())).toContain(":(glob)");
-  });
-
   // Excluding codekb from the DIFF INPUT must not be read as "do not read
   // codekb": the base point is still resolved by reading re-scans/.
   test("separates base-point resolution from the diff input", () => {
-    expect(exclusionSection(source())).toContain("re-scans/");
+    const section = exclusionSection(source());
+    expect(section).toContain("re-scans/");
+    expect(section).toContain("not diff input");
   });
 });
 
 describe("t2415 the contract closes the citation channel (FR-EXC-3, ADR-3)", () => {
   test("forbids NEW citations of workflow process records, keeping existing ones as history", () => {
     const section = exclusionSection(source());
+    expect(section).toContain("Never cite a workflow process record");
+    expect(section).toContain("does not already cite");
+    expect(section).toContain("stay as history");
     expect(section).toContain("issue-evidence.md");
-    expect(section.toLowerCase()).toContain("never cite");
-    expect(section.toLowerCase()).toContain("already");
   });
 });
 

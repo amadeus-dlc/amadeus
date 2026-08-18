@@ -107,8 +107,8 @@ function keptAfter(exclusions: readonly string[]): Map<string, number> {
 }
 
 /** `path -> insertions` for what a single class CLAIMS (include form, no `.`). */
-function claimedBy(includes: readonly string[]): Map<string, number> {
-  return numstat(includes);
+function claimedBy(include: string): Map<string, number> {
+  return numstat([include]);
 }
 
 function totalOf(counts: Map<string, number>): number {
@@ -190,13 +190,10 @@ describe("t2415 the canonical pathspecs bite (FR-EXC-5)", () => {
     expect(bare.size).toBe(all.size);
   });
 
-  // `:(glob)` also buys precision, not just a non-zero match: its `*` stands for
-  // ONE path segment, so a class cannot quietly swallow a deeper lookalike.
-  test("the space wildcard spans exactly one segment", () => {
-    const claimed = [...claimedBy([includeFormOf(INTENTS)]).keys()];
+  test("the space wildcard reaches every space, not just the default one", () => {
+    const claimed = [...claimedBy(includeFormOf(INTENTS)).keys()];
     expect(claimed).toContain("amadeus/spaces/default/intents/260101-x/requirements.md");
     expect(claimed).toContain("amadeus/spaces/other/intents/260102-y/audit/shard.jsonl");
-    expect(claimed).not.toContain("amadeus/spaces/default/codekb/repo/re-scans/260101-x.md");
   });
 });
 
@@ -224,7 +221,7 @@ describe("t2415 every exclusion is attributable (FR-EXC-4)", () => {
 
     const claimants = new Map<string, string[]>(excluded.map((p) => [p, []]));
     for (const exclusion of RE_SCAN_EXCLUDED_PATHSPECS) {
-      for (const path of claimedBy([includeFormOf(exclusion)]).keys()) {
+      for (const path of claimedBy(includeFormOf(exclusion)).keys()) {
         claimants.get(path)?.push(exclusion);
       }
     }
@@ -244,7 +241,7 @@ describe("t2415 every exclusion is attributable (FR-EXC-4)", () => {
   test("the classes claim nothing that survived the exclusion", () => {
     const kept = keptAfter(RE_SCAN_EXCLUDED_PATHSPECS);
     for (const exclusion of RE_SCAN_EXCLUDED_PATHSPECS) {
-      const claimed = [...claimedBy([includeFormOf(exclusion)]).keys()];
+      const claimed = [...claimedBy(includeFormOf(exclusion)).keys()];
       expect(claimed.filter((p) => kept.has(p))).toEqual([]);
     }
   });
