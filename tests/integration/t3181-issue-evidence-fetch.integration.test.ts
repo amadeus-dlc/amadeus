@@ -18,9 +18,18 @@
 // The gateway is injected as a fake, so nothing here reaches GitHub. The last
 // describe spawns the real CLI to pin the argv dispatch itself.
 
-import { afterEach, describe, expect, test } from "bun:test";
+import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import {
   cleanupTestProject,
@@ -51,6 +60,31 @@ const REPO: GitHubRepository = {
   canonical: "amadeus-dlc/amadeus",
 };
 const SHA = "0b652d2cd1a6fbf2d5a905736d3a3eb887e9d810";
+
+// A `gh` that answers the two readiness probes and the two reads with canned
+// bytes, so a CLI spawn can reach the write without touching GitHub. Mirrors the
+// fake-gh-on-PATH pattern t222 established.
+const FAKE_GH = `#!/usr/bin/env bun
+const args = process.argv.slice(2);
+if (args[0] === "--version") { console.log("gh version 0.0.0 (fake)"); process.exit(0); }
+if (args[0] === "auth") process.exit(0);
+const path = args.find((a) => a.startsWith("repos/")) ?? "";
+if (path.endsWith("/comments")) { process.stdout.write("[]"); process.exit(0); }
+const issue = {
+  number: 3181,
+  title: "t",
+  body: "b",
+  state: "open",
+  repository_url: "https://api.github.com/repos/${REPO.canonical}",
+};
+process.stdout.write("HTTP/2.0 200 OK\\ncontent-type: application/json\\r\\n\\r\\n" + JSON.stringify(issue));
+process.exit(0);
+`;
+
+const fakeBins: string[] = [];
+afterAll(() => {
+  for (const dir of fakeBins) rmSync(dir, { recursive: true, force: true });
+});
 
 let project: string | undefined;
 afterEach(() => {
@@ -168,7 +202,8 @@ describe("t3181 issue-evidence fetch — capture (FR-EVD-1)", () => {
     project = seededProject();
     await fetchWith(project, { issues: "3181" });
     const entries = readdirSync(dirname(evidenceFile(project)));
-    expect(entries).toEqual(["issue-evidence.md"]);
+    expect(entries).toContain("issue-evidence.md");
+    expect(entries.filter((name) => name.includes(".tmp-"))).toEqual([]);
   });
 });
 
@@ -216,16 +251,18 @@ describe("t3181 issue-evidence fetch — loud failure (FR-EVD-5)", () => {
     expect(readFileSync(evidenceFile(project), "utf-8")).toBe(before);
   });
 
-  test.each([
+  const badFlags: Array<[string, Record<string, string>]> = [
     ["an absent --issues flag", {}],
     ["an empty --issues list", { issues: "" }],
     ["a non-numeric issue", { issues: "3181,abc" }],
     ["a zero issue number", { issues: "0" }],
     ["a negative issue number", { issues: "-3181" }],
     ["a malformed --repo", { issues: "3181", repo: "not-a-slug" }],
-  ])("rejects %s before any request", async (_label, flags) => {
+  ];
+
+  test.each(badFlags)("rejects %s before any request", async (_label, flags) => {
     project = seededProject();
-    const outcome = await fetchWith(project, flags as Record<string, string>);
+    const outcome = await fetchWith(project, flags);
     expect(outcome.kind).toBe("error");
     expect(existsSync(evidenceFile(project))).toBe(false);
   });
@@ -287,5 +324,43 @@ describe("t3181 issue-evidence argv dispatch", () => {
     const result = spawnSync("bun", [TOOL, "no-such-verb"], { encoding: "utf-8" });
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("issue-evidence");
+  });
+
+  // A THROW, not an error outcome: the record's `ideation` path is a file, so
+  // the write's mkdir raises ENOTDIR deep inside the promise. Without a
+  // rejection handler on the dispatch arm that surfaces as a bare unhandled
+  // rejection, skipping die() and its ERROR_LOGGED row. gh is a fake on PATH
+  // (the t222 pattern) so the run reaches the write without touching GitHub.
+  test("fails loud when the write itself throws", () => {
+    project = seededProject();
+    const bin = mkdtempSync(join(tmpdir(), "amadeus-t3181-bin-"));
+    fakeBins.push(bin);
+    const gh = join(bin, "gh");
+    writeFileSync(gh, FAKE_GH, "utf-8");
+    chmodSync(gh, 0o755);
+
+    // Make the artifact's parent unreachable: a FILE where a directory belongs.
+    const record = join(project, "amadeus", "spaces", DEFAULT_SPACE, "intents", DEFAULT_RECORD_DIR);
+    rmSync(join(record, "ideation"), { recursive: true, force: true });
+    writeFileSync(join(record, "ideation"), "not a directory\n", "utf-8");
+
+    const result = spawnSync(
+      "bun",
+      [
+        TOOL,
+        "issue-evidence",
+        "fetch",
+        "--issues",
+        "3181",
+        "--repo",
+        REPO.canonical,
+        "--project-dir",
+        project,
+      ],
+      { encoding: "utf-8", env: { ...process.env, PATH: `${bin}:${process.env.PATH ?? ""}` } },
+    );
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("issue-evidence fetch");
+    expect(existsSync(evidenceFile(project))).toBe(false);
   });
 });

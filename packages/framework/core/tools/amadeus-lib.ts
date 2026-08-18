@@ -5007,10 +5007,14 @@ export function memoryFilePath(projectDir: string, phase: string, stageSlug: str
 // reach the engine's graph-compiled resolveArtifactPath. Returns null on the
 // same no-intent-resolves condition: a per-intent record cannot be named
 // without an intent.
+// One definition of the leaf, as segments, so the absolute builder (native
+// separators) and the relative one (posix) cannot drift apart.
+const ISSUE_EVIDENCE_SEGMENTS = ["ideation", "intent-capture", "issue-evidence.md"] as const;
+
 export function issueEvidencePath(projectDir: string, intent?: string, space?: string): string | null {
   const dir = recordDir(projectDir, intent, space);
   if (dir === null) return null;
-  return join(dir, "ideation", "intent-capture", "issue-evidence.md");
+  return join(dir, ...ISSUE_EVIDENCE_SEGMENTS);
 }
 
 // Relative analog of issueEvidencePath (posix slashes) — the form the contracts
@@ -5018,7 +5022,7 @@ export function issueEvidencePath(projectDir: string, intent?: string, space?: s
 export function relativeIssueEvidencePath(projectDir: string, intent?: string, space?: string): string | null {
   const rel = relativeRecordDir(projectDir, intent, space);
   if (rel === null) return null;
-  return `${rel}/ideation/intent-capture/issue-evidence.md`;
+  return `${rel}/${ISSUE_EVIDENCE_SEGMENTS.join("/")}`;
 }
 
 // `<root>/inception/units-generation/unit-of-work-dependency.md` — the fenced

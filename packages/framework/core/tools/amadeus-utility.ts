@@ -6979,14 +6979,20 @@ export function runUtilityMain(): void {
     // audit transition; a gh failure exits non-zero and writes nothing, leaving
     // the conductor to continue on the free-text fallback.
     case "issue-evidence":
-      void runIssueEvidenceFetch(projectDir, positional.slice(1), flags).then(
-        (outcome) => {
+      void runIssueEvidenceFetch(projectDir, positional.slice(1), flags)
+        .then((outcome) => {
           if (outcome.kind === "error") die(outcome.message);
           process.stdout.write(
             `${relativeIssueEvidencePath(projectDir) ?? outcome.path} (${outcome.issues} issue(s))\n`,
           );
-        },
-      );
+        })
+        // A throw rather than an error outcome — an unwritable record dir, a
+        // gateway that raises — would otherwise surface as a bare unhandled
+        // rejection, skipping die() and the ERROR_LOGGED row every other verb
+        // emits. Same exit shape as the handled failures.
+        .catch((error: unknown) =>
+          die(`issue-evidence fetch: ${errorMessage(error)}`),
+        );
       break;
     // detect - read-only query verb. Prints the workspace scan
     // (greenfield/brownfield, languages) + the resolved scope-registry paths so

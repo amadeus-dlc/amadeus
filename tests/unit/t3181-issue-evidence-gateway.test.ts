@@ -18,6 +18,8 @@ import { describe, expect, test } from "bun:test";
 import {
   commentsArgv,
   createEvidenceGitHubGatewayAdapter,
+  FIND_PER_PAGE,
+  parseGitHubRepository,
   parseIssueComments,
 } from "../../packages/framework/core/tools/amadeus-github-gateway.ts";
 import type { GitHubRepository } from "../../packages/framework/core/tools/amadeus-github-types.ts";
@@ -83,13 +85,15 @@ function comment(id: number, extra: Record<string, unknown> = {}): Record<string
 }
 
 describe("t3181 commentsArgv", () => {
-  test("asks the comments endpoint for every page, read-only", () => {
+  test("asks the comments endpoint for every page, read-only, at the full page size", () => {
     expect(commentsArgv(REPO, 3181)).toEqual([
       "api",
       "--paginate",
       "--method",
       "GET",
       "repos/amadeus-dlc/amadeus/issues/3181/comments",
+      "-f",
+      `per_page=${FIND_PER_PAGE}`,
     ]);
   });
 });
@@ -115,6 +119,22 @@ describe("t3181 parseIssueComments", () => {
   test("reads a null body as empty rather than rejecting the comment", () => {
     const parsed = parseIssueComments([comment(11, { body: null })], REPO);
     expect(parsed.kind === "ok" && parsed.value[0].body).toBe("");
+  });
+
+  // GitHub echoes the repository's REAL casing in issue_url while our canonical
+  // is lowercased, so an owner or name with a capital letter must still bind.
+  test("binds a mixed-case repository to its normalized canonical", () => {
+    const mixed = parseGitHubRepository("Amadeus-DLC", "Amadeus");
+    if (mixed === null) throw new Error("fixture repo failed to parse");
+    const parsed = parseIssueComments(
+      [
+        comment(11, {
+          issue_url: "https://api.github.com/repos/Amadeus-DLC/Amadeus/issues/3181",
+        }),
+      ],
+      mixed,
+    );
+    expect(parsed.kind).toBe("ok");
   });
 
   test.each([

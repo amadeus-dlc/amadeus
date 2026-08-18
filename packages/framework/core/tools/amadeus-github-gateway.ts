@@ -196,6 +196,10 @@ export function commentsArgv(
     "--method",
     "GET",
     `${issuesPath(repo)}/${issueNumber}/comments`,
+    // Same page size as the issue walk, from the same constant: at the API
+    // default of 30 a long cross-review costs extra round trips for nothing.
+    "-f",
+    `per_page=${FIND_PER_PAGE}`,
   ];
 }
 
@@ -479,6 +483,30 @@ export type RemoteGitHubIssueComment = Readonly<{
   htmlUrl: string;
 }>;
 
+// Remote `issue_url` is https://api.github.com/repos/{owner}/{name}/issues/{n}.
+// parseRepositoryUrlIdentity demands exactly the two identity segments under
+// /repos, so the issue-scoped form gets its own split — but the identity still
+// goes through parseGitHubRepository, and that is what makes the comparison
+// case-insensitive: GitHub echoes the repository's REAL casing here while our
+// canonical is lowercased, so a literal prefix match would reject every repo
+// with a capital letter in its owner or name.
+function parseIssueUrlRepository(url: string): GitHubRepository | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== "https:" || parsed.host !== "api.github.com") {
+    return null;
+  }
+  const segments = parsed.pathname.split("/").filter((s) => s.length > 0);
+  if (segments.length !== 5 || segments[0] !== "repos" || segments[3] !== "issues") {
+    return null;
+  }
+  return parseGitHubRepository(segments[1], segments[2]);
+}
+
 // Validate one remote comment element, binding it to the request repository the
 // same way parseIssueObject binds an issue: the remote `issue_url` names the
 // repo the comment actually hangs off, so a response for another repository is
@@ -499,9 +527,8 @@ function parseIssueCommentObject(
   if (typeof obj.created_at !== "string") return null;
   if (typeof obj.html_url !== "string") return null;
   if (typeof obj.issue_url !== "string") return null;
-  if (!obj.issue_url.startsWith(`https://api.github.com/repos/${repo.canonical}/issues/`)) {
-    return null;
-  }
+  const commentRepo = parseIssueUrlRepository(obj.issue_url);
+  if (commentRepo === null || commentRepo.canonical !== repo.canonical) return null;
 
   const user = obj.user;
   if (typeof user !== "object" || user === null) return null;

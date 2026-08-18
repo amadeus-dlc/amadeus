@@ -37,9 +37,7 @@ function stageSource(phase: string, slug: string): string {
 }
 
 function frontmatter(phase: string, slug: string): Record<string, unknown> {
-  const parsed = parseStageFrontmatter(stageSource(phase, slug));
-  if (parsed === null) throw new Error(`no frontmatter in ${phase}/${slug}.md`);
-  return parsed as unknown as Record<string, unknown>;
+  return parseStageFrontmatter(stageSource(phase, slug));
 }
 
 function consumedArtifacts(

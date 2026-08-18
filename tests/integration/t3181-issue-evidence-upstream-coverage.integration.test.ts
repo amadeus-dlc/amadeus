@@ -178,7 +178,7 @@ describe("t3181 upstream-coverage now covers issue-evidence (FR-EVD-7)", () => {
     expect(result.verdicts).toEqual(["amadeus.sensor.passed"]);
   });
 
-  test("flips back to FAILED the moment the evidence reappears", () => {
+  test("returns to PASSED once the evidence file is removed", () => {
     // The same document, the same stage: only the artefact's presence moves, so
     // the verdict difference is attributable to the new consume and nothing else.
     const proj = makeProject(UNCITED, true);
