@@ -2,9 +2,33 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
+const RELEASE_WORKFLOW = join(import.meta.dir, "../../.github/workflows/release.yml");
+
+// #3247 ledger: the build-dist job's step names. A workflow-only PR that
+// drops or renames one of these must fail this file; #3248 makes that PR
+// take the full CI path so the failure is not deferred to an unrelated PR.
+const PINNED_BUILD_DIST_STEPS = [
+  "Skip dist asset build (dry run)",
+  "Checkout released commit",
+  "Set up bun",
+  "Install dependencies",
+  "Build dist",
+  "Verify source-only boundary",
+  "Verify graph compile invariants",
+  "Build release assets",
+  "Upload release assets",
+] as const;
+
+function buildDistStepNames(yaml: string): Array<string | undefined> {
+  const workflow = Bun.YAML.parse(yaml) as {
+    jobs: Record<string, { steps: Array<{ name?: string }> }>;
+  };
+  return workflow.jobs["build-dist"]?.steps.map((step) => step.name) ?? [];
+}
+
 describe("t223 release bot bypass boundary", () => {
   test("release phases run as separate sequential jobs", () => {
-    const yaml = readFileSync(join(import.meta.dir, "../../.github/workflows/release.yml"), "utf8");
+    const yaml = readFileSync(RELEASE_WORKFLOW, "utf8");
     const workflow = Bun.YAML.parse(yaml) as {
       permissions: Record<string, string>;
       jobs: Record<
@@ -47,17 +71,7 @@ describe("t223 release bot bypass boundary", () => {
     const publishSteps = workflow.jobs.publish?.steps.map((step) => step.name);
 
     expect(prepareSteps).toContain("Bump, land via merge queue, tag");
-    expect(buildDistSteps).toEqual([
-      "Skip dist asset build (dry run)",
-      "Checkout released commit",
-      "Set up bun",
-      "Install dependencies",
-      "Build dist",
-      "Verify source-only boundary",
-      "Verify graph compile invariants",
-      "Build release assets",
-      "Upload release assets",
-    ]);
+    expect(buildDistSteps).toEqual([...PINNED_BUILD_DIST_STEPS]);
     expect(githubReleaseSteps).toContain("Create GitHub Release with generated notes");
     expect(publishSteps).toContain("Publish to npm");
 
@@ -102,7 +116,7 @@ describe("t223 release bot bypass boundary", () => {
   });
 
   test("release writes use the GitHub App token", () => {
-    const yaml = readFileSync(join(import.meta.dir, "../../.github/workflows/release.yml"), "utf8");
+    const yaml = readFileSync(RELEASE_WORKFLOW, "utf8");
 
     expect(yaml).toContain("contents: read # release writes use the narrowly scoped GitHub App token below");
     expect(yaml).toContain(
@@ -126,5 +140,14 @@ describe("t223 release bot bypass boundary", () => {
     expect(yaml).not.toContain('git config user.name "github-actions[bot]"');
     expect(yaml).not.toContain("tags/commits pushed with GITHUB_TOKEN never trigger other workflows");
     expect(yaml).not.toContain("pushes directly to main");
+  });
+
+  test("#3248 injection: renaming a pinned build-dist step disagrees with the ledger", () => {
+    const yaml = readFileSync(RELEASE_WORKFLOW, "utf8");
+    expect(buildDistStepNames(yaml)).toEqual([...PINNED_BUILD_DIST_STEPS]);
+    const mutated = yaml.replace("- name: Build dist\n", "- name: Build dist MUTATED\n");
+    expect(mutated).not.toBe(yaml);
+    expect(buildDistStepNames(mutated)).not.toEqual([...PINNED_BUILD_DIST_STEPS]);
+    expect(buildDistStepNames(mutated)).toContain("Build dist MUTATED");
   });
 });

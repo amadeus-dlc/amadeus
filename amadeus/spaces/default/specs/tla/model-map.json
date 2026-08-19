@@ -14,7 +14,7 @@
       "entries": [
         {
           "implPath": "packages/framework/core/tools/amadeus-orchestrate.ts",
-          "sha256": "3abb9daf07d480bd187c5366e60703cc99fff980251b9171f75fe0229476fe07"
+          "sha256": "330820a464c5a8e160cadc8cff687c07dcb32b6d36084b0556040285acfa999a"
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-state.ts",
@@ -61,6 +61,14 @@
       },
       "evidenceBundle": {
         "digest": "sha256:cebe2897bff3d3fed905e298b83c90023bb9eba56ce7b24f614e0301a58a2efb"
+      },
+      "authoringProvenance": {
+        "intentRecord": "amadeus/spaces/default/intents/260813-bolt-pr-attestation",
+        "execution": {
+          "auditShard": "amadeus/spaces/default/intents/260813-bolt-pr-attestation/audit/j5ik2o-mac-studio-lan-9bc851023366.jsonl",
+          "timestamp": "2026-08-14T00:36:30Z",
+          "eventIdentity": "0f7e04ec87a660429a16811abe81427ead2fbb2cba26a4fa2b85b1aafcd0407e"
+        }
       }
     },
     {
@@ -90,7 +98,7 @@
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election-store.ts",
-          "sha256": "82b4b05ddf0bb92d1889e504545290ba82d9709fecd40dc391586932af21863c"
+          "sha256": "014e01dd210095ab7227c1f34166a36ea00b7ca86c14cb37e053f8d6183f96aa"
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-election-transport.ts",
@@ -180,7 +188,7 @@
       "entries": [
         {
           "implPath": "packages/framework/core/tools/amadeus-orchestrate.ts",
-          "sha256": "3abb9daf07d480bd187c5366e60703cc99fff980251b9171f75fe0229476fe07"
+          "sha256": "330820a464c5a8e160cadc8cff687c07dcb32b6d36084b0556040285acfa999a"
         },
         {
           "implPath": "packages/framework/core/tools/amadeus-state.ts",

@@ -62,6 +62,19 @@ bun .claude/tools/amadeus-bolt.ts set-autonomy --mode full \
   --confirmed-display-digest sha256:...
 ```
 
+A `HUMAN_TURN` is minted only when the host fires a trusted presence hook:
+Claude Code's `UserPromptSubmit` (a typed prompt at a turn boundary) or
+`PostToolUse` on `AskUserQuestion`. Claude Code does **not** fire
+`UserPromptSubmit` for a message queued while the agent is mid-turn
+(`queued_command` attachments; measured on Claude Code 2.1.69–2.1.233 against
+[anthropics/claude-code#31114](https://github.com/anthropics/claude-code/issues/31114)).
+That delivery is real human input, but it is not presence. `set-autonomy` and
+other provenance gates refuse with `PROVENANCE_REQUIRED` and tell you to submit
+the same command again at a turn boundary (after the agent yields). There is no
+complementary capture path: scraping the transcript would mint presence from a
+channel the host does not treat as a prompt, which collides with the
+machine-injection classifier and with consuming an unrelated turn.
+
 ### Declaring the mode at launch
 
 `set-autonomy` is the canonical recording path, but it needs an Intent to already

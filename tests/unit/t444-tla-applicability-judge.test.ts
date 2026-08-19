@@ -18,13 +18,16 @@ function failure<T, E>(result: { ok: true; value: T } | { ok: false; error: E })
 }
 
 const IDENTITY = `sha256:${"a".repeat(64)}` as never;
+const OTHER_IDENTITY = `sha256:${"b".repeat(64)}` as never;
 
 // The registered model traces FR-001; FR-900 is outside every registered model.
 function input(kind: string, subjects: readonly string[]): Parameters<typeof ApplicabilityJudge.judge>[0] {
   return {
     subjectIdentity: IDENTITY,
     declaration: { subjects: subjects as never, kind: kind as never, rationale: "because" },
-    registeredModels: { models: [{ name: "FormalElection", traceSubjects: ["FR-001"] as never }] },
+    registeredModels: {
+      models: [{ name: "FormalElection", subjectIdentity: IDENTITY, traceSubjects: ["FR-001"] as never }],
+    },
   };
 }
 
@@ -71,9 +74,30 @@ describe("ApplicabilityJudge.judge — the closed J1..J6 table (BR-U2-01)", () =
     const models = withExtra.registeredModels?.models ?? [];
     const extended = {
       ...withExtra,
-      registeredModels: { models: [...models, { name: "Other", traceSubjects: ["AC-004"] as never }] },
+      registeredModels: { models: [...models, { name: "Other", subjectIdentity: IDENTITY, traceSubjects: ["AC-004"] as never }] },
     };
     expect(unwrap(ApplicabilityJudge.judge(extended))).toBe("author-new");
+  });
+
+  test("does not match a same-name subject from another requirements document (#3250)", () => {
+    const declaration = input("non-target", ["FR-001"]);
+    const withDifferentDocument = {
+      ...declaration,
+      subjectIdentity: OTHER_IDENTITY,
+    };
+    expect(unwrap(ApplicabilityJudge.judge(withDifferentDocument))).toBe("non-target");
+  });
+
+  test("routes the reproduced FR-1..FR-4,FR-6 collision to non-target (#3250)", () => {
+    const subjects = ["FR-1", "FR-2", "FR-3", "FR-4", "FR-6"] as never;
+    const judged = ApplicabilityJudge.judge({
+      subjectIdentity: OTHER_IDENTITY,
+      declaration: { subjects, kind: "non-target", rationale: "separate requirements document" },
+      registeredModels: {
+        models: [{ name: "Registered", subjectIdentity: IDENTITY, traceSubjects: subjects }],
+      },
+    });
+    expect(unwrap(judged)).toBe("non-target");
   });
 
   test("is deterministic across repeated calls (BR-U2-07)", () => {

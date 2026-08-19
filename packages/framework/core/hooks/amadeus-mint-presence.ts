@@ -1,10 +1,19 @@
-// UserPromptSubmit hook: record a HUMAN_TURN event (human-presence gate).
+// UserPromptSubmit + PostToolUse AskUserQuestion hook: record a HUMAN_TURN
+// event (human-presence gate).
 //
 // On every real human prompt, append a HUMAN_TURN event to the active intent's
 // audit shard (the state machine's own append-only ledger). The approval /
 // interview gate (handleApprove / handleAnswer) refuses unless a HUMAN_TURN was
 // recorded since the last gate resolution, so a model under autopilot cannot
 // fabricate an approval with no human having acted this turn.
+//
+// Claude Code fires this hook on UserPromptSubmit (typed prompt at a turn
+// boundary) and on PostToolUse for AskUserQuestion. It does not fire
+// UserPromptSubmit for a queued mid-turn delivery (`queued_command` attachments
+// injected while the agent is working; anthropics/claude-code#31114). That
+// input is real human text but is not presence — provenance gates refuse with
+// PROVENANCE_REQUIRED and name the turn-boundary retry rather than scraping
+// the transcript (#3170).
 //
 // Classify the prompt before minting. Claude Code fires UserPromptSubmit not
 // only for physical human input but also for machine-injected, turn-starting

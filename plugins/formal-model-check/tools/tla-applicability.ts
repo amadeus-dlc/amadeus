@@ -56,6 +56,7 @@ export interface ChangeDeclaration {
 /** One registered model, reduced to what the decision table consumes. */
 export interface RegisteredModel {
   readonly name: string;
+  readonly subjectIdentity?: AggregateDigest;
   readonly traceSubjects: readonly StableId[];
 }
 
@@ -75,7 +76,8 @@ export type ApplicabilityRoute = "author-new" | "revise-model" | "impl-only" | "
 export type ApplicabilityFailure =
   | { readonly kind: "undecidable"; readonly row: string; readonly conflicts: readonly string[] }
   | { readonly kind: "missing-evidence"; readonly row: string; readonly detail: string }
-  | { readonly kind: "approval-missing"; readonly route: ApplicabilityRoute };
+  | { readonly kind: "approval-missing"; readonly route: ApplicabilityRoute }
+  | { readonly kind: "terminal-route-receipt-required"; readonly route: "impl-only" | "non-target" };
 
 // The consistent (kind -> route) half of the table, and its inverse. Every row
 // below J2 is 1:1 with a route, so the receipt can name its row from the route
@@ -111,10 +113,21 @@ function err<E>(error: E): Result<never, E> {
   return { ok: false, error };
 }
 
-/** Set intersection only — no verdict, no model success, is an input (BR-U2-02). */
-function intersectsRegisteredModel(subjects: readonly StableId[], models: readonly RegisteredModel[]): boolean {
-  const traced = new Set<string>(models.flatMap((model) => model.traceSubjects as readonly string[]));
-  return subjects.some((subject) => traced.has(subject));
+/**
+ * Set intersection only — no verdict, no model success, is an input (BR-U2-02).
+ * Stable IDs are document-scoped, so both the aggregate identity and the ID
+ * must match before a declaration intersects a registered model (#3250).
+ */
+function intersectsRegisteredModel(
+  subjectIdentity: AggregateDigest,
+  subjects: readonly StableId[],
+  models: readonly RegisteredModel[],
+): boolean {
+  return models.some(
+    (model) =>
+      model.subjectIdentity === subjectIdentity &&
+      subjects.some((subject) => model.traceSubjects.includes(subject)),
+  );
 }
 
 /** The J1..J6 table, evaluated top down; the first matching row decides. */
@@ -127,7 +140,7 @@ function judge(input: ApplicabilityInput): Result<ApplicabilityRoute, Applicabil
     return err<ApplicabilityFailure>({ kind: "missing-evidence", row: "J1", detail: "model map is unreadable" });
   }
 
-  const key = `${declaration.kind}:${intersectsRegisteredModel(declaration.subjects, registeredModels.models)}`;
+  const key = `${declaration.kind}:${intersectsRegisteredModel(input.subjectIdentity, declaration.subjects, registeredModels.models)}`;
   const conflict = J2_FORMS[key];
   if (conflict !== undefined) {
     return err<ApplicabilityFailure>({ kind: "undecidable", row: "J2", conflicts: [conflict] });
@@ -290,7 +303,7 @@ const AUTHORING_ROUTES: ReadonlySet<string> = new Set(["author-new", "revise-mod
 
 /** Is the tip's subject set traced by a registered model (registration done)? */
 function registered(receipt: RecordedReceipt, modelMap: ModelMapSnapshot): boolean {
-  return intersectsRegisteredModel(receipt.subjects, modelMap.models);
+  return intersectsRegisteredModel(receipt.subjectIdentity, receipt.subjects, modelMap.models);
 }
 
 /** Judge one chain tip. `null` means the tip releases the hold. */
@@ -367,7 +380,12 @@ export function defaultModelMapPath(workspaceRoot: string = process.cwd()): stri
 }
 
 /** The subjects a registered model traces, read out of the bundle it names. */
-export type ResolveTraceSubjects = (digest: string) => readonly StableId[] | null;
+export interface ResolvedTraceSubjects {
+  readonly subjectIdentity: AggregateDigest;
+  readonly subjects: readonly StableId[];
+}
+
+export type ResolveTraceSubjects = (digest: string) => ResolvedTraceSubjects | null;
 
 /**
  * Read the model map as the decision table's snapshot. A registered model's
@@ -397,9 +415,9 @@ export function readModelMapSnapshot(
       models.push({ name: entry.name, traceSubjects: [] });
       continue;
     }
-    const traceSubjects = resolveTraceSubjects(evidenceBundle.digest);
-    if (traceSubjects === null) return null;
-    models.push({ name: entry.name, traceSubjects });
+    const resolved = resolveTraceSubjects(evidenceBundle.digest);
+    if (resolved === null) return null;
+    models.push({ name: entry.name, subjectIdentity: resolved.subjectIdentity, traceSubjects: resolved.subjects });
   }
   return { models };
 }
@@ -407,6 +425,11 @@ export function readModelMapSnapshot(
 /** The subjects recorded by a bundle's applicability part, or null if it has none. */
 export function traceSubjectsOf(parts: EvidenceParts): readonly StableId[] | null {
   return recordedReceipt(parts)?.subjects ?? null;
+}
+
+/** The document identity bound by a bundle's applicability part, or null if absent. */
+export function traceSubjectIdentityOf(parts: EvidenceParts): AggregateDigest | null {
+  return recordedReceipt(parts)?.subjectIdentity ?? null;
 }
 
 /**

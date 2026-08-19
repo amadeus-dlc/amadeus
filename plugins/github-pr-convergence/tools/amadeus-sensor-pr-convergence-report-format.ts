@@ -12,10 +12,15 @@
 //                The human-turn id, the timestamp, and the reason are the
 //                whole point of that record, so their absence is a finding.
 //   landed     — the merge queue landed the pull request before the loop could
-//                report (#3062). Accepted at the `pr-convergence` stage only,
-//                and only with the merge instant and a well-formed merge
-//                commit: it records a merge that happened, it does not claim
-//                convergence.
+//                report (#3062). Always needs the merge instant and a
+//                well-formed merge commit: it records a merge that happened,
+//                it does not claim convergence. Accepted at the
+//                `pr-convergence` stage unconditionally, and at any other
+//                stage (code-generation, in particular — #3235) only when the
+//                RECEIPT — not merely the body — attests that merge: the
+//                receipt is what turns a merge fact from a claim into
+//                evidence, so the stage a landed record may close follows the
+//                same rule #3149 gave the checkout/merge binding.
 //   superseded — a unit's own pull request never converged because the work
 //                it carried reached the trunk through a different pull
 //                request or commit (#3239). The human turn, reason, and
@@ -29,7 +34,8 @@
 //
 // Which environment a record answers for is NOT read off its kind (#3149): any
 // kind may be finalised against the merge that closed it, and the receipt is
-// what says so. See `checkAttestationEnvironment`.
+// what says so. See `checkAttestationEnvironment`. #3235 applies the same
+// receipt-over-kind principle to which STAGE a `landed` record may finalise.
 //
 // Deliberately does NOT import the plugin's renderReport. Core ships to every
 // harness whether or not the plugin is installed, and a core->plugin import
@@ -183,6 +189,18 @@ function malformedMergeFact(label: MergeFactLabel, value: string): string | null
     return Number.isNaN(Date.parse(value)) ? `unparseable timestamp "${value}"` : null;
   }
   return /^[0-9a-f]{40}$/.test(value) ? null : `not a commit object id "${value}"`;
+}
+
+/** Whether the record's RECEIPT — not merely its body — attests the merge it
+ *  was finalised against. Only a self-development record carries a receipt at
+ *  all (`checkAttestation` below is a no-op for anything else), so a landed
+ *  record outside that scope never has one and stays checkout/pr-convergence
+ *  bound (#3062's original boundary). */
+function landedReceiptAttestsMerge(outputPath: string, body: string): boolean {
+  const recordRoot = recordRootForReport(outputPath);
+  if (recordRoot === null || !isSelfRecord(recordRoot)) return false;
+  const receipt = parseAttestation(body);
+  return receipt !== null && receipt.mergeCommit !== undefined && receipt.mergedAt !== undefined;
 }
 
 function checkLanded(body: string, converged: string | null, findings: ReportFormatFinding[]): void {
@@ -482,7 +500,7 @@ export function evaluateReportFormat(outputPath: string, stage?: string): Report
 
   const findings: ReportFormatFinding[] = [];
   const { kind, converged } = checkCommon(body, findings);
-  applyKindRules(kind, converged, body, findings, stage);
+  applyKindRules(kind, converged, body, findings, stage, landedReceiptAttestsMerge(outputPath, body));
   checkAttestation(outputPath, body, findings);
   const reason = kind === "override" || kind === "landed" || kind === "created" || kind === "superseded"
     ? kind
@@ -495,7 +513,8 @@ function applyKindRules(
   converged: string | null,
   body: string,
   findings: ReportFormatFinding[],
-  stage?: string,
+  stage: string | undefined,
+  mergeAttested: boolean,
 ): void {
   if (kind === "override") {
     checkOverride(body, findings);
@@ -506,8 +525,11 @@ function applyKindRules(
   }
   if (kind === "landed") {
     checkLanded(body, converged, findings);
-    if (stage !== "pr-convergence") {
-      findings.push({ field: "kind", reason: "landed finalises the pr-convergence stage only" });
+    if (stage !== "pr-convergence" && !mergeAttested) {
+      findings.push({
+        field: "kind",
+        reason: "landed without a receipt-attested merge finalises the pr-convergence stage only (#3235)",
+      });
     }
     return;
   }

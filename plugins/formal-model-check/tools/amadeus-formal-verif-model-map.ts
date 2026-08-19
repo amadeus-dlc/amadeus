@@ -206,6 +206,16 @@ export interface ModelMapEvidenceBundle {
   readonly digest: string;
 }
 
+/** The intent record and audit execution that authored a newly registered model. */
+export interface ModelMapAuthoringProvenance {
+  readonly intentRecord: string;
+  readonly execution: {
+    readonly auditShard: string;
+    readonly timestamp: string;
+    readonly eventIdentity: string;
+  };
+}
+
 export interface ModelMapModel {
   readonly name: string;
   readonly model: ModelMapAssetIdentity;
@@ -214,6 +224,7 @@ export interface ModelMapModel {
   readonly entries: readonly ModelMapEntry[];
   readonly vocabulary?: ModelVocabulary;
   readonly evidenceBundle?: ModelMapEvidenceBundle;
+  readonly authoringProvenance?: ModelMapAuthoringProvenance;
 }
 
 export interface ModelMap {
@@ -351,10 +362,10 @@ function parseEntries(value: unknown): Result<readonly ModelMapEntry[], ModelLoa
   return { ok: true, value: entries };
 }
 
-// The optional auxiliaries / vocabulary / evidenceBundle keys widen the model
+// The optional auxiliaries / vocabulary / evidenceBundle / authoringProvenance keys widen the model
 // shape to the key sets below; every other combination is rejected as before.
 const REQUIRED_MODEL_KEYS = ["cfg", "entries", "model", "name"] as const;
-const OPTIONAL_MODEL_KEYS = ["auxiliaries", "vocabulary", "evidenceBundle"] as const;
+const OPTIONAL_MODEL_KEYS = ["auxiliaries", "vocabulary", "evidenceBundle", "authoringProvenance"] as const;
 
 // Every subset of the optional keys, added to the required ones. Deriving the
 // sets keeps a new optional key from needing a hand-written combination table.
@@ -376,6 +387,54 @@ function parseEvidenceBundle(value: unknown, index: number): Result<ModelMapEvid
     return invalid(`models[${index}].evidenceBundle.digest must be sha256:<hex64>`);
   }
   return { ok: true, value: { digest: value.digest } };
+}
+
+const INTENT_RECORD_PATH = /^amadeus\/spaces\/[A-Za-z0-9][A-Za-z0-9._-]*\/intents\/[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/;
+
+export function parseAuthoringProvenance(
+  value: unknown,
+  index = 0,
+): Result<ModelMapAuthoringProvenance, ModelLoadError> {
+  if (!exactObject(value, ["execution", "intentRecord"])) {
+    return invalid(`models[${index}].authoringProvenance must have exactly intentRecord and execution`);
+  }
+  if (typeof value.intentRecord !== "string" || !INTENT_RECORD_PATH.test(value.intentRecord)) {
+    return invalid(`models[${index}].authoringProvenance.intentRecord must be a canonical intent record path`);
+  }
+  if (!exactObject(value.execution, ["auditShard", "eventIdentity", "timestamp"])) {
+    return invalid(`models[${index}].authoringProvenance.execution must have exactly auditShard, timestamp and eventIdentity`);
+  }
+  const execution = value.execution;
+  const expectedPrefix = `${value.intentRecord}/audit/`;
+  const shardName = typeof execution.auditShard === "string"
+    ? execution.auditShard.slice(expectedPrefix.length)
+    : "";
+  if (
+    typeof execution.auditShard !== "string"
+    || !execution.auditShard.startsWith(expectedPrefix)
+    || shardName.includes("/")
+    || !/^[A-Za-z0-9._-]+\.jsonl$/.test(shardName)
+  ) {
+    return invalid(`models[${index}].authoringProvenance.execution.auditShard must belong to intentRecord/audit`);
+  }
+  if (typeof execution.timestamp !== "string" || !ISO_TIMESTAMP.test(execution.timestamp)) {
+    return invalid(`models[${index}].authoringProvenance.execution.timestamp must be an ISO-8601 UTC timestamp`);
+  }
+  if (typeof execution.eventIdentity !== "string" || !SHA256.test(execution.eventIdentity)) {
+    return invalid(`models[${index}].authoringProvenance.execution.eventIdentity must be a lowercase SHA-256 value`);
+  }
+  return {
+    ok: true,
+    value: {
+      intentRecord: value.intentRecord,
+      execution: {
+        auditShard: execution.auditShard,
+        timestamp: execution.timestamp,
+        eventIdentity: execution.eventIdentity,
+      },
+    },
+  };
 }
 
 function isCanonicalAuxiliaryPath(value: unknown, selfPath: string): value is string {
@@ -457,7 +516,7 @@ function parseModelVocabulary(value: unknown): Result<ModelVocabulary, ModelLoad
 function parseModel(value: unknown, index: number): Result<ModelMapModel, ModelLoadError> {
   if (!MODEL_KEY_SETS.some((keys) => exactObject(value, keys))) {
     return invalid(
-      `models[${index}] must have exactly name, model, cfg, and entries, optionally with auxiliaries, vocabulary and evidenceBundle`,
+      `models[${index}] must have exactly name, model, cfg, and entries, optionally with auxiliaries, vocabulary, evidenceBundle and authoringProvenance`,
     );
   }
   const record = value as Record<string, unknown>;
@@ -489,6 +548,12 @@ function parseModel(value: unknown, index: number): Result<ModelMapModel, ModelL
     if (!parsed.ok) return parsed;
     evidenceBundle = parsed.value;
   }
+  let authoringProvenance: ModelMapAuthoringProvenance | undefined;
+  if ("authoringProvenance" in record) {
+    const parsed = parseAuthoringProvenance(record.authoringProvenance, index);
+    if (!parsed.ok) return parsed;
+    authoringProvenance = parsed.value;
+  }
   return {
     ok: true,
     value: {
@@ -499,6 +564,7 @@ function parseModel(value: unknown, index: number): Result<ModelMapModel, ModelL
       ...(auxiliaries === undefined ? {} : { auxiliaries }),
       ...(vocabulary === undefined ? {} : { vocabulary }),
       ...(evidenceBundle === undefined ? {} : { evidenceBundle }),
+      ...(authoringProvenance === undefined ? {} : { authoringProvenance }),
     },
   };
 }

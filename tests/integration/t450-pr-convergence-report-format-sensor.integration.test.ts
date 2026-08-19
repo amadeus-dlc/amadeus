@@ -633,6 +633,61 @@ describe("t450 attestation checks on a self-development record", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// #3235 — the merge-queue landed finalisation of #3062 finalises the
+// pr-convergence stage, but the same record is also the code-generation
+// artifact evidence: a receipt that attests the merge is just as final there.
+// The kind rule follows #3149's own principle (receipt over kind) instead of
+// a hard-coded stage name.
+// ---------------------------------------------------------------------------
+
+function landedPayload(): string {
+  return renderReport({
+    kind: "landed",
+    prRef: { repo: "amadeus-dlc/amadeus", number: 2838 },
+    mergedAt: MERGE_INSTANT,
+    mergeCommitOid: MERGE_SHA,
+    checkRollupState: "SUCCESS",
+    generatedAt: "2026-08-19T09:05:00Z",
+  });
+}
+
+describe("t450 landed at code-generation follows the receipt, not the kind (#3235)", () => {
+  test("a landed report whose receipt attests the merge is no longer refused at code-generation", () => {
+    const body = attested(landedPayload(), { mergeCommit: MERGE_SHA, mergedAt: MERGE_INSTANT });
+    const self = selfRecord({ audit: auditRow(body) });
+    const result = evaluateReportFormat(self.reportAt(body), "code-generation");
+    expect(fieldsOf(result)).not.toContain("kind");
+  });
+
+  test("the same receipt-attested record still passes at pr-convergence (no regression, #3062)", () => {
+    const body = attested(landedPayload(), { mergeCommit: MERGE_SHA, mergedAt: MERGE_INSTANT });
+    const self = selfRecord({ audit: auditRow(body) });
+    const result = evaluateReportFormat(self.reportAt(body), "pr-convergence");
+    expect(fieldsOf(result)).not.toContain("kind");
+  });
+
+  test("falling proof: a landed report whose receipt never attested the merge is still refused at code-generation", () => {
+    // The body claims the merge (every landed body does, per checkLanded),
+    // but the receipt the CLI actually minted never attested it — the
+    // hand-forged shape this gate exists to catch.
+    const body = attested(landedPayload());
+    const self = selfRecord({ audit: auditRow(body) });
+    const result = evaluateReportFormat(self.reportAt(body), "code-generation");
+    expect(result.pass).toBe(false);
+    expect(fieldsOf(result)).toContain("kind");
+  });
+
+  test("falling proof: a landed report with no record root at all is still refused outside pr-convergence", () => {
+    // No self-development record to resolve means no receipt can be read, so
+    // the merge fact can never be attested — the original #3062 boundary
+    // holds for anything that is not a self-record.
+    const result = evaluateReportFormat(reportAt(landedReport()), "code-generation");
+    expect(result.pass).toBe(false);
+    expect(fieldsOf(result)).toContain("kind");
+  });
+});
+
 describe("t450 CLI contract — advisory means exit 0 on both verdicts", () => {
   function run(argv: string[]): { code: number; stdout: string } {
     let stdout = "";

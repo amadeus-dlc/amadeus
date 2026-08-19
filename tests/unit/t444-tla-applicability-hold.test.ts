@@ -46,7 +46,7 @@ function receipt(overrides: Record<string, unknown>): Record<string, unknown> {
   };
 }
 
-const MODEL_MAP = { models: [{ name: "FormalElection", traceSubjects: ["FR-001"] as never }] };
+const MODEL_MAP = { models: [{ name: "FormalElection", subjectIdentity: CURRENT, traceSubjects: ["FR-001"] as never }] };
 
 // Derived from the production union so a reshaped EvidenceParts breaks this
 // test at compile time instead of silently drifting past it.
@@ -200,8 +200,8 @@ describe("readModelMapSnapshot", () => {
     const digest = `sha256:${"4".repeat(64)}`;
     const text = JSON.stringify({ models: [{ name: "Election", evidenceBundle: { digest } }] });
     const subjects = ["FR-010"] as unknown as readonly StableId[];
-    const snapshot = readModelMapSnapshot(text, (named) => (named === digest ? subjects : null));
-    expect(snapshot?.models).toEqual([{ name: "Election", traceSubjects: subjects }]);
+    const snapshot = readModelMapSnapshot(text, (named) => (named === digest ? { subjectIdentity: CURRENT, subjects } : null));
+    expect(snapshot?.models).toEqual([{ name: "Election", subjectIdentity: CURRENT, traceSubjects: subjects }]);
   });
 });
 

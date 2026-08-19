@@ -64,6 +64,7 @@ import {
 } from "./amadeus-lib.js";
 import {
   applyProductionAutonomyMode,
+  formatIntentAutonomyUpdateFailure,
   commitProductionQualityObservation,
   commitProductionQuestionDecision,
   previewProductionAutonomyGrant,
@@ -1193,7 +1194,7 @@ function handleSetAutonomy(args: string[], explicitProjectDir?: string): void {
         policies: readDecisionPolicyInputs(flags["policies-file"]),
         confirmedDisplayDigest: flags["confirmed-display-digest"],
       });
-      if (!applied.ok) error(`Intent autonomy update failed: ${applied.error}`);
+      if (!applied.ok) error(formatIntentAutonomyUpdateFailure(applied.error));
       console.log(JSON.stringify({
         emitted: "INTENT_AUTONOMY_TRANSACTION_COMMITTED",
         mode: flags.mode,

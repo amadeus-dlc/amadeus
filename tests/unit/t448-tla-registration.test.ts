@@ -21,6 +21,15 @@ const CFG_IDENTITY = "b".repeat(64);
 const IMPL_SHA = "c".repeat(64);
 const BUNDLE_DIGEST = `sha256:${"d".repeat(64)}`;
 
+const AUTHORING_PROVENANCE = {
+  intentRecord: "amadeus/spaces/default/intents/260813-bolt-pr-attestation",
+  execution: {
+    auditShard: "amadeus/spaces/default/intents/260813-bolt-pr-attestation/audit/session.jsonl",
+    timestamp: "2026-08-05T00:00:00Z",
+    eventIdentity: "e".repeat(64),
+  },
+};
+
 function modelEntry(name: string, extra: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     name,
@@ -235,6 +244,14 @@ describe("draft admission and map composition (BR-U4-05/12/17)", () => {
     expect(parsed.error.kind).toBe("validator-rejected");
   });
 
+  test("refuses a draft without intent-record authoring provenance", () => {
+    const parsed = parseEntryDraft(modelEntry("Sample", { evidenceBundle: { digest: BUNDLE_DIGEST } }));
+    expect(parsed.ok).toBe(false);
+    if (parsed.ok) return;
+    expect(parsed.error).toMatchObject({ kind: "validator-rejected" });
+    expect(parsed.error).toMatchObject({ detail: "draft must carry authoringProvenance" });
+  });
+
   test("refuses a draft that is not an object with a name", () => {
     expect(parseEntryDraft("Sample").ok).toBe(false);
     expect(parseEntryDraft({ evidenceBundle: { digest: BUNDLE_DIGEST } }).ok).toBe(false);
@@ -246,7 +263,10 @@ describe("draft admission and map composition (BR-U4-05/12/17)", () => {
   });
 
   test("accepts a draft carrying a well-formed reference", () => {
-    const parsed = parseEntryDraft(modelEntry("Sample", { evidenceBundle: { digest: BUNDLE_DIGEST } }));
+    const parsed = parseEntryDraft(modelEntry("Sample", {
+      evidenceBundle: { digest: BUNDLE_DIGEST },
+      authoringProvenance: AUTHORING_PROVENANCE,
+    }));
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
     expect(parsed.value.name).toBe("Sample");
@@ -256,7 +276,10 @@ describe("draft admission and map composition (BR-U4-05/12/17)", () => {
     const snapshot = parseModelMapSnapshot(EXISTING_MAP);
     expect(snapshot.ok).toBe(true);
     if (!snapshot.ok) return;
-    const draft = parseEntryDraft(modelEntry("Election", { evidenceBundle: { digest: BUNDLE_DIGEST } }));
+    const draft = parseEntryDraft(modelEntry("Election", {
+      evidenceBundle: { digest: BUNDLE_DIGEST },
+      authoringProvenance: AUTHORING_PROVENANCE,
+    }));
     if (!draft.ok) return;
 
     const composed = composeRegisteredMap(snapshot.value, draft.value);
@@ -271,7 +294,10 @@ describe("draft admission and map composition (BR-U4-05/12/17)", () => {
   test("refuses a draft that duplicates a registered name (validator on the whole map)", () => {
     const snapshot = parseModelMapSnapshot(EXISTING_MAP);
     if (!snapshot.ok) return;
-    const draft = parseEntryDraft(modelEntry("Mirror", { evidenceBundle: { digest: BUNDLE_DIGEST } }));
+    const draft = parseEntryDraft(modelEntry("Mirror", {
+      evidenceBundle: { digest: BUNDLE_DIGEST },
+      authoringProvenance: AUTHORING_PROVENANCE,
+    }));
     if (!draft.ok) return;
 
     const composed = composeRegisteredMap(snapshot.value, draft.value);

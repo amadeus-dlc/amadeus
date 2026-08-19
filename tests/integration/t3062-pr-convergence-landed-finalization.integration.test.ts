@@ -282,4 +282,19 @@ describe("#3062 — a merged self record finalises through the ordinary verbs", 
     expect(result.pass).toBe(false);
     expect(result.findings.map((finding) => finding.field)).toContain("kind");
   });
+
+  test("the blocking sensor also accepts the landed record at the code-generation stage (#3235)", async () => {
+    // #3149's principle — the receipt decides, never the kind — extends to
+    // which stage may treat `landed` as evidence: a receipt that attests the
+    // merge is just as final at code-generation as it is at pr-convergence.
+    const f = await delivered();
+    f.merged = true;
+    const out = await runCli(verbArgs("report", f), seams(f));
+    expect(out.exitCode).toBe(0);
+
+    const result = evaluateReportFormat(reportPathFor(f.record, UNIT), "code-generation");
+    expect(result.findings).toEqual([]);
+    expect(result.pass).toBe(true);
+    expect(result.reason).toBe("landed");
+  });
 });
