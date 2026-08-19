@@ -5,9 +5,6 @@
 // commit — never `git push` to main.
 
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import {
   classifyReleaseLandWait,
   incrementReleaseVersion,
@@ -26,7 +23,7 @@ import {
   parseReleaseLandArgs,
   ReleaseLandCliPort,
 } from "../../scripts/release-land.ts";
-import { SETUP_PACKAGE_REL, VERSION_SURFACES } from "../../scripts/release-version-sync-plan.ts";
+import { VERSION_SURFACES } from "../../scripts/release-version-sync-plan.ts";
 
 const PR_URL = "https://example.test/pull/42";
 const MERGE_SHA = "b".repeat(40);
@@ -303,10 +300,6 @@ describe("release-land CLI merge-queue compatibility", () => {
   });
 
   test("branch and tag pushes never target main", () => {
-    const repoRoot = mkdtempSync(join(tmpdir(), "amadeus-release-land-"));
-    mkdirSync(join(repoRoot, "packages/setup"), { recursive: true });
-    writeFileSync(join(repoRoot, SETUP_PACKAGE_REL), `{\n  "name": "@amadeus-dlc/setup",\n  "version": "0.1.7"\n}\n`);
-
     const commands: string[][] = [];
     const runner: CommandRunner = {
       run(command) {
@@ -321,7 +314,7 @@ describe("release-land CLI merge-queue compatibility", () => {
       },
     };
     const port = new ReleaseLandCliPort({
-      repoRoot,
+      repoRoot: "/tmp/amadeus-release-land",
       repository: "amadeus-dlc/amadeus",
       botLogin: BOT_LOGIN,
       runner,
