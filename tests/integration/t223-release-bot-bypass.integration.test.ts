@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 describe("t223 release bot bypass boundary", () => {
@@ -46,7 +46,7 @@ describe("t223 release bot bypass boundary", () => {
     const githubReleaseSteps = workflow.jobs["github-release"]?.steps.map((step) => step.name);
     const publishSteps = workflow.jobs.publish?.steps.map((step) => step.name);
 
-    expect(prepareSteps).toContain("Bump, commit, tag, push (release-it)");
+    expect(prepareSteps).toContain("Bump, land via merge queue, tag");
     expect(buildDistSteps).toEqual([
       "Skip dist asset build (dry run)",
       "Checkout released commit",
@@ -112,13 +112,20 @@ describe("t223 release bot bypass boundary", () => {
     expect(yaml).toContain(`client-id: \${{ vars.METRICS_BOT_CLIENT_ID }}`);
     expect(yaml).toContain(`private-key: \${{ secrets.METRICS_BOT_PRIVATE_KEY }}`);
     expect(yaml).toContain("permission-contents: write");
+    expect(yaml).toContain("permission-pull-requests: write");
     expect(yaml).toContain(`token: \${{ steps.app-token.outputs.token }}`);
     expect(yaml).toContain(`GH_TOKEN: \${{ steps.app-token.outputs.token }}`);
     expect(yaml).toContain(`\${{ steps.app-token.outputs.app-slug }}[bot]`);
+    expect(yaml).toContain("bun scripts/release-land.ts");
+    expect(yaml).toContain("timeout-minutes: 90");
+    expect(yaml).not.toContain("bunx --bun release-it");
+    expect(existsSync(join(import.meta.dir, "../../packages/setup/.release-it.json"))).toBe(false);
+    expect(readFileSync(join(import.meta.dir, "../../package.json"), "utf8")).not.toContain('"release-it"');
     expect(yaml).toContain(
       `if: \${{ !(github.event_name == 'push' && github.actor == 'amadeus-dlc-bot[bot]') }}`,
     );
     expect(yaml).not.toContain('git config user.name "github-actions[bot]"');
     expect(yaml).not.toContain("tags/commits pushed with GITHUB_TOKEN never trigger other workflows");
+    expect(yaml).not.toContain("pushes directly to main");
   });
 });

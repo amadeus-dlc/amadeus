@@ -10,8 +10,8 @@
 
 The repo has **one version**: `packages/setup/package.json`'s version drives
 the `vX.Y.Z` release tags, and `AMADEUS_VERSION` plus the README badge are
-kept equal to it (t68 guards the alignment; the release-it `after:bump` hook
-runs `scripts/release-version-sync.ts`). Generated `dist/` and self-install
+kept equal to it (t68 guards the alignment; the release lander runs
+`scripts/release-version-sync.ts`). Generated `dist/` and self-install
 trees remain untracked; the release workflow rebuilds them from the released
 commit and publishes the distribution asset. One
 tag is simultaneously the npm release of `@amadeus-dlc/setup` and the GitHub
@@ -65,12 +65,13 @@ Confirm all three before touching a version number:
 
 `packages/setup/package.json`'s `version` is an independent semver starting
 at `0.1.0` (FR-017, BR-P06). **The release workflow bumps it for you** —
-pick the bump level when dispatching (chapter 5); release-it bumps it, the
-`after:bump` hook syncs `AMADEUS_VERSION` and the README badge, and those
-tracked version surfaces are committed, tagged `vX.Y.Z`, and pushed to `main`
-in one go. Generated output remains ignored and is rebuilt by the release job. The release commit lands on
-`main` without a PR — an explicit, team-recorded exception to the PR rule,
-limited to the release version sync.
+pick the bump level when dispatching (chapter 5). The lander syncs
+`AMADEUS_VERSION` and the README badge, opens a `release/vX.Y.Z` pull
+request, and lands it through the merge queue. After the squash commit is
+on `main`, the same run tags that SHA `vX.Y.Z`. Generated output remains
+ignored and is rebuilt by the release job. The bump does not push `main`
+directly: the ruleset requires a pull request, merge queue, and `CI Success`
+(#2888).
 
 Manual fallback:
 
@@ -148,11 +149,11 @@ install step.)
 From the Actions tab, run **Release @amadeus-dlc/setup** on `main` and pick
 the bump level (patch / minor / major). One run does everything:
 
-1. release-it bumps `packages/setup/package.json`; the `after:bump` hook
-   (`scripts/release-version-sync.ts`) syncs `AMADEUS_VERSION` and the README
-   badge; the tracked version surfaces are committed, tagged `vX.Y.Z`, and
-   pushed to `main` (config:
-   `packages/setup/.release-it.json`)
+1. `scripts/release-land.ts` plans the next version and calls
+   `scripts/release-version-sync.ts`, which writes every version surface
+   (`packages/setup/package.json`, `AMADEUS_VERSION`, and the README badge);
+   those files land on `main` through a bot PR and the merge queue; this run
+   then tags the squash commit `vX.Y.Z`
 2. `build-dist` checks out that exact commit, installs with Bun 1.3.13, builds
    every harness, runs the full CI test profile, enforces the source-only
    boundary and graph invariants, and creates a deterministic
@@ -171,14 +172,13 @@ edit cannot enter the Git history or this clean-checkout build.
 
 The **first release** needs no special handling: with no `v*` tag in the
 repo, the dispatch skips the bump and releases the committed version as-is
-(`release-it --no-increment`, tag only). Pushing a `vX.Y.Z` tag manually
-remains a fallback entry point — it skips the bump (the tag must match the
-committed package version and point at `main`) and runs notes → build →
-publish.
+(tag only). Pushing a `vX.Y.Z` tag manually remains a fallback entry point
+— it skips the bump (the tag must match the committed package version and
+point at `main`) and runs notes → build → publish.
 
-To rehearse without releasing, dispatch with `dry-run: true` —
-release-it runs with `--dry-run` (no commit/tag/push), distribution asset
-creation is skipped, and `npm publish --dry-run` replaces the real publish; no
+To rehearse without releasing, dispatch with `dry-run: true` — the lander
+runs with `--dry-run` (no commit/PR/tag), distribution asset creation is
+skipped, and `npm publish --dry-run` replaces the real publish; no
 `NPM_TOKEN` is needed.
 
 ### Fallback: manual publish (no provenance)

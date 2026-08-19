@@ -788,7 +788,7 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "worktree",
     requiredAttributes: ["Bolt slug", "Worktree path", "Branch name", "Base branch"],
-    optionalAttributes: [],
+    optionalAttributes: ["Base SHA"],
     schemaVersion: 1,
   },
   {

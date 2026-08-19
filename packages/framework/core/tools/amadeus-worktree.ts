@@ -14,8 +14,9 @@
 // Running from inside a Bolt worktree itself (true nesting) is still rejected.
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
-import { basename, dirname, join, resolve } from "node:path";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import { emitAuditEvent } from "../otel/audit-emit.ts";
 import {
   auditBlockField,
@@ -26,14 +27,17 @@ import {
   normalizeWorktreeSlug,
   pathKey,
   readAllAuditShards,
+  relativeRecordDir,
   resolveConstructionRepo,
   resolveMainCheckout,
   resolveProjectDir,
   worktreeBaseDir,
   worktreePath,
+  worktreeRuntimeGraphPath,
   worktreeStateFilePath,
 } from "./amadeus-lib.js";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
+import { isHarnessDirName } from "./amadeus-harness.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
 
 // kebab-case slug shape: lowercase letter, then lowercase letters / digits /
@@ -129,6 +133,12 @@ function runGit(args: string[], cwd?: string): GitResult {
     stderr: (r.stderr ?? "").toString(),
     code: r.status ?? 1,
   };
+}
+
+// Shared failure detail for the merge preflight/cleanup errors. A dedicated
+// helper keeps the call sites free of nested template literals.
+export function gitRunDetail(result: GitResult): string {
+  return result.stderr.trim() || result.stdout.trim() || `exit ${result.code}`;
 }
 
 export function assertLocalBaseFresh({
@@ -311,7 +321,9 @@ export function handleCreate(
 
   // Audit-first: emit BEFORE git so a kill-9 between emit and git surfaces
   // as "phantom WORKTREE_CREATED" reconciled by doctor (audit-of-intent
-  // semantics — see docs/reference/12-state-machine.md).
+  // semantics — see docs/reference/12-state-machine.md). The Base SHA pins the
+  // fork point: `amadeus-swarm check/finalize` read it back as the anti-tamper
+  // baseline, so a worker commit cannot move the baseline by committing.
   let auditTs: string;
   try {
     auditTs = emitAudit(pd, "WORKTREE_CREATED", {
@@ -319,6 +331,7 @@ export function handleCreate(
       "Worktree path": wtPath,
       "Branch name": branchName,
       "Base branch": flags.base,
+      "Base SHA": baseExists.stdout.trim(),
     }, flags.intent, flags.space);
   } catch (e) {
     errorWithSlug(slug, `Audit emission failed: ${errorMessage(e)}`);
@@ -348,9 +361,11 @@ export function handleCreate(
 //
 // Usage:
 //   amadeus-worktree merge --slug <slug> --target <branch> --strategy <squash|merge|rebase>
-//                        [--message <msg>] [--repo <name>] [--intent <dir>] [--space <name>]
+//                        [--message <msg>] [--repo <name>]
+//                        [--intent <dir>] [--space <name>]
 //
 // --repo (P7): the sibling repo the merge lands in — same resolution as `create`.
+
 export function handleMerge(
   args: string[],
   explicitProjectDir?: string,
@@ -368,6 +383,16 @@ export function handleMerge(
   // worktree, gitCwd is the main checkout; otherwise it is the caller's own repoCwd.
   const repoCwd = resolveRepoCwd(pd, flags, slug);
   const { gitCwd } = resolveWorktreeAnchor(repoCwd);
+  const wtPath = worktreePath(pd, slug);
+  const sourceManaged = managedWorktreePaths(pd, wtPath, flags);
+
+  // Refuse uncommitted, staged, or unknown-ignored source before the
+  // WORKTREE_MERGED audit row and before any mutating git command. The worktree
+  // fork's state/audit/runtime mirrors are metadata already handled by
+  // complete --merge, not source input. Disposable ignored paths (generated
+  // output roots, self-install copies) are remembered for post-merge cleanup.
+  const disposableSource = preflightDirtySource(wtPath, slug, sourceManaged);
+  preflightDirtyTarget(gitCwd, slug);
 
   // Defensive HEAD check: the main checkout must have <target> checked out.
   const head = runGit(["rev-parse", "--abbrev-ref", "HEAD"], gitCwd);
@@ -388,7 +413,6 @@ export function handleMerge(
     );
   }
 
-  const wtPath = worktreePath(pd, slug);
   const branchName = `bolt-${slug}`;
 
   // Rebase requires a remote for <target>. The remote-existence check is
@@ -534,6 +558,23 @@ export function handleMerge(
   // "merge failed entirely" from "merge landed, cleanup orphan remains"
   // — these need different recovery actions.
   const cleanupTag = `[merge-succeeded:${commitSha}]`;
+  // Remove the disposable ignored paths captured at preflight (generated output
+  // roots, self-install copies) by exact pathspec, then discard only the
+  // fork-managed metadata that complete --merge has already converged. Restore
+  // tracked metadata to the source branch's HEAD, then remove untracked/ignored
+  // metadata through explicit pathspecs. Re-run the source preflight before
+  // non-force removal so a late source write is preserved.
+  if (disposableSource.length > 0) {
+    const cleaned = runGit(["clean", "-fdx", "--", ...disposableSource], wtPath);
+    if (!cleaned.ok) {
+      errorWithSlug(
+        slug,
+        `${cleanupTag} disposable source cleanup failed: ${gitRunDetail(cleaned)}`,
+      );
+    }
+  }
+  cleanupManagedWorktreeMetadata(wtPath, slug, sourceManaged, cleanupTag);
+  preflightDirtySource(wtPath, slug, sourceManaged, cleanupTag);
   const rm = runGit(["worktree", "remove", wtPath], gitCwd);
   if (!rm.ok) {
     errorWithSlug(
@@ -560,6 +601,259 @@ export function handleMerge(
       audit_timestamp: auditTs,
     })
   );
+}
+
+interface ManagedWorktreePaths {
+  readonly state: string;
+  readonly runtimeGraph: string;
+  readonly auditDir: string;
+  readonly scratchPrefix: string;
+}
+
+function gitRelativePath(wtPath: string, path: string): string {
+  return relative(wtPath, path).split(sep).join("/");
+}
+
+function managedWorktreePaths(
+  pd: string,
+  rootPath: string,
+  flags: Record<string, string>,
+): ManagedWorktreePaths {
+  const recordPrefix = relativeRecordDir(pd, flags.intent, flags.space);
+  const statePath = worktreeStateFilePath(rootPath, recordPrefix);
+  const recordRoot = dirname(statePath);
+  const recordRootRel = gitRelativePath(rootPath, recordRoot);
+  return {
+    state: gitRelativePath(rootPath, statePath),
+    runtimeGraph: gitRelativePath(
+      rootPath,
+      worktreeRuntimeGraphPath(rootPath, recordPrefix),
+    ),
+    auditDir: `${recordRootRel}/audit`,
+    scratchPrefix: `${recordRootRel}/.amadeus-`,
+  };
+}
+
+function hasPathPrefix(path: string, prefix: string): boolean {
+  return prefix.length > 0 && (path === prefix || path.startsWith(`${prefix}/`));
+}
+
+function isManagedWorktreePath(path: string, managed: ManagedWorktreePaths): boolean {
+  return (
+    path === managed.state ||
+    path === managed.runtimeGraph ||
+    hasPathPrefix(path, managed.auditDir) ||
+    path.startsWith(managed.scratchPrefix)
+  );
+}
+
+// The harness self-install root this tool runs from (…/<harness>/tools →
+// …/<harness>, e.g. dist/claude/.claude). An ignored worktree FILE that also
+// exists in this tree is a regenerable self-install copy, not source; any
+// other ignored file may be hand-authored and must block the merge loudly.
+// Shape-validated: when the module does NOT run from a harness install (a
+// source-tree import, a relocated bundle), there is no install root and no
+// ignored file is disposable — fail closed instead of deriving a root from an
+// arbitrary parent directory, because this classification feeds `git clean`.
+export function resolveSelfInstallRoot(moduleDir: string): string | null {
+  if (basename(moduleDir) !== "tools") return null;
+  const harnessDirPath = dirname(moduleDir);
+  return isHarnessDirName(basename(harnessDirPath)) ? harnessDirPath : null;
+}
+
+const HARNESS_INSTALL_ROOT = resolveSelfInstallRoot(dirname(fileURLToPath(import.meta.url)));
+
+export function isSelfInstallLeaf(
+  relPath: string,
+  installRoot: string | null = HARNESS_INSTALL_ROOT,
+): boolean {
+  if (installRoot === null) return false;
+  const [head, ...rest] = relPath.split("/");
+  return (
+    rest.length > 0 &&
+    head === basename(installRoot) &&
+    existsSync(join(installRoot, ...rest))
+  );
+}
+
+interface SourceInspection {
+  readonly blocking: string[];
+  readonly disposable: string[];
+}
+
+export function classifySourcePaths(
+  porcelain: string,
+  managed: ManagedWorktreePaths,
+  installRoot: string | null = HARNESS_INSTALL_ROOT,
+): SourceInspection {
+  const records = porcelain.split("\0");
+  const blocking: string[] = [];
+  const disposable: string[] = [];
+  for (let index = 0; index < records.length; index++) {
+    const record = records[index];
+    if (record.length === 0) continue;
+    if (record.length < 4 || record[2] !== " ") {
+      blocking.push("<malformed-git-status>");
+      continue;
+    }
+    const status = record.slice(0, 2);
+    const paths = [record.slice(3)];
+    if (/[RC]/.test(status)) {
+      const originalPath = records[index + 1];
+      if (originalPath === undefined || originalPath.length === 0) {
+        blocking.push("<malformed-git-status>");
+      } else {
+        paths.push(originalPath);
+        index += 1;
+      }
+    }
+    for (const path of paths) {
+      if (isManagedWorktreePath(path, managed)) continue;
+      if (status === "!!") {
+        // A wholly-ignored directory collapses to a `!! dir/` entry: generated
+        // output territory, removable by exact path before worktree removal.
+        if (path.endsWith("/") || isSelfInstallLeaf(path, installRoot)) disposable.push(path);
+        else blocking.push(path);
+      } else {
+        blocking.push(path);
+      }
+    }
+  }
+  return { blocking: [...new Set(blocking)], disposable: [...new Set(disposable)] };
+}
+
+function inspectSourceWorktree(
+  wtPath: string,
+  slug: string,
+  managed: ManagedWorktreePaths,
+  failureTag = "",
+): SourceInspection {
+  const failurePrefix = failureTag.length > 0 ? `${failureTag} ` : "";
+  const status = runGit(
+    [
+      "status",
+      "--porcelain=v1",
+      "-z",
+      "--untracked-files=all",
+      "--ignored=matching",
+    ],
+    wtPath,
+  );
+  if (!status.ok) {
+    errorWithSlug(
+      slug,
+      `${failurePrefix}could not inspect source worktree status: ${gitRunDetail(status)}`,
+    );
+  }
+  return classifySourcePaths(status.stdout, managed);
+}
+
+// Refuse source the merge must not lose: uncommitted or staged tracked changes,
+// untracked files, and ignored files that are neither generated-output roots nor
+// regenerable self-install copies. Returns the disposable ignored paths so the
+// post-merge cleanup can remove them by exact pathspec before the non-force
+// worktree removal.
+function preflightDirtySource(
+  wtPath: string,
+  slug: string,
+  managed: ManagedWorktreePaths,
+  failureTag = "",
+): string[] {
+  const failurePrefix = failureTag.length > 0 ? `${failureTag} ` : "";
+  const inspection = inspectSourceWorktree(wtPath, slug, managed, failureTag);
+  if (inspection.blocking.length === 0) return inspection.disposable;
+  errorWithSlug(
+    slug,
+    `${failurePrefix}source worktree has uncommitted, staged, or ignored changes: ${inspection.blocking.join(", ")}. Commit or remove them before merge.`,
+  );
+}
+
+function preflightDirtyTarget(gitCwd: string, slug: string): void {
+  const staged = runGit(["diff", "--cached", "--quiet", "--exit-code"], gitCwd);
+  if (!staged.ok) {
+    if (staged.code !== 1) {
+      errorWithSlug(
+        slug,
+        `could not inspect staged target changes: ${gitRunDetail(staged)}`,
+      );
+    }
+    const names = runGit(["diff", "--cached", "--name-only", "-z"], gitCwd);
+    if (!names.ok) {
+      errorWithSlug(
+        slug,
+        `could not list staged target changes: ${gitRunDetail(names)}`,
+      );
+    }
+    const paths = names.stdout.split("\0").filter((path) => path.length > 0);
+    errorWithSlug(
+      slug,
+      `target checkout has staged changes: ${paths.join(", ") || "<unknown>"}. Commit or remove them before merge.`,
+    );
+  }
+}
+
+function managedMetadataCleanupPaths(
+  wtPath: string,
+  slug: string,
+  managed: ManagedWorktreePaths,
+): string[] {
+  const separator = managed.scratchPrefix.lastIndexOf("/");
+  const recordRoot = managed.scratchPrefix.slice(0, separator);
+  const scratchNamePrefix = managed.scratchPrefix.slice(separator + 1);
+  const absoluteRecordRoot = resolve(wtPath, recordRoot);
+  let scratchPaths: string[] = [];
+  if (existsSync(absoluteRecordRoot)) {
+    try {
+      scratchPaths = readdirSync(absoluteRecordRoot)
+        .filter((name) => name.startsWith(scratchNamePrefix))
+        .map((name) => `${recordRoot}/${name}`);
+    } catch (cause) {
+      errorWithSlug(
+        slug,
+        `could not enumerate managed worktree metadata: ${cause instanceof Error ? cause.message : String(cause)}`,
+      );
+    }
+  }
+  return [managed.state, managed.runtimeGraph, managed.auditDir, ...scratchPaths];
+}
+
+function cleanupManagedWorktreeMetadata(
+  wtPath: string,
+  slug: string,
+  managed: ManagedWorktreePaths,
+  cleanupTag: string,
+): void {
+  const tracked = runGit(["ls-files", "-z"], wtPath);
+  if (!tracked.ok) {
+    errorWithSlug(
+      slug,
+      `${cleanupTag} could not inspect tracked worktree metadata: ${gitRunDetail(tracked)}`,
+    );
+  }
+  const trackedManaged = tracked.stdout
+    .split("\0")
+    .filter((path) => path.length > 0 && isManagedWorktreePath(path, managed));
+  if (trackedManaged.length > 0) {
+    const restored = runGit(
+      ["restore", "--source=HEAD", "--staged", "--worktree", "--", ...trackedManaged],
+      wtPath,
+    );
+    if (!restored.ok) {
+      errorWithSlug(
+        slug,
+        `${cleanupTag} managed metadata restore failed: ${gitRunDetail(restored)}`,
+      );
+    }
+  }
+
+  const cleanupPaths = managedMetadataCleanupPaths(wtPath, slug, managed);
+  const cleaned = runGit(["clean", "-fdx", "--", ...cleanupPaths], wtPath);
+  if (!cleaned.ok) {
+    errorWithSlug(
+      slug,
+      `${cleanupTag} managed metadata cleanup failed: ${gitRunDetail(cleaned)}`,
+    );
+  }
 }
 
 function currentSha(cwd?: string): string {

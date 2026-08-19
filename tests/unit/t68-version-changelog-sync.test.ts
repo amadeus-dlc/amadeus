@@ -6,7 +6,7 @@
 // CHANGELOG.md as well (heading ⇄ version.ts ⇄ badge three-point sync,
 // heading uniqueness, link-ref policy — ported from the .sh TAP plan 6).
 // CHANGELOG.md was deleted on 2026-07-09: release notes are now generated
-// per release into GitHub Releases by the release workflow (release-it +
+// per release into GitHub Releases by the release workflow (release-land +
 // softprops/action-gh-release, unified `vX.Y.Z` tag axis), so there is no
 // changelog file to sync. The filename keeps the historical t68 id to avoid
 // test-inventory churn.
@@ -65,8 +65,8 @@ describe("t68 framework version sync (version.ts / CLI / README badge)", () => {
   }, scaleTestTime(30000));
 
   // The repo has ONE version: packages/setup's package.json (which drives
-  // the v* release tags) must equal AMADEUS_VERSION. The release-it
-  // after:bump hook (scripts/release-version-sync.ts) keeps them aligned;
+  // the v* release tags) must equal AMADEUS_VERSION. The release lander
+  // (scripts/release-version-sync.ts) keeps them aligned;
   // this guard catches a hand bump of either side alone.
   test("packages/setup version equals AMADEUS_VERSION (unified version axis)", () => {
     const tsVersion = versionAssignments()[0];

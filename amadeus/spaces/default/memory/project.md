@@ -47,7 +47,7 @@
 
 デプロイ基盤は持たず、リリースは npm パッケージ配布、GitHub Release Asset、タグ / PR 履歴で管理する。GitHub Actions は push と pull_request で typecheck、lint、隔離2回ビルドの再現性検査、source-only 境界検査、グラフ不変量検査、smoke + unit + integration tests を実行する。
 
-リリースは `release.yml` の `workflow_dispatch` 一本で行う。release-it がバージョン同期、`vX.Y.Z` タグ、GitHub Release ノート、npm publish を実行する。手書きの `CHANGELOG.md` は持たず、PR や amadeus ワークフローからバージョンを上げない。
+リリースは `release.yml` の `workflow_dispatch` 一本で行う。lander がバージョン同期を bot PR と merge queue で着地させ、squash commit に `vX.Y.Z` タグを打ち、GitHub Release ノートと npm publish を実行する。手書きの `CHANGELOG.md` は持たず、機能 PR や amadeus ワークフローからバージョンを上げない。
 
 - バージョン管理下の append-only 生成物の誤りは、履歴 rewrite・force push・branch protection 緩和をせず、人間承認付き通常 PR の `git revert` で回復する。collector / schema の欠陥なら修正と revert を同一 PR にし、conflict 時は停止する <!-- cid:deployment-pipeline:c3 -->
 - Deployment Execution の結果は N/A(反証可能な不存在・非適用根拠あり)、NOT EXECUTED(理由併記)、PENDING(閉包条件併記)、PASS(実行証跡に基づく検証成功)を相互代用しない <!-- cid:deployment-execution:c3 -->
@@ -73,7 +73,7 @@ TypeScript / ESM と Bun 直接実行を前提に、既存の `amadeus-` プレ�
 ## Decided
 
 - DECIDED: 新しい `/amadeus --*` ユーティリティハンドラを実装する前に `docs/reference/11-contributing.md` の「Adding a Utility Handler」チェックリストに従う
-- DECIDED: バージョンバンプは `release.yml`(workflow_dispatch → release-it)だけが行う。`after:bump` の `scripts/release-version-sync.ts` が全バージョン面を機械的に同期するため、PR や amadeus ワークフローが個別ファイルのバージョンを上げることはない
+- DECIDED: バージョンバンプは `release.yml`(workflow_dispatch → `scripts/release-land.ts`)だけが行う。`scripts/release-version-sync.ts` が全バージョン面を機械的に同期し、着地は merge queue 上の bot PR に限定する。機能 PR や amadeus ワークフローが個別ファイルのバージョンを上げることはない
 - DECIDED: 成果物が複数の配送経路(packager 投影 / runtime compose / self-install 等)を通って届く修正では、受け入れ条件をソース断面の述語で書かず、各配送先の実ツリーに対する述語で書く。ソース断面だけの green は、変換器を持たない配送路の退行を構造的に隠す <!-- cid:requirements-analysis:c2-acceptance-at-delivery-tree -->
 - DECIDED: `packages/framework/core/` を変更したときの build と再現性検査は、manifest が発見する全ハーネスを対象とする。固定数や一部列挙で止めず、packager の検出集合を正とする <!-- cid:build-and-test:bt-dist-regen-seven-harnesses -->
 
