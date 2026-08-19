@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import {
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
@@ -249,16 +250,28 @@ describe("t549 election v2 store", () => {
     })).toMatchObject({ ok: false, error: "run-conflict" });
   });
 
+  // The current-tally write is failed by a read-only election directory: the
+  // tallies/ subdirectory stays writable, so the history entry still lands,
+  // while the sibling staging file for tally.json cannot be created. This arm
+  // used to pre-create `tally.json.tmp` instead, which only worked while
+  // writeStoreFile derived its staging file from the destination alone (#3183).
   test("same-run retry advances when history is durable but current was not written", () => {
     state("collecting");
     const first = tally("run-1", ["q1", "q2"], [established("q1"), hold("q2")], null);
-    mkdirSync(join(electionDir(), "tally.json.tmp"));
-    const failed = ElectionStore.commitTally(root, DEFINITION.electionId, first, {
-      expectedState: "collecting",
-      nextState: "partial",
-    });
+    // commitTally's own mkdir of tallies/ needs the election directory
+    // writable, so create it while that is still true.
+    mkdirSync(join(electionDir(), "tallies"), { recursive: true });
+    chmodSync(electionDir(), 0o555);
+    let failed: ReturnType<typeof ElectionStore.commitTally>;
+    try {
+      failed = ElectionStore.commitTally(root, DEFINITION.electionId, first, {
+        expectedState: "collecting",
+        nextState: "partial",
+      });
+    } finally {
+      chmodSync(electionDir(), 0o755);
+    }
     expect(failed).toMatchObject({ ok: false, error: "io-error", durable: ["history"] });
-    rmSync(join(electionDir(), "tally.json.tmp"), { recursive: true });
 
     const repaired = ElectionStore.commitTally(root, DEFINITION.electionId, first, {
       expectedState: "collecting",
@@ -396,13 +409,18 @@ describe("t549 election v2 store", () => {
       error: "corrupt",
     });
     rmSync(join(electionDir(), "tally.json"));
-    const electionJson = join(electionDir(), "election.json");
-    mkdirSync(`${electionJson}.tmp`);
-    expect(ElectionStore.setState(root, DEFINITION.electionId, "open")).toMatchObject({
-      ok: false,
-      error: "io-error",
-    });
-    rmSync(`${electionJson}.tmp`, { recursive: true });
+    // election.json stays readable (load must succeed) while its directory
+    // denies new files, so the write fails at its staging step. Squatting
+    // `election.json.tmp` no longer does this: staging names are per-process
+    // since #3183.
+    chmodSync(electionDir(), 0o555);
+    let readOnlyState: ReturnType<typeof ElectionStore.setState>;
+    try {
+      readOnlyState = ElectionStore.setState(root, DEFINITION.electionId, "open");
+    } finally {
+      chmodSync(electionDir(), 0o755);
+    }
+    expect(readOnlyState).toMatchObject({ ok: false, error: "io-error" });
 
     const registry = JSON.parse(readFileSync(electionsRegistryPath(root), "utf8"));
     const originalDirName = registry[0].dirName;
