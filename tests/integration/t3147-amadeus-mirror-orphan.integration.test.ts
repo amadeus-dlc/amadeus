@@ -1,6 +1,6 @@
 // t3147 — orphan Intent Mirror diagnosis + repair CLI, real filesystem registry.
 // covers: packages/framework/core/tools/amadeus-mirror-orphan.ts
-// size: small
+// size: medium
 
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
