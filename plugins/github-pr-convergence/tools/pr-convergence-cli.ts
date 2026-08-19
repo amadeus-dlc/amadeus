@@ -97,6 +97,7 @@ import {
   verifyCurrentPrerequisites,
   verifyLandedPrerequisites,
   verifyMergedEpochAncestry,
+  verifySupersedeAncestry,
 } from "./pr-convergence-git-runner.ts";
 
 // ---------------------------------------------------------------------------
@@ -146,6 +147,21 @@ export type ConvergenceReport =
       readonly checkRollupState: string | null;
       readonly generatedAt: string;
       readonly attestation?: ReportAttestation;
+    }
+  | {
+      // A unit whose OWN pull request never converged: the work reached the
+      // trunk through a different pull request or commit entirely (#3239).
+      // No verdict and no ledger — the convergence predicate never ran
+      // against this pull request, and a human ruled its delivery closed
+      // instead of the loop. `supersededBy` is the commit that actually
+      // delivered the work, measured by ancestry against the checkout that
+      // mints this record.
+      readonly kind: "superseded";
+      readonly generatedAt: string;
+      readonly prRef: { readonly repo: string; readonly number: number };
+      readonly supersededBy: string;
+      readonly override: OverrideRecord;
+      readonly attestation?: ReportAttestation;
     };
 
 export { REPORT_BASENAME, reportPathFor };
@@ -175,6 +191,22 @@ export function renderReport(report: ConvergenceReport): string {
       // Informational only: a merged PR may have carried no checks at all, and
       // an absent rollup is not a field worth rendering as "null".
       ...(report.checkRollupState === null ? [] : [`- check rollup: ${report.checkRollupState}`]),
+      `- generated at: ${report.generatedAt}`,
+      "",
+    ].join("\n");
+    return report.attestation === undefined ? payload : `${payload}${renderAttestation(report.attestation)}`;
+  }
+  if (report.kind === "superseded") {
+    const payload = [
+      "# PR Convergence Report",
+      "",
+      "- kind: superseded",
+      `- pull request: ${report.prRef.repo}#${report.prRef.number}`,
+      `- superseded by: ${report.supersededBy}`,
+      "- converged: false",
+      `- human turn: ${report.override.humanTurnId}`,
+      `- reason: ${report.override.reason}`,
+      `- recorded at: ${report.override.recordedAt}`,
       `- generated at: ${report.generatedAt}`,
       "",
     ].join("\n");
@@ -378,6 +410,15 @@ interface ConvergenceOptions {
   readonly reason: string | null;
   readonly logTool: string;
   readonly unlinked: boolean;
+  // The supersede arm of `override` (#3239): the commit that actually
+  // delivered this unit's work, when this delivery's own pull request never
+  // converged, and the Bolt it belongs to — supersede never reaches a pull
+  // request body to read the Amadeus Work identity from, so `bolt` is
+  // supplied the same way `create` supplies it. The pair is one optional
+  // field, not two independently-nullable ones: the parser is the only place
+  // that decides whether supersede applies, and there is no state where one
+  // is present without the other for `runSupersede` to re-check.
+  readonly supersede: SupersedeFlags | null;
 }
 
 interface CreateBaseOptions {
@@ -518,32 +559,87 @@ function parseUnlinked(flags: Map<string, string>): UnlinkedParse {
   return { ok: true, value: true };
 }
 
-function parseOptions(argv: readonly string[]): OptionParse {
-  const [verb, ...rest] = argv;
-  const flags = parseFlags(rest);
-  if (flags === null) return { ok: false, message: "malformed flags: expected --key value pairs" };
-  if (verb === "create") return parseCreateOptions(flags);
-  if (verb !== "status" && verb !== "report" && verb !== "override") {
-    return { ok: false, message: `unknown verb: ${String(verb)} (expected create|status|report|override)` };
+const SUPERSEDED_BY_RE = /^[0-9a-f]{40}$/;
+
+interface SupersedeFlags {
+  readonly supersededBy: string;
+  readonly bolt: string;
+}
+
+type SupersedeFlagsParse =
+  | { readonly ok: true; readonly value: SupersedeFlags | null }
+  | { readonly ok: false; readonly message: string };
+
+/** `--superseded-by` is override-only, and only a full commit object id: no PR
+ *  resolution happens inside the CLI (#3239 keeps the simplest shape — the
+ *  caller resolves a pull request to the commit that landed it). `--bolt` is
+ *  required alongside it, the same way `create` requires its own `--bolt`.
+ *  The pair is minted together or not at all — there is no `SupersedeFlags`
+ *  with only one field set for a downstream check to catch. */
+function parseSupersedeFlags(flags: Map<string, string>, verb: string): SupersedeFlagsParse {
+  const value = flags.get("superseded-by");
+  if (value === undefined) return { ok: true, value: null };
+  if (verb !== "override") return { ok: false, message: "--superseded-by is only valid with override" };
+  if (!SUPERSEDED_BY_RE.test(value)) {
+    return { ok: false, message: "--superseded-by must be a full commit object id" };
   }
-  const target = resolveTarget(flags);
-  if (!target.ok) return target;
+  const bolt = flags.get("bolt") ?? null;
+  if (bolt === null || !UNIT_RE.test(bolt)) {
+    return { ok: false, message: "--bolt is required and must be a slug with --superseded-by" };
+  }
+  return { ok: true, value: { supersededBy: value, bolt } };
+}
+
+const KNOWN_CONVERGENCE_VERBS = new Set(["status", "report", "override"]);
+
+type ReasonParse =
+  | { readonly ok: true; readonly value: string | null }
+  | { readonly ok: false; readonly message: string };
+
+/** `--reason` is free-form everywhere except `override`, which requires a
+ *  non-blank one — the whole point of a human ruling is that it says why. */
+function parseReason(flags: Map<string, string>, verb: string): ReasonParse {
   const reason = flags.get("reason") ?? null;
-  const unlinked = parseUnlinked(flags);
-  if (!unlinked.ok) return unlinked;
   if (verb === "override" && (reason === null || reason.trim() === "")) {
     return { ok: false, message: "--reason is required for override" };
   }
+  return { ok: true, value: reason };
+}
+
+function parseConvergenceOptions(
+  verb: "status" | "report" | "override",
+  flags: Map<string, string>,
+): OptionParse {
+  const target = resolveTarget(flags);
+  if (!target.ok) return target;
+  const reason = parseReason(flags, verb);
+  if (!reason.ok) return reason;
+  const unlinked = parseUnlinked(flags);
+  if (!unlinked.ok) return unlinked;
+  const supersede = parseSupersedeFlags(flags, verb);
+  if (!supersede.ok) return supersede;
   return {
     ok: true,
     value: {
       verb,
       ...target.value,
-      reason,
+      reason: reason.value,
       logTool: flags.get("log-tool") ?? defaultLogToolPath(),
       unlinked: unlinked.value,
+      supersede: supersede.value,
     },
   };
+}
+
+function parseOptions(argv: readonly string[]): OptionParse {
+  const [verb, ...rest] = argv;
+  const flags = parseFlags(rest);
+  if (flags === null) return { ok: false, message: "malformed flags: expected --key value pairs" };
+  if (verb === "create") return parseCreateOptions(flags);
+  if (verb === undefined || !KNOWN_CONVERGENCE_VERBS.has(verb)) {
+    return { ok: false, message: `unknown verb: ${String(verb)} (expected create|status|report|override)` };
+  }
+  return parseConvergenceOptions(verb as "status" | "report" | "override", flags);
 }
 
 interface DeliveryHeads {
@@ -639,9 +735,14 @@ function existingReportKind(path: string): ExistingReport | null {
 function transitionAllowed(current: string, next: string): boolean {
   // `created -> landed` is the merge-queue finalisation (#3062): auto-merge
   // landed the pull request before `report` ran, so the epoch closes on the
-  // merge fact instead of a convergence verdict. Nothing transitions OUT of a
-  // final state, and no final state is rewritten as another.
-  if (current === "created") return next === "converged" || next === "override" || next === "landed";
+  // merge fact instead of a convergence verdict. `created -> superseded`
+  // (#3239) is the same shape for a delivery that never merged at all: a
+  // human ruled it closed because the work landed through a different pull
+  // request or commit. Nothing transitions OUT of a final state, and no final
+  // state is rewritten as another.
+  if (current === "created") {
+    return next === "converged" || next === "override" || next === "landed" || next === "superseded";
+  }
   return current === "override" && next === "converged";
 }
 
@@ -1031,6 +1132,20 @@ function lifecycleAtChangedHead(
       ? { kind: "write" }
       : refuseLifecycle(`report lifecycle refused: ${previousKind} -> ${report.kind}`);
   }
+  // A superseded record answers for no live PR head at all — the ancestry it
+  // rests on (verifySupersedeAncestry) was already measured before the
+  // caller got here, and it names the checkout, never the pull request's
+  // head. A stale `created` epoch this record supersedes is exactly the case
+  // it exists to close, but a stale head is not itself permission: only
+  // `created -> superseded` is a real transition, so an already-terminal
+  // record (converged, landed, or a prior superseded) left at some earlier
+  // head is refused exactly as transitionAllowed already says, not
+  // silently rewritten because its head happens to have moved.
+  if (report.kind === "superseded") {
+    return transitionAllowed(previousKind, report.kind)
+      ? { kind: "write" }
+      : refuseLifecycle(`report lifecycle refused: ${previousKind} -> ${report.kind}`);
+  }
   return report.kind === "created"
     ? { kind: "write" }
     : refuseLifecycle("report lifecycle stale: PR head changed; run create to begin a new created epoch");
@@ -1046,7 +1161,11 @@ function selfReportLifecycle(
   const { heads, work } = delivery;
   const previous = existingReportKind(path);
   if (previous === null) {
-    return report.kind === "created"
+    // Supersede (#3239) is the one arm that never needs a created epoch
+    // first: the whole point is that this delivery's own pull request never
+    // reached one, or the created report that once existed was lost when the
+    // record was reconstructed after the supersede.
+    return report.kind === "created" || report.kind === "superseded"
       ? { kind: "write" }
       : refuseLifecycle("report lifecycle refused: create must establish the created state first");
   }
@@ -1780,7 +1899,109 @@ function overrideReason(reason: string, ruling: MergedEpochRuling | null): strin
   return reason === "" ? measured : `${reason} — ${measured}`;
 }
 
+/**
+ * The supersede arm of `override` (#3239): a unit whose own pull request was
+ * closed without merging because the work it carried reached the trunk
+ * through a different pull request or commit. Neither of the two prerequisites
+ * every other arm rests on hold here: there is no live PR head to check the
+ * checkout out at (the delivery may already be gone, or was never this
+ * checkout's branch), and the delivery need never have reached a `created`
+ * epoch in the first place (a supersede can happen before `create` ever ran,
+ * or after the record that once existed was lost).
+ *
+ * What replaces them is measured locally rather than asked of GitHub: the
+ * commit that superseded this delivery must be an ancestor of the checkout
+ * writing this record (`verifySupersedeAncestry`), and a human — never the
+ * loop, which has nothing left to converge — must be the one recording it
+ * (the same HUMAN_TURN requirement `override` already carries). No GitHub
+ * call is made at all: the own pull request may be CLOSED, and the ordinary
+ * evaluation pipeline (`evaluate`) exists to judge an OPEN one.
+ */
+async function runSupersede(
+  options: ConvergenceOptions,
+  supersede: SupersedeFlags,
+  seams: CliSeams,
+): Promise<CliOutcome> {
+  if (!isSelfRecord(options.record)) {
+    return { exitCode: 1, stdout: "", stderr: "supersede refused: --superseded-by is only meaningful for self-* records\n" };
+  }
+  const { supersededBy, bolt } = supersede;
+  const membershipFailure = deliveryMembershipFailure(options.record, bolt, options.units);
+  if (membershipFailure !== null) {
+    return { exitCode: 1, stdout: "", stderr: `supersede refused: ${membershipFailure}\n` };
+  }
+  const git = seams.gitSpawn ?? nodeGitSpawn;
+  const prerequisite = verifyLandedPrerequisites(options.record, git, options.units);
+  if (!prerequisite.ok) {
+    return { exitCode: 1, stdout: "", stderr: `supersede refused: ${prerequisite.message}\n` };
+  }
+  const ancestry = verifySupersedeAncestry(options.record, supersededBy, git);
+  if (!ancestry.ok) {
+    return { exitCode: 1, stdout: "", stderr: `supersede refused: ${ancestry.message}\n` };
+  }
+  const humanTurn = latestHumanTurn(options.record);
+  if (humanTurn === null) {
+    return { exitCode: 1, stdout: "", stderr: "supersede refused: no HUMAN_TURN found in the record's audit shards\n" };
+  }
+  const intent = resolveIntentReference(options.record);
+  if (!intent.ok) return { exitCode: 3, stdout: "", stderr: `${intent.message}\n` };
+
+  const recordedAt = seams.now();
+  const reason = options.reason ?? "";
+  const decision =
+    `pr-convergence supersede: ${options.ref.repo}#${options.ref.number} unit=${options.unit} ` +
+    `supersededBy=${supersededBy} humanTurn=${humanTurn.eventId} reason=${reason}`;
+  const emitted = await seams.emitDecision([
+    "bun",
+    options.logTool,
+    "decision",
+    "--stage",
+    "code-generation",
+    "--decision",
+    decision,
+    "--rationale",
+    reason,
+  ]);
+  if (emitted.code !== 0) {
+    return {
+      exitCode: 2,
+      stdout: "",
+      stderr: `supersede refused: audit emission failed (exit ${emitted.code}) ${emitted.stderr}\n`,
+    };
+  }
+
+  const report: ConvergenceReport = {
+    kind: "superseded",
+    generatedAt: recordedAt,
+    prRef: refValue(options.ref),
+    supersededBy: ancestry.proof.supersededBy,
+    override: { humanTurnId: humanTurn.eventId, reason, recordedAt },
+  };
+  const work: DeliveryWork = {
+    intent: intent.value.name,
+    intentUuid: intent.value.uuid,
+    record: intent.value.recordPath,
+    bolt,
+    unit: options.unit,
+    units: options.units,
+  };
+  // No live branch answers for a superseded delivery, so — exactly as the
+  // landed and merged-override arms already do when a live head cannot be
+  // named — every head in the triple binds to the one thing that IS live:
+  // the checkout minting this record.
+  const heads: DeliveryHeads = {
+    localHead: ancestry.proof.localHead,
+    remoteHead: ancestry.proof.localHead,
+    prHead: ancestry.proof.localHead,
+  };
+  const delivery: SelfDelivery = { work, heads, epoch: null, ruling: null, merge: null };
+  return writeSelfReport(options.record, report, delivery, seams, "pr-convergence");
+}
+
 async function runConvergence(options: ConvergenceOptions, seams: CliSeams): Promise<CliOutcome> {
+  if (options.verb === "override" && options.supersede !== null) {
+    return runSupersede(options, options.supersede, seams);
+  }
   let evaluation: EvaluationResult;
   try {
     evaluation = await evaluate(options, seams);

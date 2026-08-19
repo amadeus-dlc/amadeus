@@ -21,6 +21,16 @@
 //                receipt is what turns a merge fact from a claim into
 //                evidence, so the stage a landed record may close follows the
 //                same rule #3149 gave the checkout/merge binding.
+//   superseded — a unit's own pull request never converged because the work
+//                it carried reached the trunk through a different pull
+//                request or commit (#3239). The human turn, reason, and
+//                recorded-at are the override shape it shares (FR-7b); the
+//                commit that actually delivered the work is the one field it
+//                adds, and it is required in the same well-formed-object-id
+//                shape a merge commit is. Unlike landed, it IS the
+//                code-generation evidence for that unit — the only report it
+//                will ever have — so unlike landed it is accepted at every
+//                stage, not only pr-convergence.
 //
 // Which environment a record answers for is NOT read off its kind (#3149): any
 // kind may be finalised against the merge that closed it, and the receipt is
@@ -105,12 +115,15 @@ function checkCommon(body: string, findings: ReportFormatFinding[]): {
   if (kind === null || kind === "") {
     findings.push({
       field: "kind",
-      reason: "missing — every report declares created, converged, or override",
+      reason: "missing — every report declares created, converged, override, landed, or superseded",
     });
-  } else if (kind !== "created" && kind !== "converged" && kind !== "override" && kind !== "landed") {
+  } else if (
+    kind !== "created" && kind !== "converged" && kind !== "override" &&
+    kind !== "landed" && kind !== "superseded"
+  ) {
     findings.push({
       field: "kind",
-      reason: `unknown kind "${kind}" — expected created, converged, or override`,
+      reason: `unknown kind "${kind}" — expected created, converged, override, landed, or superseded`,
     });
   }
 
@@ -202,6 +215,28 @@ function checkLanded(body: string, converged: string | null, findings: ReportFor
     }
     const malformed = malformedMergeFact(label, value);
     if (malformed !== null) findings.push({ field: label, reason: malformed });
+  }
+}
+
+/** The superseded record (#3239): the override shape (human turn, reason,
+ *  recorded at) plus the one fact it adds — the commit that actually
+ *  delivered the work, in the same well-formed-object-id shape a merge
+ *  commit is checked in. A superseded report claiming converged:true would
+ *  smuggle a convergence claim through a record that exists precisely
+ *  because convergence never happened. */
+function checkSuperseded(body: string, converged: string | null, findings: ReportFormatFinding[]): void {
+  checkOverride(body, findings);
+  if (converged === "true") {
+    findings.push({ field: "converged", reason: "a superseded report is converged: false by construction" });
+  }
+  const supersededBy = field(body, "superseded by");
+  if (supersededBy === null || supersededBy === "") {
+    findings.push({
+      field: "superseded by",
+      reason: "missing — a superseded report records the commit that actually delivered the work",
+    });
+  } else if (!/^[0-9a-f]{40}$/.test(supersededBy)) {
+    findings.push({ field: "superseded by", reason: `not a commit object id "${supersededBy}"` });
   }
 }
 
@@ -467,7 +502,9 @@ export function evaluateReportFormat(outputPath: string, stage?: string): Report
   const { kind, converged } = checkCommon(body, findings);
   applyKindRules(kind, converged, body, findings, stage, landedReceiptAttestsMerge(outputPath, body));
   checkAttestation(outputPath, body, findings);
-  const reason = kind === "override" || kind === "landed" || kind === "created" ? kind : "converged";
+  const reason = kind === "override" || kind === "landed" || kind === "created" || kind === "superseded"
+    ? kind
+    : "converged";
   return verdict(reason, findings);
 }
 
@@ -494,6 +531,10 @@ function applyKindRules(
         reason: "landed without a receipt-attested merge finalises the pr-convergence stage only (#3235)",
       });
     }
+    return;
+  }
+  if (kind === "superseded") {
+    checkSuperseded(body, converged, findings);
     return;
   }
   if (kind === "converged" && converged === "false") {

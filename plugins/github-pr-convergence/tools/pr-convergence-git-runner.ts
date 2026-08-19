@@ -243,6 +243,62 @@ export function verifyMergedEpochAncestry(
 }
 
 /**
+ * Evidence that a commit which superseded a unit's own delivery (#3239) is on
+ * the trunk the current checkout can already see. Distinct from
+ * `LandedEpochProof`: that proof relates a `created` epoch's attested head to
+ * the merge that closed it, whereas here there is no epoch and no merge to
+ * relate — only the fact that whatever superseded this delivery actually
+ * landed. Only `verifySupersedeAncestry` mints one.
+ */
+export type SupersedeAncestryProof = {
+  readonly supersededBy: string;
+  readonly localHead: string;
+  readonly __brand: "SupersedeAncestryProof";
+};
+
+export type SupersedeAncestryResult =
+  | { readonly ok: true; readonly proof: SupersedeAncestryProof }
+  | { readonly ok: false; readonly message: string };
+
+/**
+ * Whether `supersededBy` — the commit that actually delivered this unit's
+ * work — is an ancestor of the current checkout's HEAD. A unit's own pull
+ * request never merged here, so there is no live branch and no merge fact to
+ * bind against; the only thing that can be measured locally is that the
+ * commit which superseded it is really on the history this checkout already
+ * holds. No fetch is attempted — unlike `verifyMergedEpochAncestry`, there is
+ * no `refs/pull/<n>/head` to pull it from, since it may not even be the head
+ * of any pull request (a raw commit is accepted too) — so a checkout that has
+ * not yet fetched the superseding history fails closed with a message that
+ * says so, rather than guessing.
+ */
+export function verifySupersedeAncestry(
+  cwd: string,
+  supersededBy: string,
+  git: GitSpawn = nodeGitSpawn,
+): SupersedeAncestryResult {
+  const head = run(git, cwd, ["rev-parse", "HEAD"]);
+  const localHead = head.stdout.trim();
+  if (head.code !== 0 || !/^[0-9a-f]{40}$/i.test(localHead)) {
+    return { ok: false, message: "cannot resolve local HEAD" };
+  }
+  const ancestry = run(git, cwd, ["merge-base", "--is-ancestor", supersededBy, localHead]);
+  if (ancestry.code === 0) {
+    return { ok: true, proof: { supersededBy, localHead, __brand: "SupersedeAncestryProof" } };
+  }
+  if (ancestry.code === 1) {
+    return {
+      ok: false,
+      message: `${supersededBy} is not an ancestor of the current checkout ${localHead}; fetch the superseding history and retry`,
+    };
+  }
+  return {
+    ok: false,
+    message: `cannot measure whether ${supersededBy} is an ancestor of ${localHead}: ${ancestry.stderr.trim()}`,
+  };
+}
+
+/**
  * The pull request the current checkout is allowed to speak for: the same
  * commit AND the same branch name. A SHA alone is not identity — the identical
  * commit published under a second branch would otherwise pass.

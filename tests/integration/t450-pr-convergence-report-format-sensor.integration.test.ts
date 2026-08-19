@@ -388,6 +388,26 @@ describe("t450 falling evidence — each missing required field goes red", () =>
     expect(result.pass).toBe(false);
     expect(result.findings.map((f) => f.field)).toContain("kind");
   });
+
+  test("the unknown-kind diagnostic names every kind the predicate actually accepts", () => {
+    // The five kinds `checkCommon` accepts (created, converged, override,
+    // landed, superseded) and the diagnostic's own claim must not drift apart.
+    const body = convergedReport().replace("- kind: converged", "- kind: waived");
+    const result = evaluateReportFormat(reportAt(body));
+    const finding = result.findings.find((f) => f.field === "kind");
+    for (const kind of ["created", "converged", "override", "landed", "superseded"]) {
+      expect(finding?.reason).toContain(kind);
+    }
+  });
+
+  test("the missing-kind diagnostic also names every accepted kind", () => {
+    const body = convergedReport().replace(/^- kind: .*\n/m, "");
+    const result = evaluateReportFormat(reportAt(body));
+    const finding = result.findings.find((f) => f.field === "kind");
+    for (const kind of ["created", "converged", "override", "landed", "superseded"]) {
+      expect(finding?.reason).toContain(kind);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
