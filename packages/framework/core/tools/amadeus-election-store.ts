@@ -567,6 +567,11 @@ function acquirePendingLock(dir: string, voter: string): boolean {
       if (attempt < PENDING_LOCK_MAX_RETRIES) {
         Bun.sleepSync(PENDING_LOCK_RETRY_MS);
       }
+      // Explicit retry terminal (NSD001, mirrors acquireAuditLock in
+      // amadeus-lib.ts): this arm never swallows a failure — it hands
+      // control back to the loop, whose exhausted budget returns the loud
+      // `false` every caller checks.
+      continue;
     }
   }
   return false;
@@ -579,6 +584,10 @@ function releasePendingLock(dir: string, voter: string): void {
     // Best-effort: a failed release only costs a future acquirer some of its
     // retry budget, never data loss — the write it guarded already committed
     // via writeStoreFile's atomic tmp+rename before release is attempted.
+    // Explicit terminal (NSD001): this is the function's last statement, so
+    // the early `return` makes the intentional swallow visible rather than
+    // an implicit fall-through past the try/catch.
+    return;
   }
 }
 
