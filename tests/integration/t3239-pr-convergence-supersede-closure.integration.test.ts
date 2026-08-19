@@ -231,6 +231,36 @@ describe("#3239 — a superseded unit's own pull request closes honestly", () =>
     expect(readFileSync(reportPathFor(f.record, UNIT), "utf-8")).toContain("- kind: superseded");
   });
 
+  test("falling proof: a converged report at a different head is never overwritten by supersede", async () => {
+    // Regression: a stale attested prHead alone must not be enough to let
+    // supersede through — only `created -> superseded` is a real transition
+    // (transitionAllowed). A terminal converged verdict at some earlier head
+    // is exactly the record supersede must never be able to clobber.
+    const f = makeFixture();
+    const payload = [
+      "# PR Convergence Report", "", "- kind: converged",
+      `- pull request: ${REPO}#${PR_NUMBER}`, "- generated at: 2026-08-09T22:54:09Z",
+      "- converged: true", "- merge state: clean", "- mergeable resolution: MERGEABLE", "",
+      "## Violating threads", "", "- replied-unresolved: 0", "- ignored: 0", "",
+      "## Ledger", "", "- resolved: 3", "- outdated: 1", "- replied-unresolved: 0",
+      "- ignored: 0", "- human-only: 0", "- terminalized: 1", "",
+    ].join("\n");
+    const unsigned = {
+      intent: "supersede", intentUuid: UUID, record: `amadeus/spaces/default/intents/${RECORD_DIR}/`,
+      bolt: BOLT, unit: UNIT, repo: REPO, pr: PR_NUMBER,
+      localHead: "b".repeat(40), remoteHead: "b".repeat(40), prHead: "b".repeat(40),
+      contentDigest: reportPayloadDigest(payload),
+    };
+    const body = `${payload}${renderAttestation({ id: attestationId(unsigned), ...unsigned })}`;
+    mkdirSync(join(f.record, "construction", UNIT, "code-generation"), { recursive: true });
+    writeFileSync(reportPathFor(f.record, UNIT), body, "utf-8");
+
+    const out = await runCli(overrideArgs(f, f.deliveredSha), seams(f));
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain("report lifecycle refused: converged -> superseded");
+    expect(readFileSync(reportPathFor(f.record, UNIT), "utf-8")).toContain("- kind: converged");
+  });
+
   test("falling proof: a dirty tracked worktree (foreign to this unit) refuses the record", async () => {
     const f = makeFixture();
     writeFileSync(join(f.record, "amadeus-state.md"), "- **Scope**: self-fix\n- **Note**: uncommitted\n", "utf-8");
@@ -260,6 +290,28 @@ describe("#3239 — a superseded unit's own pull request closes honestly", () =>
     const out = await runCli(overrideArgs(f, f.deliveredSha, { bolt: null }), seams(f));
     expect(out.exitCode).toBe(2);
     expect(out.stderr).toContain("--bolt");
+  });
+
+  test("falling proof: an unapproved --bolt refuses the record before any decision or report is written", async () => {
+    // --bolt only has to be a well-formed slug at parse time; runSupersede
+    // still owes the same Delivery Bolt authority check `create` runs before
+    // it writes anything, or an unapproved bolt leaves a decision line and a
+    // report file behind for the format sensor to reject only afterwards.
+    const f = makeFixture();
+    let decisionCalls = 0;
+    const tracked: CliSeams = {
+      ...seams(f),
+      emitDecision: async () => {
+        decisionCalls += 1;
+        return { code: 0, stderr: "" };
+      },
+    };
+    const out = await runCli(overrideArgs(f, f.deliveredSha, { bolt: "not-the-approved-bolt" }), tracked);
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain("supersede refused");
+    expect(out.stderr).toContain("DELIVERY_BOLT_AUTHORITY");
+    expect(decisionCalls).toBe(0);
+    expect(() => readFileSync(reportPathFor(f.record, UNIT), "utf-8")).toThrow();
   });
 
   test("falling proof: --superseded-by must be a full commit object id, not a PR reference", async () => {

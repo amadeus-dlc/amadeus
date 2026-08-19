@@ -115,7 +115,7 @@ function checkCommon(body: string, findings: ReportFormatFinding[]): {
   if (kind === null || kind === "") {
     findings.push({
       field: "kind",
-      reason: "missing — every report declares created, converged, or override",
+      reason: "missing — every report declares created, converged, override, landed, or superseded",
     });
   } else if (
     kind !== "created" && kind !== "converged" && kind !== "override" &&
@@ -123,7 +123,7 @@ function checkCommon(body: string, findings: ReportFormatFinding[]): {
   ) {
     findings.push({
       field: "kind",
-      reason: `unknown kind "${kind}" — expected created, converged, or override`,
+      reason: `unknown kind "${kind}" — expected created, converged, override, landed, or superseded`,
     });
   }
 

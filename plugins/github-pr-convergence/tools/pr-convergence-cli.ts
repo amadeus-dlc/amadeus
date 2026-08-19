@@ -1136,8 +1136,16 @@ function lifecycleAtChangedHead(
   // rests on (verifySupersedeAncestry) was already measured before the
   // caller got here, and it names the checkout, never the pull request's
   // head. A stale `created` epoch this record supersedes is exactly the case
-  // it exists to close.
-  if (report.kind === "superseded") return { kind: "write" };
+  // it exists to close, but a stale head is not itself permission: only
+  // `created -> superseded` is a real transition, so an already-terminal
+  // record (converged, landed, or a prior superseded) left at some earlier
+  // head is refused exactly as transitionAllowed already says, not
+  // silently rewritten because its head happens to have moved.
+  if (report.kind === "superseded") {
+    return transitionAllowed(previousKind, report.kind)
+      ? { kind: "write" }
+      : refuseLifecycle(`report lifecycle refused: ${previousKind} -> ${report.kind}`);
+  }
   return report.kind === "created"
     ? { kind: "write" }
     : refuseLifecycle("report lifecycle stale: PR head changed; run create to begin a new created epoch");
@@ -1918,6 +1926,10 @@ async function runSupersede(
     return { exitCode: 1, stdout: "", stderr: "supersede refused: --superseded-by is only meaningful for self-* records\n" };
   }
   const { supersededBy, bolt } = supersede;
+  const membershipFailure = deliveryMembershipFailure(options.record, bolt, options.units);
+  if (membershipFailure !== null) {
+    return { exitCode: 1, stdout: "", stderr: `supersede refused: ${membershipFailure}\n` };
+  }
   const git = seams.gitSpawn ?? nodeGitSpawn;
   const prerequisite = verifyLandedPrerequisites(options.record, git, options.units);
   if (!prerequisite.ok) {
