@@ -671,6 +671,7 @@ describe("Intent-scoped autonomy production path", () => {
     const selected = run(projectDir, "amadeus-bolt.ts", ["set-autonomy", "--mode", "full"], true);
     expect(selected.status).not.toBe(0);
     expect(selected.output).toContain("PROVENANCE_REQUIRED");
+    expect(selected.output).toContain("turn boundary");
     expect(auditEvents(projectDir)).not.toContain("INTENT_AUTONOMY_TRANSACTION_COMMITTED");
   });
 

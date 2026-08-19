@@ -919,6 +919,17 @@ function alreadyDeclared(before: AutonomyProjection, mode: AutonomyMode, command
     before.modeProvenance.commandOccurrenceId === commandOccurrenceId;
 }
 
+// User-facing wrapper for applyProductionAutonomyMode failures. The machine
+// code stays `PROVENANCE_REQUIRED` so callers can still match it; the suffix
+// is the #3170 close: Claude Code does not fire UserPromptSubmit for a
+// message queued mid-turn, so that input never becomes HUMAN_TURN provenance.
+export function formatIntentAutonomyUpdateFailure(error: string): string {
+  const prefix = `Intent autonomy update failed: ${error}`;
+  return error === "PROVENANCE_REQUIRED"
+    ? `${prefix}. Queued mid-turn input is not recorded as HUMAN_TURN; submit the command again at a turn boundary (after the agent yields).`
+    : prefix;
+}
+
 export function applyProductionAutonomyMode(input: ApplyProductionAutonomyModeInput): { readonly ok: true; readonly projection: AutonomyProjection } | { readonly ok: false; readonly error: string } {
   const resolved = resolveIntent(input.projectDir);
   if (resolved === null) return { ok: false, error: "active-intent-required" };
