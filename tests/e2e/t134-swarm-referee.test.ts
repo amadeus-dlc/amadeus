@@ -67,6 +67,7 @@
 //   .sh 12 conductor attribution (--reasons unsatisfiable)   -> "12 conductor attribution: --reasons unsatisfiable lands the typed reason"
 //   .sh 13 --reasons cannot override the lying-conductor guard-> "13 --reasons cannot launder a claimed-but-red unit (stays error)"
 //   #3197 Git source must land on the target (not AIDLC-only false green)
+//   #3197 uncommitted files and a missing --target/--base stay fail-closed
 //
 // 13 .sh asserts -> 13 expect()-bearing test() cases (same count, same)
 // observables). STRONGER than the .sh in several places: the .sh grepped loose
@@ -180,6 +181,7 @@ function gitShow(proj: string, spec: string): { rc: number; out: string } {
 interface RefResult {
   rc: number;
   out: string; // stdout (the envelope / verdict JSON)
+  err: string;
 }
 
 /**
@@ -193,7 +195,7 @@ function runRef(proj: string, args: string[]): RefResult {
     cwd: proj,
     encoding: "utf-8",
   });
-  return { rc: res.status ?? -1, out: res.stdout ?? "" };
+  return { rc: res.status ?? -1, out: res.stdout ?? "", err: res.stderr ?? "" };
 }
 
 interface PoolAttempt {
@@ -357,6 +359,8 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
       "alpha",
       "--check-cmd",
       "test -f impl.txt",
+      "--target",
+      "main",
     ]);
     expect(f.rc).toBe(0);
     const fEnv = JSON.parse(f.out);
@@ -453,6 +457,8 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
       "win,lie",
       "--check-cmd",
       "test -f win.txt",
+      "--target",
+      "main",
     ]);
     const env = JSON.parse(f.out);
     // STRONGER than the .sh's `grep -A2`: locate the parsed `lie` row and assert
@@ -491,6 +497,8 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
       "wn,le",
       "--check-cmd",
       "test -f wn.txt",
+      "--target",
+      "main",
     ]);
     const env = JSON.parse(f.out);
     expect(env.converged).toBe(1);
@@ -732,6 +740,8 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
       "mu",
       "--check-cmd",
       "test -f impl.txt",
+      "--target",
+      "main",
     ]);
 
     // AC-674-3: envelope/exit-code compatibility is preserved.
@@ -781,6 +791,8 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
       "src",
       "--check-cmd",
       "test -f impl.txt",
+      "--target",
+      "main",
     ]);
     const env = JSON.parse(f.out);
     const src = env.units.find((u: { unit: string }) => u.unit === "src");
@@ -796,5 +808,58 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     expect(src.status).toBe("converged");
     expect(env.converged).toBe(1);
     expect(env.merge_failures).toEqual([]);
+  }, scaleTestTime(120000));
+
+  test("16 finalize: uncommitted worktree files are not Git-landed converged (#3197)", () => {
+    const proj = makeSwarmFixture();
+    runRef(proj, ["prepare", "--batch", "5", "--units", "dirty", "--base", "main"]);
+    terminalizePool(proj, "5");
+    writeFileSync(join(wtPath(proj, "dirty"), "impl.txt"), "uncommitted\n");
+
+    const f = runRef(proj, [
+      "finalize",
+      "--batch",
+      "5",
+      "--units",
+      "dirty",
+      "--claimed",
+      "dirty",
+      "--check-cmd",
+      "test -f impl.txt",
+      "--target",
+      "main",
+    ]);
+    const env = JSON.parse(f.out);
+    const dirty = env.units.find((u: { unit: string }) => u.unit === "dirty");
+    expect(f.rc).toBe(2);
+    expect(dirty).toBeDefined();
+    expect(dirty.status).toBe("failed");
+    expect(env.converged).toBe(0);
+    expect(env.merge_failures).toHaveLength(1);
+    expect(env.merge_failures[0].unit).toBe("dirty");
+    expect(gitShow(proj, "HEAD:impl.txt").rc).not.toBe(0);
+    expect(eventCount(proj, "SWARM_UNIT_CONVERGED")).toBe(0);
+  }, scaleTestTime(120000));
+
+  test("17 finalize: genuine merge requires --target or --base", () => {
+    const proj = makeSwarmFixture();
+    runRef(proj, ["prepare", "--batch", "6", "--units", "bound", "--base", "main"]);
+    terminalizePool(proj, "6");
+    commitInWorktree(proj, "bound", "impl.txt", "landed\n");
+
+    const f = runRef(proj, [
+      "finalize",
+      "--batch",
+      "6",
+      "--units",
+      "bound",
+      "--claimed",
+      "bound",
+      "--check-cmd",
+      "test -f impl.txt",
+    ]);
+    expect(f.rc).toBe(1);
+    expect(f.err).toContain("finalize requires --target <branch> or --base <branch>");
+    expect(gitShow(proj, "HEAD:impl.txt").rc).not.toBe(0);
   }, scaleTestTime(120000));
 });

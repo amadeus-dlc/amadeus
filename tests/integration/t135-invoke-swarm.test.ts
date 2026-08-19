@@ -294,7 +294,7 @@ function setupReferee(): void {
     [
       SWARM_TOOL, "--project-dir", proj, "finalize",
       "--batch", "1", "--units", "win,lose", "--claimed", "win,lose",
-      "--check-cmd", "test -f win.txt",
+      "--check-cmd", "test -f win.txt", "--target", "main",
     ],
     { encoding: "utf-8" },
   );
