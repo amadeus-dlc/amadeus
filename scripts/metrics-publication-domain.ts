@@ -476,16 +476,42 @@ function rejectedReceiptProblems(receipts: OperationReceipt[]): string[] {
     .map((receipt) => receipt.detail ?? receipt.target);
 }
 
+// The merge queue owns the merge, so `gh pr merge` cannot ask it to drop the head branch (#2925),
+// and the repository setting that used to do it is not something this run can rely on. A branch
+// still present after its pull request merged therefore has no other deleter, and polling for
+// "0 related branches" can never converge on its own (#3168). The publisher deletes it itself, but
+// only once the landing is proven: a branch that still backs an unmerged pull request is the state
+// the wait exists for, and any evidence problem keeps the run on its fail-closed path.
+function isLandedLeftoverBranch(inventory: SnapshotInventory): boolean {
+  if (inventory.problems.length > 0) return false;
+  if (inventory.branches.length === 0) return false;
+  if (inventory.pullRequests.length !== 0) return false;
+  if (inventory.landed.length !== 1) return false;
+  if (inventory.landed[0].sha !== inventory.targetSha) return false;
+  return ownershipProblems(inventory.branches).length === 0;
+}
+
 async function waitForSnapshotPostcondition(
   port: SnapshotPublisherPort,
   options: { deadlineMs: number; pollIntervalMs: number },
   stickyFailure: boolean,
   receipts: OperationReceipt[],
 ): Promise<SnapshotInventory | PublisherRunResult> {
+  let sweptLeftoverBranch = false;
   while (true) {
     const inventory = await port.inventory();
     const problems = snapshotPostconditionProblems(inventory);
     if (problems.length === 0) return inventory;
+    if (!sweptLeftoverBranch && isLandedLeftoverBranch(inventory)) {
+      // One attempt only: a branch that survives the sweep is an unexplained state, and the
+      // deadline below is what reports it rather than an unbounded delete loop.
+      sweptLeftoverBranch = true;
+      const sweepReceipts = await port.cleanup(inventory);
+      receipts.push(...sweepReceipts);
+      const sweepProblems = rejectedReceiptProblems(sweepReceipts);
+      if (sweepProblems.length > 0) return failedRun("cleanup-rejected", true, receipts, sweepProblems);
+      continue;
+    }
     const hasTerminalPullRequest = inventory.pullRequests.some(
       (candidate) => candidate.state === "closed" || candidate.mergeability === "conflicting",
     );
@@ -603,6 +629,17 @@ function maintenancePostconditionProblems(inventory: MaintenanceInventory): stri
   return problems;
 }
 
+// The mirror of isLandedLeftoverBranch on the maintenance side: an absent diff with no unmerged
+// pull request means the maintenance commit landed, so a branch still standing is one the queue
+// declined to delete and nothing else will (#3168).
+function isLandedLeftoverMaintenanceBranch(inventory: MaintenanceInventory): boolean {
+  if (inventory.problems.length > 0) return false;
+  if (inventory.branches.length === 0) return false;
+  if (inventory.pullRequests.length !== 0) return false;
+  if (inventory.hasDiff) return false;
+  return ownershipProblems(inventory.branches).length === 0;
+}
+
 async function waitForMaintenancePostcondition(
   port: MaintenancePublisherPort,
   cutoffSha: string,
@@ -611,10 +648,19 @@ async function waitForMaintenancePostcondition(
   receipts: OperationReceipt[],
   decisionReasons: string[],
 ): Promise<PublisherRunResult> {
+  let sweptLeftoverBranch = false;
   while (true) {
     const observation = await port.reconcile(cutoffSha);
     const problems = maintenancePostconditionProblems(observation.inventory);
     if (problems.length === 0) return successfulRun(stickyFailure, receipts, decisionReasons);
+    if (!sweptLeftoverBranch && isLandedLeftoverMaintenanceBranch(observation.inventory)) {
+      sweptLeftoverBranch = true;
+      const sweepReceipts = await port.cleanup(observation.inventory);
+      receipts.push(...sweepReceipts);
+      const sweepProblems = rejectedReceiptProblems(sweepReceipts);
+      if (sweepProblems.length > 0) return failedRun("cleanup-rejected", true, receipts, sweepProblems);
+      continue;
+    }
     const hasTerminalPullRequest = observation.inventory.pullRequests.some(
       (candidate) => candidate.state === "closed" || candidate.mergeability === "conflicting",
     );
