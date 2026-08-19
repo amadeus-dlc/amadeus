@@ -51,3 +51,19 @@ Issue や matrix へ出す情報は adapter ID、bounded failure category、再�
 | deterministic check差分 | CI/local check failure |
 
 必須テストは、unknown/duplicate adapter、malformed receipt、cleanup failure receipt拒否、cross-transport receipt流用拒否、green SHA mismatch、follow-up link/status不整合、secret/path漏洩pattern、marker欠損/重複、入力順を変えたbyte-identical生成、atomic write failure、check mode差分を含む。外部CLIやcredentialを使わない純粋 fixture で検証し、live transport の再実行を evidence projector の前提にしない。
+
+## Review — Iteration 1
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-04T23:49:39Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+Internally coherent spec-unit security design: no-new-infrastructure projector scope, admission/provenance controls, fail-closed failure handling, concrete required-test list, and explicit acknowledgement that all declared consumes are absent by design; 6 H2 headings satisfy required-sections.
+
+### Findings
+
+- FOLLOW-UP | The stage contract lists authentication/authorization, encryption design, and security headers as categories; the artifact justifies inapplicability only via one blanket sentence (security-design.md:6-7). Add one explicit N/A line per category for auditability.
+- FOLLOW-UP | The advisory upstream-coverage sensor will likely fire because the declared consumes are only collectively acknowledged as skipped (security-design.md:5); treat that sensor result as expected/non-blocking here.
+- NIT | Marker-fence terminology (security-design.md:35, 38, 49) lacks a concrete syntax definition; resolve in the next design/implementation stage.
