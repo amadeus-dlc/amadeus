@@ -36,6 +36,7 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 
 const ROOT = join(import.meta.dir, "..", "..");
 
@@ -57,6 +58,13 @@ interface DirectRun {
   readonly output: string;
 }
 
+// spawnSync blocks this thread, so a child that hangs cannot be cut short by
+// Bun's per-test timeout — the runner would sit there until the CI job's own
+// deadline, which is the same "results never arrive" failure mode this file
+// exists to prevent. The child gets its own deadline instead, generously above
+// the ~2.5s the slowest case measures.
+const CHILD_DEADLINE_MS = scaleTestTime(50_000);
+
 function runDirect(
   files: readonly string[],
   overrides: Readonly<Record<string, string>> = {},
@@ -65,8 +73,15 @@ function runDirect(
     cwd: ROOT,
     encoding: "utf8",
     env: { ...bareEnv(), ...overrides },
+    timeout: CHILD_DEADLINE_MS,
   });
-  return { status: res.status, output: `${res.stdout ?? ""}${res.stderr ?? ""}` };
+  // Surface the kill/spawn diagnosis in the captured text: on a timeout Bun
+  // writes nothing useful to the pipes, so without this an assertion failure
+  // would read as "no summary" with no hint that the child was killed.
+  const killed = res.signal === null && res.error === undefined
+    ? ""
+    : `\n[spawn diagnostic] signal=${res.signal ?? "none"} error=${res.error?.message ?? "none"}\n`;
+  return { status: res.status, output: `${res.stdout ?? ""}${res.stderr ?? ""}${killed}` };
 }
 
 // Bun's own end-of-run summary. Its ABSENCE is the #3280 symptom: the runner
