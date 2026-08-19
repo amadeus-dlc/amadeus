@@ -49,3 +49,12 @@ RE: stop 自体は正しい(read-only コマンドは前進しない)が SKILL.m
 上記「裁定の改訂(CG 実測による方式変更)」節の**前提は取り違えだった** — conductor は並行する別セッションの方式 B PR(#2767)を自分の builder の PR と誤認し、「builder が A→B へ逸脱した」と誤って結論して裁定を B へ改訂した。実際には本 intent の builder は方式 A を正しく実装(PR #2770)しており逸脱はなかった。
 
 ただし**結論(方式 B 採用)は独立検証で正当**: 両 PR の実 diff を6軸で実測比較した結果、B(report=committed / next=terminal の責務分離、Stop hook 無改修、多義サイトを型で解消)が A(report に terminal 判定を負わせ終端 ack が『continue』と言う Major 欠陥、Stop hook 改修、CONFLICTING)より優ると確定。#2762 は #2767(B、squash 34888d840)で解決・CLOSED。本 intent の CG 成果 #2770(A)は supersede クローズした。汚染は provenance の記述のみで、採用結論は実測に接地している。
+
+## 配送クロージャの裁定(2026-08-19、intent 再開時)
+
+本 intent はパーク(2026-08-10T01:04:48Z)後に再開され、その間に code-generation の produces へ `pr-convergence-report` が追加されていた。本 unit の Bolt PR #2770 は収束せず #2767 に supersede されており、#2767 / #2770 のいずれも Amadeus provenance(タイトル `[intent/bolt/unit] ` 接頭辞と本文 `## Amadeus Work`)を持たないため CLI が `provenance-violation` で拒否する状態だった(`--unlinked true` は self-* スコープで禁止)。
+
+- 選択肢 A(record のみの新規 Bolt PR を作って `converged`)/ B(merged #2767 へ provenance 後付け → `override`)/ C(closed #2770 へ provenance 後付け → `override`)を監督者へ諮り、**C** の裁定を得た(2026-08-19)
+- 裁定理由(監督者): (1) C は「本 bolt の PR #2770 は収束せず #2767(squash `34888d840`)に supersede された」という実際に起きたことをそのまま記録できる唯一の案 (2) B は #2767 が本 bolt の配送物だったという虚偽を作り、main の commit subject とも不整合になる (3) A は実装を含まない PR への `converged` 記録であり検証劇場(team.md Forbidden)に該当する
+- 裁定条件: (a) #2770 へ付与する provenance は真実のみ(#2770 は実際に本 bolt が出した PR であり、欠落メタデータの真実への訂正) (b) report の reason に非収束・supersede の事実、実配送が #2767 / `34888d840` であること、祖先証明の実測を明記 (c) #2767 と main 履歴には一切触れない (d) 本裁定と根拠を record へ残す(本節と `construction/code-generation/memory.md`) (e) override 経路が拒否された場合は迂回せず再度エスカレーション
+- 本裁定は `semi` 梯子ではなく**監督者への直接エスカレーション**で得た。理由: GitHub 上の既存 PR メタデータの編集は外部境界の操作であり、team.md のユーザーエスカレーション正準リスト (3)「人間の関与が本質の事項(外部サービス操作)」に該当するため
