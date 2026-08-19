@@ -34,7 +34,12 @@ import {
   handleList,
   handleMerge,
 } from "../../packages/framework/core/tools/amadeus-worktree.ts";
-import { REPO_ROOT, seedWorkspaceShell, seededStateFile } from "../harness/fixtures.ts";
+import {
+  REPO_ROOT,
+  seedWorkspaceShell,
+  seededStateFile,
+  shouldRetryWorktreeAdd,
+} from "../harness/fixtures.ts";
 
 describe("t209 worktreeBaseDir anchor rule (#746) — pure seam", () => {
   test("sibling worktree of a legacy single-repo intent anchors at the main checkout", () => {
@@ -100,7 +105,14 @@ interface SiblingScratch {
 let scratch: SiblingScratch;
 
 function git(cwd: string, args: string[]): string {
-  const result = spawnSync("git", args, { cwd, encoding: "utf-8" });
+  const run = () => spawnSync("git", args, { cwd, encoding: "utf-8" });
+  let result = run();
+  // Narrow retry (#3088): a `worktree add` can lose a sub-millisecond race
+  // against a concurrent prune/gc that deletes its still-empty metadata dir
+  // before the `locked` marker is written. See shouldRetryWorktreeAdd.
+  if (result.status !== 0 && shouldRetryWorktreeAdd(args, result.stderr ?? "")) {
+    result = run();
+  }
   if (result.status !== 0) {
     throw new Error(
       `git ${args.join(" ")} failed in ${cwd}: ${result.stderr?.trim() || result.stdout?.trim() || `exit ${result.status}`}`,

@@ -576,6 +576,61 @@ export function cleanupWorktreeFixture(proj: string | undefined): void {
   removeTreeWithRetry(proj);
 }
 
+/**
+ * Stderr fragment `git worktree add` emits when a concurrent prune/gc removes
+ * the freshly-created (still-empty) `.git/worktrees/<name>` metadata dir in
+ * the narrow window between mkdir and the `locked` marker write (#3056 first
+ * retried this once, locally, for tests/integration/t-worktree-gc.test.ts;
+ * #3088 catalogued 8 more `git worktree add` fixture-setup call sites with
+ * the same exposure). A genuine failure (bad ref, path already exists, ...)
+ * never produces this exact fragment, so matching on it cannot mask an
+ * unrelated failure.
+ */
+export const WORKTREE_ADD_PRUNE_RACE_STDERR = "/locked' for writing: No such file or directory";
+
+/** True when `stderr` is the narrow prune-race failure above. */
+export function isWorktreeAddPruneRaceStderr(stderr: string): boolean {
+  return stderr.includes(WORKTREE_ADD_PRUNE_RACE_STDERR);
+}
+
+/**
+ * True when `args` is a `git worktree add` invocation (optionally prefixed
+ * with global flags such as `-C <dir>`) that failed with the narrow
+ * prune-race stderr above — the single condition every retry site in this
+ * file shares, so a caller with its own git-running wrapper (runGit,
+ * gitStdout, the local `git()` helpers) can fold the retry into its existing
+ * loop instead of adopting spawnWorktreeAdd wholesale.
+ */
+export function shouldRetryWorktreeAdd(args: readonly string[], stderr: string): boolean {
+  for (let i = 0; i < args.length - 1; i++) {
+    if (args[i] === "worktree" && args[i + 1] === "add") {
+      return isWorktreeAddPruneRaceStderr(stderr);
+    }
+  }
+  return false;
+}
+
+/**
+ * Run `git worktree add <addArgs>` in `cwd`, retrying exactly once if the
+ * first attempt fails with WORKTREE_ADD_PRUNE_RACE_STDERR. `spawn` defaults to
+ * a real `git` subprocess and is injectable so the retry branch is
+ * unit-testable without depending on the real (sub-millisecond, hard-to-hit —
+ * see #3088) race window.
+ */
+export function spawnWorktreeAdd(
+  cwd: string,
+  addArgs: readonly string[],
+  spawn: (args: readonly string[]) => SpawnSyncReturns<string> = (args) =>
+    spawnSync("git", args, { cwd, encoding: "utf-8" }),
+): SpawnSyncReturns<string> {
+  const args = ["worktree", "add", ...addArgs];
+  let result = spawn(args);
+  if (result.status !== 0 && shouldRetryWorktreeAdd(args, result.stderr ?? "")) {
+    result = spawn(args);
+  }
+  return result;
+}
+
 // rmSync with force:true can return without error while leaving the tree in
 // place (observed on macOS/bun 1.3.13 against large fixture trees — issue
 // #1565), so success is verified by the post-condition (the path is gone),

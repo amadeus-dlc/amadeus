@@ -17,6 +17,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { shouldRetryWorktreeAdd } from "../harness/fixtures.ts";
 
 const TESTS_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const REPO_ROOT = join(TESTS_ROOT, "..");
@@ -82,10 +83,14 @@ function md5(path: string): string {
 }
 
 function runGit(projectDir: string, args: readonly string[]): string {
-  const result = spawnSync("git", args, {
-    cwd: projectDir,
-    encoding: "utf-8",
-  });
+  const run = () => spawnSync("git", args, { cwd: projectDir, encoding: "utf-8" });
+  let result = run();
+  // Narrow retry (#3088): a `worktree add` can lose a sub-millisecond race
+  // against a concurrent prune/gc that deletes its still-empty metadata dir
+  // before the `locked` marker is written. See shouldRetryWorktreeAdd.
+  if (result.status !== 0 && shouldRetryWorktreeAdd(args, result.stderr ?? "")) {
+    result = run();
+  }
   if (result.status !== 0) {
     throw new Error(`git ${args.join(" ")} failed: ${result.stderr || result.stdout}`);
   }

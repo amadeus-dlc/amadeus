@@ -65,6 +65,7 @@ import {
   cleanupWorktreeFixture,
   seededStateFile,
   setupWorktreeFixture,
+  spawnWorktreeAdd,
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
@@ -143,11 +144,7 @@ describe("t04 amadeus-worktree discard/list/verify (migrated from t04-worktree-d
     const p = freshFixture();
     // Add a NON-bolt worktree to confirm the filter excludes it (mirrors the
     // .sh's `git -C "$FIX2" worktree add -q "$FIX2/non-bolt-wt" -b unrelated`).
-    const add = spawnSync(
-      "git",
-      ["-C", p, "worktree", "add", "-q", join(p, "non-bolt-wt"), "-b", "unrelated"],
-      { encoding: "utf-8" },
-    );
+    const add = spawnWorktreeAdd(p, ["-q", join(p, "non-bolt-wt"), "-b", "unrelated"]);
     expect(add.status).toBe(0);
 
     const created = wt(p, ["create", "--slug", "listed", "--base", "main"]);
