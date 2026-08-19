@@ -623,7 +623,20 @@ export function spawnWorktreeAdd(
   spawn: (args: readonly string[]) => SpawnSyncReturns<string> = (args) =>
     spawnSync("git", args, { cwd, encoding: "utf-8" }),
 ): SpawnSyncReturns<string> {
-  const args = ["worktree", "add", ...addArgs];
+  return spawnGitCommand(cwd, ["worktree", "add", ...addArgs], spawn);
+}
+
+/**
+ * Run one git command with the narrow #3088 retry: a generic runner for call
+ * sites whose argv is not statically a `worktree add` — the retry predicate
+ * itself decides, so every other command keeps single-shot semantics.
+ */
+export function spawnGitCommand(
+  cwd: string,
+  args: readonly string[],
+  spawn: (args: readonly string[]) => SpawnSyncReturns<string> = (a) =>
+    spawnSync("git", a, { cwd, encoding: "utf-8" }),
+): SpawnSyncReturns<string> {
   let result = spawn(args);
   if (result.status !== 0 && shouldRetryWorktreeAdd(args, result.stderr ?? "")) {
     result = spawn(args);
