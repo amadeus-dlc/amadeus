@@ -344,6 +344,19 @@ function parseReport(result: CliResult): MigrationReport {
   }
 }
 
+function installedEngineCheck(
+  report: MigrationReport,
+): { id: string; pass: boolean; detail: string } {
+  const checks = report.checks as ReadonlyArray<
+    { id: string; pass: boolean; detail: string }
+  >;
+  const check = checks.find((entry) => entry.id === "installed-engine");
+  if (check === undefined) {
+    throw new Error(`report has no installed-engine check: ${JSON.stringify(report.checks)}`);
+  }
+  return check;
+}
+
 function gitIndexPath(project: UpstreamV2Fixture): string {
   const raw = project.git(["rev-parse", "--git-path", "index"]).trim();
   return isAbsolute(raw) ? raw : resolve(project.projectDir, raw);
@@ -1165,6 +1178,52 @@ describe("t224 upstream-v2 migration public CLI", () => {
     } finally {
       rmSync(external, { recursive: true, force: true });
     }
+  });
+
+  // #3151: the merge-queue red that pulled a PR out of the queue was not the symlink assertions
+  // below — it was the `migrate --apply` on their first line refusing with `installed-engine:
+  // false`, because the `git ls-files --stage -z` read behind that check came back cut short under
+  // load (the bun read behaviour #2397/#3065 already caught on `git ls-tree -z`). Both cases drive
+  // that cut deterministically instead of waiting for load, so neither one turns "finished in
+  // time" into the pass condition.
+  test("migration re-reads a tool index whose first read was cut short", () => {
+    const project = fixture();
+
+    const migrated = migrateWithEnv(
+      project,
+      { NODE_ENV: "test", AMADEUS_MIGRATE_TEST_CUT_TOOL_INDEX_READ: "1" },
+      "--apply",
+    );
+
+    expectSuccessfulMigration(migrated);
+    expect(installedEngineCheck(parseReport(migrated)).pass).toBe(true);
+  });
+
+  test("migration names the short tool index read instead of denying the committed utility", () => {
+    const project = fixture();
+
+    const refused = migrateWithEnv(
+      project,
+      { NODE_ENV: "test", AMADEUS_MIGRATE_TEST_CUT_TOOL_INDEX_READ: "99" },
+      "--apply",
+    );
+
+    expect(refused.status).not.toBe(0);
+    const report = parseReport(refused);
+    expect(report.status).toBe("refused");
+    const check = installedEngineCheck(report);
+    expect(check.pass).toBe(false);
+    // The tree on disk is committed and clean, so the old wording ("requires a committed regular
+    // Amadeus utility") states something the run never measured.
+    expect(check.detail).toContain("ls-files");
+    expect(check.detail).toMatch(/NUL|not read|could not read/i);
+    expect(check.detail).not.toContain("Migration requires a committed regular Amadeus utility");
+    expect(
+      (report.checks as ReadonlyArray<{ id: string; pass: boolean }>).filter(
+        (entry) => !entry.pass,
+      ).map((entry) => entry.id),
+    ).toEqual(["installed-engine"]);
+    expect(existsSync(project.destinationRoot)).toBe(false);
   });
 
   test("installed doctor does not follow a linked heartbeat directory or heartbeat file", () => {
