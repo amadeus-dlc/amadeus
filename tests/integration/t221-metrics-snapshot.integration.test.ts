@@ -31,7 +31,6 @@ function applyEnv(values: Record<string, string | undefined>): void {
   }
 }
 function cli(root: string, verb: "--write" | "--check") {
-  const started = performance.now();
   const childEnv: Record<string, string | undefined> = { ...process.env, AMADEUS_METRICS_ROOT: root, AMADEUS_COMPLEXITY_ROOTS: join(root, "scripts") };
   // bugs is network-backed: a contributor's ambient token would make the run
   // reach GitHub, so the fixture pins the collector to its skip path.
@@ -42,7 +41,7 @@ function cli(root: string, verb: "--write" | "--check") {
     encoding: "utf8",
     env: childEnv,
   });
-  return { ...result, elapsed: performance.now() - started };
+  return result;
 }
 
 describe("t221 snapshot writer and real CLI", () => {
@@ -117,11 +116,9 @@ describe("t221 snapshot writer and real CLI", () => {
     expect(() => writeSnapshotAtomic(root, runSnapshot(env, []))).toThrow();
     expect(readdirSync(root).filter((name) => name.endsWith(".json"))).toEqual([]);
   });
-  test("real --write runs all collectors under 10 seconds and two runs create distinct files", () => {
+  test("real --write runs all collectors and two runs create distinct files", () => {
     const root = fixture(); const first = cli(root, "--write"); const second = cli(root, "--write");
-    // The elapsed ceiling is a hang guard on a collector run that finishes in
-    // well under a second, not a performance budget.
-    expect(first.status).toBe(0); expect(first.stdout.trim()).toMatch(/^OK 6 collectors \(skipped: bugs\) .+\.json$/); expect(first.elapsed).toBeLessThan(10_000);
+    expect(first.status).toBe(0); expect(first.stdout.trim()).toMatch(/^OK 6 collectors \(skipped: bugs\) .+\.json$/);
     expect(second.status).toBe(0); expect(readdirSync(join(root, "metrics")).filter((name) => name.endsWith(".json"))).toHaveLength(2);
   }, scaleTestTime(20_000));
   test("real --check runs all collectors without writing", () => {

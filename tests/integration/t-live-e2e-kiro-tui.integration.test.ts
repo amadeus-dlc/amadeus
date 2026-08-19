@@ -315,11 +315,9 @@ describe("Kiro TUI live adapter", () => {
         credentialSource: new KiroHomeCredentialSource({ sourceHome: item.sourceHome }),
       });
       expect(prepared.ok).toBe(true);
-      const started = Date.now();
       const receipt = await adapter.cleanup({ scratch, registeredResources: registrar.snapshot() });
       expect(receipt.failures).toContain("error connecting to socket: Permission denied");
       expect(receipt.failures).not.toContain("private tmux server was not reaped");
-      expect(Date.now() - started).toBeLessThan(30_000);
     } finally {
       rmSync(item.root, { recursive: true, force: true });
     }

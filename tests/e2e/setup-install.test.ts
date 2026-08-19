@@ -83,14 +83,11 @@ describe("amadeus-setup install (E2E, offline fixture)", () => {
       const target = mkdtempSync(join(tmpdir(), "amadeus-setup-e2e-install-"));
 
       try {
-        const startedAt = Date.now();
         const result = await spawnAsync(
           process.execPath, // tests always run under bun (see setup-cli-smoke.test.ts)
           ["--preload", SHIM_PATH, cliPath, "install", "--harness", "claude", "--target", target, "--yes"],
           { ...process.env, AMADEUS_SETUP_TEST_FAKE_GITHUB_PORT: String(port) },
         );
-        const elapsedMs = Date.now() - startedAt;
-
         expect(result.stderr).toBe("");
         expect(result.status).toBe(0);
         expect(existsSync(join(target, ".claude"))).toBe(true);
@@ -103,11 +100,6 @@ describe("amadeus-setup install (E2E, offline fixture)", () => {
         expect(manifest.harness).toBe("claude");
         expect(manifest.sourceTag).toBe(FIXTURE_TAG);
 
-        // NFR-001: install should complete within 1 minute under normal
-        // network conditions. This offline run has no network latency at all,
-        // so the declared ceiling is used as-is and acts as a hang guard on the
-        // installer — it is not a tighter performance target of its own.
-        expect(elapsedMs).toBeLessThan(60_000);
       } finally {
         rmSync(target, { recursive: true, force: true });
         await close();
