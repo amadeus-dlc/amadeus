@@ -5248,5 +5248,16 @@
     },
     "reason": "The defensive arm for `git ls-files` failing in a worktree whose git commands all succeeded moments earlier in the same handleMerge call (preflight inspect, merge, restore). A repo that breaks between those reads cannot be staged deterministically in-process; the reachable cleanup arms (restore failure, clean failure, scratch enumeration failure) are driven by tests/unit/t209-worktree-read-anchor.test.ts (#3197).",
     "expiry": "remove when the cleanup helper accepts an injectable git runner"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-mirror-orphan.ts",
+    "selector": {
+      "function": "<module>",
+      "fingerprint": "sha256:104782923aa9bd8952019b15c159a8d476e0f2f5afa4a7399242857ec647291a",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The import.meta.main CLI wrapper's process.exit(await runMirrorOrphanMain(...)) call only runs in a spawned process; Bun does not attribute a spawned process's execution back to the parent LCOV report (cid:code-generation:bun-coverage-spawn-blindspot). runMirrorOrphanMain itself is fully driven in-process by tests/integration/t3147-amadeus-mirror-orphan.integration.test.ts across diagnose (error and candidate-found arms) and repair (closed, refused, and error arms).",
+    "expiry": "remove if Bun starts attributing spawned-process coverage back to the parent LCOV report"
   }
 ]

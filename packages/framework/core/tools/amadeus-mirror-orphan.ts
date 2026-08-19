@@ -121,12 +121,16 @@ export type DiagnoseOrphanMirrorsOutcome =
   | Readonly<{ kind: "ok"; scanned: number; candidates: readonly OrphanCandidateReport[] }>
   | Readonly<{ kind: "error"; message: string }>;
 
-export async function diagnoseOrphanMirrors(input: Readonly<{
+export type DiagnoseOrphanMirrorsInput = Readonly<{
   projectDir: string;
   space?: string;
   repository: RepositoryIdentity;
   gateway?: MirrorGitHubGateway;
-}>): Promise<DiagnoseOrphanMirrorsOutcome> {
+}>;
+
+export async function diagnoseOrphanMirrors(
+  input: DiagnoseOrphanMirrorsInput,
+): Promise<DiagnoseOrphanMirrorsOutcome> {
   const registryUuids = new Set(
     readIntentRegistry(input.projectDir, input.space).map((entry) => entry.uuid),
   );
@@ -223,7 +227,7 @@ export type RepairOrphanMirrorOutcome =
   | Readonly<{ kind: "refused"; issueNumber: number; reason: OrphanNotOrphanReason }>
   | Readonly<{ kind: "error"; message: string }>;
 
-export async function repairOrphanMirrorIssue(input: Readonly<{
+export type RepairOrphanMirrorIssueInput = Readonly<{
   projectDir: string;
   space?: string;
   repository: RepositoryIdentity;
@@ -231,7 +235,11 @@ export async function repairOrphanMirrorIssue(input: Readonly<{
   now: string;
   gateway?: MirrorGitHubGateway;
   processRunner?: MirrorProcessRunner;
-}>): Promise<RepairOrphanMirrorOutcome> {
+}>;
+
+export async function repairOrphanMirrorIssue(
+  input: RepairOrphanMirrorIssueInput,
+): Promise<RepairOrphanMirrorOutcome> {
   const registryUuids = new Set(
     readIntentRegistry(input.projectDir, input.space).map((entry) => entry.uuid),
   );
@@ -309,6 +317,7 @@ function resolveRepositoryFlag(args: readonly string[]): RepositoryIdentity | nu
 export async function runMirrorOrphanMain(
   args: string[],
   now: () => string = () => new Date().toISOString(),
+  deps: Readonly<{ gateway?: MirrorGitHubGateway; processRunner?: MirrorProcessRunner }> = {},
 ): Promise<number> {
   const [sub, ...rest] = args;
   const repository = resolveRepositoryFlag(rest);
@@ -320,7 +329,7 @@ export async function runMirrorOrphanMain(
   const space = flagValue(rest, "--space");
 
   if (sub === "diagnose") {
-    const result = await diagnoseOrphanMirrors({ projectDir, space, repository });
+    const result = await diagnoseOrphanMirrors({ projectDir, space, repository, gateway: deps.gateway });
     if (result.kind === "error") {
       console.error(`amadeus-mirror-orphan: diagnose failed: ${result.message}`);
       return 1;
@@ -346,6 +355,8 @@ export async function runMirrorOrphanMain(
     repository,
     issueNumber,
     now: now(),
+    gateway: deps.gateway,
+    processRunner: deps.processRunner,
   });
   if (result.kind === "error") {
     console.error(`amadeus-mirror-orphan: WARNING: repair failed for #${issueNumber}: ${result.message}`);

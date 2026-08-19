@@ -307,25 +307,171 @@ describe("repairOrphanMirrorIssue", () => {
     expect(result.kind).toBe("error");
     expect(runner.requests).toHaveLength(0);
   });
-});
 
-describe("runMirrorOrphanMain (CLI)", () => {
-  test("diagnose exits 0 and prints the candidate list as JSON", async () => {
+  test("fails open when the gh process does not exit cleanly (spawn-error)", async () => {
     const root = fixture();
     const gateway = new StubGateway();
-    gateway.found = [markerIssue(3095, ORPHAN_UUID)];
-    // The CLI wiring only accepts flags; project-dir routes to our fixture.
-    // Injecting the gateway is not part of the CLI surface, so this exercises
-    // argument parsing + exit code only, with a network call that would fail
-    // in CI captured by monkey-patching diagnoseOrphanMirrors is avoided by
-    // instead calling the library function directly above; here we only check
-    // usage/exit-code handling for malformed invocations.
-    void gateway;
+    gateway.view = markerIssue(3095, ORPHAN_UUID);
+    const runner = new StubRunner();
+    runner.result = { kind: "spawn-error" };
+    const result = await repairOrphanMirrorIssue({
+      projectDir: root,
+      repository: REPO,
+      issueNumber: 3095,
+      now: "2026-08-19T00:00:00Z",
+      gateway,
+      processRunner: runner,
+    });
+    expect(result.kind).toBe("error");
+    if (result.kind !== "error") throw new Error("unreachable");
+    expect(result.message).toContain("posting the obsolete comment failed");
+    expect(result.message).toContain("spawn-error");
+  });
+
+  test("fails open when gh returns a response with no HTTP status line (malformed)", async () => {
+    const root = fixture();
+    const gateway = new StubGateway();
+    gateway.view = markerIssue(3095, ORPHAN_UUID);
+    const runner = new StubRunner();
+    runner.result = exited(0, Buffer.from("not an http envelope at all", "utf-8"));
+    const result = await repairOrphanMirrorIssue({
+      projectDir: root,
+      repository: REPO,
+      issueNumber: 3095,
+      now: "2026-08-19T00:00:00Z",
+      gateway,
+      processRunner: runner,
+    });
+    expect(result.kind).toBe("error");
+    if (result.kind !== "error") throw new Error("unreachable");
+    expect(result.message).toContain("posting the obsolete comment failed");
+    expect(result.message).toContain("malformed response");
+  });
+});
+
+async function captureConsole(
+  fn: () => Promise<number>,
+): Promise<{ rc: number; out: string; err: string }> {
+  let out = "";
+  let err = "";
+  const origLog = console.log;
+  const origErr = console.error;
+  console.log = (...a: unknown[]) => {
+    out += `${a.map(String).join(" ")}\n`;
+  };
+  console.error = (...a: unknown[]) => {
+    err += `${a.map(String).join(" ")}\n`;
+  };
+  try {
+    const rc = await fn();
+    return { rc, out, err };
+  } finally {
+    console.log = origLog;
+    console.error = origErr;
+  }
+}
+
+describe("runMirrorOrphanMain (CLI)", () => {
+  test("rejects malformed invocations before dispatching to either subcommand", async () => {
+    const root = fixture();
     const badRepo = await runMirrorOrphanMain(["diagnose", "--repo", "not-a-repo", "--project-dir", root]);
     expect(badRepo).toBe(2);
     const badSub = await runMirrorOrphanMain(["bogus", "--repo", "acme/app"]);
     expect(badSub).toBe(2);
     const missingIssue = await runMirrorOrphanMain(["repair", "--repo", "acme/app", "--project-dir", root]);
     expect(missingIssue).toBe(2);
+  });
+
+  test("diagnose reports a gateway failure through the injected dependency and exits 1", async () => {
+    const root = fixture();
+    const gateway = new StubGateway();
+    gateway.findIssuesByMarker = async () => ({
+      kind: "failure",
+      classification: "network",
+      summary: "connection reset",
+      retryable: true,
+      effect: "outcome-unknown",
+    });
+    const { rc, err } = await captureConsole(() =>
+      runMirrorOrphanMain(
+        ["diagnose", "--repo", "acme/app", "--project-dir", root],
+        undefined,
+        { gateway },
+      ),
+    );
+    expect(rc).toBe(1);
+    expect(err).toContain("diagnose failed");
+  });
+
+  test("diagnose prints candidates as JSON and warns on stderr through the injected gateway", async () => {
+    const root = fixture();
+    const gateway = new StubGateway();
+    gateway.found = [markerIssue(3095, ORPHAN_UUID)];
+    const { rc, out, err } = await captureConsole(() =>
+      runMirrorOrphanMain(
+        ["diagnose", "--repo", "acme/app", "--project-dir", root],
+        undefined,
+        { gateway },
+      ),
+    );
+    expect(rc).toBe(0);
+    expect(out).toContain(`"issueNumber":3095`);
+    expect(err).toContain("WARNING: 1 orphan mirror candidate(s) found (#3095)");
+  });
+
+  test("repair closes a genuine orphan end-to-end through the injected dependencies and exits 0", async () => {
+    const root = fixture();
+    const gateway = new StubGateway();
+    gateway.view = markerIssue(3095, ORPHAN_UUID);
+    const runner = new StubRunner();
+    const { rc, out } = await captureConsole(() =>
+      runMirrorOrphanMain(
+        ["repair", "--issue", "3095", "--repo", "acme/app", "--project-dir", root],
+        () => "2026-08-19T00:00:00Z",
+        { gateway, processRunner: runner },
+      ),
+    );
+    expect(rc).toBe(0);
+    expect(out).toContain(`"kind":"closed"`);
+    expect(runner.requests).toHaveLength(2);
+  });
+
+  test("repair exits 1 and warns on stderr when it refuses (UUID present in the registry)", async () => {
+    const root = fixture();
+    const gateway = new StubGateway();
+    gateway.view = markerIssue(3116, LIVE_UUID);
+    const runner = new StubRunner();
+    const { rc, err } = await captureConsole(() =>
+      runMirrorOrphanMain(
+        ["repair", "--issue", "3116", "--repo", "acme/app", "--project-dir", root],
+        () => "2026-08-19T00:00:00Z",
+        { gateway, processRunner: runner },
+      ),
+    );
+    expect(rc).toBe(1);
+    expect(err).toContain("refused to close #3116");
+    expect(runner.requests).toHaveLength(0);
+  });
+
+  test("repair exits 1 and warns on stderr when the library call reports an error", async () => {
+    const root = fixture();
+    const gateway = new StubGateway();
+    gateway.view = {
+      kind: "failure",
+      classification: "api",
+      summary: "not found",
+      retryable: false,
+      effect: "not-started",
+    };
+    const runner = new StubRunner();
+    const { rc, err } = await captureConsole(() =>
+      runMirrorOrphanMain(
+        ["repair", "--issue", "9999", "--repo", "acme/app", "--project-dir", root],
+        () => "2026-08-19T00:00:00Z",
+        { gateway, processRunner: runner },
+      ),
+    );
+    expect(rc).toBe(1);
+    expect(err).toContain("repair failed for #9999");
   });
 });
