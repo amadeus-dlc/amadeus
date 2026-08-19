@@ -83,7 +83,7 @@ is.
 | `SESSION_RESUMED` | Existing Claude Code session resumed (source=resume) | Source | — | `hooks/amadeus-session-start.ts` |
 | `SESSION_COMPACTED` | Context compaction occurred | Current Stage, State Validity | — | `hooks/amadeus-validate-state.ts` (PreCompact) |
 | `SESSION_ENDED` | Claude Code session terminates | Reason | — | `hooks/amadeus-session-end.ts` |
-| `HUMAN_TURN` | A real human acted this turn: submitted a prompt, or answered a question widget only on a harness with a trusted question-answer hook (the approval/interview gate requires one since the last gate resolution). Codex uses numbered prose so every answer returns through prompt submission. | — | — | `tools/amadeus-presence-reservation.ts` — the canonical presence seam appended to by `hooks/amadeus-mint-presence.ts` (UserPromptSubmit + PostToolUse AskUserQuestion where that hook is trusted) and by the per-harness prompt-submit adapters, which never append on their own |
+| `HUMAN_TURN` | A real human acted this turn: submitted a prompt at a turn boundary, or answered a question widget only on a harness with a trusted question-answer hook (the approval/interview gate requires one since the last gate resolution). Codex uses numbered prose so every answer returns through prompt submission. A message queued mid-turn (`queued_command`) is real human input but is not this event: Claude Code does not fire UserPromptSubmit for that delivery (#3170). | — | — | `tools/amadeus-presence-reservation.ts` — the canonical presence seam appended to by `hooks/amadeus-mint-presence.ts` (UserPromptSubmit + PostToolUse AskUserQuestion where that hook is trusted) and by the per-harness prompt-submit adapters, which never append on their own |
 
 ### Advisory choice evidence
 

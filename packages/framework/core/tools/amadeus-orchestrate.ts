@@ -214,6 +214,7 @@ import type {
 import {
   admitProductionStageFailure,
   applyProductionAutonomyMode,
+  formatIntentAutonomyUpdateFailure,
   observeLaunchTurnToken,
   previewProductionAutonomyGrant,
   productionStageAutonomy,
@@ -1478,9 +1479,10 @@ export function applyLaunchAutonomyDeclaration(
     };
   }
   // 8 — delegate. The flag is not provenance: the write path's own HUMAN_TURN
-  // requirement decides, and its PROVENANCE_REQUIRED is relayed unchanged.
+  // requirement decides, and its PROVENANCE_REQUIRED is relayed through the
+  // user-facing formatter (#3170 turn-boundary hint).
   const applied = ports.applyMode({ projectDir, stateContent, mode });
-  if (!applied.ok) return { kind: "error", message: `Intent autonomy update failed: ${applied.error}` };
+  if (!applied.ok) return { kind: "error", message: formatIntentAutonomyUpdateFailure(applied.error) };
   return { kind: "continue" };
 }
 
