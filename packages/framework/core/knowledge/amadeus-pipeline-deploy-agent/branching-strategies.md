@@ -275,7 +275,9 @@ If the worktree was already gone (idempotent path), `emitted` is `null` and `rea
 
 ## How AIDLC reads strategy from team practices
 
-The dispatch protocol described in this section is invoked at the two Bolt boundaries — worktree create when a Bolt starts, worktree merge when it completes. `amadeus-bolt complete --merge` orchestrates around the dispatch (forkState merge-back, forkAudit merge-back) but does not call `amadeus-worktree merge` directly. No shipped conductor face carries that dispatch today (`amadeus-worktree` appears in none of them), so treat this section as the agent's contract for when it IS dispatched, not as a description of prose that exists.
+The dispatch protocol described in this section is invoked at the two Bolt boundaries — worktree create when a Bolt starts, worktree merge when it completes. `amadeus-bolt complete --merge` orchestrates around the dispatch (forkState merge-back, forkAudit merge-back) but does not call `amadeus-worktree merge` itself: that is the Git-source half. For a swarm batch, `amadeus-swarm finalize` is the owner — after a successful AIDLC-data merge it dispatches `amadeus-worktree merge --slug <unit> --target <bound> --strategy <bound>`. A unit is not `converged` unless both halves land. Treat this section as the flag menu for that dispatch, not as a conductor-owned Step that lives in SKILL.md prose.
+
+If an older finalize already reported `units[].status: converged` without a `WORKTREE_MERGED` row or without the worker commit on the target, recover by running the same `amadeus-worktree merge --slug <unit> --target <prepare-base> --strategy squash` from the main checkout (HEAD must be the target). Do not re-run finalize to "confirm" a landing that never happened.
 
 At either boundary, the orchestrator dispatches a Task call to **amadeus-pipeline-deploy-agent** with two inputs:
 

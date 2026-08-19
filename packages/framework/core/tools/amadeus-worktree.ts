@@ -533,8 +533,10 @@ export function handleMerge(
   // ERROR_LOGGED row carries enough state for doctor to tell
   // "merge failed entirely" from "merge landed, cleanup orphan remains"
   // — these need different recovery actions.
+  // --force matches discard: a Bolt worktree is often dirty with AIDLC
+  // fork leftovers that complete --merge already landed on the base.
   const cleanupTag = `[merge-succeeded:${commitSha}]`;
-  const rm = runGit(["worktree", "remove", wtPath], gitCwd);
+  const rm = runGit(["worktree", "remove", "--force", wtPath], gitCwd);
   if (!rm.ok) {
     errorWithSlug(
       slug,

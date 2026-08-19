@@ -45,17 +45,21 @@
 //       check alone is never authority to re-spawn a worker.
 //   finalize --batch <n> --units <a,b,c> --claimed <a,b> --check-cmd <cmd>
 //            [--test-file <path>] [--reasons <unit>=<reason>,...]
+//            [--target <branch>] [--strategy <squash|merge|rebase>] [--repo <name>]
 //       The AUTHORITATIVE gate. The conductor's claimed-converged set is an
 //       explicit input and the only thing finalize trusts from it. For each
 //       claimed unit, RE-RUN the check (green + untampered) before any merge: a
 //       unit named in --claimed but red on disk is refused the merge and lands in
 //       the failure envelope (the lying-conductor guard). Serialised HOLD-MERGE
-//       merge-back of the genuine passes only, then emit the full SWARM_* audit
-//       trail + the typed envelope + exit 0/2. --reasons carries the conductor's
-//       typed attribution for a DECLINED (unclaimed) unit — unsatisfiable /
-//       budget-exhausted / cap-exhausted — recorded faithfully (the conductor
-//       judges WHY a unit gave up; the tool only records it, never for a claimed
-//       unit, whose reason is always the tool's own re-verify verdict).
+//       merge-back of the genuine passes only — AIDLC data THEN Git source —
+//       then emit the full SWARM_* audit trail + the typed envelope + exit 0/2.
+//       --target/--strategy bind amadeus-worktree merge (default: current branch
+//       of the construction repo, squash). --repo is the same selector prepare
+//       used. --reasons carries the conductor's typed attribution for a DECLINED
+//       (unclaimed) unit — unsatisfiable / budget-exhausted / cap-exhausted —
+//       recorded faithfully (the conductor judges WHY a unit gave up; the tool
+//       only records it, never for a claimed unit, whose reason is always the
+//       tool's own re-verify verdict).
 //
 // Retry judgement and retry authority remain distinct: the conductor supplies
 // observed native facts, while the exact allowlist and durable C2 budget decide
@@ -66,6 +70,7 @@
 //   - amadeus-worktree create        -> the isolated git worktree per unit
 //   - amadeus-bolt start --worktree  -> state/audit/runtime-graph fork into it
 //   - amadeus-bolt complete --merge  -> the AIDLC-data merge back to the base
+//   - amadeus-worktree merge         -> the Git-source merge onto --target
 //   - amadeus-bolt release-merge     -> release the existing per-Bolt HOLD-MERGE
 //     lock before a serialised merge (idempotent — safe if never held). The merge
 //     phase is serial (a one-at-a-time loop), so only one merge is ever in flight.
@@ -167,6 +172,7 @@ export function resolveDriver(raw: string | undefined, harness: HarnessName): Dr
 // --degraded-from. `error` is excluded: it is the tool's OWN verdict for a
 // claimed-but-red / tampered unit, never a conductor-supplied attribution.
 const DECLINED_REASONS: FailureReason[] = ["unsatisfiable", "budget-exhausted", "cap-exhausted"];
+const WORKTREE_STRATEGIES = new Set(["squash", "merge", "rebase"]);
 
 interface UnitResult {
   unit: string;
@@ -894,6 +900,28 @@ function finishFinalizeInputFailure(
   exit(2);
 }
 
+function resolveFinalizeGitMerge(
+  projectDir: string,
+  flags: Record<string, string>,
+): { target: string; strategy: string; repoArgs: string[] } {
+  const strategy = flags.strategy ?? "squash";
+  if (!WORKTREE_STRATEGIES.has(strategy)) {
+    fail(`finalize --strategy must be one of: squash, merge, rebase`);
+  }
+  let repoCwd: string;
+  let repoName: string | null;
+  try {
+    const resolved = resolveConstructionRepo(projectDir, flags.repo, flags.intent, flags.space);
+    repoCwd = resolved.cwd;
+    repoName = resolved.repo;
+  } catch (e) {
+    fail(e instanceof Error ? e.message : String(e));
+  }
+  const target = flags.target ?? flags.base ?? currentBranch(repoCwd);
+  if (!target) fail("finalize could not resolve --target");
+  return { target, strategy, repoArgs: repoName ? ["--repo", repoName] : [] };
+}
+
 export function handleFinalize(
   rest: string[],
   exit: (code: number) => void = process.exit,
@@ -1037,10 +1065,14 @@ export function handleFinalize(
 
   // Serialised HOLD-MERGE merge-back of the genuine passes only (sorted for a
   // deterministic merge order). release-merge is idempotent — safe whether or not
-  // the lock was ever held; complete --merge reaches the add/add-conflict abort
-  // pinned at the composed surface by the worktree-merge tests.
+  // the lock was ever held; complete --merge is the AIDLC-data half; Git source
+  // then lands through amadeus-worktree merge (issue #3197). A unit is not
+  // converged unless BOTH land — the same merge_failures downgrade as #674.
   const mergeFailures: { unit: string; detail: string }[] = [];
-  for (const unit of [...genuine].sort()) {
+  const unitsToMerge = [...genuine].sort();
+  const gitMerge =
+    unitsToMerge.length > 0 ? resolveFinalizeGitMerge(projectDir, flags) : undefined;
+  for (const unit of unitsToMerge) {
     runTool("amadeus-bolt.ts", ["release-merge", "--slug", unit], projectDir);
     const merged = runTool(
       "amadeus-bolt.ts",
@@ -1049,6 +1081,37 @@ export function handleFinalize(
     );
     if (!merged.ok) {
       mergeFailures.push({ unit, detail: merged.stderr.trim() || merged.stdout.trim() });
+      continue;
+    }
+    if (gitMerge === undefined) {
+      mergeFailures.push({ unit, detail: "amadeus-worktree merge binding missing" });
+      continue;
+    }
+    const landed = runTool(
+      "amadeus-worktree.ts",
+      [
+        "merge",
+        "--slug",
+        unit,
+        "--target",
+        gitMerge.target,
+        "--strategy",
+        gitMerge.strategy,
+        "--message",
+        `Bolt ${unit} (swarm batch ${batch})`,
+        ...gitMerge.repoArgs,
+      ],
+      projectDir,
+    );
+    if (!landed.ok) {
+      const detail =
+        landed.stderr.trim() || landed.stdout.trim() || "amadeus-worktree merge failed";
+      // The primitive tags cleanup-only failures after the target commit
+      // already landed. That is not a false green: the Git source is on
+      // the target, and doctor reconciles the leftover worktree/branch.
+      if (!detail.includes("[merge-succeeded:")) {
+        mergeFailures.push({ unit, detail });
+      }
     }
   }
 

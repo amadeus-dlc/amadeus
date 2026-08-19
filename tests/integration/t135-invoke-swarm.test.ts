@@ -250,6 +250,12 @@ function setupReferee(): void {
   const winWorktree = join(proj, ".amadeus", "worktrees", "bolt-win");
   if (existsSync(winWorktree)) {
     writeFileSync(join(winWorktree, "win.txt"), "done\n");
+    spawnSync("git", ["add", "--", "win.txt"], { cwd: winWorktree, encoding: "utf-8" });
+    spawnSync(
+      "git",
+      ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "land win.txt"],
+      { cwd: winWorktree, encoding: "utf-8" },
+    );
   }
 
   // The fixed pool is the dispatch authority. Acquire at most the prepared cap,

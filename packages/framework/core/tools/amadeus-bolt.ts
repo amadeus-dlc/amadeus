@@ -437,12 +437,10 @@ function handleStart(args: string[], explicitProjectDir?: string): void {
 // --merge: after BOLT_COMPLETED, delegates to `amadeus-state.ts merge` and
 // `amadeus-audit.ts audit-merge` to
 // consolidate state + audit back to main. This is the AIDLC-metadata half only:
-// it runs BEFORE whatever integrates the Bolt's SOURCE branch, so the record is
-// consolidated first and a later git integration cannot land code whose state
-// and audit never came back. No shipped conductor face carries that git
-// integration today (`amadeus-worktree` appears in none of them), so this
-// comment names the ordering, not a numbered step in prose that has since
-// moved. Single-bolt only — csv batch with --merge is rejected.
+// it runs BEFORE the Git-source merge (`amadeus-worktree merge`, dispatched by
+// `amadeus-swarm finalize` for a swarm batch) so the record is consolidated
+// first and a later git integration cannot land code whose state and audit
+// never came back. Single-bolt only — csv batch with --merge is rejected.
 function preflightCompletionMerge(
   pd: string,
   flags: Record<string, string>,

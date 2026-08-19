@@ -35,7 +35,7 @@
 //     claimed-but-red / tampered unit is refused the merge and lands "failed"
 //     with reason "error". A DECLINED (unclaimed) unit carries the conductor's
 //     --reasons attribution (:463-477,:523), defaulting to "cap-exhausted".
-//     Merges the genuine passes (serialised, :541), then emits one
+//     Merges the genuine passes (serialised AIDLC then Git source), then emits one
 //     SWARM_UNIT_CONVERGED / SWARM_UNIT_FAILED row per unit, a
 //     SWARM_BATON_RETURNED per failed unit, and a closing SWARM_COMPLETED
 //     (:555-570); prints the pretty-printed envelope and exits 2 if any unit or
@@ -66,8 +66,9 @@
 //   .sh 11 path-confinement (../ --test-file typed error)    -> "11 path-confinement: a ../ --test-file is a typed error, not a disabled guard"
 //   .sh 12 conductor attribution (--reasons unsatisfiable)   -> "12 conductor attribution: --reasons unsatisfiable lands the typed reason"
 //   .sh 13 --reasons cannot override the lying-conductor guard-> "13 --reasons cannot launder a claimed-but-red unit (stays error)"
+//   #3197 Git source must land on the target (not AIDLC-only false green)
 //
-// 13 .sh asserts -> 13 expect()-bearing test() cases (same count, same
+// 13 .sh asserts -> 13 expect()-bearing test() cases (same count, same)
 // observables). STRONGER than the .sh in several places: the .sh grepped loose
 // substrings (`grep -q '"converged":true'`); here the stdout is JSON.parse'd and
 // asserted field-by-field (e.g. the lying unit's status === "failed" + reason
@@ -151,6 +152,29 @@ function makeSwarmFixture(): string {
 /** The per-unit worktree path the tool derives (amadeus-lib worktreePath). */
 function wtPath(proj: string, slug: string): string {
   return join(proj, ".amadeus", "worktrees", `bolt-${slug}`);
+}
+
+/** Stage a worker commit inside a prepared unit worktree (the Git source finalize must land). */
+function commitInWorktree(proj: string, slug: string, file: string, content: string): void {
+  const dir = wtPath(proj, slug);
+  writeFileSync(join(dir, file), content);
+  const add = spawnSync("git", ["add", "--", file], { cwd: dir, encoding: "utf-8" });
+  if ((add.status ?? -1) !== 0) {
+    throw new Error(`git add ${file} failed: ${add.stderr ?? add.stdout}`);
+  }
+  const commit = spawnSync(
+    "git",
+    ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", `land ${file}`],
+    { cwd: dir, encoding: "utf-8" },
+  );
+  if ((commit.status ?? -1) !== 0) {
+    throw new Error(`git commit ${file} failed: ${commit.stderr ?? commit.stdout}`);
+  }
+}
+
+function gitShow(proj: string, spec: string): { rc: number; out: string } {
+  const res = spawnSync("git", ["show", spec], { cwd: proj, encoding: "utf-8" });
+  return { rc: res.status ?? -1, out: res.stdout ?? "" };
 }
 
 interface RefResult {
@@ -298,9 +322,10 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     // The worktree directory landed on disk via the real `git worktree add`.
     expect(existsSync(wtPath(proj, "alpha"))).toBe(true);
 
-    // --- Case 2: the conductor's worker would have written impl.txt; stage it so
-    // the real check command (test -f impl.txt) passes (exit 0 = green).
-    writeFileSync(join(wtPath(proj, "alpha"), "impl.txt"), "done\n");
+    // --- Case 2: the conductor's worker would have committed impl.txt; stage
+    // that Git source so the real check command (test -f impl.txt) passes and
+    // later finalize can land the commit on the target (issue #3197).
+    commitInWorktree(proj, "alpha", "impl.txt", "done\n");
     const c1 = runRef(proj, ["check", "alpha", "--check-cmd", "test -f impl.txt"]);
     expect(c1.rc).toBe(0);
     expect(JSON.parse(c1.out).converged).toBe(true);
@@ -417,7 +442,7 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     runRef(proj, ["prepare", "--batch", "2", "--units", "win,lie", "--base", "main"]);
     terminalizePool(proj, "2");
     // `win` genuinely converges; `lie` does NOT (no impl) but is falsely claimed.
-    writeFileSync(join(wtPath(proj, "win"), "win.txt"), "done\n");
+    commitInWorktree(proj, "win", "win.txt", "done\n");
     const f = runRef(proj, [
       "finalize",
       "--batch",
@@ -455,7 +480,7 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     const proj = makeSwarmFixture();
     runRef(proj, ["prepare", "--batch", "2", "--units", "wn,le", "--base", "main"]);
     terminalizePool(proj, "2");
-    writeFileSync(join(wtPath(proj, "wn"), "wn.txt"), "done\n");
+    commitInWorktree(proj, "wn", "wn.txt", "done\n");
     const f = runRef(proj, [
       "finalize",
       "--batch",
@@ -731,5 +756,45 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     expect(eventCount(proj, "SWARM_UNIT_FAILED")).toBe(1);
     expect(eventCount(proj, "SWARM_BATON_RETURNED")).toBe(1);
     expect(eventCount(proj, "SWARM_COMPLETED")).toBe(1);
+  }, scaleTestTime(120000));
+
+  // ===========================================================================
+  // Case 15 (issue #3197): AIDLC merge success is not Git-source landing.
+  // A worker commit in the unit worktree must reach the target branch, and
+  // finalize must not report units[].status converged without that landing.
+  // ===========================================================================
+  test("15 finalize: worker Git source lands on the target (issue #3197)", () => {
+    const proj = makeSwarmFixture();
+    runRef(proj, ["prepare", "--batch", "4", "--units", "src", "--base", "main"]);
+    terminalizePool(proj, "4");
+    commitInWorktree(proj, "src", "impl.txt", "landed\n");
+    const before = gitShow(proj, "HEAD:impl.txt");
+    expect(before.rc).not.toBe(0);
+
+    const f = runRef(proj, [
+      "finalize",
+      "--batch",
+      "4",
+      "--units",
+      "src",
+      "--claimed",
+      "src",
+      "--check-cmd",
+      "test -f impl.txt",
+    ]);
+    const env = JSON.parse(f.out);
+    const src = env.units.find((u: { unit: string }) => u.unit === "src");
+
+    // The Git source must actually land. A verify-only / AIDLC-only success
+    // that leaves main unchanged is the #3197 false green.
+    const landed = gitShow(proj, "HEAD:impl.txt");
+    expect(landed.rc).toBe(0);
+    expect(landed.out).toBe("landed\n");
+    expect(eventCount(proj, "WORKTREE_MERGED")).toBe(1);
+    expect(f.rc).toBe(0);
+    expect(src).toBeDefined();
+    expect(src.status).toBe("converged");
+    expect(env.converged).toBe(1);
+    expect(env.merge_failures).toEqual([]);
   }, scaleTestTime(120000));
 });
