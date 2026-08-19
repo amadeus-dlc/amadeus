@@ -313,7 +313,7 @@ describe("hold — the expected demo of Bolt 2", () => {
 
   test("a current terminal receipt releases the hold", async () => {
     const registration = await registerFr001();
-    const receipt = await receiptFor("impl-only", ["FR-001"], IDENTITY_B, approvalFile(), true);
+    const receipt = await receiptFor("non-target", ["FR-001"], IDENTITY_B, approvalFile(), true);
     await buildBundle("terminal", "terminal-route-receipt", receipt, IDENTITY_B, registration);
     const { exitCode, body } = await hold(IDENTITY_B);
     expect(exitCode).toBe(0);
