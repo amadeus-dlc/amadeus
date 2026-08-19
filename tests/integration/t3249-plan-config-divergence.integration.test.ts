@@ -15,7 +15,9 @@
 //     #3249 divergence that refused to reach the stage completion demanded
 //   - retractStrandedWorkflowCompletion the recompose-side retraction
 //
-// Mechanism: none - pure functions and a guard registry driven directly.
+// Mechanism: none - pure functions, a guard registry and two CLI handlers
+// driven directly in-process. It lives in the integration tier because the
+// fixtures touch the filesystem (a medium test, which the unit tier caps out).
 
 import { describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";

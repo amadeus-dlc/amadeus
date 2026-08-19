@@ -1944,7 +1944,7 @@
           "mechanism": "none"
         },
         {
-          "file": "tests/unit/t3249-plan-config-divergence.test.ts",
+          "file": "tests/integration/t3249-plan-config-divergence.integration.test.ts",
           "mechanism": "none"
         }
       ],
