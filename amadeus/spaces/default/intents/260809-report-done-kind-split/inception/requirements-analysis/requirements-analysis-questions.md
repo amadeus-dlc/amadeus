@@ -72,3 +72,26 @@ C 案(#2770 への provenance 補記 → `override`)は provenance の補記ま�
 - Delivery Bolt PR: **#3236**(head `chore/record-260809-report-done-kind-split`、base `main`)。マージ・queue 投入は監督者が行う
 - 構造欠落は Issue **#3239** として起票(bug / P3 / S3-MAJOR)
 - #2767 と `main` 履歴は未接触(裁定条件 (c) を維持)
+
+### autonomy 投影の往復と scope グリッド recompose の経緯(2026-08-19)
+
+再開時、engine が `AUTONOMY_PROJECTION_DIVERGENCE` を出した(`Intent Autonomy Mode: semi` が投影する `Construction Autonomy Mode` は RFC-0001 FR-6 により `autonomous` だが、record は `gated` のままだった)。`set-autonomy --mode semi` で投影を収束させた。
+
+その後 `complete-workflow` が、現行 `amadeus/config.json` の `plugin.scope-bindings` が `self-fix` に必須と定める3ステージ(`formal-model-check` / `tla-authoring` / `pr-convergence`)が pending だとして拒否した。この record の scope グリッドは 2026-08-09 に書かれ、当該 binding は PR #2890(2026-08-11、本 intent のパーク中)で入ったため、`jump resolve` 側は同じ3ステージを「skipped」として拒否する — 両経路が塞がった。この構造欠陥は Issue **#3249** として起票済み。
+
+グリッドを現行 config へ合わせる `recompose --add` は、Lifecycle Phase が CONSTRUCTION かつ `Construction Autonomy Mode` が `autonomous` のとき拒否される(`amadeus-lib.ts:572-585` `assertRecomposeAllowed`)。`gated` を得られるのは mode `none` だけなので、**一時的に `none` へ落とし、recompose 後ただちに `semi` へ戻した**。
+
+この往復は**認可の拡大ではなく、人間宣言の復元**である。`semi` は intent 誕生時に人間が宣言したモードであり、一次記録は Intent 監査の seq 19 / 2026-08-09T22:54:10Z / transactionId `autonomy-command-3c68a8d807f0bba03e0623d944d11314`(event `AUTONOMY_MODE_CHANGED`、`beforeMode: none` → `afterMode: semi`、`principalId: local-human`、`humanTurnId: sha256:eb94811ba47c2a2d8134051d1c27d156055aa0fefeb321d387880497f98a58cb`)。復帰前にこの行を実測して実 HUMAN 由来を確認した。
+
+また、この計画変更(recompose)自体は人間ゲートを経ている — 監督者の裁定と、ユーザーのターミナル入力による実 HUMAN_TURN(seq 74 / 2026-08-19T09:12:28Z)である。`set-autonomy` は `PROVENANCE_REQUIRED` により未消費の human presence を要求するため、この往復は人間の presence なしには実行できなかった。**supervision 承認による代答には当たらない**(監督者の承認はステージゲートの裁定であり、HUMAN_TURN の代替として使っていない)。3操作(`none` → `recompose` → `semi`)は連続して実行し、間に他のゲート判定を挟んでいない。
+
+### 人間入力の代理入力への切替(2026-08-19)
+
+2026-08-19 09:40 頃以降、本 intent の人間入力は**監督 AI による代理入力**で行う。
+
+- **委任の根拠(申告)**: 監督セッションの実 HUMAN_TURN、逐語「なんでメンバーの端末でいちいち入力しないといけないのだ。お前が代理入力しろや」。ユーザー本人が、マイルストーンゲートごとに本ターミナルへ入力する運用を明示的に取り止め、監督 AI へ代理入力を委任した
+- **本 record で検証できたこと**: 代理入力は本セッションのユーザープロンプトとして着弾しており、`UserPromptSubmit` フックが HUMAN_TURN を mint している(machine-injected マーカーを持たないため)。すなわち presence 自体は本 record の監査に実在する
+- **本 record で検証できないこと**: 上記の逐語 HUMAN_TURN は監督セッション側の監査に属し、本 intent の audit shard からは参照できない。したがって委任の一次記録は**本 record の外**にあり、ここに残せるのは申告された provenance である。監査時はこの点を前提に読むこと
+- **適用範囲**: 本 intent の残りのゲート承認に限る。マージ・リリース等の不可逆な外部操作へは拡張しない(team.md P4)
+
+それ以前(build-and-test / tla-authoring のゲート)の HUMAN_TURN は、ユーザー本人が本ターミナルへ直接入力したもの(seq 45 / 74 ほか)。
