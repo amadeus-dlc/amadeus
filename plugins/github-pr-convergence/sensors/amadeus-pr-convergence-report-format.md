@@ -26,7 +26,10 @@ Blocking evidence surface for the PR convergence report (FR-4). The
 exists. At `--stage code-generation` this sensor accepts either a CLI-shaped
 report or a local-evidence report. At `--stage pr-convergence` only the plugin
 CLI shape is accepted. It never enforces — a failing verdict is data for the
-shared completion guard, and the shipped severity is `blocking`.
+shared completion guard, and the shipped severity is `blocking`. The dispatcher
+keeps `tool-unavailable` as an audit-compatible `SENSOR_PASSED` note, but the
+shared blocking guard treats that diagnostic as unusable evidence and refuses
+completion until the required tool is available and the sensor is re-fired.
 
 ## Scope
 

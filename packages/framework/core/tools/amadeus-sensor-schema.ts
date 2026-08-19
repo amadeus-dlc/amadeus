@@ -35,9 +35,11 @@ import { scalarField } from "./amadeus-lib.ts";
 // The closed severity vocabulary. "advisory" is the framework default and the
 // severity every shipped manifest declares: the sensor records its verdict in
 // the audit trail and nothing else. "blocking" is consumed by the approval
-// guard — a stage whose blocking sensor has an unresolved FAILED verdict (or
+// guard — a stage whose blocking sensor has no usable terminal verdict (or
 // never fired at all) cannot be completed. Runtime carriage is via the compiled
-// stage graph (SensorResolution.severity), not the audit row.
+// stage graph (SensorResolution.severity), not the audit row. A
+// SENSOR_PASSED Note=tool-unavailable remains audit-compatible, but is not a
+// usable blocking verdict.
 export const SENSOR_SEVERITIES = ["advisory", "blocking"] as const;
 export type SensorSeverity = (typeof SENSOR_SEVERITIES)[number];
 

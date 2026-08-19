@@ -1,5 +1,18 @@
 # コンポーネント棚卸し
 
+## Issue #3029 のコンポーネント境界
+
+| コンポーネント | 入力 | 出力 | 境界上の注意 |
+|---|---|---|---|
+| sensor manifest parser | YAML frontmatter | `SensorManifest` / `SensorSeverity` | blocking の宣言を graph に渡すが、script exit の意味は持たない |
+| sensor dispatcher | command、stage、output path | `SENSOR_FIRED` と terminal `SENSOR_*` | exit 127 を成功系イベントへ分類する |
+| compiled graph | stage `sensors:` と manifest roster | `sensors_applicable` | severity の唯一の runtime carrier |
+| blocking guard | graph の blocking IDs、audit、artifact digest | allow / deny verdict | `script-error:` を拒否し `tool-unavailable` を許可する |
+| GitHub PR convergence sensor | `pr-convergence-report.md` | pass/fail JSON | manifest は `default_severity: blocking`。実際の gate は core guard が担う |
+| t511 / t92 regression corpus | inline audit、isolated temp project、stub scripts | truth-table assertions | exit 127 の pass 維持を明示的に pin する |
+
+コンポーネントは「分類」「severity 搬送」「完了判定」に分離されており、Issue #3029 は dispatcher の `tool-unavailable` 分類を guard の blocking semantics が失敗扱いとして消費していない接合部にある。
+
 ## core/tools の増減と formal-model-check patient 面の構成要素（260814-fmc-macos-provider、履歴、observed `5f6b5bf97`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: すべて observed = `5f6b5bf97068f59dee53dcd4a2f6564967c3d164`。差分 base = `89532174c30ef9cc7ff29496cd6916586fdda00a`（9 commits）。全数列挙と検索述語は `re-scans/260814-fmc-macos-provider.md` を正本とする。

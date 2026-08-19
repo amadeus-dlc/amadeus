@@ -1,5 +1,11 @@
 # ビジネス概要
 
+## Issue #3029 の現行断面（2026-08-18、観測 `c8c393bba927e4c00a8c6de9ef2da76068d04bfa`）
+
+Issue #3029 は、blocking sensor の per-sensor script が exit 127 を返したとき、ツール利用不能を示す `SENSOR_PASSED`（`Note: tool-unavailable`）として監査され、blocking gate を通過できる欠陥である。これは Bun 自体が起動できない `script-error: spawn-failed` 分岐とは別の経路である。
+
+現行の証拠は、dispatcher の `packages/framework/core/tools/amadeus-sensor.ts:772-778`（branch b）、completion guard の `packages/framework/core/tools/amadeus-state.ts:2008-2014`、blocking manifest の `plugins/github-pr-convergence/sensors/amadeus-pr-convergence-report-format.md:5` に分散している。後続 requirements では、exit 127 を blocking gate で拒否する fail-closed 化か、現在の pass 扱いを文書化して維持するかを裁定する必要がある。前者なら `tests/integration/t511-blocking-sensor-gate.integration.test.ts:369-374` と `tests/unit/t511-blocking-sensor-severity.test.ts:512-527` の期待値反転、後者なら `packages/framework/core/knowledge/amadeus-shared/audit-format.md:267-272` と blocking semantics の整合明文化が必要になる。
+
 ## プロダクトと利用者価値
 
 Amadeus は、要件整理、設計、実装、検証、Pull Request 提出までを監査可能な stage として進める AI-DLC CLI フレームワークである。リポジトリは長時間稼働するサービスではなく、Bun で実行する短命な TypeScript ツール、複数 AI ハーネスへの配布面、Markdown/JSON の workflow record から構成される。

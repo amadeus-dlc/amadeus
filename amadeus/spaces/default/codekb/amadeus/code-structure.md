@@ -1,5 +1,18 @@
 # コード構造
 
+## Issue #3029 に関係する構造（2026-08-18）
+
+| 層 | ファイル | 責務 | 現行の観測 |
+|---|---|---|---|
+| manifest schema | `packages/framework/core/tools/amadeus-sensor-schema.ts` | `default_severity` を含む sensor manifest の解析・検証 | `advisory` / `blocking` の閉語彙を保持する |
+| dispatcher | `packages/framework/core/tools/amadeus-sensor.ts` | per-sensor script の spawn、結果分類、SENSOR_* 監査行の出力 | exit 127 は `SENSOR_PASSED` + `tool-unavailable` |
+| graph resolver | `packages/framework/core/tools/amadeus-graph.ts` | stage の sensor binding と severity の compiled projection | blocking severity は `sensors_applicable` に搬送 |
+| completion guard | `packages/framework/core/tools/amadeus-state.ts` | fire/terminal/digest を読み stage 完了を許可・拒否 | `script-error:` のみ blocking refusal |
+| plugin manifest | `plugins/github-pr-convergence/sensors/amadeus-pr-convergence-report-format.md` | PR report の blocking sensor 宣言 | `default_severity: blocking` |
+| regression tests | `tests/unit/t511-blocking-sensor-severity.test.ts`, `tests/integration/t511-blocking-sensor-gate.integration.test.ts`, `tests/integration/t92.test.ts` | severity、completion gate、dispatcher truth table の固定 | exit 127 の pass 期待値を固定 |
+
+この問題は dispatcher が監査イベントを生成する面と、state がそのイベントを completion predicate に射影する面の契約不一致である。Bun 不在の `spawn-failed` は dispatcher の branch 0 にあり、exit 127 の branch b と別分岐なので同一の実害例として扱わない。
+
 ## Focus Area: undefined 形の回帰テストが要求するシーム（260814-ambient-error-sink、履歴、observed `6e94189de`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260814-priority-bug-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 対象: [Issue #3004](https://github.com/amadeus-dlc/amadeus/issues/3004)。測定 ref = observed `6e94189dec9e8e2bd0aaeb53bcff7cf9cba27440`。本節は**落ちる実証を成立させるために必要なテスト構造**を記録する（テストの設計自体は build-and-test / code-generation の所掌）。

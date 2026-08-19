@@ -366,11 +366,14 @@ describe("t511 — approve refuses on an unresolved blocking sensor (#2671 c)", 
     expect(r.stderr).toContain("script-error: bad-output");
   });
 
-  test("approves after the exit-127 stub emits tool-unavailable (#2988)", () => {
+  test("refuses approve after the exit-127 stub emits tool-unavailable (#3029)", () => {
     fireBlockingSensor("amadeus-sensor-stub-127.ts");
+    const before = readFileSync(stateFile(), "utf-8");
     const r = captureExit(() => handleApprove([STAGE]));
-    expect(r.threw).toBe(false);
-    expect(readFileSync(stateFile(), "utf-8")).toContain(`- [x] ${STAGE}`);
+    expect(r.threw).toBe(true);
+    expect(r.stderr).toContain(SENSOR);
+    expect(r.stderr).toContain("tool-unavailable");
+    expect(readFileSync(stateFile(), "utf-8")).toBe(before);
   });
 
   test("approves once the sensor's latest terminal is SENSOR_PASSED", () => {

@@ -34,8 +34,9 @@ import {
 import type { SensorSeverity } from "../../dist/claude/.claude/tools/amadeus-sensor-schema.ts";
 import { evaluateBlockingSensors } from "../../dist/claude/.claude/tools/amadeus-state.ts";
 import {
-  digestFile,
-  resolveScriptPath,
+	digestFile,
+	decideOutcomeOrScriptError,
+	resolveScriptPath,
 } from "../../dist/claude/.claude/tools/amadeus-sensor.ts";
 
 // --- Layer 1 helpers: a minimal sensor roster -------------------------------
@@ -120,14 +121,16 @@ function sensorRow(
   outputPath: string,
   timestamp: string,
   stageSlug = "requirements-analysis",
+  extra: Record<string, string> = {},
 ): string {
   return auditLine(
     event,
     {
-      "Fire id": timestamp.replace(/\D/g, "").slice(-8),
+      "Fire id": extra["Fire id"] ?? timestamp.replace(/\D/g, "").slice(0, 10),
       "Sensor ID": sensorId,
       "Stage slug": stageSlug,
       "Output path": outputPath,
+      ...extra,
     },
     timestamp,
   );
@@ -367,6 +370,36 @@ describe("t511 — evaluateBlockingSensors decision table (#2671 c)", () => {
     expect(finding?.kind === "unresolved" ? finding.terminal : "x").toBeNull();
   });
 
+  test("a digest-less PASS from an older fire stays unresolved after a re-fire (#3204)", () => {
+    // Interleaved terminals: the latest FIRED is fire-new, but a late digest-less
+    // PASSED from fire-old still arrives. Pairing by Output path alone would
+    // accept that stale success and fail-open the blocking gate.
+    const oldFire = {
+      "Fire id": "fire-old",
+      "Sensor ID": "blocking-probe",
+      "Stage slug": "requirements-analysis",
+      "Output path": OUT,
+    };
+    const newFire = {
+      "Fire id": "fire-new",
+      "Sensor ID": "blocking-probe",
+      "Stage slug": "requirements-analysis",
+      "Output path": OUT,
+    };
+    const audit = [
+      auditLine("SENSOR_FIRED", oldFire, "2026-08-10T01:00:00Z"),
+      auditLine("SENSOR_FIRED", newFire, "2026-08-10T02:00:00Z"),
+      auditLine("SENSOR_PASSED", oldFire, "2026-08-10T02:00:01Z"),
+    ].join("\n");
+    const finding = evaluateBlockingSensors(
+      ["blocking-probe"],
+      audit,
+      "requirements-analysis",
+    );
+    expect(finding?.kind).toBe("unresolved");
+    expect(finding?.kind === "unresolved" ? finding.terminal : "x").toBe("SENSOR_PASSED");
+  });
+
   test("a re-fire after a PASSED reopens the output until its own terminal lands", () => {
     // PASSED → FIRED with no terminal yet: the artifact was edited again and the
     // re-fire is still in flight. Reading the stale PASSED would approve a stage
@@ -467,6 +500,47 @@ describe("t511 — evaluateBlockingSensors decision table (#2671 c)", () => {
     });
   });
 
+  test("spawn-failed remains a distinct script-error and is rejected by the blocking gate (#3029)", () => {
+    const error = Object.assign(new Error("spawn ENOENT"), { code: "ENOENT" });
+    const outcome = decideOutcomeOrScriptError(
+      {} as never,
+      60_000,
+      Date.now(),
+      () => ({
+        pid: 1,
+        output: ["", "", ""],
+        stdout: "",
+        stderr: "",
+        status: null,
+        signal: null,
+        error,
+      }) as ReturnType<Parameters<typeof decideOutcomeOrScriptError>[3]>,
+    );
+    expect(outcome.kind).toBe("passed");
+    if (outcome.kind !== "passed") throw new Error("spawn failure must produce a passed audit outcome");
+    expect(outcome.durationMs).toBeGreaterThanOrEqual(0);
+    expect(outcome.note).toBe("script-error: spawn-failed: ENOENT");
+    const note = outcome.note ?? "";
+    expect(note).toBe("script-error: spawn-failed: ENOENT");
+    const fields = {
+      "Fire id": "spawn-failed",
+      "Sensor ID": "blocking-probe",
+      "Stage slug": "requirements-analysis",
+      "Output path": OUT,
+      Note: note,
+    };
+    const audit = [
+      auditLine("SENSOR_FIRED", fields, "2026-08-10T01:00:00Z"),
+      auditLine("SENSOR_PASSED", fields, "2026-08-10T01:00:01Z"),
+    ].join("\n");
+    expect(evaluateBlockingSensors(["blocking-probe"], audit, "requirements-analysis")).toEqual({
+      kind: "script-error",
+      sensorId: "blocking-probe",
+      outputPath: OUT,
+      note: "script-error: spawn-failed: ENOENT",
+    });
+  });
+
   test("SENSOR_PASSED with Note script-error: bad-output is not a pass (#2988)", () => {
     const fields = {
       "Fire id": "badout",
@@ -509,7 +583,7 @@ describe("t511 — evaluateBlockingSensors decision table (#2671 c)", () => {
     });
   });
 
-  test("SENSOR_PASSED with Note tool-unavailable remains a pass (#2988)", () => {
+  test("SENSOR_PASSED with Note tool-unavailable fails closed for blocking sensors (#3029)", () => {
     const fields = {
       "Fire id": "tu127",
       "Sensor ID": "blocking-probe",
@@ -523,7 +597,12 @@ describe("t511 — evaluateBlockingSensors decision table (#2671 c)", () => {
     ].join("\n");
     expect(
       evaluateBlockingSensors(["blocking-probe"], audit, "requirements-analysis"),
-    ).toBeNull();
+    ).toEqual({
+      kind: "tool-unavailable",
+      sensorId: "blocking-probe",
+      outputPath: OUT,
+      note: "tool-unavailable",
+    });
   });
 
   test("note-less SENSOR_PASSED remains a pass (#2988)", () => {

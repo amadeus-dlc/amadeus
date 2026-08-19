@@ -1870,6 +1870,7 @@ export type BlockingSensorFinding =
   | { kind: "never-fired"; sensorId: string }
   | { kind: "unresolved"; sensorId: string; outputPath: string; terminal: string | null }
   | { kind: "stale"; sensorId: string; outputPath: string }
+  | { kind: "tool-unavailable"; sensorId: string; outputPath: string; note: string }
   | { kind: "script-error"; sensorId: string; outputPath: string; note: string };
 
 type SensorAuditRow = {
@@ -1964,6 +1965,14 @@ function isScriptErrorNote(note: string | null): boolean {
   return note?.startsWith("script-error:") === true;
 }
 
+function isBlockingDiagnosticNote(note: string | null): boolean {
+  return note === "tool-unavailable" || isScriptErrorNote(note);
+}
+
+function isToolUnavailableNote(note: string | null): boolean {
+  return note === "tool-unavailable";
+}
+
 export function evaluateBlockingSensors(
   blockingSensorIds: readonly string[],
   audit: string,
@@ -1992,9 +2001,12 @@ export function evaluateBlockingSensors(
         continue;
       }
       const fire = latestFire.get(row.outputPath);
-      const receiptMatches = row.outputDigest === null || (
-        fire !== undefined && fire.fireId === row.fireId && fire.outputDigest === row.outputDigest
-      );
+      // Fire id is the required correlator. A digest-less terminal from an
+      // older fire must not clear a later fire on the same Output path.
+      const receiptMatches =
+        fire !== undefined &&
+        fire.fireId === row.fireId &&
+        (row.outputDigest === null || fire.outputDigest === row.outputDigest);
       latestTerminal.set(row.outputPath, {
         event: row.event,
         outputDigest: row.outputDigest,
@@ -2007,13 +2019,21 @@ export function evaluateBlockingSensors(
     const latestDigest = currentDigest?.(latestOutputPath);
     const latestOutputPassed = latest?.event === "SENSOR_PASSED"
       && latest.receiptMatches
-      && !isScriptErrorNote(latest.note)
+      && !isBlockingDiagnosticNote(latest.note)
       && (currentDigest === undefined || (
           latest.outputDigest !== null && latestDigest === latest.outputDigest
         )
       );
     for (const outputPath of firedOutputs) {
       const terminal = latestTerminal.get(outputPath) ?? null;
+      if (isToolUnavailableNote(terminal?.note ?? null)) {
+        return {
+          kind: "tool-unavailable",
+          sensorId,
+          outputPath,
+          note: terminal?.note ?? "tool-unavailable",
+        };
+      }
       if (isScriptErrorNote(terminal?.note ?? null)) {
         return {
           kind: "script-error",
@@ -2064,9 +2084,9 @@ function blockingSensorIdsForStage(slug: string): string[] {
 // manifests through the compiled graph's sensors_applicable rows. A project that
 // registers no blocking sensor is resolved not-applicable and sees no change.
 // The sensor's own PASSED/FAILED truth table (amadeus-sensor.ts) is left
-// unchanged. This guard additionally consumes a SENSOR_PASSED Note that
-// starts with `script-error:` as not-pass, so a crashed blocking sensor
-// cannot complete a stage.
+// unchanged. This guard additionally consumes SENSOR_PASSED diagnostics
+// (`script-error:` and `tool-unavailable`) as not-pass, so a blocking sensor
+// that cannot produce usable evidence cannot complete a stage.
 function evaluateBlockingSensorGuard(
   context: StageCompletionGuardContext,
 ): LifecycleGuardVerdict {
@@ -2112,6 +2132,14 @@ function evaluateBlockingSensorGuard(
       reason:
         `Refusing to complete "${stage.slug}": the blocking sensor "${finding.sensorId}" ` +
         `has a script-error verdict (${finding.note}) on ${finding.outputPath}.`,
+      recovery: BLOCKING_SENSOR_REMEDY,
+    });
+  }
+  if (finding.kind === "tool-unavailable") {
+    return guardDenied({
+      reason:
+        `Refusing to complete "${stage.slug}": the blocking sensor "${finding.sensorId}" ` +
+        `could not run its required tool (${finding.note}) on ${finding.outputPath}.`,
       recovery: BLOCKING_SENSOR_REMEDY,
     });
   }
