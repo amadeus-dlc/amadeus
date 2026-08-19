@@ -7,7 +7,7 @@ import { canonicalIdentity } from "../../plugins/formal-model-check/tools/canoni
 import { updateModelMap } from "../../plugins/formal-model-check/tools/amadeus-sensor-model-completeness.ts";
 import { runTlaAuthoring } from "../../plugins/formal-model-check/tools/tla-authoring.ts";
 import { EvidenceBundle, EvidenceEnvelopeCodec } from "../../plugins/formal-model-check/tools/tla-evidence.ts";
-import { readModelMapSnapshot, traceSubjectsOf } from "../../plugins/formal-model-check/tools/tla-applicability.ts";
+import { readModelMapSnapshot, traceSubjectIdentityOf, traceSubjectsOf } from "../../plugins/formal-model-check/tools/tla-applicability.ts";
 import {
   RegistrationCommitter,
   createRegistrationPorts,
@@ -97,6 +97,14 @@ function entryFor(name: string, extra: Record<string, unknown> = {}): Record<str
     model: { path: `amadeus/spaces/default/specs/tla/${name}.tla`, identity: MODEL_IDENTITY },
     cfg: { path: `amadeus/spaces/default/specs/tla/${name}.cfg`, identity: CFG_IDENTITY },
     entries: [{ implPath: "packages/framework/core/tools/amadeus-election.ts", sha256: IMPL_SHA }],
+    authoringProvenance: {
+      intentRecord: "amadeus/spaces/default/intents/260813-bolt-pr-attestation",
+      execution: {
+        auditShard: "amadeus/spaces/default/intents/260813-bolt-pr-attestation/audit/session.jsonl",
+        timestamp: APPROVED_AT,
+        eventIdentity: "e".repeat(64),
+      },
+    },
     ...extra,
   };
 }
@@ -434,11 +442,14 @@ describe("registration hands the entry to the hold evaluator (FR-010 handoff)", 
       const parsed = EvidenceEnvelopeCodec.parseBundleDigest(digest);
       if (!parsed.ok) return null;
       const parts = EvidenceBundle.read(store, { digest: parsed.value });
-      return parts.ok ? traceSubjectsOf(parts.value) : null;
+      if (!parts.ok) return null;
+      const subjectIdentity = traceSubjectIdentityOf(parts.value);
+      const subjects = traceSubjectsOf(parts.value);
+      return subjectIdentity !== null && subjects !== null ? { subjectIdentity, subjects } : null;
     });
 
     expect(snapshot?.models).toEqual([
-      { name: "Election", traceSubjects: ["FR-010"] as unknown as readonly StableId[] },
+      { name: "Election", subjectIdentity: SUBJECT_IDENTITY, traceSubjects: ["FR-010"] as unknown as readonly StableId[] },
       { name: "Mirror", traceSubjects: [] },
     ]);
   });

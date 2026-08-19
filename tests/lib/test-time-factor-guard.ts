@@ -12,7 +12,8 @@ export type TimingSinkKind =
   | "timing-default"
   | "timing-constant"
   | "deadline"
-  | "test-timeout";
+  | "test-timeout"
+  | "elapsed-assertion";
 
 export interface TimingSinkFinding {
   path: string;
@@ -57,12 +58,36 @@ const SCAN_ROOTS = [
   "tests/e2e",
   "tests/harness",
   "tests/lib",
+  // Performance tests are scanned too. Their measured budgets are a distinct
+  // policy class and must carry an explicit allowlist rationale when retained.
+  "tests/perf",
 ] as const;
+
+/*
+ * Timing policy:
+ * - Class A blocking tests must prove control flow through status, counters,
+ *   seams, or completion events; elapsed-time pass/fail checks are removed.
+ * - Class B checks may remain only when they are scaleTestTime-routed,
+ *   represent a declared regression/boundary contract, and have an exact
+ *   allowlist entry with the retention reason.
+ * - Class C performance tests are scanned by this guard. A benchmark budget
+ *   may remain only for a declared performance NFR and must be allowlisted;
+ *   an unclassified timing sink fails closed.
+ */
 
 const PROHIBITED_ALLOWLIST_SINKS = new Set<TimingSinkKind>([
   "final-timeout-rescale",
   "test-time-rescale",
 ]);
+
+const ELAPSED_ASSERTION_MATCHERS = new Set([
+  "toBeLessThan",
+  "toBeLessThanOrEqual",
+  "toBeGreaterThan",
+  "toBeGreaterThanOrEqual",
+]);
+
+const ELAPSED_NAME = /(?:elapsed|duration|latency|millis|took|(?:cli|spawn|piMedian)Ms$)/i;
 
 function lineAt(source: string, offset: number): number {
   let line = 1;
@@ -211,6 +236,77 @@ export function scanTimingSource(path: string, source: string): TimingSinkFindin
     ts.forEachChild(node, visit);
   };
   visit(sourceFile);
+
+  const isClockCall = (node: ts.Node): boolean => {
+    if (!ts.isCallExpression(node)) return false;
+    if (!ts.isPropertyAccessExpression(node.expression)) return false;
+    const owner = node.expression.expression;
+    return (
+      ts.isIdentifier(owner) &&
+      ((owner.text === "performance" && node.expression.name.text === "now") ||
+        (owner.text === "Date" && node.expression.name.text === "now"))
+    );
+  };
+  const hasElapsedSignal = (node: ts.Node): boolean => {
+    if (ts.isIdentifier(node) && ELAPSED_NAME.test(node.text)) return true;
+    if (ts.isPropertyAccessExpression(node) && ELAPSED_NAME.test(node.name.text)) return true;
+    if (
+      ts.isBinaryExpression(node) &&
+      node.operatorToken.kind === ts.SyntaxKind.MinusToken &&
+      isClockCall(node.left)
+    ) {
+      return true;
+    }
+    let found = false;
+    ts.forEachChild(node, (child) => {
+      if (!found && hasElapsedSignal(child)) found = true;
+    });
+    return found;
+  };
+  const hasElapsedComparison = (node: ts.Node): boolean => {
+    if (
+      ts.isBinaryExpression(node) &&
+      [
+        ts.SyntaxKind.LessThanToken,
+        ts.SyntaxKind.LessThanEqualsToken,
+        ts.SyntaxKind.GreaterThanToken,
+        ts.SyntaxKind.GreaterThanEqualsToken,
+      ].includes(node.operatorToken.kind) &&
+      (hasElapsedSignal(node.left) || hasElapsedSignal(node.right))
+    ) {
+      return true;
+    }
+    let found = false;
+    ts.forEachChild(node, (child) => {
+      if (!found && hasElapsedComparison(child)) found = true;
+    });
+    return found;
+  };
+  const visitAssertions = (node: ts.Node): void => {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "expect") {
+      const matcher = node.parent;
+      if (
+        ts.isPropertyAccessExpression(matcher) &&
+        matcher.expression === node &&
+        ts.isCallExpression(matcher.parent) &&
+        matcher.parent.expression === matcher &&
+        (ELAPSED_ASSERTION_MATCHERS.has(matcher.name.text) ||
+          (matcher.name.text === "toBe" && node.arguments[0] && hasElapsedComparison(node.arguments[0]))) &&
+        node.arguments[0] &&
+        (hasElapsedSignal(node.arguments[0]) || hasElapsedComparison(node.arguments[0]))
+      ) {
+        const assertion = matcher.parent;
+        findings.push({
+          path,
+          sink: "elapsed-assertion",
+          line: sourceFile.getLineAndCharacterOfPosition(assertion.getStart(sourceFile)).line + 1,
+          expression: assertion.getText(sourceFile),
+        });
+      }
+    }
+    ts.forEachChild(node, visitAssertions);
+  };
+  visitAssertions(sourceFile);
   return findings.sort((a, b) => a.line - b.line || a.sink.localeCompare(b.sink));
 }
 

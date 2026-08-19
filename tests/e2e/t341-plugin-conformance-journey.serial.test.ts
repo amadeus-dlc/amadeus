@@ -56,7 +56,6 @@ const CODEX_INSTALL_DOC = join(REPO_ROOT, "dist", "plugins", PLUGIN, "codex", "I
 
 let ws = "";
 let hostRoot = "";
-let journeyMs = 0;
 
 type Run = { status: number | null; stdout: string; stderr: string };
 
@@ -187,8 +186,6 @@ afterAll(() => {
 
 describe("t341 plugin conformance journey (FR-4, #1589)", () => {
   test("the whole shipped journey: install -> auto-compose -> stage graph -> next -> doctor -> drop", () => {
-    const startedAt = Date.now();
-
     // --- (a) install ---------------------------------------------------------
     // The destination is the harness-rooted staging dir the shipped INSTALL doc
     // names (#1591 ruling B). Assert the doc says so BEFORE following it, so a
@@ -289,8 +286,6 @@ describe("t341 plugin conformance journey (FR-4, #1589)", () => {
     expect(snapshot(hostRoot)).toEqual(baseline);
     expect(existsSync(join(hostRoot, "plugins"))).toBe(false);
 
-    journeyMs = Date.now() - startedAt;
-    console.log(`t341 journey wall clock: ${(journeyMs / 1000).toFixed(2)}s`);
   });
 
   test("the journey left no residue in the repository (read-only fixture, isolated host)", () => {
@@ -307,11 +302,4 @@ describe("t341 plugin conformance journey (FR-4, #1589)", () => {
     expect(ws.startsWith(tmpdir())).toBe(true);
   });
 
-  test("the journey is bounded (measured, not estimated)", () => {
-    // FR-5 acceptance 3: the CI job's cost is a MEASURED number. The ceiling is
-    // a runaway guard an order of magnitude above the observed run, not a
-    // performance budget — the observed value is reported by the log line above.
-    expect(journeyMs).toBeGreaterThan(0);
-    expect(journeyMs).toBeLessThan(180_000);
-  });
 });

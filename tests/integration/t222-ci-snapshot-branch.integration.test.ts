@@ -76,6 +76,20 @@ describe("t222 CI snapshot publication boundary", () => {
     });
   });
 
+  // #3248: a release.yml-only PR used to land on the quick path (full=false),
+  // so t223's job/step pin never ran until an unrelated full PR. Any workflow
+  // file must take the full path so those pins can go red on the changing PR.
+  test("a non-ci workflow-only change runs full tests (#3248)", () => {
+    expect(detectChanges([".github/workflows/release.yml"])).toEqual({
+      full: "true",
+      drift: "false",
+      coverage: "false",
+    });
+    expect(detectChanges([".github/workflows/metrics-maintenance.yml"])).toMatchObject({
+      full: "true",
+    });
+  });
+
   test("repository workflow routes full and drift-only validation independently", () => {
     const yaml = readFileSync(join(import.meta.dir, "../../.github/workflows/ci.yml"), "utf8");
     const changesJob = yaml.split("  changes:")[1]?.split("\n  typecheck:")[0] ?? "";

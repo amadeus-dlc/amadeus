@@ -4954,12 +4954,83 @@
     "file": "packages/framework/core/tools/amadeus-election-store.ts",
     "selector": {
       "function": "appendPending",
-      "fingerprint": "sha256:2fdd8eecc875ccfbd5c57e32edf9ae71e2b0cb09cbd5f8287e8e6ef7290e2747",
+      "fingerprint": "sha256:c45c9a51eccb0dc72c4b49043e88718660d1a6e2c0cdbb0f632e90f94386bc78",
       "anchorLines": 1,
       "targetLines": "1",
       "class": "catch-arm"
     },
     "reason": "pending mkdir failure requires the parent to exist as a file after load succeeded; t549 covers pending-as-file via readAllPending before this mkdir.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-store.ts",
+    "selector": {
+      "function": "acquirePendingLock",
+      "fingerprint": "sha256:2fdd8eecc875ccfbd5c57e32edf9ae71e2b0cb09cbd5f8287e8e6ef7290e2747",
+      "anchorLines": 1,
+      "targetLines": "1",
+      "class": "catch-arm"
+    },
+    "reason": "acquirePendingLock's pending-dir mkdir failure mirrors appendPending's own pending-mkdir catch-arm above (same TOCTOU shape: the parent must vanish or become a file after load succeeded); no test forces that fault.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-store.ts",
+    "selector": {
+      "function": "acquirePendingLock",
+      "fingerprint": "sha256:dd63a8824666fec030fb867eb547b60fc5b5811c74382ce5353bdae1f529f7b9",
+      "anchorLines": 3,
+      "targetLines": "1-3",
+      "class": "catch-arm"
+    },
+    "reason": "#3225: the lock-contention retry sleep only executes when mkdirSync(lockDir) hits EEXIST from a SIBLING PROCESS racing the same voter. t3046 (raceBallot via Bun.spawn) exercises this for real, but Bun's coverage instrumentation only tracks the parent test process, not the spawned children — the losing child's retry loop is genuinely reached at runtime yet invisible to in-process LCOV (mirrors t33's audit-logger lock rationale, cited in t3046's own module header).",
+    "expiry": "remove when coverage instrumentation can attribute child-process execution back to the spawning test, or an in-process lock-contention test seam is added"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-store.ts",
+    "selector": {
+      "function": "acquirePendingLock",
+      "fingerprint": "sha256:e4a471482d7b713559a959c23610e70b6cfa3bd2da5b06aa19700d58830fe1f9",
+      "anchorLines": 2,
+      "targetLines": "1-2"
+    },
+    "reason": "#3225: the lock-acquire timeout (retry budget exhausted) requires a same-voter lock held for the full ~2s budget, which no test forces — the guarded section is a single read+write that completes in well under a millisecond, so this is a fail-closed guard against a holder that never releases (e.g. a crashed process), not a reachable success-path branch.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-store.ts",
+    "selector": {
+      "function": "acquirePendingLock",
+      "fingerprint": "sha256:9153e11a7abe177f2e6a382ac0c23733509eb6f7756ba93cd472446abfc7c6b2",
+      "anchorLines": 1,
+      "targetLines": "1",
+      "class": "catch-arm"
+    },
+    "reason": "#3225: the explicit `continue;` added for NSD001 (making the retry-then-loop control flow visible to the no-silent-drop gate) is the same cross-process-only lock-contention line already covered by the 3-line if-block entry directly above — it only executes on the losing sibling process's retry path, which t3046 exercises for real via Bun.spawn but Bun's in-process LCOV cannot observe (bun-coverage-spawn-blindspot, same rationale).",
+    "expiry": "remove when coverage instrumentation can attribute child-process execution back to the spawning test, or an in-process lock-contention test seam is added"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-store.ts",
+    "selector": {
+      "function": "releasePendingLock",
+      "fingerprint": "sha256:b3599f41bdbd2fd03d1112fffd10d143487f9206df50ff5f88a5ebf7f07b930c",
+      "anchorLines": 1,
+      "targetLines": "1",
+      "class": "catch-arm"
+    },
+    "reason": "#3225: releasePendingLock's rmSync catch is a best-effort cleanup arm (see the adjacent comment) — no test forces rmSync to fail on a lock directory this process just created and holds sole ownership of.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-store.ts",
+    "selector": {
+      "function": "appendPending",
+      "fingerprint": "sha256:ec361686197437bbcfea71601efc5fb6d9079f0239a53f825a05b30fa1bfda63",
+      "anchorLines": 1,
+      "targetLines": "1",
+      "class": "catch-arm"
+    },
+    "reason": "#3225: wrapping appendPending's body in the try/finally that releases the new per-voter lock re-indented this pre-existing pending-mkdir catch header by one level, so the patch gate now sees the `} catch {` line itself as added; the guarded body (return err(\"io-error\")) is already covered by the entry above this block. Same TOCTOU shape (parent must vanish or become a file after load succeeded); t549 covers pending-as-file via readAllPending before this mkdir.",
     "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
   },
   {

@@ -115,11 +115,11 @@ describe("t527 terminal route receipt persistence", () => {
     expect(released.body.verdict).toEqual({ kind: "no-hold", basis: { digest } });
   });
 
-  test("without --persist the receipt is returned and the store stays empty", async () => {
+  test("without --persist a terminal route is rejected before a receipt can be lost", async () => {
     const identity = await declareSubjects();
-    const emitted = await run(receiptArgv("non-target", identity, approvalPath, []));
-    expect(emitted.exitCode).toBe(0);
-    expect(emitted.body.digest).toBeUndefined();
+    const refused = await run(receiptArgv("non-target", identity, approvalPath, []));
+    expect(refused.exitCode).toBe(1);
+    expect(refused.body.failure).toEqual({ kind: "terminal-route-receipt-required", route: "non-target" });
     const listed = await run(["bundle", "list", "--store", storeRoot]);
     expect(listed.body.refs).toEqual([]);
   });

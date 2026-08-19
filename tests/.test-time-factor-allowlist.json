@@ -472,5 +472,125 @@
     "sink": "test-timeout",
     "count": 1,
     "reason": "FR-4 AMADEUS_TEST_TIMEOUT is a final live-test override and must not be multiplied again."
+  },
+  {
+    "path": "tests/unit/t-otel-stacktrace-redaction.test.ts",
+    "sink": "elapsed-assertion",
+    "count": 4,
+    "reason": "Class B: scaleTestTime-routed linearity regression ceilings are retained as an explicit test contract."
+  },
+  {
+    "path": "tests/unit/t-sensor-fire-seam.test.ts",
+    "sink": "elapsed-assertion",
+    "count": 1,
+    "reason": "The assertion verifies the returned duration invariant is non-negative, not a wall-clock performance budget."
+  },
+  {
+    "path": "tests/unit/t-test-size-dynamic.test.ts",
+    "sink": "elapsed-assertion",
+    "count": 1,
+    "reason": "The fallback measurement contract requires a positive observed duration; this is semantic output validation, not a speed budget."
+  },
+  {
+    "path": "tests/unit/t511-blocking-sensor-severity.test.ts",
+    "sink": "elapsed-assertion",
+    "count": 1,
+    "reason": "The assertion verifies the returned duration invariant is non-negative, not a wall-clock performance budget."
+  },
+  {
+    "path": "tests/integration/t-formal-verif-run-model-check-real.integration.test.ts",
+    "sink": "elapsed-assertion",
+    "count": 2,
+    "reason": "The real toolchain integration retains a generous subprocess completion ceiling to detect a hung child; it is not a throughput target."
+  },
+  {
+    "path": "tests/integration/t258-lifecycle-transaction.test.ts",
+    "sink": "elapsed-assertion",
+    "count": 1,
+    "reason": "The scaleTestTime-routed assertion verifies the five-second lock retry boundary contract, not operation throughput."
+  },
+  {
+    "path": "tests/integration/t259-guard-integration.test.ts",
+    "sink": "elapsed-assertion",
+    "count": 1,
+    "reason": "Class B: the scaleTestTime-routed p95 delta is a declared guard-overhead regression contract."
+  },
+  {
+    "path": "tests/integration/t370-canonical-lock-target.integration.test.ts",
+    "sink": "elapsed-assertion",
+    "count": 1,
+    "reason": "Class B: the scaleTestTime-routed assertion distinguishes the caller-supplied zero retry budget from the default boundary."
+  },
+  {
+    "path": "tests/integration/t447-pr-convergence-ledger.integration.test.ts",
+    "sink": "elapsed-assertion",
+    "count": 1,
+    "reason": "Class B: the scaleTestTime-routed adversarial-parser ceiling is retained as a declared catastrophic-regression guard."
+  },
+  {
+    "path": "tests/integration/t448-pr-convergence-cli.integration.test.ts",
+    "sink": "elapsed-assertion",
+    "count": 1,
+    "reason": "Class B: the scaleTestTime-routed subprocess timeout ceiling is retained to detect an unresponsive child, not to claim latency."
+  },
+  {
+    "path": "tests/perf/no-silent-drop-adoption.perf.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "Class C: the performance suite is scanned; this outer timeout is retained for the declared cold-process benchmark workload."
+  },
+  {
+    "path": "tests/perf/t-no-silent-drop-text-mutation.test.ts",
+    "sink": "elapsed-assertion",
+    "count": 1,
+    "reason": "Class C: the declared latency NFR is retained as an explicit benchmark budget and is allowlisted with exact count."
+  },
+  {
+    "path": "tests/perf/t-no-silent-drop-text-mutation.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "Class C: the performance suite is scanned; this outer timeout is retained for the declared benchmark workload."
+  },
+  {
+    "path": "tests/perf/t-pi-adapter-overhead.test.ts",
+    "sink": "elapsed-assertion",
+    "count": 1,
+    "reason": "Class C: the declared adapter latency NFR is retained as an explicit benchmark budget and is allowlisted with exact count."
+  },
+  {
+    "path": "tests/perf/t-plugin-stage-discovery-performance.test.ts",
+    "sink": "elapsed-assertion",
+    "count": 2,
+    "reason": "Class C: the declared compile-time capacity NFR is retained as an explicit benchmark budget and is allowlisted with exact count."
+  },
+  {
+    "path": "tests/perf/t257-status-registry-migration-perf.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "Class C: the performance suite is scanned; this outer timeout is retained for the declared latency benchmark workload."
+  },
+  {
+    "path": "tests/perf/t258-lifecycle-transaction-perf.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "Class C: the performance suite is scanned; this outer timeout is retained for the declared lifecycle latency benchmark workload."
+  },
+  {
+    "path": "tests/perf/t259-guard-corpus-perf.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "Class C: the performance suite is scanned; this outer timeout is retained for the declared guard scaling benchmark workload."
+  },
+  {
+    "path": "tests/perf/t292-mirror-distribution-performance-perf.test.ts",
+    "sink": "elapsed-assertion",
+    "count": 1,
+    "reason": "Class C: the declared catastrophic workload envelope is retained as an explicit benchmark budget and is allowlisted with exact count."
+  },
+  {
+    "path": "tests/perf/t415-plugin-optin-startup-performance.test.ts",
+    "sink": "test-timeout",
+    "count": 1,
+    "reason": "Class C: the performance suite is scanned; this outer timeout is retained for the declared startup latency benchmark workload."
   }
 ]

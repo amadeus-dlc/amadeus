@@ -277,6 +277,7 @@ describe("t450 --autonomy application handler", () => {
     const out = rec.drive("semi");
     expect(out.kind).toBe("error");
     expect(out.kind === "error" && out.message).toContain("PROVENANCE_REQUIRED");
+    expect(out.kind === "error" && out.message).toContain("turn boundary");
   });
 
   // ── H9 (FR-CLI-5 second half / R12) ─────────────────────────────────────

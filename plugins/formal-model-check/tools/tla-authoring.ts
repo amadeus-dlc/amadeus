@@ -15,6 +15,7 @@ import {
   AuthoringHoldEvaluator,
   defaultModelMapPath,
   readModelMapSnapshot,
+  traceSubjectIdentityOf,
   traceSubjectsOf,
   verifyHumanApproval,
   type ChangeDeclaration,
@@ -298,7 +299,10 @@ function readModelMap(flags: Record<string, string>, store: string): ModelMapSna
     const parsed = EvidenceEnvelopeCodec.parseBundleDigest(digest);
     if (!parsed.ok) return null;
     const parts = EvidenceBundle.read(store, { digest: parsed.value });
-    return parts.ok ? traceSubjectsOf(parts.value) : null;
+    if (!parts.ok) return null;
+    const subjectIdentity = traceSubjectIdentityOf(parts.value);
+    const subjects = traceSubjectsOf(parts.value);
+    return subjectIdentity !== null && subjects !== null ? { subjectIdentity, subjects } : null;
   });
 }
 
@@ -382,8 +386,9 @@ function readApproval(flags: Record<string, string>): HumanApprovalRef | null | 
 const TERMINAL_ROUTES: ReadonlySet<string> = new Set(["impl-only", "non-target"]);
 
 // The receipt and its approval are the two parts a terminal-route bundle
-// carries (tla-evidence.ts TERMINAL_RECEIPTS), so the store write needs nothing
-// the judge did not already produce.
+// carries (tla-evidence.ts TERMINAL_RECEIPTS). Terminal routes must request
+// persistence in this command; allowing a successful print-only result would
+// let the stage appear complete without the hold-releasing evidence (#3188).
 function persistTerminalReceipt(
   context: JudgeContext,
   receipt: Record<string, unknown>,
@@ -412,7 +417,8 @@ interface ReceiptSettings {
 
 // `--persist` is spelled with its value because the shared flag parser reads
 // `--name value` pairs only; a bare switch would break the argv into an odd
-// length and be refused as a usage error before it reached this verb.
+// length and be refused as a usage error before it reached this verb. It is a
+// required gate for `impl-only` and `non-target`, not an optional output mode.
 function receiptSettings(flags: Record<string, string>): ReceiptSettings | Emitted {
   const persist = flags.persist === "true";
   if (flags.persist !== undefined && !persist) return usageError("--persist takes the literal value true");
@@ -437,6 +443,9 @@ function applicabilityReceipt(flags: Record<string, string>): Emitted {
 
   const judged = ApplicabilityJudge.judge(context.input);
   if (!judged.ok) return failed(judged.error);
+  if ((judged.value === "impl-only" || judged.value === "non-target") && !settings.persist) {
+    return failed({ kind: "terminal-route-receipt-required", route: judged.value });
+  }
   if (settings.persist && !TERMINAL_ROUTES.has(judged.value)) {
     return failed({ kind: "not-a-terminal-route", route: judged.value });
   }

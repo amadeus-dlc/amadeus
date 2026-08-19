@@ -58,7 +58,10 @@ assessment here rather than assuming that an absent model means non-target:
 If no subject meets the formal-model criterion, record a terminal
 `not-applicable` assessment with the inspected identifiers and stop the stage
 successfully. For `impl-only` and `non-target`, persist the terminal-route
-receipt after its human approval and stop successfully. Only `author-new` and
+receipt after its human approval and stop successfully. The CLI gate rejects a
+terminal route unless `applicability receipt` is called with `--persist true`,
+so a print-only receipt cannot complete this stage without hold-releasing
+evidence. Only `author-new` and
 `revise-model` continue to step 2. Missing requirements, an undecidable route,
 or a selected subject without a stable identifier is a halt rather than a
 silent no-hold.

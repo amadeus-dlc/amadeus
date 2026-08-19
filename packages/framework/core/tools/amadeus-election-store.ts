@@ -14,18 +14,23 @@
 //       timeline.json   append-only tally event list
 //       views/          per-voter blind distribution views
 //
-// Per-voter writers by decision D-09 (revised for #3046, ADR-5) — no locking.
-// Each voter's pending ballots live in a single file, and appendPending
-// derives the next arrivalSequence purely from that voter's own file (read
-// set == write set), so concurrent appends from DIFFERENT voters never race:
-// they touch independent files and number independently of one another.
-// Concurrent appends from the SAME voter are last-write-wins: every write
-// replaces the whole file via tmp+rename (writeStoreFile), so the store never
-// tears — the losing write's ballot is simply not persisted, and since #3183
-// gave each writer its own staging file, that loss is silent rather than
-// surfacing as an incidental io-error from a shared tmp name. Serialising
-// same-voter writes would need real concurrency control, which this module
-// deliberately does not have (see D-09 above).
+// Per-voter writers by decision D-09 (revised for #3046, ADR-5; revised again
+// for #3225). Each voter's pending ballots live in a single file, and
+// appendPending derives the next arrivalSequence purely from that voter's own
+// file (read set == write set), so concurrent appends from DIFFERENT voters
+// never race: they touch independent files and number independently of one
+// another.
+//
+// Concurrent appends from the SAME voter serialise through a per-voter
+// mkdir-based lock (acquirePendingLock/releasePendingLock below — the same
+// atomic-mkdir idiom the audit lock in amadeus-lib.ts uses). appendPending's
+// whole read-then-write window (read the voter's pending file, compute the
+// next arrivalSequence, write the file back via writeStoreFile) runs inside
+// that lock, so a second same-voter call never reads a snapshot the first
+// call is still overwriting: it waits for the lock, then re-reads the
+// winner's already-persisted event and appends on top of it. Every ballot a
+// caller submits is therefore durably persisted — no same-voter write can
+// silently clobber another (#3225).
 //
 // arrivalSequence is therefore unique per voter, not globally; cross-voter
 // overlap is expected. Global ordering is a deterministic (arrivalSequence,
@@ -527,6 +532,73 @@ function idempotentBallot(
 
 function pendingPath(dir: string, voter: string): string {
   return join(dir, "pending", `${voter}.json`);
+}
+
+// #3225: per-(dir, voter) mutual exclusion for appendPending's read-then-write
+// window. mkdir is atomic at the OS level (POSIX and Windows both guarantee
+// exactly one caller observes success for a given path), so this is the same
+// idiom as the audit lock in amadeus-lib.ts. Unlike that lock, this one is
+// colocated directly under the voter's own pending file rather than hashed
+// into the shared OS tmpdir: the resource being guarded (`<dir>/pending/<voter>.json`)
+// already lives at a path that is unique per (root, electionId, voter), so
+// there is no cross-identity collision to dodge and no hashing indirection is
+// needed. This is the simplest concurrency-control shape that closes the
+// race (compare-and-set on a whole-file rewrite would still need a check
+// immediately before the rename, which is itself a second read-then-write
+// window — a lock has no such residual gap), chosen over CAS for that reason.
+function pendingLockDir(dir: string, voter: string): string {
+  return join(dir, "pending", `.lock-${voter}`);
+}
+
+const PENDING_LOCK_RETRY_MS = 5;
+// ~2s total budget. The guarded section is a single read + write of one
+// voter's pending file (no I/O beyond that), so any real acquire completes
+// in well under a millisecond; this budget only exists to absorb CI/dev
+// machine scheduling noise, not to model a slow critical section.
+const PENDING_LOCK_MAX_RETRIES = 400;
+
+function acquirePendingLock(dir: string, voter: string): boolean {
+  try {
+    mkdirSync(join(dir, "pending"), { recursive: true });
+  } catch {
+    return false;
+  }
+  const lockDir = pendingLockDir(dir, voter);
+  for (let attempt = 0; attempt <= PENDING_LOCK_MAX_RETRIES; attempt++) {
+    try {
+      mkdirSync(lockDir);
+      return true;
+    } catch {
+      // EEXIST: another writer for this voter holds the lock. Sleep and
+      // retry rather than reap — the guarded section is short-lived enough
+      // that stale-owner recovery (as the audit lock needs) is not worth the
+      // added complexity here; a wedged lock can only come from a process
+      // that crashed mid-write, which is already an exceptional condition.
+      if (attempt < PENDING_LOCK_MAX_RETRIES) {
+        Bun.sleepSync(PENDING_LOCK_RETRY_MS);
+      }
+      // Explicit retry terminal (NSD001, mirrors acquireAuditLock in
+      // amadeus-lib.ts): this arm never swallows a failure — it hands
+      // control back to the loop, whose exhausted budget returns the loud
+      // `false` every caller checks.
+      continue;
+    }
+  }
+  return false;
+}
+
+function releasePendingLock(dir: string, voter: string): void {
+  try {
+    rmSync(pendingLockDir(dir, voter), { recursive: true, force: true });
+  } catch {
+    // Best-effort: a failed release only costs a future acquirer some of its
+    // retry budget, never data loss — the write it guarded already committed
+    // via writeStoreFile's atomic tmp+rename before release is attempted.
+    // Explicit terminal (NSD001): this is the function's last statement, so
+    // the early `return` makes the intentional swallow visible rather than
+    // an implicit fall-through past the try/catch.
+    return;
+  }
 }
 
 function readPendingVoter(
@@ -1144,59 +1216,71 @@ export const ElectionStore = {
     if (!loaded.ok) return loaded;
     const encoded = encodeBallot(ballot, loaded.value.definition);
     if (!encoded.ok) return encoded;
-    // ADR-5 contract 1: read set == write set. Numbering and the same-pending
-    // identity check both come from the calling voter's own file only — an
-    // identity match can never live in another voter's file anyway, since
-    // identity() embeds ballot.voter. This is what removes the cross-voter
-    // TOCTOU: two different voters' appendPending calls never share a read.
-    const voterPending = readPendingVoter(
-      loaded.value.resolved.dir,
-      ballot.voter,
-      loaded.value.definition,
-    );
-    if (!voterPending.ok) return voterPending;
-    const sameIdentity = voterPending.value.find((event) => identity(event.ballot) === identity(ballot));
-    const pendingRetry = idempotentBallot(
-      sameIdentity?.ballot,
-      encoded.value,
-      loaded.value.definition,
-      sameIdentity?.arrivalSequence ?? -1,
-    );
-    if (pendingRetry !== null) return pendingRetry;
-    const ledger = readLedger(loaded.value.resolved.dir, loaded.value.definition);
-    if (!ledger.ok) return ledger;
-    const integrated = ledger.value.find((candidate) => identity(candidate) === identity(ballot));
-    const ledgerRetry = idempotentBallot(integrated, encoded.value, loaded.value.definition, -1);
-    if (ledgerRetry !== null) return ledgerRetry;
-    const arrivalSequence = Math.max(-1, ...voterPending.value.map((event) => event.arrivalSequence)) + 1;
-    try {
-      mkdirSync(join(loaded.value.resolved.dir, "pending"), { recursive: true });
-    } catch {
+    // #3225: serialise same-voter appendPending calls so the read-then-write
+    // window below (read the voter's own pending file, compute the next
+    // arrivalSequence, rewrite the whole file) can never race a sibling call
+    // for the same voter — see acquirePendingLock's header comment.
+    if (!acquirePendingLock(loaded.value.resolved.dir, ballot.voter)) {
       return err("io-error");
     }
-    // Re-encode previously stored events so every persisted ballot keeps the
-    // codec's canonical serialization instead of a decoded object's key order.
-    const events: { arrivalSequence: number; ballot: unknown }[] = [];
-    for (const event of voterPending.value) {
-      const reencoded = encodeBallot(event.ballot, loaded.value.definition);
-      if (!reencoded.ok) return reencoded;
-      events.push({
-        arrivalSequence: event.arrivalSequence,
-        ballot: JSON.parse(reencoded.value) as unknown,
-      });
+    try {
+      // ADR-5 contract 1: read set == write set. Numbering and the same-pending
+      // identity check both come from the calling voter's own file only — an
+      // identity match can never live in another voter's file anyway, since
+      // identity() embeds ballot.voter. This is what removes the cross-voter
+      // TOCTOU: two different voters' appendPending calls never share a read
+      // (and, since #3225, never share a lock either — the lock is per-voter).
+      const voterPending = readPendingVoter(
+        loaded.value.resolved.dir,
+        ballot.voter,
+        loaded.value.definition,
+      );
+      if (!voterPending.ok) return voterPending;
+      const sameIdentity = voterPending.value.find((event) => identity(event.ballot) === identity(ballot));
+      const pendingRetry = idempotentBallot(
+        sameIdentity?.ballot,
+        encoded.value,
+        loaded.value.definition,
+        sameIdentity?.arrivalSequence ?? -1,
+      );
+      if (pendingRetry !== null) return pendingRetry;
+      const ledger = readLedger(loaded.value.resolved.dir, loaded.value.definition);
+      if (!ledger.ok) return ledger;
+      const integrated = ledger.value.find((candidate) => identity(candidate) === identity(ballot));
+      const ledgerRetry = idempotentBallot(integrated, encoded.value, loaded.value.definition, -1);
+      if (ledgerRetry !== null) return ledgerRetry;
+      const arrivalSequence = Math.max(-1, ...voterPending.value.map((event) => event.arrivalSequence)) + 1;
+      try {
+        mkdirSync(join(loaded.value.resolved.dir, "pending"), { recursive: true });
+      } catch {
+        return err("io-error");
+      }
+      // Re-encode previously stored events so every persisted ballot keeps the
+      // codec's canonical serialization instead of a decoded object's key order.
+      const events: { arrivalSequence: number; ballot: unknown }[] = [];
+      for (const event of voterPending.value) {
+        const reencoded = encodeBallot(event.ballot, loaded.value.definition);
+        if (!reencoded.ok) return reencoded;
+        events.push({
+          arrivalSequence: event.arrivalSequence,
+          ballot: JSON.parse(reencoded.value) as unknown,
+        });
+      }
+      events.push({ arrivalSequence, ballot: JSON.parse(encoded.value) as unknown });
+      const file = {
+        schemaVersion: 2,
+        electionId,
+        voter: ballot.voter,
+        events,
+      };
+      const write = writeStoreFile(
+        pendingPath(loaded.value.resolved.dir, ballot.voter),
+        JSON.stringify(file, null, 2),
+      );
+      return write.ok ? ok({ idempotent: false, arrivalSequence }) : err("io-error");
+    } finally {
+      releasePendingLock(loaded.value.resolved.dir, ballot.voter);
     }
-    events.push({ arrivalSequence, ballot: JSON.parse(encoded.value) as unknown });
-    const file = {
-      schemaVersion: 2,
-      electionId,
-      voter: ballot.voter,
-      events,
-    };
-    const write = writeStoreFile(
-      pendingPath(loaded.value.resolved.dir, ballot.voter),
-      JSON.stringify(file, null, 2),
-    );
-    return write.ok ? ok({ idempotent: false, arrivalSequence }) : err("io-error");
   },
 
   integratePending(

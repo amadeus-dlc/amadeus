@@ -57,6 +57,18 @@ bun .claude/tools/amadeus-bolt.ts set-autonomy --mode full \
   --confirmed-display-digest sha256:...
 ```
 
+`HUMAN_TURN` が鋳造されるのは、ホストが信頼済みの presence hook を発火したとき
+だけです。Claude Code では `UserPromptSubmit`(ターン境界でのタイプ入力)と
+`AskUserQuestion` の `PostToolUse` です。実行中ターンへキュー投入されたメッセージ
+(`queued_command` 添付、ミッドターン)に対して Claude Code は `UserPromptSubmit`
+を発火しません([anthropics/claude-code#31114](https://github.com/anthropics/claude-code/issues/31114)、
+Claude Code 2.1.69–2.1.233 で実測)。それは実ユーザー入力ですが presence では
+ありません。`set-autonomy` などの provenance ゲートは `PROVENANCE_REQUIRED`
+で拒否し、エージェントが yield したターン境界で同じコマンドを再投入するよう
+案内します。補完的な捕捉経路はありません。トランスクリプトを掻き集めて鋳造すると、
+ホストがプロンプトとして扱わないチャネルから presence を作り、機械注入分類器や
+別目的ターンの消費と衝突します。
+
 ### 起動時にモードを宣言する
 
 `set-autonomy` は正準の記録経路ですが、Intent が既に存在していることを前提とします。

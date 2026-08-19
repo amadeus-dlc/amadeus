@@ -34,9 +34,8 @@
 // down in afterEach. Nothing written under tests/fixtures/**.
 //
 // Old TAP -> new test parity (1:1, every .sh assertion -> a named test()):
-//   .sh 1 (elapsed < 10s ceiling)                       -> "completes under the 10s lock-timeout ceiling"
-//   .sh 2 (5 BOLT_STARTED entries, no lost writes)      -> "all 5 BOLT_STARTED entries land (no lost writes)"
-//   .sh 3 (each bolt-1..bolt-5 name appears once)       -> "each of bolt-1..bolt-5 appears exactly once"
+//   .sh 1 (5 BOLT_STARTED entries, no lost writes)      -> "all 5 BOLT_STARTED entries land (no lost writes)"
+//   .sh 2 (each bolt-1..bolt-5 name appears once)       -> "each of bolt-1..bolt-5 appears exactly once"
 //   .sh 4 (#Event == #heading, no half-writes)          -> "every BOLT_STARTED has a matching heading (no half-writes)"
 //   .sh 5 (separator count == fixture + 5)              -> "separator count == fixture (3) + 5 bolts == 8"
 //
@@ -74,7 +73,6 @@ const BOLT = join(AMADEUS_SRC, "tools", "amadeus-bolt.ts");
 interface RaceResult {
   proj: string;
   body: string;
-  elapsedMs: number;
 }
 
 /** Concatenate every audit shard (audit/*.jsonl) for the seeded record — the 5
@@ -107,7 +105,7 @@ let current: { proj: string } | null = null;
  * Fork 5 concurrent `bun amadeus-bolt.ts start --name bolt-<i> --batch 1
  * --walking-skeleton false` processes against one audit.md (mirrors the .sh's
  * `for i in 1..5; bun "$BOLT" start ... &` + wait). Returns the post-race
- * bytes + wall-clock elapsed. Uses Bun.spawn (async, non-blocking launch) so
+ * audit bytes. Uses Bun.spawn (async, non-blocking launch) so
  * all 5 are genuinely in flight before any awaits — a true race, not a serial
  * loop. resetAidlcEnv() first so a leaked default scope can't shift behaviour.
  */
@@ -127,7 +125,6 @@ async function raceFiveBolts(): Promise<RaceResult> {
   mkdirSync(join(proj, "amadeus"), { recursive: true });
   writeFileSync(join(proj, "amadeus", ".amadeus-clone-id"), "cccccccccccc\n", "utf-8");
 
-  const start = Date.now();
   const procs = [1, 2, 3, 4, 5].map((i) =>
     Bun.spawn({
       cmd: [
@@ -149,9 +146,7 @@ async function raceFiveBolts(): Promise<RaceResult> {
   );
   // Wait for all 5 to exit (mirrors the .sh's `wait "$pid" || true`).
   await Promise.all(procs.map((p) => p.exited));
-  const elapsedMs = Date.now() - start;
-
-  return { proj, body: readAllShards(proj), elapsedMs };
+  return { proj, body: readAllShards(proj) };
 }
 
 // Run the race once per test (each test gets a fresh project + fresh race) so
@@ -169,21 +164,14 @@ afterEach(() => {
 });
 
 describe("t46 parallel-bolt — 5 racing amadeus-bolt start processes (migrated from t46-parallel-bolt.sh, plan 5)", () => {
-  test("completes under the 10s lock-timeout ceiling [.sh 1]", () => {
-    // Lock retry budget is 50×100ms = 5s max wait per process; with 5 racing,
-    // worst case the last waits ~500ms. The .sh ceilinged at 10s to catch real
-    // hangs while leaving headroom. Same ceiling here (in ms).
-    expect(race.elapsedMs).toBeLessThan(10_000);
-  }, scaleTestTime(30_000));
-
-  test("all 5 BOLT_STARTED entries land (no lost writes) [.sh 2]", () => {
+  test("all 5 BOLT_STARTED entries land (no lost writes) [.sh 1]", () => {
     // The .sh: grep -cE '^\*\*Event\*\*: BOLT_STARTED'. Count exactly 5 — a
     // lost write under the race would drop this below 5.
     const eventCount = auditRecords(race.body).filter((r) => r.event === "BOLT_STARTED").length;
     expect(eventCount).toBe(5);
   }, scaleTestTime(30_000));
 
-  test("each of bolt-1..bolt-5 appears exactly once [.sh 3]", () => {
+  test("each of bolt-1..bolt-5 appears exactly once [.sh 2]", () => {
     // The .sh grepped presence per name; STRONGER here — assert EXACTLY one
     // record carrying `Bolt names: bolt-<i>` per i, so no name is dropped or
     // doubled.

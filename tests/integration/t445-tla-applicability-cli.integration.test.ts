@@ -76,6 +76,7 @@ async function receiptFor(
   subjects: readonly string[],
   identity: string,
   approval: string,
+  persist = false,
 ): Promise<Record<string, unknown>> {
   const body = await judged([
     "applicability", "receipt",
@@ -86,6 +87,7 @@ async function receiptFor(
     "--store", storeRoot,
     "--audit-dir", workspace,
     "--generated-at", "2026-08-05T00:00:00Z",
+    ...(persist ? ["--persist", "true"] : []),
   ]);
   return body.receipt as Record<string, unknown>;
 }
@@ -243,6 +245,7 @@ describe("applicability receipt (BR-U2-03/24)", () => {
       "--declaration", declaration("impl-only", ["FR-001"]),
       "--identity", IDENTITY_A,
       "--approval", "none",
+      "--persist", "true",
       "--model-map", modelMapPath,
       "--store", storeRoot,
       "--audit-dir", workspace,
@@ -263,6 +266,7 @@ describe("applicability receipt (BR-U2-03/24)", () => {
       "--declaration", declaration("impl-only", ["FR-001"]),
       "--identity", IDENTITY_A,
       "--approval", approvalFile(overrides),
+      "--persist", "true",
       "--model-map", modelMapPath,
       "--store", storeRoot,
       "--audit-dir", workspace,
@@ -273,7 +277,7 @@ describe("applicability receipt (BR-U2-03/24)", () => {
 
   test("accepts an approval grounded in the audit shard", async () => {
     await registerFr001();
-    const receipt = await receiptFor("impl-only", ["FR-001"], IDENTITY_A, approvalFile());
+    const receipt = await receiptFor("impl-only", ["FR-001"], IDENTITY_A, approvalFile(), true);
     expect(receipt.route).toBe("impl-only");
     expect(receipt.subjectIdentity).toBe(IDENTITY_A);
     expect(String(receipt.reason)).toContain("J4");
@@ -309,7 +313,7 @@ describe("hold — the expected demo of Bolt 2", () => {
 
   test("a current terminal receipt releases the hold", async () => {
     const registration = await registerFr001();
-    const receipt = await receiptFor("impl-only", ["FR-001"], IDENTITY_B, approvalFile());
+    const receipt = await receiptFor("non-target", ["FR-001"], IDENTITY_B, approvalFile(), true);
     await buildBundle("terminal", "terminal-route-receipt", receipt, IDENTITY_B, registration);
     const { exitCode, body } = await hold(IDENTITY_B);
     expect(exitCode).toBe(0);

@@ -36,7 +36,7 @@
 
 | フック | イベント | スコープ | マッチャー | 目的 |
 |------|-------|---------|---------|---------|
-| `amadeus-mint-presence.ts` | UserPromptSubmit + PostToolUse | プロジェクト全体 (settings.json) | (空) / `AskUserQuestion` | 実際の人間のプロンプトごと、および回答済みの `AskUserQuestion` ウィジェットごとに `HUMAN_TURN` イベントを記録する(ゲート承認とインタビュー回答はタイプされたプロンプトではなくウィジェットのクリックである)。承認/インタビューのゲートはこの台帳を確認し、直近のゲート解決以降に1件を要求するため、オートパイロット下のモデルが人間の行動なしに承認を捏造できない |
+| `amadeus-mint-presence.ts` | UserPromptSubmit + PostToolUse | プロジェクト全体 (settings.json) | (空) / `AskUserQuestion` | 実際の人間のプロンプトごと、および回答済みの `AskUserQuestion` ウィジェットごとに `HUMAN_TURN` イベントを記録する(ゲート承認とインタビュー回答はタイプされたプロンプトではなくウィジェットのクリックである)。承認/インタビューのゲートはこの台帳を確認し、直近のゲート解決以降に1件を要求するため、オートパイロット下のモデルが人間の行動なしに承認を捏造できない。Claude Code はキュー投入されたミッドターン入力に対して `UserPromptSubmit` を発火しないため、その配送は presence にならない(#3170) |
 | `amadeus-audit-logger.ts` | PostToolUse | プロジェクト全体 (settings.json) | `Write\|Edit` | 成果物の書き込みを `audit/` シャードに自動記録する |
 | `amadeus-sensor-fire.ts` | PostToolUse | プロジェクト全体 (settings.json) | `Write\|Edit` | マッチする書き込みに対してアクティブなステージの解決済みSensorを発火する(アドバイザリー。決してブロックしない) |
 | `amadeus-sync-statusline.ts` | PostToolUse | プロジェクト全体 (settings.json) | `TaskUpdate` | ステージタスクのアクティブ化時に状態ファイルを自動同期する |

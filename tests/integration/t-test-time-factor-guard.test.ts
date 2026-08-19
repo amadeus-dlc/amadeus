@@ -5,6 +5,7 @@ import { join } from "node:path";
 import {
   evaluateTimingSinks,
   scanTimingSource,
+  scanTestTimingSinks,
   validateTimingAllowlist,
   type TimingAllowlistEntry,
 } from "../lib/test-time-factor-guard.ts";
@@ -45,6 +46,40 @@ describe("test timing sink guard", () => {
       `,
     );
     expect(findings.map(({ sink }) => sink)).toEqual(["timer", "timer"]);
+  });
+
+  test("elapsed-time assertions are detected as assertion-side sinks", () => {
+    const findings = scanTimingSource(
+      "tests/integration/elapsed-assertion.test.ts",
+      `
+        const started = performance.now();
+        const elapsedMs = performance.now() - started;
+        expect(elapsedMs).toBeLessThan(10_000);
+        expect(Date.now() - started).toBeLessThanOrEqual(20_000);
+        expect(runs.every((run) => run.durationMs < LIMIT_MS)).toBe(true);
+      `,
+    );
+    expect(findings.map(({ sink }) => sink)).toEqual([
+      "elapsed-assertion",
+      "elapsed-assertion",
+      "elapsed-assertion",
+    ]);
+  });
+
+  test("the perf suite is part of the timing sink scan", () => {
+    const root = mkdtempSync(join(tmpdir(), "test-time-factor-guard-perf-"));
+    const perfDir = join(root, "tests", "perf");
+    try {
+      mkdirSync(perfDir, { recursive: true });
+      writeFileSync(join(perfDir, "raw.test.ts"), "expect(elapsedMs).toBeLessThan(500);\n");
+      const scan = scanTestTimingSinks(root);
+      expect(scan.paths).toContain("tests/perf/raw.test.ts");
+      expect(scan.findings).toEqual([
+        expect.objectContaining({ path: "tests/perf/raw.test.ts", sink: "elapsed-assertion" }),
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   test("explicit test timeouts and suite defaults are detected", () => {
@@ -151,6 +186,9 @@ describe("test timing sink guard", () => {
       mkdirSync(unitDir, { recursive: true });
       writeFileSync(join(unitDir, "raw.test.ts"), `await Bun.${"sleep"}(500);\n`);
       writeFileSync(join(testsDir, ".test-time-factor-allowlist.json"), "[]\n");
+      expect(runTestTimeFactorGuard(root)).toBe(1);
+
+      writeFileSync(join(unitDir, "raw.test.ts"), "expect(elapsedMs).toBeLessThan(500);\n");
       expect(runTestTimeFactorGuard(root)).toBe(1);
 
       writeFileSync(join(testsDir, ".test-time-factor-allowlist.json"), "not-json\n");
