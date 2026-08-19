@@ -14,7 +14,7 @@ import {
 import {
   advisoryModelCheckOutputDir,
   verifyAdvisoryModelCheckOutcome,
-} from "../../plugins/formal-model-check/tools/advisory-model-check.ts";
+} from "../lib/advisory-model-check.ts";
 import { canonicalIdentity } from "../../plugins/formal-model-check/tools/canonical.ts";
 import { FIXED_TLC_VERSION_LINE } from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 
