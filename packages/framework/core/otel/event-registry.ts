@@ -529,7 +529,10 @@ export const REGISTERED_EVENTS = [
     durability: "canonical",
     category: "navigation",
     requiredAttributes: ["Scope", "Stages skipped", "Stages added", "Stages in Scope"],
-    optionalAttributes: [],
+    // "Workflow completion retracted": the prepared-completion stage this flip
+    // invalidated by moving the terminal stage, or "none" (#3249). Optional so
+    // RECOMPOSED rows emitted before the retraction existed stay valid.
+    optionalAttributes: ["Workflow completion retracted"],
     schemaVersion: 1,
   },
   // --- Interaction Events (6) ---

@@ -140,7 +140,7 @@ number of discarded run-now receipts.
 | `DEPTH_CHANGED` | `--depth` changed depth level | Old Depth, New Depth | — | `tools/amadeus-utility.ts` |
 | `TEST_STRATEGY_CHANGED` | `--test-strategy` changed test strategy | Old Strategy, New Strategy | — | `tools/amadeus-utility.ts` |
 | `SCOPE_DETECTED` | Auto-detected from freeform text | Detected scope, Input text, Source | Matched keywords | `tools/amadeus-utility.ts detect-scope` |
-| `RECOMPOSED` | The adaptive composer re-shaped a running workflow's pending stages (suffix flips via `recompose`) | Scope, Stages skipped, Stages added, Stages in Scope | — | `tools/amadeus-utility.ts recompose` |
+| `RECOMPOSED` | The adaptive composer re-shaped a running workflow's pending stages (suffix flips via `recompose`) | Scope, Stages skipped, Stages added, Stages in Scope | Workflow completion retracted | `tools/amadeus-utility.ts recompose` |
 
 ### Interaction Events (6 events)
 

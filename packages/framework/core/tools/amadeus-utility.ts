@@ -89,6 +89,7 @@ import {
   codekbRepoName,
   relativeCodekbDir,
   relativeCodekbReScanFile,
+  effectivePlanAction,
   listIntents,
   listSpaces,
   loadAgents,
@@ -127,6 +128,7 @@ import {
   type StageEntry,
   setCheckbox,
   setField,
+  setFieldStrict,
   setStageSuffix,
   scopeGridPath,
   scopesDir,
@@ -174,6 +176,7 @@ import { settingsDoctorCheck } from "./amadeus-settings.ts";
 import { validateStageFrontmatter } from "./amadeus-stage-schema.ts";
 import { requiredPluginStagesForScope, resolveAmadeusConfig } from "./amadeus-config.ts";
 import { PHASE_PROGRESS_FIELD } from "./amadeus-state.ts";
+import { workflowCompletionPreparation } from "./amadeus-workflow-completion.ts";
 import { AMADEUS_VERSION } from "./amadeus-version.ts";
 import {
   createInitialGoalLineage,
@@ -5857,6 +5860,56 @@ export function applyRecomposeSuffixFlips(
   return updated;
 }
 
+// A prepared workflow completion names the stage that WAS terminal. A flip that
+// moves the terminal stage strands it: every completion path then refuses the
+// mismatch — `amadeus-orchestrate next` ("... is not the final in-scope stage"),
+// the final stage's approve ("Workflow completion is already prepared for ..."),
+// and the park mirror boundary ("pending completion stage ... does not match
+// Current Stage ...") — and no verb clears it (#3249). Close it at the cause:
+// the flip that invalidated the preparation retracts it, so the new terminal
+// stage can prepare its own.
+export interface WorkflowCompletionRetraction {
+  /** The state content with the preparation cleared (unchanged when none was). */
+  readonly content: string;
+  /** The RECOMPOSED audit row's value: the retracted stage, or "none". */
+  readonly auditValue: string;
+  /** The operator-facing line, empty when nothing was retracted. */
+  readonly notice: string;
+}
+
+const WORKFLOW_COMPLETION_FIELDS = [
+  "Workflow Completion Instance",
+  "Workflow Completion Stage",
+  "Workflow Completion Status",
+] as const;
+
+const NO_RETRACTION = { auditValue: "none", notice: "" } as const;
+
+export function retractStrandedWorkflowCompletion(
+  content: string,
+  scope: string,
+): WorkflowCompletionRetraction {
+  const prepared = workflowCompletionPreparation(content);
+  if (prepared === null) return { content, ...NO_RETRACTION };
+  if (nextInScopeStage(prepared.stage, scope, content) === null) {
+    return { content, ...NO_RETRACTION };
+  }
+  // setFieldStrict, not setField: the three fields exist by construction (a
+  // preparation was parsed out of them), so a silent no-op would leave exactly
+  // the stranded preparation this is retracting.
+  let updated = content;
+  for (const field of WORKFLOW_COMPLETION_FIELDS) {
+    updated = setFieldStrict(updated, field, "");
+  }
+  return {
+    content: updated,
+    auditValue: prepared.stage,
+    notice:
+      `Workflow completion preparation retracted: ${prepared.stage} ` +
+      "(no longer the final in-scope stage; the new final stage prepares its own)\n",
+  };
+}
+
 export function handleRecompose(projectDir: string, flags: Record<string, string>): void {
   const skipList = (flags.skip ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   const addList = (flags.add ?? "").split(",").map((s) => s.trim()).filter(Boolean);
@@ -5913,10 +5966,8 @@ export function handleRecompose(projectDir: string, flags: Record<string, string
     const currentIdx = graph.findIndex((s) => s.slug === currentSlug);
 
     // The effective pre-flip plan (suffix override wins over the grid).
-    const effective = (slug: string): "EXECUTE" | "SKIP" => {
-      const v = suffixes.get(slug) ?? scopeDef.stages[slug];
-      return v === "EXECUTE" ? "EXECUTE" : "SKIP";
-    };
+    const effective = (slug: string): "EXECUTE" | "SKIP" =>
+      effectivePlanAction(suffixes, scopeDef.stages, slug) === "EXECUTE" ? "EXECUTE" : "SKIP";
 
     // --- Per-flip guards: pending-only, ahead-of-cursor, skeleton-gate ------
     const reject = (slug: string, why: string): never =>
@@ -5998,10 +6049,8 @@ export function handleRecompose(projectDir: string, flags: Record<string, string
     // --- Rebuild the derived fields against the EFFECTIVE plan --------------
     // (the scope-change set: Stages to Execute / to Skip / Total / Completed).
     const postSuffixes = parseStateStageSuffixes(content);
-    const eff = (slug: string): "EXECUTE" | "SKIP" => {
-      const v = postSuffixes.get(slug) ?? scopeDef.stages[slug];
-      return v === "EXECUTE" ? "EXECUTE" : "SKIP";
-    };
+    const eff = (slug: string): "EXECUTE" | "SKIP" =>
+      effectivePlanAction(postSuffixes, scopeDef.stages, slug) === "EXECUTE" ? "EXECUTE" : "SKIP";
     // The shared rebuild preserves the Stages to Skip row's birth/scope-change
     // annotations verbatim, so a skip+add round trip leaves the row unchanged.
     const { content: rebuilt, executeStages, completedCount } = rebuildDerivedPlanFields(content, graph, eff);
@@ -6011,6 +6060,12 @@ export function handleRecompose(projectDir: string, flags: Record<string, string
       const next = nextInScopeStage(currentSlug, scope, content);
       content = setField(content, "Next Stage", next ? next.slug : "none");
     }
+
+    // Judged against the REBUILT plan: "is the prepared stage still terminal
+    // AFTER this recompose".
+    const retraction = retractStrandedWorkflowCompletion(content, scope);
+    content = retraction.content;
+
     content = setField(content, "Last Updated", isoTimestamp());
 
     writeStateFile(projectDir, content, flags.intent, flags.space);
@@ -6020,13 +6075,15 @@ export function handleRecompose(projectDir: string, flags: Record<string, string
       "Stages skipped": skipList.length > 0 ? skipList.join(", ") : "none",
       "Stages added": addList.length > 0 ? addList.join(", ") : "none",
       "Stages in Scope": String(executeStages.length),
+      "Workflow completion retracted": retraction.auditValue,
     });
 
     process.stdout.write(
       `Recomposed: ${skipList.length} skipped (${skipList.join(", ") || "none"}), ` +
         `${addList.length} added (${addList.join(", ") || "none"})\n` +
         `Stages in scope: ${executeStages.length}\n` +
-        `Completed: ${completedCount}/${executeStages.length}\n`,
+        `Completed: ${completedCount}/${executeStages.length}\n` +
+        retraction.notice,
     );
   });
 }

@@ -9,6 +9,7 @@ import {
 } from "./amadeus-state.ts";
 import {
   type CheckboxState,
+  effectivePlanAction,
   emitError,
   errorMessage,
   findStageBySlug,
@@ -34,19 +35,6 @@ import {
   withAuditLock,
   writeStateFile,
 } from "./amadeus-lib.js";
-
-// The EFFECTIVE per-stage action: the live state file's EXECUTE/SKIP suffix
-// (a recomposed plan) wins over the static scope grid - the same resolution
-// rule the router applies (nextInScopeStage's override seam). Every jump-side
-// grid read goes through this so a jump and an advance can never disagree
-// about which stages are on the plan.
-function effectiveAction(
-  suffixes: Map<string, "EXECUTE" | "SKIP">,
-  scopeMapping: { stages: Record<string, string> },
-  slug: string,
-): string | undefined {
-  return suffixes.get(slug) ?? scopeMapping.stages[slug];
-}
 
 // --- Audit emission helper ---
 // The one seam every jump emitter goes through, which is why the bootstrap
@@ -279,7 +267,7 @@ export function handleResolve(args: string[]): void {
   const scopeMapping = loadScopeMapping()[scope];
   if (!scopeMapping) error(`Unknown scope: ${scope}`);
   // The live plan's per-stage suffix overrides (a recomposed plan) - every
-  // grid read below resolves through effectiveAction so a suffix-promoted
+  // grid read below resolves through effectivePlanAction so a suffix-promoted
   // stage is jumpable and a suffix-SKIPped one is refused, matching the
   // router's own resolution. ONLY when the resolved scope IS the state's own
   // scope: an explicit `--scope <other>` asks about a DIFFERENT scope's plan,
@@ -302,7 +290,7 @@ export function handleResolve(args: string[]): void {
     if (!targetStage) error(`Unknown stage: ${flags.stage}`);
 
     // Check if target is on the EFFECTIVE plan (suffix override wins).
-    if (effectiveAction(suffixes, scopeMapping, targetStage.slug) === "SKIP") {
+    if (effectivePlanAction(suffixes, scopeMapping.stages, targetStage.slug) === "SKIP") {
       error(
         `Stage "${targetStage.slug}" is skipped for scope "${scope}". Choose a different stage or change scope.`
       );
@@ -321,7 +309,7 @@ export function handleResolve(args: string[]): void {
       graphForPhase.find(
         (s) =>
           s.phase === canonicalPhase &&
-          effectiveAction(suffixes, scopeMapping, s.slug) === "EXECUTE",
+          effectivePlanAction(suffixes, scopeMapping.stages, s.slug) === "EXECUTE",
       ) ?? firstInScopeStageOfPhase(canonicalPhase, scope);
     if (!targetStage) {
       error(
@@ -343,14 +331,14 @@ export function handleResolve(args: string[]): void {
   if (direction === "forward") {
     // Stages between current (exclusive) and target (exclusive)
     for (let i = currentIdx + 1; i < targetIdx; i++) {
-      if (effectiveAction(suffixes, scopeMapping, graph[i].slug) === "EXECUTE") {
+      if (effectivePlanAction(suffixes, scopeMapping.stages, graph[i].slug) === "EXECUTE") {
         affectedSlugs.push(graph[i].slug);
       }
     }
   } else if (direction === "backward") {
     // Target and all stages after (on the effective plan)
     for (let i = targetIdx; i < graph.length; i++) {
-      if (effectiveAction(suffixes, scopeMapping, graph[i].slug) === "EXECUTE") {
+      if (effectivePlanAction(suffixes, scopeMapping.stages, graph[i].slug) === "EXECUTE") {
         affectedSlugs.push(graph[i].slug);
       }
     }
@@ -422,7 +410,7 @@ export function handleExecute(args: string[]): void {
     const scopeMapping = loadScopeMapping()[scope];
     if (!scopeMapping) error(`Unknown scope: ${scope}`);
     // The live plan's suffix overrides - execute resolves the same EFFECTIVE
-    // plan resolve does (see effectiveAction), so a recomposed stage is
+    // plan resolve does (see effectivePlanAction), so a recomposed stage is
     // reachable and a recompose-SKIPped one refused here too. Same
     // scope-matches-state guard as resolve: a foreign --scope consults the
     // static grid only.
@@ -440,7 +428,7 @@ export function handleExecute(args: string[]): void {
     // One line: bun's lcov leaves the continuation lines of a multi-line call at
     // DA:0, so a wrapped call reads as two dead rows rather than one
     // (spawn-blindspot-two-step (i) before the waiver).
-    if (effectiveAction(suffixes, scopeMapping, targetSlug) === "SKIP") error(`Stage "${targetSlug}" is skipped for scope "${scope}". Choose a different target or change scope.`);
+    if (effectivePlanAction(suffixes, scopeMapping.stages, targetSlug) === "SKIP") error(`Stage "${targetSlug}" is skipped for scope "${scope}". Choose a different target or change scope.`);
 
     const graph = loadStageGraph();
     const targetIdx = stageIndex(targetSlug);
@@ -478,7 +466,7 @@ export function handleExecute(args: string[]): void {
       // is passed over.
       for (let i = currentIdx + 1; i < targetIdx; i++) {
         const slug = graph[i].slug;
-        if (effectiveAction(suffixes, scopeMapping, slug) !== "EXECUTE") continue;
+        if (effectivePlanAction(suffixes, scopeMapping.stages, slug) !== "EXECUTE") continue;
         const state = checkboxMap.get(slug);
         if (state && IN_FLIGHT_STATES.includes(state)) {
           content = requireChanged(
@@ -518,7 +506,7 @@ export function handleExecute(args: string[]): void {
         const slug = graph[i].slug;
         // Effective plan again: a recompose-ADDed stage's [x] is reset by a
         // backward jump like any on-plan stage (ADD-then-jump consistency).
-        if (effectiveAction(suffixes, scopeMapping, slug) !== "EXECUTE") continue;
+        if (effectivePlanAction(suffixes, scopeMapping.stages, slug) !== "EXECUTE") continue;
         const state = checkboxMap.get(slug);
         if (state && RESETTABLE.includes(state)) {
           content = requireChanged(

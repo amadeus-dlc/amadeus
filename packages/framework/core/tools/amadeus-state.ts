@@ -44,6 +44,7 @@ import {
   isAutonomousMode,
   isoTimestamp,
   KNOWN_CODEKB_STAGES,
+  effectivePlanAction,
   loadScopeMapping,
   listIntents,
   guardIntentOperation,
@@ -5184,18 +5185,68 @@ function mandatoryPluginStages(
 // Host-bound plugin stages a scope declares mandatory. Policy, not invariant:
 // which stages are mandatory comes from the project's plugin configuration, so a
 // project that configures none is answered allowed with nothing to judge.
+//
+// TWO sources meet here, and #3249 is what happens when they disagree. The
+// mandatory SET comes from host config (`plugin.scope-bindings`), which moves
+// with the project. Whether a stage is on THIS Intent's plan comes from the
+// record's execution projection, which froze when the Intent was born. Park an
+// Intent, add a binding, resume: config says the stage is mandatory while the
+// plan says SKIP, so completion refuses it as unrun and `jump` refuses to run
+// it as off-plan — a parked Intent terminable by neither path.
+//
+// The record's plan is canonical for what this Intent RUNS (it is what the
+// router, jump and every derived counter read — resolved here through the same
+// shared effectivePlanAction they use). So a config-mandated stage the plan
+// skips is reported as the divergence it is, naming `recompose` — the one verb
+// that reconciles the plan to the config — rather than as an ordinary pending
+// stage the caller is told to "run", which the plan forbids.
 function evaluateMandatoryPluginStages(
   context: WorkflowPreparationGuardContext,
 ): LifecycleGuardVerdict {
   const { pd, content } = context;
   const scope = getField(content, "Scope") ?? "";
   const rows = parseCheckboxes(content);
-  for (const slug of mandatoryPluginStages(pd, scope, stateOperationTarget?.intent, stateOperationTarget?.space)) {
+  const suffixes = parseStateStageSuffixes(content);
+  const scopeStages = loadScopeMapping()[scope]?.stages ?? {};
+  const mandatory = mandatoryPluginStages(
+    pd,
+    scope,
+    stateOperationTarget?.intent,
+    stateOperationTarget?.space,
+  );
+  const outstanding = mandatory.filter((slug) => {
     const state = rows.find((row) => row.slug === slug)?.state;
-    if (state === "completed" || slug === context.completedSlug) continue;
+    return state !== "completed" && slug !== context.completedSlug;
+  });
+  // Every diverged stage at once: the reconciliation is one `recompose` call,
+  // so naming them one refusal at a time would cost a round trip per stage.
+  // A slug NEITHER source names (effectivePlanAction undefined — a stage this
+  // host never compiled) is not a plan disagreement and keeps the pending arm.
+  const diverged = outstanding.filter(
+    (slug) => effectivePlanAction(suffixes, scopeStages, slug) === "SKIP",
+  );
+  if (diverged.length > 0) {
+    const named = diverged.map((slug) => `"${slug}"`).join(", ");
+    let recovery = "This Intent's plan is canonical for what it runs, so reconcile it before ";
+    recovery += `finishing: (1) if Construction is autonomous, \`amadeus-bolt.ts set-autonomy --mode none\` `;
+    recovery += `first (it needs a fresh human turn); (2) \`amadeus-utility.ts recompose --add `;
+    recovery += `${diverged.join(",")}\`; (3) run and complete the stage(s). Jumping straight to them is `;
+    recovery += "refused while the plan says SKIP, so recompose is the only way in.";
     return guardDenied({
       reason:
-        `Refusing workflow completion: host-bound plugin stage "${slug}" is mandatory ` +
+        `Refusing workflow completion: host-bound plugin stage(s) ${named} are mandatory ` +
+        `for scope "${scope}", but this Intent's execution projection has them SKIP. ` +
+        "The record's plan was frozen when the Intent was born; amadeus/config.json " +
+        "plugin.scope-bindings has moved since, and the two now disagree.",
+      recovery,
+    });
+  }
+  const pending = outstanding[0];
+  if (pending !== undefined) {
+    const state = rows.find((row) => row.slug === pending)?.state;
+    return guardDenied({
+      reason:
+        `Refusing workflow completion: host-bound plugin stage "${pending}" is mandatory ` +
         `for scope "${scope}" and is ${state ?? "absent"}.`,
       recovery: "Run and complete it before finishing.",
     });
