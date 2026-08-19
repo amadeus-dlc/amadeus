@@ -183,6 +183,19 @@ describe("t3243: handleApproveBatch must not bootstrap OTel against an ambient p
     expect(shardFiles(seededAuditDir(ambient))).toEqual(ambientBefore);
   });
 
+  test("a --batch syntax error (value swallowed by the next flag) inside parseFlags also refuses against the explicit fixture dir and never touches the ambient cwd workspace's audit shard", () => {
+    const ambientBefore = shardFiles(seededAuditDir(ambient));
+
+    // The sibling parseFlags arm: `--batch` immediately followed by another
+    // flag instead of a value. Same explicit-pd requirement as the missing-
+    // value arm above, but a distinct branch/line inside parseFlags.
+    const { rc, out } = boltCapture("approve-batch", ["--batch", "--space", "default"], fixture);
+
+    expect(rc).not.toBe(0);
+    expect(out).toContain("Did you forget the value?");
+    expect(shardFiles(seededAuditDir(ambient))).toEqual(ambientBefore);
+  });
+
   test("a non-numeric --batch value refuses against the explicit fixture dir and never touches the ambient cwd workspace's audit shard", () => {
     const ambientBefore = shardFiles(seededAuditDir(ambient));
 
