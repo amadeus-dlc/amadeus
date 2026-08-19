@@ -89,13 +89,13 @@ function statePath(project: string, record: string): string {
   return join(project, "amadeus", "spaces", "default", "intents", record, "amadeus-state.md");
 }
 
-function bornProject(): { project: string; record: string } {
+function bornProject(bound: string = BOUND_STAGE): { project: string; record: string } {
   const project = createTestProject();
   projects.push(project);
   // The host binding that moved while the Intent was parked.
   writeFileSync(
     join(project, "amadeus", "config.json"),
-    JSON.stringify({ plugin: { "scope-bindings": { "t3249-plugin": { [BOUND_STAGE]: ["fix"] } } } }),
+    JSON.stringify({ plugin: { "scope-bindings": { "t3249-plugin": { [bound]: ["fix"] } } } }),
   );
   const birth = run(project, UTIL, ["intent-birth", "--scope", "fix"]);
   expect(birth.status, out(birth)).toBe(0);
@@ -175,18 +175,7 @@ describe("#3249 a plan/config divergence is named, not reported as a pending sta
   test("an on-plan mandatory stage still refuses with the unchanged pending wording", () => {
     // Negative control: the divergence branch must not swallow the ordinary
     // "you have not run it yet" case. code-generation is EXECUTE for `fix`.
-    const project = createTestProject();
-    projects.push(project);
-    writeFileSync(
-      join(project, "amadeus", "config.json"),
-      JSON.stringify({ plugin: { "scope-bindings": { "t3249-plugin": { "code-generation": ["fix"] } } } }),
-    );
-    const birth = run(project, UTIL, ["intent-birth", "--scope", "fix"]);
-    expect(birth.status, out(birth)).toBe(0);
-    const record = readFileSync(
-      join(project, "amadeus", "spaces", "default", "intents", "active-intent"),
-      "utf8",
-    ).trim();
+    const { project, record } = bornProject("code-generation");
     reconcileAchieved(project, BORN_FINAL_STAGE);
 
     const completed = run(project, STATE, [
