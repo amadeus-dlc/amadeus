@@ -131,3 +131,9 @@ error: expect(received).not.toBe(expected)   Expected: not 0
 | semi-authority-projection | #3146 | `5aab4b893` | 2026-08-16T12:51:44Z |
 
 各 unit の `pr-convergence-report.md` は本セッションで現行 CLI の merged arm により merge 事実へ再 attest 済みで、`pr-convergence-report-format` センサーは 13/13 で code-generation スコープの `SENSOR_PASSED` を実測した。
+
+## 検証の正本について(訂正)
+
+本ステージの起草時、conductor は「本ブランチは record 面のみでコード差分が 0 ファイルのため、ローカルフルスイートを検証の正本としてよい」と解したが、§13 選挙 E-260819-RFC0001-BT-S13 の両票が独立にこの前提を反証した。committed record を入力として走る blocking テストが実在する — `tests/integration/t517-question-budget-sensor.integration.test.ts:350-351` は `amadeus/spaces/default/intents` 配下の全 `*-questions.md` を再帰走査する(逐語 `const INTENTS = join(REPO_ROOT, "amadeus", "spaces", "default", "intents");` と `everyQuestionFile(INTENTS, files)`、本起草時に実読で確認)。`t514-nfr-budget-sensor` / `t461-subagent-stats` も同 corpus を読む。既存則 `cid:code-generation:c1-question-budget-corpus` が同じ非対称を記録している。
+
+したがって record-only の変更こそ CI 固有の情報を持つ。本ステージのローカル実測は補助であり、merge-ready の正本は record checkpoint PR に対する必須 CI の green とする(`cid:ci-pipeline:strict-up-to-date-before-merge`)。上記のローカル結果は CI green を代替しない。
