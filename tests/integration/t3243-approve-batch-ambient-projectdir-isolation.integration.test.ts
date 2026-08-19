@@ -167,4 +167,29 @@ describe("t3243: handleApproveBatch must not bootstrap OTel against an ambient p
     // refusal asserted above).
     expect(shardFiles(seededAuditDir(ambient))).toEqual(ambientBefore);
   });
+
+  test("a --batch syntax error (missing value) inside parseFlags also refuses against the explicit fixture dir and never touches the ambient cwd workspace's audit shard", () => {
+    const ambientBefore = shardFiles(seededAuditDir(ambient));
+
+    // parseFlags itself calls error() for a malformed argument list, BEFORE
+    // handleApproveBatch's own presence/state checks ever run. Its internal
+    // error() calls need the same explicit `pd` threaded through them (see
+    // amadeus-bolt.ts parseFlags) or this refusal falls back to ambient
+    // resolution exactly like the #3243 defect this file otherwise covers.
+    const { rc, out } = boltCapture("approve-batch", ["--batch"], fixture);
+
+    expect(rc).not.toBe(0);
+    expect(out.toLowerCase()).toMatch(/expects a value/);
+    expect(shardFiles(seededAuditDir(ambient))).toEqual(ambientBefore);
+  });
+
+  test("a non-numeric --batch value refuses against the explicit fixture dir and never touches the ambient cwd workspace's audit shard", () => {
+    const ambientBefore = shardFiles(seededAuditDir(ambient));
+
+    const { rc, out } = boltCapture("approve-batch", ["--batch", "not-a-number"], fixture);
+
+    expect(rc).not.toBe(0);
+    expect(out).toContain("Invalid --batch");
+    expect(shardFiles(seededAuditDir(ambient))).toEqual(ambientBefore);
+  });
 });

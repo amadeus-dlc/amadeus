@@ -180,17 +180,17 @@ function spawnSibling(
   };
 }
 
-function parseFlags(args: string[]): Record<string, string> {
+function parseFlags(args: string[], explicitProjectDir?: string): Record<string, string> {
   const flags: Record<string, string> = {};
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (!a.startsWith("--")) continue;
     if (i + 1 >= args.length) {
-      error(`${a} expects a value, got end of arguments.`);
+      error(`${a} expects a value, got end of arguments.`, explicitProjectDir);
     }
     const val = args[i + 1];
     if (val.startsWith("--")) {
-      error(`${a} expects a value, got another flag: "${val}". Did you forget the value?`);
+      error(`${a} expects a value, got another flag: "${val}". Did you forget the value?`, explicitProjectDir);
     }
     flags[a.slice(2)] = val;
     i++;
@@ -1253,16 +1253,17 @@ function handleSetAutonomy(args: string[], explicitProjectDir?: string): void {
 // withAuditLock installs an exit-handler safety net that still releases the
 // lock dir.
 function handleApproveBatch(args: string[], explicitProjectDir?: string): void {
-  const flags = parseFlags(args);
-  // Resolved BEFORE any validation error() call (the handleComplete
-  // precedent, line ~614): every error() below must carry this explicit `pd`
-  // so a refusal is always attributed to the caller's own project dir, never
-  // to whatever ambient workspace resolveProjectDir(undefined) would fall
-  // back to when this process's cwd happens to sit inside a real amadeus
-  // checkout (#3243 — a bare error(msg) here bootstrapped OTel against that
-  // ambient workspace and could even leak an ERROR_LOGGED row into its real
-  // audit shard).
+  // Resolved BEFORE any validation error() call, INCLUDING parseFlags' own
+  // internal ones (the handleComplete precedent, line ~614): every error()
+  // below must carry this explicit `pd` so a refusal is always attributed to
+  // the caller's own project dir, never to whatever ambient workspace
+  // resolveProjectDir(undefined) would fall back to when this process's cwd
+  // happens to sit inside a real amadeus checkout (#3243 — a bare error(msg)
+  // here bootstrapped OTel against that ambient workspace and could even leak
+  // an ERROR_LOGGED row into its real audit shard). parseFlags takes no
+  // dependency on `pd`, so resolving it first is free.
   const pd = resolveBoltProjectDir(explicitProjectDir);
+  const flags = parseFlags(args, pd);
   if (!flags.batch) error("Missing --batch <n> (the 1-origin swarm batch number)", pd);
   const batch = Number(flags.batch.trim());
   if (!Number.isInteger(batch) || batch < 1) {
