@@ -192,6 +192,9 @@ const RETIRED_SOURCE_DISPATCH_CLAIMS = [
   "No shipped conductor face carries",
   "dispatch lives in SKILL",
   "Step 6.5",
+  // A runbook line that tells its reader to invoke the merge primitive would
+  // reopen the second integration path #3197 closed — flags only, no call sites.
+  "amadeus-worktree.ts merge --slug",
 ] as const;
 const CURRENT_SOURCE_DISPATCH_TOKENS = [
   "`amadeus-swarm finalize`",

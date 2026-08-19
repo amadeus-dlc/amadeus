@@ -96,6 +96,7 @@ import {
   recordDir,
   resolveConstructionRepo,
   resolveProjectDir,
+  splitAuditRecords,
   stateFilePath,
   worktreePath,
 } from "./amadeus-lib.ts";
@@ -423,12 +424,16 @@ function worktreeHead(projectDir: string, cwd: string): string | null {
 // flags — a tamper baseline the caller supplies is no baseline at all.
 export interface PreparedForkBinding {
   readonly base: string;
-  readonly forkSha: string;
+  // null for a legacy WORKTREE_CREATED row that predates Base SHA capture:
+  // the recorded base still names the delivery target, but no anti-tamper
+  // baseline exists, so --test-file callers fail closed on it.
+  readonly forkSha: string | null;
 }
 
 // Parse the newest WORKTREE_CREATED block for `unit` out of the intent's audit
-// shards. Returns null when the unit was never prepared (no block) or the block
-// predates Base SHA capture — both fail closed at the caller.
+// shards. Returns null when the unit was never prepared (no block, or a block
+// with no Base branch) — the caller fails closed. A row that predates Base SHA
+// capture keeps its base and carries forkSha: null.
 export function parsePreparedForkBinding(
   pd: string,
   unit: string,
@@ -441,9 +446,9 @@ export function parsePreparedForkBinding(
   const newest = matches[matches.length - 1];
   if (!newest) return null;
   const base = auditBlockField(newest.block, "Base branch");
+  if (!base) return null;
   const forkSha = auditBlockField(newest.block, "Base SHA");
-  if (!base || !forkSha) return null;
-  return { base, forkSha };
+  return { base, forkSha: forkSha || null };
 }
 
 // Compute a unit's verdict from its prepared fork and the worker commit that the
@@ -821,7 +826,12 @@ function handlePrepare(rest: string[]): void {
 
 // Exit 0 ONLY for a genuine convergence (green AND untampered) — the seam an
 // ultra driver and the conductor gate on (a worker's self-claim is never read).
-function handleCheck(rest: string[]): void {
+// exit is injectable so the CLI wiring is drivable in-process by the tests
+// (Bun coverage does not instrument spawned CLI processes).
+export function handleCheck(
+  rest: string[],
+  exit: (code: number) => void = process.exit,
+): void {
   const { positional, flags } = parseArgs(rest);
   const projectDir = resolveProjectDir(flags["project-dir"]);
 
@@ -841,7 +851,7 @@ function handleCheck(rest: string[]): void {
       flags.intent,
       flags.space,
     );
-    if (!preparedFork) {
+    if (!preparedFork || preparedFork.forkSha === null) {
       console.log(
         JSON.stringify({
           unit,
@@ -851,7 +861,8 @@ function handleCheck(rest: string[]): void {
           detail: `no prepared fork binding for unit "${unit}" (WORKTREE_CREATED with Base SHA absent) — run \`prepare\` first`,
         })
       );
-      process.exit(1);
+      exit(1);
+      return;
     }
     binding = { testFile: flags["test-file"], forkSha: preparedFork.forkSha };
   }
@@ -870,7 +881,8 @@ function handleCheck(rest: string[]): void {
         detail: verdict.confineError,
       })
     );
-    process.exit(1);
+    exit(1);
+    return;
   }
 
   const genuine = verdict.converged && !verdict.tampered;
@@ -882,7 +894,7 @@ function handleCheck(rest: string[]): void {
   };
   if (verdict.tampered) out.detail = "protected test file was modified";
   console.log(JSON.stringify(out));
-  process.exit(genuine ? 0 : 1);
+  exit(genuine ? 0 : 1);
 }
 
 // --- retry ------------------------------------------------------------------
@@ -1097,6 +1109,12 @@ function resolveFinalizeRepoArgs(
 // tool-emitted WORKTREE_MERGED row is the delivery receipt. Lets a retried
 // finalize (after a sibling's source-merge failure stopped the batch) count
 // the delivered unit as converged instead of failing it for a missing worktree.
+// The receipt must belong to the CURRENT fork: a receipt older than the unit's
+// newest WORKTREE_CREATED is a previous delivery of the same slug, not this
+// batch's — counting it would report converged without integrating this
+// batch's source (#3197). Ordering is (timestamp, buffer position), the same
+// contract findAllEvents applies; audit timestamps are second-precision, so
+// the position tie-break decides same-second re-forks by append order.
 function sourceAlreadyIntegrated(
   pd: string,
   unit: string,
@@ -1104,7 +1122,24 @@ function sourceAlreadyIntegrated(
   space?: string,
 ): boolean {
   const audit = readAllAuditShards(pd, intent, space);
-  return audit.length > 0 && findAllEvents(audit, "WORKTREE_MERGED", unit).length > 0;
+  if (audit.length === 0) return false;
+  const rows: { merged: boolean; timestamp: string; pos: number }[] = [];
+  const blocks = splitAuditRecords(audit);
+  for (let pos = 0; pos < blocks.length; pos++) {
+    const event = auditBlockField(blocks[pos], "Event");
+    if (event !== "WORKTREE_MERGED" && event !== "WORKTREE_CREATED") continue;
+    if (auditBlockField(blocks[pos], "Bolt slug") !== unit) continue;
+    const timestamp = auditBlockField(blocks[pos], "Timestamp");
+    if (timestamp === null || timestamp === "") continue;
+    rows.push({ merged: event === "WORKTREE_MERGED", timestamp, pos });
+  }
+  rows.sort((a, b) => {
+    if (a.timestamp !== b.timestamp) return a.timestamp < b.timestamp ? -1 : 1;
+    return a.pos - b.pos;
+  });
+  const hasCreated = rows.some((row) => !row.merged);
+  const newest = rows[rows.length - 1];
+  return hasCreated && newest !== undefined && newest.merged;
 }
 
 export function handleFinalize(
@@ -1222,7 +1257,8 @@ export function handleFinalize(
         });
         continue;
       }
-      if (testFile && !preparedForks.has(unit)) {
+      const preparedForkSha = preparedForks.get(unit)?.forkSha ?? null;
+      if (testFile && preparedForkSha === null) {
         results.push({
           unit,
           status: "failed",
@@ -1235,7 +1271,7 @@ export function handleFinalize(
         unit,
         projectDir,
         checkCmd,
-        testFile ? { testFile, forkSha: preparedForks.get(unit)!.forkSha } : {},
+        testFile && preparedForkSha !== null ? { testFile, forkSha: preparedForkSha } : {},
       );
       if (!verdict.exists) {
         if (sourceAlreadyIntegrated(projectDir, unit, flags.intent, flags.space)) {

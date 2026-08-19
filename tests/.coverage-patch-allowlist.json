@@ -2159,7 +2159,7 @@
     "file": "packages/framework/core/tools/amadeus-swarm.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:3da2c5fcc23c1ada7ca31ba49f32487fcf4ecf0e212987cebd9a9f8b63a74ca1",
+      "fingerprint": "sha256:b304335872e61d5c6e90771855d0c058329102dce6c0bbc3af7f555fffa3b9bf",
       "anchorLines": 54,
       "targetLines": "1-54"
     },
@@ -2203,9 +2203,9 @@
     "file": "packages/framework/core/tools/amadeus-swarm.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:bd4bb1a87c0de36c50f1f0e0e2b0937096982d270700992569206e0983a64969",
-      "anchorLines": 148,
-      "targetLines": "1-148"
+      "fingerprint": "sha256:7db7bf1439e840fcaf1592fe5d36bfd76db60f3335e9a577c3097720da9474fb",
+      "anchorLines": 149,
+      "targetLines": "1-149"
     },
     "reason": "Fixed-pool CLI adapters parse native facts and delegate every mutation to createUnitPoolCoordinator. Their command protocol is exercised through the shipped CLI by tests/integration/t135-invoke-swarm.test.ts and pinned across all harnesses by t425; coordinator semantics and rejection branches are driven in-process by tests/unit/t425-unit-pool.test.ts. Bun cannot attribute spawned adapter execution.",
     "expiry": "remove when fixed-pool handlers receive injectable argv, repository, output, and exit ports"

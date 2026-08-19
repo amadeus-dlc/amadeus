@@ -249,15 +249,19 @@ function setupReferee(): void {
   // source-only commit per the swarm source handoff); `lose` did not. This
   // test stages win's impl directly — no model.
   const winWorktree = join(proj, ".amadeus", "worktrees", "bolt-win");
-  if (existsSync(winWorktree)) {
-    writeFileSync(join(winWorktree, "win.txt"), "done\n");
-    spawnSync("git", ["add", "--", "win.txt"], { cwd: winWorktree, encoding: "utf-8" });
-    spawnSync(
-      "git",
-      ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "worker source for win", "--", "win.txt"],
-      { cwd: winWorktree, encoding: "utf-8" },
-    );
-  }
+  // The handoff under test is a COMMITTED source-only change: a missing
+  // worktree or a failed add/commit must fail here, not surface later as a
+  // finalize mystery (win.txt alone would pass even uncommitted).
+  expect(existsSync(winWorktree)).toBe(true);
+  writeFileSync(join(winWorktree, "win.txt"), "done\n");
+  const winAdd = spawnSync("git", ["add", "--", "win.txt"], { cwd: winWorktree, encoding: "utf-8" });
+  expect(winAdd.status).toBe(0);
+  const winCommit = spawnSync(
+    "git",
+    ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "-m", "worker source for win", "--", "win.txt"],
+    { cwd: winWorktree, encoding: "utf-8" },
+  );
+  expect(winCommit.status).toBe(0);
 
   // The fixed pool is the dispatch authority. Acquire at most the prepared cap,
   // confirm the two native handles, then settle each Unit. A settle releases its

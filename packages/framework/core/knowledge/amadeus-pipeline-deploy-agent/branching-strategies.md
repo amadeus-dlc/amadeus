@@ -40,7 +40,7 @@ When dispatched for trunk-based:
 1. Read `team.md` `## Branching` per `shared/rules-reading.md`. If empty, fall back to `org.md`, then to hardcoded defaults.
 2. Resolve flags: `--base main --target main --strategy squash` for the default; deviate only if `team.md` explicitly says otherwise.
 3. **Create**: invoke `bun {{HARNESS_DIR}}/tools/amadeus-worktree.ts create --slug <bolt-slug> --base main`.
-4. **Merge** (after Bolt gate approval): caller must be on `main` at the main checkout. Invoke `bun {{HARNESS_DIR}}/tools/amadeus-worktree.ts merge --slug <bolt-slug> --target main --strategy squash --message "<commit message>"`.
+4. **Merge mapping** (consumed at Bolt gate approval): `--target main --strategy squash`. The runtime integration owner (`amadeus-swarm finalize`) invokes the merge primitive with these flags after re-verification and the metadata merge — this runbook resolves the flags and never invokes the primitive itself.
 5. Return the JSON envelope per § Response contract back to the orchestrator.
 
 ### Failure modes
@@ -78,7 +78,7 @@ When dispatched for GitHub Flow:
 1. Read `team.md` `## Branching` (and `## Merge style` if present). The merge-strategy choice (squash vs merge) is what differs from trunk-based.
 2. Resolve flags: `--base main --target main --strategy <squash|merge>` per affirmation; default to `squash`.
 3. **Create**: `bun {{HARNESS_DIR}}/tools/amadeus-worktree.ts create --slug <bolt-slug> --base main`.
-4. **Merge**: `bun {{HARNESS_DIR}}/tools/amadeus-worktree.ts merge --slug <bolt-slug> --target main --strategy <squash|merge> [--message "<msg>"]`. With `--strategy merge`, a no-fast-forward merge commit preserves the bolt branch's individual commits.
+4. **Merge mapping**: `--target main --strategy <squash|merge>`. With `--strategy merge`, a no-fast-forward merge commit preserves the bolt branch's individual commits. Resolved here, invoked only by the runtime integration owner.
 5. Return per § Response contract.
 
 ### Failure modes
@@ -119,9 +119,9 @@ When dispatched for GitFlow:
 
 1. Read `team.md` `## Branching`. Look for the integration-branch name (`develop` is the convention; teams sometimes use `integration` or `next`).
 2. For feature Bolts: `--base <integration> --target <integration> --strategy <merge|squash>`. Default to `merge`.
-3. For hotfix Bolts (rare in Construction; usually triggered by an out-of-band stage): `--base main --target main --strategy merge`. The operator separately merges the hotfix back to `<integration>` after `amadeus-worktree merge` succeeds. Out of scope for the tool.
+3. For hotfix Bolts (rare in Construction; usually triggered by an out-of-band stage): `--base main --target main --strategy merge`. The operator separately merges the hotfix back to `<integration>` after the runtime source integration lands it on `main`. Out of scope for the tool.
 4. **Create**: `bun {{HARNESS_DIR}}/tools/amadeus-worktree.ts create --slug <bolt-slug> --base <integration>`.
-5. **Merge**: caller must be on `<integration>` at the main checkout. `bun {{HARNESS_DIR}}/tools/amadeus-worktree.ts merge --slug <bolt-slug> --target <integration> --strategy <merge|squash>`.
+5. **Merge mapping**: `--target <integration> --strategy <merge|squash>`. The runtime integration owner performs the merge on `<integration>` at the main checkout.
 6. Return per § Response contract; if hotfix, include `notes: "manual merge to <integration> required"` so the orchestrator surfaces the follow-up.
 
 ### Failure modes
@@ -164,7 +164,7 @@ When dispatched for Release Branches:
 1. Read `team.md` `## Branching`. Look for the release-branch pattern (`release/vX.Y` is the convention).
 2. Determine which line the Bolt belongs to from the Bolt's metadata (the orchestrator passes a `target_line: main | release/vX.Y` hint). Default to `main` when ambiguous.
 3. **Create**: `bun {{HARNESS_DIR}}/tools/amadeus-worktree.ts create --slug <bolt-slug> --base <line>`.
-4. **Merge**: caller on `<line>` at the main checkout. `bun {{HARNESS_DIR}}/tools/amadeus-worktree.ts merge --slug <bolt-slug> --target <line> --strategy merge`.
+4. **Merge mapping**: `--target <line> --strategy merge`. Resolved here, invoked only by the runtime integration owner.
 5. If the Bolt was a release-branch fix, include `notes: "consider cherry-pick to main"` in the response — the operator handles the cross-merge.
 6. Return per § Response contract.
 

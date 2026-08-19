@@ -966,6 +966,11 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     if (firstConflictPaths.length > 0) gitOrThrow(proj, ["reset", "--merge", "HEAD"]);
     const betaWt = wtPath(proj, "beta-source");
     const recoveryMerge = runGit(betaWt, ["-c", "merge.ff=false", "merge", "--no-ff", "main", "--no-edit"]);
+    // The intent is "merging main conflicts on the shared file", not a specific
+    // git exit code — pin the unmerged path instead.
+    const recoveryMergeConflicted =
+      recoveryMerge.rc !== 0 &&
+      gitOrThrow(betaWt, ["diff", "--name-only", "--diff-filter=U"]) === "shared-recovery.txt";
     writeFileSync(join(betaWt, "shared-recovery.txt"), "recovered beta\n");
     gitOrThrow(betaWt, ["add", "--", "shared-recovery.txt", "alpha-source.txt"]);
     gitOrThrow(betaWt, [
@@ -996,7 +1001,7 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
       ),
       firstConflictPaths,
       alphaCleanupAfterFirst,
-      recoveryMergeStatus: recoveryMerge.rc,
+      recoveryMergeConflicted,
       retryStatus: second.rc,
       retryConverged: secondEnvelope.converged,
       retryFailed: secondEnvelope.failed,
@@ -1020,7 +1025,7 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
         branchRemoved: true,
         sourceLanded: true,
       },
-      recoveryMergeStatus: 1,
+      recoveryMergeConflicted: true,
       retryStatus: 0,
       retryConverged: 2,
       retryFailed: 0,

@@ -37,6 +37,7 @@ import {
   worktreeStateFilePath,
 } from "./amadeus-lib.js";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
+import { isHarnessDirName } from "./amadeus-harness.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
 
 // kebab-case slug shape: lowercase letter, then lowercase letters / digits /
@@ -136,7 +137,7 @@ function runGit(args: string[], cwd?: string): GitResult {
 
 // Shared failure detail for the merge preflight/cleanup errors. A dedicated
 // helper keeps the call sites free of nested template literals.
-function gitRunDetail(result: GitResult): string {
+export function gitRunDetail(result: GitResult): string {
   return result.stderr.trim() || result.stdout.trim() || `exit ${result.code}`;
 }
 
@@ -646,18 +647,32 @@ function isManagedWorktreePath(path: string, managed: ManagedWorktreePaths): boo
   );
 }
 
-// The harness self-install root this tool runs from (…/<harness>/<dir>, e.g.
-// dist/claude/.claude). An ignored worktree FILE that also exists in this tree
-// is a regenerable self-install copy, not source; any other ignored file may
-// be hand-authored and must block the merge loudly.
-const HARNESS_INSTALL_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
+// The harness self-install root this tool runs from (…/<harness>/tools →
+// …/<harness>, e.g. dist/claude/.claude). An ignored worktree FILE that also
+// exists in this tree is a regenerable self-install copy, not source; any
+// other ignored file may be hand-authored and must block the merge loudly.
+// Shape-validated: when the module does NOT run from a harness install (a
+// source-tree import, a relocated bundle), there is no install root and no
+// ignored file is disposable — fail closed instead of deriving a root from an
+// arbitrary parent directory, because this classification feeds `git clean`.
+export function resolveSelfInstallRoot(moduleDir: string): string | null {
+  if (basename(moduleDir) !== "tools") return null;
+  const harnessDirPath = dirname(moduleDir);
+  return isHarnessDirName(basename(harnessDirPath)) ? harnessDirPath : null;
+}
 
-function isSelfInstallLeaf(relPath: string): boolean {
+const HARNESS_INSTALL_ROOT = resolveSelfInstallRoot(dirname(fileURLToPath(import.meta.url)));
+
+export function isSelfInstallLeaf(
+  relPath: string,
+  installRoot: string | null = HARNESS_INSTALL_ROOT,
+): boolean {
+  if (installRoot === null) return false;
   const [head, ...rest] = relPath.split("/");
   return (
     rest.length > 0 &&
-    head === basename(HARNESS_INSTALL_ROOT) &&
-    existsSync(join(HARNESS_INSTALL_ROOT, ...rest))
+    head === basename(installRoot) &&
+    existsSync(join(installRoot, ...rest))
   );
 }
 
@@ -666,9 +681,10 @@ interface SourceInspection {
   readonly disposable: string[];
 }
 
-function classifySourcePaths(
+export function classifySourcePaths(
   porcelain: string,
   managed: ManagedWorktreePaths,
+  installRoot: string | null = HARNESS_INSTALL_ROOT,
 ): SourceInspection {
   const records = porcelain.split("\0");
   const blocking: string[] = [];
@@ -696,7 +712,7 @@ function classifySourcePaths(
       if (status === "!!") {
         // A wholly-ignored directory collapses to a `!! dir/` entry: generated
         // output territory, removable by exact path before worktree removal.
-        if (path.endsWith("/") || isSelfInstallLeaf(path)) disposable.push(path);
+        if (path.endsWith("/") || isSelfInstallLeaf(path, installRoot)) disposable.push(path);
         else blocking.push(path);
       } else {
         blocking.push(path);

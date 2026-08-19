@@ -222,8 +222,11 @@ For each granted batch:
 2. Prepare the exact batch and concurrency granted by the directive. For a
    multi-repository intent, pass the directive's repository as `--repo <name>`;
    never guess an omitted repository.
-3. Acquire one permit per ready unit and dispatch it through the packaged Pi
-   child driver with `persona: "amadeus-builder-agent"`. Confirm only a
+3. Acquire one permit per ready unit — keep acquiring until the referee
+   reports `capacity-exhausted` or `no-ready-unit`, and acquire again after
+   each settle frees a slot; `finalize` rejects a pool that still holds
+   queued units — and dispatch each permit through the packaged Pi child
+   driver with `persona: "amadeus-builder-agent"`. Confirm only a
    driver-accepted dispatch with its native handle.
 4. Run the referee's declared check, then settle and release the corresponding
    attempt exactly once.

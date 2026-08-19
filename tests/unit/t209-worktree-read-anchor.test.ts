@@ -24,17 +24,22 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveWorktreeBaseDir } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import {
+  classifySourcePaths,
+  gitRunDetail,
   handleCreate,
   handleDiscard,
   handleList,
   handleMerge,
+  isSelfInstallLeaf,
+  resolveSelfInstallRoot,
 } from "../../packages/framework/core/tools/amadeus-worktree.ts";
 import { REPO_ROOT, seedWorkspaceShell, seededStateFile } from "../harness/fixtures.ts";
+import { resetOtelPerProject } from "../harness/otel-reset.ts";
 
 describe("t209 worktreeBaseDir anchor rule (#746) — pure seam", () => {
   test("sibling worktree of a legacy single-repo intent anchors at the main checkout", () => {
@@ -156,6 +161,10 @@ beforeEach(() => {
 
 afterEach(() => {
   rmSync(scratch.root, { recursive: true, force: true });
+  // The write handlers bootstrap OTel for the scratch clone on their audit
+  // emit; the per-process one-workspace invariant must be dropped before the
+  // next test mints a different scratch clone.
+  resetOtelPerProject();
 });
 
 describe("t209 sibling swarm pipeline resolves the anchored worktree (#746)", () => {
@@ -280,5 +289,202 @@ describe("t209 write-handler seam: merge/discard/list resolve the same anchor (#
     const out = captureStdout(() => handleList([], scratch.clone));
     const parsed = JSON.parse(out.trim()) as { worktrees: unknown[] };
     expect(Array.isArray(parsed.worktrees)).toBe(true);
+  });
+});
+
+// --- #3197 merge source hygiene: the preflight classification and its ------
+// --- rejection arms, driven in-process (bun coverage cannot measure ---------
+// --- spawned CLI runs) -------------------------------------------------------
+
+/** Drive a rejection path in-process: process.exit throws, stderr is captured. */
+function captureRejection(fn: () => void): { message: string; exitCode: number } {
+  const originalExit = process.exit;
+  const originalError = console.error;
+  let message = "";
+  let exitCode = -1;
+  process.exit = ((code?: number) => {
+    exitCode = code ?? 0;
+    throw new Error(`exit ${exitCode}`);
+  }) as typeof process.exit;
+  console.error = (value: unknown) => {
+    message = String(value);
+  };
+  try {
+    fn();
+  } catch (cause) {
+    if (!(cause instanceof Error && cause.message === `exit ${exitCode}`)) throw cause;
+  } finally {
+    process.exit = originalExit;
+    console.error = originalError;
+  }
+  return { message, exitCode };
+}
+
+const MANAGED = {
+  state: "amadeus/spaces/default/intents/rec/amadeus-state.md",
+  runtimeGraph: "amadeus/spaces/default/intents/rec/runtime-graph.json",
+  auditDir: "amadeus/spaces/default/intents/rec/audit",
+  scratchPrefix: "amadeus/spaces/default/intents/rec/.amadeus-",
+};
+
+describe("t209 source classification (#3197) — pure seam", () => {
+  test("gitRunDetail prefers stderr, then stdout, then the exit code", () => {
+    expect(gitRunDetail({ ok: false, stdout: "out", stderr: " err ", code: 1 })).toBe("err");
+    expect(gitRunDetail({ ok: false, stdout: " out ", stderr: "", code: 1 })).toBe("out");
+    expect(gitRunDetail({ ok: false, stdout: "", stderr: "", code: 128 })).toBe("exit 128");
+  });
+
+  test("classifySourcePaths: wholly-ignored dirs are disposable, unknown ignored files block", () => {
+    const porcelain = ["!! dist/", "!! notes.draft", ""].join("\0");
+    expect(classifySourcePaths(porcelain, MANAGED)).toEqual({
+      blocking: ["notes.draft"],
+      disposable: ["dist/"],
+    });
+  });
+
+  test("classifySourcePaths: a self-install leaf is disposable, other ignored files block", () => {
+    const root = mkdtempSync(join(tmpdir(), "amadeus-t209-install-"));
+    try {
+      const installRoot = join(root, ".claude");
+      mkdirSync(join(installRoot, "tools"), { recursive: true });
+      writeFileSync(join(installRoot, "tools", "amadeus-worktree.ts"), "// installed\n");
+      const porcelain = ["!! .claude/tools/amadeus-worktree.ts", "!! .claude/nope.txt", ""].join(
+        "\0",
+      );
+      expect(classifySourcePaths(porcelain, MANAGED, installRoot)).toEqual({
+        blocking: [".claude/nope.txt"],
+        disposable: [".claude/tools/amadeus-worktree.ts"],
+      });
+      // Without a resolved install root every ignored file blocks (fail closed).
+      expect(classifySourcePaths(porcelain, MANAGED, null)).toEqual({
+        blocking: [".claude/tools/amadeus-worktree.ts", ".claude/nope.txt"],
+        disposable: [],
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("classifySourcePaths: untracked, staged, and malformed records block", () => {
+    const porcelain = ["?? new.ts", "M  tracked.ts", "M\x00", ""].join("\0");
+    const result = classifySourcePaths(porcelain, MANAGED);
+    expect(result.blocking).toEqual(["new.ts", "tracked.ts", "<malformed-git-status>"]);
+    expect(result.disposable).toEqual([]);
+  });
+
+  test("classifySourcePaths: rename records consume the origin path; managed paths skip", () => {
+    const porcelain = [
+      "R  new-name.ts",
+      "old-name.ts",
+      "!! amadeus/spaces/default/intents/rec/audit/",
+      "M  amadeus/spaces/default/intents/rec/amadeus-state.md",
+      "",
+    ].join("\0");
+    expect(classifySourcePaths(porcelain, MANAGED)).toEqual({
+      blocking: ["new-name.ts", "old-name.ts"],
+      disposable: [],
+    });
+  });
+
+  test("isSelfInstallLeaf requires the harness dir prefix and an installed counterpart", () => {
+    const root = mkdtempSync(join(tmpdir(), "amadeus-t209-leaf-"));
+    try {
+      const installRoot = join(root, ".claude");
+      mkdirSync(join(installRoot, "tools"), { recursive: true });
+      writeFileSync(join(installRoot, "tools", "amadeus-worktree.ts"), "// installed\n");
+      expect(isSelfInstallLeaf(".claude/tools/amadeus-worktree.ts", installRoot)).toBe(true);
+      expect(isSelfInstallLeaf(".claude/does-not-exist.txt", installRoot)).toBe(false);
+      expect(isSelfInstallLeaf("other/tools/amadeus-worktree.ts", installRoot)).toBe(false);
+      expect(isSelfInstallLeaf(".claude", installRoot)).toBe(false);
+      expect(isSelfInstallLeaf(".claude/tools/amadeus-worktree.ts", null)).toBe(false);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("resolveSelfInstallRoot accepts only a harness-shaped <root>/<.harness>/tools module dir", () => {
+    expect(resolveSelfInstallRoot("/ws/.claude/tools")).toBe("/ws/.claude");
+    expect(resolveSelfInstallRoot("/ws/.cursor/tools")).toBe("/ws/.cursor");
+    // A source-tree import runs from packages/framework/core/tools — "core"
+    // is not a harness dir, so there is no install root (fail closed).
+    expect(resolveSelfInstallRoot("/repo/packages/framework/core/tools")).toBeNull();
+    expect(resolveSelfInstallRoot("/ws/.claude/hooks")).toBeNull();
+  });
+});
+
+describe("t209 merge source hygiene (#3197) — handler seam", () => {
+  test("merge rejects a worktree with uncommitted source before any mutation", () => {
+    captureStdout(() =>
+      handleCreate(["--slug", "seam-dirty", "--base", "main"], scratch.clone),
+    );
+    const wt = join(scratch.clone, ".amadeus", "worktrees", "bolt-seam-dirty");
+    writeFileSync(join(wt, "dirty.txt"), "uncommitted\n", "utf-8");
+    const headBefore = git(scratch.clone, ["rev-parse", "HEAD"]);
+
+    const rejection = captureRejection(() =>
+      handleMerge(
+        ["--slug", "seam-dirty", "--target", "main", "--strategy", "squash"],
+        scratch.clone,
+      ),
+    );
+    expect(rejection.exitCode).toBe(1);
+    expect(rejection.message).toContain("uncommitted");
+    expect(rejection.message).toContain("dirty.txt");
+    expect(git(scratch.clone, ["rev-parse", "HEAD"])).toBe(headBefore);
+    expect(existsSync(wt)).toBe(true);
+  });
+
+  test("merge rejects a target checkout with staged changes", () => {
+    captureStdout(() =>
+      handleCreate(["--slug", "seam-staged", "--base", "main"], scratch.clone),
+    );
+    const wt = join(scratch.clone, ".amadeus", "worktrees", "bolt-seam-staged");
+    git(wt, ["config", "user.email", "t209@example.com"]);
+    git(wt, ["config", "user.name", "t209"]);
+    writeFileSync(join(wt, "staged-src.txt"), "committed\n", "utf-8");
+    git(wt, ["add", "staged-src.txt"]);
+    git(wt, ["commit", "-q", "-m", "worker source"]);
+    writeFileSync(join(scratch.clone, "staged-target.txt"), "staged\n", "utf-8");
+    git(scratch.clone, ["add", "staged-target.txt"]);
+
+    const rejection = captureRejection(() =>
+      handleMerge(
+        ["--slug", "seam-staged", "--target", "main", "--strategy", "squash"],
+        scratch.clone,
+      ),
+    );
+    expect(rejection.exitCode).toBe(1);
+    expect(rejection.message).toContain("staged changes");
+    expect(rejection.message).toContain("staged-target.txt");
+    git(scratch.clone, ["reset", "-q", "HEAD", "--", "staged-target.txt"]);
+  });
+
+  test("merge cleans wholly-ignored output roots by exact path before non-force removal", () => {
+    writeFileSync(join(scratch.clone, ".gitignore"), "/gen-out/\n", "utf-8");
+    git(scratch.clone, ["add", ".gitignore"]);
+    git(scratch.clone, ["commit", "-q", "-m", "ignore generated output"]);
+    // Keep origin/main in step so create's stale-base guard sees a fresh base.
+    git(scratch.clone, ["push", "-q", "origin", "main"]);
+    captureStdout(() =>
+      handleCreate(["--slug", "seam-gen", "--base", "main"], scratch.clone),
+    );
+    const wt = join(scratch.clone, ".amadeus", "worktrees", "bolt-seam-gen");
+    git(wt, ["config", "user.email", "t209@example.com"]);
+    git(wt, ["config", "user.name", "t209"]);
+    writeFileSync(join(wt, "gen-src.txt"), "committed\n", "utf-8");
+    git(wt, ["add", "gen-src.txt"]);
+    git(wt, ["commit", "-q", "-m", "worker source"]);
+    mkdirSync(join(wt, "gen-out"), { recursive: true });
+    writeFileSync(join(wt, "gen-out", "generated.js"), "generated\n", "utf-8");
+
+    const out = captureStdout(() =>
+      handleMerge(
+        ["--slug", "seam-gen", "--target", "main", "--strategy", "squash"],
+        scratch.clone,
+      ),
+    );
+    expect(out).toContain("WORKTREE_MERGED");
+    expect(readFileSync(join(scratch.clone, "gen-src.txt"), "utf-8")).toBe("committed\n");
+    expect(existsSync(wt)).toBe(false);
   });
 });

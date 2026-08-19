@@ -24,6 +24,7 @@ import {
   claimedUnitsOutsideBatch,
   currentStageOrFail,
   fileTamperResultForStatuses,
+  handleCheck,
   handleFinalize,
   parsePreparedForkBinding,
   verdictFor,
@@ -32,8 +33,9 @@ import {
   createAuditUnitPoolRepository,
   createUnitPoolCoordinator,
 } from "../../packages/framework/core/tools/amadeus-unit-pool-runtime.ts";
-import { resetOtelBootstrapForTests } from "../../packages/framework/core/otel/bootstrap.ts";
+import { ensureOtelBootstrap, resetOtelBootstrapForTests } from "../../packages/framework/core/otel/bootstrap.ts";
 import { resetFatalLatchForTests } from "../../packages/framework/core/otel/fatal-latch.ts";
+import { appendAuditEntryViaEvents } from "../../packages/framework/core/otel/migration-adapter.ts";
 import { resetLoggerProviderForTests } from "../../packages/framework/core/otel/logger-provider.ts";
 import { resetTracerProviderForTests } from "../../packages/framework/core/otel/tracer-provider.ts";
 
@@ -563,5 +565,451 @@ describe("t207 protected-file anti-tamper guard (#748)", () => {
       converged: true,
       tampered: true,
     });
+  });
+});
+
+// --- #3197 in-process coverage: fork binding, check binding gate, and the ---
+// --- finalize per-Unit transaction failure arms -----------------------------
+
+/** Emit a real audit row through the canonical event seam. */
+function emitAuditRow(
+  projectDir: string,
+  event: string,
+  fields: Record<string, string>,
+): void {
+  ensureOtelBootstrap(projectDir);
+  appendAuditEntryViaEvents(event, fields, projectDir);
+}
+
+/** A batch with a terminal, all-succeeded fixed Unit pool. */
+function buildSucceededPool(projectDir: string, batch: string, units: string[]): void {
+  const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(projectDir));
+  pool.initialEnqueue({
+    idempotencyKey: "init",
+    batchId: batch,
+    cap: 1,
+    units: units.map((unitId) => ({ unitId, dependsOn: [] })),
+  });
+  for (const unit of units) {
+    pool.acquire({ idempotencyKey: `acquire-${unit}`, batchId: batch });
+    const attempt = pool.readProjection(batch).active[0];
+    pool.confirmDispatch({
+      idempotencyKey: `confirm-${unit}`,
+      batchId: batch,
+      attemptId: attempt.attemptId,
+      nativeHandle: `native-${unit}`,
+    });
+    pool.settleRelease({
+      idempotencyKey: `settle-${unit}`,
+      batchId: batch,
+      attemptId: attempt.attemptId,
+      outcome: "succeeded",
+    });
+  }
+}
+
+interface FinalizeDrive {
+  readonly envelope: {
+    converged: number;
+    failed: number;
+    merge_failures: { unit: string; detail: string }[];
+    units: { unit: string; status: string; detail?: string }[];
+  };
+  readonly exitCode: number;
+  readonly toolCalls: { tool: string; args: string[] }[];
+}
+
+/** Drive handleFinalize in-process with a stubbed sibling-tool runner. */
+function driveFinalize(
+  projectDir: string,
+  extraArgs: string[],
+  toolResultFor: (tool: string, args: string[]) => { ok: boolean; stdout: string; stderr: string },
+): FinalizeDrive {
+  const toolCalls: { tool: string; args: string[] }[] = [];
+  let output = "";
+  let exitCode = -1;
+  const log = spyOn(console, "log").mockImplementation((value) => {
+    output = String(value);
+  });
+  try {
+    handleFinalize(
+      ["--project-dir", projectDir, ...extraArgs],
+      (code) => {
+        exitCode = code;
+      },
+      () => ({ ok: true, stdout: "", stderr: "" }),
+      (tool, args) => {
+        toolCalls.push({ tool, args });
+        return toolResultFor(tool, args);
+      },
+    );
+  } finally {
+    log.mockRestore();
+  }
+  return { envelope: JSON.parse(output), exitCode, toolCalls };
+}
+
+const okTool = (): { ok: boolean; stdout: string; stderr: string } => ({
+  ok: true,
+  stdout: "",
+  stderr: "",
+});
+
+describe("t207 prepared fork binding (#3197)", () => {
+  test("parsePreparedForkBinding fails closed without audit and keeps the base of a Base-SHA-less row", () => {
+    const empty = makeTemporaryDirectory("amadeus-t207-binding-empty-");
+    birthIntent(empty, "binding-empty", "default", "feature");
+    expect(parsePreparedForkBinding(empty, "alpha")).toBeNull();
+
+    const legacy = makeTemporaryDirectory("amadeus-t207-binding-legacy-");
+    birthIntent(legacy, "binding-legacy", "default", "feature");
+    emitAuditRow(legacy, "WORKTREE_CREATED", {
+      "Bolt slug": "alpha",
+      "Worktree path": "/tmp/wt",
+      "Branch name": "bolt-alpha",
+      "Base branch": "delivery",
+    });
+    // A legacy row without Base SHA keeps its recorded delivery target; only
+    // the anti-tamper baseline is absent (forkSha: null fails closed where a
+    // baseline is required).
+    expect(parsePreparedForkBinding(legacy, "alpha")).toEqual({
+      base: "delivery",
+      forkSha: null,
+    });
+  });
+
+  test("parsePreparedForkBinding parses the WORKTREE_CREATED fork contract", () => {
+    const projectDir = makeTemporaryDirectory("amadeus-t207-binding-");
+    birthIntent(projectDir, "binding", "default", "feature");
+    emitAuditRow(projectDir, "WORKTREE_CREATED", {
+      "Bolt slug": "alpha",
+      "Worktree path": "/tmp/wt",
+      "Branch name": "bolt-alpha",
+      "Base branch": "delivery",
+      "Base SHA": "a".repeat(40),
+    });
+    expect(parsePreparedForkBinding(projectDir, "alpha")).toEqual({
+      base: "delivery",
+      forkSha: "a".repeat(40),
+    });
+  });
+
+  test("check with --test-file fails closed without a binding and on a Base-SHA-less binding", () => {
+    const projectDir = makeTemporaryDirectory("amadeus-t207-check-binding-");
+    birthIntent(projectDir, "check-binding", "default", "feature");
+    const runCheck = (): { output: string; exitCode: number } => {
+      let output = "";
+      let exitCode = -1;
+      const log = spyOn(console, "log").mockImplementation((value) => {
+        output = String(value);
+      });
+      try {
+        handleCheck(
+          [
+            "--project-dir",
+            projectDir,
+            "alpha",
+            "--check-cmd",
+            passingCheckCommand,
+            "--test-file",
+            "spec/protected.test",
+          ],
+          (code) => {
+            exitCode = code;
+          },
+        );
+      } finally {
+        log.mockRestore();
+      }
+      return { output, exitCode };
+    };
+
+    const noBinding = runCheck();
+    expect(noBinding.exitCode).toBe(1);
+    expect(JSON.parse(noBinding.output).detail).toContain("no prepared fork binding");
+
+    // A legacy row keeps its base but has no baseline: --test-file still fails.
+    emitAuditRow(projectDir, "WORKTREE_CREATED", {
+      "Bolt slug": "alpha",
+      "Worktree path": "/tmp/wt",
+      "Branch name": "bolt-alpha",
+      "Base branch": "main",
+    });
+    const legacyBinding = runCheck();
+    expect(legacyBinding.exitCode).toBe(1);
+    expect(JSON.parse(legacyBinding.output).detail).toContain("no prepared fork binding");
+  });
+
+  test("check resolves the anti-tamper baseline from the prepared fork binding", () => {
+    const { projectDir, worktreeDir } = makeVerdictFixture();
+    birthIntent(projectDir, "check-baseline", "default", "feature");
+    const forkSha = spawnSync("git", ["rev-parse", "HEAD"], {
+      cwd: worktreeDir,
+      encoding: "utf-8",
+    }).stdout.trim();
+    emitAuditRow(projectDir, "WORKTREE_CREATED", {
+      "Bolt slug": "alpha",
+      "Worktree path": worktreeDir,
+      "Branch name": "bolt-alpha",
+      "Base branch": "main",
+      "Base SHA": forkSha,
+    });
+    writeFileSync(join(worktreeDir, "spec", "protected.test"), "TAMPERED\n");
+    let output = "";
+    let exitCode = -1;
+    const log = spyOn(console, "log").mockImplementation((value) => {
+      output = String(value);
+    });
+    try {
+      handleCheck(
+        [
+          "--project-dir",
+          projectDir,
+          "alpha",
+          "--check-cmd",
+          passingCheckCommand,
+          "--test-file",
+          "spec/protected.test",
+        ],
+        (code) => {
+          exitCode = code;
+        },
+      );
+    } finally {
+      log.mockRestore();
+    }
+    expect(exitCode).toBe(1);
+    expect(JSON.parse(output).tampered).toBe(true);
+  });
+});
+
+describe("t207 verdict HEAD-binding guards (#3197)", () => {
+  test("expectedHead mismatch is a confine error", () => {
+    const { projectDir, worktreeDir } = makeVerdictFixture();
+    const head = spawnSync("git", ["rev-parse", "HEAD"], {
+      cwd: worktreeDir,
+      encoding: "utf-8",
+    }).stdout.trim();
+    const verdict = verdictFor("alpha", projectDir, passingCheckCommand, {
+      expectedHead: "0".repeat(40),
+    });
+    expect(verdict.confineError).toBe(
+      `worker HEAD does not match the verified source binding: expected ${"0".repeat(40)}, got ${head}`,
+    );
+  });
+
+  test("a check command that moves the worker HEAD is a confine error", () => {
+    const { projectDir } = makeVerdictFixture();
+    const verdict = verdictFor(
+      "alpha",
+      projectDir,
+      "git commit --allow-empty -q -m bump",
+      { expectedHead: "0".repeat(40) },
+    );
+    expect(verdict.confineError).toContain("worker HEAD changed during the convergence check");
+  });
+
+  test("an unresolvable worker HEAD is a confine error", () => {
+    const projectDir = makeTemporaryDirectory("amadeus-t207-nogit-");
+    mkdirSync(join(projectDir, ".amadeus", "worktrees", "bolt-alpha"), { recursive: true });
+    const verdict = verdictFor("alpha", projectDir, passingCheckCommand, {
+      expectedHead: "0".repeat(40),
+    });
+    expect(verdict.confineError).toBe(
+      "could not resolve the worker HEAD before and after the convergence check",
+    );
+  });
+
+  test("a --test-file escaping the worktree stays a confine error via the binding", () => {
+    const { projectDir, worktreeDir } = makeVerdictFixture();
+    const forkSha = spawnSync("git", ["rev-parse", "HEAD"], {
+      cwd: worktreeDir,
+      encoding: "utf-8",
+    }).stdout.trim();
+    const verdict = verdictFor("alpha", projectDir, passingCheckCommand, {
+      testFile: "../outside.test",
+      forkSha,
+    });
+    expect(verdict.confineError).toBe(
+      "--test-file resolves outside the unit worktree: ../outside.test",
+    );
+  });
+});
+
+describe("t207 finalize source-transaction arms (#3197)", () => {
+  function finalizeFixture(prefix: string, withWorktree = true): string {
+    const projectDir = makeTemporaryDirectory(prefix);
+    birthIntent(projectDir, "finalize-arms", "default", "feature");
+    writeFileSync(
+      stateFilePath(projectDir),
+      "# AI-DLC State Tracking\n\n- **Current Stage**: code-generation\n",
+    );
+    if (withWorktree) {
+      mkdirSync(join(projectDir, ".amadeus", "worktrees", "bolt-alpha"), { recursive: true });
+    }
+    buildSucceededPool(projectDir, "7", ["alpha"]);
+    return projectDir;
+  }
+
+  const finalizeArgs = [
+    "--batch",
+    "7",
+    "--units",
+    "alpha",
+    "--claimed",
+    "alpha",
+    "--check-cmd",
+    passingCheckCommand,
+  ];
+
+  test("a release-merge failure is a merge failure and never reaches the source merge", () => {
+    const projectDir = finalizeFixture("amadeus-t207-release-fail-");
+    const drive = driveFinalize(projectDir, finalizeArgs, (tool, args) =>
+      tool === "amadeus-bolt.ts" && args[0] === "release-merge"
+        ? { ok: false, stdout: "", stderr: "hold lock stuck" }
+        : okTool(),
+    );
+    expect(drive.exitCode).toBe(2);
+    expect(drive.envelope.converged).toBe(0);
+    expect(drive.envelope.merge_failures).toEqual([
+      { unit: "alpha", detail: "release-merge failed: hold lock stuck" },
+    ]);
+    expect(drive.envelope.units[0].status).toBe("failed");
+    expect(drive.toolCalls.some((c) => c.tool === "amadeus-worktree.ts")).toBe(false);
+  });
+
+  test("a metadata merge failure skips the source merge for that Unit", () => {
+    const projectDir = finalizeFixture("amadeus-t207-metadata-fail-");
+    const drive = driveFinalize(projectDir, finalizeArgs, (tool, args) =>
+      tool === "amadeus-bolt.ts" && args[0] === "complete"
+        ? { ok: false, stdout: "", stderr: "state conflict" }
+        : okTool(),
+    );
+    expect(drive.exitCode).toBe(2);
+    expect(drive.envelope.merge_failures).toEqual([
+      { unit: "alpha", detail: "metadata merge failed: state conflict" },
+    ]);
+    expect(drive.toolCalls.map((c) => c.args[0])).toEqual(["release-merge", "complete"]);
+  });
+
+  test("an invalid --strategy fails closed before any unit work", () => {
+    const projectDir = finalizeFixture("amadeus-t207-strategy-");
+    const originalExit = process.exit;
+    const error = spyOn(console, "error").mockImplementation(() => {});
+    process.exit = ((code?: number) => {
+      throw new Error(`exit ${code ?? 0}`);
+    }) as typeof process.exit;
+    try {
+      expect(() =>
+        handleFinalize(["--project-dir", projectDir, ...finalizeArgs, "--strategy", "bogus"]),
+      ).toThrow("exit 1");
+      expect(error).toHaveBeenCalledWith(expect.stringContaining("--strategy"));
+    } finally {
+      process.exit = originalExit;
+      error.mockRestore();
+    }
+  });
+
+  test("a claimed unit without a prepared fork binding fails when --test-file is given", () => {
+    const projectDir = finalizeFixture("amadeus-t207-no-binding-");
+    const drive = driveFinalize(
+      projectDir,
+      [...finalizeArgs, "--test-file", "spec/protected.test"],
+      () => okTool(),
+    );
+    expect(drive.exitCode).toBe(2);
+    expect(drive.envelope.converged).toBe(0);
+    expect(drive.envelope.units[0].status).toBe("failed");
+    expect(drive.envelope.units[0].detail).toContain("no prepared fork binding");
+  });
+
+  test("an already-delivered unit counts as converged on a current WORKTREE_MERGED receipt", () => {
+    const projectDir = finalizeFixture("amadeus-t207-delivered-", false);
+    emitAuditRow(projectDir, "WORKTREE_CREATED", {
+      "Bolt slug": "alpha",
+      "Worktree path": join(projectDir, ".amadeus", "worktrees", "bolt-alpha"),
+      "Branch name": "bolt-alpha",
+      "Base branch": "main",
+      "Base SHA": "a".repeat(40),
+    });
+    emitAuditRow(projectDir, "WORKTREE_MERGED", {
+      "Bolt slug": "alpha",
+      "Worktree path": join(projectDir, ".amadeus", "worktrees", "bolt-alpha"),
+      "Target branch": "main",
+      Strategy: "squash",
+    });
+    const drive = driveFinalize(projectDir, finalizeArgs, () => okTool());
+    expect(drive.exitCode).toBe(0);
+    expect(drive.envelope.converged).toBe(1);
+    expect(drive.envelope.units[0].status).toBe("converged");
+    expect(drive.toolCalls).toEqual([]);
+  });
+
+  test("a WORKTREE_MERGED receipt older than the newest fork is not this batch's delivery", () => {
+    const projectDir = finalizeFixture("amadeus-t207-stale-receipt-", false);
+    emitAuditRow(projectDir, "WORKTREE_CREATED", {
+      "Bolt slug": "alpha",
+      "Worktree path": join(projectDir, ".amadeus", "worktrees", "bolt-alpha"),
+      "Branch name": "bolt-alpha",
+      "Base branch": "main",
+      "Base SHA": "a".repeat(40),
+    });
+    emitAuditRow(projectDir, "WORKTREE_MERGED", {
+      "Bolt slug": "alpha",
+      "Worktree path": join(projectDir, ".amadeus", "worktrees", "bolt-alpha"),
+      "Target branch": "main",
+      Strategy: "squash",
+    });
+    // A later prepare re-forks the same slug; the old receipt must not satisfy
+    // the new batch. Audit timestamps are second-precision, so append order is
+    // the discriminator within the same second.
+    emitAuditRow(projectDir, "WORKTREE_CREATED", {
+      "Bolt slug": "alpha",
+      "Worktree path": join(projectDir, ".amadeus", "worktrees", "bolt-alpha"),
+      "Branch name": "bolt-alpha",
+      "Base branch": "main",
+      "Base SHA": "b".repeat(40),
+    });
+    const drive = driveFinalize(projectDir, finalizeArgs, () => okTool());
+    expect(drive.exitCode).toBe(2);
+    expect(drive.envelope.converged).toBe(0);
+    expect(drive.envelope.units[0].status).toBe("failed");
+    expect(drive.envelope.units[0].detail).toContain("no worktree on re-verify");
+  });
+
+  test("a legacy Base-SHA-less fork still delivers to its recorded base branch", () => {
+    const projectDir = finalizeFixture("amadeus-t207-legacy-base-");
+    emitAuditRow(projectDir, "WORKTREE_CREATED", {
+      "Bolt slug": "alpha",
+      "Worktree path": join(projectDir, ".amadeus", "worktrees", "bolt-alpha"),
+      "Branch name": "bolt-alpha",
+      "Base branch": "delivery",
+    });
+    const drive = driveFinalize(projectDir, finalizeArgs, () => okTool());
+    expect(drive.exitCode).toBe(0);
+    expect(drive.envelope.converged).toBe(1);
+    const merge = drive.toolCalls.find((c) => c.tool === "amadeus-worktree.ts");
+    expect(merge).toBeDefined();
+    const targetIndex = merge!.args.indexOf("--target");
+    expect(merge!.args[targetIndex + 1]).toBe("delivery");
+  });
+
+  test("a multi-repo intent without --repo fails closed at the repo boundary", () => {
+    const projectDir = makeTemporaryDirectory("amadeus-t207-multirepo-");
+    birthIntent(projectDir, "multi-repo", "default", "feature", ["repo-a", "repo-b"]);
+    const originalExit = process.exit;
+    const error = spyOn(console, "error").mockImplementation(() => {});
+    process.exit = ((code?: number) => {
+      throw new Error(`exit ${code ?? 0}`);
+    }) as typeof process.exit;
+    try {
+      expect(() =>
+        handleFinalize(["--project-dir", projectDir, ...finalizeArgs]),
+      ).toThrow("exit 1");
+      expect(error).toHaveBeenCalled();
+    } finally {
+      process.exit = originalExit;
+      error.mockRestore();
+    }
   });
 });
