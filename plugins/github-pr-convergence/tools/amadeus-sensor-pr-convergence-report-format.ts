@@ -22,7 +22,10 @@
 //                recorded-at are the override shape it shares (FR-7b); the
 //                commit that actually delivered the work is the one field it
 //                adds, and it is required in the same well-formed-object-id
-//                shape a merge commit is.
+//                shape a merge commit is. Unlike landed, it IS the
+//                code-generation evidence for that unit — the only report it
+//                will ever have — so unlike landed it is accepted at every
+//                stage, not only pr-convergence.
 //
 // Which environment a record answers for is NOT read off its kind (#3149): any
 // kind may be finalised against the merge that closed it, and the receipt is
@@ -509,7 +512,6 @@ function applyKindRules(
     return;
   }
   if (kind === "superseded") {
-    // Unlike landed, superseded IS the code-generation evidence (#3239): accepted at every stage.
     checkSuperseded(body, converged, findings);
     return;
   }

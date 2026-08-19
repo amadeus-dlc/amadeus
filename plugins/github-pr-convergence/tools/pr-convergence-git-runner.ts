@@ -289,9 +289,7 @@ export function verifySupersedeAncestry(
   if (ancestry.code === 1) {
     return {
       ok: false,
-      message:
-        `${supersededBy} is not an ancestor of the current checkout ${localHead}; ` +
-        "fetch the superseding history and retry",
+      message: `${supersededBy} is not an ancestor of the current checkout ${localHead}; fetch the superseding history and retry`,
     };
   }
   return {
