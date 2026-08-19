@@ -6,10 +6,12 @@
 - 2026-08-04T14:28:00Z — Kiro ACPもnfr-requirements成果物を再作成せず、Functional Designのstrong containment、JSON-RPC相関、cleanup優先契約をNFR componentへ写像する。
 - 2026-08-04T14:38:00Z — Kimi printはsource credentialをnon-ownedのまま短命bindingだけをresource管理し、run request identityをFIFO queue・lease owner・run identityへ連続させる。
 - 2026-08-04T14:46:00Z — Evidence Unitはdeclared input 0件のspecとして扱い、兄弟Unitの成果物を暗黙consumeせず、receipt provenanceと決定的projectionのsecurity contractだけを設計する。
+- 2026-08-04T23:49:55Z — Session resumed on the Claude harness after the park; the runtime graph was missing (BOLT_DAG_RECOVERED) and was rebuilt via `amadeus-runtime.ts compile`, which restored the produces_kinds pruning (library units: security-design + logical-components; spec unit: security-design only). The pre-compile directive that demanded all five outputs was treated as a graph artifact, not a real gap.
 
 ## Deviations
 
 - なし。
+- 2026-08-04T23:49:55Z — none this session; the remaining work was the §12a review of the phase2-live-e2e-evidence draft, which the previous session had left unreviewed.
 
 ## Tradeoffs
 
@@ -22,3 +24,4 @@
 ## Open questions
 
 - なし。
+- 2026-08-04T23:49:55Z — The advisory upstream-coverage sensor fires on every unit because the nfr-requirements consumes are skipped by the self-feature scope; confirm the team is comfortable treating that as expected noise for spec/library units.

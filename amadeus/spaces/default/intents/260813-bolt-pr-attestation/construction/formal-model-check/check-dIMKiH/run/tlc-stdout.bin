@@ -1,0 +1,66 @@
+@!@!@STARTMSG 2262:0 @!@!@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+@!@!@ENDMSG 2262 @!@!@
+@!@!@STARTMSG 2187:0 @!@!@
+Running breadth-first search Model-Checking with fp 61 and seed 8790785848796847021 with 1 worker on 16 cores with 910MB heap and 64MB offheap memory [pid: 23424] (Mac OS X 26.5.1 aarch64, Eclipse Adoptium 26.0.1 x86_64, MSBDiskFPSet, DiskStateQueue).
+@!@!@ENDMSG 2187 @!@!@
+@!@!@STARTMSG 2220:0 @!@!@
+Starting SANY...
+@!@!@ENDMSG 2220 @!@!@
+Parsing file /Users/j5ik2o/orca/workspaces/amadeus/enhancement-election-cli-cli-per-question-choice/amadeus/spaces/default/intents/260813-bolt-pr-attestation/construction/formal-model-check/check-dIMKiH/run.tmp-e0e3d54a-ed6f-4d35-b3c8-7cb524bbba33/.scratch/.tlc-inputs/FormalElection.tla
+Parsing file /Users/j5ik2o/orca/workspaces/amadeus/enhancement-election-cli-cli-per-question-choice/amadeus/spaces/default/intents/260813-bolt-pr-attestation/construction/formal-model-check/check-dIMKiH/run.tmp-e0e3d54a-ed6f-4d35-b3c8-7cb524bbba33/.scratch/.tlc-stdlib/Naturals.tla
+Parsing file /Users/j5ik2o/orca/workspaces/amadeus/enhancement-election-cli-cli-per-question-choice/amadeus/spaces/default/intents/260813-bolt-pr-attestation/construction/formal-model-check/check-dIMKiH/run.tmp-e0e3d54a-ed6f-4d35-b3c8-7cb524bbba33/.scratch/.tlc-stdlib/Sequences.tla
+Parsing file /Users/j5ik2o/orca/workspaces/amadeus/enhancement-election-cli-cli-per-question-choice/amadeus/spaces/default/intents/260813-bolt-pr-attestation/construction/formal-model-check/check-dIMKiH/run.tmp-e0e3d54a-ed6f-4d35-b3c8-7cb524bbba33/.scratch/.tlc-stdlib/FiniteSets.tla
+Parsing file /Users/j5ik2o/orca/workspaces/amadeus/enhancement-election-cli-cli-per-question-choice/amadeus/spaces/default/intents/260813-bolt-pr-attestation/construction/formal-model-check/check-dIMKiH/run.tmp-e0e3d54a-ed6f-4d35-b3c8-7cb524bbba33/.scratch/.tlc-stdlib/TLC.tla
+Parsing file /Users/j5ik2o/orca/workspaces/amadeus/enhancement-election-cli-cli-per-question-choice/amadeus/spaces/default/intents/260813-bolt-pr-attestation/construction/formal-model-check/check-dIMKiH/run.tmp-e0e3d54a-ed6f-4d35-b3c8-7cb524bbba33/.scratch/.tlc-inputs/FormalElectionCore.tla
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module FormalElectionCore
+Semantic processing of module FormalElection
+@!@!@STARTMSG 2219:0 @!@!@
+SANY finished.
+@!@!@ENDMSG 2219 @!@!@
+@!@!@STARTMSG 2185:0 @!@!@
+Starting... (2026-08-13 23:16:18)
+@!@!@ENDMSG 2185 @!@!@
+@!@!@STARTMSG 2212:0 @!@!@
+Implied-temporal checking--satisfiability problem has 1 branches.
+@!@!@ENDMSG 2212 @!@!@
+@!@!@STARTMSG 2189:0 @!@!@
+Computing initial states...
+@!@!@ENDMSG 2189 @!@!@
+@!@!@STARTMSG 2190:0 @!@!@
+Finished computing initial states: 1 distinct state generated at 2026-08-13 23:16:18.
+@!@!@ENDMSG 2190 @!@!@
+@!@!@STARTMSG 2200:0 @!@!@
+Progress(13) at 2026-08-13 23:16:18: 5,922 states generated, 2,266 distinct states found, 0 states left on queue.
+@!@!@ENDMSG 2200 @!@!@
+@!@!@STARTMSG 2192:0 @!@!@
+Checking temporal properties for the complete state space with 2266 total distinct states at (2026-08-13 23:16:18)
+@!@!@ENDMSG 2192 @!@!@
+@!@!@STARTMSG 2267:0 @!@!@
+Finished checking temporal properties in 00s at 2026-08-13 23:16:18
+@!@!@ENDMSG 2267 @!@!@
+@!@!@STARTMSG 2193:0 @!@!@
+Model checking completed. No error has been found.
+  Estimates of the probability that TLC did not check all reachable states
+  because two distinct states had the same fingerprint:
+  calculated (optimistic):  val = 4.5E-13
+@!@!@ENDMSG 2193 @!@!@
+@!@!@STARTMSG 2200:0 @!@!@
+Progress(13) at 2026-08-13 23:16:18: 5,922 states generated (671,682 s/min), 2,266 distinct states found (257,013 ds/min), 0 states left on queue.
+@!@!@ENDMSG 2200 @!@!@
+@!@!@STARTMSG 2199:0 @!@!@
+5922 states generated, 2266 distinct states found, 0 states left on queue.
+@!@!@ENDMSG 2199 @!@!@
+@!@!@STARTMSG 2194:0 @!@!@
+The depth of the complete state graph search is 13.
+@!@!@ENDMSG 2194 @!@!@
+@!@!@STARTMSG 2268:0 @!@!@
+The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 16 and the 95th percentile is 4).
+@!@!@ENDMSG 2268 @!@!@
+@!@!@STARTMSG 2186:0 @!@!@
+Finished in 533ms at (2026-08-13 23:16:18)
+@!@!@ENDMSG 2186 @!@!@

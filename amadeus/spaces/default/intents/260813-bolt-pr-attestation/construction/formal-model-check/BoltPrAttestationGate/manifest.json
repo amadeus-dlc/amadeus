@@ -1,0 +1,48 @@
+{
+  "schema": "amadeus.model-check-manifest.v1",
+  "runId": "6d179be2-fd7a-49bf-a85b-0421c0cc9a9f",
+  "outcome": "NOT_DETECTED",
+  "exitCode": 0,
+  "startedAt": "2026-08-14T05:41:48.515Z",
+  "finishedAt": "2026-08-14T05:41:49.669Z",
+  "expectedArtifacts": [
+    "env-receipt.json",
+    "tlc-stdout.bin",
+    "tlc-stderr.bin",
+    "completion-marker.json"
+  ],
+  "artifacts": [
+    {
+      "path": "env-receipt.json",
+      "sha256": "956fe0b14742e571ff08a10c32ca557541c11dc3110584eba7aede4d229d5564",
+      "bytes": 1421
+    },
+    {
+      "path": "tlc-stdout.bin",
+      "sha256": "504b78ea7ebfd7f1994b2120a8d525115ca1b5ccab5f035a2ac430c8f1729a93",
+      "bytes": 2728
+    },
+    {
+      "path": "tlc-stderr.bin",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "completion-marker.json",
+      "sha256": "c3553973d5da290989c356ca93a63ba8828c1ad6efbce89a6449ca57fdb6ff2a",
+      "bytes": 74
+    }
+  ],
+  "partial": false,
+  "errorCode": null,
+  "errorDetail": null,
+  "advisory": null,
+  "sourceProvenance": {
+    "modelPath": "amadeus/spaces/default/specs/tla/BoltPrAttestationGate.tla",
+    "cfgPath": "amadeus/spaces/default/specs/tla/BoltPrAttestationGate.cfg",
+    "moduleIdentity": "6585fdc943cf8a86facb2dbbd65470bcd94f4a5be9120bb4fa0b05640c2d34ed",
+    "cfgIdentity": "e040b0f0443f182274ef4c17afc261c059224e449ee7676677675ee275d0a1fd",
+    "moduleSha256": "622c00493eb69e0d0e178ac73ac7d54bff0c9d01d262861d74eb33105e7d780c",
+    "cfgSha256": "6f98eddf1095ecbe0b1bb2ff6fbf217b7233bcf8db455113f0a075090f8b68fb"
+  }
+}

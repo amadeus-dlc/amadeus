@@ -941,6 +941,16 @@
     "status": "complete"
   },
   {
+    "uuid": "019fd0c2-2c63-7a61-80a2-7bde4a3c4cf3",
+    "slug": "docs-impl-sync",
+    "dirName": "260805-docs-impl-sync",
+    "scope": "self-document",
+    "status": "in-flight",
+    "docsOnly": {
+      "evidence": "GATE_APPROVED functional-design 2026-08-05T10:14:00Z — intent 260805-docs-impl-sync は scope self-document(docs 専用)。workspace 成果は docs/ + README*.md のみで PR #2302/#2314 で配送済み(Intent 自律モード full グラント intent-grant-d7bbea44ff43fae65262e848d5c4d0fc、§12a READY)"
+    }
+  },
+  {
     "uuid": "019fd067-5759-7053-bead-aff6ad5c1cac",
     "slug": "pr-convergence-plugin",
     "dirName": "260805-pr-convergence-plugin",
@@ -1129,6 +1139,13 @@
     "uuid": "019ffb1a-d46b-7016-938d-5de854a84362",
     "slug": "advisory-requestion-fix",
     "dirName": "260813-advisory-requestion-fix",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
+    "uuid": "019ffd42-eb8e-7918-989f-5cb3f0ea8103",
+    "slug": "bolt-pr-attestation",
+    "dirName": "260813-bolt-pr-attestation",
     "scope": "self-fix",
     "status": "complete"
   },

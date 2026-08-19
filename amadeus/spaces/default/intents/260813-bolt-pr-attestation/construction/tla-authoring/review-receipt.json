@@ -1,0 +1,20 @@
+{
+  "reviewer": "amadeus-architecture-reviewer-agent",
+  "modelAuthor": "amadeus-architect-agent",
+  "verdict": "READY",
+  "reviewedAt": "2026-08-14T01:40:13Z",
+  "artifactDigests": [
+    "sha256:622c00493eb69e0d0e178ac73ac7d54bff0c9d01d262861d74eb33105e7d780c",
+    "sha256:6f98eddf1095ecbe0b1bb2ff6fbf217b7233bcf8db455113f0a075090f8b68fb",
+    "sha256:d008da435c562858b8d36c880e6761b652b41b4f9cd48aaf04b3bd0811e926aa",
+    "sha256:df290d1d6253e312bfc33e99febbf9489b9f9ecffed84ecb966ebda80ff6d3a4",
+    "sha256:9dfff84e01a4113da9652df27460f3ffd071c4f0f1d58b6034df5f4ce8df9fbb",
+    "sha256:e91531ea6869c7c73470297d901dc218a5ea41a8ceb3b9cb31f7e3edf93a208d",
+    "sha256:adde97b20a55ed02e72d181aad17214425c8ef5e36c56cac5cd7134d99d045c3",
+    "sha256:936f50b2132c612398ba85353515910b2d98db9fa1e6d744d720eb0a81a64151",
+    "sha256:40859b8fe9bfa25e30d0d5156a0b162c4cd36114b586580dc1f39e6b26c60bbc",
+    "sha256:6001bf9feb086d35ac9b5fc7656922494ceb65088ee1027f4a679f17c96f589c",
+    "sha256:29dbc8cabcab8fa367cf5783dcad638c33dd0923a8c6e47379a6a4dcf598de11",
+    "sha256:91720a6bbaf63effd40bb8dcd9e4fd9bd353195b7ee400b31276fcfe8c486692"
+  ]
+}

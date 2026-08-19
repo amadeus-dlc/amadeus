@@ -1,0 +1,27 @@
+{
+  "route": "revise-model",
+  "subjectIdentity": "sha256:5946d92b6e74ce3df007e03a7e0f32283ddafc42f8816cf004b6c1d73bceb950",
+  "subjectSeries": "sha256:6acdf00d1b1a79b0c21c3e346e6ac0ac9076a37eaa5680d248d90f6e7f48694a",
+  "subjects": [
+    "FR-2",
+    "FR-3",
+    "FR-4",
+    "FR-5",
+    "FR-BPA-1",
+    "FR-BPA-2",
+    "FR-BPA-4",
+    "FR-BPA-5",
+    "FR-BPA-7",
+    "FR-BPA-8",
+    "NFR-BPA-1",
+    "NFR-BPA-2"
+  ],
+  "reason": "J5: semantic-change — 既存のPR/head/attestation/completion lifecycleに、Delivery Boltの正規member Unit集合、owner-bound evidence投影、partial/foreign evidence拒否、full autonomyの一意な継続が加わり、共有状態の到達可能な安全条件が変化したため。",
+  "judgedBy": "amadeus-architect-agent",
+  "humanApproval": null,
+  "generatedAt": "2026-08-14T01:39:34.428Z",
+  "predecessor": {
+    "kind": "bundle",
+    "digest": "sha256:3bd61262c5518b47d92840f22a4a77569b6eaf2a963b8163ec629559e7c68f0f"
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "name": "BoltPrAttestationGate",
+  "model": {
+    "path": "amadeus/spaces/default/specs/tla/BoltPrAttestationGate.tla",
+    "identity": "6585fdc943cf8a86facb2dbbd65470bcd94f4a5be9120bb4fa0b05640c2d34ed"
+  },
+  "cfg": {
+    "path": "amadeus/spaces/default/specs/tla/BoltPrAttestationGate.cfg",
+    "identity": "e040b0f0443f182274ef4c17afc261c059224e449ee7676677675ee275d0a1fd"
+  },
+  "entries": [
+    {
+      "implPath": "packages/framework/core/tools/amadeus-orchestrate.ts",
+      "sha256": "b56bef3902961ef6c5e796bd267a0e284e3a32aa7b6e333edfeae1ebe15be385"
+    },
+    {
+      "implPath": "packages/framework/core/tools/amadeus-state.ts",
+      "sha256": "cb3c7e63181a1def5d62ab121d92d75a2f3e9f9e21fc877f869011074f8d2b6c"
+    }
+  ],
+  "vocabulary": {
+    "namedInvariants": [
+      "TypeOK",
+      "EvidenceCurrentHead",
+      "SensorRequiresAttestation",
+      "AttestationRequiresCompleteBolt",
+      "SensorRequiresCompleteBolt",
+      "OwnerEvidenceIsolated",
+      "AutonomyDecisionSafe",
+      "ReceiptIdempotent",
+      "ReceiptBoundCurrentReport",
+      "CodeGenerationGuarded",
+      "WorkflowGuarded"
+    ],
+    "traceStateVariables": [
+      "workflowDone",
+      "artifactsComplete",
+      "verdict",
+      "codeGenerationDone",
+      "sensorPassed",
+      "reportHead",
+      "head",
+      "attested",
+      "reportUnits",
+      "evidencedUnits",
+      "membershipValid",
+      "tupleConsistent",
+      "ownerEvidenceDistinct",
+      "candidateCount",
+      "authorityDecision",
+      "humanQuestion",
+      "receiptIssued",
+      "receiptCount",
+      "reportIdentity",
+      "receiptHead",
+      "receiptIdentity"
+    ]
+  },
+  "evidenceBundle": {
+    "digest": "sha256:cebe2897bff3d3fed905e298b83c90023bb9eba56ce7b24f614e0301a58a2efb"
+  }
+}

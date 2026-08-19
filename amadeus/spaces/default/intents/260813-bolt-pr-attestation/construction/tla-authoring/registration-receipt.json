@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "receipt": {
+    "entryName": "BoltPrAttestationGate",
+    "bundle": {
+      "digest": "sha256:cebe2897bff3d3fed905e298b83c90023bb9eba56ce7b24f614e0301a58a2efb"
+    },
+    "registeredAt": "2026-08-14T01:41:19.429Z"
+  }
+}

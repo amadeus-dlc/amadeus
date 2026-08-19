@@ -1,0 +1,13 @@
+[
+  "TypeOK",
+  "EvidenceCurrentHead",
+  "SensorRequiresAttestation",
+  "AttestationRequiresCompleteBolt",
+  "SensorRequiresCompleteBolt",
+  "OwnerEvidenceIsolated",
+  "AutonomyDecisionSafe",
+  "ReceiptIdempotent",
+  "ReceiptBoundCurrentReport",
+  "CodeGenerationGuarded",
+  "WorkflowGuarded"
+]
