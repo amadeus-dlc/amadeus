@@ -2881,6 +2881,10 @@
       "minMechanism": "none",
       "coveredBy": [
         {
+          "file": "tests/integration/t3256-election-round-terminate.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/integration/t371-deletion-gate-cli.test.ts",
           "mechanism": "none"
         },

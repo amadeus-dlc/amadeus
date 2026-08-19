@@ -62,7 +62,8 @@ export type ElectionState =
   | "partial"
   | "tallied"
   | "rendered"
-  | "recorded";
+  | "recorded"
+  | "terminated";
 
 export type ElectionStoreError =
   | "missing"
@@ -114,12 +115,20 @@ interface TallyEntry {
   readonly bytes: string;
 }
 
-export type ElectionTimelineEvent = {
-  readonly schemaVersion: 2;
-  readonly kind: "tallied";
-  readonly runId: string;
-  readonly at: string;
-};
+export type ElectionTimelineEvent =
+  | {
+      readonly schemaVersion: 2;
+      readonly kind: "tallied";
+      readonly runId: string;
+      readonly at: string;
+    }
+  | {
+      readonly schemaVersion: 2;
+      readonly kind: "round-terminated";
+      readonly reason: string;
+      readonly supersededBy: string | null;
+      readonly at: string;
+    };
 
 export interface ElectionSnapshot {
   readonly definition: CanonicalElectionDefinition;
@@ -140,6 +149,7 @@ const ELECTION_STATES: ReadonlySet<string> = new Set<ElectionState>([
   "tallied",
   "rendered",
   "recorded",
+  "terminated",
 ]);
 
 function ok<T>(value: T): ElectionStoreResult<T> {
@@ -920,13 +930,18 @@ function readTimeline(path: string): ElectionStoreResult<unknown[]> {
 }
 
 function isTimelineEvent(value: unknown): value is ElectionTimelineEvent {
-  return (
-    isRecord(value) &&
-    value.schemaVersion === 2 &&
-    value.kind === "tallied" &&
-    typeof value.runId === "string" &&
-    typeof value.at === "string"
-  );
+  if (!isRecord(value) || value.schemaVersion !== 2) return false;
+  if (value.kind === "tallied") {
+    return typeof value.runId === "string" && typeof value.at === "string";
+  }
+  if (value.kind === "round-terminated") {
+    return (
+      typeof value.reason === "string" &&
+      (value.supersededBy === null || typeof value.supersededBy === "string") &&
+      typeof value.at === "string"
+    );
+  }
+  return false;
 }
 
 function validTimeline(events: readonly unknown[]): events is readonly ElectionTimelineEvent[] {
@@ -944,7 +959,37 @@ function appendTimeline(path: string, tally: CanonicalTally): ElectionStoreResul
     runId: tally.runId,
     at: tally.talliedAt,
   };
-  const matching = events.filter((candidate) => candidate.runId === tally.runId);
+  const matching = events.filter((candidate) => candidate.kind === "tallied" && candidate.runId === tally.runId);
+  if (matching.length > 1) return err("corrupt");
+  if (matching.length === 1) {
+    return sameValue(matching[0], event) ? ok("same") : err("run-conflict");
+  }
+  const write = writeStoreFile(path, JSON.stringify([...events, event], null, 2));
+  return write.ok ? ok("appended") : err("io-error");
+}
+
+// #3256: records why an open re-vote round was terminated outside the normal
+// tally pipeline (the decision was settled another way, e.g. a user-delegated
+// ruling). Mirrors appendTimeline's shape, but dedupes on "at most one
+// round-terminated event per timeline" rather than a runId — a round can only
+// be terminated once, so a second call is either the same idempotent retry or
+// a genuine conflict, never a second distinct termination.
+function appendRoundTerminatedEvent(
+  path: string,
+  input: { readonly reason: string; readonly supersededBy: string | null; readonly at: string },
+): ElectionStoreResult<"appended" | "same"> {
+  const timeline = readTimeline(path);
+  if (!timeline.ok) return timeline;
+  const events: readonly unknown[] = timeline.value;
+  if (!validTimeline(events)) return err("corrupt");
+  const event: ElectionTimelineEvent = {
+    schemaVersion: 2,
+    kind: "round-terminated",
+    reason: input.reason,
+    supersededBy: input.supersededBy,
+    at: input.at,
+  };
+  const matching = events.filter((candidate) => candidate.kind === "round-terminated");
   if (matching.length > 1) return err("corrupt");
   if (matching.length === 1) {
     return sameValue(matching[0], event) ? ok("same") : err("run-conflict");
@@ -1276,6 +1321,35 @@ export const ElectionStore = {
     };
   },
 
+  // #3256: terminates a re-vote round stuck in "collecting" whose decision was
+  // settled outside the normal tally pipeline (e.g. a user-delegated ruling),
+  // so it will never receive every voter's ballot. Reuses writeCommitState's
+  // expected/next transition (mirrors commitTally's own use of it), so a
+  // repeat call with the SAME reason/supersededBy is an idempotent no-op
+  // (repaired: true) rather than a state-conflict, and a repeat call with a
+  // DIFFERENT reason is a genuine conflict (run-conflict) rather than a
+  // silent overwrite of the recorded rationale.
+  terminateRound(
+    root: string,
+    electionId: string,
+    input: { readonly reason: string; readonly supersededBy: string | null; readonly terminatedAt: string },
+  ): TallyCommitResult {
+    const durable: TallyDurableStep[] = [];
+    if (input.reason.trim() === "") return failed("corrupt", durable);
+    const loaded = load(root, electionId, false);
+    if (!loaded.ok) return failed(loaded.error, durable);
+    const stateWrite = writeCommitState(root, loaded.value, "collecting", "terminated", durable);
+    if (stateWrite !== null) return stateWrite;
+    const timeline = appendRoundTerminatedEvent(join(loaded.value.resolved.dir, "timeline.json"), {
+      reason: input.reason,
+      supersededBy: input.supersededBy,
+      at: input.terminatedAt,
+    });
+    if (!timeline.ok) return failed(timeline.error, durable);
+    durable.push("timeline");
+    return { ok: true, value: { repaired: timeline.value === "same", durable } };
+  },
+
   verify(root: string, electionId: string): ElectionStoreResult<void> {
     const loaded = load(root, electionId);
     if (!loaded.ok) return loaded;
@@ -1289,7 +1363,12 @@ export const ElectionStore = {
     if (!timeline.ok) return timeline;
     const events: readonly unknown[] = timeline.value;
     if (!validTimeline(events)) return err("corrupt");
-    const runIds = events.map((event) => event.runId);
-    return new Set(runIds).size === runIds.length ? ok(undefined) : err("corrupt");
+    const runIds = events.filter((event) => event.kind === "tallied").map((event) => event.runId);
+    if (new Set(runIds).size !== runIds.length) return err("corrupt");
+    // #3256: a round can only be terminated once (appendRoundTerminatedEvent
+    // enforces this at write time); re-check it here too, the same way the
+    // runId uniqueness above is re-checked independently of appendTimeline.
+    const terminations = events.filter((event) => event.kind === "round-terminated");
+    return terminations.length <= 1 ? ok(undefined) : err("corrupt");
   },
 };
