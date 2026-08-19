@@ -27,7 +27,6 @@
 | `@opentelemetry/api-logs` | `0.221.0` | logs API |
 | `@opentelemetry/context-async-hooks` | `2.10.0` | async context |
 | `fast-check` | `^4.9.0` | property-based tests |
-| `release-it` | `^20.2.1` | release automation |
 
 ## Tooling
 

@@ -2,9 +2,9 @@
 // (the repo has ONE version axis: packages/setup/package.json drives the
 // v* release tags — see tests/unit/t68-version-changelog-sync.test.ts).
 //
-// Called by release-it's after:bump hook (packages/setup/.release-it.json)
-// with the freshly bumped version, so the release commit carries:
-//   - packages/setup/package.json          (bumped by release-it itself)
+// Called by scripts/release-land.ts with the freshly bumped version, so the
+// release commit carries:
+//   - packages/setup/package.json          (bumped by the lander)
 //   - packages/framework/core/tools/amadeus-version.ts
 //   - README.md version badge
 //   - dist/<harness>/ + self-install trees  (regenerated via the scripts —

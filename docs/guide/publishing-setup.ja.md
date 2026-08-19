@@ -10,7 +10,7 @@
 
 このリポジトリのバージョンは **1 つ** です: `packages/setup/package.json` の
 version が `vX.Y.Z` リリースタグを駆動し、`AMADEUS_VERSION` と README バッジは
-それと等しく保たれます(t68 が整合をガードし、release-it の `after:bump` フックが
+それと等しく保たれます(t68 が整合をガードし、release lander が
 `scripts/release-version-sync.ts` を実行します)。生成された `dist/` とself-install
 treeは未追跡のままで、release workflowがリリース対象commitから再buildして配布assetを
 公開します。1 つのタグが
@@ -64,11 +64,11 @@ Release へ生成されます — CHANGELOG ファイルはありません。
 
 `packages/setup/package.json` の `version` は `0.1.0` から始まる独立した semver
 です(FR-017、BR-P06)。**リリースワークフローが代わりに bump します** — dispatch
-時に bump レベルを選び(第 5 章)、release-it がそれを bump し、`after:bump` フックが
-`AMADEUS_VERSION` とREADMEバッジを同期します。追跡されたversion surfaceだけが
-コミットされ、`vX.Y.Z` としてタグ付けされ、`main` へpushされます。生成物はignoreされた
-ままrelease jobが再buildします。リリースコミットは PR なしで `main` へ着地します — PR ルールに対する
-明示的でチームに記録された例外であり、リリースのバージョン同期に限定されます。
+時に bump レベルを選び(第 5 章)、lander が `AMADEUS_VERSION` と README バッジを
+同期し、`release/vX.Y.Z` の pull request を開いて merge queue で着地させます。
+squash commit が `main` に入ったあと、同じ run がその SHA に `vX.Y.Z` を打ちます。
+生成物は ignore されたまま release job が再 build します。bump は `main` へ直接
+push しません。ruleset が pull request、merge queue、`CI Success` を要求するからです(#2888)。
 
 手動フォールバック:
 
@@ -145,10 +145,10 @@ bunx amadeus-setup --help
 Actions タブから `main` に対して **Release @amadeus-dlc/setup** を実行し、bump
 レベル(patch / minor / major)を選びます。1 回の実行がすべてを行います:
 
-1. release-it が `packages/setup/package.json` を bump し、`after:bump` フック
-   (`scripts/release-version-sync.ts`)が `AMADEUS_VERSION` とREADMEバッジを同期する。
-   追跡されたversion surfaceがコミットされ、`vX.Y.Z` としてタグ付けされ、`main` へ push される(設定:
-   `packages/setup/.release-it.json`)
+1. `scripts/release-land.ts` が `packages/setup/package.json` を bump し、
+   `scripts/release-version-sync.ts` が `AMADEUS_VERSION` と README バッジを同期する。
+   追跡された version surface は bot PR と merge queue 経由で `main` に着地し、
+   同じ run が squash commit に `vX.Y.Z` を打つ
 2. `build-dist` がそのcommitをcheckoutし、Bun 1.3.13で依存関係をinstallして全ハーネスを
    buildし、full CI test profile、source-only境界、graph不変量を検査したうえで、決定的な
    `amadeus-dist-vX.Y.Z.tar.gz`、manifest、`SHA256SUMS`を生成する
@@ -163,13 +163,13 @@ Actions タブから `main` に対して **Release @amadeus-dlc/setup** を実�
 
 **最初のリリース** に特別な扱いは不要です: リポジトリに `v*` タグがない状態では、
 dispatch は bump をスキップしてコミット済みのバージョンをそのまま
-リリースします(`release-it --no-increment`、タグのみ)。`vX.Y.Z` タグを手動で
-push することはフォールバックの入口として残っています — これは bump を
-スキップし(タグはコミット済みのパッケージバージョンと一致し、`main` を指す必要が
-あります)、ノート → ビルド → publish を実行します。
+リリースします(タグのみ)。`vX.Y.Z` タグを手動で push することはフォールバックの
+入口として残っています — これは bump をスキップし(タグはコミット済みの
+パッケージバージョンと一致し、`main` を指す必要があります)、ノート → ビルド →
+publish を実行します。
 
 リリースせずにリハーサルするには、`dry-run: true` で dispatch します —
-release-it が `--dry-run` で実行され(コミット/タグ/push なし)、配布asset生成はskipされ、
+lander が `--dry-run` で実行され(コミット/PR/タグなし)、配布asset生成はskipされ、
 実際の publish は `npm publish --dry-run` に置き換わります。`NPM_TOKEN` は不要です。
 
 ### フォールバック: 手動 publish(provenance なし)
