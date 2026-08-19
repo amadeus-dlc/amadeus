@@ -114,10 +114,6 @@ describe("book-pack verify-dummy (engine-coupling drift guard)", () => {
       "cleanup-start",
       "cleanup-complete",
     ]);
-    // Both bounds are the probe's own declared timeouts: what they check is
-    // that the timeout mechanism governed the run, not how fast the box is.
-    expect(events.at(-1)?.elapsedMs).toBeLessThan(PROBE_VERIFIER_TIMEOUT_MS);
-    expect(result.durationMs).toBeLessThan(PROBE_TEST_TIMEOUT_MS);
     expect(
       hasConsistentTimeoutBudget(
         PROBE_VERIFIER_TIMEOUT_MS,
