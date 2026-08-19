@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-08-19T15:23:40.965Z",
+  "commit": "a34e099c2b69425cb41768d2405b1db3a1f4a0de",
+  "collectors": {
+    "ccn": {
+      "tool": "lizard",
+      "tool_version": "1.23.0",
+      "values": {
+        "functions": 7400,
+        "p50": 2,
+        "p90": 8,
+        "max": 38,
+        "over_threshold": 32,
+        "threshold": 15
+      }
+    },
+    "coverage": {
+      "tool": "bun",
+      "tool_version": "1.3.13",
+      "values": {
+        "hits": 97216,
+        "lines": 103940,
+        "percent": 93.53088320184722
+      }
+    },
+    "loc": {
+      "tool": "git",
+      "tool_version": "git version 2.54.0",
+      "values": {
+        "core": 151342,
+        "scripts": 13678,
+        "tests": 394451
+      }
+    },
+    "tests": {
+      "tool": "amadeus-run-tests",
+      "tool_version": "a34e099c2b69425cb41768d2405b1db3a1f4a0de",
+      "values": {
+        "files": 1063,
+        "failedFiles": 0,
+        "assertions": 14194,
+        "failedAssertions": 0
+      }
+    },
+    "test_pyramid": {
+      "tool": "amadeus-test-size",
+      "tool_version": "a34e099c2b69425cb41768d2405b1db3a1f4a0de",
+      "values": {
+        "unit_medium": 161,
+        "unit_small": 275,
+        "unit_large": 1,
+        "perf_medium": 7,
+        "perf_small": 3,
+        "integration_medium": 594,
+        "integration_small": 16,
+        "smoke_medium": 16,
+        "harness_medium": 1,
+        "formal-verif_medium": 1,
+        "fixtures_small": 1,
+        "e2e_medium": 88,
+        "e2e_small": 8,
+        "e2e_large": 2,
+        "lib_medium": 1
+      }
+    },
+    "dist_size": {
+      "tool": "node-fs",
+      "tool_version": "24.3.0",
+      "values": {
+        "bytes": 0
+      }
+    },
+    "bugs": {
+      "tool": "gh",
+      "tool_version": "gh version 2.97.0 (2026-07-31)",
+      "values": {
+        "total": 415,
+        "open": 5,
+        "closed": 410,
+        "fixed": 403,
+        "rejected": 7,
+        "s1_fatal": 14,
+        "s2_critical": 49,
+        "s3_major": 197,
+        "s4_minor": 89,
+        "unlabeled": 66
+      }
+    }
+  }
+}
