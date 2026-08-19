@@ -160,6 +160,45 @@ const REVIEW_RECOVERY_TOKENS = [
   "skips the stage body",
   "`gate:false` suppresses only the human gate and §13",
 ] as const;
+const SWARM_SOURCE_HANDOFF_TOKENS = [
+  "source-only Git commit",
+  "only implementation and test changes",
+  "`amadeus/` state, audit, runtime",
+  "same `--repo <name>`",
+  "finalize --batch <directive.batch>",
+  "[--target <branch>]",
+  "[--strategy <squash|merge|rebase>]",
+  "non-default `--base <branch>`",
+  "same branch explicitly as `finalize --target <branch>`",
+  "workflow metadata first",
+  "target `main`",
+  "strategy `squash`",
+  "source merge fails",
+  "`halt-and-ask`",
+] as const;
+const BUILDER_AGENT = "packages/framework/core/agents/amadeus-builder-agent.md";
+const BUILDER_SOURCE_HANDOFF_TOKENS = [
+  "after the assigned verification succeeds and before reporting success",
+  "source-only Git commit",
+  "assigned worktree",
+  "only implementation and test changes",
+  "`amadeus/` state, audit, runtime",
+  "Never stage or commit",
+] as const;
+const BRANCHING_STRATEGIES_KNOWLEDGE =
+  "packages/framework/core/knowledge/amadeus-pipeline-deploy-agent/branching-strategies.md";
+const RETIRED_SOURCE_DISPATCH_CLAIMS = [
+  "does not call amadeus-worktree merge directly",
+  "No shipped conductor face carries",
+  "dispatch lives in SKILL",
+  "Step 6.5",
+] as const;
+const CURRENT_SOURCE_DISPATCH_TOKENS = [
+  "`amadeus-swarm finalize`",
+  "source merge dispatch is not conductor prose",
+  "reconciles workflow metadata first",
+  "invokes `amadeus-worktree merge` as a primitive",
+] as const;
 
 describe("t181 per-harness conductor-surface freshness gate (P11 RESOLVE-2)", () => {
   const skills = harnessSkills();
@@ -239,6 +278,35 @@ describe("t181 per-harness conductor-surface freshness gate (P11 RESOLVE-2)", ()
         missing.push(`${rel}  still hand-types ${HAND_TYPED_BATCH}`);
       }
     }
+    expect(missing).toEqual([]);
+  });
+
+  test("every conductor surface preserves the worker source-integration handoff", () => {
+    const surfaces = conductorSurfaces();
+    expect(surfaces).toHaveLength(8);
+    const missing: string[] = [];
+    for (const rel of surfaces) {
+      const body = readFileSync(join(REPO_ROOT, rel), "utf-8");
+      const swarmScope = invokeSwarmDispatchScope(body);
+      for (const token of SWARM_SOURCE_HANDOFF_TOKENS) {
+        if (!swarmScope.includes(token)) missing.push(`${rel}  swarm handoff missing: ${token}`);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+
+  test("the shared builder contract requires a verified source-only swarm commit", () => {
+    const body = readFileSync(join(REPO_ROOT, BUILDER_AGENT), "utf-8");
+    const missing = BUILDER_SOURCE_HANDOFF_TOKENS.filter((token) => !body.includes(token));
+    expect(missing).toEqual([]);
+  });
+
+  test("branching knowledge describes referee-owned metadata-first source integration", () => {
+    const body = readFileSync(join(REPO_ROOT, BRANCHING_STRATEGIES_KNOWLEDGE), "utf-8");
+    const prose = body.replaceAll("`", "");
+    const retired = RETIRED_SOURCE_DISPATCH_CLAIMS.filter((claim) => prose.includes(claim));
+    const missing = CURRENT_SOURCE_DISPATCH_TOKENS.filter((token) => !body.includes(token));
+    expect(retired).toEqual([]);
     expect(missing).toEqual([]);
   });
 

@@ -25,6 +25,7 @@ import {
   currentStageOrFail,
   fileTamperResultForStatuses,
   handleFinalize,
+  parsePreparedForkBinding,
   verdictFor,
 } from "../../packages/framework/core/tools/amadeus-swarm.ts";
 import {
@@ -278,6 +279,125 @@ describe("t207 claimed/units guard (#738)", () => {
     }
   });
 
+  test("finalize stops source integration after the first source merge failure", () => {
+    const projectDir = makeTemporaryDirectory("amadeus-t207-source-merge-");
+    birthIntent(projectDir, "source-merge", "default", "feature");
+    writeFileSync(
+      stateFilePath(projectDir),
+      "# AI-DLC State Tracking\n\n- **Current Stage**: code-generation\n",
+    );
+    for (const unit of ["alpha", "beta"]) {
+      mkdirSync(join(projectDir, ".amadeus", "worktrees", `bolt-${unit}`), {
+        recursive: true,
+      });
+    }
+    const pool = createUnitPoolCoordinator(createAuditUnitPoolRepository(projectDir));
+    pool.initialEnqueue({
+      idempotencyKey: "init",
+      batchId: "4",
+      cap: 1,
+      units: [
+        { unitId: "alpha", dependsOn: [] },
+        { unitId: "beta", dependsOn: [] },
+      ],
+    });
+    for (const unit of ["alpha", "beta"]) {
+      pool.acquire({ idempotencyKey: `acquire-${unit}`, batchId: "4" });
+      const attempt = pool.readProjection("4").active[0];
+      pool.confirmDispatch({
+        idempotencyKey: `confirm-${unit}`,
+        batchId: "4",
+        attemptId: attempt.attemptId,
+        nativeHandle: `native-${unit}`,
+      });
+      pool.settleRelease({
+        idempotencyKey: `settle-${unit}`,
+        batchId: "4",
+        attemptId: attempt.attemptId,
+        outcome: "succeeded",
+      });
+    }
+
+    const toolCalls: { tool: string; args: string[] }[] = [];
+    let output = "";
+    let exitCode = -1;
+    let thrown: unknown;
+    const originalExit = process.exit;
+    const log = spyOn(console, "log").mockImplementation((value) => {
+      output = String(value);
+    });
+    process.exit = ((code?: number) => {
+      throw new Error(`exit ${code ?? 0}`);
+    }) as typeof process.exit;
+    try {
+      handleFinalize(
+        [
+          "--project-dir",
+          projectDir,
+          "--batch",
+          "4",
+          "--units",
+          "beta,alpha",
+          "--claimed",
+          "beta,alpha",
+          "--check-cmd",
+          passingCheckCommand,
+        ],
+        (code) => {
+          exitCode = code;
+        },
+        () => ({ ok: true, stdout: "", stderr: "" }),
+        (tool, args) => {
+          toolCalls.push({ tool, args });
+          const slugIndex = args.indexOf("--slug");
+          const slug = slugIndex >= 0 ? args[slugIndex + 1] : "";
+          if (tool === "amadeus-worktree.ts" && slug === "alpha") {
+            return {
+              ok: false,
+              stdout: '{"status":"conflict","slug":"alpha"}',
+              stderr: "",
+            };
+          }
+          return { ok: true, stdout: "", stderr: "" };
+        },
+      );
+    } catch (error) {
+      thrown = error;
+    } finally {
+      process.exit = originalExit;
+      log.mockRestore();
+    }
+
+    expect(thrown).toBeUndefined();
+    expect(exitCode).toBe(2);
+    expect(toolCalls.slice(0, 3)).toEqual([
+      {
+        tool: "amadeus-bolt.ts",
+        args: ["release-merge", "--slug", "alpha"],
+      },
+      {
+        tool: "amadeus-bolt.ts",
+        args: ["complete", "--merge", "--slug", "alpha", "--batch", "4", "--name", "alpha"],
+      },
+      {
+        tool: "amadeus-worktree.ts",
+        args: ["merge", "--slug", "alpha", "--target", "main", "--strategy", "squash"],
+      },
+    ]);
+    expect(
+      toolCalls.filter(({ tool }) => tool === "amadeus-worktree.ts"),
+    ).toHaveLength(1);
+    const envelope = JSON.parse(output);
+    expect(envelope.merge_failures.map((entry: { unit: string }) => entry.unit)).toEqual([
+      "alpha",
+      "beta",
+    ]);
+    expect(envelope.units).toEqual([
+      expect.objectContaining({ unit: "beta", status: "failed", reason: "error" }),
+      expect.objectContaining({ unit: "alpha", status: "failed", reason: "error" }),
+    ]);
+  });
+
   test("reports every claimed unit outside the batch and accepts a valid subset", () => {
     expect(claimedUnitsOutsideBatch(["alpha", "beta"], ["alpha", "gamma", "gamma"]))
       .toEqual(["gamma"]);
@@ -341,15 +461,42 @@ describe("t207 claimed/units guard (#738)", () => {
 });
 
 describe("t207 protected-file anti-tamper guard (#748)", () => {
-  test("classifies HEAD-untracked and unexpected git statuses as loud errors", () => {
+  test("detects a protected-file change committed after the prepared fork", () => {
+    const { projectDir, worktreeDir } = makeVerdictFixture();
+    const forkSha = spawnSync("git", ["rev-parse", "HEAD"], {
+      cwd: worktreeDir,
+      encoding: "utf-8",
+    }).stdout.trim();
+    writeFileSync(join(worktreeDir, "spec", "protected.test"), "TAMPERED\n");
+    runGit(worktreeDir, ["add", "spec/protected.test"]);
+    runGit(worktreeDir, ["commit", "-q", "-m", "commit protected test tamper"]);
+    const verifiedHead = spawnSync("git", ["rev-parse", "HEAD"], {
+      cwd: worktreeDir,
+      encoding: "utf-8",
+    }).stdout.trim();
+
+    expect(
+      verdictFor("alpha", projectDir, passingCheckCommand, {
+        testFile: "spec/protected.test",
+        forkSha,
+        expectedHead: verifiedHead,
+      }),
+    ).toEqual({
+      exists: true,
+      converged: true,
+      tampered: true,
+    });
+  });
+
+  test("classifies fork-untracked and unexpected git statuses as loud errors", () => {
     expect(fileTamperResultForStatuses(128, 0, "spec/untracked.test")).toEqual({
       status: "error",
-      detail: "protected test file is not tracked at HEAD: spec/untracked.test",
+      detail: "protected test file is not tracked at the prepared fork: spec/untracked.test",
     });
     expect(fileTamperResultForStatuses(0, 128, "spec/protected.test")).toEqual({
       status: "error",
       detail:
-        "could not compare protected test file against HEAD (git diff exit 128): spec/protected.test",
+        "could not compare protected test file against the prepared fork (git diff exit 128): spec/protected.test",
     });
   });
 
@@ -362,39 +509,46 @@ describe("t207 protected-file anti-tamper guard (#748)", () => {
     });
   });
 
-  test("verdictFor rejects a HEAD-untracked protected file through the shared error path", () => {
+  test("verdictFor rejects a fork-untracked protected file through the shared error path", () => {
     const { projectDir, worktreeDir } = makeVerdictFixture();
+    const forkSha = spawnSync("git", ["rev-parse", "HEAD"], {
+      cwd: worktreeDir,
+      encoding: "utf-8",
+    }).stdout.trim();
     writeFileSync(join(worktreeDir, "spec", "untracked.test"), "UNTRACKED\n");
 
     const verdict = verdictFor(
       "alpha",
       projectDir,
       passingCheckCommand,
-      "spec/untracked.test",
+      { testFile: "spec/untracked.test", forkSha },
     );
 
     expect(verdict).toEqual({
       exists: true,
       converged: true,
       tampered: false,
-      confineError: "protected test file is not tracked at HEAD: spec/untracked.test",
+      confineError: "protected test file is not tracked at the prepared fork: spec/untracked.test",
     });
   });
 
   test("verdictFor preserves tracked clean and tracked tampered behavior", () => {
     const { projectDir, worktreeDir } = makeVerdictFixture();
+    const forkSha = spawnSync("git", ["rev-parse", "HEAD"], {
+      cwd: worktreeDir,
+      encoding: "utf-8",
+    }).stdout.trim();
 
     const clean = verdictFor(
       "alpha",
       projectDir,
       passingCheckCommand,
-      "spec/protected.test",
+      { testFile: "spec/protected.test", forkSha },
     );
     expect(clean).toEqual({
       exists: true,
       converged: true,
       tampered: false,
-      confineError: undefined,
     });
 
     writeFileSync(join(worktreeDir, "spec", "protected.test"), "TAMPERED\n");
@@ -402,13 +556,12 @@ describe("t207 protected-file anti-tamper guard (#748)", () => {
       "alpha",
       projectDir,
       passingCheckCommand,
-      "spec/protected.test",
+      { testFile: "spec/protected.test", forkSha },
     );
     expect(tampered).toEqual({
       exists: true,
       converged: true,
       tampered: true,
-      confineError: undefined,
     });
   });
 });

@@ -787,8 +787,12 @@ export const REGISTERED_EVENTS = [
     auditEvent: "WORKTREE_CREATED",
     durability: "canonical",
     category: "worktree",
+    // `Base SHA` pins the fork point at create time — the swarm referee reads it
+    // back as the anti-tamper baseline and default delivery target, so a worker
+    // commit cannot move the baseline by moving HEAD (#3197). Optional: rows
+    // written before the swarm source-integration contract carry no Base SHA.
     requiredAttributes: ["Bolt slug", "Worktree path", "Branch name", "Base branch"],
-    optionalAttributes: [],
+    optionalAttributes: ["Base SHA"],
     schemaVersion: 1,
   },
   {

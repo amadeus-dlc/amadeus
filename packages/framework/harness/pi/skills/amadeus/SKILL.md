@@ -227,9 +227,10 @@ For each granted batch:
    driver-accepted dispatch with its native handle.
 4. Run the referee's declared check, then settle and release the corresponding
    attempt exactly once.
-5. Finalize only after the pool is terminal. A failed or unverifiable unit halts
-   for the shared failure protocol; it is never promoted as converged.
+5. Finalize only after the pool is terminal, using `bun .pi/tools/amadeus-swarm.ts finalize --batch <directive.batch> --units <all> --claimed <converged> --check-cmd "<command>" [--repo <name>] [--target <branch>] [--strategy <squash|merge|rebase>]`. A failed or unverifiable unit halts for the shared failure protocol; it is never promoted as converged.
 6. `--batch` is never guessed or re-derived: pass `directive.batch`, the engine's 1-origin batch identity and the durable Unit Pool id every later call for this batch is keyed by. `--check-cmd` and the optional `--test-file` are the opposite — the engine never supplies them, the convergence check is conductor knowledge: take the project's own build/test command from the team practice files under `amadeus/spaces/<space>/memory/` (Testing Posture / Tech Stack) and the protected spec from the unit's own test plan in the intent record. When neither names one, ask the human before dispatching rather than inventing a command.
+
+**Swarm source handoff.** After the assigned verification succeeds and before reporting success, each Unit worker creates a source-only Git commit in its assigned worktree containing only implementation and test changes. Workers never stage or commit `amadeus/` state, audit, runtime, or other workflow metadata. For a multi-repository batch, the conductor passes the same `--repo <name>` to `finalize` that it passed to `prepare`. `finalize` accepts optional `[--target <branch>] [--strategy <squash|merge|rebase>]`; the default target is the base captured by `prepare` (target `main` for a default prepare) and the default strategy `squash`. When `prepare` uses a non-default `--base <branch>`, that captured base is already the delivery target — passing the same branch explicitly as `finalize --target <branch>` is redundant but harmless. `finalize` reconciles workflow metadata first, then integrates the committed worker source. If a source merge fails, do not report success or continue the forwarding loop; use the shared `halt-and-ask` failure seam.
 
 Every child is confined to its assigned worktree and must not run Git operations
 outside it. Retry authority comes only from the referee's retry command and its

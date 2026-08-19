@@ -1,10 +1,12 @@
 # Branching Strategies
 
-A menu of common branching strategies, what they look like, when to use them, and how AIDLC's Construction worktrees map onto each. When the orchestrator dispatches amadeus-pipeline-deploy-agent at Bolt boundaries, this file is the menu the agent surveys to map a team's affirmed branching strategy onto the `amadeus-worktree` tool's flags.
+A menu of common branching strategies, what they look like, when to use them, and how AIDLC's Construction worktrees map onto each. The pipeline-deploy agent uses this file to resolve branching policy and the target/strategy flags for the underlying merge primitive. Runtime source integration itself is owned by the deterministic swarm referee.
 
 > **Reading practices:** see `knowledge/amadeus-shared/rules-reading.md` for empty-template detection, semantic-topic matching, and the `team.md → org.md → hardcoded defaults` fallback chain. This file does not duplicate that protocol.
 >
 > See also `cicd-patterns.md` § "Branch Strategies" for the higher-level CI-flow context.
+>
+> **Runtime ownership:** The command lines below document branch-policy mapping for the underlying primitives; they are not conductor call sites. `amadeus-swarm finalize` owns source integration after Unit Pool convergence.
 
 ---
 
@@ -212,7 +214,7 @@ When dispatched for Monorepo:
 
 ## Response contract
 
-When the orchestrator dispatches amadeus-pipeline-deploy-agent for a worktree create or merge, the agent invokes `amadeus-worktree` directly and reports the JSON envelope below back to the orchestrator. SKILL.md Step 0.5 / Step 6.75 then call `amadeus-worktree verify` as a deterministic backstop confirming the audit event landed.
+The envelopes below document deterministic primitive results consumed inside the swarm referee. During batch setup, `amadeus-swarm prepare` invokes the worktree create primitive. During source delivery, `amadeus-swarm finalize` invokes the worktree merge primitive only after metadata reconciliation. These envelopes are not prose handoffs from the pipeline-deploy agent to the conductor.
 
 ### Create response (success)
 
@@ -275,18 +277,13 @@ If the worktree was already gone (idempotent path), `emitted` is `null` and `rea
 
 ## How AIDLC reads strategy from team practices
 
-The dispatch protocol described in this section is invoked at the two Bolt boundaries — worktree create when a Bolt starts, worktree merge when it completes. `amadeus-bolt complete --merge` orchestrates around the dispatch (forkState merge-back, forkAudit merge-back) but does not call `amadeus-worktree merge` directly. No shipped conductor face carries that dispatch today (`amadeus-worktree` appears in none of them), so treat this section as the agent's contract for when it IS dispatched, not as a description of prose that exists.
+`amadeus-swarm finalize` owns source integration. In the current contract, source merge dispatch is not conductor prose: after terminal-pool validation and Unit re-verification, the referee releases the Unit's merge hold, reconciles workflow metadata first through `amadeus-bolt complete --merge`, and then invokes `amadeus-worktree merge` as a primitive for each genuinely converged Unit. The referee performs those transactions in deterministic Unit-slug order.
 
-At either boundary, the orchestrator dispatches a Task call to **amadeus-pipeline-deploy-agent** with two inputs:
+A metadata failure skips source integration for that Unit. A source failure blocks later source transactions because the target checkout may contain unresolved conflicts. Either failure downgrades the affected Unit, returns its baton, preserves the recovery state, and makes `finalize` exit non-zero rather than report the batch as converged.
 
-1. The contents of `{{HARNESS_DIR}}/rules/amadeus-team.md`'s `## Way of Working` section (or `amadeus-org.md` if `amadeus-team.md` is empty — fallback chain in `shared/rules-reading.md`).
-2. The Bolt's metadata (slug, source branch, optional target-line hint for release-branch teams).
+Branch-policy selection remains knowledge work. The pipeline-deploy agent reads the `## Way of Working` and branching sections from team practices, falling back through organization practices to trunk-based defaults (`main` base and target, `squash` strategy). It uses this menu to resolve or review the intended policy; it does not perform the runtime source-integration transaction.
 
-The agent reads this file (`branching-strategies.md`) as the menu, matches the team's stated strategy to one of the five above, picks the right `amadeus-worktree` flags, invokes the tool, and returns the response envelope per § Response contract.
-
-If the team's stated strategy doesn't map cleanly to the menu (e.g. "we use a hybrid"), the agent picks the closest fit and notes the deviation in the response's `notes` field; the orchestrator surfaces it in the audit log.
-
-If neither `amadeus-team.md` nor `amadeus-org.md` provides branching practice, the agent applies hardcoded defaults — trunk-based with squash, base `main`, target `main` — and emits `PRACTICES_SECTION_EMPTY` (advisory-only).
+If the team's stated strategy does not map cleanly to the menu, record the closest fit and the deviation for the conductor to surface before Construction. Do not silently invent a hybrid runtime path.
 
 ---
 
