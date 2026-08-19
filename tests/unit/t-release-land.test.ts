@@ -5,13 +5,17 @@
 // commit — never `git push` to main.
 
 import { describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   classifyReleaseLandWait,
   incrementReleaseVersion,
+  parseOpenReleasePrUrl,
   parseReleasePrView,
+  plannedReleaseVersion,
   releaseBranchName,
   releaseTagName,
-  replaceSetupPackageVersion,
   runReleaseLand,
   type ReleaseLandPort,
   type ReleasePrObservation,
@@ -21,17 +25,19 @@ import {
   parseReleaseLandArgs,
   ReleaseLandCliPort,
 } from "../../scripts/release-land.ts";
+import { SETUP_PACKAGE_REL, VERSION_SURFACES } from "../../scripts/release-version-sync-plan.ts";
 
 const PR_URL = "https://example.test/pull/42";
 const MERGE_SHA = "b".repeat(40);
 const HEAD_SHA = "a".repeat(40);
+const BOT_LOGIN = "amadeus-dlc-bot[bot]";
 
 function observation(overrides: Partial<ReleasePrObservation> = {}): ReleasePrObservation {
   return {
     state: "OPEN",
     url: PR_URL,
     mergeCommitSha: null,
-    failedRequiredChecks: [],
+    ciSuccessFailed: false,
     ...overrides,
   };
 }
@@ -45,28 +51,9 @@ function fakePort(overrides: Partial<ReleaseLandPort> = {}): {
     currentSetupVersion: () => "0.1.7",
     currentHeadSha: () => HEAD_SHA,
     tagExists: () => false,
-    checkoutReleaseBranch: (branch) => {
-      calls.push(`checkout:${branch}`);
-    },
-    writeSetupVersion: (version) => {
-      calls.push(`write:${version}`);
-    },
-    syncVersionSurfaces: (version) => {
-      calls.push(`sync:${version}`);
-    },
-    createBumpCommit: (version) => {
-      calls.push(`commit:${version}`);
-    },
-    pushReleaseBranch: (branch) => {
-      calls.push(`push:${branch}`);
-    },
-    findOpenReleasePr: () => null,
-    createReleasePr: (branch, version) => {
-      calls.push(`pr:${branch}:${version}`);
+    queueReleasePullRequest: (version) => {
+      calls.push(`queue:${version}`);
       return PR_URL;
-    },
-    enableAutoMerge: (url) => {
-      calls.push(`auto-merge:${url}`);
     },
     observePr: () => observation({ state: "MERGED", mergeCommitSha: MERGE_SHA }),
     createAndPushTag: (version, sha) => {
@@ -79,6 +66,14 @@ function fakePort(overrides: Partial<ReleaseLandPort> = {}): {
     ...overrides,
   };
   return { port, calls };
+}
+
+function landArgs() {
+  return {
+    mode: { kind: "land" as const, bump: "patch" as const },
+    deadlineMs: 10,
+    pollIntervalMs: 1,
+  };
 }
 
 describe("release-land version increment", () => {
@@ -97,12 +92,12 @@ describe("release-land version increment", () => {
     expect(releaseTagName("0.1.8")).toBe("v0.1.8");
   });
 
-  test("replaces only the setup package version field", () => {
-    const raw = `{\n  "name": "@amadeus-dlc/setup",\n  "version": "0.1.7"\n}\n`;
-    expect(replaceSetupPackageVersion(raw, "0.1.8")).toBe(
-      `{\n  "name": "@amadeus-dlc/setup",\n  "version": "0.1.8"\n}\n`,
-    );
+  test("planned version stays current only in bootstrap mode", () => {
+    expect(plannedReleaseVersion("0.1.7", { kind: "bootstrap" })).toBe("0.1.7");
+    expect(plannedReleaseVersion("0.1.7", { kind: "dry-run", bump: "minor" })).toBe("0.2.0");
+    expect(plannedReleaseVersion("0.1.7", { kind: "land", bump: "patch" })).toBe("0.1.8");
   });
+
 });
 
 describe("release-land PR observation", () => {
@@ -123,7 +118,7 @@ describe("release-land PR observation", () => {
       state: "MERGED",
       url: PR_URL,
       mergeCommitSha: MERGE_SHA,
-      failedRequiredChecks: [],
+      ciSuccessFailed: false,
     });
   });
 
@@ -137,7 +132,25 @@ describe("release-land PR observation", () => {
       },
       "gh pr view",
     );
-    expect(parsed.failedRequiredChecks).toEqual(["CI Success"]);
+    expect(parsed.ciSuccessFailed).toBe(true);
+  });
+
+  test("accepts a single bot-owned open release PR", () => {
+    expect(
+      parseOpenReleasePrUrl([{ url: PR_URL, author: { login: BOT_LOGIN } }], {
+        branch: "release/v0.1.8",
+        botLogin: BOT_LOGIN,
+      }),
+    ).toBe(PR_URL);
+  });
+
+  test("refuses an open release PR owned by someone else", () => {
+    expect(() =>
+      parseOpenReleasePrUrl([{ url: PR_URL, author: { login: "other" } }], {
+        branch: "release/v0.1.8",
+        botLogin: BOT_LOGIN,
+      }),
+    ).toThrow("not amadeus-dlc-bot[bot]");
   });
 });
 
@@ -149,7 +162,7 @@ describe("release-land wait classifier", () => {
         nowMs: 10,
         deadlineMs: 5,
       }),
-    ).toBe("ready");
+    ).toEqual({ kind: "ready", sha: MERGE_SHA });
   });
 
   test("failed when the PR closes without merging or CI Success fails", () => {
@@ -159,14 +172,14 @@ describe("release-land wait classifier", () => {
         nowMs: 0,
         deadlineMs: 10,
       }),
-    ).toBe("failed");
+    ).toEqual({ kind: "failed" });
     expect(
       classifyReleaseLandWait({
-        observation: observation({ failedRequiredChecks: ["CI Success"] }),
+        observation: observation({ ciSuccessFailed: true }),
         nowMs: 0,
         deadlineMs: 10,
       }),
-    ).toBe("failed");
+    ).toEqual({ kind: "failed" });
   });
 
   test("timeout beats an still-open PR with no required failure", () => {
@@ -176,7 +189,7 @@ describe("release-land wait classifier", () => {
         nowMs: 10,
         deadlineMs: 10,
       }),
-    ).toBe("timeout");
+    ).toEqual({ kind: "timeout" });
   });
 });
 
@@ -184,79 +197,37 @@ describe("runReleaseLand", () => {
   test("dry-run increments without writing, pushing, or tagging", async () => {
     const { port, calls } = fakePort();
     const result = await runReleaseLand(port, {
-      bump: "patch",
-      bootstrap: false,
-      dryRun: true,
+      mode: { kind: "dry-run", bump: "patch" },
       deadlineMs: 10,
       pollIntervalMs: 1,
     });
-    expect(result).toEqual({ version: "0.1.8", sha: HEAD_SHA, pullRequestUrl: null, dryRun: true });
+    expect(result).toEqual({ version: "0.1.8", sha: HEAD_SHA, pullRequestUrl: null });
     expect(calls).toEqual([]);
   });
 
   test("bootstrap tags the current HEAD and does not open a PR", async () => {
     const { port, calls } = fakePort();
     const result = await runReleaseLand(port, {
-      bump: "patch",
-      bootstrap: true,
-      dryRun: false,
+      mode: { kind: "bootstrap" },
       deadlineMs: 10,
       pollIntervalMs: 1,
     });
-    expect(result).toEqual({ version: "0.1.7", sha: HEAD_SHA, pullRequestUrl: null, dryRun: false });
+    expect(result).toEqual({ version: "0.1.7", sha: HEAD_SHA, pullRequestUrl: null });
     expect(calls).toEqual([`tag:v0.1.7:${HEAD_SHA}`]);
-  });
-
-  test("reuses an already-open release PR instead of pushing a second bump", async () => {
-    const { port, calls } = fakePort({
-      findOpenReleasePr: () => PR_URL,
-    });
-    const result = await runReleaseLand(port, {
-      bump: "patch",
-      bootstrap: false,
-      dryRun: false,
-      deadlineMs: 10,
-      pollIntervalMs: 1,
-    });
-    expect(result.pullRequestUrl).toBe(PR_URL);
-    expect(calls).toEqual([`auto-merge:${PR_URL}`, `tag:v0.1.8:${MERGE_SHA}`]);
   });
 
   test("dispatch lands through a PR and tags the squash SHA, not HEAD", async () => {
     const { port, calls } = fakePort();
-    const result = await runReleaseLand(port, {
-      bump: "patch",
-      bootstrap: false,
-      dryRun: false,
-      deadlineMs: 10,
-      pollIntervalMs: 1,
-    });
-    expect(result).toEqual({ version: "0.1.8", sha: MERGE_SHA, pullRequestUrl: PR_URL, dryRun: false });
-    expect(calls).toEqual([
-      "checkout:release/v0.1.8",
-      "write:0.1.8",
-      "sync:0.1.8",
-      "commit:0.1.8",
-      "push:release/v0.1.8",
-      "pr:release/v0.1.8:0.1.8",
-      `auto-merge:${PR_URL}`,
-      `tag:v0.1.8:${MERGE_SHA}`,
-    ]);
+    const result = await runReleaseLand(port, landArgs());
+    expect(result).toEqual({ version: "0.1.8", sha: MERGE_SHA, pullRequestUrl: PR_URL });
+    expect(calls).toEqual([`queue:0.1.8`, `tag:v0.1.8:${MERGE_SHA}`]);
   });
 
   test("refuses to wait past a failed CI Success check", async () => {
     const { port } = fakePort({
-      observePr: () => observation({ failedRequiredChecks: ["CI Success"] }),
+      observePr: () => observation({ ciSuccessFailed: true }),
     });
-    await expect(
-      runReleaseLand(port, {
-        bump: "patch",
-        bootstrap: false,
-        dryRun: false,
-        deadlineMs: 10,
-        pollIntervalMs: 1,
-      }),
-    ).rejects.toThrow("did not land");
+    await expect(runReleaseLand(port, landArgs())).rejects.toThrow("did not land");
   });
 });
 
@@ -267,56 +238,27 @@ describe("release-land CLI merge-queue compatibility", () => {
         "--repository",
         "amadeus-dlc/amadeus",
         "--bot-login",
-        "amadeus-dlc-bot[bot]",
+        BOT_LOGIN,
         "--bump",
         "patch",
       ]),
     ).toEqual({
       repository: "amadeus-dlc/amadeus",
-      botLogin: "amadeus-dlc-bot[bot]",
-      bump: "patch",
-      bootstrap: false,
-      dryRun: false,
+      botLogin: BOT_LOGIN,
+      mode: { kind: "land", bump: "patch" },
       deadlineSeconds: 4800,
       pollSeconds: 15,
     });
   });
 
-  test("enableAutoMerge issues no rejected merge-queue flags", () => {
+  test("queueReleasePullRequest reuses an open bot PR and issues no rejected merge-queue flags", () => {
     const commands: string[][] = [];
     const runner: CommandRunner = {
       run(command) {
         commands.push(command);
-        return { stdout: "", stderr: "" };
-      },
-    };
-    const port = new ReleaseLandCliPort({
-      repoRoot: "/tmp/amadeus-release-land",
-      repository: "amadeus-dlc/amadeus",
-      botLogin: "amadeus-dlc-bot[bot]",
-      runner,
-    });
-
-    port.enableAutoMerge(PR_URL);
-
-    expect(commands).toEqual([["gh", "pr", "merge", "--auto", PR_URL]]);
-    expect(commands[0]).not.toContain("--squash");
-    expect(commands[0]).not.toContain("--delete-branch");
-  });
-
-  test("branch and tag pushes never target main", () => {
-    const commands: string[][] = [];
-    const runner: CommandRunner = {
-      run(command) {
-        commands.push(command);
-        if (command[0] === "gh" && command[1] === "pr" && command[2] === "view") {
+        if (command[0] === "gh" && command[1] === "pr" && command[2] === "list") {
           return {
-            stdout: JSON.stringify({
-              state: "MERGED",
-              url: PR_URL,
-              mergeCommit: { oid: MERGE_SHA },
-              statusCheckRollup: [],
-            }),
+            stdout: JSON.stringify([{ url: PR_URL, author: { login: BOT_LOGIN } }]),
             stderr: "",
           };
         }
@@ -326,12 +268,63 @@ describe("release-land CLI merge-queue compatibility", () => {
     const port = new ReleaseLandCliPort({
       repoRoot: "/tmp/amadeus-release-land",
       repository: "amadeus-dlc/amadeus",
-      botLogin: "amadeus-dlc-bot[bot]",
+      botLogin: BOT_LOGIN,
       runner,
     });
 
-    port.pushReleaseBranch("release/v0.1.8");
+    expect(port.queueReleasePullRequest("0.1.8")).toBe(PR_URL);
+    expect(commands).toEqual([
+      [
+        "gh",
+        "pr",
+        "list",
+        "--repo",
+        "amadeus-dlc/amadeus",
+        "--base",
+        "main",
+        "--head",
+        "release/v0.1.8",
+        "--state",
+        "open",
+        "--json",
+        "url,author",
+      ],
+      ["gh", "pr", "merge", "--auto", PR_URL],
+    ]);
+    expect(commands[1]).not.toContain("--squash");
+    expect(commands[1]).not.toContain("--delete-branch");
+  });
+
+  test("branch and tag pushes never target main", () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "amadeus-release-land-"));
+    mkdirSync(join(repoRoot, "packages/setup"), { recursive: true });
+    writeFileSync(join(repoRoot, SETUP_PACKAGE_REL), `{\n  "name": "@amadeus-dlc/setup",\n  "version": "0.1.7"\n}\n`);
+
+    const commands: string[][] = [];
+    const runner: CommandRunner = {
+      run(command) {
+        commands.push(command);
+        if (command[0] === "gh" && command[1] === "pr" && command[2] === "list") {
+          return { stdout: "[]", stderr: "" };
+        }
+        if (command[0] === "gh" && command[1] === "pr" && command[2] === "create") {
+          return { stdout: PR_URL, stderr: "" };
+        }
+        return { stdout: "", stderr: "" };
+      },
+    };
+    const port = new ReleaseLandCliPort({
+      repoRoot,
+      repository: "amadeus-dlc/amadeus",
+      botLogin: BOT_LOGIN,
+      runner,
+    });
+
+    expect(port.queueReleasePullRequest("0.1.8")).toBe(PR_URL);
     port.createAndPushTag("0.1.8", MERGE_SHA);
+
+    const added = commands.find((command) => command[0] === "git" && command[1] === "add");
+    expect(added).toEqual(["git", "add", "--", ...VERSION_SURFACES.map((surface) => surface.relPath)]);
 
     const pushed = commands.filter((command) => command[0] === "git" && command[1] === "push");
     expect(pushed).toEqual([

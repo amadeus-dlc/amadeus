@@ -13,19 +13,22 @@
 import { describe, expect, test } from "bun:test";
 import {
   planVersionSync,
+  SETUP_PACKAGE_REL,
   VERSION_SURFACES,
 } from "../../scripts/release-version-sync-plan.ts";
 
 const VERSION_REL = "packages/framework/core/tools/amadeus-version.ts";
 const README_REL = "README.md";
 
+const setupPkg = (v: string): string => `{\n  "name": "@amadeus-dlc/setup",\n  "version": "${v}"\n}\n`;
 const versionTs = (v: string): string => `export const AMADEUS_VERSION = "${v}";\n`;
 const readme = (badge: string): string =>
   `# X\n\n![version](https://img.shields.io/badge/version-${badge}-blue)\n`;
 
-/** Build the contents map both surfaces need for a given from-state. */
+/** Build the contents map every surface needs for a given from-state. */
 function contents(fromVersion: string, fromBadge: string): Record<string, string> {
   return {
+    [SETUP_PACKAGE_REL]: setupPkg(fromVersion),
     [VERSION_REL]: versionTs(fromVersion),
     [README_REL]: readme(fromBadge),
   };
@@ -52,6 +55,7 @@ describe("release-version-sync plan seam — FR-702-1 badge transitions", () => 
       expect(result.ok).toBe(true);
       if (!result.ok) return; // narrow for TS; the assert above already failed
       const byPath = Object.fromEntries(result.entries.map((e) => [e.relPath, e]));
+      expect(byPath[SETUP_PACKAGE_REL].next).toContain(`"version": "${c.to}"`);
       expect(byPath[README_REL].next).toContain(`badge/version-${escapeBadge(c.to)}-blue`);
       expect(byPath[VERSION_REL].next).toContain(`AMADEUS_VERSION = "${c.to}"`);
     });
@@ -113,6 +117,7 @@ describe("release-version-sync plan seam — #740 shields badge dash escaping", 
 describe("release-version-sync plan seam — FR-702-2 all-or-nothing", () => {
   test("a README badge miss fails the whole plan (no partial plan)", () => {
     const bad = {
+      [SETUP_PACKAGE_REL]: setupPkg("0.1.1"), // matches
       [VERSION_REL]: versionTs("0.1.1"), // matches
       [README_REL]: readme("CORRUPT"), // no X.Y.Z -> misses
     };
@@ -127,6 +132,7 @@ describe("release-version-sync plan seam — FR-702-2 all-or-nothing", () => {
 
   test("a version.ts miss fails the whole plan (no partial plan)", () => {
     const bad = {
+      [SETUP_PACKAGE_REL]: setupPkg("0.1.1"), // matches
       [VERSION_REL]: "export const NOT_THE_CONSTANT = 1;\n", // misses
       [README_REL]: readme("0.1.1"), // matches
     };
@@ -138,7 +144,10 @@ describe("release-version-sync plan seam — FR-702-2 all-or-nothing", () => {
   });
 
   test("a missing (unread) surface fails the plan", () => {
-    const result = planVersionSync("0.2.0", { [VERSION_REL]: versionTs("0.1.1") });
+    const result = planVersionSync("0.2.0", {
+      [SETUP_PACKAGE_REL]: setupPkg("0.1.1"),
+      [VERSION_REL]: versionTs("0.1.1"),
+    });
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.relPath).toBe(README_REL);
@@ -146,8 +155,8 @@ describe("release-version-sync plan seam — FR-702-2 all-or-nothing", () => {
 });
 
 describe("release-version-sync plan seam — canonical surfaces", () => {
-  test("the two version surfaces are declared once and are the ones patched", () => {
+  test("the version surfaces are declared once and are the ones patched", () => {
     const paths = VERSION_SURFACES.map((s) => s.relPath).sort();
-    expect(paths).toEqual([README_REL, VERSION_REL].sort());
+    expect(paths).toEqual([README_REL, SETUP_PACKAGE_REL, VERSION_REL].sort());
   });
 });

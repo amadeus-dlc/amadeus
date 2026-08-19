@@ -1,16 +1,19 @@
-import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import {
   RELEASE_PR_MARKER,
+  parseOpenReleasePrUrl,
   parseReleasePrView,
+  releaseBranchName,
   releaseTagName,
-  replaceSetupPackageVersion,
   runReleaseLand,
   type ReleaseBump,
+  type ReleaseLandMode,
   type ReleaseLandPort,
   type ReleasePrObservation,
 } from "./release-land-domain.ts";
+import { SETUP_PACKAGE_REL, VERSION_SURFACES } from "./release-version-sync-plan.ts";
 
 export type CommandOutput = { stdout: string; stderr: string };
 export type CommandRunner = {
@@ -35,15 +38,15 @@ export const systemCommandRunner: CommandRunner = {
 export type ReleaseLandCliArgs = {
   readonly repository: string;
   readonly botLogin: string;
-  readonly bump: ReleaseBump;
-  readonly bootstrap: boolean;
-  readonly dryRun: boolean;
+  readonly mode: ReleaseLandMode;
   readonly deadlineSeconds: number;
   readonly pollSeconds: number;
 };
 
 const USAGE =
   "Usage: bun scripts/release-land.ts --repository <owner/repo> --bot-login <login> [--bump patch|minor|major] [--bootstrap] [--dry-run] [--deadline-seconds <n>] [--poll-seconds <n>]";
+
+const BUMP_TRACKED_PATHS = VERSION_SURFACES.map((surface) => surface.relPath);
 
 function positiveNumber(value: string | undefined, flag: string): number {
   if (value === undefined || !/^[1-9][0-9]*$/.test(value)) throw new Error(`${flag} requires a positive integer`);
@@ -55,22 +58,22 @@ function parseBump(value: string | undefined): ReleaseBump {
   throw new Error("--bump must be patch, minor, or major");
 }
 
-export function parseReleaseLandArgs(argv: string[]): ReleaseLandCliArgs {
-  const flags = new Set([
-    "--repository",
-    "--bot-login",
-    "--bump",
-    "--bootstrap",
-    "--dry-run",
-    "--deadline-seconds",
-    "--poll-seconds",
-  ]);
+function modeFromFlags(input: { readonly bootstrap: boolean; readonly dryRun: boolean; readonly bump: ReleaseBump }): ReleaseLandMode {
+  if (input.dryRun) return { kind: "dry-run", bump: input.bump };
+  if (input.bootstrap) return { kind: "bootstrap" };
+  return { kind: "land", bump: input.bump };
+}
+
+function collectCliFlags(
+  argv: string[],
+  spec: { readonly values: ReadonlySet<string>; readonly switches: ReadonlySet<string> },
+): { values: Map<string, string>; switches: Set<string> } {
   const values = new Map<string, string>();
   const switches = new Set<string>();
   for (let index = 0; index < argv.length; index += 1) {
     const flag = argv[index];
-    if (!flag?.startsWith("--") || !flags.has(flag)) throw new Error(USAGE);
-    if (flag === "--bootstrap" || flag === "--dry-run") {
+    if (flag === undefined || !(spec.values.has(flag) || spec.switches.has(flag))) throw new Error(USAGE);
+    if (spec.switches.has(flag)) {
       if (switches.has(flag)) throw new Error(`duplicate option: ${flag}`);
       switches.add(flag);
       continue;
@@ -81,6 +84,14 @@ export function parseReleaseLandArgs(argv: string[]): ReleaseLandCliArgs {
     values.set(flag, value);
     index += 1;
   }
+  return { values, switches };
+}
+
+export function parseReleaseLandArgs(argv: string[]): ReleaseLandCliArgs {
+  const { values, switches } = collectCliFlags(argv, {
+    values: new Set(["--repository", "--bot-login", "--bump", "--deadline-seconds", "--poll-seconds"]),
+    switches: new Set(["--bootstrap", "--dry-run"]),
+  });
   const repository = values.get("--repository");
   const botLogin = values.get("--bot-login");
   if (repository === undefined || !/^[^/\s]+\/[^/\s]+$/.test(repository)) throw new Error("--repository must be owner/name");
@@ -90,9 +101,11 @@ export function parseReleaseLandArgs(argv: string[]): ReleaseLandCliArgs {
   return {
     repository,
     botLogin,
-    bump,
-    bootstrap: switches.has("--bootstrap"),
-    dryRun: switches.has("--dry-run"),
+    mode: modeFromFlags({
+      bootstrap: switches.has("--bootstrap"),
+      dryRun: switches.has("--dry-run"),
+      bump,
+    }),
     deadlineSeconds: values.has("--deadline-seconds")
       ? positiveNumber(values.get("--deadline-seconds"), "--deadline-seconds")
       : 4800,
@@ -126,21 +139,18 @@ export class ReleaseLandCliPort implements ReleaseLandPort {
     this.#context = context;
   }
 
-  #setupPackagePath(): string {
-    return join(this.#context.repoRoot, "packages/setup/package.json");
-  }
-
   currentSetupVersion(): string {
-    const pkg = JSON.parse(readFileSync(this.#setupPackagePath(), "utf8")) as { version?: unknown };
+    const pkg = JSON.parse(readFileSync(join(this.#context.repoRoot, SETUP_PACKAGE_REL), "utf8")) as {
+      version?: unknown;
+    };
     if (typeof pkg.version !== "string" || pkg.version.length === 0) {
-      throw new Error("packages/setup/package.json is missing version");
+      throw new Error(`${SETUP_PACKAGE_REL} is missing version`);
     }
     return pkg.version;
   }
 
   currentHeadSha(): string {
-    const sha = command(this.#context, ["git", "rev-parse", "HEAD"]);
-    return sha;
+    return command(this.#context, ["git", "rev-parse", "HEAD"]);
   }
 
   tagExists(tag: string): boolean {
@@ -150,101 +160,13 @@ export class ReleaseLandCliPort implements ReleaseLandPort {
     return remote.length > 0;
   }
 
-  writeSetupVersion(version: string): void {
-    const path = this.#setupPackagePath();
-    writeFileSync(path, replaceSetupPackageVersion(readFileSync(path, "utf8"), version));
-  }
-
-  syncVersionSurfaces(version: string): void {
-    command(this.#context, ["bun", "scripts/release-version-sync.ts", version]);
-  }
-
-  checkoutReleaseBranch(branch: string): void {
-    command(this.#context, ["git", "fetch", "--no-tags", "origin", "main"]);
-    command(this.#context, ["git", "switch", "--detach", "origin/main"]);
-    command(this.#context, ["git", "switch", "-C", branch]);
-  }
-
-  createBumpCommit(version: string): void {
-    command(this.#context, [
-      "git",
-      "add",
-      "--",
-      "packages/setup/package.json",
-      "packages/framework/core/tools/amadeus-version.ts",
-      "README.md",
-    ]);
-    command(this.#context, ["git", "commit", "-m", `chore(release): v${version}`]);
-  }
-
-  pushReleaseBranch(branch: string): void {
-    command(this.#context, [
-      "git",
-      "push",
-      `--force-with-lease=refs/heads/${branch}:`,
-      "origin",
-      `HEAD:refs/heads/${branch}`,
-    ]);
-  }
-
-  findOpenReleasePr(branch: string): string | null {
-    const output = command(this.#context, [
-      "gh",
-      "pr",
-      "list",
-      "--repo",
-      this.#context.repository,
-      "--base",
-      "main",
-      "--head",
-      branch,
-      "--state",
-      "open",
-      "--json",
-      "url,author",
-    ]);
-    const parsed = parseJsonOutput(output, "gh pr list");
-    if (!Array.isArray(parsed)) throw new Error("gh pr list did not return an array");
-    if (parsed.length === 0) return null;
-    if (parsed.length !== 1) throw new Error(`expected 0 or 1 open release PRs for ${branch}, found ${parsed.length}`);
-    const row = parsed[0];
-    if (typeof row !== "object" || row === null || Array.isArray(row)) throw new Error("gh pr list row is invalid");
-    const record = row as Record<string, unknown>;
-    const author = record.author;
-    const login =
-      typeof author === "object" && author !== null && !Array.isArray(author) && typeof (author as { login?: unknown }).login === "string"
-        ? (author as { login: string }).login
-        : "";
-    if (login !== this.#context.botLogin) {
-      throw new Error(`open PR for ${branch} is owned by ${login || "unknown"}, not ${this.#context.botLogin}`);
-    }
-    if (typeof record.url !== "string" || record.url.length === 0) throw new Error("gh pr list row is missing url");
-    return record.url;
-  }
-
-  createReleasePr(branch: string, version: string): string {
-    return command(this.#context, [
-      "gh",
-      "pr",
-      "create",
-      "--repo",
-      this.#context.repository,
-      "--base",
-      "main",
-      "--head",
-      branch,
-      "--title",
-      `chore(release): v${version}`,
-      "--body",
-      `${RELEASE_PR_MARKER}\nAutomated release version sync for v${version}.\n\nOpened by the Release workflow. Merge Queue lands it; this run tags the squash commit and publishes.`,
-    ]);
-  }
-
-  enableAutoMerge(url: string): void {
+  queueReleasePullRequest(version: string): string {
+    const url = this.#ensureReleasePullRequest(version);
     // main's Ruleset requires the merge queue (#2888): the queue owns the
     // merge strategy (ruleset merge_method=SQUASH) and branch deletion, so
     // `--squash` and `--delete-branch` are both rejected by gh CLI (#2925).
     command(this.#context, ["gh", "pr", "merge", "--auto", url]);
+    return url;
   }
 
   observePr(url: string): ReleasePrObservation {
@@ -271,6 +193,70 @@ export class ReleaseLandCliPort implements ReleaseLandPort {
 
   async sleep(milliseconds: number): Promise<void> {
     await Bun.sleep(milliseconds);
+  }
+
+  #ensureReleasePullRequest(version: string): string {
+    const branch = releaseBranchName(version);
+    const existing = this.#findOpenReleasePr(branch);
+    if (existing !== null) return existing;
+    this.#checkoutReleaseBranch(branch);
+    command(this.#context, ["bun", "scripts/release-version-sync.ts", version]);
+    command(this.#context, ["git", "add", "--", ...BUMP_TRACKED_PATHS]);
+    command(this.#context, ["git", "commit", "-m", `chore(release): v${version}`]);
+    command(this.#context, [
+      "git",
+      "push",
+      `--force-with-lease=refs/heads/${branch}:`,
+      "origin",
+      `HEAD:refs/heads/${branch}`,
+    ]);
+    return this.#findOpenReleasePr(branch) ?? this.#createReleasePr(branch, version);
+  }
+
+  #checkoutReleaseBranch(branch: string): void {
+    command(this.#context, ["git", "fetch", "--no-tags", "origin", "main"]);
+    command(this.#context, ["git", "switch", "--detach", "origin/main"]);
+    command(this.#context, ["git", "switch", "-C", branch]);
+  }
+
+  #findOpenReleasePr(branch: string): string | null {
+    const output = command(this.#context, [
+      "gh",
+      "pr",
+      "list",
+      "--repo",
+      this.#context.repository,
+      "--base",
+      "main",
+      "--head",
+      branch,
+      "--state",
+      "open",
+      "--json",
+      "url,author",
+    ]);
+    return parseOpenReleasePrUrl(parseJsonOutput(output, "gh pr list"), {
+      branch,
+      botLogin: this.#context.botLogin,
+    });
+  }
+
+  #createReleasePr(branch: string, version: string): string {
+    return command(this.#context, [
+      "gh",
+      "pr",
+      "create",
+      "--repo",
+      this.#context.repository,
+      "--base",
+      "main",
+      "--head",
+      branch,
+      "--title",
+      `chore(release): v${version}`,
+      "--body",
+      `${RELEASE_PR_MARKER}\nAutomated release version sync for v${version}.\n\nOpened by the Release workflow. Merge Queue lands it; this run tags the squash commit and publishes.`,
+    ]);
   }
 }
 
@@ -299,9 +285,7 @@ export async function releaseLandMain(
       runner: options.runner ?? systemCommandRunner,
     });
     const result = await runReleaseLand(port, {
-      bump: args.bump,
-      bootstrap: args.bootstrap,
-      dryRun: args.dryRun,
+      mode: args.mode,
       deadlineMs: Date.now() + args.deadlineSeconds * 1000,
       pollIntervalMs: args.pollSeconds * 1000,
     });

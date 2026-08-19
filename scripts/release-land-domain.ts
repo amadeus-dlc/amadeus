@@ -1,23 +1,53 @@
 // Pure seams for the release-land path (#2888).
 //
 // After the main ruleset required merge queue and dropped the GitHub App
-// bypass, release-it can no longer push a bump commit to main. The bump
-// lands through a bot PR + `gh pr merge --auto`; the tag is applied to the
-// squash commit, not the pre-merge branch tip.
+// bypass, a bump cannot be pushed to main. The lander opens a bot PR,
+// lands it with `gh pr merge --auto`, and tags the squash commit.
 
-export const RELEASE_BRANCH_PREFIX = "release/v";
 export const RELEASE_PR_MARKER = "<!-- amadeus:release-bump:v1 -->";
 
 export type ReleaseBump = "patch" | "minor" | "major";
+
+export type ReleaseLandMode =
+  | { readonly kind: "dry-run"; readonly bump: ReleaseBump }
+  | { readonly kind: "bootstrap" }
+  | { readonly kind: "land"; readonly bump: ReleaseBump };
 
 export type ReleasePrObservation = {
   readonly state: "OPEN" | "MERGED" | "CLOSED";
   readonly url: string;
   readonly mergeCommitSha: string | null;
-  readonly failedRequiredChecks: readonly string[];
+  readonly ciSuccessFailed: boolean;
 };
 
-export type ReleaseLandWaitVerdict = "ready" | "pending" | "failed" | "timeout";
+export type ReleaseLandWaitVerdict =
+  | { readonly kind: "ready"; readonly sha: string }
+  | { readonly kind: "pending" }
+  | { readonly kind: "failed" }
+  | { readonly kind: "timeout" };
+
+export type ReleaseLandArgs = {
+  readonly mode: ReleaseLandMode;
+  readonly deadlineMs: number;
+  readonly pollIntervalMs: number;
+};
+
+export type ReleaseLandResult = {
+  readonly version: string;
+  readonly sha: string;
+  readonly pullRequestUrl: string | null;
+};
+
+export type ReleaseLandPort = {
+  currentSetupVersion(): string;
+  currentHeadSha(): string;
+  tagExists(tag: string): boolean;
+  queueReleasePullRequest(version: string): string;
+  observePr(url: string): ReleasePrObservation;
+  createAndPushTag(version: string, sha: string): void;
+  nowMs(): number;
+  sleep(milliseconds: number): Promise<void>;
+};
 
 export function isFullSha(value: string): boolean {
   return /^[0-9a-f]{40}$/.test(value);
@@ -34,62 +64,84 @@ export function incrementReleaseVersion(version: string, bump: ReleaseBump): str
   return `${major}.${minor}.${patch + 1}`;
 }
 
+export function plannedReleaseVersion(current: string, mode: ReleaseLandMode): string {
+  return mode.kind === "bootstrap" ? current : incrementReleaseVersion(current, mode.bump);
+}
+
 export function releaseBranchName(version: string): string {
-  return `${RELEASE_BRANCH_PREFIX}${version}`;
+  return `release/v${version}`;
 }
 
 export function releaseTagName(version: string): string {
   return `v${version}`;
 }
 
-export function replaceSetupPackageVersion(raw: string, next: string): string {
-  const accept = /"version":\s*"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?"/;
-  if (!accept.test(raw)) throw new Error("packages/setup/package.json has no version field");
-  return raw.replace(accept, `"version": "${next}"`);
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isFailedConclusion(conclusion: string | null): boolean {
-  return (
-    conclusion === "FAILURE" ||
-    conclusion === "CANCELLED" ||
-    conclusion === "TIMED_OUT" ||
-    conclusion === "ACTION_REQUIRED" ||
-    conclusion === "STARTUP_FAILURE"
-  );
+function requireRecord(value: unknown, label: string): Record<string, unknown> {
+  if (!isRecord(value)) throw new Error(label);
+  return value;
+}
+
+function requireNonEmptyString(value: unknown, label: string): string {
+  if (typeof value !== "string" || value.length === 0) throw new Error(label);
+  return value;
+}
+
+function mergeCommitShaOf(value: unknown, source: string): string | null {
+  if (value === null || value === undefined) return null;
+  const oid = requireNonEmptyString(requireRecord(value, `${source} has an invalid mergeCommit`).oid, `${source} has an invalid mergeCommit`);
+  if (!isFullSha(oid)) throw new Error(`${source} mergeCommit.oid is not a full SHA`);
+  return oid;
+}
+
+function ciSuccessFailedIn(rollup: unknown, source: string): boolean {
+  if (rollup === undefined || rollup === null) return false;
+  if (!Array.isArray(rollup)) throw new Error(`${source} statusCheckRollup is not an array`);
+  return rollup.some((item) => {
+    if (!isRecord(item) || item.name !== "CI Success") return false;
+    return (
+      item.conclusion === "FAILURE" ||
+      item.conclusion === "CANCELLED" ||
+      item.conclusion === "TIMED_OUT" ||
+      item.conclusion === "ACTION_REQUIRED" ||
+      item.conclusion === "STARTUP_FAILURE"
+    );
+  });
 }
 
 export function parseReleasePrView(value: unknown, source: string): ReleasePrObservation {
-  if (!isRecord(value)) throw new Error(`${source} is not an object`);
-  const state = value.state;
+  const record = requireRecord(value, `${source} is not an object`);
+  const state = record.state;
   if (state !== "OPEN" && state !== "MERGED" && state !== "CLOSED") {
     throw new Error(`${source} has an invalid state`);
   }
-  const url = value.url;
-  if (typeof url !== "string" || url.length === 0) throw new Error(`${source} is missing url`);
-  let mergeCommitSha: string | null = null;
-  if (value.mergeCommit !== null && value.mergeCommit !== undefined) {
-    if (!isRecord(value.mergeCommit) || typeof value.mergeCommit.oid !== "string") {
-      throw new Error(`${source} has an invalid mergeCommit`);
-    }
-    if (!isFullSha(value.mergeCommit.oid)) throw new Error(`${source} mergeCommit.oid is not a full SHA`);
-    mergeCommitSha = value.mergeCommit.oid;
+  return {
+    state,
+    url: requireNonEmptyString(record.url, `${source} is missing url`),
+    mergeCommitSha: mergeCommitShaOf(record.mergeCommit, source),
+    ciSuccessFailed: ciSuccessFailedIn(record.statusCheckRollup, source),
+  };
+}
+
+export function parseOpenReleasePrUrl(
+  value: unknown,
+  input: { readonly branch: string; readonly botLogin: string },
+): string | null {
+  if (!Array.isArray(value)) throw new Error("gh pr list did not return an array");
+  if (value.length === 0) return null;
+  if (value.length !== 1) {
+    throw new Error(`expected 0 or 1 open release PRs for ${input.branch}, found ${value.length}`);
   }
-  const failedRequiredChecks: string[] = [];
-  const rollup = value.statusCheckRollup;
-  if (rollup !== undefined && rollup !== null) {
-    if (!Array.isArray(rollup)) throw new Error(`${source} statusCheckRollup is not an array`);
-    for (const item of rollup) {
-      if (!isRecord(item)) continue;
-      if (item.name !== "CI Success") continue;
-      const conclusion = typeof item.conclusion === "string" ? item.conclusion : null;
-      if (isFailedConclusion(conclusion)) failedRequiredChecks.push("CI Success");
-    }
+  const record = requireRecord(value[0], "gh pr list row is invalid");
+  const author = isRecord(record.author) ? record.author.login : undefined;
+  const login = typeof author === "string" ? author : "";
+  if (login !== input.botLogin) {
+    throw new Error(`open PR for ${input.branch} is owned by ${login || "unknown"}, not ${input.botLogin}`);
   }
-  return { state, url, mergeCommitSha, failedRequiredChecks };
+  return requireNonEmptyString(record.url, "gh pr list row is missing url");
 }
 
 export function classifyReleaseLandWait(input: {
@@ -98,74 +150,29 @@ export function classifyReleaseLandWait(input: {
   readonly deadlineMs: number;
 }): ReleaseLandWaitVerdict {
   if (input.observation.state === "MERGED") {
-    return input.observation.mergeCommitSha !== null ? "ready" : "failed";
+    return input.observation.mergeCommitSha !== null
+      ? { kind: "ready", sha: input.observation.mergeCommitSha }
+      : { kind: "failed" };
   }
-  if (input.observation.state === "CLOSED") return "failed";
-  if (input.observation.failedRequiredChecks.length > 0) return "failed";
-  if (input.nowMs >= input.deadlineMs) return "timeout";
-  return "pending";
+  if (input.observation.state === "CLOSED" || input.observation.ciSuccessFailed) return { kind: "failed" };
+  return input.nowMs >= input.deadlineMs ? { kind: "timeout" } : { kind: "pending" };
 }
 
-export type ReleaseLandArgs = {
-  readonly bump: ReleaseBump;
-  readonly bootstrap: boolean;
-  readonly dryRun: boolean;
-  readonly deadlineMs: number;
-  readonly pollIntervalMs: number;
-};
-
-export type ReleaseLandResult = {
-  readonly version: string;
-  readonly sha: string;
-  readonly pullRequestUrl: string | null;
-  readonly dryRun: boolean;
-};
-
-export type ReleaseLandPort = {
-  currentSetupVersion(): string;
-  currentHeadSha(): string;
-  tagExists(tag: string): boolean;
-  checkoutReleaseBranch(branch: string): void;
-  writeSetupVersion(version: string): void;
-  syncVersionSurfaces(version: string): void;
-  createBumpCommit(version: string): void;
-  pushReleaseBranch(branch: string): void;
-  findOpenReleasePr(branch: string): string | null;
-  createReleasePr(branch: string, version: string): string;
-  enableAutoMerge(url: string): void;
-  observePr(url: string): ReleasePrObservation;
-  createAndPushTag(version: string, sha: string): void;
-  nowMs(): number;
-  sleep(milliseconds: number): Promise<void>;
-};
-
 export async function runReleaseLand(port: ReleaseLandPort, args: ReleaseLandArgs): Promise<ReleaseLandResult> {
-  const current = port.currentSetupVersion();
-  const version = args.bootstrap ? current : incrementReleaseVersion(current, args.bump);
-  if (args.dryRun) {
-    return { version, sha: port.currentHeadSha(), pullRequestUrl: null, dryRun: true };
+  const version = plannedReleaseVersion(port.currentSetupVersion(), args.mode);
+  if (args.mode.kind === "dry-run") {
+    return { version, sha: port.currentHeadSha(), pullRequestUrl: null };
   }
   if (port.tagExists(releaseTagName(version))) {
     throw new Error(`tag ${releaseTagName(version)} already exists`);
   }
-  if (args.bootstrap) {
+  if (args.mode.kind === "bootstrap") {
     const sha = port.currentHeadSha();
     port.createAndPushTag(version, sha);
-    return { version, sha, pullRequestUrl: null, dryRun: false };
+    return { version, sha, pullRequestUrl: null };
   }
 
-  const branch = releaseBranchName(version);
-  let pullRequestUrl = port.findOpenReleasePr(branch);
-  if (pullRequestUrl === null) {
-    port.checkoutReleaseBranch(branch);
-    port.writeSetupVersion(version);
-    port.syncVersionSurfaces(version);
-    port.createBumpCommit(version);
-    port.pushReleaseBranch(branch);
-    pullRequestUrl = port.findOpenReleasePr(branch) ?? port.createReleasePr(branch, version);
-  }
-  port.enableAutoMerge(pullRequestUrl);
-
+  const pullRequestUrl = port.queueReleasePullRequest(version);
   while (true) {
     const observation = port.observePr(pullRequestUrl);
     const verdict = classifyReleaseLandWait({
@@ -173,20 +180,16 @@ export async function runReleaseLand(port: ReleaseLandPort, args: ReleaseLandArg
       nowMs: port.nowMs(),
       deadlineMs: args.deadlineMs,
     });
-    if (verdict === "ready") {
-      const sha = observation.mergeCommitSha;
-      if (sha === null) throw new Error(`merged ${pullRequestUrl} has no merge commit SHA`);
-      port.createAndPushTag(version, sha);
-      return { version, sha, pullRequestUrl, dryRun: false };
+    if (verdict.kind === "ready") {
+      port.createAndPushTag(version, verdict.sha);
+      return { version, sha: verdict.sha, pullRequestUrl };
     }
-    if (verdict === "failed") {
-      const checks =
-        observation.failedRequiredChecks.length > 0
-          ? `: ${observation.failedRequiredChecks.join(", ")}`
-          : "";
-      throw new Error(`release PR ${pullRequestUrl} did not land (${observation.state}${checks})`);
+    if (verdict.kind === "failed") {
+      throw new Error(
+        `release PR ${pullRequestUrl} did not land (${observation.state}${observation.ciSuccessFailed ? ": CI Success" : ""})`,
+      );
     }
-    if (verdict === "timeout") {
+    if (verdict.kind === "timeout") {
       throw new Error(`timed out waiting for release PR ${pullRequestUrl} to land`);
     }
     await port.sleep(args.pollIntervalMs);

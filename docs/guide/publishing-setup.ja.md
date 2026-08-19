@@ -145,10 +145,10 @@ bunx amadeus-setup --help
 Actions タブから `main` に対して **Release @amadeus-dlc/setup** を実行し、bump
 レベル(patch / minor / major)を選びます。1 回の実行がすべてを行います:
 
-1. `scripts/release-land.ts` が `packages/setup/package.json` を bump し、
-   `scripts/release-version-sync.ts` が `AMADEUS_VERSION` と README バッジを同期する。
-   追跡された version surface は bot PR と merge queue 経由で `main` に着地し、
-   同じ run が squash commit に `vX.Y.Z` を打つ
+1. `scripts/release-land.ts` が次バージョンを決め、`scripts/release-version-sync.ts` が
+   すべての version surface（`packages/setup/package.json`、`AMADEUS_VERSION`、README バッジ）
+   を書き込む。それらは bot PR と merge queue 経由で `main` に着地し、同じ run が
+   squash commit に `vX.Y.Z` を打つ
 2. `build-dist` がそのcommitをcheckoutし、Bun 1.3.13で依存関係をinstallして全ハーネスを
    buildし、full CI test profile、source-only境界、graph不変量を検査したうえで、決定的な
    `amadeus-dist-vX.Y.Z.tar.gz`、manifest、`SHA256SUMS`を生成する

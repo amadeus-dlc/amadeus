@@ -149,10 +149,11 @@ install step.)
 From the Actions tab, run **Release @amadeus-dlc/setup** on `main` and pick
 the bump level (patch / minor / major). One run does everything:
 
-1. `scripts/release-land.ts` bumps `packages/setup/package.json`;
-   `scripts/release-version-sync.ts` syncs `AMADEUS_VERSION` and the README
-   badge; the tracked version surfaces land on `main` through a bot PR and
-   the merge queue; this run then tags the squash commit `vX.Y.Z`
+1. `scripts/release-land.ts` plans the next version and calls
+   `scripts/release-version-sync.ts`, which writes every version surface
+   (`packages/setup/package.json`, `AMADEUS_VERSION`, and the README badge);
+   those files land on `main` through a bot PR and the merge queue; this run
+   then tags the squash commit `vX.Y.Z`
 2. `build-dist` checks out that exact commit, installs with Bun 1.3.13, builds
    every harness, runs the full CI test profile, enforces the source-only
    boundary and graph invariants, and creates a deterministic

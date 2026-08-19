@@ -32,6 +32,7 @@ const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const SCRIPT = join(REPO_ROOT, "scripts", "release-version-sync.ts");
 
+const SETUP_REL = "packages/setup/package.json";
 const VERSION_REL = "packages/framework/core/tools/amadeus-version.ts";
 const README_REL = "README.md";
 
@@ -41,7 +42,7 @@ afterAll(() => {
 });
 
 /**
- * A throwaway git repo with the two version surfaces. `badge` is written
+ * A throwaway git repo with the version surfaces. `badge` is written
  * verbatim into the README shields.io URL so callers control whether it is a
  * valid / prerelease / corrupt token.
  */
@@ -57,7 +58,9 @@ function makeFixture(opts: { versionTs: string; badge: string }): string {
   git(["init", "-q"]);
   git(["symbolic-ref", "HEAD", "refs/heads/main"]);
 
+  mkdirSync(join(dir, "packages", "setup"), { recursive: true });
   mkdirSync(join(dir, "packages", "framework", "core", "tools"), { recursive: true });
+  writeFileSync(join(dir, SETUP_REL), `{\n  "name": "@amadeus-dlc/setup",\n  "version": "0.0.0"\n}\n`);
   writeFileSync(join(dir, VERSION_REL), opts.versionTs);
   writeFileSync(
     join(dir, README_REL),
