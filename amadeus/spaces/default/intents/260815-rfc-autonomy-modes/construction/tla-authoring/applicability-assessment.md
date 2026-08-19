@@ -94,10 +94,18 @@ Steps 2〜6(モデルと cfg の記述、reduction manifest、trace 行、refere
 
 **conductor の手続きミス(申告)**: amadeus-election スキルは「`hold` 指令ならまず人間委譲節へ移る(再投票ラウンドを回すかどうかは人間が決める)」と定めるが、conductor は指令転送ループを自動で回し、`hold` 指令の `notify` を実行して**再投票ラウンドを開いてしまった**。hold は人間委譲点であり自動転送してはならない。
 
-**開いてしまった再投票ラウンドの終端について**: ユーザー裁定により本件は選挙外で決着したため、スキルの定める「人間が選挙外で決着させると決めた場合は、そこで選挙を止めて記録を残す」に従い、選挙は `collecting`(run-1、両者 pending)のまま停止し、本節をその記録とする。election CLI には close / abort / supersede に相当する verb が存在しないことを実測した — 逐語(引数なし実行時の usage): `Usage: bun <harness-dir>/tools/amadeus-election.ts <open|next|status|vote|notify|tally|render|verify|report> [--election <id>] [--file <path>] [--trigger manual|auto] [--project <dir>]`。terminal まで到達させる唯一の経路は両者の amend ballot 再提出だが、それはユーザー裁定を CLI へ代理入力することになり、スキルが明示的に禁じる(「CLI に人間の裁定を投入する verb は存在しないため、このスキルは裁定を CLI へ代理入力しない」)ため採らない。
+**開いてしまった再投票ラウンドの終端について**: ユーザー裁定により本件は選挙外で決着したため、スキルの定める「人間が選挙外で決着させると決めた場合は、そこで選挙を止めて記録を残す」に従い、選挙は `collecting`(run-1、両者 pending)のまま停止し、本節をその記録とする。**【2回目の再発】この手続きミス(hold 指令を人間委譲へ回さず自動転送し再投票ラウンドを開く)は、最終ステージ formal-model-check の §13 選挙 `E-260819-RFC0001-FMC-S13` でも再発した。再発防止の定型: election の指令転送ループで `next` が `kind: hold` を返したら、**その場でループを止め、verb を実行せずに人間へ委譲する**。`hold` は転送対象の指令ではなく判断点である。人間が「再投票する」と決めた場合にのみ hold 指令を転送節どおり実行する。**
+
+election CLI には close / abort / supersede に相当する verb が存在しないことを実測した — 逐語(引数なし実行時の usage): `Usage: bun <harness-dir>/tools/amadeus-election.ts <open|next|status|vote|notify|tally|render|verify|report> [--election <id>] [--file <path>] [--trigger manual|auto] [--project <dir>]`。terminal まで到達させる唯一の経路は両者の amend ballot 再提出だが、それはユーザー裁定を CLI へ代理入力することになり、スキルが明示的に禁じる(「CLI に人間の裁定を投入する verb は存在しないため、このスキルは裁定を CLI へ代理入力しない」)ため採らない。
 
 ## FR-3 の形式検証は未実施(open item)
 
 分離の帰結として、**選定 subject である FR-3(waiting terminal)の形式検証は本 intent では実施されていない**。formal-model-check ステージで実測した既存登録 4 モデル(BoltPrAttestationGate / FormalElection / MirrorLifecycle / PrConvergenceGate)の `NOT_DETECTED`(exit 0)は、本節の語彙 census と `vocabulary.namedInvariants` 全列挙が示すとおり FR-3 を一切覆っておらず、drift 不在と既存不変量の無退行の証拠にとどまる。無関係な検査の成立を対象 subject の検証成立へ代入しない(`cid:build-and-test:verdict-names-unverified-facets`)。
 
 未検証面: FR-3 の waiting terminal の状態機械 — 三終端の相互排他 dispatch、未知 stop reason の拒否、同一 rate key 未解決エントリでの human エスカレーション、台帳破損下での resume 取り違え不成立。持ち越し先は Issue #3246。
+
+## formal-model-check の §13 tie とその裁定(2件目)
+
+最終ステージ formal-model-check の §13 学習選定も選挙 `E-260819-RFC0001-FMC-S13` で tie(favor=2 against=0 abstain=0、subagent-1 が choice 3「いずれも採用しない」、subagent-2 が choice 1)となり、team.md 正準リスト (1) としてユーザーへエスカレーションした。裁定は **選択肢 A(候補1を subagent-2 の3条件付き fail-closed の形で採用)**(2026-08-19)。provenance: 監督セッションの実 HUMAN_TURN 2件 — 完遂指示(逐語「止まっているintentは完遂させてね」)および代理裁定・代理入力の委任(逐語「お前が代理入力しろや」)。前回 tie(`E-260819-RFC0001-TLA-S13`)と同じ委任解釈である。
+
+この選挙で開いてしまった再投票ラウンドも、前回同様 CLI に終端 verb が存在しないため `collecting` のまま停止し本節を記録とする。
