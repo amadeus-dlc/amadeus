@@ -5,6 +5,8 @@
 // commit — never `git push` to main.
 
 import { describe, expect, test } from "bun:test";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   classifyReleaseLandWait,
   incrementReleaseVersion,
@@ -22,8 +24,12 @@ import {
   type CommandRunner,
   parseReleaseLandArgs,
   ReleaseLandCliPort,
+  releaseLandMain,
+  systemCommandRunner,
 } from "../../scripts/release-land.ts";
 import { VERSION_SURFACES } from "../../scripts/release-version-sync-plan.ts";
+
+const REPO_ROOT = join(import.meta.dir, "../..");
 
 const PR_URL = "https://example.test/pull/42";
 const MERGE_SHA = "b".repeat(40);
@@ -156,6 +162,21 @@ describe("release-land PR observation", () => {
       }),
     ).toThrow("not amadeus-dlc-bot[bot]");
   });
+
+  test("refuses an invalid PR state and more than one open release PR", () => {
+    expect(() => parseReleasePrView({ state: "DRAFT", url: PR_URL }, "gh pr view")).toThrow(
+      "invalid state",
+    );
+    expect(() =>
+      parseOpenReleasePrUrl(
+        [
+          { url: PR_URL, author: { login: BOT_LOGIN } },
+          { url: `${PR_URL}2`, author: { login: BOT_LOGIN } },
+        ],
+        { branch: "release/v0.1.8", botLogin: BOT_LOGIN },
+      ),
+    ).toThrow("expected 0 or 1 open release PRs");
+  });
 });
 
 describe("release-land wait classifier", () => {
@@ -195,6 +216,16 @@ describe("release-land wait classifier", () => {
       }),
     ).toEqual({ kind: "timeout" });
   });
+
+  test("merged without a squash SHA is failed, not ready", () => {
+    expect(
+      classifyReleaseLandWait({
+        observation: observation({ state: "MERGED", mergeCommitSha: null }),
+        nowMs: 0,
+        deadlineMs: 10,
+      }),
+    ).toEqual({ kind: "failed" });
+  });
 });
 
 describe("runReleaseLand", () => {
@@ -231,7 +262,35 @@ describe("runReleaseLand", () => {
     const { port } = fakePort({
       observePr: () => observation({ ciSuccessFailed: true }),
     });
-    await expect(runReleaseLand(port, landArgs())).rejects.toThrow("did not land");
+    await expect(runReleaseLand(port, landArgs())).rejects.toThrow("did not land (OPEN: CI Success)");
+  });
+
+  test("refuses when the planned tag already exists", async () => {
+    const { port } = fakePort({ tagExists: () => true });
+    await expect(runReleaseLand(port, landArgs())).rejects.toThrow("already exists");
+  });
+
+  test("times out when the PR stays open past the deadline", async () => {
+    const { port } = fakePort({
+      observePr: () => observation(),
+      nowMs: () => 10,
+    });
+    await expect(runReleaseLand(port, landArgs())).rejects.toThrow("timed out waiting for release PR");
+  });
+
+  test("sleeps once while the PR is still pending, then tags the squash SHA", async () => {
+    let polls = 0;
+    const { port, calls } = fakePort({
+      observePr: () => {
+        polls += 1;
+        return polls === 1
+          ? observation()
+          : observation({ state: "MERGED", mergeCommitSha: MERGE_SHA });
+      },
+    });
+    const result = await runReleaseLand(port, landArgs());
+    expect(result).toEqual({ version: "0.1.8", sha: MERGE_SHA, pullRequestUrl: PR_URL });
+    expect(calls).toEqual([`queue:0.1.8`, "sleep", `tag:v0.1.8:${MERGE_SHA}`]);
   });
 });
 
@@ -336,5 +395,166 @@ describe("release-land CLI merge-queue compatibility", () => {
       expect(command.includes("HEAD:main")).toBe(false);
       expect(command.includes("HEAD:refs/heads/main")).toBe(false);
     }
+  });
+
+  test("rejects a non-positive deadline or poll interval", () => {
+    const required = ["--repository", "amadeus-dlc/amadeus", "--bot-login", BOT_LOGIN, "--bump", "patch"];
+    expect(() => parseReleaseLandArgs([...required, "--deadline-seconds", "0"])).toThrow(
+      "--deadline-seconds requires a positive integer",
+    );
+    expect(() => parseReleaseLandArgs([...required, "--poll-seconds", "x"])).toThrow(
+      "--poll-seconds requires a positive integer",
+    );
+    expect(parseReleaseLandArgs([...required, "--deadline-seconds", "30", "--poll-seconds", "2"])).toMatchObject({
+      deadlineSeconds: 30,
+      pollSeconds: 2,
+    });
+  });
+
+  test("reads the setup version, observes the PR, and reports tag presence", () => {
+    const runner: CommandRunner = {
+      run(command) {
+        if (command[0] === "git" && command[1] === "rev-parse") return { stdout: HEAD_SHA, stderr: "" };
+        if (command[0] === "git" && command[1] === "tag") return { stdout: "", stderr: "" };
+        if (command[0] === "git" && command[1] === "ls-remote") {
+          return { stdout: `${HEAD_SHA}\trefs/tags/v0.1.8`, stderr: "" };
+        }
+        if (command[0] === "gh" && command[1] === "pr" && command[2] === "view") {
+          return {
+            stdout: JSON.stringify({
+              state: "MERGED",
+              url: PR_URL,
+              mergeCommit: { oid: MERGE_SHA },
+              statusCheckRollup: [],
+            }),
+            stderr: "",
+          };
+        }
+        throw new Error(`unexpected command: ${command.join(" ")}`);
+      },
+    };
+    const port = new ReleaseLandCliPort({
+      repoRoot: REPO_ROOT,
+      repository: "amadeus-dlc/amadeus",
+      botLogin: BOT_LOGIN,
+      runner,
+    });
+    expect(port.currentSetupVersion()).toBe("0.1.7");
+    expect(port.currentHeadSha()).toBe(HEAD_SHA);
+    expect(port.tagExists("v0.1.8")).toBe(true);
+    expect(port.observePr(PR_URL)).toEqual({
+      state: "MERGED",
+      url: PR_URL,
+      mergeCommitSha: MERGE_SHA,
+      ciSuccessFailed: false,
+    });
+    expect(port.nowMs()).toBeGreaterThan(0);
+  });
+
+  test("treats a locally listed tag as present without asking the remote", () => {
+    const commands: string[][] = [];
+    const port = new ReleaseLandCliPort({
+      repoRoot: REPO_ROOT,
+      repository: "amadeus-dlc/amadeus",
+      botLogin: BOT_LOGIN,
+      runner: {
+        run(command) {
+          commands.push(command);
+          return { stdout: "v0.1.8", stderr: "" };
+        },
+      },
+    });
+    expect(port.tagExists("v0.1.8")).toBe(true);
+    expect(commands).toEqual([["git", "tag", "--list", "v0.1.8"]]);
+  });
+
+  test("rejects invalid JSON from gh pr view", () => {
+    const port = new ReleaseLandCliPort({
+      repoRoot: REPO_ROOT,
+      repository: "amadeus-dlc/amadeus",
+      botLogin: BOT_LOGIN,
+      runner: { run: () => ({ stdout: "not-json", stderr: "" }) },
+    });
+    expect(() => port.observePr(PR_URL)).toThrow("gh pr view returned invalid JSON");
+  });
+});
+
+describe("releaseLandMain", () => {
+  const dispatchArgs = [
+    "--repository",
+    "amadeus-dlc/amadeus",
+    "--bot-login",
+    BOT_LOGIN,
+    "--bump",
+    "patch",
+    "--dry-run",
+  ];
+
+  test("returns 2 when the dispatch flags are invalid", async () => {
+    expect(await releaseLandMain([])).toBe(2);
+  });
+
+  test("dry-run writes GitHub outputs and returns 0", async () => {
+    const previous = process.env.GITHUB_OUTPUT;
+    const runner = {
+      run(command: string[]) {
+        if (command[0] === "git" && command[1] === "rev-parse") {
+          return { stdout: HEAD_SHA, stderr: "" };
+        }
+        throw new Error(`unexpected command: ${command.join(" ")}`);
+      },
+    };
+    try {
+      process.env.GITHUB_OUTPUT = join(tmpdir(), `release-land-github-output-${Date.now()}`);
+      expect(await releaseLandMain(dispatchArgs, { repoRoot: REPO_ROOT, runner })).toBe(0);
+      process.env.GITHUB_OUTPUT = "";
+      expect(await releaseLandMain(dispatchArgs, { repoRoot: REPO_ROOT, runner })).toBe(0);
+      delete process.env.GITHUB_OUTPUT;
+      expect(await releaseLandMain(dispatchArgs, { repoRoot: REPO_ROOT, runner })).toBe(0);
+    } finally {
+      if (previous === undefined) delete process.env.GITHUB_OUTPUT;
+      else process.env.GITHUB_OUTPUT = previous;
+    }
+  });
+
+  test("returns 1 when landing fails and skips empty GitHub output", async () => {
+    const previous = process.env.GITHUB_OUTPUT;
+    process.env.GITHUB_OUTPUT = "";
+    try {
+      expect(
+        await releaseLandMain(
+          ["--repository", "amadeus-dlc/amadeus", "--bot-login", BOT_LOGIN, "--bump", "patch"],
+          {
+            repoRoot: REPO_ROOT,
+            runner: {
+              run(command) {
+                if (command[0] === "git" && command[1] === "tag") return { stdout: "v0.1.8", stderr: "" };
+                throw new Error(`unexpected command: ${command.join(" ")}`);
+              },
+            },
+          },
+        ),
+      ).toBe(1);
+    } finally {
+      if (previous === undefined) delete process.env.GITHUB_OUTPUT;
+      else process.env.GITHUB_OUTPUT = previous;
+    }
+  });
+
+  test("systemCommandRunner reports a failing process", () => {
+    expect(systemCommandRunner.run(["git", "--version"]).stdout.length).toBeGreaterThan(0);
+    expect(() =>
+      systemCommandRunner.run(["git", "rev-parse", "--verify", "refs/does-not-exist-for-release-land"]),
+    ).toThrow("git rev-parse");
+  });
+
+  test("sleep resolves without using a test-file timer", async () => {
+    const port = new ReleaseLandCliPort({
+      repoRoot: REPO_ROOT,
+      repository: "amadeus-dlc/amadeus",
+      botLogin: BOT_LOGIN,
+      runner: { run: () => ({ stdout: "", stderr: "" }) },
+    });
+    await port.sleep(0);
   });
 });
