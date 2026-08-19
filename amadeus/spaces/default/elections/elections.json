@@ -1720,5 +1720,11 @@
     "dirName": "260819-e-260819-rfc0001-tla-rou",
     "createdAt": "2026-08-19T08:17:30Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-260819-RFC0001-TLA-S13",
+    "dirName": "260819-e-260819-rfc0001-tla-s13",
+    "createdAt": "2026-08-19T08:39:34Z",
+    "status": "collecting"
   }
 ]
