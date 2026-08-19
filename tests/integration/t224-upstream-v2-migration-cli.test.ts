@@ -7,6 +7,13 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
+import {
+  type GitOutcome as MigrateGitOutcome,
+  isIncompleteNulRead,
+  NUL_READ_ATTEMPTS,
+  nulReadForensics,
+  readNulTerminated,
+} from "../../packages/framework/core/tools/amadeus-migrate-git.ts";
 import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -2075,5 +2082,67 @@ describe("t224 upstream-v2 migration public CLI", () => {
     } finally {
       rmSync(outside, { recursive: true, force: true });
     }
+  });
+});
+
+// --- #3151 in-process twins for the spawn-only NUL-read seam ----------------
+// The migration CLI consumes these through a spawned child, which bun coverage
+// cannot attribute; the seam's contracts are pinned here in-process.
+
+describe("t224 NUL-read seam (#3151) — in-process", () => {
+  const ok = (stdout: string, stderr = ""): MigrateGitOutcome => ({ ok: true, stdout, stderr });
+
+  test("isIncompleteNulRead: only a successful, non-empty, unterminated read is incomplete", () => {
+    expect(isIncompleteNulRead(ok("a\0b"))).toBe(true);
+    expect(isIncompleteNulRead(ok("a\0b\0"))).toBe(false);
+    expect(isIncompleteNulRead(ok(""))).toBe(false);
+    expect(isIncompleteNulRead({ ok: false, stdout: "a", stderr: "boom" })).toBe(false);
+  });
+
+  test("readNulTerminated: a complete first read never re-runs", () => {
+    const attempts: number[] = [];
+    const listing = readNulTerminated((attempt) => {
+      attempts.push(attempt);
+      return ok("rec\0");
+    });
+    expect(listing).toEqual({ outcome: ok("rec\0"), attempts: 1 });
+    expect(attempts).toEqual([1]);
+  });
+
+  test("readNulTerminated: a short read converges on a later complete read", () => {
+    const listing = readNulTerminated((attempt) => (attempt < 3 ? ok("cut") : ok("rec\0")));
+    expect(listing.attempts).toBe(3);
+    expect(listing.outcome).toEqual(ok("rec\0"));
+  });
+
+  test("readNulTerminated: a genuinely unterminated output stops at the attempt bound", () => {
+    const attempts: number[] = [];
+    const listing = readNulTerminated((attempt) => {
+      attempts.push(attempt);
+      return ok("always-cut");
+    }, NUL_READ_ATTEMPTS);
+    expect(attempts).toEqual([1, 2, 3]);
+    expect(listing.attempts).toBe(NUL_READ_ATTEMPTS);
+    expect(isIncompleteNulRead(listing.outcome)).toBe(true);
+  });
+
+  test("nulReadForensics records edges, NUL accounting, and truncated stderr", () => {
+    const line = nulReadForensics(ok("ab\0cd", "e".repeat(300)), 2);
+    expect(line).toContain("attempts=2");
+    expect(line).toContain("ok=true");
+    expect(line).toContain("bytes=5");
+    expect(line).toContain("nulCount=1");
+    expect(line).toContain("endsNul=false");
+    expect(line).toContain("bytesAfterLastNul=2");
+    expect(line).toContain(`head16=${Buffer.from("ab\0cd").toString("hex")}`);
+    expect(line).not.toContain("e".repeat(201));
+  });
+
+  test("nulReadForensics on an empty read reports zero bytes and no NULs", () => {
+    const line = nulReadForensics(ok(""), 1);
+    expect(line).toContain("bytes=0");
+    expect(line).toContain("nulCount=0");
+    expect(line).toContain("endsNul=false");
+    expect(line).toContain("bytesAfterLastNul=0");
   });
 });
