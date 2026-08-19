@@ -6,9 +6,9 @@ Issue #3188 is closed against the following evidence snapshot.
 
 The `tla-authoring` contract first required terminal-route receipt persistence
 in commit `387cbd0146` (`refactor(plugins): スコープ割当をホスト所有へ移す (#2890)`,
-2026-08-11). `git log -S 'persist the terminal-route' --
-plugins/formal-model-check/stages/tla-authoring.md` identifies that commit as
-the first introduction of the requirement.
+2026-08-11). A `git log -S 'persist the terminal-route'` history search over
+the stage contract identifies that commit as the first introduction of the
+requirement.
 
 ## Violations found
 
