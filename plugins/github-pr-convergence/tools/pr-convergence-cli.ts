@@ -412,11 +412,13 @@ interface ConvergenceOptions {
   readonly unlinked: boolean;
   // The supersede arm of `override` (#3239): the commit that actually
   // delivered this unit's work, when this delivery's own pull request never
-  // converged. `bolt` is required alongside it — supersede never reaches a
-  // pull request body to read the Amadeus Work identity from, so it is
-  // supplied the same way `create` supplies it.
-  readonly supersededBy: string | null;
-  readonly bolt: string | null;
+  // converged, and the Bolt it belongs to — supersede never reaches a pull
+  // request body to read the Amadeus Work identity from, so `bolt` is
+  // supplied the same way `create` supplies it. The pair is one optional
+  // field, not two independently-nullable ones: the parser is the only place
+  // that decides whether supersede applies, and there is no state where one
+  // is present without the other for `runSupersede` to re-check.
+  readonly supersede: SupersedeFlags | null;
 }
 
 interface CreateBaseOptions {
@@ -560,21 +562,23 @@ function parseUnlinked(flags: Map<string, string>): UnlinkedParse {
 const SUPERSEDED_BY_RE = /^[0-9a-f]{40}$/;
 
 interface SupersedeFlags {
-  readonly supersededBy: string | null;
-  readonly bolt: string | null;
+  readonly supersededBy: string;
+  readonly bolt: string;
 }
 
 type SupersedeFlagsParse =
-  | { readonly ok: true; readonly value: SupersedeFlags }
+  | { readonly ok: true; readonly value: SupersedeFlags | null }
   | { readonly ok: false; readonly message: string };
 
 /** `--superseded-by` is override-only, and only a full commit object id: no PR
  *  resolution happens inside the CLI (#3239 keeps the simplest shape — the
  *  caller resolves a pull request to the commit that landed it). `--bolt` is
- *  required alongside it, the same way `create` requires its own `--bolt`. */
+ *  required alongside it, the same way `create` requires its own `--bolt`.
+ *  The pair is minted together or not at all — there is no `SupersedeFlags`
+ *  with only one field set for a downstream check to catch. */
 function parseSupersedeFlags(flags: Map<string, string>, verb: string): SupersedeFlagsParse {
   const value = flags.get("superseded-by");
-  if (value === undefined) return { ok: true, value: { supersededBy: null, bolt: null } };
+  if (value === undefined) return { ok: true, value: null };
   if (verb !== "override") return { ok: false, message: "--superseded-by is only valid with override" };
   if (!SUPERSEDED_BY_RE.test(value)) {
     return { ok: false, message: "--superseded-by must be a full commit object id" };
@@ -622,7 +626,7 @@ function parseConvergenceOptions(
       reason: reason.value,
       logTool: flags.get("log-tool") ?? defaultLogToolPath(),
       unlinked: unlinked.value,
-      ...supersede.value,
+      supersede: supersede.value,
     },
   };
 }
@@ -1907,16 +1911,13 @@ function overrideReason(reason: string, ruling: MergedEpochRuling | null): strin
  */
 async function runSupersede(
   options: ConvergenceOptions,
-  supersededBy: string,
+  supersede: SupersedeFlags,
   seams: CliSeams,
 ): Promise<CliOutcome> {
   if (!isSelfRecord(options.record)) {
     return { exitCode: 1, stdout: "", stderr: "supersede refused: --superseded-by is only meaningful for self-* records\n" };
   }
-  const bolt = options.bolt;
-  if (bolt === null) {
-    return { exitCode: 1, stdout: "", stderr: "supersede refused: --bolt is required\n" };
-  }
+  const { supersededBy, bolt } = supersede;
   const git = seams.gitSpawn ?? nodeGitSpawn;
   const prerequisite = verifyLandedPrerequisites(options.record, git, options.units);
   if (!prerequisite.ok) {
@@ -1986,8 +1987,8 @@ async function runSupersede(
 }
 
 async function runConvergence(options: ConvergenceOptions, seams: CliSeams): Promise<CliOutcome> {
-  if (options.verb === "override" && options.supersededBy !== null) {
-    return runSupersede(options, options.supersededBy, seams);
+  if (options.verb === "override" && options.supersede !== null) {
+    return runSupersede(options, options.supersede, seams);
   }
   let evaluation: EvaluationResult;
   try {

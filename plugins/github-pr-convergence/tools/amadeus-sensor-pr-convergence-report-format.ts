@@ -509,10 +509,7 @@ function applyKindRules(
     return;
   }
   if (kind === "superseded") {
-    // Unlike landed, a superseded record IS the code-generation evidence
-    // (#3239): it is the only report a unit whose own pull request never
-    // converged will ever have, so it is accepted at every stage the way
-    // converged and override already are.
+    // Unlike landed, superseded IS the code-generation evidence (#3239): accepted at every stage.
     checkSuperseded(body, converged, findings);
     return;
   }

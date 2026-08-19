@@ -41,6 +41,8 @@ import {
   renderAttestation,
   reportPayloadDigest,
 } from "../../plugins/github-pr-convergence/tools/pr-convergence-attestation.ts";
+import type { GitSpawn } from "../../plugins/github-pr-convergence/tools/pr-convergence-git-runner.ts";
+import { verifySupersedeAncestry } from "../../plugins/github-pr-convergence/tools/pr-convergence-git-runner.ts";
 import { projectDeliveryBoltPlan } from "../../packages/framework/core/tools/amadeus-delivery-bolts.ts";
 
 const UUID = "uuid-3239";
@@ -229,6 +231,15 @@ describe("#3239 — a superseded unit's own pull request closes honestly", () =>
     expect(readFileSync(reportPathFor(f.record, UNIT), "utf-8")).toContain("- kind: superseded");
   });
 
+  test("falling proof: a dirty tracked worktree (foreign to this unit) refuses the record", async () => {
+    const f = makeFixture();
+    writeFileSync(join(f.record, "amadeus-state.md"), "- **Scope**: self-fix\n- **Note**: uncommitted\n", "utf-8");
+    const out = await runCli(overrideArgs(f, f.deliveredSha), seams(f));
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain("supersede refused");
+    expect(out.stderr).toContain("dirty");
+  });
+
   test("falling proof: a commit that never reached the trunk refuses the record", async () => {
     const f = makeFixture();
     const out = await runCli(overrideArgs(f, f.unreachableSha), seams(f));
@@ -287,5 +298,57 @@ describe("#3239 — a superseded unit's own pull request closes honestly", () =>
     const result = evaluateReportFormat(path, "code-generation");
     expect(result.pass).toBe(false);
     expect(result.findings.map((finding) => finding.field)).toContain("superseded by");
+  });
+
+  test("falling proof: a 'superseded by' value that is not a commit object id is a sensor finding", async () => {
+    const f = makeFixture();
+    const out = await runCli(overrideArgs(f, f.deliveredSha), seams(f));
+    expect(out.exitCode).toBe(0);
+    const path = reportPathFor(f.record, UNIT);
+    const forged = readFileSync(path, "utf-8").replace(
+      /^- superseded by: .*$/m,
+      "- superseded by: not-a-commit",
+    );
+    writeFileSync(path, forged, "utf-8");
+    const result = evaluateReportFormat(path, "code-generation");
+    expect(result.pass).toBe(false);
+    const finding = result.findings.find((f2) => f2.field === "superseded by");
+    expect(finding?.reason).toContain("not a commit object id");
+  });
+
+  test("falling proof: --superseded-by mints a report even when the audit emission fails, so the caller can retry", async () => {
+    const f = makeFixture();
+    const failing: CliSeams = { ...seams(f), emitDecision: async () => ({ code: 2, stderr: "amadeus-log unavailable" }) };
+    const out = await runCli(overrideArgs(f, f.deliveredSha), failing);
+    expect(out.exitCode).toBe(2);
+    expect(out.stderr).toContain("supersede refused");
+    expect(out.stderr).toContain("audit emission failed");
+  });
+});
+
+describe("verifySupersedeAncestry — the local git probes it rests on", () => {
+  test("a HEAD that cannot be resolved refuses the ancestry proof", () => {
+    const git: GitSpawn = (argv) => {
+      if (argv.includes("rev-parse")) return { code: 1, stdout: "", stderr: "fatal: not a git repository" };
+      return { code: 0, stdout: "", stderr: "" };
+    };
+    const result = verifySupersedeAncestry("/tmp/does-not-matter", "a".repeat(40), git);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.message).toBe("cannot resolve local HEAD");
+  });
+
+  test("an ancestry check that fails for a reason other than 'not an ancestor' is a measurement failure", () => {
+    const localHead = "b".repeat(40);
+    const git: GitSpawn = (argv) => {
+      if (argv.includes("rev-parse")) return { code: 0, stdout: `${localHead}\n`, stderr: "" };
+      if (argv.includes("merge-base")) return { code: 128, stdout: "", stderr: "fatal: Not a valid commit name" };
+      return { code: 0, stdout: "", stderr: "" };
+    };
+    const result = verifySupersedeAncestry("/tmp/does-not-matter", "c".repeat(40), git);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.message).toContain("cannot measure whether");
+      expect(result.message).toContain("fatal: Not a valid commit name");
+    }
   });
 });
