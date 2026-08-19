@@ -29,7 +29,12 @@ import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "nod
 import { fileURLToPath } from "node:url";
 import { isHarnessType } from "./amadeus-harness.ts";
 import { parseDoctorAuditSuffix } from "./amadeus-journal.ts";
-import { normalizeGitOutcome } from "./amadeus-migrate-git.ts";
+import {
+  isIncompleteNulRead,
+  normalizeGitOutcome,
+  nulReadForensics,
+  readNulTerminated,
+} from "./amadeus-migrate-git.ts";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
 
 const UPSTREAM_NAMESPACE = "aidlc";
@@ -2419,22 +2424,87 @@ interface IndexedToolTree {
   entries: Map<string, { mode: string; hash: string }>;
 }
 
+// #3151: reproduce the short `git ls-files --stage -z` read that merge-queue load produced on CI
+// without depending on machine load. The value is how many leading attempts come back cut short;
+// every later attempt returns what git actually wrote, so a bounded re-read can still converge.
+function cutToolIndexReadForTest(
+  outcome: { ok: boolean; stdout: string; stderr: string },
+  attempt: number,
+): { ok: boolean; stdout: string; stderr: string } {
+  if (process.env.NODE_ENV !== "test") return outcome;
+  const budget = Number.parseInt(
+    process.env.AMADEUS_MIGRATE_TEST_CUT_TOOL_INDEX_READ ?? "",
+    10,
+  );
+  if (!Number.isInteger(budget) || budget < attempt || outcome.stdout === "") return outcome;
+  const cut = outcome.stdout
+    .slice(0, Math.max(1, Math.floor(outcome.stdout.length * 0.6)))
+    .replace(/\0+$/, "");
+  return { ...outcome, stdout: cut === "" ? outcome.stdout.slice(0, 1) : cut };
+}
+
+// A tool tree that could not be read is not the same finding as a tool tree that was read and did
+// not match, and #3151 showed what collapsing the two costs: a short `git ls-files --stage -z` read
+// under merge-queue load surfaced as "Migration requires a committed regular Amadeus utility" over
+// a tree that was committed, clean, and never actually measured. Carry the reason instead.
+type IndexedToolTreeReading =
+  | { tree: IndexedToolTree; unreadable: null }
+  | { tree: null; unreadable: string };
+
+function unreadableToolTree(reason: string): IndexedToolTreeReading {
+  return { tree: null, unreadable: reason };
+}
+
 function indexedToolTree(
   projectDir: string,
   relativeTools: string,
-): IndexedToolTree | null {
-  const staged = git(projectDir, ["ls-files", "--stage", "-z", "--", relativeTools]);
+): IndexedToolTreeReading {
+  const listing = readNulTerminated((attempt) =>
+    cutToolIndexReadForTest(
+      git(projectDir, ["ls-files", "--stage", "-z", "--", relativeTools]),
+      attempt,
+    ),
+  );
+  const staged = listing.outcome;
+  if (!staged.ok) {
+    return unreadableToolTree(
+      `git ls-files --stage -z -- ${relativeTools} failed ` +
+        `(${nulReadForensics(staged, listing.attempts)})`,
+    );
+  }
+  // A read that git reported as successful but that stops mid-record is a read, not a tree: the
+  // records it lost would otherwise read as files missing from the index.
+  if (isIncompleteNulRead(staged)) {
+    return unreadableToolTree(
+      `git ls-files --stage -z -- ${relativeTools} output is not NUL terminated after ` +
+        `${listing.attempts} read(s) (${nulReadForensics(staged, listing.attempts)})`,
+    );
+  }
   const objectFormat = git(projectDir, ["rev-parse", "--show-object-format"]);
-  if (!staged.ok || !objectFormat.ok) return null;
+  if (!objectFormat.ok) {
+    return unreadableToolTree(
+      "git rev-parse --show-object-format failed " +
+        `(${nulReadForensics(objectFormat, 1)})`,
+    );
+  }
   const algorithm = objectFormat.stdout.trim();
-  if (algorithm !== "sha1" && algorithm !== "sha256") return null;
+  if (algorithm !== "sha1" && algorithm !== "sha256") {
+    return unreadableToolTree(
+      `git reported an unsupported object format ${JSON.stringify(algorithm)}`,
+    );
+  }
   const entries = new Map<string, { mode: string; hash: string }>();
   for (const row of staged.stdout.split("\0").filter(Boolean)) {
     const match = row.match(/^(\d+) ([0-9a-f]+) \d+\t([\s\S]+)$/);
-    if (!match) return null;
+    if (!match) {
+      return unreadableToolTree(
+        `git ls-files --stage -z -- ${relativeTools} produced a malformed record ` +
+          `(${nulReadForensics(staged, listing.attempts)})`,
+      );
+    }
     entries.set(match[3], { mode: match[1], hash: match[2] });
   }
-  return { algorithm, entries };
+  return { tree: { algorithm, entries }, unreadable: null };
 }
 
 function committedToolEntryMatches(
@@ -2458,29 +2528,40 @@ function committedToolEntryMatches(
   );
 }
 
+// `fingerprint: null` with `unreadable: null` is the honest "measured, and the tree does not
+// qualify" verdict; a non-null `unreadable` means the measurement itself did not complete and the
+// caller must say so rather than assert anything about the tree (#3151).
+interface CommittedToolsReading {
+  fingerprint: string | null;
+  unreadable: string | null;
+}
+
 function committedToolsFingerprint(
   projectDir: string,
   harness: string,
-): string | null {
+): CommittedToolsReading {
   const toolsRoot = join(projectDir, harness, "tools");
   if (
     !pathEntryExists(toolsRoot) ||
     pathTraversesSymlink(projectDir, toolsRoot) ||
     !lstatSync(toolsRoot).isDirectory()
   ) {
-    return null;
+    return { fingerprint: null, unreadable: null };
   }
   const relativeTools = toPosix(relative(projectDir, toolsRoot));
-  const indexed = indexedToolTree(projectDir, relativeTools);
-  if (indexed === null) return null;
+  const reading = indexedToolTree(projectDir, relativeTools);
+  const indexed = reading.tree;
+  if (indexed === null) return { fingerprint: null, unreadable: reading.unreadable };
   const rootDevice = lstatSync(toolsRoot).dev;
   const entries = walkTree(toolsRoot);
   const files = entries.filter((entry) => entry.kind !== "directory");
-  if (files.length === 0 || files.length !== indexed.entries.size) return null;
-  if (!entries.every((entry) => committedToolEntryMatches(entry, projectDir, rootDevice, indexed))) {
-    return null;
+  if (files.length === 0 || files.length !== indexed.entries.size) {
+    return { fingerprint: null, unreadable: null };
   }
-  return sourceTreeFingerprint(toolsRoot);
+  if (!entries.every((entry) => committedToolEntryMatches(entry, projectDir, rootDevice, indexed))) {
+    return { fingerprint: null, unreadable: null };
+  }
+  return { fingerprint: sourceTreeFingerprint(toolsRoot), unreadable: null };
 }
 
 function inspectInstalledDoctor(
@@ -2498,6 +2579,7 @@ function inspectInstalledDoctor(
     harness,
     utility: join(projectDir, harness, "tools", "amadeus-utility.ts"),
   }));
+  const unreadable: string[] = [];
   const valid = candidates.flatMap(({ harness, utility }) => {
     if (
       !pathEntryExists(utility) ||
@@ -2506,7 +2588,9 @@ function inspectInstalledDoctor(
     ) {
       return [];
     }
-    const toolsFingerprint = committedToolsFingerprint(projectDir, harness);
+    const tools = committedToolsFingerprint(projectDir, harness);
+    if (tools.unreadable !== null) unreadable.push(`${harness}/tools: ${tools.unreadable}`);
+    const toolsFingerprint = tools.fingerprint;
     if (toolsFingerprint === null) return [];
     const bytes = readFileSync(utility);
     if (!isUtf8(bytes)) return [];
@@ -2524,7 +2608,11 @@ function inspectInstalledDoctor(
       ? "A committed project-local Amadeus utility will run doctor from " +
           toPosix(relative(projectDir, selected.utility)) +
           "."
-      : "Migration requires a committed regular Amadeus utility at .claude/tools/amadeus-utility.ts, .codex/tools/amadeus-utility.ts, or .kiro/tools/amadeus-utility.ts.",
+      : unreadable.length > 0
+        // Saying the utility is not committed would be a claim about a tree this run never
+        // finished reading. Report the read that did not complete instead (#3151).
+        ? "Migration could not read the committed Amadeus utility tree: " + unreadable.join("; ")
+        : "Migration requires a committed regular Amadeus utility at .claude/tools/amadeus-utility.ts, .codex/tools/amadeus-utility.ts, or .kiro/tools/amadeus-utility.ts.",
   );
   return selected
     ? {
@@ -2986,12 +3074,21 @@ function assertDoctorUtilityStable(inspection: Inspection): void {
     inspection.doctorToolsFingerprint === null ||
     pathTraversesSymlink(inspection.projectDir, utility) ||
     !isRegularFile(utility) ||
-    pathFingerprint(utility) !== inspection.doctorUtilityFingerprint ||
-    committedToolsFingerprint(
-      inspection.projectDir,
-      inspection.doctorHarness,
-    ) !== inspection.doctorToolsFingerprint
+    pathFingerprint(utility) !== inspection.doctorUtilityFingerprint
   ) {
+    throw new Error("The installed Amadeus doctor utility changed before execution.");
+  }
+  const tools = committedToolsFingerprint(inspection.projectDir, inspection.doctorHarness);
+  // Re-reading the tool tree here can fail the same way the preflight read can (#3151). Failing
+  // closed is right, but the message must not accuse the tree of having changed when the run only
+  // failed to read it.
+  if (tools.unreadable !== null) {
+    throw new Error(
+      "The installed Amadeus doctor utility could not be re-read before execution: " +
+        tools.unreadable,
+    );
+  }
+  if (tools.fingerprint !== inspection.doctorToolsFingerprint) {
     throw new Error("The installed Amadeus doctor utility changed before execution.");
   }
 }

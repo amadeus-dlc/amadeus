@@ -7,6 +7,13 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
+import {
+  type GitOutcome as MigrateGitOutcome,
+  isIncompleteNulRead,
+  NUL_READ_ATTEMPTS,
+  nulReadForensics,
+  readNulTerminated,
+} from "../../packages/framework/core/tools/amadeus-migrate-git.ts";
 import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -342,6 +349,19 @@ function parseReport(result: CliResult): MigrationReport {
       { cause: error },
     );
   }
+}
+
+function installedEngineCheck(
+  report: MigrationReport,
+): { id: string; pass: boolean; detail: string } {
+  const checks = report.checks as ReadonlyArray<
+    { id: string; pass: boolean; detail: string }
+  >;
+  const check = checks.find((entry) => entry.id === "installed-engine");
+  if (check === undefined) {
+    throw new Error(`report has no installed-engine check: ${JSON.stringify(report.checks)}`);
+  }
+  return check;
 }
 
 function gitIndexPath(project: UpstreamV2Fixture): string {
@@ -1165,6 +1185,52 @@ describe("t224 upstream-v2 migration public CLI", () => {
     } finally {
       rmSync(external, { recursive: true, force: true });
     }
+  });
+
+  // #3151: the merge-queue red that pulled a PR out of the queue was not the symlink assertions
+  // below — it was the `migrate --apply` on their first line refusing with `installed-engine:
+  // false`, because the `git ls-files --stage -z` read behind that check came back cut short under
+  // load (the bun read behaviour #2397/#3065 already caught on `git ls-tree -z`). Both cases drive
+  // that cut deterministically instead of waiting for load, so neither one turns "finished in
+  // time" into the pass condition.
+  test("migration re-reads a tool index whose first read was cut short", () => {
+    const project = fixture();
+
+    const migrated = migrateWithEnv(
+      project,
+      { NODE_ENV: "test", AMADEUS_MIGRATE_TEST_CUT_TOOL_INDEX_READ: "1" },
+      "--apply",
+    );
+
+    expectSuccessfulMigration(migrated);
+    expect(installedEngineCheck(parseReport(migrated)).pass).toBe(true);
+  });
+
+  test("migration names the short tool index read instead of denying the committed utility", () => {
+    const project = fixture();
+
+    const refused = migrateWithEnv(
+      project,
+      { NODE_ENV: "test", AMADEUS_MIGRATE_TEST_CUT_TOOL_INDEX_READ: "99" },
+      "--apply",
+    );
+
+    expect(refused.status).not.toBe(0);
+    const report = parseReport(refused);
+    expect(report.status).toBe("refused");
+    const check = installedEngineCheck(report);
+    expect(check.pass).toBe(false);
+    // The tree on disk is committed and clean, so the old wording ("requires a committed regular
+    // Amadeus utility") states something the run never measured.
+    expect(check.detail).toContain("ls-files");
+    expect(check.detail).toMatch(/NUL|not read|could not read/i);
+    expect(check.detail).not.toContain("Migration requires a committed regular Amadeus utility");
+    expect(
+      (report.checks as ReadonlyArray<{ id: string; pass: boolean }>).filter(
+        (entry) => !entry.pass,
+      ).map((entry) => entry.id),
+    ).toEqual(["installed-engine"]);
+    expect(existsSync(project.destinationRoot)).toBe(false);
   });
 
   test("installed doctor does not follow a linked heartbeat directory or heartbeat file", () => {
@@ -2016,5 +2082,67 @@ describe("t224 upstream-v2 migration public CLI", () => {
     } finally {
       rmSync(outside, { recursive: true, force: true });
     }
+  });
+});
+
+// --- #3151 in-process twins for the spawn-only NUL-read seam ----------------
+// The migration CLI consumes these through a spawned child, which bun coverage
+// cannot attribute; the seam's contracts are pinned here in-process.
+
+describe("t224 NUL-read seam (#3151) — in-process", () => {
+  const ok = (stdout: string, stderr = ""): MigrateGitOutcome => ({ ok: true, stdout, stderr });
+
+  test("isIncompleteNulRead: only a successful, non-empty, unterminated read is incomplete", () => {
+    expect(isIncompleteNulRead(ok("a\0b"))).toBe(true);
+    expect(isIncompleteNulRead(ok("a\0b\0"))).toBe(false);
+    expect(isIncompleteNulRead(ok(""))).toBe(false);
+    expect(isIncompleteNulRead({ ok: false, stdout: "a", stderr: "boom" })).toBe(false);
+  });
+
+  test("readNulTerminated: a complete first read never re-runs", () => {
+    const attempts: number[] = [];
+    const listing = readNulTerminated((attempt) => {
+      attempts.push(attempt);
+      return ok("rec\0");
+    });
+    expect(listing).toEqual({ outcome: ok("rec\0"), attempts: 1 });
+    expect(attempts).toEqual([1]);
+  });
+
+  test("readNulTerminated: a short read converges on a later complete read", () => {
+    const listing = readNulTerminated((attempt) => (attempt < 3 ? ok("cut") : ok("rec\0")));
+    expect(listing.attempts).toBe(3);
+    expect(listing.outcome).toEqual(ok("rec\0"));
+  });
+
+  test("readNulTerminated: a genuinely unterminated output stops at the attempt bound", () => {
+    const attempts: number[] = [];
+    const listing = readNulTerminated((attempt) => {
+      attempts.push(attempt);
+      return ok("always-cut");
+    }, NUL_READ_ATTEMPTS);
+    expect(attempts).toEqual([1, 2, 3]);
+    expect(listing.attempts).toBe(NUL_READ_ATTEMPTS);
+    expect(isIncompleteNulRead(listing.outcome)).toBe(true);
+  });
+
+  test("nulReadForensics records edges, NUL accounting, and truncated stderr", () => {
+    const line = nulReadForensics(ok("ab\0cd", "e".repeat(300)), 2);
+    expect(line).toContain("attempts=2");
+    expect(line).toContain("ok=true");
+    expect(line).toContain("bytes=5");
+    expect(line).toContain("nulCount=1");
+    expect(line).toContain("endsNul=false");
+    expect(line).toContain("bytesAfterLastNul=2");
+    expect(line).toContain(`head16=${Buffer.from("ab\0cd").toString("hex")}`);
+    expect(line).not.toContain("e".repeat(201));
+  });
+
+  test("nulReadForensics on an empty read reports zero bytes and no NULs", () => {
+    const line = nulReadForensics(ok(""), 1);
+    expect(line).toContain("bytes=0");
+    expect(line).toContain("nulCount=0");
+    expect(line).toContain("endsNul=false");
+    expect(line).toContain("bytesAfterLastNul=0");
   });
 });
