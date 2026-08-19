@@ -19,7 +19,7 @@ while IFS= read -r -d '' path; do
   case "${path}" in
     *.ts|*.tsx|*.mts|*.cts|\
     bun.lock|package.json|*/package.json|tsconfig*.json|biome.json|biome.jsonc|\
-    .github/workflows/ci.yml|\
+    .github/workflows/*|\
     docs/reference/15-stage-definition.md|docs/reference/15-stage-definition.ja.md|\
     scripts/*|tests/*|packages/framework/*|packages/setup/*|book-pack/*)
       full=true
