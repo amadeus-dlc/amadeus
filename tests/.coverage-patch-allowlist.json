@@ -5226,5 +5226,27 @@
     },
     "reason": "The top-level usage string in runUtilityMain's default arm, edited by #3181 to list the issue-evidence verb. The arm ends in die(), which exits the process, so no in-process test can execute it; tests/integration/t3181-issue-evidence-fetch.integration.test.ts 'lists the verb in the top-level usage line' spawns the CLI and asserts the string at the cli mechanism.",
     "expiry": "remove if the usage arm becomes drivable in-process, or if bun starts counting spawned subprocesses"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-worktree.ts",
+    "selector": {
+      "function": "preflightDirtyTarget",
+      "fingerprint": "sha256:98f8f037c154f3af04cfedf9508033d1e2eff2e71d33814e462883fb7170dea2",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "The defensive arm for `git diff --cached --name-only` failing AFTER `git diff --cached --quiet` already exited 1 on the same index. Both reads hit the same index in the same checkout, so the second cannot fail alone by construction; the reachable sibling arms (fatal first read, staged-changes rejection) are driven in-process by tests/unit/t209-worktree-read-anchor.test.ts (#3197).",
+    "expiry": "remove if the two index reads are collapsed into a single git invocation"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-worktree.ts",
+    "selector": {
+      "function": "cleanupManagedWorktreeMetadata",
+      "fingerprint": "sha256:d18317b2a911c1b02e0dd2f6d8e9c12d5962192d1e897af1d9bcc88fe48d89fe",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "The defensive arm for `git ls-files` failing in a worktree whose git commands all succeeded moments earlier in the same handleMerge call (preflight inspect, merge, restore). A repo that breaks between those reads cannot be staged deterministically in-process; the reachable cleanup arms (restore failure, clean failure, scratch enumeration failure) are driven by tests/unit/t209-worktree-read-anchor.test.ts (#3197).",
+    "expiry": "remove when the cleanup helper accepts an injectable git runner"
   }
 ]

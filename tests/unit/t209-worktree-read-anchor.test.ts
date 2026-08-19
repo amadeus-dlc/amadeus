@@ -584,6 +584,52 @@ describe("t209 merge source hygiene (#3197) — handler seam", () => {
     expect(rejection.message).toContain("could not inspect source worktree status");
   });
 
+  test("merge fails loudly when the target index cannot be inspected", () => {
+    captureStdout(() =>
+      handleCreate(["--slug", "seam-badix", "--base", "main"], scratch.clone),
+    );
+    const wt = join(scratch.clone, ".amadeus", "worktrees", "bolt-seam-badix");
+    commitWorkerSource(wt, "badix-src.txt");
+    // A corrupt main-checkout index fails `git diff --cached` with a fatal
+    // exit (not the staged-changes 1); the worktree keeps its own index, so
+    // the source preflight still passes and the target arm is what rejects.
+    writeFileSync(join(scratch.clone, ".git", "index"), "garbage\n", "utf-8");
+    const rejection = captureRejection(() =>
+      handleMerge(
+        ["--slug", "seam-badix", "--target", "main", "--strategy", "squash"],
+        scratch.clone,
+      ),
+    );
+    expect(rejection.exitCode).toBe(1);
+    expect(rejection.message).toContain("could not inspect staged target changes");
+  });
+
+  test("merge fails loudly when the managed record root cannot be enumerated", () => {
+    captureStdout(() =>
+      handleCreate(["--slug", "seam-noread", "--base", "main"], scratch.clone),
+    );
+    const wt = join(scratch.clone, ".amadeus", "worktrees", "bolt-seam-noread");
+    commitWorkerSource(wt, "noread-src.txt");
+    // git status silently skips an unreadable untracked dir (exit 0, empty
+    // porcelain), so the preflight passes and the post-merge scratch
+    // enumeration is what throws.
+    const recordRoot = dirname(seededStateFile(wt));
+    mkdirSync(join(recordRoot, "audit"), { recursive: true });
+    chmodSync(recordRoot, 0o000);
+    try {
+      const rejection = captureRejection(() =>
+        handleMerge(
+          ["--slug", "seam-noread", "--target", "main", "--strategy", "squash"],
+          scratch.clone,
+        ),
+      );
+      expect(rejection.exitCode).toBe(1);
+      expect(rejection.message).toContain("could not enumerate managed worktree metadata");
+    } finally {
+      chmodSync(recordRoot, 0o755);
+    }
+  });
+
   test("merge restores tracked managed metadata to HEAD instead of carrying its drift", () => {
     commitSeededRecord();
     captureStdout(() =>
