@@ -1,0 +1,30 @@
+{
+  "electionId": "E-260819-RFC0001-FMC-S13",
+  "voter": "subagent-2",
+  "questions": [
+    {
+      "questionId": "q-learnings-selection",
+      "text": "intent 260815-rfc-autonomy-modes の formal-model-check ステージ §13 学習選定。候補は2件。project.md の Learnings Inbox へ採用すべき候補を1つ選ぶか、いずれも採用しないかを裁定せよ。判断基準は (a) 一般化可能性 — 将来の runner が同じ判断に到達できるか (b) 既存ノルムとの重複・矛盾の有無。既存ノルムは amadeus/spaces/default/memory/project.md と team.md を実読して確認すること。census では実在が既知の対照リテラルを含め 0-hit の偽陰性を排除すること。10 分以内を目安に投票まで到達すること。",
+      "ordered": [
+        {
+          "internalNo": 2,
+          "label": "先行 applicability outcome なしの明示 --single 実行で、model-map.json 宣言の全4モデルを検査対象とした",
+          "description": "[Interpretations] ステージ本文は『For an explicit run with no preceding applicability outcome, resolve the requested model + config as before』と述べるが、--model 指定のない起動では「requested model」が未定義になる。発火元の advisory は target を spec ディレクトリ全体(amadeus/spaces/default/specs/tla、reason: never-run)としていたため、model-map.json が宣言する全ペアを宣言順に検査する読みを採った。実測: BoltPrAttestationGate / FormalElection / MirrorLifecycle / PrConvergenceGate の4モデルすべて run-model-check.ts で NOT_DETECTED(exitCode 0)。runId = 9dd237cc-1a43-45a2-afa5-ebe2c6ce0422 / 4de4fca8-a3ad-4cd6-9588-7b32f44f24c6 / 658092e3-2fc3-4713-9d01-57ef1434d1d1 / 20e2b446-3533-4cb1-bdb4-7e49c2533630。--out は repo 外の scratchpad(cid:formal-model-check:c2 に従い run-model-check-ci.ts は使わず単一モデル経路を使用)。完了した検査であるため本文 Step 4 の plugin-activation.ts record .claude を実行し、advisory は no-hold へ遷移。model-completeness センサーは passed。",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 1,
+          "label": "本線ワークフローの本ステージでは、直前の tla-authoring が `author-new` へルートしたにもかかわらず**新規登録モデルが存在しない**という状態を扱った",
+          "description": "[Interpretations] ステージ本文 Step 1 は「`author-new` または `revise-model` のルートは tla-authoring が今まさに登録したモデルを名指し、それを検査せよ」と定めるが、本 intent では Steps 2〜6(モデル作成〜model-map 登録)をユーザー裁定により独立 intent(Issue #3246)へ分離したため、新規登録は行われていない。「矛盾した outcome は halt」の条項に機械的に当てはめるのではなく、分離がユーザー裁定によるスコープ確定であることを applicability-assessment に明記済みである点をもって、**新規モデルの検査は対象外**とし、既存の登録 4 モデルに対する検査結果(handoff 実行時)を本ステージの検証実績として扱った。実測: model-map の実装ハッシュピン 4 モデル 13 エントリすべて MATCH(drift 0)、`model-completeness` センサー exit 0、plugin-activation advisory は `{\"verdict\":{\"kind\":\"no-hold\"}}`。登録 4 モデル(BoltPrAttestationGate / FormalElection / MirrorLifecycle / PrConvergenceGate)は本セッションの handoff 実行で全て NOT_DETECTED(exit 0)を実測済み。",
+          "displayNo": 2
+        },
+        {
+          "internalNo": 3,
+          "label": "いずれも採用しない(0 件で可)",
+          "description": "候補が一般化可能な恒久知に達していない、または既存ノルムで十分に覆われていると判断する場合はこちら。近接する既存則: cid:formal-model-check:c2(ローカル明示実行は run-model-check.ts の単一モデル経路、CI 受入経路は使わない)、cid:formal-model-check:fmc-no-activation-record-on-not-applicable(検査未起動なら activation record を書かない)、cid:tla-authoring:tla-impl-only-evidence-shape、cid:tla-authoring:tla-spec-change-discriminator、cid:application-design:finite-exploration-not-detected-proof。project.md § Corrections 前書き「個別 intent の一回性の罠…は記録しない」も考慮すること。",
+          "displayNo": 3
+        }
+      ]
+    }
+  ]
+}

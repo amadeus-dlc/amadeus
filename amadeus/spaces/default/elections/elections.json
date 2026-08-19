@@ -1732,5 +1732,11 @@
     "dirName": "260819-e-260819-rfc0001-prc-s13",
     "createdAt": "2026-08-19T09:38:29Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-260819-RFC0001-FMC-S13",
+    "dirName": "260819-e-260819-rfc0001-fmc-s13",
+    "createdAt": "2026-08-19T09:44:03Z",
+    "status": "collecting"
   }
 ]
