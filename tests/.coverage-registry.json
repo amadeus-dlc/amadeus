@@ -1942,6 +1942,10 @@
         {
           "file": "tests/integration/t3249-parked-scope-binding-divergence.integration.test.ts",
           "mechanism": "none"
+        },
+        {
+          "file": "tests/unit/t3249-plan-config-divergence.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
