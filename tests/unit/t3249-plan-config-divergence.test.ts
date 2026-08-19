@@ -11,11 +11,13 @@
 //   - effectivePlanAction              the ONE plan-action resolution rule
 //   - the mandatory-plugin-stage guard through its registry, the same way
 //     complete-workflow evaluates it
+//   - jump's handleResolve, the OTHER reader of that rule - the half of the
+//     #3249 divergence that refused to reach the stage completion demanded
 //   - retractStrandedWorkflowCompletion the recompose-side retraction
 //
 // Mechanism: none - pure functions and a guard registry driven directly.
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, spyOn, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -29,6 +31,7 @@ import {
   formatGuardRefusal,
 } from "../../packages/framework/core/tools/amadeus-lifecycle-guard.ts";
 import { effectivePlanAction } from "../../packages/framework/core/tools/amadeus-lib.ts";
+import { handleResolve } from "../../packages/framework/core/tools/amadeus-jump.ts";
 import { retractStrandedWorkflowCompletion } from "../../packages/framework/core/tools/amadeus-utility.ts";
 import {
   prepareWorkflowCompletion,
@@ -227,5 +230,76 @@ describe("retractStrandedWorkflowCompletion closes the stale preparation at the 
     expect(retraction.content).toBe(content);
     expect(retraction.auditValue).toBe("none");
     expect(retraction.notice).toBe("");
+  });
+});
+
+// --- jump's reader of the same rule -----------------------------------------
+//
+// handleResolve is the OTHER half of the #3249 deadlock: the completion guard
+// told the caller to run a stage this refused to reach. Driven in-process (bun
+// --coverage does not instrument a spawned CLI), through the CLAUDE_PROJECT_DIR
+// seam resolveProjectDir documents for exactly this.
+
+function jumpProject(): string {
+  const root = mkdtempSync(join(tmpdir(), "amadeus-t3249-jump-"));
+  roots.push(root);
+  const intents = join(root, "amadeus", "spaces", "default", "intents");
+  mkdirSync(join(intents, "rec-1"), { recursive: true });
+  writeFileSync(join(root, "amadeus", "active-space"), "default\n");
+  writeFileSync(join(intents, "active-intent"), "rec-1\n");
+  writeFileSync(
+    join(intents, "rec-1", "amadeus-state.md"),
+    state(
+      [
+        "- [x] reverse-engineering — EXECUTE",
+        "- [ ] requirements-analysis — EXECUTE",
+        "- [ ] code-generation — EXECUTE",
+        "- [ ] build-and-test — EXECUTE",
+        "- [ ] ci-pipeline — SKIP",
+      ].join("\n"),
+    ).replace("- **Current Stage**: build-and-test", "- **Current Stage**: requirements-analysis"),
+  );
+  return root;
+}
+
+function resolved(root: string, args: readonly string[]): Record<string, unknown> {
+  const lines: string[] = [];
+  const logSpy = spyOn(console, "log").mockImplementation((value) => {
+    lines.push(String(value));
+  });
+  const prior = process.env.CLAUDE_PROJECT_DIR;
+  process.env.CLAUDE_PROJECT_DIR = root;
+  try {
+    handleResolve([...args]);
+  } finally {
+    process.env.CLAUDE_PROJECT_DIR = prior;
+    logSpy.mockRestore();
+  }
+  return JSON.parse(lines[0]) as Record<string, unknown>;
+}
+
+describe("jump resolves the plan through the same shared rule", () => {
+  test("a forward jump walks the effective plan and skips the off-plan stage", () => {
+    const out = resolved(jumpProject(), ["--stage", "build-and-test"]);
+    expect(out.target_slug).toBe("build-and-test");
+    expect(out.direction).toBe("forward");
+    expect(out.affected_stages).toEqual(["code-generation"]);
+  });
+
+  test("a phase jump lands on the first EXECUTE stage of the phase", () => {
+    const out = resolved(jumpProject(), ["--phase", "construction"]);
+    expect(out.target_slug).toBe("code-generation");
+  });
+
+  test("a backward jump collects the target and everything on-plan after it", () => {
+    const out = resolved(jumpProject(), ["--stage", "reverse-engineering"]);
+    expect(out.direction).toBe("backward");
+    // ci-pipeline is SKIP on this plan, so the redo set stops before it.
+    expect(out.affected_stages).toEqual([
+      "reverse-engineering",
+      "requirements-analysis",
+      "code-generation",
+      "build-and-test",
+    ]);
   });
 });
