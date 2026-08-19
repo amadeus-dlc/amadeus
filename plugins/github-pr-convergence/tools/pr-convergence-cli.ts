@@ -586,22 +586,32 @@ function parseSupersedeFlags(flags: Map<string, string>, verb: string): Supersed
   return { ok: true, value: { supersededBy: value, bolt } };
 }
 
-function parseOptions(argv: readonly string[]): OptionParse {
-  const [verb, ...rest] = argv;
-  const flags = parseFlags(rest);
-  if (flags === null) return { ok: false, message: "malformed flags: expected --key value pairs" };
-  if (verb === "create") return parseCreateOptions(flags);
-  if (verb !== "status" && verb !== "report" && verb !== "override") {
-    return { ok: false, message: `unknown verb: ${String(verb)} (expected create|status|report|override)` };
-  }
-  const target = resolveTarget(flags);
-  if (!target.ok) return target;
+const KNOWN_CONVERGENCE_VERBS = new Set(["status", "report", "override"]);
+
+type ReasonParse =
+  | { readonly ok: true; readonly value: string | null }
+  | { readonly ok: false; readonly message: string };
+
+/** `--reason` is free-form everywhere except `override`, which requires a
+ *  non-blank one — the whole point of a human ruling is that it says why. */
+function parseReason(flags: Map<string, string>, verb: string): ReasonParse {
   const reason = flags.get("reason") ?? null;
-  const unlinked = parseUnlinked(flags);
-  if (!unlinked.ok) return unlinked;
   if (verb === "override" && (reason === null || reason.trim() === "")) {
     return { ok: false, message: "--reason is required for override" };
   }
+  return { ok: true, value: reason };
+}
+
+function parseConvergenceOptions(
+  verb: "status" | "report" | "override",
+  flags: Map<string, string>,
+): OptionParse {
+  const target = resolveTarget(flags);
+  if (!target.ok) return target;
+  const reason = parseReason(flags, verb);
+  if (!reason.ok) return reason;
+  const unlinked = parseUnlinked(flags);
+  if (!unlinked.ok) return unlinked;
   const supersede = parseSupersedeFlags(flags, verb);
   if (!supersede.ok) return supersede;
   return {
@@ -609,12 +619,23 @@ function parseOptions(argv: readonly string[]): OptionParse {
     value: {
       verb,
       ...target.value,
-      reason,
+      reason: reason.value,
       logTool: flags.get("log-tool") ?? defaultLogToolPath(),
       unlinked: unlinked.value,
       ...supersede.value,
     },
   };
+}
+
+function parseOptions(argv: readonly string[]): OptionParse {
+  const [verb, ...rest] = argv;
+  const flags = parseFlags(rest);
+  if (flags === null) return { ok: false, message: "malformed flags: expected --key value pairs" };
+  if (verb === "create") return parseCreateOptions(flags);
+  if (verb === undefined || !KNOWN_CONVERGENCE_VERBS.has(verb)) {
+    return { ok: false, message: `unknown verb: ${String(verb)} (expected create|status|report|override)` };
+  }
+  return parseConvergenceOptions(verb as "status" | "report" | "override", flags);
 }
 
 interface DeliveryHeads {
