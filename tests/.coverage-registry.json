@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 638,
+    "total": 639,
     "enumeratedByClass": {
-      "function": 358,
+      "function": 359,
       "audit": 98,
       "scope": 15,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 191,
+      "function": 192,
       "audit": 49,
       "scope": 15,
       "stage": 8,
@@ -1929,6 +1929,22 @@
         },
         {
           "file": "tests/integration/t529-advisory-hold-trace.integration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:effectivePlanAction",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/integration/t3249-parked-scope-binding-divergence.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
+          "file": "tests/integration/t3249-plan-config-divergence.integration.test.ts",
           "mechanism": "none"
         }
       ],

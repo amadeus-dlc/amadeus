@@ -6182,10 +6182,9 @@ export function rebuildCompletedFieldFromState(
     );
   }
   const stateOverrides = parseStateStageSuffixes(content);
-  const rebuilt = rebuildDerivedPlanFields(content, graph, (slug) => {
-    const action = stateOverrides.get(slug) ?? scopeStages[slug];
-    return action === "EXECUTE" ? "EXECUTE" : "SKIP";
-  });
+  const rebuilt = rebuildDerivedPlanFields(content, graph, (slug) =>
+    effectivePlanAction(stateOverrides, scopeStages, slug) === "EXECUTE" ? "EXECUTE" : "SKIP"
+  );
   return {
     content: setField(content, "Completed", String(rebuilt.completedCount)),
     completedCount: rebuilt.completedCount,
@@ -6272,7 +6271,7 @@ function resyncOneIntent(
   // over the scope grid); a stage that has no row yet takes the grid's verdict.
   const suffixes = parseStateStageSuffixes(content);
   const planOf = (slug: string): "EXECUTE" | "SKIP" =>
-    (suffixes.get(slug) ?? scopeDef.stages[slug]) === "EXECUTE" ? "EXECUTE" : "SKIP";
+    effectivePlanAction(suffixes, scopeDef.stages, slug) === "EXECUTE" ? "EXECUTE" : "SKIP";
   const stateOf = (slug: string): CheckboxState => rowBySlug.get(slug)?.state ?? "pending";
 
   let next = replaceStageProgressSection(
@@ -8175,8 +8174,9 @@ export function nextInScopeStage(
 
     // State override wins over scope-mapping. A SKIP override drops an
     // EXECUTE stage; an EXECUTE override promotes a SKIP stage.
-    const effectiveAction = stateOverrides?.get(slug) ?? mapping.stages[slug];
-    if (effectiveAction === "EXECUTE") return graph[i];
+    if (effectivePlanAction(stateOverrides, mapping.stages, slug) === "EXECUTE") {
+      return graph[i];
+    }
   }
   return null;
 }
@@ -8201,6 +8201,27 @@ export function parseStateStageSuffixes(
     m = regex.exec(content);
   }
   return out;
+}
+
+// THE plan-action resolution rule, in one place. The live state file's
+// per-stage EXECUTE/SKIP suffix (a recomposed plan) wins over the static scope
+// grid. Every judgement about "is this stage on this Intent's plan" — the
+// router (nextInScopeStage), jump, recompose, the derived-field rebuilds and
+// the mandatory-plugin-stage completion guard — resolves through this, so no
+// two of them can answer differently for the same slug (#3249: the completion
+// guard read host config while jump read the record's grid, and a parked Intent
+// whose config moved under it could be terminated by neither).
+//
+// `undefined` means NEITHER source names the slug — a stage this scope grid
+// never compiled. That is not the same as SKIP, and callers that need a
+// two-valued answer coerce it themselves: what an off-grid stage means differs
+// per caller, and folding the coercion in here would hide that choice.
+export function effectivePlanAction(
+  suffixes: ReadonlyMap<string, "EXECUTE" | "SKIP"> | null | undefined,
+  scopeStages: Readonly<Record<string, string>>,
+  slug: string
+): string | undefined {
+  return suffixes?.get(slug) ?? scopeStages[slug];
 }
 
 export function firstInScopeStageOfPhase(
