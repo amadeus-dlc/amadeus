@@ -24,9 +24,17 @@
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { resolveWorktreeBaseDir } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import {
   classifySourcePaths,
@@ -38,7 +46,12 @@ import {
   isSelfInstallLeaf,
   resolveSelfInstallRoot,
 } from "../../packages/framework/core/tools/amadeus-worktree.ts";
-import { REPO_ROOT, seedWorkspaceShell, seededStateFile } from "../harness/fixtures.ts";
+import {
+  REPO_ROOT,
+  seededAuditDir,
+  seededStateFile,
+  seedWorkspaceShell,
+} from "../harness/fixtures.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 
 describe("t209 worktreeBaseDir anchor rule (#746) — pure seam", () => {
@@ -327,6 +340,20 @@ const MANAGED = {
   scratchPrefix: "amadeus/spaces/default/intents/rec/.amadeus-",
 };
 
+/** Commit on the scratch clone with an explicit identity (CI has no global one). */
+function cloneCommit(cwd: string, message: string): void {
+  git(cwd, [
+    "-c",
+    "user.email=t209@example.com",
+    "-c",
+    "user.name=t209",
+    "commit",
+    "-q",
+    "-m",
+    message,
+  ]);
+}
+
 describe("t209 source classification (#3197) — pure seam", () => {
   test("gitRunDetail prefers stderr, then stdout, then the exit code", () => {
     expect(gitRunDetail({ ok: false, stdout: "out", stderr: " err ", code: 1 })).toBe("err");
@@ -462,7 +489,7 @@ describe("t209 merge source hygiene (#3197) — handler seam", () => {
   test("merge cleans wholly-ignored output roots by exact path before non-force removal", () => {
     writeFileSync(join(scratch.clone, ".gitignore"), "/gen-out/\n", "utf-8");
     git(scratch.clone, ["add", ".gitignore"]);
-    git(scratch.clone, ["commit", "-q", "-m", "ignore generated output"]);
+    cloneCommit(scratch.clone, "ignore generated output");
     // Keep origin/main in step so create's stale-base guard sees a fresh base.
     git(scratch.clone, ["push", "-q", "origin", "main"]);
     captureStdout(() =>
@@ -486,5 +513,94 @@ describe("t209 merge source hygiene (#3197) — handler seam", () => {
     expect(out).toContain("WORKTREE_MERGED");
     expect(readFileSync(join(scratch.clone, "gen-src.txt"), "utf-8")).toBe("committed\n");
     expect(existsSync(wt)).toBe(false);
+  });
+
+  /** Commit the seeded record so a fresh worktree TRACKS the managed paths. */
+  function commitSeededRecord(): void {
+    git(scratch.clone, ["add", "-A", "--", "amadeus"]);
+    cloneCommit(scratch.clone, "seed tracked record");
+    git(scratch.clone, ["push", "-q", "origin", "main"]);
+  }
+
+  function commitWorkerSource(wt: string, name: string): void {
+    git(wt, ["config", "user.email", "t209@example.com"]);
+    git(wt, ["config", "user.name", "t209"]);
+    writeFileSync(join(wt, name), "committed\n", "utf-8");
+    git(wt, ["add", "--", name]);
+    git(wt, ["commit", "-q", "-m", "worker source"]);
+  }
+
+  test("merge restores tracked managed metadata to HEAD instead of carrying its drift", () => {
+    commitSeededRecord();
+    captureStdout(() =>
+      handleCreate(["--slug", "seam-track", "--base", "main"], scratch.clone),
+    );
+    const wt = join(scratch.clone, ".amadeus", "worktrees", "bolt-seam-track");
+    commitWorkerSource(wt, "track-src.txt");
+    // The state fork already rewrote the tracked file; make the drift explicit.
+    writeFileSync(seededStateFile(wt), "- **Current Stage**: code-generation\ndrift\n", "utf-8");
+
+    const out = captureStdout(() =>
+      handleMerge(
+        ["--slug", "seam-track", "--target", "main", "--strategy", "squash"],
+        scratch.clone,
+      ),
+    );
+    expect(out).toContain("WORKTREE_MERGED");
+    // The squash commit carries only worker source — managed drift was restored.
+    expect(git(scratch.clone, ["show", "--name-only", "--format=", "HEAD"])).toBe("track-src.txt");
+    expect(existsSync(wt)).toBe(false);
+  });
+
+  test("merge fails loudly when the managed metadata restore cannot write", () => {
+    commitSeededRecord();
+    captureStdout(() =>
+      handleCreate(["--slug", "seam-rofail", "--base", "main"], scratch.clone),
+    );
+    const wt = join(scratch.clone, ".amadeus", "worktrees", "bolt-seam-rofail");
+    commitWorkerSource(wt, "rofail-src.txt");
+    const stateFile = seededStateFile(wt);
+    writeFileSync(stateFile, "- **Current Stage**: code-generation\ndrift\n", "utf-8");
+    const recordDir = dirname(stateFile);
+    chmodSync(stateFile, 0o444);
+    chmodSync(recordDir, 0o555);
+    try {
+      const rejection = captureRejection(() =>
+        handleMerge(
+          ["--slug", "seam-rofail", "--target", "main", "--strategy", "squash"],
+          scratch.clone,
+        ),
+      );
+      expect(rejection.exitCode).toBe(1);
+      expect(rejection.message).toContain("managed metadata restore failed");
+    } finally {
+      chmodSync(recordDir, 0o755);
+      chmodSync(stateFile, 0o644);
+    }
+  });
+
+  test("merge fails loudly when the managed metadata cleanup cannot remove", () => {
+    captureStdout(() =>
+      handleCreate(["--slug", "seam-clfail", "--base", "main"], scratch.clone),
+    );
+    const wt = join(scratch.clone, ".amadeus", "worktrees", "bolt-seam-clfail");
+    commitWorkerSource(wt, "clfail-src.txt");
+    // An unremovable entry under the audit dir: a file inside a read-only dir.
+    const locked = join(seededAuditDir(wt), "locked");
+    mkdirSync(locked, { recursive: true });
+    writeFileSync(join(locked, "inner.jsonl"), "{}\n", "utf-8");
+    chmodSync(locked, 0o555);
+    try {
+      const rejection = captureRejection(() =>
+        handleMerge(
+          ["--slug", "seam-clfail", "--target", "main", "--strategy", "squash"],
+          scratch.clone,
+        ),
+      );
+      expect(rejection.exitCode).toBe(1);
+      expect(rejection.message).toContain("managed metadata cleanup failed");
+    } finally {
+      chmodSync(locked, 0o755);
+    }
   });
 });
