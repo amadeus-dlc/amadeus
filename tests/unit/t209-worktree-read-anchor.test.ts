@@ -399,6 +399,13 @@ describe("t209 source classification (#3197) — pure seam", () => {
     expect(result.disposable).toEqual([]);
   });
 
+  test("classifySourcePaths: a rename record without its origin path is malformed", () => {
+    expect(classifySourcePaths("R  new-name.ts\0", MANAGED)).toEqual({
+      blocking: ["<malformed-git-status>", "new-name.ts"],
+      disposable: [],
+    });
+  });
+
   test("classifySourcePaths: rename records consume the origin path; managed paths skip", () => {
     const porcelain = [
       "R  new-name.ts",
@@ -529,6 +536,53 @@ describe("t209 merge source hygiene (#3197) — handler seam", () => {
     git(wt, ["add", "--", name]);
     git(wt, ["commit", "-q", "-m", "worker source"]);
   }
+
+  test("merge fails loudly when the disposable source cleanup cannot remove", () => {
+    writeFileSync(join(scratch.clone, ".gitignore"), "/gen-out/\n", "utf-8");
+    git(scratch.clone, ["add", ".gitignore"]);
+    cloneCommit(scratch.clone, "ignore generated output");
+    git(scratch.clone, ["push", "-q", "origin", "main"]);
+    captureStdout(() =>
+      handleCreate(["--slug", "seam-genfail", "--base", "main"], scratch.clone),
+    );
+    const wt = join(scratch.clone, ".amadeus", "worktrees", "bolt-seam-genfail");
+    commitWorkerSource(wt, "genfail-src.txt");
+    // An unremovable entry under the wholly-ignored output root.
+    const locked = join(wt, "gen-out", "locked");
+    mkdirSync(locked, { recursive: true });
+    writeFileSync(join(locked, "generated.js"), "generated\n", "utf-8");
+    chmodSync(locked, 0o555);
+    try {
+      const rejection = captureRejection(() =>
+        handleMerge(
+          ["--slug", "seam-genfail", "--target", "main", "--strategy", "squash"],
+          scratch.clone,
+        ),
+      );
+      expect(rejection.exitCode).toBe(1);
+      expect(rejection.message).toContain("disposable source cleanup failed");
+    } finally {
+      chmodSync(locked, 0o755);
+    }
+  });
+
+  test("merge fails loudly when the source worktree status cannot be inspected", () => {
+    captureStdout(() =>
+      handleCreate(["--slug", "seam-nogit", "--base", "main"], scratch.clone),
+    );
+    const wt = join(scratch.clone, ".amadeus", "worktrees", "bolt-seam-nogit");
+    // A corrupted gitfile makes every git command in the worktree fail; the
+    // preflight inspect is the first one handleMerge runs.
+    writeFileSync(join(wt, ".git"), "gitdir: /nonexistent\n", "utf-8");
+    const rejection = captureRejection(() =>
+      handleMerge(
+        ["--slug", "seam-nogit", "--target", "main", "--strategy", "squash"],
+        scratch.clone,
+      ),
+    );
+    expect(rejection.exitCode).toBe(1);
+    expect(rejection.message).toContain("could not inspect source worktree status");
+  });
 
   test("merge restores tracked managed metadata to HEAD instead of carrying its drift", () => {
     commitSeededRecord();

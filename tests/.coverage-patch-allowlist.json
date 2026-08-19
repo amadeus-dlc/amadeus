@@ -2158,17 +2158,6 @@
   {
     "file": "packages/framework/core/tools/amadeus-swarm.ts",
     "selector": {
-      "function": "<module>",
-      "fingerprint": "sha256:b304335872e61d5c6e90771855d0c058329102dce6c0bbc3af7f555fffa3b9bf",
-      "anchorLines": 54,
-      "targetLines": "1-54"
-    },
-    "reason": "Prepare validation and configuration helpers are owned by the spawned swarm CLI. tests/integration/t135-invoke-swarm.test.ts exercises valid preparation, invalid degraded drivers, capped concurrency, and partial-prepare refusal through the shipped command; Bun cannot attribute child-process execution to parent LCOV.",
-    "expiry": "remove when handlePrepare gains an in-process argv and exit driver"
-  },
-  {
-    "file": "packages/framework/core/tools/amadeus-swarm.ts",
-    "selector": {
       "function": "handlePrepare",
       "fingerprint": "sha256:9d4ff1336366161d9a36d4091ddbf30eb631f3de00e990c118d5ab25ed200afd",
       "anchorLines": 1,

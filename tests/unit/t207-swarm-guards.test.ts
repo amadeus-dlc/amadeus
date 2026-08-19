@@ -740,6 +740,49 @@ describe("t207 prepared fork binding (#3197)", () => {
     expect(JSON.parse(legacyBinding.output).detail).toContain("no prepared fork binding");
   });
 
+  test("check reports a confine error as an error envelope with exit 1", () => {
+    const { projectDir, worktreeDir } = makeVerdictFixture();
+    birthIntent(projectDir, "check-confine", "default", "feature");
+    const forkSha = spawnSync("git", ["rev-parse", "HEAD"], {
+      cwd: worktreeDir,
+      encoding: "utf-8",
+    }).stdout.trim();
+    emitAuditRow(projectDir, "WORKTREE_CREATED", {
+      "Bolt slug": "alpha",
+      "Worktree path": worktreeDir,
+      "Branch name": "bolt-alpha",
+      "Base branch": "main",
+      "Base SHA": forkSha,
+    });
+    let output = "";
+    let exitCode = -1;
+    const log = spyOn(console, "log").mockImplementation((value) => {
+      output = String(value);
+    });
+    try {
+      handleCheck(
+        [
+          "--project-dir",
+          projectDir,
+          "alpha",
+          "--check-cmd",
+          passingCheckCommand,
+          "--test-file",
+          "../outside.test",
+        ],
+        (code) => {
+          exitCode = code;
+        },
+      );
+    } finally {
+      log.mockRestore();
+    }
+    expect(exitCode).toBe(1);
+    const envelope = JSON.parse(output);
+    expect(envelope.reason).toBe("error");
+    expect(envelope.detail).toContain("resolves outside the unit worktree");
+  });
+
   test("check resolves the anti-tamper baseline from the prepared fork binding", () => {
     const { projectDir, worktreeDir } = makeVerdictFixture();
     birthIntent(projectDir, "check-baseline", "default", "feature");
