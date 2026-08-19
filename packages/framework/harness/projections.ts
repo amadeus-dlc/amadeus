@@ -32,6 +32,7 @@ export const MIRROR_TOOL_FILES = [
   "amadeus-mirror-gateway.ts",
   "amadeus-mirror-labels.ts",
   "amadeus-mirror-lifecycle.ts",
+  "amadeus-mirror-orphan.ts",
   "amadeus-mirror-policy.ts",
   "amadeus-mirror-presentation.ts",
   "amadeus-mirror-project-contract.ts",

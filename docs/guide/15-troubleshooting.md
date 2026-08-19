@@ -28,6 +28,7 @@ This chapter covers common issues and their solutions, organized by symptom.
 | Statusline not appearing | Verify `bun` is on PATH and `settings.json` `statusLine.command` references `amadeus-statusline.ts` |
 | Subagent timed out | Run `/amadeus` to retry or run the stage inline |
 | `producer-outcome-pending` after Construction | Jump back to `code-generation` with `/amadeus --stage code-generation`, run `/amadeus`, approve the gate |
+| Mirror Issue stays open after an Intent's record is gone | Run `bun .claude/tools/amadeus-mirror-orphan.ts diagnose --repo <owner/name>` (see below) |
 
 ---
 
@@ -270,6 +271,36 @@ cp dist/codex/AGENTS.md   your-project/AGENTS.md   # or merge into yours
 The `amadeus/` shell ships the pre-built `amadeus/spaces/default/memory/` method tree the engine reads; `/amadeus --doctor` (`$amadeus --doctor` on Codex) fails its "workspace shell ready" check without it.
 
 This produces the same file layout the installer applies — it just skips the fetch, diff-plan, and manifest bookkeeping the installer does for you. A manual copy has no `amadeus/.installer/amadeus-setup-manifest.json`, so a later `amadeus-setup upgrade` run treats it as an unmanaged installation: it still applies (with a conservative backup-every-modified-file strategy) rather than refusing, but it can't diff against a known prior version. Prefer the installer once it's reachable again.
+
+---
+
+## Orphan Intent Mirror Issues
+
+**Symptom**: A GitHub Issue mirroring an Intent stays open forever, even though the Intent it names no longer exists in `amadeus/spaces/<space>/intents/intents.json`. This happens when an Intent's record is discarded or replaced (an uncommitted worktree/branch abandoned, or a same-named record directory reused by a new Intent) before its `workflow-completed` mirror close ever fires — the ordinary Mirror lifecycle (`amadeus-mirror-lifecycle.ts`) always resolves an Intent through the registry first, so a registry-absent UUID resolves to nothing and no close boundary can reach the stale Issue (see [Issue #3147](https://github.com/amadeus-dlc/amadeus/issues/3147)).
+
+### Diagnose: list orphan candidates (read-only)
+
+```
+bun .claude/tools/amadeus-mirror-orphan.ts diagnose --repo <owner/name>
+```
+
+This scans every Issue carrying an Intent Mirror marker, keeps the ones that are still **open**, and reports any whose marker names an Intent UUID that is **absent from the current working tree's registry** as a warning-only candidate list. It never mutates GitHub and never closes anything by itself.
+
+> **False-positive warning.** A UUID absent from *this* working tree's registry is not proof the Intent is gone — it may simply be alive in a concurrent worktree or branch that has not landed on `main` yet. Before repairing a candidate, corroborate independently, e.g.:
+>
+> ```
+> git log --all --oneline -S<intent-uuid> -- 'amadeus/spaces/*/intents/intents.json'
+> ```
+>
+> If that turns up a commit that is an ancestor of your current branch, the UUID did land at some point — investigate further before closing. If it turns up nothing (or only commits on an abandoned branch), the candidate is a genuine orphan.
+
+### Repair: close one orphan Issue
+
+```
+bun .claude/tools/amadeus-mirror-orphan.ts repair --issue <n> --repo <owner/name>
+```
+
+This re-verifies the single named Issue at call time (fetches it fresh, re-checks it is still open, matches the configured repository, and re-checks the UUID is still absent from the registry) before it posts an "obsolete" comment naming the Intent UUID, record directory, and the registry-check timestamp, and closes the Issue. If the UUID has reappeared in the registry since you last ran `diagnose`, or the Issue is no longer open, `repair` refuses and closes nothing (fail-closed). If the GitHub call itself fails (network, auth, rate limit), `repair` prints a `WARNING` and exits non-zero without closing anything — the same fail-open posture as every other Mirror operation (see [Failure and retry](22-intent-mirror.md#failure-and-retry)); it never blocks the workflow, because it runs outside it.
 
 ---
 
