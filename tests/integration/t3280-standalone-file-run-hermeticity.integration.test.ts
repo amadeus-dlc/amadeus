@@ -17,8 +17,9 @@
 //
 // #698 ("standalone-green for non-substrate tests") already established the
 // contract this violates, and its remediation idiom — a file-level
-// `process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD ??= "1"` — is carried by 30
-// files today. t33 and t507 are the two that escaped that batch.
+// `process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD ??= "1"` — was already carried
+// by 30 files. t33 and t507 are the two that escaped that batch; both now carry
+// it too, so the idiom's census reads 32.
 //
 // This pins BOTH halves, because they fail independently:
 //   R-1 self-report:  a directly-run file emits its own pass/fail summary
@@ -35,7 +36,6 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { join } from "node:path";
-import { scaleTestTime } from "../lib/test-time-factor.ts";
 
 const ROOT = join(import.meta.dir, "..", "..");
 
@@ -87,7 +87,12 @@ function reportedTests(run: DirectRun): number {
   return Number(m[1]);
 }
 
-const SPAWN_TIMEOUT = scaleTestTime(60_000);
+// No per-test budget is declared here on purpose. Each case spawns child
+// `bun test` runs that measure ~0.2-2.5s, and the suite runner already hands
+// every file a 30s per-test timeout (run-tests.ts) — the band chosen for
+// exactly this spawn-heavy shape. Declaring another one would add a timing
+// sink the test-time-factor guard would then have to carry as a waiver, for a
+// budget the runner already provides.
 
 describe("#3280 a directly-run test file reports its own result", () => {
   test("t507 alone: the run ends with a summary instead of a silent teardown", () => {
@@ -95,19 +100,19 @@ describe("#3280 a directly-run test file reports its own result", () => {
     // Pre-fix this output is exactly 4 lines — the banner, the file header, the
     // refusal JSON — and then the process is gone.
     expect(run.output, run.output).toMatch(SUMMARY);
-  }, SPAWN_TIMEOUT);
+  });
 
   test("t507 alone is standalone-green (the #698 contract)", () => {
     const run = runDirect([T507]);
     expect(run.output, run.output).toContain("0 fail");
     expect(run.status, run.output).toBe(0);
-  }, SPAWN_TIMEOUT);
+  });
 
   test("t33 alone is standalone-green (the second file #3280 names)", () => {
     const run = runDirect([T33]);
     expect(run.output, run.output).toContain("0 fail");
     expect(run.status, run.output).toBe(0);
-  }, SPAWN_TIMEOUT);
+  });
 
   // Without this the exit trap would be unexercised: the guard default above
   // means no refusal fires in normal operation, so nothing would prove the trap
@@ -121,7 +126,7 @@ describe("#3280 a directly-run test file reports its own result", () => {
     // ...but as a reported test failure, with the summary the runner owes us.
     expect(run.output, run.output).toMatch(SUMMARY);
     expect(run.output, run.output).toContain("exited 1 instead of returning");
-  }, SPAWN_TIMEOUT);
+  });
 });
 
 describe("#3280 a co-run file's results are not lost", () => {
@@ -139,5 +144,5 @@ describe("#3280 a co-run file's results are not lost", () => {
     expect(combined.output, combined.output).toMatch(/across 2 files/);
     expect(combined.output, combined.output).toContain("0 fail");
     expect(combined.status, combined.output).toBe(0);
-  }, SPAWN_TIMEOUT);
+  });
 });
