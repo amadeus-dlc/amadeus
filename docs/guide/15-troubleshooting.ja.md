@@ -28,6 +28,7 @@
 | ステータスラインが表示されない | `bun` が PATH 上にあり、`settings.json` の `statusLine.command` が `amadeus-statusline.ts` を参照するか確認 |
 | サブエージェントがタイムアウト | `/amadeus` を実行して再試行、またはステージをインラインで実行 |
 | Construction 後に `producer-outcome-pending` | `/amadeus --stage code-generation` で `code-generation` へ戻り、`/amadeus` を実行してゲートを承認 |
+| Intent の record が消えても Mirror Issue が open のまま | `bun .claude/tools/amadeus-mirror-orphan.ts diagnose --repo <owner/name>` を実行(下記参照) |
 
 ---
 
@@ -270,6 +271,36 @@ cp dist/codex/AGENTS.md   your-project/AGENTS.md   # または自分のものへ
 `amadeus/` シェルは、エンジンが読むビルド済みの `amadeus/spaces/default/memory/` メソッドツリーを同梱します。これがないと `/amadeus --doctor`(Codex では `$amadeus --doctor`)は「workspace shell ready」チェックで失敗します。
 
 これはインストーラが適用するのと同じファイルレイアウトを生成します — インストーラが代行するフェッチ、差分プラン、マニフェスト管理を省略するだけです。手動コピーには `amadeus/.installer/amadeus-setup-manifest.json` がないため、後から `amadeus-setup upgrade` を実行すると管理外インストールとして扱われます。拒否はされず(変更されるファイルをすべてバックアップする保守的な戦略で)適用されますが、既知の以前のバージョンとの差分は取れません。到達可能になったらインストーラの利用を優先してください。
+
+---
+
+## 孤児化した Intent Mirror Issue
+
+**症状**: Intent をミラーする GitHub Issue が、その Issue が指す Intent がもう `amadeus/spaces/<space>/intents/intents.json` に存在しないのに open のまま残り続ける。これは、Intent の record が `workflow-completed` の mirror close が発火する前に破棄・置換された場合(コミットされていない worktree/ブランチの破棄、または同名の record ディレクトリが新しい Intent に再利用された場合)に発生する — 通常の Mirror lifecycle(`amadeus-mirror-lifecycle.ts`)は必ず先に registry 経由で Intent を解決するため、registry に存在しない UUID は何にも解決されず、どの close boundary も古い Issue へ到達できない([Issue #3147](https://github.com/amadeus-dlc/amadeus/issues/3147) を参照)。
+
+### 診断: 孤児候補を列挙する(read-only)
+
+```
+bun .claude/tools/amadeus-mirror-orphan.ts diagnose --repo <owner/name>
+```
+
+これは Intent Mirror マーカーを持つすべての Issue を走査し、**open** のものだけを残し、そのマーカーが指す Intent UUID が**現在の作業ツリーの registry に不在**なものを警告用の候補一覧として報告する。GitHub を変更することは一切なく、それ自身では何も close しない。
+
+> **偽陽性への注意**: この作業ツリーの registry に UUID が不在であることは、その Intent が消えた証拠にはならない — まだ `main` へ着地していない並行 worktree やブランチで生きているだけかもしれない。候補を修復する前に、次のように独立して裏付けを取ること:
+>
+> ```
+> git log --all --oneline -S<intent-uuid> -- 'amadeus/spaces/*/intents/intents.json'
+> ```
+>
+> これで現在のブランチの祖先であるコミットがヒットすれば、UUID は過去に着地している — close する前にさらに調査すること。何もヒットしない(または放棄されたブランチ上のコミットしかヒットしない)場合は、真の孤児と判断できる。
+
+### 修復: 孤児 Issue を1件closeする
+
+```
+bun .claude/tools/amadeus-mirror-orphan.ts repair --issue <n> --repo <owner/name>
+```
+
+これは指定した1件の Issue を呼び出し時点で再検証(Issue を再取得し、まだ open であること、設定済みの repository と一致すること、UUID がいまも registry に不在であることを再確認)したうえで、Intent UUID・record ディレクトリ・registry 確認時刻を記した obsolete コメントを投稿し、Issue を close する。`diagnose` を実行して以降に UUID が registry へ再出現していた場合、または Issue がすでに open でなくなっていた場合は、`repair` は何も close せず拒否する(fail-closed)。GitHub 呼び出し自体が失敗した場合(ネットワーク・認証・rate limit)、`repair` は `WARNING` を出力して非ゼロで終了し、何も close しない — 他のすべての Mirror 操作と同じ fail-open の姿勢([失敗とretry](22-intent-mirror.ja.md#失敗とretry)を参照)であり、ワークフローの外側で実行されるためワークフローをブロックすることはない。
 
 ---
 

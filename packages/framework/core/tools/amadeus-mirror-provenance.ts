@@ -16,7 +16,9 @@ import type {
   RepositoryIdentity,
 } from "./amadeus-mirror-types.ts";
 
-const MARKER_PREFIX = "<!-- amadeus-intent-mirror:v1 ";
+// Exported so callers that need to pre-filter candidates by substring (the
+// orphan mirror scan, #3147) share this literal instead of hand-copying it.
+export const MARKER_PREFIX = "<!-- amadeus-intent-mirror:v1 ";
 const MARKER_SUFFIX = " -->";
 // Global matcher for the exact envelope; the payload is base64url (no padding).
 const MARKER_RE = /<!-- amadeus-intent-mirror:v1 ([A-Za-z0-9_-]+) -->/g;
