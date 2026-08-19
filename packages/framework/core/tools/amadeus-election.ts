@@ -41,7 +41,7 @@ import { createSubagentTransport, distribute, normalizeAt } from "./amadeus-elec
 import { resolveProjectDir } from "./amadeus-lib.ts";
 
 const USAGE =
-  "Usage: bun <harness-dir>/tools/amadeus-election.ts <open|next|status|vote|notify|tally|render|verify|report> [--election <id>] [--file <path>] [--trigger manual|auto] [--project <dir>]";
+  "Usage: bun <harness-dir>/tools/amadeus-election.ts <open|next|status|vote|notify|tally|render|verify|report|terminate> [--election <id>] [--file <path>] [--trigger manual|auto] [--project <dir>] [--reason <text>] [--superseded-by <ref>]";
 
 export type ElectionCliErrorCategory =
   | "decode"
@@ -187,6 +187,12 @@ function directiveFromSnapshot(
   if (snapshot.state === "recorded") {
     return ok({ kind: "done", ...base(snapshot, targets, digest, null, null) });
   }
+  // #3256: a terminated round is a dead end exactly like "recorded" — no
+  // further verb is expected, so `next`/`status` report "done" rather than
+  // falling through to invalid-transition.
+  if (snapshot.state === "terminated") {
+    return ok({ kind: "done", ...base(snapshot, targets, digest, null, null) });
+  }
   return {
     ok: false,
     error: { category: "invalid-transition", electionId, nextAction: "open the election first" },
@@ -319,6 +325,58 @@ export function voteElection(
   return appended.ok
     ? ok({ voter: ballot.voter, idempotent: appended.value.idempotent })
     : storeError(electionId, appended.error);
+}
+
+export interface RoundTerminationReceipt {
+  readonly electionId: string;
+  readonly from: ElectionState;
+  readonly to: "terminated";
+  readonly reason: string;
+  readonly supersededBy: string | null;
+  readonly repaired: boolean;
+  readonly terminatedAt: string;
+}
+
+// #3256: terminates a re-vote round stuck in "collecting" whose decision was
+// settled outside the normal directive loop (e.g. a user-delegated ruling),
+// so it will never receive every voter's ballot and would otherwise stay
+// orphaned forever — the directive loop has no path out of "collecting"
+// except a full tally. A direct action like `voteElection`, not a directive:
+// there is no notify/tally/render/verify step whose report this satisfies.
+export function terminateRoundElection(
+  root: string,
+  electionId: string,
+  input: { readonly reason: string; readonly supersededBy: string | null },
+  terminatedAt: string,
+): ElectionCliResult<RoundTerminationReceipt> {
+  if (input.reason.trim() === "") {
+    return cliError("decode", electionId, "provide a non-empty --reason");
+  }
+  const snapshot = ElectionStore.readSnapshot(root, electionId);
+  if (!snapshot.ok) return storeError(electionId, snapshot.error);
+  if (snapshot.value.state !== "collecting" && snapshot.value.state !== "terminated") {
+    return cliError(
+      "invalid-transition",
+      electionId,
+      "terminate is only valid for a round stuck in collecting",
+    );
+  }
+  const fromState = snapshot.value.state;
+  const terminated = ElectionStore.terminateRound(root, electionId, {
+    reason: input.reason,
+    supersededBy: input.supersededBy,
+    terminatedAt,
+  });
+  if (!terminated.ok) return storeError(electionId, terminated.error);
+  return ok({
+    electionId,
+    from: fromState,
+    to: "terminated",
+    reason: input.reason,
+    supersededBy: input.supersededBy,
+    repaired: terminated.value.repaired,
+    terminatedAt,
+  });
 }
 
 function sameIds(left: readonly string[], right: readonly string[]): boolean {
@@ -481,7 +539,13 @@ export function renderElection(
     materializedBallots: checked.value.ledger,
     lateResponses: [],
     history: checked.value.history,
-    timeline: checked.value.timeline,
+    // #3256: the record only ever renders tally history — a "terminated"
+    // round is a dead end (directiveFromSnapshot never returns a "render"
+    // kind for it), so filtering here is provably a no-op in practice; it
+    // exists to narrow the store's now-union ElectionTimelineEvent down to
+    // the tally-only shape amadeus-election-record.ts's ElectionRecordTimelineEvent
+    // still declares.
+    timeline: checked.value.timeline.filter((event) => event.kind === "tallied"),
   });
   const path = join(resolveElectionDir(root, directive.electionId), "record.md");
   if (!writeStoreFile(path, record).ok) return storeError(directive.electionId, "io-error");
@@ -516,7 +580,8 @@ export function verifyElection(
     currentTally: tally,
     lifecycle: "tallied",
     lateResponses: [],
-    timeline: checked.value.timeline,
+    // #3256: see the matching comment in renderElection.
+    timeline: checked.value.timeline.filter((event) => event.kind === "tallied"),
     record,
   });
   if (!verified.ok) return cliError("verification", directive.electionId, "render a canonical record and retry");
@@ -614,6 +679,8 @@ type CliArgs = {
   file?: string;
   project?: string;
   trigger?: string;
+  reason?: string;
+  supersededBy?: string;
 };
 
 function parseCliArgs(argv: readonly string[]): CliArgs | null {
@@ -628,6 +695,8 @@ function parseCliArgs(argv: readonly string[]): CliArgs | null {
     else if (flag === "--file") parsed.file = value;
     else if (flag === "--project") parsed.project = value;
     else if (flag === "--trigger") parsed.trigger = value;
+    else if (flag === "--reason") parsed.reason = value;
+    else if (flag === "--superseded-by") parsed.supersededBy = value;
     else return null;
   }
   return parsed;
@@ -664,7 +733,7 @@ function strings(value: unknown): readonly string[] | null {
 }
 
 function isElectionState(value: unknown): value is ElectionState {
-  return typeof value === "string" && ["draft", "open", "collecting", "partial", "tallied", "rendered", "recorded"].includes(value);
+  return typeof value === "string" && ["draft", "open", "collecting", "partial", "tallied", "rendered", "recorded", "terminated"].includes(value);
 }
 
 function isHoldReason(value: unknown): value is HoldReason {
@@ -787,6 +856,25 @@ function runDirectiveVerb(root: string, verb: string, electionId: string, file: 
   return usageFail();
 }
 
+// #3256: `terminate` is a direct action (like `vote`), not a directive — it
+// closes an orphaned round without ever going through the
+// notify/tally/render/verify report protocol. Extracted out of main() to
+// keep its own usage-validation branching from inflating main()'s
+// complexity; null means "not this verb".
+function runTerminateVerb(root: string, args: CliArgs): number | null {
+  if (args.verb !== "terminate") return null;
+  if (args.electionId === undefined || args.reason === undefined) return usageFail();
+  const terminatedAt = normalizeAt(new Date().toISOString());
+  return emit(
+    terminateRoundElection(
+      root,
+      args.electionId,
+      { reason: args.reason, supersededBy: args.supersededBy ?? null },
+      terminatedAt,
+    ),
+  );
+}
+
 export function main(argv: readonly string[], projectDir?: string): number {
   const args = parseCliArgs(argv);
   if (args === null) return usageFail();
@@ -800,6 +888,8 @@ export function main(argv: readonly string[], projectDir?: string): number {
     if (raw === null) return emit(cliError("decode", "unknown", "fix the input file and retry"));
     return emit(triggeredOpenElection(resolvedProjectDir, root, raw, args.trigger ?? "manual"));
   }
+  const terminated = runTerminateVerb(root, args);
+  if (terminated !== null) return terminated;
   if (args.electionId === undefined) return usageFail();
   const handled = runElectionVerb(root, args.verb, args.electionId, args.file);
   if (handled !== null) return handled;
