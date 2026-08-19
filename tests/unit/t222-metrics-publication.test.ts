@@ -390,6 +390,65 @@ describe("t222 snapshot publisher orchestration", () => {
     expect(receipts.map((receipt) => receipt.operation)).toEqual(["create", "auto-merge", "dispatch"]);
   });
 
+  // Issue #3168: the merge queue lands the snapshot pull request but never deletes its head branch
+  // (`--delete-branch` is rejected on a queued merge, and the repository's delete_branch_on_merge is
+  // off), so `expected 0 related branches` can only converge if the publisher sweeps the branch.
+  test("a head branch the queue left behind is swept once the snapshot has landed", async () => {
+    const branch = parseSnapshotCandidate(snapshotBranch());
+    if (branch.kind !== "branch") throw new Error("fixture");
+    const leftover = snapshotInventory({ landed: [{ path: SNAPSHOT_PATH, sha: TARGET_SHA }], branches: [branch] });
+    const landed = snapshotInventory({ landed: [{ path: SNAPSHOT_PATH, sha: TARGET_SHA }] });
+    const { implementation, receipts } = port([snapshotInventory(), leftover, landed, landed]);
+    expect(await runSnapshotPublisher(implementation, { deadlineMs: 100, pollIntervalMs: 10 })).toMatchObject({
+      code: 0,
+      finalState: "converged",
+      stickyFailure: false,
+    });
+    expect(receipts.map((receipt) => receipt.operation)).toEqual(["create", "auto-merge", "cleanup", "dispatch"]);
+  });
+
+  test("a rejected sweep of the leftover branch stays loud", async () => {
+    const branch = parseSnapshotCandidate(snapshotBranch());
+    if (branch.kind !== "branch") throw new Error("fixture");
+    const leftover = snapshotInventory({ landed: [{ path: SNAPSHOT_PATH, sha: TARGET_SHA }], branches: [branch] });
+    const { implementation } = port([snapshotInventory(), leftover], {
+      cleanup: async () => [
+        { operation: "delete-branch", target: SNAPSHOT_BRANCH, status: "rejected", detail: "lease changed" },
+      ],
+    });
+    expect(await runSnapshotPublisher(implementation, { deadlineMs: 100, pollIntervalMs: 10 })).toMatchObject({
+      code: 1,
+      finalState: "cleanup-rejected",
+      problems: ["lease changed"],
+    });
+  });
+
+  test("the sweep is attempted once and a branch that survives it still times out", async () => {
+    const branch = parseSnapshotCandidate(snapshotBranch());
+    if (branch.kind !== "branch") throw new Error("fixture");
+    const leftover = snapshotInventory({ landed: [{ path: SNAPSHOT_PATH, sha: TARGET_SHA }], branches: [branch] });
+    const { implementation, receipts } = port([snapshotInventory(), leftover]);
+    expect(await runSnapshotPublisher(implementation, { deadlineMs: 30, pollIntervalMs: 10 })).toMatchObject({
+      code: 1,
+      finalState: "timeout",
+      problems: ["expected 0 related branches, found 1"],
+    });
+    expect(receipts.filter((receipt) => receipt.operation === "cleanup")).toHaveLength(1);
+  });
+
+  test("a head branch still backing an unmerged pull request is never swept", async () => {
+    const owned = parseSnapshotCandidate(snapshotPr());
+    const branch = parseSnapshotCandidate(snapshotBranch());
+    if (owned.kind !== "pull-request" || branch.kind !== "branch") throw new Error("fixture");
+    const pending = snapshotInventory({ pullRequests: [owned], branches: [branch] });
+    const { implementation, receipts } = port([pending]);
+    expect(await runSnapshotPublisher(implementation, { deadlineMs: 20, pollIntervalMs: 10 })).toMatchObject({
+      code: 1,
+      finalState: "timeout",
+    });
+    expect(receipts.map((receipt) => receipt.operation)).not.toContain("cleanup");
+  });
+
   test("landed rerun only resends the explicit dispatch", async () => {
     const landed = snapshotInventory({ landed: [{ path: SNAPSHOT_PATH, sha: TARGET_SHA }] });
     const { implementation, receipts } = port([landed, landed]);
@@ -542,6 +601,52 @@ describe("t222 maintenance publisher orchestration", () => {
       finalState: "converged",
     });
     expect(receipts.map((receipt) => receipt.operation)).toEqual(["publish", "auto-merge"]);
+  });
+
+  // Issue #3168, maintenance mirror: the queue lands the maintenance pull request and leaves its
+  // head branch behind, so "0 maintenance branches" cannot converge without the publisher sweeping.
+  test("a maintenance head branch the queue left behind is swept once the diff has landed", async () => {
+    const branch = parseMaintenanceCandidate(maintenanceBranch(), { repository: REPOSITORY, botLogin: BOT_LOGIN });
+    if (branch.kind !== "branch") throw new Error("fixture");
+    const hasDiff = maintenanceInventory();
+    const leftover = maintenanceInventory({ hasDiff: false, branches: [branch] });
+    const noDiff = maintenanceInventory({ hasDiff: false });
+    const { implementation, receipts } = port([{ cutoffSha: TARGET_SHA, inventory: hasDiff }], [leftover, noDiff]);
+    expect(await runMaintenancePublisher(implementation, { deadlineMs: 100, pollIntervalMs: 10 })).toMatchObject({
+      code: 0,
+      finalState: "converged",
+    });
+    expect(receipts.map((receipt) => receipt.operation)).toEqual(["publish", "auto-merge", "cleanup"]);
+  });
+
+  test("a rejected sweep of the leftover maintenance branch stays loud", async () => {
+    const branch = parseMaintenanceCandidate(maintenanceBranch(), { repository: REPOSITORY, botLogin: BOT_LOGIN });
+    if (branch.kind !== "branch") throw new Error("fixture");
+    const hasDiff = maintenanceInventory();
+    const leftover = maintenanceInventory({ hasDiff: false, branches: [branch] });
+    const { implementation } = port([{ cutoffSha: TARGET_SHA, inventory: hasDiff }], [leftover], {
+      cleanup: async () => [
+        { operation: "delete-branch", target: MAINTENANCE_BRANCH, status: "rejected", detail: "lease changed" },
+      ],
+    });
+    expect(await runMaintenancePublisher(implementation, { deadlineMs: 100, pollIntervalMs: 10 })).toMatchObject({
+      code: 1,
+      finalState: "cleanup-rejected",
+      problems: ["lease changed"],
+    });
+  });
+
+  test("a maintenance branch that still carries the diff is never swept", async () => {
+    const branch = parseMaintenanceCandidate(maintenanceBranch(), { repository: REPOSITORY, botLogin: BOT_LOGIN });
+    if (branch.kind !== "branch") throw new Error("fixture");
+    const hasDiff = maintenanceInventory();
+    const pending = maintenanceInventory({ branches: [branch] });
+    const { implementation, receipts } = port([{ cutoffSha: TARGET_SHA, inventory: hasDiff }], [pending], {});
+    expect(await runMaintenancePublisher(implementation, { deadlineMs: 20, pollIntervalMs: 10 })).toMatchObject({
+      code: 1,
+      finalState: "timeout",
+    });
+    expect(receipts.map((receipt) => receipt.operation)).not.toContain("cleanup");
   });
 
   test("no-diff state succeeds without publishing", async () => {

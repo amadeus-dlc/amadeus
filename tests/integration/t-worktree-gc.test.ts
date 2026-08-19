@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { shouldRetryWorktreeAdd } from "../harness/fixtures.ts";
 
 const ROOT = resolve(import.meta.dir, "../..");
 const WORKTREE_GC = join(ROOT, "scripts/worktree-gc.sh");
@@ -14,14 +15,11 @@ afterEach(() => {
 function git(cwd: string, ...args: string[]) {
   let result = Bun.spawnSync({ cmd: ["git", ...args], cwd, stderr: "pipe", stdout: "pipe" });
   const stderr = result.stderr.toString();
-  if (
-    result.exitCode !== 0 &&
-    args[0] === "worktree" &&
-    args[1] === "add" &&
-    stderr.includes("/locked' for writing: No such file or directory")
-  ) {
-    // `git worktree add` removes its incomplete metadata on exit, so retry the
-    // narrow prune race once without masking any other fixture setup failure.
+  // `git worktree add` removes its incomplete metadata on exit, so retry the
+  // narrow prune race once without masking any other fixture setup failure.
+  // See shouldRetryWorktreeAdd (tests/harness/fixtures.ts) — the shared
+  // matcher every `git worktree add` fixture-setup call site retries against.
+  if (result.exitCode !== 0 && shouldRetryWorktreeAdd(args, stderr)) {
     result = Bun.spawnSync({ cmd: ["git", ...args], cwd, stderr: "pipe", stdout: "pipe" });
   }
   expect(result.exitCode, result.stderr.toString()).toBe(0);

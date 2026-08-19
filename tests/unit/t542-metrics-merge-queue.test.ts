@@ -1,9 +1,9 @@
 // t542 — merge queue compatibility for scripts/metrics-publication.ts auto-merge
 // invocations (Issue #2925). gh CLI rejects `--delete-branch` and `--squash` on
 // `gh pr merge` when the target branch has a merge queue rule (main does, since
-// #2888): the queue owns branch deletion (repo delete_branch_on_merge=true) and
-// the merge strategy (ruleset merge_method=SQUASH), so the CLI call must not
-// assert either.
+// #2888): the queue owns the merge strategy (ruleset merge_method=SQUASH), so
+// the CLI call must not assert either. Branch deletion is nobody's job on that
+// call, so the publisher sweeps the landed head branch itself (#3168).
 import { describe, expect, test } from "bun:test";
 import type { CommandRunner } from "../../scripts/metrics-publication-github.ts";
 import { MaintenanceCliPort, SnapshotCliPort } from "../../scripts/metrics-publication-github.ts";

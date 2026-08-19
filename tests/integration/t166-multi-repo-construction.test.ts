@@ -1,4 +1,4 @@
-// covers: subcommand:amadeus-worktree:create, subcommand:amadeus-worktree:merge, subcommand:amadeus-swarm:prepare, function:resolveConstructionRepo, function:repoDir, function:intentRepos
+// covers: subcommand:amadeus-worktree:create, subcommand:amadeus-worktree:merge, subcommand:amadeus-swarm:prepare, subcommand:amadeus-swarm:finalize, function:resolveConstructionRepo, function:repoDir, function:intentRepos
 //
 // Mechanism: cli (spawned dist tools) + real git. P7 — multi-repo construction:
 // `amadeus-worktree create/merge` thread `--repo <name>` so `git worktree add` and
@@ -68,6 +68,95 @@ function runSwarm(proj: string, ...args: string[]): RunResult {
 function git(cwd: string, ...args: string[]): { status: number; out: string } {
   const r = spawnSync("git", args, { cwd, encoding: "utf-8" });
   return { status: r.status ?? -1, out: `${r.stdout ?? ""}${r.stderr ?? ""}` };
+}
+
+function gitOrThrow(cwd: string, ...args: string[]): string {
+  const result = git(cwd, ...args);
+  if (result.status !== 0) {
+    throw new Error(`git ${args.join(" ")} failed: ${result.out.trim() || `exit ${result.status}`}`);
+  }
+  return result.out.trim();
+}
+
+interface PoolAttempt {
+  readonly attemptId: string;
+  readonly unitId: string;
+  readonly dispatchConfirmed: boolean;
+}
+
+interface PoolProjection {
+  readonly phase: string;
+  readonly active: readonly PoolAttempt[];
+}
+
+function poolProjection(result: RunResult, action: string): PoolProjection {
+  const body = JSON.parse(result.stdout);
+  if (result.status !== 0 || !body.ok) {
+    const reason = typeof body.reason === "string" ? body.reason : result.out.trim() || "unknown";
+    throw new Error(`unable to ${action} test Unit: ${reason}`);
+  }
+  return body.projection;
+}
+
+function terminalizePool(proj: string, batch: string): void {
+  let step = 0;
+  let projection: PoolProjection | null = null;
+  while (projection?.phase !== "terminal") {
+    if (!projection?.active[0]) {
+      projection = poolProjection(
+        runSwarm(
+          proj,
+          "acquire",
+          "--batch", batch,
+          "--idempotency-key", `t166-acquire-${step}`,
+        ),
+        "acquire",
+      );
+    }
+    const attempt = projection.active[0];
+    if (!attempt) throw new Error("pool acquisition produced no active attempt");
+    if (!attempt.dispatchConfirmed) {
+      projection = poolProjection(
+        runSwarm(
+          proj,
+          "confirm-dispatch",
+          "--batch", batch,
+          "--attempt", attempt.attemptId,
+          "--native-handle", `native-${attempt.unitId}`,
+          "--idempotency-key", `t166-confirm-${attempt.attemptId}`,
+        ),
+        "confirm dispatch for",
+      );
+    }
+    projection = poolProjection(
+      runSwarm(
+        proj,
+        "settle-release",
+        "--batch", batch,
+        "--attempt", attempt.attemptId,
+        "--outcome", "succeeded",
+        "--idempotency-key", `t166-settle-${attempt.attemptId}`,
+      ),
+      "settle",
+    );
+    step += 1;
+  }
+}
+
+function commitWorkerSource(
+  proj: string,
+  slug: string,
+  relativePath: string,
+  contents: string,
+): void {
+  const wt = worktreeDir(proj, slug);
+  writeFileSync(join(wt, relativePath), contents);
+  gitOrThrow(wt, "add", "--", relativePath);
+  gitOrThrow(wt, "commit", "-q", "-m", `worker source for ${slug}`, "--", relativePath);
+  const committed = gitOrThrow(wt, "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD");
+  if (committed !== relativePath) {
+    throw new Error(`worker commit must contain only ${relativePath}; got ${committed || "<empty>"}`);
+  }
 }
 
 /** A fresh workspace root (NOT a git repo). */
@@ -256,6 +345,48 @@ describe("t166 P7 multi-repo construction — --repo anchors the worktree to the
       // Only true if prepare resolved --repo and threaded it into create's cwd.
       expect(hasBoltBranch(proj, "repo-a", "swarmunit")).toBe(true);
       expect(hasBoltBranch(proj, "repo-b", "swarmunit")).toBe(false);
+    });
+  });
+
+  describe("M2 multi-repo: swarm finalize --repo lands source only in the target repo", () => {
+    const proj = freshWorkspace();
+    const repoA = makeSiblingRepo(proj, "repo-a");
+    const repoB = makeSiblingRepo(proj, "repo-b");
+    runUtil(proj, "intent-birth", "--scope", "feature", "--repos", "repo-a,repo-b");
+    const prepared = runSwarm(
+      proj,
+      "prepare",
+      "--batch", "2",
+      "--units", "swarm-finalize",
+      "--base", "main",
+      "--repo", "repo-a",
+    );
+    commitWorkerSource(proj, "swarm-finalize", "swarm-source.txt", "repo-a source\n");
+    terminalizePool(proj, "2");
+    const repoABefore = gitOrThrow(repoA, "rev-parse", "main");
+    const repoBBefore = gitOrThrow(repoB, "rev-parse", "main");
+    const finalized = runSwarm(
+      proj,
+      "finalize",
+      "--batch", "2",
+      "--units", "swarm-finalize",
+      "--claimed", "swarm-finalize",
+      "--check-cmd", "test -f swarm-source.txt",
+      "--repo", "repo-a",
+    );
+    const repoAAfter = gitOrThrow(repoA, "rev-parse", "main");
+    const repoBAfter = gitOrThrow(repoB, "rev-parse", "main");
+
+    test("terminal finalize advances repo-a only and cleans its worktree + branch", () => {
+      expect(prepared.status).toBe(0);
+      expect(finalized.status).toBe(0);
+      expect(repoAAfter).not.toBe(repoABefore);
+      expect(git(repoA, "cat-file", "-e", `${repoAAfter}:swarm-source.txt`).status).toBe(0);
+      expect(repoBAfter).toBe(repoBBefore);
+      expect(git(repoB, "cat-file", "-e", `${repoBAfter}:swarm-source.txt`).status).not.toBe(0);
+      expect(existsSync(worktreeDir(proj, "swarm-finalize"))).toBe(false);
+      expect(hasBoltBranch(proj, "repo-a", "swarm-finalize")).toBe(false);
+      expect(hasBoltBranch(proj, "repo-b", "swarm-finalize")).toBe(false);
     });
   });
 

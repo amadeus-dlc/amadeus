@@ -1,13 +1,20 @@
+// Test-only helper. Originally added under plugins/formal-model-check/tools/
+// (#2890) but never declared in that plugin's manifest, and it must not be:
+// declaring it would pull amadeus-lib.ts's transitive import closure (down to
+// vendor OpenTelemetry modules) into the plugin bundle, which every other
+// plugin tool avoids by construction (#3078). It has no production importer —
+// only tests/integration/t-advisory-human-choice-{boundaries,domain}.test.ts
+// consume it, via a direct source import.
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readFileSync, readdirSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import {
   docsRoot,
   isPlainObject,
-} from "../../../packages/framework/core/tools/amadeus-lib.ts";
-import { canonicalIdentity } from "./canonical.ts";
-import { cfgConstants } from "./run-model-check-artifacts.ts";
-import { FIXED_TLC_VERSION_LINE } from "./tlc-toolchain.ts";
+} from "../../packages/framework/core/tools/amadeus-lib.ts";
+import { canonicalIdentity } from "../../plugins/formal-model-check/tools/canonical.ts";
+import { cfgConstants } from "../../plugins/formal-model-check/tools/run-model-check-artifacts.ts";
+import { FIXED_TLC_VERSION_LINE } from "../../plugins/formal-model-check/tools/tlc-toolchain.ts";
 
 export type AdvisoryIdentity = {
   target: string;

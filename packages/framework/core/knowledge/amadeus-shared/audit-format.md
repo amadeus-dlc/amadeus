@@ -220,7 +220,7 @@ Emitted during Phase 3 (Construction) when Bolts run inside per-Bolt git worktre
 
 | Event | When | Required | Optional | Emitter |
 |-------|------|----------|----------|---------|
-| `WORKTREE_CREATED` | Per-Bolt git worktree created from main on Bolt start | Bolt slug, Worktree path, Branch name, Base branch | — | `tools/amadeus-worktree.ts` (`create`) |
+| `WORKTREE_CREATED` | Per-Bolt git worktree created from main on Bolt start | Bolt slug, Worktree path, Branch name, Base branch | Base SHA | `tools/amadeus-worktree.ts` (`create`) |
 | `WORKTREE_MERGED` | Bolt's worktree merged back to main on gate approval | Bolt slug, Worktree path, Target branch, Strategy | — | `tools/amadeus-worktree.ts` (`merge`) |
 | `WORKTREE_DISCARDED` | Aborted Bolt's worktree explicitly removed | Bolt slug, Worktree path, Reason | — | `tools/amadeus-worktree.ts` (`discard`) |
 | `STATE_FORKED` | State file forked to worktree on Bolt start | Bolt slug, Worktree path, Source state hash, Target state hash | — | `tools/amadeus-state.ts` (`fork`) |

@@ -62,6 +62,7 @@ import { basename, join, resolve } from "node:path";
 import {
   cleanupWorktreeFixture,
   setupWorktreeFixture,
+  spawnWorktreeAdd,
   WORKTREE_FIXTURE_PREFIX,
 } from "../harness/fixtures.ts";
 
@@ -146,11 +147,7 @@ describe("t01 worktree harness helpers (migrated from t01-helpers.sh, plan 7)", 
     const childWt = join(fixture, "wt");
     // .sh test 5: git worktree add -q "$child_wt" -b foo-branch, then
     // assert_worktree_at "$fixture" "$child_wt".
-    const add = spawnSync(
-      "git",
-      ["-C", fixture, "worktree", "add", "-q", childWt, "-b", "foo-branch"],
-      { encoding: "utf-8" },
-    );
+    const add = spawnWorktreeAdd(fixture, ["-q", childWt, "-b", "foo-branch"]);
     expect(add.status).toBe(0);
     expect(worktreeRegistered(fixture, childWt)).toBe(true);
   }, scaleTestTime(GIT_FIXTURE_TEST_TIMEOUT_MS));

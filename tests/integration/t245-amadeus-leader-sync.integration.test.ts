@@ -10,6 +10,7 @@ import { cpSync, mkdirSync, mkdtempSync, readdirSync, rmSync, symlinkSync, write
 import * as realOs from "node:os";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { shouldRetryWorktreeAdd } from "../harness/fixtures.ts";
 import {
   analyzeOwnedContents,
   collectDiff,
@@ -80,7 +81,13 @@ function ok(stdout = ""): CommandResult {
 }
 
 function gitStdout(args: string[], cwd: string): string {
-  const result = spawnGit(args, cwd);
+  let result = spawnGit(args, cwd);
+  // Narrow retry (#3088): a `worktree add` can lose a sub-millisecond race
+  // against a concurrent prune/gc that deletes its still-empty metadata dir
+  // before the `locked` marker is written. See shouldRetryWorktreeAdd.
+  if (result.kind === "error" && shouldRetryWorktreeAdd(args, result.stderr)) {
+    result = spawnGit(args, cwd);
+  }
   expect(result.kind).toBe("ok");
   if (result.kind === "error") throw new Error(result.stderr);
   return result.stdout;

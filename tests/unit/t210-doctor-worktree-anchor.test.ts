@@ -33,6 +33,7 @@ import {
   DEFAULT_SPACE,
   seedWorkspaceShell,
   seededStateFile,
+  shouldRetryWorktreeAdd,
 } from "../harness/fixtures.ts";
 
 // Doctor is spawned from the DIST tree (dist/claude/.claude/tools) because it
@@ -52,7 +53,14 @@ interface SiblingScratch {
 let scratch: SiblingScratch;
 
 function git(cwd: string, args: string[]): string {
-  const result = spawnSync("git", args, { cwd, encoding: "utf-8" });
+  const run = () => spawnSync("git", args, { cwd, encoding: "utf-8" });
+  let result = run();
+  // Narrow retry (#3088): a `worktree add` can lose a sub-millisecond race
+  // against a concurrent prune/gc that deletes its still-empty metadata dir
+  // before the `locked` marker is written. See shouldRetryWorktreeAdd.
+  if (result.status !== 0 && shouldRetryWorktreeAdd(args, result.stderr ?? "")) {
+    result = run();
+  }
   if (result.status !== 0) {
     throw new Error(
       `git ${args.join(" ")} failed in ${cwd}: ${result.stderr?.trim() || result.stdout?.trim() || `exit ${result.status}`}`,
