@@ -181,17 +181,17 @@ function spawnSibling(
   };
 }
 
-function parseFlags(args: string[]): Record<string, string> {
+function parseFlags(args: string[], explicitProjectDir?: string): Record<string, string> {
   const flags: Record<string, string> = {};
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (!a.startsWith("--")) continue;
     if (i + 1 >= args.length) {
-      error(`${a} expects a value, got end of arguments.`);
+      error(`${a} expects a value, got end of arguments.`, explicitProjectDir);
     }
     const val = args[i + 1];
     if (val.startsWith("--")) {
-      error(`${a} expects a value, got another flag: "${val}". Did you forget the value?`);
+      error(`${a} expects a value, got another flag: "${val}". Did you forget the value?`, explicitProjectDir);
     }
     flags[a.slice(2)] = val;
     i++;
@@ -1254,17 +1254,26 @@ function handleSetAutonomy(args: string[], explicitProjectDir?: string): void {
 // withAuditLock installs an exit-handler safety net that still releases the
 // lock dir.
 function handleApproveBatch(args: string[], explicitProjectDir?: string): void {
-  const flags = parseFlags(args);
-  if (!flags.batch) error("Missing --batch <n> (the 1-origin swarm batch number)");
+  // Resolved BEFORE any validation error() call, INCLUDING parseFlags' own
+  // internal ones (the handleComplete precedent, line ~614): every error()
+  // below must carry this explicit `pd` so a refusal is always attributed to
+  // the caller's own project dir, never to whatever ambient workspace
+  // resolveProjectDir(undefined) would fall back to when this process's cwd
+  // happens to sit inside a real amadeus checkout (#3243 — a bare error(msg)
+  // here bootstrapped OTel against that ambient workspace and could even leak
+  // an ERROR_LOGGED row into its real audit shard). parseFlags takes no
+  // dependency on `pd`, so resolving it first is free.
+  const pd = resolveBoltProjectDir(explicitProjectDir);
+  const flags = parseFlags(args, pd);
+  if (!flags.batch) error("Missing --batch <n> (the 1-origin swarm batch number)", pd);
   const batch = Number(flags.batch.trim());
   if (!Number.isInteger(batch) || batch < 1) {
-    error(`Invalid --batch: ${flags.batch}. Must be a positive integer (batch numbers are 1-origin).`);
+    error(`Invalid --batch: ${flags.batch}. Must be a positive integer (batch numbers are 1-origin).`, pd);
   }
 
-  const pd = resolveBoltProjectDir(explicitProjectDir);
   withAuditLock(pd, () => {
     const presence = verifyBatchApprovalPresence(pd);
-    if (!presence.ok) error(presence.error.reason);
+    if (!presence.ok) errorNoAuditTrace(presence.error.reason);
 
     const content = readStateFile(pd);
     const approved = parseApprovedSwarmBatches(content);
@@ -1290,7 +1299,7 @@ function handleApproveBatch(args: string[], explicitProjectDir?: string): void {
         "User Input": `approve-batch --batch ${batch}`,
       });
     } catch (e) {
-      error(`Audit emission failed: ${errorMessage(e)}`);
+      error(`Audit emission failed: ${errorMessage(e)}`, pd);
     }
 
     writeStateFile(pd, updated);
@@ -1408,6 +1417,17 @@ function error(msg: string, explicitProjectDir?: string): never {
   const pd = resolveProjectDir(explicitProjectDir ?? projectDir);
   const command = `amadeus-bolt ${process.argv.slice(2).join(" ")}`.trim();
   emitError(pd, "amadeus-bolt", command, msg);
+}
+
+// D7/FR-12 R-7: a presence refusal must leave NO new audit trace — the ledger
+// stays byte-identical before and after ("no evidence, no record" for a
+// security-relevant gate). error()/emitError's ERROR_LOGGED write is correct
+// for every OTHER failure this file reports, but wrong here: unlike error(),
+// this never touches any project's audit shard, so there is no project dir to
+// (mis)resolve or attribute the write to in the first place.
+function errorNoAuditTrace(msg: string): never {
+  console.error(JSON.stringify({ error: msg }));
+  process.exit(1);
 }
 
 // Emit BOLT_FAILED for partial-progress recovery in --worktree / --merge
