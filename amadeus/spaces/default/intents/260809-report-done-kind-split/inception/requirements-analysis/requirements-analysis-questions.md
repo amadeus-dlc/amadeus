@@ -52,9 +52,23 @@ RE: stop 自体は正しい(read-only コマンドは前進しない)が SKILL.m
 
 ## 配送クロージャの裁定(2026-08-19、intent 再開時)
 
-本 intent はパーク(2026-08-10T01:04:48Z)後に再開され、その間に code-generation の produces へ `pr-convergence-report` が追加されていた。本 unit の Bolt PR #2770 は収束せず #2767 に supersede されており、#2767 / #2770 のいずれも Amadeus provenance(タイトル `[intent/bolt/unit] ` 接頭辞と本文 `## Amadeus Work`)を持たないため CLI が `provenance-violation` で拒否する状態だった(`--unlinked true` は self-* スコープで禁止)。
+本 intent はパーク(2026-08-10T01:04:48Z)後に 2026-08-19 に再開された。code-generation の produces に `pr-convergence-report` を注ぎ込む `github-pr-convergence` プラグインの seam は、パーク前から有効だった(seam 導入 `da0efa4a3` 2026-08-06 / 本ワークスペースでの activation `75a1c198d` 2026-08-07 — いずれも本 intent 開始 2026-08-09 より前。実測: `git log -S'"entries": ["pr-convergence-report"]' -- '*plugin.json'` と `git show 28e1f40c3:amadeus/config.json`)。つまり配送証跡の要求は当初から適用されており、park により未到達だっただけである。本 unit の Bolt PR #2770 は収束せず #2767 に supersede されており、#2767 / #2770 のいずれも Amadeus provenance(タイトル `[intent/bolt/unit] ` 接頭辞と本文 `## Amadeus Work`)を持たないため CLI が `provenance-violation` で拒否する状態だった(`--unlinked true` は self-* スコープで禁止)。
 
 - 選択肢 A(record のみの新規 Bolt PR を作って `converged`)/ B(merged #2767 へ provenance 後付け → `override`)/ C(closed #2770 へ provenance 後付け → `override`)を監督者へ諮り、**C** の裁定を得た(2026-08-19)
 - 裁定理由(監督者): (1) C は「本 bolt の PR #2770 は収束せず #2767(squash `34888d840`)に supersede された」という実際に起きたことをそのまま記録できる唯一の案 (2) B は #2767 が本 bolt の配送物だったという虚偽を作り、main の commit subject とも不整合になる (3) A は実装を含まない PR への `converged` 記録であり検証劇場(team.md Forbidden)に該当する
 - 裁定条件: (a) #2770 へ付与する provenance は真実のみ(#2770 は実際に本 bolt が出した PR であり、欠落メタデータの真実への訂正) (b) report の reason に非収束・supersede の事実、実配送が #2767 / `34888d840` であること、祖先証明の実測を明記 (c) #2767 と main 履歴には一切触れない (d) 本裁定と根拠を record へ残す(本節と `construction/code-generation/memory.md`) (e) override 経路が拒否された場合は迂回せず再度エスカレーション
 - 本裁定は `semi` 梯子ではなく**監督者への直接エスカレーション**で得た。理由: GitHub 上の既存 PR メタデータの編集は外部境界の操作であり、team.md のユーザーエスカレーション正準リスト (3)「人間の関与が本質の事項(外部サービス操作)」に該当するため
+
+### C 案の実行不能と A′ への再裁定(2026-08-19)
+
+C 案(#2770 への provenance 補記 → `override`)は provenance の補記までは成立したが(`status` が `converged:false` / `verdict:not-converged` / `mergeState:DIRTY` / `ignored:4` を返す状態まで到達)、`override` 自体が CLI 契約上実行不能と実測した。
+
+- `plugins/github-pr-convergence/tools/pr-convergence-git-runner.ts:255` `verifyCurrentPrerequisites`(ブランチ照合 :263-266)が checkout ブランチ == PR head ブランチを要求。実行結果 exit 1、逐語 `delivery prerequisite failed: checked-out branch intent-2764-complete is not the PR head branch worktree-agent-a99898fa56f0e6079`
+- 仮にそれを満たしても `plugins/github-pr-convergence/tools/pr-convergence-cli.ts:711`(`selfEvidence`、定義 :703)が既存の created epoch を要求 — 逐語 `created report is missing; run create first`。#2770 は CLI の `create` を経ていないため不在
+- `--unlinked true` は self-* で禁止(同 :662-663)
+
+裁定条件 (e)(拒否されたら迂回せず再エスカレーション)に従い再度諮り、**A′**(残存成果物である intent record を運ぶ Bolt PR を新規作成し、そこで収束させる)の裁定を得た。前回 A を検証劇場として却下した懸念は、(i) PR タイトル・本文・`code-summary.md`・レポート注記のすべてで「実装は #2767 / `34888d840` で着地済み、本 PR が運ぶのは record のクロージャのみ」を明示すること、(ii) #2770 への真実の provenance 補記を維持すること、で解消されるとの判断。
+
+- Delivery Bolt PR: **#3236**(head `chore/record-260809-report-done-kind-split`、base `main`)。マージ・queue 投入は監督者が行う
+- 構造欠落は Issue **#3239** として起票(bug / P3 / S3-MAJOR)
+- #2767 と `main` 履歴は未接触(裁定条件 (c) を維持)
