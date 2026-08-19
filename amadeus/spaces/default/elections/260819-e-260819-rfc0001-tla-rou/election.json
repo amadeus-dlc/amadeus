@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 2,
+  "electionId": "E-260819-RFC0001-TLA-ROUTE",
+  "kind": "design-deviation",
+  "questions": [
+    {
+      "questionId": "q-tla-route",
+      "text": "intent 260815-rfc-autonomy-modes(RFC-0001 Intent Autonomy Modes、実装は 13 unit の PR として着地済み)の tla-authoring ステージの適用性ルートを裁定せよ。ステージ本文(.claude/plugins/formal-model-check/stages/tla-authoring.md の Steps 1)は、選定した subject を new-subject / semantic-change / impl-only / non-target に分類し、未登録の選定集合は author-new へ、選定集合が空なら terminal not-applicable を記録して成功終了せよと定める。既存の登録モデルは BoltPrAttestationGate / FormalElection / MirrorLifecycle / PrConvergenceGate の4件。要件は amadeus/spaces/default/intents/260815-rfc-autonomy-modes/inception/requirements-analysis/requirements.md(FR-1〜FR-15、NFR 5件)。判断にあたっては (1) ステージ本文 Steps 1 (2) team.md § Testing Posture の二層検証の発火条件 (3) project.md の cid:tla-authoring:tla-spec-change-discriminator と cid:tla-authoring:tla-impl-only-evidence-shape を実読すること。実測済みの証拠は各選択肢の description に転記してあるが、鵜呑みにせず自分で再実行して確認すること。",
+      "choices": [
+        {
+          "internalNo": 1,
+          "label": "impl-only(terminal ルート。モデルの新規作成・改訂を行わない)",
+          "description": "根拠: (a) subject 語彙 probe — amadeus/spaces/default/specs/tla/{BoltPrAttestationGate,FormalElection,MirrorLifecycle,PrConvergenceGate}.tla に対する固定文字列 census(grep -c -F)で、対照リテラル VARIABLES / Init / Next は全4モデルで非ゼロ(1/2/2)、被検リテラル waiting / interactiv / presence / recommendation / contested / semiAuthority / grantCeremony / completionReport は全4モデルで 0 hit。(b) namedInvariants の列挙 — BoltPrAttestationGate: TypeOK, EvidenceCurrentHead, SensorRequiresAttestation, AttestationRequiresCompleteBolt, SensorRequiresCompleteBolt, OwnerEvidenceIsolated, AutonomyDecisionSafe, ReceiptIdempotent, ReceiptBoundCurrentReport, CodeGenerationGuarded, WorkflowGuarded / FormalElection: TypeOK, QuestionIdsUnique, AcceptedDomain, ResultCompleteness, PerQuestionIsolation, HeldOnlyTargets, MixedLifecycle / MirrorLifecycle: TypeOK, NoCloseWithoutLandedSync, NoDuplicateCreate / PrConvergenceGate: TypeOK, EvidenceCurrentHead, SensorRequiresAttestation, CodeGenerationGuarded, WorkflowGuarded — waiting terminal・presence 検査・推薦梯子・semi projection を守る不変量は不在。(c) impl-only の該当性 — 本 intent は model-map が pin する packages/framework/core/tools/amadeus-orchestrate.ts と amadeus-state.ts を実際に変更しており(pin は着地時に resync 済みで現在 drift 0)、pin 対象を触った側に立つ。(d) team.md § Testing Posture は形式検証層の発火を『並行プロトコル(状態機械・相互排除の不変量)の spec 変更時のみ』と限定し全変更への一律義務化を否定する。FR-3 が導入する waiting terminal は単一 intent のライフサイクル状態であって相互排除不変量を持つ並行プロトコルではない、と読む立場。"
+        },
+        {
+          "internalNo": 2,
+          "label": "author-new(FR-3 の waiting terminal を新規 subject として登録しモデルを起こす)",
+          "description": "根拠: ステージ本文 Steps 1 は『未登録の選定集合は author-new へルートしなければならない』と定め、かつ『never infer impl-only merely because a model already exists』と明記する。FR-3(非対話中断の一般機構、ADR-4)は park guard の前提を廃棄して waiting を park と区別される一級 terminal として追加する — 新しい状態と遷移の追加であり、project.md の cid:tla-authoring:tla-spec-change-discriminator が spec 変更でないとする 2 類型(fail-closed の拒否ガードの追加 / 既存の別経路が既に持つ契約への対称性回復)のいずれにも当たらない。ワークフローは中断と再開をまたいで amadeus-state.md と監査台帳を共有する再開可能アクターであり、『待つべきワークフローが走り続ける』『待機中のワークフローが認可なく再開される』はいずれも無音で残存しうる安全性違反である。したがって選定基準に該当し、未登録である以上 author-new が本文の指示どおりの帰結、とする立場。"
+        },
+        {
+          "internalNo": 3,
+          "label": "not-applicable(選定集合が空。terminal 記録のみ)",
+          "description": "根拠: FR-1〜FR-15 のいずれも『共有状態を持つ並行アクター + 無音で残存しうる安全性違反』の選定基準を満たさない、とする立場。FR-1 は純粋な型・語彙、FR-2 は読取ポート、FR-7/FR-8 は設定軸と表示、FR-9 は provenance 記録、FR-10 は発火述語、FR-11 は digest 束縛、FR-13 は調査のみ、FR-14 は文書、FR-15 は無退行であり、いずれも並行性を持たない。FR-3/FR-4/FR-5/FR-6/FR-12 も単一 intent 内の逐次的な判定経路であって相互排除を必要としない。この立場を採る場合、impl-only(選択肢1)との違いは『pin 対象を触ったか』の扱いであり、本 intent が pin されている amadeus-orchestrate.ts / amadeus-state.ts を実際に変更している事実と整合するかを検討すること。"
+        }
+      ]
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

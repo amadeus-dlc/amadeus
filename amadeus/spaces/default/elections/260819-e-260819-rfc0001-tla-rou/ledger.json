@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "ballots": [
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260819-RFC0001-TLA-ROUTE",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-tla-route",
+          "choiceInternalNo": 2,
+          "goa": 2,
+          "reservation": "author-new に進む前に選定集合の境界を確定させること。私が選定基準を満たすと実測できたのは FR-3(waiting terminal の三分割と ledger 束縛の rate 制約)であり、FR-4 は同一状態機械の裁定順序として同梱すべきだが、FR-5(semi projection)/ FR-6(乖離 loud fail)/ FR-12(presence fail-closed)は project.md の discriminator が名指す除外2類型(fail-closed 拒否ガードの追加 / 既存経路が既に持つ契約への対称性回復)に該当するため選定集合へ入れない。subjects declare は FR-3 (+FR-4) に絞ること。また実装は既に 13 unit で着地済みであり、本ルートは gating ではなく事後の形式検証になる — その位置づけを applicability-assessment へ明記し、step 5 の human gate でコスト是非を人間へ提示すること。",
+          "rationale": "ステージ本文 Steps 1.2 の選定基準(共有状態を持つ並行・再開可能アクター + 無音で残存しうる安全性違反)に FR-3 が該当することを実装の実読で確定した。packages/framework/core/tools/amadeus-waiting.ts:288 resumeInterruption は AWAITING_RULING / REPAIR_STALLED / HUMAN_REENTRY_REASONS(park)の三終端を record から dispatch し、未知の stop reason を park へ縮退させず拒否する(逐語コメント『resuming a broken run as a healthy one is the failure the three-way split exists to prevent』)。admitWaiting は (occurrence, basis) の rateKey を永続 ledger の prior entry 集合に照合し、セッションを跨いだ再到達を repeat と判定する — すなわち再開可能アクターが永続状態を共有する。無音の安全性違反も実在する: waiting record を park 経路で resume すると『never parked な record に WORKFLOW_UNPARKED を出す』台帳不整合が起き、その時点では loud に落ちない。次に project.md cid:tla-authoring:tla-spec-change-discriminator の判別を適用した。FR-3 は新終端 AWAITING_RULING を stop reason 集合へ追加し、専用 resume 条件・専用 lifecycle marker(WORKFLOW_WAITING_ENTERED / _RESUMED、registry 96->98)・終端間の排他規則を導入する(commit c5789486f)。これは discriminator が spec 変更に当たらないと定める2類型(fail-closed の拒否ガード追加 / 既存の別経路が既に持つ契約への対称性回復)のいずれでもなく、状態・遷移・相互排除規則の追加そのものである。したがって team.md § Testing Posture の発火条件『並行プロトコル(状態機械・相互排除の不変量)の spec 変更時のみ』も満たす。最後に登録有無を独立に census した(実行 tree = 現 worktree、述語 = grep -c -F、対象 = specs/tla の全 7 モジュール、zsh 配列展開)。対照 MODULE = 7/7 非ゼロ、VARIABLES = 6/7 非ゼロ、Init = 17 hit(いずれも exit 0)で述語は健全。被検 AWAITING_RULING / REPAIR_STALLED / waitingId / enterWaiting / resumeInterruption / rateKey / interactivityBasis / stopReason は全 7 モジュールで 0 hit・exit 1(不一致であって exit 2 のエラーではない)。case-insensitive でも waiting / awaiting / presence / interact / contested / recommend / semi は全モジュール 0 hit。model-map の namedInvariants も自前で列挙し(ビュー転記と一致)、waiting 終端・presence 境界・推薦梯子を守る不変量は不在。BoltPrAttestationGate は AutonomyDecisionSafe / authorityDecision / candidateCount / humanQuestion を持つが、evidence bundle(cebe2897...)の宣言 subject は intent 260813-bolt-pr-attestation の FR 群で route: revise-model、記述は『Delivery Bolt の正規 member Unit 集合…full autonomy の一意な継続』であり、対象は attestation gate の Delivery Bolt authority 解決に限定される。FR-3 の waiting 終端はその抽象に存在しない(park / waiting / resume いずれも 0 hit)。以上より選定集合は未登録であり、Steps 1.4 の『An unregistered selected set must route to author-new』が直接適用される。impl-only(選択肢1)は採らない: 本 intent が pin 対象 amadeus-orchestrate.ts / amadeus-state.ts を実際に変更している(commit c5789486f / 85e283a53 / d00103a64、pin digest は現在 13/13 MATCH で drift 0)ことは必要条件にすぎず、project.md cid:tla-impl-only-evidence-shape 自身が『pinned implPath を触ったかどうかだけでは impl-only の根拠にならない』と定める。0-hit census は『被検 subject がモデルの守備範囲外』を示すが、その subject が選定基準を満たす場合、本文が指す帰結は impl-only ではなく author-new であり、Steps 1.3 は『never infer impl-only merely because a model already exists』と明記する。260818-priority-bug-batch-4 の impl-only 先例が整合するのは、その subject が discriminator の除外2類型(emit 拒否ガード / terminal outcome の対称性回復)に実際に該当したためで、本件は該当しない。not-applicable(選択肢3)も採らない: その description は FR-3 を『単一 intent 内の逐次的な判定経路であって相互排除を必要としない』と括るが、admitWaiting の rate 制約が永続 ledger をセッション跨ぎで参照する点と resumeInterruption の三終端排他 dispatch が実装上これを反証する。"
+        }
+      ],
+      "submittedAt": "2026-08-19T08:24:22Z",
+      "receivedAt": "2026-08-19T08:24:28Z"
+    },
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260819-RFC0001-TLA-ROUTE",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-tla-route",
+          "choiceInternalNo": 2,
+          "goa": 2,
+          "reservation": "ballot に revise-model が選択肢として無い点を留保する。独自 census で BoltPrAttestationGate.tla:74-77 の AutonomyDecisionSafe(humanQuestion = FALSE / authorityDecision = continued => candidateCount = 1 / refused => candidateCount # 1)と :156-158 の ResolveAuthority(authorityDecision' = IF candidateCount = 1 THEN continued ELSE refused)を発見した。これは FR-1 の unique/contested/none と FR-4 の『対話→人間』経路に語彙上きわめて近く、一見 revise-model を要するように見える。実読で追跡した結果、この candidateCount は degrade の unit ディレクトリ解決(amadeus-orchestrate.ts resolveDegradeUnit :4624-4637 の candidates.length === 1)を抽象しており、commit d7ffaa544(#2999『Fix multi-Unit Delivery Bolt PR attestation』)が導入した Delivery Bolt authority(approved-plan / engine-singleton)の抽象であって RFC-0001 の推薦梯子ではない、と判定した。したがって revise-model は不要で author-new が正しいが、この判定は authoring 段で再確認すべきであり、新モデルの scope 境界は AutonomyDecisionSafe と衝突しない形(Delivery Bolt unit 解決を subject に含めない)で明示的に引くこと。あわせて author-new の subject は FR-3(waiting terminal)を中核とし、FR-1/FR-4 のうち waiting へ流れ込む裁定経路までを境界とすること — FR-7/FR-8/FR-13/FR-14 等の非並行 FR を選定集合へ混ぜない。",
+          "rationale": "ステージ本文 Steps 1 の 2 段(選定基準の充足 → 登録状況による分類)を順に適用した。(1) 選定基準『共有状態を持つ並行・再開可能アクター + 無音で残存しうる安全性違反』の充足: FR-3 の実装 c5789486f(#3130)は amadeus-waiting.ts(328 行、実測 15117 bytes)を新設し、park guard を state.ts から除去したうえで AWAITING_RULING を独自 resume condition つきの stop reason として追加している。waitingEntriesOfEvents(:206-218)は WORKFLOW_WAITING_ENTERED / WORKFLOW_WAITING_RESUMED の追記型イベント列を fold して事前到達を復元し、admitWaiting(:321-330)は rate key の未解決エントリを .at(-1) で選ぶ順序依存の判定を行う。ledger はセッション・プロセスを跨いで共有される(commit 逐語『enterWaiting checks the rate constraint against the ledger rather than process memory, so an arrival that repeats one from an earlier session is seen as a repeat』)。無音の安全性違反はコード自身が名指しする — 逐語『a corrupt ledger must not be able to launder one entry's resume into another's』(:204-205)、および『Waiting cannot exit through the park resume: doing so would emit WORKFLOW_UNPARKED for a record that never parked』。ResumeDispatch(:222-227)は park / waiting / repair-stalled の三終端を1つの envelope から相互排他に振り分けており、相互排除不変量を持つ。よって基準を充足する。(2) 登録状況: 独自 census(zsh 配列展開、grep -c -F、対照リテラル同伴)で .tla 全 7 ファイルに対し waiting = 0 / AWAITING = 0 / resumeInterruption = 0、対照 VARIABLES = 6 ファイル hit・Init 17・Next 14(exit 0)。0-hit は exit 1(不一致)であり exit 2(エラー)ではない。BoltPrAttestationGate.tla:25 の AuthorityDecisions == {\"pending\", \"continued\", \"refused\"} に waiting は無く、4 モデルの namedInvariants(model-map.json 実読)にも waiting/resume/interruption を守るものは無い。すなわち未登録。本文 Steps 1.4『An unregistered selected set must route to author-new』により author-new。(3) 選択肢 1(impl-only)を採らない理由: 提示された 2 点セット証拠(語彙 0-hit・namedInvariants 不在)は『登録モデルの守備範囲外』を示すものであり、それはまさに未登録の定義である。本文 Steps 1.3 は『never infer impl-only merely because a model already exists』と明記し、cid:tla-impl-only-evidence-shape も『pinned implPath を触ったかどうかだけでは impl-only の根拠にならない』と定める。impl-only が正しいのは選定基準を充足しない場合に限られる。先例 260818-priority-bug-batch-4 が impl-only を採れたのは、その変更が fail-closed の拒否ガード追加と既存契約への対称性回復の 2 類型に収まり新しい状態機械を導入しなかったためで(同 applicability-assessment 実読)、本件は逆に guard の除去と新終端・新台帳語彙・新相互排除規則の追加である。cid:tla-spec-change-discriminator の判別規則『状態・遷移・相互排除規則を追加するか』に照らして spec 変更に当たり、team.md § Testing Posture の発火条件『並行プロトコル(状態機械・相互排除の不変量)の spec 変更時のみ』も満たす — 一律義務化への滑落ではない。(4) 選択肢 3(not-applicable)を採らない理由: 選定集合が空であることを要するが、上記のとおり FR-3 が基準を充足するため空ではない。model-map の pin(amadeus-orchestrate.ts = 3abb9daf07d4… / amadeus-state.ts = eeddeb61656d…)は実ファイルの shasum -a 256 と一致(drift 0)しており、両 pin 対象を本 intent が実際に変更した事実とも整合しない。"
+        }
+      ],
+      "submittedAt": "2026-08-19T08:23:32Z",
+      "receivedAt": "2026-08-19T08:24:32Z"
+    }
+  ]
+}
