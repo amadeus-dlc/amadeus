@@ -137,6 +137,17 @@ export function parseReleasePrView(value: unknown, source: string): ReleasePrObs
   };
 }
 
+// One GitHub App author reaches this check under three spellings depending on
+// the surface that reported it: the REST/GraphQL login (`<slug>[bot]`), the
+// gh CLI's app rendering (`app/<slug>`), and the bare slug. Compare the slug,
+// not the spelling — the mismatch refused a genuine bot PR on the first real
+// re-dispatch (run 32229259195: "owned by app/amadeus-dlc-bot, not
+// amadeus-dlc-bot[bot]").
+function botLoginSlug(login: string): string {
+  const bare = login.startsWith("app/") ? login.slice("app/".length) : login;
+  return bare.endsWith("[bot]") ? bare.slice(0, -"[bot]".length) : bare;
+}
+
 export function parseOpenReleasePrUrl(
   value: unknown,
   input: { readonly branch: string; readonly botLogin: string },
@@ -149,7 +160,7 @@ export function parseOpenReleasePrUrl(
   const record = requireRecord(value[0], "gh pr list row is invalid");
   const author = isRecord(record.author) ? record.author.login : undefined;
   const login = typeof author === "string" ? author : "";
-  if (login !== input.botLogin) {
+  if (login === "" || botLoginSlug(login) !== botLoginSlug(input.botLogin)) {
     throw new Error(`open PR for ${input.branch} is owned by ${login || "unknown"}, not ${input.botLogin}`);
   }
   return requireNonEmptyString(record.url, "gh pr list row is missing url");

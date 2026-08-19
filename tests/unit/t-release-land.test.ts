@@ -314,6 +314,17 @@ describe("release-land CLI merge-queue compatibility", () => {
     });
   });
 
+  test("parseOpenReleasePrUrl accepts every spelling of the same bot and refuses foreigners", () => {
+    const row = (login: string) => [{ url: PR_URL, author: { login } }];
+    const input = { branch: "release/v0.1.8", botLogin: BOT_LOGIN };
+    // gh renders a GitHub App author as app/<slug>; the API says <slug>[bot].
+    expect(parseOpenReleasePrUrl(row("app/amadeus-dlc-bot"), input)).toBe(PR_URL);
+    expect(parseOpenReleasePrUrl(row("amadeus-dlc-bot[bot]"), input)).toBe(PR_URL);
+    expect(parseOpenReleasePrUrl(row("amadeus-dlc-bot"), input)).toBe(PR_URL);
+    expect(() => parseOpenReleasePrUrl(row("someone-else"), input)).toThrow("is owned by");
+    expect(() => parseOpenReleasePrUrl(row(""), input)).toThrow("is owned by");
+  });
+
   test("queueReleasePullRequest reuses an open bot PR and issues no rejected merge-queue flags", () => {
     const commands: string[][] = [];
     const runner: CommandRunner = {
