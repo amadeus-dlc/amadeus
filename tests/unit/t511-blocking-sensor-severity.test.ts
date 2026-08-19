@@ -121,14 +121,16 @@ function sensorRow(
   outputPath: string,
   timestamp: string,
   stageSlug = "requirements-analysis",
+  extra: Record<string, string> = {},
 ): string {
   return auditLine(
     event,
     {
-      "Fire id": timestamp.replace(/\D/g, "").slice(-8),
+      "Fire id": extra["Fire id"] ?? timestamp.replace(/\D/g, "").slice(0, 10),
       "Sensor ID": sensorId,
       "Stage slug": stageSlug,
       "Output path": outputPath,
+      ...extra,
     },
     timestamp,
   );
@@ -366,6 +368,36 @@ describe("t511 — evaluateBlockingSensors decision table (#2671 c)", () => {
     );
     expect(finding?.kind).toBe("unresolved");
     expect(finding?.kind === "unresolved" ? finding.terminal : "x").toBeNull();
+  });
+
+  test("a digest-less PASS from an older fire stays unresolved after a re-fire (#3204)", () => {
+    // Interleaved terminals: the latest FIRED is fire-new, but a late digest-less
+    // PASSED from fire-old still arrives. Pairing by Output path alone would
+    // accept that stale success and fail-open the blocking gate.
+    const oldFire = {
+      "Fire id": "fire-old",
+      "Sensor ID": "blocking-probe",
+      "Stage slug": "requirements-analysis",
+      "Output path": OUT,
+    };
+    const newFire = {
+      "Fire id": "fire-new",
+      "Sensor ID": "blocking-probe",
+      "Stage slug": "requirements-analysis",
+      "Output path": OUT,
+    };
+    const audit = [
+      auditLine("SENSOR_FIRED", oldFire, "2026-08-10T01:00:00Z"),
+      auditLine("SENSOR_FIRED", newFire, "2026-08-10T02:00:00Z"),
+      auditLine("SENSOR_PASSED", oldFire, "2026-08-10T02:00:01Z"),
+    ].join("\n");
+    const finding = evaluateBlockingSensors(
+      ["blocking-probe"],
+      audit,
+      "requirements-analysis",
+    );
+    expect(finding?.kind).toBe("unresolved");
+    expect(finding?.kind === "unresolved" ? finding.terminal : "x").toBe("SENSOR_PASSED");
   });
 
   test("a re-fire after a PASSED reopens the output until its own terminal lands", () => {

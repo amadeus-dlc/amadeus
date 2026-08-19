@@ -2001,9 +2001,12 @@ export function evaluateBlockingSensors(
         continue;
       }
       const fire = latestFire.get(row.outputPath);
-      const receiptMatches = row.outputDigest === null || (
-        fire !== undefined && fire.fireId === row.fireId && fire.outputDigest === row.outputDigest
-      );
+      // Fire id is the required correlator. A digest-less terminal from an
+      // older fire must not clear a later fire on the same Output path.
+      const receiptMatches =
+        fire !== undefined &&
+        fire.fireId === row.fireId &&
+        (row.outputDigest === null || fire.outputDigest === row.outputDigest);
       latestTerminal.set(row.outputPath, {
         event: row.event,
         outputDigest: row.outputDigest,
