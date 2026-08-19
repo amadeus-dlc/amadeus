@@ -5989,6 +5989,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/integration/t3243-approve-batch-ambient-projectdir-isolation.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/integration/t404-bolt-emit-audit-fatal-latch.test.ts",
           "mechanism": "cli"
         },
