@@ -50,6 +50,16 @@ import {
   seedStateFile,
 } from "../harness/fixtures.ts";
 
+// Standalone hermeticity (issue #698, extended by #3280): the suite runner
+// injects these guard bypasses into every test file's env (tests/run-tests.ts),
+// so this file only went green under the runner. Default them here as well so a
+// bare `bun test <this file>` behaves the same — runBolt inherits process.env,
+// so the defaults reach the spawned CLI. Guard-enforcement tests re-enable a
+// guard by deleting its var in their own spawn env, so these defaults do not
+// mask enforcement coverage.
+process.env.AMADEUS_SKIP_ARTIFACT_GUARD ??= "1";
+process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD ??= "1";
+
 // P9 per-intent layout: the flat amadeus-docs/ root is retired. Bolt's audit lands
 // in a per-clone shard under the record (or the bare space record root when no
 // state seeds a resolvable cursor); state lives in the active intent's record.
@@ -100,6 +110,11 @@ function runBolt(proj: string, ...args: string[]): RunResult {
   const res = spawnSync(BUN, [TOOL, ...args, "--project-dir", proj], {
     encoding: "utf-8",
     cwd: proj,
+    // Spread explicitly rather than relying on implicit inheritance (#3280):
+    // under Bun a runtime `process.env.X = ...` is NOT visible to a child that
+    // inherits implicitly, so the guard defaults set above would never reach
+    // the spawned CLI and this file would stay red on a direct `bun test`.
+    env: { ...process.env },
   });
   return { status: res.status ?? -1, out: `${res.stdout ?? ""}${res.stderr ?? ""}` };
 }

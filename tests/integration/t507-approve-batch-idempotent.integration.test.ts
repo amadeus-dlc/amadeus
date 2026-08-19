@@ -40,6 +40,15 @@ import { join } from "node:path";
 const LOCK_BASE_DIR = mkdtempSync(join(tmpdir(), "amadeus-t507-locks-"));
 process.env.AMADEUS_LOCK_BASE_DIR = LOCK_BASE_DIR;
 
+// Standalone hermeticity (issue #698): the suite runner injects these guard
+// bypasses into every test file's env (tests/run-tests.ts), so this file only
+// went green under the runner. Default them here as well so a bare
+// `bun test <this file>` behaves the same. Guard-enforcement tests re-enable
+// a guard by deleting its var in their own spawn env, so these defaults do
+// not mask enforcement coverage.
+process.env.AMADEUS_SKIP_ARTIFACT_GUARD ??= "1";
+process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD ??= "1";
+
 import { handleBoltCommand } from "../../packages/framework/core/tools/amadeus-bolt.ts";
 import {
   getField,
@@ -89,17 +98,53 @@ function readState(p: string): string {
   return readFileSync(seededStateFile(p), "utf-8");
 }
 
-/** Run a bolt subcommand in-process, capturing what it printed to stdout. */
+// A trapped process.exit, carried out of the CLI as a value (issue #3280).
+class ExitSignal extends Error {
+  constructor(readonly code: number) {
+    super(`exit ${code}`);
+  }
+}
+
+/**
+ * Run a bolt subcommand in-process, capturing what it printed to stdout.
+ *
+ * The exit trap is the t414 / t-approve-batch-presence-guard pattern: every
+ * amadeus-bolt refusal goes through error() -> emitError(), which ends in
+ * process.exit(1). Left untrapped that does not fail this file's test — it
+ * kills the whole Bun runner mid-file, so no pass/fail summary is printed and,
+ * in a multi-file invocation, the OTHER files' results are lost with it
+ * (issue #3280).
+ *
+ * Unlike those two files this one returns the printed lines rather than
+ * {rc, out}: they assert ON the refusal, so an exit code is their subject,
+ * while nothing here consumes one. A trapped exit is therefore surfaced as a
+ * legible test failure instead of a field no assertion reads.
+ */
 function boltCapture(subcommand: string, args: string[], p: string): string[] {
   const printed: string[] = [];
-  const original = console.log;
+  const originalLog = console.log;
+  const originalError = console.error;
+  const originalExit = process.exit.bind(process);
   console.log = (...parts: unknown[]) => {
     printed.push(parts.map(String).join(" "));
   };
+  console.error = (...parts: unknown[]) => {
+    printed.push(parts.map(String).join(" "));
+  };
+  process.exit = ((code?: number) => {
+    throw new ExitSignal(code ?? 0);
+  }) as typeof process.exit;
   try {
     handleBoltCommand(subcommand, args, p);
+  } catch (e) {
+    if (!(e instanceof ExitSignal)) throw e;
+    throw new Error(
+      `amadeus-bolt ${subcommand} exited ${e.code} instead of returning: ${printed.join(" | ")}`,
+    );
   } finally {
-    console.log = original;
+    console.log = originalLog;
+    console.error = originalError;
+    process.exit = originalExit;
   }
   return printed;
 }

@@ -4759,6 +4759,10 @@
         {
           "file": "tests/integration/t-approve-batch-presence-guard.integration.test.ts",
           "mechanism": "none"
+        },
+        {
+          "file": "tests/integration/t3280-standalone-file-run-hermeticity.integration.test.ts",
+          "mechanism": "none"
         }
       ],
       "status": "covered"
