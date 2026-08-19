@@ -87,7 +87,7 @@ Per unit: [TBD]
 - [ ] ci-pipeline — SKIP
 - [x] tla-authoring — EXECUTE
 - [x] pr-convergence — EXECUTE
-- [-] formal-model-check — EXECUTE
+- [?] formal-model-check — EXECUTE
 
 ### OPERATION PHASE
 - [ ] deployment-pipeline — SKIP
@@ -106,7 +106,7 @@ Per unit: [TBD]
 - **Intent Autonomy Mode**: full
 - **Intent Grant**: intent-grant-18ad0820d326a34e0ac06546c44a57dd
 - **Construction Autonomy Mode**: autonomous
-- **Last Updated**: 2026-08-19T09:42:49Z
+- **Last Updated**: 2026-08-19T09:50:52Z
 
 ## Session Resume Point
 - **Last Completed Stage**: pr-convergence
