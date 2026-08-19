@@ -1,0 +1,24 @@
+{
+  "electionId": "E-260819-RFC0001-PRC-S13",
+  "voter": "subagent-1",
+  "questions": [
+    {
+      "questionId": "q-learnings-selection",
+      "text": "intent 260815-rfc-autonomy-modes の pr-convergence ステージ §13 学習選定。候補は1件。project.md の Learnings Inbox へ採用するか、0 件で可とするかを裁定せよ。判断基準は (a) 一般化可能性 — 将来の runner が同じ判断に到達できるか (b) 既存ノルムとの重複・矛盾の有無。既存ノルムは amadeus/spaces/default/memory/project.md と team.md を実読して確認すること。census では実在が既知の対照リテラルを含め、0-hit の偽陰性(zsh 語分割、ugrep の \\b や複雑選言による異常終了)を排除すること。10 分以内を目安に投票まで到達すること。",
+      "ordered": [
+        {
+          "internalNo": 1,
+          "label": "本ステージ Step 6 の `report`(merged arm による in-place 最終化)を、ステージ到達前の code-generation 段で 13 unit すべてに対して先行実行していた",
+          "description": "[Deviations] code-generation の blocking sensor `pr-convergence-report-format` が「report が旧 checkout head に束縛されている」ため落ち、ゲートが閉じられなかったため。#3149 / PR #3172 が導入した merged arm の in-place 最終化(payload と verdict は不変、receipt を merge 事実へ再 attest)を適用して解消した。結果として本ステージでは新規の report 生成はなく、13 unit の配送状態と成果物の再検証のみを行った。実測: `status` は 3 unit 抽出(#3117 / #3130 / #3146)でいずれも `verdict: landed` / `mergeState: MERGED` / `converged: false`(マージ済み PR では収束述語が走らないため converged は false になる — ステージ本文『Already merged?』節どおり)。13 unit すべての report は `pr-convergence` スコープで `SENSOR_PASSED` を実測。",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 2,
+          "label": "採用しない(0 件で可)",
+          "description": "候補が一般化可能な恒久知に達していない、または既存ノルムで十分に覆われていると判断する場合はこちら。近接する既存則: cid:pr-convergence:c1-2(stale created attestation と merged PR の最終化経路)、cid:pr-convergence:converged-final-no-landed-rewrite(converged は final、landed 再発行は禁止)、cid:pr-convergence:prc-landed-batch-serialize(複数 unit の landed 最終化は直列化)、cid:code-generation:c2-pr-record-in-head-checkout、cid:pr-convergence:prc-report-lands-in-later-pr。project.md § Corrections 前書き「個別 intent の一回性の罠…は記録しない」も考慮すること。",
+          "displayNo": 2
+        }
+      ]
+    }
+  ]
+}

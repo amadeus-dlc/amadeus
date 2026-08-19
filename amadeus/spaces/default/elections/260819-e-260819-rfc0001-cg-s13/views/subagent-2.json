@@ -1,0 +1,24 @@
+{
+  "electionId": "E-260819-RFC0001-CG-S13",
+  "voter": "subagent-2",
+  "questions": [
+    {
+      "questionId": "q-learnings-selection",
+      "text": "intent 260815-rfc-autonomy-modes の code-generation ステージ §13 学習選定。候補は1件(c1、Deviations 由来)。この候補を project.md のノルムとして採用するか、0 件で可とするかを裁定せよ。判断は候補の一般化可能性(将来の runner が同じ罠を避けられるか)と、既存ノルムとの重複・矛盾の有無で行う。既存ノルムは amadeus/spaces/default/memory/project.md と team.md を実読して確認すること。",
+      "ordered": [
+        {
+          "internalNo": 1,
+          "label": "c1 を採用(project.md ## Corrections へ)",
+          "description": "候補 c1 の要約: 「unit config-visibility の pr-convergence-report を旧 CLI の破損書き換えから原状復元した」。文脈: 破損 commit 7b8c552a0(2026-08-16T13:06:42Z)が CLI 生成済みの converged 報告(attestation prca:4613a9a2…、収束台帳 resolved:6 / terminalized:5)を kind: landed へ書き換えていた。これは #3149 が禁じた converged→landed の書き換えで、修正 PR #3172 の main 着地(2026-08-17T09:54:07Z)より前の旧 CLI 由来。landed は applyKindRules(plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts:470-475)により code-generation スコープで必ず FAILED になり、transitionAllowed(plugins/github-pr-convergence/tools/pr-convergence-cli.ts:639-645)は landed からの遷移を拒否、blocking guard(packages/framework/core/tools/amadeus-state.ts:1976 evaluateBlockingSensors / :2107)は code-generation スコープの SENSOR_PASSED を要求するため、ゲートが構造的に閉じられなくなっていた。監督者裁定に従い d00103a64 の CLI 生成 bytes を byte-exact 復元し、現行 CLI の report merged arm で再最終化して両スコープ SENSOR_PASSED を実測した。採用する場合の一般形: 『旧世代ツールが書いた成果物が現行契約で不正な状態(遷移不能な終端 kind 等)に固まっている場合、手書き修正やゲート迂回ではなく、git 履歴に残る当該ツール生成 bytes の byte-exact 復元 + 現行ツールでの再実行で原状回復する。復元の前提(祖先関係・監査受領行の現存)を実測し、根拠を record へ残す』。",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 2,
+          "label": "0 件で可(採用しない)",
+          "description": "c1 を一回性の事象(すでに #3149/#3172 で修正済みの旧 CLI 由来の破損)とみなし、恒久ノルムへ昇格させない。既存の『台帳ファイルのマージ衝突は3ステージ blob 全文から再構成する』(cid:code-generation:cg-ledger-blob-reconstruction)や『バージョン管理下の append-only 生成物の誤りは履歴 rewrite せず通常 PR の git revert で回復する』(cid:deployment-pipeline:c3)で十分にカバーされていると判断する場合はこちら。",
+          "displayNo": 2
+        }
+      ]
+    }
+  ]
+}

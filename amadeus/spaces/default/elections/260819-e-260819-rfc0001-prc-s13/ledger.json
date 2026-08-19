@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "ballots": [
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260819-RFC0001-PRC-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-learnings-selection",
+          "choiceInternalNo": 2,
+          "goa": 2,
+          "reservation": "本候補は「Step 6 の merged arm 最終化を code-generation 段で 13 unit へ先行実行した」という当該 intent 固有の逸脱記録であり、規則の形をとっていない。同種の状況が第三の intent で再発した場合は、叙述ではなく規則(発火条件=code-generation の blocking sensor pr-convergence-report-format が旧 head 束縛で赤、行為=merged arm report の冪等実行、帰結=pr-convergence ステージは再検証のみ)として Inbox へ起票することを条件に、今回の 0 件に同意する。",
+          "rationale": "実測に基づく判定。(1) 候補の事実は record で確認できた: <record>/construction/pr-convergence/ には memory.md のみで新規 report は無く(本ステージ生成物ゼロ)、unit 側の pr-convergence-report.md は 13 件、うち 13/13 が `- kind: converged` かつ 13/13 が `merge commit:` と `attestation id` を持つ(find + grep -F の件数、対照リテラル attestation id=13 で 0-hit 偽陰性を排除)。すなわち payload/verdict 不変・receipt を merge 事実へ再 attest という記述どおり。(2) しかし機構・意味論はすべて既存の正本と既決ノルムで既に覆われている。ステージ本文 plugins/github-pr-convergence/stages/pr-convergence.md:305-350 が『Already merged?』『A verdict that is already final ... `report` finalises it in place instead ... the payload bytes and the verdict stay exactly as they were, and the receipt is re-attested』『The blocking sensor asks the receipt, not the kind ... every other receipt must still name the current HEAD』を逐語で規定しており、候補が挙げる sensor 赤の原因(旧 checkout head 束縛)と是正(merged arm 実行)、および converged:false が期待値である理由まで正本側で導出できる。ノルム側でも project.md:179 cid:pr-convergence:c1-2(merged arm が MERGED PR の正規最終化経路)、project.md:199 cid:pr-convergence:user-1(report-format sensor 赤の回復は merged-arm report の冪等再実行 → SENSOR_PASSED)、cid:pr-convergence:converged-final-no-landed-rewrite(converged は final、landed 再書換禁止)、cid:code-generation:c1-landed-rollup-attribution(converged はマージ前専用ゆえマージ後は false)が該当箇所を占めており重複する。census: これら cid の実在を grep -c -F で確認(c1-2=2, converged-final-no-landed-rewrite=2, prc-landed-batch-serialize=2, c2-pr-record-in-head-checkout=3, prc-report-lands-in-later-pr=1、対照 'Learnings Inbox'=2)。配列展開で回し zsh 語分割の偽陰性を回避、-F 固定文字列で ugrep の複雑選言・\\b トリガも回避。(3) project.md § Corrections 前書き『個別 intent の一回性の罠…は記録しない』および P5(最小変更)に照らし、規則を追加しない叙述の Inbox 投入はノイズを増やすのみで将来の runner の判断を変えない。逸脱の provenance は当該ステージの Deviations と audit に残るため、0 件でも記録の喪失は生じない。よって internalNo 2(0 件で可)。"
+        }
+      ],
+      "submittedAt": "2026-08-19T09:41:15Z",
+      "receivedAt": "2026-08-19T09:41:48Z"
+    },
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260819-RFC0001-PRC-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-learnings-selection",
+          "choiceInternalNo": 2,
+          "goa": 2,
+          "reservation": "候補の中に一つだけ非重複の核がある—「pr-convergence-report は code-generation の produces seam であり、その blocking sensor も code-generation に overlay される(plugins/github-pr-convergence/plugin.json の seams: stage code-generation / seam produces = pr-convergence-report、seam sensors = pr-convergence-report-format)。したがって code-generation ゲートで report を実行することは設計どおりであって逸脱ではない」という構造事実。候補が同じ事象を [Deviations] として記録している点はこの wiring と整合しない。将来の runner が同じ誤読を繰り返すようなら、候補文そのものではなく『report の実行点は code-generation ゲートであり、pr-convergence ステージは配送状態の再検証になりうる。これは逸脱として起票しない』という規則形へ書き直したうえで別途諮るべき。今回の候補文のまま採用することには反対する。",
+          "rationale": "(a) 一般化可能性: 候補は規則でも判断手順でもなく単一 intent の叙述(『13 unit すべてに対して先行実行していた』『本ステージでは新規の report 生成はなく…再検証のみ』)であり、将来の runner が発火条件・判定手順・予防形のいずれも導出できない。project.md § Corrections 前書き『個別 intent の一回性の罠…は記録しない(git 履歴と intent record が一次記録)』に該当し、一次記録は既に <record>/construction/pr-convergence/memory.md の Deviations 行として存在する。(b) 重複: 候補の実質内容はすべて既存の正本・ノルムで被覆済み。(b-1) merged arm による in-place 最終化と live-head 前提の置換は plugins/github-pr-convergence/stages/pr-convergence.md:305- の『Already merged?』節に逐語で存在(『The `report` verb therefore **replaces** the two live-head prerequisites on this path (#3110)』)。(b-2) 候補が挙げる `converged: false` の理由も同節に逐語で存在(『the `landed` report the CLI writes carries `converged: false` and no verdict or ledger at all, because the convergence predicate never ran』)— 候補自身が『ステージ本文どおり』と認めており、正本の再掲にすぎない。(b-3) 実行順序が制御不能である点も同節に逐語(『auto-merge can land the pull request before `report` runs, and the loop cannot control that ordering』)。(b-4) report-format sensor 失敗の是正が merged-arm report の冪等再実行で sensor PASSED になることは project.md:199 の cid:pr-convergence:user-1 に既出。(b-5) stale 化した attestation に対する merged arm 最終化経路は project.md:179 の cid:pr-convergence:c1-2 に既出。(c) 実測(census、対象 tree = 作業ディレクトリ現断面): 対照リテラル `pr-convergence` = 20 hit / `cid:pr-convergence:c1-2` = 2 hit(grep 健全性を確認)に対し、候補固有語 `merged arm` = 3 / `merged-arm` = 1 / `report-format` = 3 / `SENSOR_PASSED` = 2 は既存則側の hit、`#3149` `#3172` `13 unit` `再検証のみ` `先行実行` は 0 hit(exit 1 = 不一致であってエラーではない)。述語は grep -c -F(固定文字列、選言なし、\\b 不使用)で ugrep 系の複雑度超過・語境界トリガを回避し、ファイル集合は配列で回して zsh 語分割の偽陰性を排除した。(d) 結論: 新規性は (b) の被覆外にある構造事実(reservation に記載)のみで、その事実は候補文の主張(逸脱であった)と逆向きである。候補文のままの採用は誤った framing を恒久知として固定するため、0 件で可とする。"
+        }
+      ],
+      "submittedAt": "2026-08-19T09:41:30Z",
+      "receivedAt": "2026-08-19T09:41:26Z"
+    }
+  ]
+}
