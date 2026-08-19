@@ -628,7 +628,7 @@ M	packages/framework/core/tools/data/self-install-allowlist.ts
 
 機序は `architecture.md`、コンポーネント境界は `component-inventory.md`、テスト空白と台帳は `code-quality-assessment.md` の各対応節を参照。
 
-## 差分リフレッシュで観測した構造変化と、focus 2 件の患部配置（260817-inception-cost-batch、現在、observed `23d4ae767`）
+## 差分リフレッシュで観測した構造変化と、focus 2 件の患部配置（260817-inception-cost-batch、履歴、observed `23d4ae767`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260818-priority-bug-batch-4 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: base `89053172ed8b5bb270e254aea029a13291d10b6b` → observed `23d4ae767956cd56fc28fa78abe28096712eff8a`。区間は **12 コミット / 123 files changed, 8023 insertions(+), 351 deletions(-)**（本節の実測）。
 
@@ -763,3 +763,142 @@ M	plugins/github-pr-convergence/tools/pr-convergence-cli.ts
 **レジストリファイルは存在しない。** `.claude/tools/data/` にも `packages/framework/core/tools/data/` にも artifact パスを持つファイルは無く、写像は規約として `resolveArtifactPath` が計算する。したがって新 artifact 種別は resolver 側 0 行だが、**producing stage の宣言が graph 不変量として必須**である。
 
 機序は `architecture.md`、コンポーネント境界は `component-inventory.md`、テスト面と台帳は `code-quality-assessment.md` の各対応節を参照。
+
+## 差分リフレッシュで観測した構造変化と、focus 2 件の患部配置（260818-priority-bug-batch-4、現在、observed `127be70c5`）
+
+**観測 ref**: base `23d4ae767956cd56fc28fa78abe28096712eff8a` → observed `127be70c5d7a584016f88a5d44e8715904020721`。区間は **5 コミット / 99 files changed, 7314 insertions(+), 61 deletions(-)**（本節の実測）。
+
+### 1. 区間の構造変化 — 新規ソース 0 / 削除 0 / 変更 10、3 区間連続でディレクトリ再編なし
+
+`git diff --name-status 23d4ae767..127be70c5 -- packages/ plugins/ docs/ .github/`（本節の実測、exit 0）の出力は **`M` 10 行のみ**である。
+
+```
+M	docs/reference/04-stages/ideation.ja.md
+M	docs/reference/04-stages/ideation.md
+M	docs/reference/04-stages/inception.ja.md
+M	docs/reference/04-stages/inception.md
+M	packages/framework/core/amadeus-common/stages/ideation/intent-capture.md
+M	packages/framework/core/amadeus-common/stages/inception/requirements-analysis.md
+M	packages/framework/core/amadeus-common/stages/inception/reverse-engineering.md
+M	packages/framework/core/tools/amadeus-github-gateway.ts
+M	packages/framework/core/tools/amadeus-lib.ts
+M	packages/framework/core/tools/amadeus-utility.ts
+```
+
+`packages/framework/harness/`、`.github/`、`package.json` / `bun.lock` / `**/package.json`、`plugins/` はいずれも**空出力・exit 0**（本節の実測）。`packages/framework/core/` と `packages/framework/harness/<name>/` の境界、`plugins/<name>/{tools,stages,sensors}/` の構成はいずれも不変である。
+
+区間全体の分類は **A 71 / M 28**（`git diff --name-status 23d4ae767..127be70c5 | awk '{print $1}' | sort | uniq -c`、本節の実測）。**削除（`D`）はゼロ**で、追加 71 の大半は record 面と新規テストである。
+
+規模の内訳（`git diff --numstat`、本節の実測）: `amadeus-utility.ts` +337 −1 / `amadeus-github-gateway.ts` +210 −33 / `amadeus-lib.ts` +57 −0 / `stages/inception/reverse-engineering.md` +73 −1 / `stages/ideation/intent-capture.md` +30 −0 / `stages/inception/requirements-analysis.md` +7 −1 / `docs/reference/04-stages/inception.md` +24 −2 / 同 `.ja.md` +5 −1 / `docs/reference/04-stages/ideation.md` +2 −1 / 同 `.ja.md` +2 −1。
+
+**挿入行の配置比**（`git diff --numstat` を path 接頭辞で集計、本節の実測。awk 述語は `re-scans/260818-priority-bug-batch-4.md` §1 に再実行可能な形で記録）:
+
+| バケット | insertions | files |
+|---|---|---|
+| `amadeus/spaces/*/intents/**`（intent record） | 3,369 | 61 |
+| `tests/**` | 1,804 | 16 |
+| `amadeus/spaces/*/codekb/**` | 1,207 | 9 |
+| `packages/**` + `plugins/**`（ソース） | 714 | 6 |
+| `metrics/**` | 182 | 2 |
+| `docs/**` | 33 | 4 |
+| `amadeus/spaces/*/memory/**` | 5 | 1 |
+| `amadeus/spaces/*/elections/**` | 0 | 0 |
+| **TOTAL** | **7,314** | **99** |
+
+**#2415 の除外述語を本区間へ適用した実測**（本節の実測。この記録は RE stage 契約が義務づける）: 除外前 **7,314 insertions / 99 files** → 除外後 **2,551 insertions / 26 files**。削減 **4,763 insertions / 73 files = 65.12%**（派生値、算出式 `4763/7314`）。除外集合は `RE_SCAN_EXCLUDED_PATHSPECS`（`amadeus-lib.ts:1540`）の 5 pathspec をそのまま使い、除外後の残余 2,551 は `tests` 1,804 + ソース 714 + `docs` 33 の合計と一致する（突合済み）。
+
+### 2. 新規テスト 8 ファイル（1,694 行）
+
+`git diff --name-status 23d4ae767..127be70c5 -- 'tests/**' | grep '^A'`（本節の実測）は **8 行**。行数は `git diff --numstat` からの転記。
+
+| ファイル | 層 | 行 | 対象 |
+|---|---|---|---|
+| `tests/integration/t2415-re-scan-exclusion.integration.test.ts` | integration | 248 | 除外挙動（kept 集合、宣言クラスとの一致 `:163`） |
+| `tests/integration/t2415-re-scan-exclusion-contract.integration.test.ts` | integration | 167 | 散文 ⇔ コード定数の drift guard（`:96` / `:159`）。**source + 全 delivered tree** を検証 |
+| `tests/integration/t3181-issue-evidence-fetch.integration.test.ts` | integration | 453 | verb の CLI 境界 |
+| `tests/integration/t3181-issue-evidence-upstream-coverage.integration.test.ts` | integration | 191 | upstream-coverage sensor との結線 |
+| `tests/integration/t3181-issue-evidence-contract.integration.test.ts` | integration | 131 | stage 契約側の宣言 |
+| `tests/unit/t3181-issue-evidence-gateway.test.ts` | unit | 273 | gateway の parser / argv |
+| `tests/unit/t3181-issue-evidence-artifact.test.ts` | unit | 175 | artifact レンダリング |
+| `tests/unit/t3181-issue-evidence-path.test.ts` | unit | 56 | パス解決 |
+
+内訳: t2415 系 **415 行** / t3181 系 **1,279 行**、合計 **1,694 行**。
+
+**既存テストの是正 3 件**（同区間、いずれも `M`）:
+
+| ファイル | 変化 | 意味 |
+|---|---|---|
+| `tests/integration/t65.test.ts` | `:175-182`（+8 −2） | 孤児 consume モデルを `produces` ∪ `optional_produces` の走査へ是正。engine の `producersOf` と parity をとる |
+| `tests/integration/t212-optional-produces.test.ts` | `:275`（+4 −1） | `optional_produces` 実運用の census を `["intent-capture", "functional-design", "infrastructure-design"]` へ更新。**この行が census の正本** |
+| `tests/integration/t66.test.ts` | `:1032` / `:1042`（+2 −2） | artifact 語彙の基数 pin を 122 → 123 |
+
+### 3. `optional_produces` の実運用が 2 → 3 stage へ
+
+`git grep -n "^optional_produces:" 127be70c5 -- 'packages/framework/core/amadeus-common/stages/**'`（本節の実測、exit 0）→ **3 hit**:
+
+```
+packages/framework/core/amadeus-common/stages/ideation/intent-capture.md:14
+packages/framework/core/amadeus-common/stages/construction/functional-design.md:17
+packages/framework/core/amadeus-common/stages/construction/infrastructure-design.md:19
+```
+
+`optional_produces` はこれまで construction phase の 2 stage だけが使う面だったが、**ideation phase の stage が初めて加わった**。census の機械照合は `tests/integration/t212-optional-produces.test.ts:275` が graph 順で固定する（`.toEqual(["intent-capture", "functional-design", "infrastructure-design"])`）。
+
+### 4. 新しい record 内パス — `<record>/ideation/intent-capture/issue-evidence.md`
+
+| 面 | file:line（observed） |
+|---|---|
+| 絶対パス解決 | `packages/framework/core/tools/amadeus-lib.ts:5043` `issueEvidencePath` |
+| 相対パス解決 | 同 `:5051` `relativeIssueEvidencePath` |
+| 生成 verb | `packages/framework/core/tools/amadeus-utility.ts:6824` `runIssueEvidenceFetch` / dispatch `:6981` |
+| 宣言（produce 側） | `stages/ideation/intent-capture.md:14-15` `optional_produces: [issue-evidence]` |
+| 宣言（consume 側） | `stages/inception/requirements-analysis.md:30-31`（`required: false`） |
+| 本文レベル読取 | `stages/inception/reverse-engineering.md:230-242`（focus 導出）。**`consumes:` には載せない**理由は同 `:239` に明記 |
+
+**artifact 種別 → path の解決規約は動いていない**。`resolveArtifactPath`（`amadeus-orchestrate.ts`）の owner 分岐がそのまま働き、producing stage が `intent-capture`（record arm）なので `<record>/ideation/intent-capture/issue-evidence.md` に解決される。前スキャンが記した「`KNOWN_CODEKB_STAGES` は `reverse-engineering` のみの単一要素集合」も不変であり、**per-intent 証跡を RE の produces に載せると codekb へ解決されてしまう**という制約（`cid:application-design:c2`）が、実際に intent-capture 側へ置く設計を強制した形である。
+
+### 5. focus 2 件の患部配置
+
+**是正は本区間で着地していない**（`git grep -n "3106" 127be70c5 -- packages/ plugins/ tests/ docs/` → **exit 1**、`"2837"` は `tests/.coverage-patch-allowlist.json` の sha256 内部文字列 2 hit のみ）。
+
+#### 5.1 #2837
+
+| 面 | file:line（observed） |
+|---|---|
+| directive 型 | `packages/framework/core/tools/amadeus-directive.ts:312-331` |
+| 閉語彙 | 同 `:555`（`INVOKE_SWARM_FIELDS`）/ 語彙表 `:587` |
+| batch 生成 | `packages/framework/core/tools/amadeus-orchestrate.ts:3906` `firstUncoveredBatch`（戻り型 `:3912`、`return` `:3929`） |
+| batch 破棄点 | 同 `:4294`（`emitConfiguredSwarm(projectDir, selection.value.pick.units)`）/ 受け側 `:4074` |
+| gate 側の開示 | 同 `:3889` `batchGateQuestion(batch, units)` / 呼出 `:3971` |
+| retry arm | 同 `:4092-4106` `preparedSwarmRetryDirective` |
+| 対称面 | `amadeus-directive.ts:644-649`（`execute-failure-election` の必須 `batch`） |
+| pool identity | `packages/framework/core/tools/amadeus-swarm.ts:638`（`unit-pool:<batch>:initial-enqueue`）/ 既定 base `:581` |
+| swarm CLI verb 一覧 | 同 `:1419`（14 verb、`context` / `status` 不在） |
+| conductor 面 | `packages/framework/harness/{claude,codex,kimi,kiro,kiro-ide,pi}/skills/amadeus/SKILL.md` と `{cursor,opencode}/commands/amadeus.md` の 8 面 |
+
+**`packages/framework/core/tools/` と `packages/framework/harness/` の両方に患部が跨る。** engine 側（directive 契約と emit）を直せば harness 8 面の散文も同期対象になりうるため、**全ハーネス build と再現性検査が発火する**（`cid:build-and-test:bt-dist-regen-seven-harnesses`）。
+
+#### 5.2 #3106
+
+| 面 | file:line（observed） |
+|---|---|
+| settle 発行 | `packages/framework/core/tools/amadeus-orchestrate.ts:4686` `settlePerUnitOutcomes`（スキップ条件 `:4706` / `:4707-4709`、冪等 `:4711`） |
+| 値の閉語彙 | 同 `:2475` `SETTLED_UNIT_OUTCOME` |
+| 読み側 | 同 `:2499` `readSettledUnitOutcomes`（拒否 `:2508`） |
+| 母集団 | 同 `:2513` `readPerUnitConsumePopulation` |
+| 検出側 | 同 `:3934` `cancelledConstructionUnits` |
+| ruling 分岐 | 同 `:6733` `handleFailureRuling`（solo arm `:6767-6781` / pool arm `:6783-6785`） |
+| 下流受理 | `packages/framework/core/tools/amadeus-per-unit-consume-fanout.ts:199` `KNOWN_OUTCOMES` / pending 述語 `:224-228` |
+| projection | `packages/framework/core/tools/amadeus-construction-outcome-projection.ts:222`（受理イベント allowlist） |
+| 文書 | `docs/guide/15-troubleshooting.md:143`（対訳 `.ja.md` は同一文字列 0 hit・**未判定**） |
+
+**患部は `amadeus-orchestrate.ts` 1 ファイルに集中する**（6 面のうち 6 面）。ただし同ファイルは `amadeus/spaces/default/specs/tla/model-map.json` の impl ハッシュピンと `tests/.coverage-patch-allowlist.json` の意味的セレクタの**2 台帳を持つ面**であり、触ると同一変更での resync が要る（`cid:build-and-test:bt-ledger-resync`）。あわせて `cid:build-and-test:bt-coverage-universe-inflation` の注意（大型 tools ファイルを新規に in-process import すると Project Coverage Gate の相対条件が構造的に赤化する）が効く面でもある。
+
+### 6. テストの置き場（空隙の是正先）
+
+| focus | 置き場（既存の対になる位置） |
+|---|---|
+| #3106 | `tests/integration/t533-per-unit-consume-fanout.integration.test.ts:786-801` — 逐語 `test("does not emit paths for a cancelled producer Unit even when files remain", …)`。これは **pool 経路の cancelled** テストであり、per-unit（solo）経路の対が存在しない |
+| #2837 | `tests/integration/t135-invoke-swarm.test.ts` — 現行は `--batch` を全てハードコードしており、batch 番号の**導出**をテストしていない。`tests/unit/t113.test.ts:303-322` は `prepared_batch` / `retry_unit` の pair 整合のみ |
+
+**新規テストファイルを足す場合は `tests/.coverage-registry.json` の regen 同梱が必須**（`cid:build-and-test:c1`、`bun tests/gen-coverage-registry.ts`）。本区間でも新規 8 スイートに対し registry が **+48 −5** で同期されている（本節の実測）。

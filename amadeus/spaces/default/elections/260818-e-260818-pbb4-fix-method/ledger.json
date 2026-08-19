@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 2,
+  "ballots": [
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260818-PBB4-FIX-METHODS",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q1-2837-context-contract",
+          "choiceInternalNo": 3,
+          "goa": 2,
+          "reservation": "C を採る条件(実装契約): (1) check_cmd / test_file を INVOKE_SWARM_FIELDS へ入れない — amadeus-swarm.ts:231-235 が checkCmd を利用者の trusted input と明示しており、engine 側に権威ある宣言先が実在しない(reviewer-2 訂正3: 搬送しても返す値がない)。A はこの既決の設計判断を覆す新契約=enhancement であり self-fix の範囲を超える。B は新 CLI 面を足しても同じ理由で check_cmd を解けず、かつ prepared_batch/retry_unit(#2864)と execute-failure-election(amadeus-directive.ts:643-647 が batch を必須搬送)が既に確立した『engine-owned routing は directive で運ぶ』前例に反し、同一 kind 内に retry arm=directive / 新規 arm=verb という新しい非対称を作る。(2) 搬送する batch identity は engine の単一の権威とし、同一変更で全ての join 面を更新する — 実測した複製面: amadeus-orchestrate.ts:3920 readProjection(String(index+1))、:2527 foldUnitPoolEventSets(eventSets, String(index+1))、:4700 settlePerUnitOutcomes の batchOf、:4046 declaredBatchOf、:3889-3892 batchGateQuestion と approve-batch 台帳(1-origin)、amadeus-swarm.ts:554 handlePrepare の /^[1-9][0-9]*$/ 検証。pool generation を非数値形で織り込むと :554 が即 fail し、:3920 の projection 読みは新 pool の terminal を見落とす。したがって『wire は数値のまま generation を別フィールドで明示し全読み口が同時に消費する』か『identity 型を全面同時変更する』のいずれかを採り、一部だけ直さない(cid:code-generation:cg2-agreeing-predicate-drift の 3 箇所以上ドリフト回避 — 起草時に grep で全数再列挙し件数と述語を成果物へ記録)。(3) C15 整合: 新フィールドと prepared_batch が同じ事実を二重に述べる形を作らない — validator で相互排他か包含関係を fail-closed に固定し、t113 の pair 整合期待を更新する。(4) FR-2837-2 は『供給責任者=conductor / 正規取得元』を directive 契約コメントと 7 conductor 面の本文へ明記し、grep 受け入れは source 断面でなく配送先ツリー(dist/<harness>, self-install)で実測する(cid:requirements-analysis:c2-acceptance-at-delivery-tree)。pi 面の非対称は意図的か欠落かを判定して成果物に記録する。(5) FR-2837-4(b)『failed terminal → 上流 replan → 同一 Unit 再提示で pool 衝突しない』は修正前 Red を先に実測してから実装する(現状 :3923-3928 の uncovered 判定は cancelled/succeeded のみ除外のため failed terminal は同番号で再提示される — この経路を直接固定するテストにする)。t135 の --batch ハードコード(:244 他)を batch 番号導出の検証へ置き換え、t181 conductor-skill-parity を同一変更で通す。(6) 要求されていない後方互換レイヤー・移行シムを足さず旧形を置き換える。(7) amadeus-orchestrate.ts を触るため model-map 実装ハッシュピンと coverage-patch-allowlist の resync、新規テスト追加時は coverage-registry regen を同梱する。",
+          "rationale": null
+        },
+        {
+          "questionId": "q2-3106-outcome-recording",
+          "choiceInternalNo": 1,
+          "goa": 2,
+          "reservation": "A を採る条件(実装契約): (1) 選択理由 — reviewer-2 の seam 対照実験 B/C が『cancelled を明示的に1行記録すれば fanout はそのまま通り当該 unit の paths も除外される』を実測済みで、amadeus-per-unit-consume-fanout.ts:199 KNOWN_OUTCOMES は既に cancelled/failed を受理する。よって読み口を触らず emitter 側に閉じる A が最小・可逆。B は :2489-2491 が定める『outcome は stage 横断で collapse する』意味論と、stage スコープの projectConstructionOutcomes({intent, stage}) の粒度が噛み合わず、pool 行・settle 行に加えて第3の供給源を持ち込むため :2546-2550 の pool 優先規則を再設計する必要があり、fail-closed 境界の作り替えになる。C は :2461-2463 が逐語で宣言する設計境界(『Separate from the swarm path's Unit pool stream in every respect — no entry in the pool's batchId namespace』)を正面から破り、solo:<n>:<unit> という非数値 id を数値 batch join へ持ち込む(E-260815-3099-FIX-METHOD の subagent-2 留保が予見した退化)。(2) 語彙は厳密な閉集合 {succeeded, cancelled, failed} に留め、それ以外は現行どおり INVALID_SETTLED_ROW で throw する。各値は engine の観測から導出し、書く値を自由選択にしない — succeeded ⇐ unitCovered true、cancelled ⇐ cancelledConstructionUnits(canonical projection 由来、:3934-3946)の membership。実行結果から導出しない値の書込は検証劇場(P2)。(3) failed arm は『到達可能性の実証』を前提条件にする — reviewer-1 の実測では solo BOLT_FAILED は settle 到達前に failure ask で短絡し(UNIT_OUTCOME_SETTLED 0 件)、ruling は Skip=cancelled / Retry=再開 / Abort=constructionSuspended へ落ちる(:6753-6790)。したがって per-unit 経路で ruling 未解決のまま failed を settle してはならない(perUnitOutcomeKey は stage+unit+batch の append-once であり、後続 Retry 成功で上書きできず偽の恒久 failed を作る)。実装前に『reachable な per-unit failed terminal』を Red で実証し、実証できない場合は failed arm を実装せず FR-3106-1 の許す『採らない根拠』として design 成果物へ記録する(未到達の arm にテストを付けるのはテスト劇場)。(4) E-260815-3099 系との関係整理を design 成果物へ明記する — C-FORM の共通制約が拘束したのは succeeded arm の発行点(unitCovered true 遷移)であり、cancelled/failed arm は固有の観測境界を持つ拡張であって矛盾ではない旨、および FIX-METHOD の subagent-1 留保『その場で緩めず再裁定へ戻すこと』を本選挙が満たしている旨を記す。(5) FR-3106-2: t533 integration の :786-801(pool 版 cancelled)と対になる位置へ『per-unit solo skip → producer-outcome-pending』の Red を先に置き、修正で Green にする。failed arm を採る場合は対の Red も置く。(6) FR-3106-3 対称性: consumer を止めず当該 unit の paths のみ除外(pool 版と同一挙動)。第3の挙動を発明しない。既存 :395-403 の pool 優先テストの前提が変わらないことを確認する。(7) 残余として『2 読み口の可視性不一致』(cancelledConstructionUnits は canonical projection、readPerUnitConsumePopulation は pool event set + settle 行)は A では根では閉じない。無言の既知限界にせず、残余であること・別 intent の候補であることを design 成果物へ明記する。あわせて reviewer-2 SR2(loadRuntimeUnitBatches null 時の全面不発行)と SR3(batch 未収載 unit)は本 unit のスコープ外だが同一関数を触るため棚卸し結果を記録する。(8) FR-3106-4: docs/guide/15-troubleshooting.md:143 の旧既知限界を英日両面で更新し、対訳側は実文言を実読特定してから同一変更で同期、grep exit code 付きで受け入れを実測する。(9) amadeus-orchestrate.ts を触るため model-map 実装ハッシュピン / coverage-patch-allowlist / coverage-registry の台帳 resync を同梱する。",
+          "rationale": null
+        }
+      ],
+      "submittedAt": "2026-08-18T08:13:15Z",
+      "receivedAt": "2026-08-18T08:18:00Z"
+    },
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260818-PBB4-FIX-METHODS",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q1-2837-context-contract",
+          "choiceInternalNo": 3,
+          "goa": 2,
+          "reservation": "C を採る根拠: batch identity は engine が権威的に算出しながら emit 境界で捨てている値(orchestrate.ts:3929 -> :4046 -> :4294 で emitConfiguredSwarm(:4074) が units のみ受領)なので搬送が正しい是正だが、check_cmd/test_file は搬送では解けない — amadeus-swarm.ts:231-234 が逐語で 'checkCmd is the user's own project check command (a trusted input)' と宣言し、git grep -n \"check_cmd\" -- packages/ は exit 1(エラーでない不一致)で権威値がフレームワークに存在しない。A のように engine が供給しない値を directive に載せると、どこも populate しないフィールド(検証劇場クラス)になる。B は directive を最小に保つ代償に新 CLI verb(amadeus-swarm.ts:1419 の Valid 一覧に context/status なし)と 7 面ぶんの呼出順 prose を増やし、しかも check_cmd の宣言先問題は解けないまま。以下を実装契約とする。(1) 搬送する identity は conductor がそのまま prepare --batch へ渡せる値であること。現行 prepare は ^[1-9][0-9]*$ のみ受理し(amadeus-swarm.ts の handlePrepare 冒頭)その値がそのまま durable な pool identity になる(:638 idempotencyKey `unit-pool:${flags.batch}:initial-enqueue` / batchId)。pool generation を織り込んだ結果が非数値になるなら prepare と pool 側の受理形も同一変更で決め、engine が prepare に拒否される値を emit しないこと。(2) identity が DAG index から乖離するなら、index を鍵にする既存 join を grep で全列挙して同一変更で整合させる: firstUncoveredBatch の readProjection(String(index+1)) (:3918-3922)、owedBatchGate / approve-batch 台帳の 1-origin、readPerUnitConsumePopulation の foldUnitPoolEventSets(eventSets, String(index+1)) (:2527) と settle 行 batch 突合 (:2549)、settlePerUnitOutcomes の batchOf (:4700)。一部だけ直す合意述語ドリフト(cid:code-generation:cg2-agreeing-predicate-drift)を避ける。(3) prepared_batch / retry_unit arm(:4092-4106、validator :620-631)と同一概念に別名を作らない。INVOKE_SWARM_FIELDS(amadeus-directive.ts:555)と FIELD_CHECKS(:661)へ新フィールドと retry arm との排他/含意関係を明示し validator テストを足す。t135(--batch がハードコード)/ t113 / t181 conductor skill parity を連動更新する。(4) FR-2837-2 は『check_cmd / test_file は conductor(ユーザー)知識であり engine は供給しない』を契約文書へ明記し、7 conductor 面(claude/codex/kimi/kiro/kiro-ide/cursor/opencode)に正規取得元を書いて per-surface grep が各面 1 hit 以上(exit 0)になることで閉じる。本 intent で config キー等の宣言先を新設しない — 必要なら別 Issue(requirements の Out of Scope 規律)。(5) amadeus-directive.ts:306-311 の 'the conductor reads the rest of the batch context off the compiled runtime graph' は batch について偽になるので同一変更で訂正する。(6) FR-2837-4 の回帰テストは failed terminal -> upstream replan -> 同一 Unit 再提示(uncovered 判定 :3923-3928 は cancelled/succeeded のみ除外し failed を除外しない)を通し、emit された directive が運ぶ identity が旧 terminal pool と衝突しないことを directive 実物に対して assert する(--batch のハードコードで代替しない)。",
+          "rationale": null
+        },
+        {
+          "questionId": "q2-3106-outcome-recording",
+          "choiceInternalNo": 1,
+          "goa": 2,
+          "reservation": "A を採る根拠: reviewer-2 の seam 実験 B/C が『cancelled を明示的に1行記録すれば fanout はそのまま通り当該 unit の path も正しく除外される』を実測し、KNOWN_OUTCOMES(per-unit-consume-fanout.ts:199)は既に cancelled/failed を受理するため読み口変更は不要で修正が emitter 側に閉じる。C は E-260815-3099-C-FORM の established(C2 = 別イベント新設、pool の単一 writer 契約は不変)と FIX-METHOD の『pool 捏造禁止』制約、および同 record の subagent-2 留保『solo:<n>:<unit> 形式の非数値 id を持ち込むと batch join が退化する』を正面から覆すため、再裁定なしには採れない(C1 は同選挙で 0 票)。B は同じ FIX-METHOD で choice A(読み口統一)として 0 票、かつ canonical projection が {intent, stage} スコープ(projectConstructionOutcomes)であるため consumer stage から producer stage を解決する新次元が要り、solo batch id が非数値で C-FORM の共通制約『数値 batch join を逐語保存』に抵触し、outcome 供給源が3系統になって producer-outcome-ambiguous 誘発リスクを持つ。以下を実装契約とする。(1) 閉語彙は {succeeded, cancelled, failed} のちょうど3値。readSettledUnitOutcomes(:2499-2511)は語彙外・鍵欠落を INVALID_SETTLED_ROW で throw し続け、:2471-2475 の『編集された台帳が consumer の実行可否を決められない』保証を弱めない。SettledUnitOutcome.outcome の型も union へ更新する。(2) cancelled / failed の行は unitCovered ゲートに載せない — :4707 の coverage 述語は succeeded arm 専用のまま残す(reviewer-1 は成果物ディレクトリ削除下でも発火を実測)。cancelled/failed の値は canonical construction outcome projection(cancelledConstructionUnits :3934-3946 と同一源)から導出する engine 観測事実に限り、conductor 供給値を受け取らない。(3) E-260815-3099-C-FORM の共通制約を逐語保存する: 数値 batch join(:2527 / :2549)と pool 優先 de-dup(:2546-2551 — pool terminal を持つ unit には settle 由来 outcome を積まない)。同一 unit が 2 行にならないことをテストで固定する。(4) 冪等鍵 perUnitOutcomeKey(:2485 = stage+unit+batch)のままでは cancelled 行が1度付いた後に unit が再実行・再成功しても上書きできず、台帳が事実に反したまま consumer の可否を決める。supersession 規則(鍵に outcome を含めたうえで reader が audit sequence 最大の行を採る等)を設計で明示決定し、shard ファイル順に依存しない決定的順序で固定して、cancel -> BOLT_STARTED 再入(construction-outcome-projection.ts:262-265 の currentTerminals delete)-> success の系列をテストで固定する(write<->read の round-trip 観点)。(5) 落ちる実証は t533 integration :786-801(pool 版 cancelled)の対に per-unit settle x cancelled の Red を先に置き、加えて failed 版(producer-outcome-failed を assert)も修正前に置く — RA iteration-2 NIT のとおりエラーパスのテスト後回しはしない。(6) 設計成果物に E-260815-3099 系裁定との関係を明記する: `Outcome: succeeded` 限定は #3105 の実装判断(:2475)であり、FIX-METHOD の subagent-1 留保が『outcome=succeeded の根拠が足りないと実装時に判断される場合は、その場で緩めず再裁定へ戻すこと』と定めていた — 本選挙がその再裁定であると書き、既決裁定の無申告の上書きにしない。あわせて FR-3106-4(docs/guide/15-troubleshooting.md 英日)と台帳 resync(model-map 実装ハッシュピン / coverage-patch-allowlist 意味的セレクタ / 新規テストファイル時の coverage-registry regen)を同一変更に含める。",
+          "rationale": null
+        }
+      ],
+      "submittedAt": "2026-08-18T08:15:29Z",
+      "receivedAt": "2026-08-18T08:18:00Z"
+    }
+  ]
+}

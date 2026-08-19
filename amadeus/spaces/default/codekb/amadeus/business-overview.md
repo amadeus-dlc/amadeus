@@ -205,7 +205,7 @@ autonomy の着地が業務上もつ意味は「**無人実行の権限を Inten
 
 機序は `architecture.md`、コンポーネント境界は `component-inventory.md`、テスト空白は `code-quality-assessment.md` の各対応節を参照。
 
-## 前区間の 5 件が解消し、焦点が inception のコスト構造へ移った（260817-inception-cost-batch、現在、observed `23d4ae767`）
+## 前区間の 5 件が解消し、焦点が inception のコスト構造へ移った（260817-inception-cost-batch、履歴、observed `23d4ae767`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260818-priority-bug-batch-4 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **業務境界そのものの変化なし。** base `89053172e` → observed `23d4ae767` の 12 コミットは、直前 intent `260816-priority-bug-batch-3` の 5 unit 着地（PR [#3173](https://github.com/amadeus-dlc/amadeus/pull/3173) / [#3175](https://github.com/amadeus-dlc/amadeus/pull/3175) / [#3172](https://github.com/amadeus-dlc/amadeus/pull/3172) / [#3174](https://github.com/amadeus-dlc/amadeus/pull/3174) / [#3171](https://github.com/amadeus-dlc/amadeus/pull/3171)）と付随する metrics snapshot・record checkpoint であり、いずれも自リポジトリの開発運用機構である。製品の対象ユーザー・提供価値・スコープ境界は動いていない。
 
@@ -245,3 +245,39 @@ autonomy の着地が業務上もつ意味は「**無人実行の権限を Inten
 **未決事項**: 2 件の是正方式はいずれも本スキャンでは決めていない（`memory/team.md` P1 の裁定事項）。特に #2415 は除外規則の**置き場**（stage 契約のどの節か）と**述語の粒度**（`amadeus/spaces/**` の前方一致では TLA ビルド台帳を巻き添えにする — `architecture.md` §1 の reconciliation を参照）、#3181 は**どの stage が Issue 証跡を produce するか**（consume だけの artifact は graph の hard error）が主要な争点である。
 
 機序は `architecture.md`、コンポーネント境界は `component-inventory.md`、公開契約は `api-documentation.md`、テスト空白は `code-quality-assessment.md` の各対応節を参照。
+
+## inception 固定費の削減機構が着地し、焦点が Construction 実行経路の信頼性へ移った（260818-priority-bug-batch-4、現在、observed `127be70c5`）
+
+**業務境界そのものの変化なし。** base `23d4ae767` → observed `127be70c5` の 5 コミットは、直前 intent `260817-inception-cost-batch` の 2 unit 着地（PR [#3190](https://github.com/amadeus-dlc/amadeus/pull/3190) / [#3191](https://github.com/amadeus-dlc/amadeus/pull/3191)）と、付随する metrics snapshot 2 件・record checkpoint 1 件であり、いずれも自リポジトリの開発運用機構である。製品の対象ユーザー・提供価値・スコープ境界は動いていない。
+
+### 着地した価値: inception の固定費に測定可能な目標が刻まれた
+
+前区間で焦点だった 2 件がどちらも着地し、**「ワークフローを回すこと自体のコスト」に対する初めての機構的な手当て**になった。
+
+| 機構 | 削るコスト | 測定 |
+|---|---|---|
+| Issue 証跡の一級上流入力化（[#3181](https://github.com/amadeus-dlc/amadeus/issues/3181)） | クロスレビューで確立済みの事実を、後続ステージが再導出する手間 | 契約に**数値目標が明記された**（下記） |
+| RE スキャン入力からの workflow exhaust 除外（[#2415](https://github.com/amadeus-dlc/amadeus/issues/2415)） | 差分リフレッシュが「前回の記録」を毎回読み直す手間 | 各スキャン記録に削減率の記載を義務化 |
+
+**数値目標が契約ファイルに固定された点が業務上の要である。** `stages/ideation/intent-capture.md` の逐語（observed 断面）:
+
+- **ベースライン**: intent あたり reverse-engineering + requirements-analysis の実働 **47 分**（issue-first の self-fix intent 4 件の中央値。record tree `215855ea7` で、stage ごとの `STAGE_STARTED` / `STAGE_COMPLETED` 監査イベントを対にし、連続イベント間の空白を 900 秒で打ち切り、park 時間を差し引いて測定）
+- **目標**: 次の issue-first intent 5 件で中央値 **35 分未満**。同じ方法で再測定する
+- **再導出可能性の要求**: 逐語 `Any later measurement must state its own tree/SHA and the aggregation command it was read from; a figure that cannot be re-derived is a claim, not a measurement.`
+
+これは「速くなったはず」という定性の申告ではなく、**反証可能な形の目標**である。本 intent（`260818-priority-bug-batch-4`）は目標区間に入る 5 件のうちの 1 件目にあたる。
+
+**本 intent が実際に削減を得た実測**: 差分スキャンの入力は除外前 **7,314 insertions / 99 files** から除外後 **2,551 insertions / 26 files** へ縮んだ（削減 **65.12%**、算出式 `4763/7314`。詳細と述語は `re-scans/260818-priority-bug-batch-4.md` §1）。この削減は「読む量」の削減であって「所要時間」の削減の証明ではない — 時間側は上記の方法で別途測る必要がある。
+
+### 本 intent の焦点: Construction 実行経路の 2 つの信頼性欠陥
+
+焦点は inception のコストから、**Construction を実際に回す経路の信頼性**へ移った。2 件とも独立クロスレビュー 2 名が成立している。
+
+| Issue | 業務影響 | 発現条件 |
+|---|---|---|
+| [#2837](https://github.com/amadeus-dlc/amadeus/issues/2837) | swarm fan-out を受けた conductor が、実行に必須の batch 番号を engine から受け取れず、**推測に頼る**。推測値はそのまま durable な作業単位の識別子になり、検査で弾かれない | swarm fan-out が有効な intent の Construction。8 つの harness 面のうち **7 面**が手動指定を前提に書かれている |
+| [#3106](https://github.com/amadeus-dlc/amadeus/issues/3106) | per-unit 経路で Unit を cancel すると、後続ステージが **`producer-outcome-pending` で構造停止する**。文書化された復旧手順がこのケースに適用できない | units-generation を実行した intent が per-unit 経路で Construction を回し、失敗裁定の Skip で Unit を cancel した場合 |
+
+**どちらも「止まる」側の欠陥である。** #2837 は誤った識別子で作業単位が作られうる方向、#3106 はワークフローが前に進めなくなる方向であり、いずれも自動化の信頼性を直接損なう。#3106 については、独立レビューが「回避策がある」という当初の重大度根拠を**反証している**（台帳へ手で `succeeded` を書き足す回避は、cancelled な Unit を succeeded と偽ることになり、存在しない成果物へ後続を流す）。
+
+**是正方式はいずれも未決**であり、公開契約の追加を伴う（`api-documentation.md` の対応節を参照）。本スキャンは方式を選定しない。

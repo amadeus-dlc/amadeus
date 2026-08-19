@@ -1,0 +1,48 @@
+{
+  "electionId": "E-260818-PBB4-FIX-METHODS",
+  "voter": "subagent-1",
+  "questions": [
+    {
+      "questionId": "q1-2837-context-contract",
+      "text": "#2837 (P2/S3): 新規 batch arm の invoke-swarm で conductor が推測なしに fixed Unit pool 手順(prepare/check/finalize)を実行できる契約形を選ぶ。現行: InvokeSwarmDirective (amadeus-directive.ts:312-331, 閉語彙 :555) は kind/units/cap/repo?/prepared_batch?/retry_unit? のみで、engine は firstUncoveredBatch (:3929) が返す batchNumber を emitConfiguredSwarm (:4074) の呼出 (:4294) で破棄する。retry arm (prepared_batch) と failure election (batch 必須) と batch-end gate (:3889) では batch を開示する非対称あり。全案共通の制約(requirements 承認済み): batch identity は pool generation を織り込む(素の 1-origin DAG index は failed terminal 後の再提示で同番号が返り pool 衝突を再現 — reviewer-2 再現6。uncovered 判定 :3923-3928 は cancelled/succeeded のみ除外)、prepared_batch/retry_unit arm と整合(C15)、engine 正本 + 7 conductor 面同期(FR-2837-3)、回帰テスト(FR-2837-4)、check_cmd/test_file の供給責任者を契約文書に明記(FR-2837-2)。",
+      "ordered": [
+        {
+          "internalNo": 1,
+          "label": "A: directive フィールド拡張 — invoke-swarm に batch identity(pool generation 織り込み)と check context(check_cmd、任意 test_file)を載せる(起票者推奨。INVOKE_SWARM_FIELDS 閉語彙・validator・t135/t181/t113 の連動更新)",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 3,
+          "label": "C: ハイブリッド — dispatch に不可欠な batch/pool identity のみ directive へ載せ、check_cmd/test_file は conductor 知識として正規取得元を conductor 面へ明記(engine は供給しない)",
+          "displayNo": 2
+        },
+        {
+          "internalNo": 2,
+          "label": "B: read-only context verb 新設 — directive は現行最小形のまま、amadeus-swarm context 等の read-only verb が batch/pool identity + check context を一意に返し、conductor 面に正確な呼び出し順を記載",
+          "displayNo": 3
+        }
+      ]
+    },
+    {
+      "questionId": "q2-3106-outcome-recording",
+      "text": "#3106 (P3/S3): per-unit 経路で cancelled になった unit(reviewer-2 SR1 により failed も同一裁定対象 — per-unit 経路では failed にも行が付かず producer-outcome-failed でなく producer-outcome-pending が出る)の terminal outcome を下流 consume に可視化し構造停止を解消する方式を選ぶ。現行: settlePerUnitOutcomes (orchestrate.ts:4686) は :4706 で cancelled を skip、SETTLED_UNIT_OUTCOME (:2475) = \"succeeded\" 単一値、reader (:2499) は succeeded 以外 throw。母集団 readPerUnitConsumePopulation (:2513) は pool event set + settle 行の 2 系統のみを読み、検出側 cancelledConstructionUnits (:3934) が読む canonical projection(solo BOLT_COMPLETED terminal を見る)を読まない。下流 fanout の KNOWN_OUTCOMES (:199) は cancelled を既に受理。solo skip arm (:6768-6781) は BOLT_COMPLETED(Outcome: cancelled) のみ書き pool 非経由。全案共通の制約: pool 経路との対称性(consumer を止めず当該 unit の paths は emit しない — t533 pool 版が固定)、failed の診断は producer-outcome-failed(設計意図 :4127-4128 の回復)、落ちる実証(t533 integration :786-801 の対になる位置に Red 先行)、E-260815-3099 系裁定(Outcome: succeeded 限定)との関係整理を design 成果物へ記録。",
+      "ordered": [
+        {
+          "internalNo": 1,
+          "label": "A: settle emitter の語彙拡張 — settlePerUnitOutcomes が cancelled/failed も UNIT_OUTCOME_SETTLED 行として記録し、SETTLED_UNIT_OUTCOME を閉集合 {succeeded, cancelled, failed} へ拡張(reader :2499 の受理拡張を含む)",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 2,
+          "label": "B: 母集団読み口の統一 — readPerUnitConsumePopulation が検出側と同じ canonical construction outcome projection(solo BOLT_COMPLETED terminal を含む)を読む(audit 新行なし、2 読み口の可視性不一致を根で解消)",
+          "displayNo": 2
+        },
+        {
+          "internalNo": 3,
+          "label": "C: 発生点で pool event 発行 — solo skip/fail arm が pool coordinator 相当の terminal event を書き、outcome 台帳を pool 経路へ一本化",
+          "displayNo": 3
+        }
+      ]
+    }
+  ]
+}

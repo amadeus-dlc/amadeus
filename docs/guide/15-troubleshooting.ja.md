@@ -135,12 +135,12 @@ engine は現在、per-unit ステージを反復する中で Unit の必須成�
 
 1. 修正を含む engine へ更新します(pull し、ソースチェックアウトで開発している場合は `bun run build`)。
 2. consumer が読む per-unit Construction ステージ(通常は `code-generation`)へカーソルを戻します: `/amadeus --stage code-generation` を実行し、表示された `amadeus-jump.ts execute` コマンドを実行します。
-3. `/amadeus` を実行します。engine が record から coverage を再導出して covered かつ未キャンセルの Unit すべての outcome を確定させ、全 Unit が既に covered であるためステージゲートを再提示します。承認してください。
+3. `/amadeus` を実行します。engine が record から coverage を再導出して covered な Unit すべての outcome を確定させ(cancel された Unit については下記参照)、全 Unit が既に covered であるためステージゲートを再提示します。承認してください。
 4. `/amadeus` を実行します。consumer ステージが Unit 群へファンアウトし、ワークフローが継続します。
 
 手順 2〜4 は成果物を追加せず履歴も書き換えません。増えるのは、観測した時点のタイムスタンプを持つ確定済み outcome の行だけです。
 
-**cancel された Unit は確定されません。** engine が outcome を確定させるのは covered **かつ** cancel されていない Unit だけです。したがって cancel された Unit を含むバッチでは、上記の手順の後もその Unit について `producer-outcome-pending` が残ります。swarm 経路はこの点が異なり(Unit pool が cancelled の terminal を記録します)、この非対称の解消は follow-up issue として追跡します。
+**cancel された Unit も確定されます。** failure ruling が cancel した Unit については、その成果物がディスク上に残っているかどうかに関わらず engine が `cancelled` の outcome を記録します。したがってバッチは停止せず、consumer は当該 Unit の path を除外して残りの Unit へファンアウトします — swarm 経路が Unit pool の terminal で従来から実現していた挙動と同一です(#3106)。その後 Unit を再開(`amadeus-bolt.ts start`)して再び covered まで到達させた場合、次の `next` が新しい outcome を cancelled 行を supersede する revision として記録します。両方の行が台帳に残り、後の行が有効です。
 
 > `/amadeus --stage code-generation --single` ではこの回復はできません。single 実行は契約上 isolated であり、そのステージの directive を1つ出すだけで engine の per-unit ループに入らないため、何も確定させません。
 

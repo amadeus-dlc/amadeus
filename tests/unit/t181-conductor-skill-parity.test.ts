@@ -140,6 +140,21 @@ const SHARED_BUILDER_ROUTING_TOKENS = [
   "uses `amadeus-builder-agent`",
   "Named `reverse-engineering` and `code-generation` lifecycle stages remain owned by `amadeus-developer-agent`.",
 ] as const;
+// Issue #2837. The swarm dispatch context splits in two, and every shipped
+// surface must carry BOTH halves:
+//   - the batch identity is ENGINE-owned routing the conductor may not
+//     re-derive, so the surface transcribes `directive.batch` instead of asking
+//     for a hand-typed `--batch <n>` (a guessed number silently correlates with
+//     whatever pool already owns it — `prepare` only checks it is an integer);
+//   - the convergence check is CONDUCTOR knowledge the engine never supplies,
+//     so the surface names where that knowledge legitimately comes from rather
+//     than leaving `--check-cmd` sourceless.
+const SWARM_CONTEXT_TOKENS = [
+  "directive.batch",
+  "the convergence check is conductor knowledge",
+  "amadeus/spaces/<space>/memory/",
+] as const;
+const HAND_TYPED_BATCH = "--batch <n>";
 const REVIEW_RECOVERY_TOKENS = [
   "`review_only:true`",
   "skips the stage body",
@@ -206,6 +221,22 @@ describe("t181 per-harness conductor-surface freshness gate (P11 RESOLVE-2)", ()
       }
       if (!/(?:skip|do not run).*(?:ordinary|normal|run )?prepar/i.test(scope)) {
         missing.push(`${rel}  prepared retry does not skip preparation`);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+
+  test("every conductor surface transcribes the batch identity and names the check-command source", () => {
+    const surfaces = conductorSurfaces();
+    expect(surfaces).toHaveLength(8);
+    const missing: string[] = [];
+    for (const rel of surfaces) {
+      const body = readFileSync(join(REPO_ROOT, rel), "utf-8");
+      for (const token of SWARM_CONTEXT_TOKENS) {
+        if (!body.includes(token)) missing.push(`${rel}  missing: ${token}`);
+      }
+      if (body.includes(HAND_TYPED_BATCH)) {
+        missing.push(`${rel}  still hand-types ${HAND_TYPED_BATCH}`);
       }
     }
     expect(missing).toEqual([]);

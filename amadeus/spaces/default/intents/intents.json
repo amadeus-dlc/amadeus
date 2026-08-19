@@ -1301,6 +1301,13 @@
     "status": "complete"
   },
   {
+    "uuid": "01a013af-0055-7f5b-b9b8-9e12b8c1f7bd",
+    "slug": "priority-bug-batch-4",
+    "dirName": "260818-priority-bug-batch-4",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
     "uuid": "01a01415-7f62-7ec7-93f8-57f64692b65f",
     "slug": "issue-3029-sensor-gate",
     "dirName": "260818-issue-3029-sensor-gate",

@@ -3015,7 +3015,7 @@ pi は **packager 側では第一級**である（`scripts/plugin-projection.ts:
 
 **#3153 / #3152 / #3156 が `amadeus-state.ts`（6457 行、`wc -l` 実測）を共有する。** #3153（`:3721-3772`）と #3152 の呼出点（`:3744`）は**同一関数内**、#3156（`:2491-2691`）は離れた行域にある。#3149（`plugins/github-pr-convergence/`）と #3046（`amadeus-election-store.ts`）は他と交差しない。機序は `architecture.md`、配置は `code-structure.md`、テスト空白と台帳は `code-quality-assessment.md` の各対応節を参照。
 
-## 区間のコンポーネント増減ゼロと、focus 2 件が触れる既存コンポーネント（260817-inception-cost-batch、現在、observed `23d4ae767`）
+## 区間のコンポーネント増減ゼロと、focus 2 件が触れる既存コンポーネント（260817-inception-cost-batch、履歴、observed `23d4ae767`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260818-priority-bug-batch-4 の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: base `89053172ed8b5bb270e254aea029a13291d10b6b` → observed `23d4ae767956cd56fc28fa78abe28096712eff8a`。file:line はすべて observed 断面で本節の起草時に逐語確認した。
 
@@ -3120,3 +3120,116 @@ pi は **packager 側では第一級**である（`scripts/plugin-projection.ts:
 **`amadeus-state.ts` は observed で 6,616 行**（`git show 23d4ae767:packages/framework/core/tools/amadeus-state.ts | wc -l`、本節の実測。base の 6,457 行から +159 = 区間 diff の +198 −39 と一致）。#3153 / #3152 / #3156 の是正は同ファイル内の非重複行域（gate 系 `:3782-3930` 付近、source-work 系 `:2503-2770`）へ着地した。
 
 **focus 2 件の患部は上表 §F のとおり `amadeus-state.ts` を含まない**（RE/RA の stage 契約、`amadeus-orchestrate.ts` の resolver、`amadeus-graph.ts` の不変量、`amadeus-github-gateway.ts`）。ただしこれは**現時点で同定できた患部集合についての観測**であって、実装が触る面の確定ではない — 是正方式が未決である以上、write scope の最終的な交差有無は design 以降の裁定に依存する。機序は `architecture.md`、配置は `code-structure.md`、テスト面と台帳は `code-quality-assessment.md` の各対応節を参照。
+
+## 区間のコンポーネント増減と、focus 2 件が触れる既存コンポーネント（260818-priority-bug-batch-4、現在、observed `127be70c5`）
+
+**観測 ref**: base `23d4ae767956cd56fc28fa78abe28096712eff8a` → observed `127be70c5d7a584016f88a5d44e8715904020721`（5 コミット / 99 files changed, 7314 insertions(+), 61 deletions(-)、`git rev-list --count` と `git diff --shortstat`、本節の実測）。
+
+### 1. 新規コンポーネント — モジュール 0 / 責務 1
+
+**新しいソースファイルは 1 件も追加されていない。** `git diff --name-status 23d4ae767..127be70c5 -- packages/ plugins/ docs/ .github/`（本節の実測、exit 0）の出力は **`M` 10 行のみ**で、`A` も `D` もゼロである。増えたのは既存モジュール内の責務であり、モジュール境界は動いていない。
+
+| 責務 | 置き場（既存モジュール） | 種別 |
+|---|---|---|
+| Issue 証跡の取り込み（read-only CLI verb） | `packages/framework/core/tools/amadeus-utility.ts`（+337 −1） | 新 verb `issue-evidence fetch` |
+| Issue コメントの read 面 | `packages/framework/core/tools/amadeus-github-gateway.ts`（+210 −33） | 3 つ目の adapter（`createEvidenceGitHubGatewayAdapter`） |
+| record 内の証跡パス解決 / RE スキャン除外の定義 | `packages/framework/core/tools/amadeus-lib.ts`（+57 −0） | 純関数 2 + 定数 1 |
+
+### 2. `amadeus-utility.ts` — 取り込み verb の内部構成
+
+新 verb は既存の read-only 照会 arm（`codekb-path`）と同じ系統に置かれ、state / audit の遷移を持たない。
+
+| 部品 | file:line（observed） | 役割 |
+|---|---|---|
+| `parseCrossReviewMarker` | `:6645` | コメント本文の `<!-- issue-cross-review … -->` marker を読み、独立レビュアーを数える |
+| `renderIssueEvidence` | `:6893` | 取り込んだ Issue 本文とコメントを 1 つの markdown へ整形。`:6899` で `fetched-at` / `repo` / `tool` の provenance 行を刻む |
+| `runIssueEvidenceFetch` | `:6824` | verb 本体。`fetch` 以外は `:6834` で拒否 |
+| dispatch arm | `:6981` | `case "issue-evidence":` |
+| usage | `:7045` | verb 名の列挙へ追加 |
+
+**batch 性**: 複数 Issue を一度に取り込み、**全部または何も書かない**（契約散文 `stages/ideation/intent-capture.md` の逐語 `the whole batch or nothing`）。`gh` が不在・未認証・失敗のいずれでも非 0 終了で何も書かず、ステージは自由文へフォールバックする。
+
+### 3. `amadeus-github-gateway.ts` — adapter が 2 種から 3 種へ
+
+| adapter | file:line | 消費者 | 権限 |
+|---|---|---|---|
+| `createMirrorGitHubGatewayAdapter` | `:1058` | intent mirror | mutation permit あり |
+| `createFindingGitHubGatewayAdapter` | `:1064` | finding | mutation permit あり |
+| **`createEvidenceGitHubGatewayAdapter`** | **`:1089`** | **`issue-evidence fetch`** | **permit なし（read-only）** |
+
+port 型 `EvidenceGitHubGateway`（`:1077`）は `readiness()` / `viewIssue()` / `listComments()` の 3 面だけを露出する。`viewIssue` は既存の combined gateway へ委譲し（`:1092` で合成、`:1095` で委譲）、`listComments` のみが新しい walk（`commentsArgv` `:189` + `parseIssueComments` `:550`）を持つ。
+
+**gateway 内の非対称を 1 点記録する。** `listComments` の argv は `--include` を持たないため、この 1 経路だけ HTTP status を取得できず、失敗分類が exit code のみに依る（根拠と逐語は `api-documentation.md` の対応節）。gateway の他の read 面はすべて `--include` 経由で HTTP envelope を読む。
+
+### 4. `amadeus-lib.ts` — 定数 1・純関数 2
+
+| 部品 | file:line | 形 |
+|---|---|---|
+| `RE_SCAN_EXCLUDED_PATHSPECS` | `:1540` | `readonly string[]`（5 pathspec）。RE 差分スキャンの除外集合の**コード側で唯一の定義** |
+| `issueEvidencePath` | `:5043` | `(projectDir, intent?, space?) => string \| null` |
+| `relativeIssueEvidencePath` | `:5051` | 同上の posix 相対形 |
+
+`RE_SCAN_EXCLUDED_PATHSPECS` は **stage 契約散文（`stages/inception/reverse-engineering.md` の Scan input exclusions 節）と対で 1 つの機構をなす**。契約散文が pathspec を逐語で載せ、コード側の定数がそれと同じ集合を持ち、drift test（`tests/integration/t2415-re-scan-exclusion-contract.integration.test.ts:96` / `:159`）が両者の一致を固定する。同テストは source 断面だけでなく**全 delivered tree** も検証する（`cid:requirements-analysis:c2-acceptance-at-delivery-tree` の実装）。
+
+### 5. focus 2 件が触れる既存コンポーネント
+
+**是正は本区間で着地していない**（`git grep -n "3106" 127be70c5 -- packages/ plugins/ tests/ docs/` → **exit 1**、`"2837"` は allowlist の sha256 内部文字列 2 hit のみ）。以下は現況の棚卸しであり、患部の確定ではない。
+
+#### 5.1 #2837 — batch identity を保持しながら emit 境界で捨てるコンポーネント
+
+```
+amadeus-orchestrate.ts:3906  firstUncoveredBatch(batches, node, …)
+     └─→ 戻り値 { units: string[]; batchNumber: number }（:3912 の型、:3929 の return）
+             │
+             ├─→ :4026  SwarmSelection.pick（batchNumber を保持したまま運ぶ）
+             │
+             └─→ :4294  emitConfiguredSwarm(projectDir, selection.value.pick.units)
+                          └─→ :4074  function emitConfiguredSwarm(projectDir, units)
+                                      ← 第2引数が units のみ。**batchNumber はここで消える**
+
+  対称面（同じ engine が batch を運ぶ経路）:
+    amadeus-orchestrate.ts:4092  preparedSwarmRetryDirective → prepared_batch / retry_unit
+    amadeus-directive.ts:644-649  execute-failure-election → batch を必須フィールドとして搬送
+    amadeus-orchestrate.ts:3889  batchGateQuestion(batch, units) → gate では 1-origin 番号を人へ開示
+```
+
+テキストフォールバック: `firstUncoveredBatch`（`:3906`）は `{units, batchNumber}` を返し、`:4294` の呼び出しが `pick.units` だけを渡すため、`emitConfiguredSwarm`（`:4074`、第2引数は `units: string[]`）に batch 番号は届かない。同じ engine は retry arm・failure election・gate 提示の 3 経路では batch identity を運んでいる。
+
+**batch 値の下流での意味**: `packages/framework/core/tools/amadeus-swarm.ts:638` 逐語 `idempotencyKey: \`unit-pool:${flags.batch}:initial-enqueue\`` — batch 整数がそのまま durable な pool identity になる。`prepare` の既定 base はブランチ名（同 `:581` 逐語 `const base = flags.base ?? currentBranch(repoCwd);`）。
+
+**conductor 面の census**（本節の実測、2 つの述語を書き分ける）:
+
+| 述語 | claude | codex | kimi | kiro | kiro-ide | cursor | opencode | pi |
+|---|---|---|---|---|---|---|---|---|
+| `git grep -c -- "--batch <n>" 127be70c5 -- <face>`（手動で `<n>` を埋めることを要求する箇所） | 6 | 6 | 6 | 6 | 6 | 5 | 5 | **0** |
+| `git grep -c -- "--batch" 127be70c5 -- <face>`（`--batch` の全出現） | 7 | 7 | 7 | 7 | 7 | 5 | 5 | 1 |
+
+face の実体: claude / codex / kimi / kiro / kiro-ide は `packages/framework/harness/<h>/skills/amadeus/SKILL.md`、cursor / opencode は `packages/framework/harness/<h>/commands/amadeus.md`、pi は `packages/framework/harness/pi/skills/amadeus/SKILL.md`。**8 面中 7 面が `--batch <n>` の手動指定を要求する。** pi の唯一の hit（`:90`）は `acquire --batch <directive.prepared_batch>` で、これは directive が運ぶ値を渡す形であり手動指定ではない。
+
+#### 5.2 #3106 — 同一監査ストリームを読む 2 つの読み口
+
+```
+監査ストリーム（record/audit/*.jsonl）
+   │
+   ├─→ 検出側  amadeus-orchestrate.ts:3934  cancelledConstructionUnits(projectDir, stage)
+   │        └─→ canonical projection（amadeus-construction-outcome-projection.ts）
+   │              → solo の BOLT_COMPLETED(Outcome: cancelled) を terminal として **見る**
+   │
+   └─→ 母集団側 amadeus-orchestrate.ts:2513  readPerUnitConsumePopulation(projectDir)
+            ├─→ pool event set（実在する pool 行のみ）
+            └─→ :2499 readSettledUnitOutcomes → :2508 で outcome を "succeeded" 一語に閉じる
+                  → solo terminal を **見ない**
+
+   発行側 amadeus-orchestrate.ts:4686  settlePerUnitOutcomes
+        └─→ :4706  if (batch === undefined || cancelledUnits.has(unit)) continue;
+              → cancelled unit は行を持たない
+
+   下流   amadeus-per-unit-consume-fanout.ts:199  KNOWN_OUTCOMES（"cancelled" を含む）
+        └─→ :224-228  pending 述語は「行が無い」ことだけを見る
+```
+
+テキストフォールバック: 同じ Unit が、検出側では「cancelled だから settle をスキップすべき」と判定され、母集団側では「outcome 行が無いから pending」と判定される。発行側（`:4706`）が cancelled を除外し、読み側（`:2508`）が `succeeded` 以外を拒否するため、cancelled 行はどこにも存在しない。下流の `KNOWN_OUTCOMES`（`:199`）は `cancelled` を正規値として既に受理するので、**行さえ届けば fail-closed は解ける**。
+
+**solo skip arm の位置**（`:6767-6781`）: `handleFailureRuling`（`:6733`）の Skip 分岐は solo arm と pool arm（`:6783-6785`）に分かれ、solo arm は `BOLT_COMPLETED`（`Outcome: "cancelled"` / `Reason: "skipped"`）を 1 行書くだけで **pool を経由しない**。pool arm は `pool.skipFailedUnit` を呼ぶ。この分岐が非対称の発生点である。
+
+**是正時に同じ関数を触る隣接面**: `settlePerUnitOutcomes` のスキップ条件は 3 つ（`:4706` の `batch === undefined`、同行の `cancelledUnits.has(unit)`、`:4707-4709` の `!unitCovered`）に加えて `:4711` の `appended.has(key)` 冪等ガードがある。batch identity が解決できない Unit も同じく pending 源になりうる点は、本 focus の範囲外だが同一関数の棚卸し対象である。

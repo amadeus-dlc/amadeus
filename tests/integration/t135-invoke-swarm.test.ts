@@ -335,6 +335,11 @@ describe("t135 engine — invoke-swarm emission gated on autonomy (migrated from
     // parsed units array equals the first batch, in order, off the DAG.
     expect(directive.units).toEqual(["a", "b"]);
     expect(directive.cap).toBe(2);
+    // #2837: the batch identity the conductor hands `prepare --batch` rides on
+    // the directive itself — derived from the compiled bolt_dag (1-origin),
+    // never re-derived by the conductor. Asserted off the emitted directive, so
+    // the referee calls below stop being the only place a batch number appears.
+    expect(directive.batch).toBe("1");
   }, scaleTestTime(30000));
 
   test("1c: invoke-swarm bakes the intent-over-space-over-project swarm.unit.concurrency.limit cap", () => {
