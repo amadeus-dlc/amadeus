@@ -1,4 +1,4 @@
-// covers: function:evaluateMandatoryPluginStages, function:handleRecompose
+// covers: function:effectivePlanAction
 //
 // t3249 - a parked Intent must stay terminable when host config moves under it.
 //
