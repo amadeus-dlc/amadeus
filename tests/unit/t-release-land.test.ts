@@ -5,6 +5,7 @@
 // commit — never `git push` to main.
 
 import { describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -433,22 +434,36 @@ describe("release-land CLI merge-queue compatibility", () => {
         throw new Error(`unexpected command: ${command.join(" ")}`);
       },
     };
-    const port = new ReleaseLandCliPort({
-      repoRoot: REPO_ROOT,
-      repository: "amadeus-dlc/amadeus",
-      botLogin: BOT_LOGIN,
-      runner,
-    });
-    expect(port.currentSetupVersion()).toBe("0.1.7");
-    expect(port.currentHeadSha()).toBe(HEAD_SHA);
-    expect(port.tagExists("v0.1.8")).toBe(true);
-    expect(port.observePr(PR_URL)).toEqual({
-      state: "MERGED",
-      url: PR_URL,
-      mergeCommitSha: MERGE_SHA,
-      ciSuccessFailed: false,
-    });
-    expect(port.nowMs()).toBeGreaterThan(0);
+    // A pinned fixture, NOT the live repo root: a release PR bumps the real
+    // packages/setup/package.json to the next version, so a literal
+    // expectation against the live tree goes red on exactly the PR this CLI
+    // exists to land (measured: release/v0.1.8, run 32219696862).
+    const fixtureRoot = mkdtempSync(join(tmpdir(), "amadeus-release-land-"));
+    try {
+      mkdirSync(join(fixtureRoot, "packages", "setup"), { recursive: true });
+      writeFileSync(
+        join(fixtureRoot, "packages", "setup", "package.json"),
+        `${JSON.stringify({ name: "amadeus-setup-fixture", version: "0.1.7" })}\n`,
+      );
+      const port = new ReleaseLandCliPort({
+        repoRoot: fixtureRoot,
+        repository: "amadeus-dlc/amadeus",
+        botLogin: BOT_LOGIN,
+        runner,
+      });
+      expect(port.currentSetupVersion()).toBe("0.1.7");
+      expect(port.currentHeadSha()).toBe(HEAD_SHA);
+      expect(port.tagExists("v0.1.8")).toBe(true);
+      expect(port.observePr(PR_URL)).toEqual({
+        state: "MERGED",
+        url: PR_URL,
+        mergeCommitSha: MERGE_SHA,
+        ciSuccessFailed: false,
+      });
+      expect(port.nowMs()).toBeGreaterThan(0);
+    } finally {
+      rmSync(fixtureRoot, { recursive: true, force: true });
+    }
   });
 
   test("treats a locally listed tag as present without asking the remote", () => {
