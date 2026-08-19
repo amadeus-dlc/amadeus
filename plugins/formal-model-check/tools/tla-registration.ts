@@ -14,7 +14,7 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import type { Result } from "./contract.ts";
-import { parseTlaModelMap } from "./amadeus-formal-verif-model-map.ts";
+import { parseAuthoringProvenance, parseTlaModelMap } from "./amadeus-formal-verif-model-map.ts";
 import { verifyHumanApproval } from "./tla-applicability.ts";
 import type { ApplicabilityReceipt, HumanApprovalRef } from "./tla-applicability.ts";
 import type { IdentityComparison, VerifiedBundle } from "./tla-evidence.ts";
@@ -53,6 +53,7 @@ export interface EvidenceBundleField {
 export interface ModelMapEntryDraft {
   readonly name: string;
   readonly evidenceBundle: EvidenceBundleField;
+  readonly authoringProvenance: Record<string, unknown>;
   readonly [key: string]: unknown;
 }
 
@@ -199,6 +200,11 @@ export function parseEntryDraft(value: unknown): Result<ModelMapEntryDraft, Regi
   if (!isRecord(bundle) || typeof bundle.digest !== "string" || !BUNDLE_DIGEST.test(bundle.digest)) {
     return rejected("draft must carry evidenceBundle.digest as sha256:<hex64>");
   }
+  if (!("authoringProvenance" in value)) {
+    return rejected("draft must carry authoringProvenance");
+  }
+  const provenance = parseAuthoringProvenance(value.authoringProvenance);
+  if (!provenance.ok) return rejected(provenance.error.detail);
   return ok(value as unknown as ModelMapEntryDraft);
 }
 

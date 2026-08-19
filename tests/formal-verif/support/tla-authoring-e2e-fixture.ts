@@ -65,6 +65,14 @@ export function entryFor(root: string, name: string, extra: Record<string, unkno
         sha256: Bun.CryptoHasher.hash("sha256", readFileSync(join(root, IMPL_PATH)), "hex"),
       },
     ],
+    authoringProvenance: {
+      intentRecord: "amadeus/spaces/default/intents/260813-bolt-pr-attestation",
+      execution: {
+        auditShard: "amadeus/spaces/default/intents/260813-bolt-pr-attestation/audit/session.jsonl",
+        timestamp: "2026-08-05T00:00:00Z",
+        eventIdentity: "e".repeat(64),
+      },
+    },
     ...extra,
   };
 }

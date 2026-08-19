@@ -63,6 +63,15 @@ const vocabElectionModel = () => ({ ...electionModel(), vocabulary: vocabulary()
 
 const auxVocabMirrorModel = () => ({ ...auxMirrorModel(), vocabulary: vocabulary() });
 
+const authoringProvenance = () => ({
+  intentRecord: "amadeus/spaces/default/intents/260813-bolt-pr-attestation",
+  execution: {
+    auditShard: "amadeus/spaces/default/intents/260813-bolt-pr-attestation/audit/j5ik2o-mac-studio-lan-9bc851023366.jsonl",
+    timestamp: "2026-08-14T00:36:30Z",
+    eventIdentity: "0f7e04ec87a660429a16811abe81427ead2fbb2cba26a4fa2b85b1aafcd0407e",
+  },
+});
+
 describe("model map v2 schema", () => {
   test("parses a multi-model canonical map", () => {
     expect(parseTlaModelMap(bytes(canonicalMap()))).toEqual({
@@ -278,6 +287,31 @@ describe("model map v2 schema", () => {
         value: { schemaVersion: 2, models: [model] },
       });
     }
+  });
+
+  test("parses an authoring provenance record with its execution anchor", () => {
+    const model = { ...electionModel(), authoringProvenance: authoringProvenance() };
+    expect(parseTlaModelMap(bytes({ schemaVersion: 2, models: [model] }))).toEqual({
+      ok: true,
+      value: { schemaVersion: 2, models: [model] },
+    });
+  });
+
+  test("rejects an authoring provenance record that is not anchored to its intent record", () => {
+    const model = {
+      ...electionModel(),
+      authoringProvenance: {
+        ...authoringProvenance(),
+        execution: {
+          ...authoringProvenance().execution,
+          auditShard: "amadeus/spaces/default/intents/other/audit/session.jsonl",
+        },
+      },
+    };
+    expect(parseTlaModelMap(bytes({ schemaVersion: 2, models: [model] }))).toMatchObject({
+      ok: false,
+      error: { code: "MODEL_MAP_INVALID" },
+    });
   });
 
   test("rejects auxiliaries with unknown keys or an empty array", () => {
