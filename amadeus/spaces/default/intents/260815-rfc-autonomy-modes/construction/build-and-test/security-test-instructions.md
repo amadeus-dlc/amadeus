@@ -1,5 +1,11 @@
 # セキュリティテスト手順 — intent 260815-rfc-autonomy-modes
 
+## 上流入力
+
+- `code-generation-plan`(13 unit 分): `<record>/construction/<unit>/code-generation/code-generation-plan.md`
+- `code-summary`(13 unit 分): `<record>/construction/<unit>/code-generation/code-summary.md`
+
+
 ## 判定: 適用可能なセキュリティ NFR は存在するが、いずれも既存の fail-closed 契約テストで検証する
 
 本 intent の要件成果物(`<record>/inception/requirements-analysis/requirements.md` `## Non-Functional Requirements` :73-79)が宣言するセキュリティ性の NFR は次の 3 つで、いずれも**数値目標ではなく契約**である。

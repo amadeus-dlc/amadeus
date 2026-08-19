@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 2,
+  "electionId": "E-260819-RFC0001-BT-S13",
+  "kind": "learnings-selection",
+  "questions": [
+    {
+      "questionId": "q-learnings-selection",
+      "text": "intent 260815-rfc-autonomy-modes の build-and-test ステージ §13 学習選定。候補は3件。project.md の Learnings Inbox へ採用すべき候補を1つ選ぶか、いずれも採用しないかを裁定せよ。判断基準は (a) 一般化可能性 — 将来の runner が同じ判断に到達できるか (b) 既存ノルムとの重複・矛盾の有無。既存ノルムは amadeus/spaces/default/memory/project.md と team.md を実読して確認すること(特に cid:build-and-test:c2-no-test-theatre-for-absent-nfr / c1-build3029 / c2-build3029 と cid:code-generation:push-first)。",
+      "choices": [
+        {
+          "internalNo": 1,
+          "label": "性能テストは「適用可能な NFR 不在(N/A)」と判定し実体を作らなかった",
+          "description": "[Interpretations] requirements.md の `## Non-Functional Requirements`(:73-79)は TDD 必須・fail-closed 保存・後方互換禁止・harness 移植性・監査 append-only の5項目のみで、時間/スループット/メモリいずれの数値閾値も宣言していない。nfr-requirements(3.2)もスコープ設定で SKIP。`cid:build-and-test:c2-no-test-theatre-for-absent-nfr` に従い、判定・根拠・将来この判定を覆す条件を performance-test-instructions.md へ明記した。セキュリティ NFR は3件存在するがいずれも数値でなく契約であるため、新規スイートを作らず既存の contract test へ帰着させた。"
+        },
+        {
+          "internalNo": 2,
+          "label": "検証は remote CI ではなくローカルフルスイートを正本とした",
+          "description": "[Interpretations] 本ブランチは record 面のみの変更でコード差分が 0 ファイル(`git diff --name-only origin/main...HEAD -- . ':(exclude)amadeus'` の出力 0 行)であり、push しても実装面を評価する CI は既に main で green の同一コードを再走させるだけになる。push-first ノルム(`cid:code-generation:push-first`)は実装 Bolt の検証順序を定めるもので、コード差分のない record checkpoint には該当しないと解した。実装 13 unit の CI green は各 PR の着地時点で確認済み。"
+        },
+        {
+          "internalNo": 3,
+          "label": "upstream-coverage センサーを stage 成果物だけでなく memory.md にも手動発火させ、不要な FAILED 行を1件作った",
+          "description": "[Deviations] memory.md は produces ではなく stage 日誌であり、consumes 参照を持たせるべき面ではない。監査は append-only のため取り消せない。手動発火は produces に列挙された成果物へのみ行うべきだった。"
+        },
+        {
+          "internalNo": 4,
+          "label": "いずれも採用しない(0 件で可)",
+          "description": "3 候補いずれも一般化可能な恒久知に達していない、または既存ノルムで十分に覆われていると判断する場合はこちら。既存の近接則: cid:build-and-test:c2-no-test-theatre-for-absent-nfr(目標なき NFR のテストを発明しない)、cid:build-and-test:c1-build3029(Comprehensive でも N/A 判定と根拠を記録)、cid:code-generation:push-first(実装 Bolt の検証は push-first)、cid:build-and-test:c2-build3029(ローカル targeted の後は push-first でリモート CI を正本に)。"
+        }
+      ]
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "collecting"
+}

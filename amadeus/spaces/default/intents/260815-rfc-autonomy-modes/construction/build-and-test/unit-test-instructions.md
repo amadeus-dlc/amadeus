@@ -1,5 +1,11 @@
 # ユニットテスト手順 — intent 260815-rfc-autonomy-modes
 
+## 上流入力
+
+- `code-generation-plan`(13 unit 分): `<record>/construction/<unit>/code-generation/code-generation-plan.md`
+- `code-summary`(13 unit 分): `<record>/construction/<unit>/code-generation/code-summary.md`
+
+
 Test Strategy: **Comprehensive** / Depth: **Standard**。
 テストは Bun 製の自作ランナー `tests/run-tests.sh`(smoke / unit / integration / e2e の4層)で実行する。新規ランナー・新規スイートは作らない(既存インフラの再利用)。
 

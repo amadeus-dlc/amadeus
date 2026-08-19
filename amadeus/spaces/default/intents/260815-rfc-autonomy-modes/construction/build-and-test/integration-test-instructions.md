@@ -1,5 +1,11 @@
 # 統合テスト手順 — intent 260815-rfc-autonomy-modes
 
+## 上流入力
+
+- `code-generation-plan`(13 unit 分): `<record>/construction/<unit>/code-generation/code-generation-plan.md`
+- `code-summary`(13 unit 分): `<record>/construction/<unit>/code-generation/code-summary.md`
+
+
 filesystem / process を使う medium test は unit allowlist を増やさず integration suite に置く方針に従う。
 
 ## 対象

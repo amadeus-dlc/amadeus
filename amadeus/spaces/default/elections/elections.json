@@ -1708,5 +1708,11 @@
     "dirName": "260819-e-260819-rfc0001-cg-s13",
     "createdAt": "2026-08-19T07:41:43Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-260819-RFC0001-BT-S13",
+    "dirName": "260819-e-260819-rfc0001-bt-s13",
+    "createdAt": "2026-08-19T08:08:56Z",
+    "status": "collecting"
   }
 ]

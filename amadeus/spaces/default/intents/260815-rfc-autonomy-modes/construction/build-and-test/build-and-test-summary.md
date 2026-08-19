@@ -1,5 +1,11 @@
 # ビルド・テストサマリ — intent 260815-rfc-autonomy-modes(RFC-0001 Intent Autonomy Modes)
 
+## 上流入力
+
+- `code-generation-plan`(13 unit 分): `<record>/construction/<unit>/code-generation/code-generation-plan.md`
+- `code-summary`(13 unit 分): `<record>/construction/<unit>/code-generation/code-summary.md`
+
+
 測定断面: `origin/main` `e7c0515fe` + 本 intent の record 変更のみ(実装差分は全て本断面の祖先として着地済み)。
 Test Strategy: **Comprehensive** / Depth: **Standard** / Scope: **self-feature**。
 

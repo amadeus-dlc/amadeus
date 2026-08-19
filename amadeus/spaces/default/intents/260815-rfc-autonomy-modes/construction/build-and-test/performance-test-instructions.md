@@ -1,10 +1,16 @@
 # 性能テスト手順 — intent 260815-rfc-autonomy-modes
 
+## 上流入力
+
+- `code-generation-plan`(13 unit 分): `<record>/construction/<unit>/code-generation/code-generation-plan.md`
+- `code-summary`(13 unit 分): `<record>/construction/<unit>/code-generation/code-summary.md`
+
+
 ## 判定: 適用可能な性能 NFR は存在しない(N/A)
 
 本 intent の要件成果物には、**合否を決める数値目標を持つ性能 NFR が宣言されていない**。
 
-### 根拠(実測)
+## 根拠(実測)
 
 `<record>/inception/requirements-analysis/requirements.md` の `## Non-Functional Requirements` 節(:73-79)は次の 5 項目のみで構成され、いずれも数値目標を持たない。
 
@@ -16,11 +22,11 @@
 
 `## Constraints` / `## Assumptions` / `## Open Questions` にも数値の性能目標はない。`nfr-requirements`(3.2)はスコープ設定で SKIP されており、追加の性能 NFR 面も存在しない。
 
-### この判定に基づく措置
+## この判定に基づく措置
 
 `cid:build-and-test:c2-no-test-theatre-for-absent-nfr` と `cid:build-and-test:c1-build3029` に従い、**目標なきベンチマークを発明しない**。体裁のための性能テスト実体は作成しない。
 
-### 将来この判定を覆す条件
+## 将来この判定を覆す条件
 
 次のいずれかが成立したら、本判定は無効になり性能テストの生成が必要になる。
 

@@ -1,5 +1,11 @@
 # ビルド・テスト実行結果(実測) — intent 260815-rfc-autonomy-modes
 
+## 上流入力
+
+- `code-generation-plan`(13 unit 分): `<record>/construction/<unit>/code-generation/code-generation-plan.md`
+- `code-summary`(13 unit 分): `<record>/construction/<unit>/code-generation/code-summary.md`
+
+
 測定断面: 作業ツリー = `origin/main` `e7c0515fe` + 本 intent の record 変更のみ。
 `git diff --name-only origin/main...HEAD -- . ':(exclude)amadeus'` → **出力 0 行**(本ブランチはコード面を一切変更していない)。
 
