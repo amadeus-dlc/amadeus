@@ -21,15 +21,21 @@
 // they touch independent files and number independently of one another.
 // Concurrent appends from the SAME voter are last-write-wins: every write
 // replaces the whole file via tmp+rename (writeStoreFile), so the store never
-// tears — the losing write's ballot is simply not persisted. arrivalSequence
-// is therefore unique per voter, not globally; cross-voter overlap is
-// expected. Global ordering is a deterministic (arrivalSequence, voter)
-// lexicographic comparison applied once at read time (readAllPending), not a
-// property stored on disk. Every read is fail-closed: a file that does not
+// tears — the losing write's ballot is simply not persisted, and since #3183
+// gave each writer its own staging file, that loss is silent rather than
+// surfacing as an incidental io-error from a shared tmp name. Serialising
+// same-voter writes would need real concurrency control, which this module
+// deliberately does not have (see D-09 above).
+//
+// arrivalSequence is therefore unique per voter, not globally; cross-voter
+// overlap is expected. Global ordering is a deterministic (arrivalSequence,
+// voter) lexicographic comparison applied once at read time (readAllPending),
+// not a property stored on disk. Every read is fail-closed: a file that does not
 // decode as the canonical schema, or whose own arrivalSequence values are not
 // strictly increasing, is rejected — never re-parsed under an older shape and
 // never silently re-initialized or re-sorted.
 
+import { randomUUID } from "node:crypto";
 import {
   existsSync,
   mkdirSync,
@@ -156,15 +162,27 @@ export function electionsRoot(projectDir: string, space = "default"): string {
   return join(projectDir, "amadeus", "spaces", space, "elections");
 }
 
+// Staging file for a same-directory tmp+rename, carrying the same per-process
+// nonce as the canonical writeFileAtomic (amadeus-lib.ts). Deriving the name
+// from the destination alone would hand every writer of one path the same
+// staging file, which is a shared mutable resource in the middle of an
+// operation whose whole point is that it has no shared middle state (#3183).
+function stagingPath(path: string): string {
+  return `${path}.tmp-${process.pid}-${randomUUID()}`;
+}
+
 // Atomic write: same-directory tmp then rename (project idiom — writeFileAtomic
-// class). All store writes funnel through this single path.
+// class). All store writes funnel through this single path. The catch arm
+// removes this call's own staging file: names are unique per call, so a
+// stranded one is never reclaimed by the next write reusing the name.
 export function writeStoreFile(path: string, data: string): ElectionStoreResult<void> {
+  const tmp = stagingPath(path);
   try {
-    const tmp = `${path}.tmp`;
     writeFileSync(tmp, data);
     renameSync(tmp, path);
     return ok(undefined);
   } catch {
+    rmSync(tmp, { force: true });
     return err("io-error");
   }
 }
@@ -874,19 +892,23 @@ function verifyNewRun(
   return current === null ? ok(undefined) : verifyPreservation(current.tally, tally, definition);
 }
 
+// Create-if-absent, staged the same way. The catch arm removes only this
+// call's own staging file: it used to remove the shared `${path}.tmp` name,
+// so a losing writer deleted the winner's in-flight file and failed both
+// (#3183).
 function createOnly(path: string, bytes: string): ElectionStoreResult<"created" | "same"> {
   if (existsSync(path)) {
     const existing = readText(path);
     if (!existing.ok) return existing;
     return existing.value === bytes ? ok("same") : err("run-conflict");
   }
+  const tmp = stagingPath(path);
   try {
-    const tmp = `${path}.tmp`;
     writeFileSync(tmp, bytes, { flag: "wx" });
     renameSync(tmp, path);
     return ok("created");
   } catch {
-    rmSync(`${path}.tmp`, { force: true });
+    rmSync(tmp, { force: true });
     return err("io-error");
   }
 }

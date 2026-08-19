@@ -4863,7 +4863,7 @@
     "file": "packages/framework/core/tools/amadeus-election-store.ts",
     "selector": {
       "function": "createOnly",
-      "fingerprint": "sha256:d3d3eeb4e63d0d9b6d519daf74e64690df0fadf4ad0d4ebadc122a31eb750e5c",
+      "fingerprint": "sha256:1f1e7addd197784066d424815fa9aec86649628dc455aade0e2d9a693ebe24d5",
       "anchorLines": 3,
       "targetLines": "1-3",
       "class": "catch-arm"

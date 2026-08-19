@@ -190,17 +190,14 @@ describe("t3046 concurrent-voter appendPending numbering (#3046, ADR-5)", () => 
   // lands last fully replaces the file; the store stays a single
   // well-formed event, never zero (torn write) and never a hybrid.
   //
-  // NOTE ON THE LOSING CALLER'S RETURN VALUE: writeStoreFile (pre-existing,
-  // shared by every store write, not part of ADR-5) uses a fixed `${path}.tmp`
-  // name. When two processes race a write to the SAME final path, the loser's
-  // own renameSync can observe ENOENT (the winner already renamed the shared
-  // tmp file away) and report "io-error" for its own call — a benign,
-  // retry-safe "lost the instant" signal, not corruption: the store's final
-  // state is still exactly one well-formed event. ADR-5's contract is that the
-  // STORE never corrupts under this race, not that every concurrent caller's
-  // own return value is ok:true; making every caller observe a clean result
-  // would need per-writer tmp names, which is the "並行 voter の実運用化"
-  // the code-generation plan explicitly defers to a future intent.
+  // NOTE ON THE LOSING CALLER'S RETURN VALUE (tightened by #3183): this
+  // assertion used to be `a.ok || b.ok`, because writeStoreFile derived its
+  // staging file from the destination alone (`${path}.tmp`). Two processes
+  // writing the same final path therefore shared one staging file, and the
+  // loser's own renameSync observed ENOENT once the winner had renamed it
+  // away — reporting "io-error" for a request that was never wrong. #3183
+  // gave every writer a per-process staging name, so losing the race is no
+  // longer observable as a failure: BOTH callers must now return ok.
   test("concurrent double-post from the SAME voter is last-write-wins and never corrupts the store (ADR-5 contract 4)", async () => {
     const ATTEMPTS = 10;
     for (let i = 0; i < ATTEMPTS; i++) {
@@ -212,14 +209,13 @@ describe("t3046 concurrent-voter appendPending numbering (#3046, ADR-5)", () => 
         ]);
         const a = parseResult(resA.stdout);
         const b = parseResult(resB.stdout);
-        // At least one of the two racers observes a clean result (it won the
-        // race, or read the sibling's already-persisted identical ballot);
-        // the other may see the loser's retry-safe "io-error" documented
-        // above, but never anything else (a real content conflict is
-        // impossible here since both submit the exact same ballot).
-        expect(a.ok || b.ok).toBe(true);
-        if (!a.ok) expect(a.error).toBe("io-error");
-        if (!b.ok) expect(b.error).toBe("io-error");
+        // Both racers observe a clean result: each either wrote its own copy
+        // of the identical ballot or read the sibling's already-persisted
+        // one. Neither may report an error — a content conflict is impossible
+        // here (both submit the exact same ballot), and the staging-file
+        // collision that used to surface as "io-error" is closed by #3183.
+        expect(a).toMatchObject({ ok: true });
+        expect(b).toMatchObject({ ok: true });
         const snapshot = ElectionStore.readSnapshot(root, DEFINITION.electionId);
         expect(snapshot.ok).toBe(true);
         if (!snapshot.ok) continue;
@@ -229,6 +225,57 @@ describe("t3046 concurrent-voter appendPending numbering (#3046, ADR-5)", () => 
         const survivor = snapshot.value.pending[0];
         expect(survivor?.voter).toBe("alice");
         expect(survivor?.responses[0]?.choiceInternalNo).toBe(1);
+      } finally {
+        rmSync(root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  // ADR-5 contract 4, second shape (#3183): the SAME voter racing two
+  // DIFFERENT ballots (an amend, or a re-vote, submitted twice concurrently).
+  // The identities differ, so neither call can take the idempotent path, and
+  // appendPending's read-then-write window is genuinely shared: both callers
+  // read the same pending file and both write a whole replacement for it.
+  //
+  // What ADR-5 promises here is last-write-wins, stated verbatim in the
+  // module header: "the losing write's ballot is simply not persisted". This
+  // test pins that promise on both sides so it stays visible rather than
+  // implied. Before #3183 the loss was usually accompanied by an "io-error"
+  // from the shared staging file — an accident of the tmp name, not a
+  // designed signal, and absent whenever the timing missed. Per-process
+  // staging names remove the accident, so a lost ballot is now always quiet.
+  // Closing that read-then-write window needs real concurrency control (a
+  // per-voter lock or a compare-and-set retry) and is deliberately NOT part
+  // of #3183; the assertions below therefore accept one OR two survivors, and
+  // will need tightening the day the window is closed.
+  test("concurrent double-post of DIFFERENT ballots from the SAME voter is last-write-wins and never corrupts the store (ADR-5 contract 4)", async () => {
+    const ATTEMPTS = 10;
+    for (let i = 0; i < ATTEMPTS; i++) {
+      const root = freshRoot();
+      try {
+        const [resA, resB] = await race(root, [
+          { voter: "alice", choice: 1, submittedAt: "2026-08-17T00:00:00Z" },
+          { voter: "alice", choice: 2, submittedAt: "2026-08-17T00:00:01Z" },
+        ]);
+        const a = parseResult(resA.stdout);
+        const b = parseResult(resB.stdout);
+        expect(a).toMatchObject({ ok: true });
+        expect(b).toMatchObject({ ok: true });
+        // The store stays readable and fail-closed-clean either way: the
+        // surviving file decodes, and its per-voter arrivalSequence values are
+        // strictly increasing (readAllPending rejects anything else outright).
+        const snapshot = ElectionStore.readSnapshot(root, DEFINITION.electionId);
+        expect(snapshot.ok).toBe(true);
+        if (!snapshot.ok) continue;
+        // Two survivors = both writes landed; one = the documented
+        // last-write-wins loss. Zero (torn write) and three (a merge that
+        // never happened) are the shapes that must never appear.
+        expect(snapshot.value.pending.length).toBeGreaterThanOrEqual(1);
+        expect(snapshot.value.pending.length).toBeLessThanOrEqual(2);
+        for (const survivor of snapshot.value.pending) {
+          expect(survivor.voter).toBe("alice");
+          expect([1, 2]).toContain(survivor.responses[0]?.choiceInternalNo);
+        }
       } finally {
         rmSync(root, { recursive: true, force: true });
       }
