@@ -17,6 +17,7 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { spawnGitCommand } from "../harness/fixtures.ts";
 
 const TESTS_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const REPO_ROOT = join(TESTS_ROOT, "..");
@@ -82,10 +83,8 @@ function md5(path: string): string {
 }
 
 function runGit(projectDir: string, args: readonly string[]): string {
-  const result = spawnSync("git", args, {
-    cwd: projectDir,
-    encoding: "utf-8",
-  });
+  // The shared runner carries the narrow #3088 worktree-add retry.
+  const result = spawnGitCommand(projectDir, args);
   if (result.status !== 0) {
     throw new Error(`git ${args.join(" ")} failed: ${result.stderr || result.stdout}`);
   }

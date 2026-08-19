@@ -49,6 +49,7 @@ import {
   seededStateFile,
   seedWorkspaceShell,
   setupWorktreeFixture,
+  spawnWorktreeAdd,
 } from "../harness/fixtures.ts";
 
 const BUN = process.execPath;
@@ -74,11 +75,7 @@ function freshFixture(): string {
  *  audit emits resolve the sibling's record. */
 function addSibling(fixture: string): string {
   const sibling = join(fixture, ".claude", "worktrees", "dev-slug");
-  const r = spawnSync(
-    "git",
-    ["-C", fixture, "worktree", "add", "-q", sibling, "-b", "dev-branch"],
-    { encoding: "utf-8" },
-  );
+  const r = spawnWorktreeAdd(fixture, ["-q", sibling, "-b", "dev-branch"]);
   if (r.status !== 0) {
     throw new Error(
       `git worktree add (sibling) failed: ${r.stderr?.trim() || r.stdout?.trim() || `exit ${r.status}`}`,
@@ -96,11 +93,7 @@ function addSibling(fixture: string): string {
  *  bolt-<slug> — the true-nesting source for T3. */
 function addBoltWorktree(fixture: string, slug: string): string {
   const path = wtPath(fixture, slug);
-  const r = spawnSync(
-    "git",
-    ["-C", fixture, "worktree", "add", "-q", path, "-b", `bolt-${slug}`, "main"],
-    { encoding: "utf-8" },
-  );
+  const r = spawnWorktreeAdd(fixture, ["-q", path, "-b", `bolt-${slug}`, "main"]);
   if (r.status !== 0) {
     throw new Error(
       `git worktree add (bolt) failed: ${r.stderr?.trim() || r.stdout?.trim() || `exit ${r.status}`}`,
