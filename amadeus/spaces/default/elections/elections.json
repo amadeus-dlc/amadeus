@@ -1702,5 +1702,11 @@
     "dirName": "260818-e-260818-pbb4-fix-method",
     "createdAt": "2026-08-18T08:08:15Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-260819-RFC0001-CG-S13",
+    "dirName": "260819-e-260819-rfc0001-cg-s13",
+    "createdAt": "2026-08-19T07:41:43Z",
+    "status": "recorded"
   }
 ]
