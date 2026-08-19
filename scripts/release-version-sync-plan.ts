@@ -14,9 +14,16 @@ export interface VersionSurface {
   readonly replacement: (version: string) => string;
 }
 
+export const SETUP_PACKAGE_REL = "packages/setup/package.json";
+
 // The canonical version surfaces the release sync patches — ONE definition,
 // consumed by both the planner and the CLI (no hand-duplicated file list).
 export const VERSION_SURFACES: readonly VersionSurface[] = [
+  {
+    relPath: SETUP_PACKAGE_REL,
+    accept: /"version":\s*"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?"/,
+    replacement: (v) => `"version": "${v}"`,
+  },
   {
     relPath: "packages/framework/core/tools/amadeus-version.ts",
     accept: /AMADEUS_VERSION = "[^"]+"/,

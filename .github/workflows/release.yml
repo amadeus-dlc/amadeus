@@ -6,27 +6,29 @@ name: Release @amadeus-dlc/setup
 # framework distributions from. Release notes are generated into the
 # GitHub Release — there is no CHANGELOG file.
 #
-# Main entry point is workflow_dispatch: pick a bump level and release-it
-# bumps the version, commits, tags `vX.Y.Z`, and pushes directly to main
-# (an explicit, team-recorded exception to the PR rule — the bump commit
-# is a one-line version change). The same run then creates the GitHub
-# Release with auto-generated notes (softprops/action-gh-release), builds
-# dist/cli.js fresh, and publishes to npm with provenance. Separate jobs let
-# a failed phase be retried without repeating successful release state changes.
+# Main entry point is workflow_dispatch: pick a bump level. The lander
+# syncs version surfaces onto a `release/vX.Y.Z` branch, opens a bot PR,
+# and lands it through the merge queue (`gh pr merge --auto`). After the
+# squash commit is on main, this run tags that SHA `vX.Y.Z`. Direct pushes
+# to main are rejected by the ruleset (no bypass actors; #2888). The same
+# run then creates the GitHub Release with auto-generated notes
+# (softprops/action-gh-release), builds dist/cli.js fresh, and publishes
+# to npm with provenance. Separate jobs let a failed phase be retried
+# without repeating successful release state changes.
 # GitHub App pushes trigger workflows, so this workflow ignores its own
-# bot-authored tag push while CI intentionally validates the bot-authored main
-# commit. Post-publish verification is a manual step
+# bot-authored tag push while CI validates the merge-queue commit.
+# Post-publish verification is a manual step
 # (see docs/guide/publishing-setup.md ch. 6) — an in-run bunx smoke was
 # removed after producing only false alarms (registry propagation lag
 # poisons the runner's registry cache, so retries can never recover).
 #
 # Bootstrap: when the repo has no v* tag yet, a dispatch skips the bump
-# and releases the committed version as-is (release-it --no-increment,
-# tag only) — the first run creates the tag matching the current version
-# with no manual tagging. A `v*` tag push remains as a fallback entry
-# point: it skips the bump and runs notes -> build -> publish -> smoke.
-# workflow_dispatch with dry-run rehearses (release-it --dry-run +
-# npm publish --dry-run) without pushing or publishing anything.
+# and releases the committed version as-is (tag only) — the first run
+# creates the tag matching the current version with no manual tagging.
+# A `v*` tag push remains as a fallback entry point: it skips the bump
+# and runs notes -> build -> publish. workflow_dispatch with dry-run
+# rehearses (lander --dry-run + npm publish --dry-run) without pushing
+# or publishing anything.
 on:
   push:
     tags: ['v*']
@@ -38,7 +40,7 @@ on:
         options: [patch, minor, major]
         default: patch
       dry-run:
-        description: 'Rehearse: no commit/tag/push, npm publish --dry-run'
+        description: 'Rehearse: no commit/PR/tag, npm publish --dry-run'
         type: boolean
         default: false
 
@@ -54,7 +56,7 @@ jobs:
     name: Prepare release
     if: ${{ !(github.event_name == 'push' && github.actor == 'amadeus-dlc-bot[bot]') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 90
     outputs:
       version: ${{ steps.release.outputs.version }}
       sha: ${{ steps.release.outputs.sha }}
@@ -66,6 +68,7 @@ jobs:
           client-id: ${{ vars.METRICS_BOT_CLIENT_ID }}
           private-key: ${{ secrets.METRICS_BOT_PRIVATE_KEY }}
           permission-contents: write
+          permission-pull-requests: write
 
       - name: Checkout (full history + tags for guards and the bootstrap check)
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -102,33 +105,41 @@ jobs:
             exit 1
           fi
 
-      - name: Bump, commit, tag, push (release-it)
+      - name: Bump, land via merge queue, tag
+        id: land
         if: github.event_name == 'workflow_dispatch'
-        working-directory: packages/setup
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           bot_user_id="$(gh api "/users/${{ steps.app-token.outputs.app-slug }}[bot]" --jq .id)"
           git config user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
           git config user.email "${bot_user_id}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com"
+          args=(
+            --repository "$GITHUB_REPOSITORY"
+            --bot-login '${{ steps.app-token.outputs.app-slug }}[bot]'
+            --bump "${{ inputs.bump }}"
+          )
           if [ -z "$(git tag --list 'v*')" ]; then
             # Bootstrap: no v* tag exists yet — release the committed version
             # as-is (tag only, no bump commit).
             echo "no v* tags found — bootstrapping the first release without a bump"
-            args=(--no-increment --no-git.commit --ci)
-          else
-            args=(${{ inputs.bump }} --ci)
+            args+=(--bootstrap)
           fi
           if [ "${{ inputs.dry-run }}" = "true" ]; then
             args+=(--dry-run)
           fi
-          bunx --bun release-it "${args[@]}"
+          bun scripts/release-land.ts "${args[@]}"
 
       - name: Resolve release
         id: release
         run: |
-          echo "version=$(bun -e 'const pkg = await Bun.file("./packages/setup/package.json").json(); console.log(pkg.version)')" >> "$GITHUB_OUTPUT"
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ steps.land.outputs.version }}" >> "$GITHUB_OUTPUT"
+            echo "sha=${{ steps.land.outputs.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=$(bun -e 'const pkg = await Bun.file("./packages/setup/package.json").json(); console.log(pkg.version)')" >> "$GITHUB_OUTPUT"
+            echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          fi
 
   build-dist:
     name: Build release distribution assets
