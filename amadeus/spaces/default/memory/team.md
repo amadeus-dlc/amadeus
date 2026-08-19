@@ -26,10 +26,6 @@
 
 **ソロ選挙:** 2体の fresh subagent(`subagent-1`, `subagent-2`)による選挙を正規の形態とし、conductor は選挙管理委員として amadeus-election CLI の指令ループを駆動し自らは投票しない。自動発動は opt-in で、階層設定の `solo-election.trigger.mode` が `auto` のときだけ (a) 設計逸脱 (b) ブロッカー (c) §13 学習選定 を `open --trigger auto` で発動し、それ以外はユーザーが明示したときのみ。仕様変更と正準リスト事項は設定値によらず選挙対象外(ユーザー専権)。2-0 なら採用、割れたケースはユーザーへエスカレーションする。
 
-### チームモード
-
-チームモード(team-up.sh / 複数エージェントセッション)の運用ノルムは 2026-08-12 の整理で退役した(git 履歴参照)。再開する場合は履歴から復元して再裁定する。
-
 ## Way of Working
 
 `main` 中心のトランクベース。短命ブランチから Bolt ごとに PR を出してスカッシュマージし、複数ユニット・他 intent の工程記録・無関係なリファクタを束ねない。自 intent の record checkpoint の同梱は可(pr-convergence CLI の create 前提と record→PR の追跡性に整合。同梱の時機は pr-convergence stage 契約に従う — 収束レポートは head に束縛され、verdict 後の record checkpoint commit / それ以前の push は created epoch の再 mint を要する。E-260813-RECORD-BUNDLING-NORM 2-0)。工程記録(`amadeus/`)はチェックポイントコミット(単独または自 intent の Bolt PR への同梱)で本線へ流す。Issue・PR は日本語(識別子・パス・ログ引用は原文保持)、コミットは英語 <!-- cid:requirements-analysis:issues-in-japanese -->
