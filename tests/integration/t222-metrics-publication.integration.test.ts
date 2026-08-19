@@ -94,8 +94,19 @@ if (args[0] === "pr" && args[1] === "list") {
   const url = args.at(-1);
   const pullRequest = state.pullRequests.find((candidate) => candidate.url === url);
   if (!pullRequest) throw new Error("unknown pull request " + url);
-  git("push", "origin", pullRequest.headRefOid + ":refs/heads/main");
-  git("push", "origin", ":refs/heads/" + pullRequest.headRefName);
+  git("fetch", "--no-tags", "origin", "main");
+  const base = git("rev-parse", "origin/main");
+  if (git("merge-base", base, pullRequest.headRefOid) !== base) throw new Error("gh pr merge: head is behind main");
+  // main's Ruleset sets merge_method=SQUASH, so the queue lands a new commit carrying the branch
+  // tree and the head tip never becomes an ancestor of main.
+  const squashed = git("commit-tree", pullRequest.headRefOid + "^{tree}", "-p", base, "-m", "squash " + pullRequest.headRefName);
+  git("push", "origin", squashed + ":refs/heads/main");
+  // The queue only drops the head branch when the repository's delete_branch_on_merge is on. It is
+  // off on amadeus-dlc/amadeus, so the default here keeps the branch: opt in to model the #1861
+  // world where the branch disappears at merge time (#3168).
+  if (process.env.FAKE_GH_DELETE_BRANCH_ON_MERGE === "1") {
+    git("push", "origin", ":refs/heads/" + pullRequest.headRefName);
+  }
   pullRequest.state = "MERGED";
   pullRequest.mergedAt = new Date().toISOString();
   state.merges++;
@@ -496,6 +507,7 @@ describe.serial("t222 metrics publication hermetic Git/GitHub boundary", () => {
   afterEach(() => {
     process.env.PATH = originalPath;
     delete process.env.FAKE_GH_STATE;
+    delete process.env.FAKE_GH_DELETE_BRANCH_ON_MERGE;
     rmSync(temporaryRoot, { recursive: true, force: true });
   });
 
@@ -733,6 +745,9 @@ describe.serial("t222 metrics publication hermetic Git/GitHub boundary", () => {
   }, scaleTestTime(30_000));
 
   test("a branch deleted between ls-remote and fetch converges and still dispatches maintenance", async () => {
+    // This race only exists where the merge itself drops the head branch, so this test opts into
+    // that repository setting instead of the publisher-swept default.
+    process.env.FAKE_GH_DELETE_BRANCH_ON_MERGE = "1";
     const sha = addMainCommit("toctou-target");
     const staleOid = "c".repeat(40);
     let wildcardListings = 0;

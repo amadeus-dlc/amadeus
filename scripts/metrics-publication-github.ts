@@ -494,9 +494,11 @@ export class SnapshotCliPort implements SnapshotPublisherPort {
   async enableAutoMerge(url: string): Promise<OperationReceipt> {
     try {
       // main's Ruleset requires the merge queue (#2888): the queue owns the
-      // merge strategy (ruleset merge_method=SQUASH) and branch deletion (repo
-      // delete_branch_on_merge=true), so `--squash` and `--delete-branch` are
-      // both rejected by gh CLI on this call (#2925).
+      // merge strategy (ruleset merge_method=SQUASH), so `--squash` and
+      // `--delete-branch` are both rejected by gh CLI on this call (#2925).
+      // Nothing here drops the head branch afterwards -- the repository setting
+      // delete_branch_on_merge is off -- so the publisher sweeps the landed
+      // branch itself once the snapshot is proven to have landed (#3168).
       command(this.#context, ["gh", "pr", "merge", "--auto", url]);
       return { operation: "auto-merge", target: url, status: "accepted" };
     } catch (error) {
