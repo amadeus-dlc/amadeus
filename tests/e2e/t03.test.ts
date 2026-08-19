@@ -50,12 +50,15 @@
 // merely claims); the rebase-rejection case also asserts NO WORKTREE_MERGED
 // audit row landed (the .sh's "pre-audit" intent, which it only documented in
 // comments).
+//
+// REGRESSION #3197: merge must reject a dirty source worktree before either
+// audit emission or target-checkout mutation, preserving the source worktree.
 
 import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { auditRowsFrom } from "../harness/audit-records.ts";
 import {
   AMADEUS_SRC,
@@ -103,11 +106,15 @@ interface CliResult {
 }
 
 /** Spawn `bun amadeus-worktree.ts <sub> ... --project-dir <p>` from cwd=<p>. */
-function tool(p: string, args: string[]): CliResult {
+function tool(
+  p: string,
+  args: string[],
+  envOverrides: NodeJS.ProcessEnv = {},
+): CliResult {
   const res = spawnSync(BUN, [TOOL, ...args, "--project-dir", p], {
     cwd: p,
     encoding: "utf-8",
-    env: ENV,
+    env: { ...ENV, ...envOverrides },
   });
   const stdout = res.stdout ?? "";
   return { status: res.status ?? -1, out: `${stdout}${res.stderr ?? ""}`, stdout };
@@ -123,8 +130,71 @@ function git(cwd: string, args: string[]): void {
   }
 }
 
+/** Git stdout for assertions, failing loudly when fixture setup is invalid. */
+function gitOutput(cwd: string, args: string[]): string {
+  const r = spawnSync("git", args, { cwd, encoding: "utf-8", env: ENV });
+  if (r.status !== 0) {
+    throw new Error(
+      `git ${args.join(" ")} failed: ${r.stderr?.trim() || r.stdout?.trim() || `exit ${r.status}`}`,
+    );
+  }
+  return (r.stdout ?? "").trim();
+}
+
 const wtPath = (p: string, slug: string): string =>
   join(p, ".amadeus", "worktrees", `bolt-${slug}`);
+
+function gitStatus(cwd: string, args: string[]): number {
+  return spawnSync("git", args, { cwd, encoding: "utf-8", env: ENV }).status ?? -1;
+}
+
+function writeFixtureFile(root: string, relativePath: string, contents: string): void {
+  const path = join(root, relativePath);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, contents);
+}
+
+function commitIgnoreRules(p: string, rules: readonly string[]): void {
+  writeFixtureFile(p, ".gitignore", `${rules.join("\n")}\n`);
+  git(p, ["add", "--", ".gitignore"]);
+  git(p, [
+    "-c", "user.email=t@x",
+    "-c", "user.name=t",
+    "commit", "-qm", "seed generated output ignores", "--", ".gitignore",
+  ]);
+}
+
+function commitWorkerSource(
+  p: string,
+  slug: string,
+  relativePath = "worker-source.txt",
+): string {
+  const wt = wtPath(p, slug);
+  writeFixtureFile(wt, relativePath, "committed worker source\n");
+  git(wt, ["add", "--", relativePath]);
+  git(wt, [
+    "-c", "user.email=t@x",
+    "-c", "user.name=t",
+    "commit", "-qm", "add worker source", "--", relativePath,
+  ]);
+  const committed = gitOutput(wt, ["diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"]);
+  if (committed !== relativePath) {
+    throw new Error(`worker commit must contain only ${relativePath}; got ${committed || "<empty>"}`);
+  }
+  return wt;
+}
+
+function gitTraceArgv(tracePath: string): string[][] {
+  return readFileSync(tracePath, "utf-8")
+    .split("\n")
+    .flatMap((line): string[][] => {
+      if (line.length === 0) return [];
+      const event = JSON.parse(line) as { argv?: unknown };
+      const argv = event.argv;
+      if (!Array.isArray(argv) || !argv.every((arg) => typeof arg === "string")) return [];
+      return [argv as string[]];
+    });
+}
 
 /** Concatenate every audit shard (audit/*.jsonl) for the seeded record. */
 function readAudit(p: string): string {
@@ -147,8 +217,9 @@ function hasMergedAudit(p: string, slug: string): boolean {
 }
 
 describe("t03 amadeus-worktree merge (migrated from t03-worktree-merge.sh, plan 13)", () => {
-  test("1-3: squash merge happy path — exit 0, emits WORKTREE_MERGED, worktree removed", () => {
+  test("1-3: squash merge happy path — exit 0, emits WORKTREE_MERGED, non-force cleanup", () => {
     const p = freshFixture();
+    const tracePath = join(p, "git-trace2-event.jsonl");
     expect(tool(p, ["create", "--slug", "demo", "--base", "main"]).status).toBe(0);
 
     // Make a commit in the worktree so the squash has something to merge.
@@ -163,13 +234,319 @@ describe("t03 amadeus-worktree merge (migrated from t03-worktree-merge.sh, plan 
       "--target", "main",
       "--strategy", "squash",
       "--message", "Bolt demo",
-    ]);
+    ], { GIT_TRACE2_EVENT: tracePath });
 
     expect(r.status).toBe(0); // T1
     expect(r.out).toContain('"emitted":"WORKTREE_MERGED"'); // T2
     expect(existsSync(wt)).toBe(false); // T3: worktree gone after success
     // STRONGER: the audit-first WORKTREE_MERGED emit actually landed on disk.
     expect(hasMergedAudit(p, "demo")).toBe(true);
+    const worktreeRemoveCalls = gitTraceArgv(tracePath).filter(
+      (argv) => argv.includes("worktree") && argv.includes("remove"),
+    );
+    expect(worktreeRemoveCalls.length).toBeGreaterThan(0);
+    expect(worktreeRemoveCalls.some((argv) => argv.includes("--force"))).toBe(false);
+  }, scaleTestTime(30000));
+
+  test("issue #3197: exclusive ignored build outputs are cleaned by exact path before non-force merge", () => {
+    const p = freshFixture();
+    const outputRoots = ["dist", "node_modules", "packages/setup/dist"];
+    const outputFiles = [
+      "dist/generated.js",
+      "node_modules/example/generated.js",
+      "packages/setup/dist/cli.js",
+    ];
+    commitIgnoreRules(p, ["/dist/**", "/node_modules/**", "/packages/setup/dist/**"]);
+    expect(tool(p, ["create", "--slug", "generated-only", "--base", "main"]).status).toBe(0);
+    const wt = commitWorkerSource(p, "generated-only");
+    for (const output of outputFiles) {
+      writeFixtureFile(wt, output, `generated ${output}\n`);
+      expect(gitOutput(wt, ["check-ignore", "--", output])).toBe(output);
+    }
+    const targetHeadBefore = gitOutput(p, ["rev-parse", "HEAD"]);
+    const tracePath = join(p, "generated-clean-trace.jsonl");
+
+    const r = tool(p, [
+      "merge",
+      "--slug", "generated-only",
+      "--target", "main",
+      "--strategy", "squash",
+      "--message", "Bolt generated-only",
+    ], { GIT_TRACE2_EVENT: tracePath });
+
+    expect(r.status).toBe(0);
+    expect(gitOutput(p, ["rev-parse", "HEAD"])).not.toBe(targetHeadBefore);
+    expect(gitOutput(p, ["diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"])).toBe(
+      "worker-source.txt",
+    );
+    expect(readFileSync(join(p, "worker-source.txt"), "utf-8")).toBe(
+      "committed worker source\n",
+    );
+    for (const output of outputFiles) expect(existsSync(join(p, output))).toBe(false);
+    expect(existsSync(wt)).toBe(false);
+    expect(gitStatus(p, ["rev-parse", "--verify", "refs/heads/bolt-generated-only"])).not.toBe(0);
+    expect(hasMergedAudit(p, "generated-only")).toBe(true);
+
+    const traceArgv = gitTraceArgv(tracePath);
+    const cleanPathTails = traceArgv
+      .filter((argv) => argv.includes("clean"))
+      .flatMap((argv) => {
+        const separator = argv.indexOf("--");
+        return separator < 0 ? [] : [argv.slice(separator + 1)];
+      });
+    const expectedRoots = [...outputRoots].sort();
+    expect(
+      cleanPathTails.some((paths) =>
+        paths.map((path) => path.replace(/\/$/, "")).sort().join("\0") === expectedRoots.join("\0")
+      ),
+    ).toBe(true);
+    const forbiddenBroadRoots = new Set([
+      ".",
+      ".agents",
+      ".claude",
+      ".codex",
+      ".cursor",
+      ".kimi-code",
+      ".opencode",
+      ".pi",
+    ]);
+    expect(
+      cleanPathTails.flat().some((path) => forbiddenBroadRoots.has(path.replace(/\/$/, ""))),
+    ).toBe(false);
+    expect(cleanPathTails.flat().some((path) => /[*?[\]]/.test(path))).toBe(false);
+    const removeCalls = traceArgv.filter(
+      (argv) => argv.includes("worktree") && argv.includes("remove"),
+    );
+    expect(removeCalls.length).toBeGreaterThan(0);
+    expect(removeCalls.some((argv) => argv.includes("--force"))).toBe(false);
+  }, scaleTestTime(30000));
+
+  test("issue #3197: unknown ignored source blocks cleanup of otherwise-known output", () => {
+    const p = freshFixture();
+    commitIgnoreRules(p, ["/dist/**", "*.draft"]);
+    expect(tool(p, ["create", "--slug", "generated-unknown", "--base", "main"]).status).toBe(0);
+    const wt = commitWorkerSource(p, "generated-unknown");
+    writeFixtureFile(wt, "dist/generated.js", "known generated output\n");
+    writeFixtureFile(wt, "notes.draft", "unknown ignored source\n");
+    expect(gitOutput(wt, ["check-ignore", "--", "dist/generated.js"])).toBe(
+      "dist/generated.js",
+    );
+    expect(gitOutput(wt, ["check-ignore", "--", "notes.draft"])).toBe("notes.draft");
+    const targetHeadBefore = gitOutput(p, ["rev-parse", "HEAD"]);
+    const targetStatusBefore = gitOutput(p, ["status", "--porcelain"]);
+
+    const r = tool(p, [
+      "merge",
+      "--slug", "generated-unknown",
+      "--target", "main",
+      "--strategy", "squash",
+      "--message", "Bolt generated-unknown",
+    ]);
+
+    expect(r.status).not.toBe(0);
+    expect(r.out).toContain("notes.draft");
+    expect(r.out).not.toContain("dist/");
+    expect(gitOutput(p, ["rev-parse", "HEAD"])).toBe(targetHeadBefore);
+    expect(gitOutput(p, ["status", "--porcelain"])).toBe(targetStatusBefore);
+    expect(existsSync(join(p, "worker-source.txt"))).toBe(false);
+    expect(hasMergedAudit(p, "generated-unknown")).toBe(false);
+    expect(existsSync(wt)).toBe(true);
+    expect(gitStatus(p, ["rev-parse", "--verify", "refs/heads/bolt-generated-unknown"])).toBe(0);
+    expect(existsSync(join(wt, "dist", "generated.js"))).toBe(true);
+    expect(readFileSync(join(wt, "notes.draft"), "utf-8")).toBe("unknown ignored source\n");
+  }, scaleTestTime(30000));
+
+  test("issue #3197: preserved self-install leaf blocks cleanup beside generated leaf", () => {
+    const p = freshFixture();
+    commitIgnoreRules(p, [
+      "/.claude/tools/amadeus-state.ts",
+      "/.claude/settings.local.json",
+    ]);
+    expect(tool(p, ["create", "--slug", "self-install-preserved", "--base", "main"]).status).toBe(0);
+    const wt = commitWorkerSource(p, "self-install-preserved");
+    const generatedLeaf = ".claude/tools/amadeus-state.ts";
+    const preservedLeaf = ".claude/settings.local.json";
+    writeFixtureFile(wt, generatedLeaf, "generated tool\n");
+    writeFixtureFile(wt, preservedLeaf, '{"local":true}\n');
+    expect(gitOutput(wt, ["check-ignore", "--", generatedLeaf])).toBe(generatedLeaf);
+    expect(gitOutput(wt, ["check-ignore", "--", preservedLeaf])).toBe(preservedLeaf);
+    const targetHeadBefore = gitOutput(p, ["rev-parse", "HEAD"]);
+    const targetStatusBefore = gitOutput(p, ["status", "--porcelain"]);
+
+    const r = tool(p, [
+      "merge",
+      "--slug", "self-install-preserved",
+      "--target", "main",
+      "--strategy", "squash",
+      "--message", "Bolt self-install-preserved",
+    ]);
+
+    expect(r.status).not.toBe(0);
+    expect(r.out).toContain(preservedLeaf);
+    expect(r.out).not.toContain(generatedLeaf);
+    expect(gitOutput(p, ["rev-parse", "HEAD"])).toBe(targetHeadBefore);
+    expect(gitOutput(p, ["status", "--porcelain"])).toBe(targetStatusBefore);
+    expect(hasMergedAudit(p, "self-install-preserved")).toBe(false);
+    expect(existsSync(wt)).toBe(true);
+    expect(gitStatus(p, ["rev-parse", "--verify", "refs/heads/bolt-self-install-preserved"])).toBe(0);
+    expect(readFileSync(join(wt, generatedLeaf), "utf-8")).toBe("generated tool\n");
+    expect(readFileSync(join(wt, preservedLeaf), "utf-8")).toBe('{"local":true}\n');
+  }, scaleTestTime(30000));
+
+  test("issue #3197: force-added known output is rejected and remains staged", () => {
+    const p = freshFixture();
+    commitIgnoreRules(p, ["/dist/**"]);
+    expect(tool(p, ["create", "--slug", "generated-staged", "--base", "main"]).status).toBe(0);
+    const wt = commitWorkerSource(p, "generated-staged");
+    const stagedOutput = "dist/generated.js";
+    writeFixtureFile(wt, stagedOutput, "force-added generated output\n");
+    git(wt, ["add", "-f", "--", stagedOutput]);
+    const targetHeadBefore = gitOutput(p, ["rev-parse", "HEAD"]);
+    const targetStatusBefore = gitOutput(p, ["status", "--porcelain"]);
+
+    const r = tool(p, [
+      "merge",
+      "--slug", "generated-staged",
+      "--target", "main",
+      "--strategy", "squash",
+      "--message", "Bolt generated-staged",
+    ]);
+
+    expect(r.status).not.toBe(0);
+    expect(r.out).toContain(stagedOutput);
+    expect(gitOutput(p, ["rev-parse", "HEAD"])).toBe(targetHeadBefore);
+    expect(gitOutput(p, ["status", "--porcelain"])).toBe(targetStatusBefore);
+    expect(hasMergedAudit(p, "generated-staged")).toBe(false);
+    expect(existsSync(wt)).toBe(true);
+    expect(gitStatus(p, ["rev-parse", "--verify", "refs/heads/bolt-generated-staged"])).toBe(0);
+    expect(gitOutput(wt, ["diff", "--cached", "--name-only", "--", stagedOutput])).toBe(
+      stagedOutput,
+    );
+    expect(readFileSync(join(wt, stagedOutput), "utf-8")).toBe(
+      "force-added generated output\n",
+    );
+  }, scaleTestTime(30000));
+
+  test("issue #3197: dirty source worktree is rejected before audit or target Git mutation", () => {
+    const p = freshFixture();
+    expect(tool(p, ["create", "--slug", "dirty", "--base", "main"]).status).toBe(0);
+
+    const wt = wtPath(p, "dirty");
+    writeFileSync(join(wt, "uncommitted.txt"), "worker draft\n");
+    const targetHeadBefore = gitOutput(p, ["rev-parse", "HEAD"]);
+    const targetStatusBefore = gitOutput(p, ["status", "--porcelain"]);
+
+    const r = tool(p, [
+      "merge",
+      "--slug", "dirty",
+      "--target", "main",
+      "--strategy", "squash",
+      "--message", "Bolt dirty",
+    ]);
+
+    expect(r.status).not.toBe(0);
+    expect(gitOutput(p, ["rev-parse", "HEAD"])).toBe(targetHeadBefore);
+    expect(gitOutput(p, ["status", "--porcelain"])).toBe(targetStatusBefore);
+    expect(hasMergedAudit(p, "dirty")).toBe(false);
+    expect(existsSync(wt)).toBe(true);
+    expect(gitOutput(wt, ["status", "--porcelain", "--", "uncommitted.txt"])).toBe(
+      "?? uncommitted.txt",
+    );
+  }, scaleTestTime(30000));
+
+  test("issue #3197: staged target changes are rejected before audit or source contamination", () => {
+    const p = freshFixture();
+    writeFileSync(join(p, "target-staged.txt"), "committed target\n");
+    git(p, ["add", "--", "target-staged.txt"]);
+    git(p, [
+      "-c", "user.email=t@x",
+      "-c", "user.name=t",
+      "commit", "-qm", "seed tracked target", "--", "target-staged.txt",
+    ]);
+    expect(tool(p, ["create", "--slug", "target-staged", "--base", "main"]).status).toBe(0);
+
+    const wt = wtPath(p, "target-staged");
+    writeFileSync(join(wt, "worker-source.txt"), "committed worker source\n");
+    git(wt, ["add", "--", "worker-source.txt"]);
+    git(wt, [
+      "-c", "user.email=t@x",
+      "-c", "user.name=t",
+      "commit", "-qm", "add worker source", "--", "worker-source.txt",
+    ]);
+
+    writeFileSync(join(p, "target-staged.txt"), "staged target change\n");
+    git(p, ["add", "--", "target-staged.txt"]);
+    const targetHeadBefore = gitOutput(p, ["rev-parse", "HEAD"]);
+    const targetStatusBefore = gitOutput(p, ["status", "--porcelain"]);
+    expect(gitOutput(p, ["diff", "--cached", "--name-only", "--", "target-staged.txt"])).toBe(
+      "target-staged.txt",
+    );
+
+    const r = tool(p, [
+      "merge",
+      "--slug", "target-staged",
+      "--target", "main",
+      "--strategy", "squash",
+      "--message", "Bolt target-staged",
+    ]);
+
+    expect(r.status).not.toBe(0);
+    expect(gitOutput(p, ["rev-parse", "HEAD"])).toBe(targetHeadBefore);
+    expect(gitOutput(p, ["status", "--porcelain"])).toBe(targetStatusBefore);
+    expect(existsSync(join(p, "worker-source.txt"))).toBe(false);
+    expect(hasMergedAudit(p, "target-staged")).toBe(false);
+    expect(existsSync(wt)).toBe(true);
+    expect(
+      gitOutput(p, ["rev-parse", "--verify", "refs/heads/bolt-target-staged"]).length,
+    ).toBeGreaterThan(0);
+    expect(gitOutput(p, ["diff", "--cached", "--name-only", "--", "target-staged.txt"])).toBe(
+      "target-staged.txt",
+    );
+    expect(gitOutput(p, ["show", "HEAD:target-staged.txt"])).toBe("committed target");
+    expect(readFileSync(join(p, "target-staged.txt"), "utf-8")).toBe("staged target change\n");
+  }, scaleTestTime(30000));
+
+  test("issue #3197: ignored uncommitted source is rejected pre-audit and retained", () => {
+    const p = freshFixture();
+    writeFileSync(join(p, ".gitignore"), "*.draft\n");
+    git(p, ["add", "--", ".gitignore"]);
+    git(p, [
+      "-c", "user.email=t@x",
+      "-c", "user.name=t",
+      "commit", "-qm", "ignore worker drafts", "--", ".gitignore",
+    ]);
+    expect(tool(p, ["create", "--slug", "ignored-dirty", "--base", "main"]).status).toBe(0);
+
+    const wt = wtPath(p, "ignored-dirty");
+    writeFileSync(join(wt, "feature.txt"), "committed source\n");
+    git(wt, ["add", "--", "feature.txt"]);
+    git(wt, [
+      "-c", "user.email=t@x",
+      "-c", "user.name=t",
+      "commit", "-qm", "add committed source", "--", "feature.txt",
+    ]);
+    writeFileSync(join(wt, "notes.draft"), "uncommitted ignored source\n");
+    expect(gitOutput(wt, ["check-ignore", "--", "notes.draft"])).toBe("notes.draft");
+    expect(gitOutput(wt, ["status", "--porcelain", "--", "notes.draft"])).toBe("");
+
+    const targetHeadBefore = gitOutput(p, ["rev-parse", "HEAD"]);
+    const targetStatusBefore = gitOutput(p, ["status", "--porcelain"]);
+    const r = tool(p, [
+      "merge",
+      "--slug", "ignored-dirty",
+      "--target", "main",
+      "--strategy", "squash",
+      "--message", "Bolt ignored-dirty",
+    ]);
+
+    expect(r.status).not.toBe(0);
+    expect(gitOutput(p, ["rev-parse", "HEAD"])).toBe(targetHeadBefore);
+    expect(gitOutput(p, ["status", "--porcelain"])).toBe(targetStatusBefore);
+    expect(hasMergedAudit(p, "ignored-dirty")).toBe(false);
+    expect(existsSync(wt)).toBe(true);
+    expect(readFileSync(join(wt, "notes.draft"), "utf-8")).toBe(
+      "uncommitted ignored source\n",
+    );
   }, scaleTestTime(30000));
 
   test("4-5: defensive HEAD check fails when cwd is on a different branch", () => {

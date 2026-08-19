@@ -12,7 +12,7 @@
 // boundary — process.exit codes, the JSON envelope on stdout, and audit.md bytes
 // — and the tool itself spawns child processes (git worktree add, amadeus-bolt,
 // the bash check command). An in-process twin would lose the real
-// git-worktree side effect, the audit emit, the genuine `git diff --quiet HEAD`
+// git-worktree side effect, the audit emit, the genuine `git diff --quiet <fork-sha>`
 // anti-tamper baseline, and the exit-2-baton-returns shell the .sh keys on. So
 // we SPAWN the real tool via spawnSync(BUN, [SWARM_TOOL, ...]) and assert on
 // res.status / res.stdout and the on-disk audit, exactly as the .sh did with
@@ -22,10 +22,13 @@
 //   - handlePrepare (:296): forks a worktree per unit via amadeus-worktree create
 //     + amadeus-bolt start --worktree; emits SWARM_STARTED once (:328) and
 //     SWARM_DEGRADED first when --degraded-from is given (:325). Exits 2 if any
-//     fork failed (:386), else 0.
+//     fork failed (:386), else 0. Each create records the fork contract (Base
+//     branch + Base SHA) on WORKTREE_CREATED — the anti-tamper baseline.
 //   - handleCheck (:391): stateless single-unit verdict via verdictFor (:162) —
 //     checkConverged (:129, exit 0 of the bash --check-cmd) AND the anti-tamper
-//     fileTampered (:143, `git diff --quiet HEAD -- <test-file>` status===1).
+//     fileTampered (:143, `git diff --quiet <fork-sha> -- <test-file>` status===1
+//     against the Base SHA captured at prepare, so a worker commit cannot move
+//     the baseline).
 //     Prints compact {unit,converged,tampered,reason}; exits 0 IFF genuinely
 //     converged (green AND untampered), 1 otherwise (:431). A --test-file that
 //     escapes the worktree is a typed confine error (:181, "resolves outside
@@ -172,6 +175,48 @@ function runRef(proj: string, args: string[]): RefResult {
   return { rc: res.status ?? -1, out: res.stdout ?? "" };
 }
 
+interface GitResult {
+  rc: number;
+  out: string;
+}
+
+function runGit(cwd: string, args: string[]): GitResult {
+  const res = spawnSync("git", args, { cwd, encoding: "utf-8" });
+  return { rc: res.status ?? -1, out: `${res.stdout ?? ""}${res.stderr ?? ""}` };
+}
+
+function gitOrThrow(cwd: string, args: string[]): string {
+  const result = runGit(cwd, args);
+  if (result.rc !== 0) {
+    throw new Error(`git ${args.join(" ")} failed: ${result.out.trim() || `exit ${result.rc}`}`);
+  }
+  return result.out.trim();
+}
+
+function commitWorkerSource(
+  proj: string,
+  slug: string,
+  relativePath: string,
+  contents: string,
+): void {
+  const wt = wtPath(proj, slug);
+  writeFileSync(join(wt, relativePath), contents);
+  gitOrThrow(wt, ["add", "--", relativePath]);
+  gitOrThrow(wt, [
+    "-c", "user.email=t@t",
+    "-c", "user.name=t",
+    "commit", "-q", "-m", `worker source for ${slug}`, "--", relativePath,
+  ]);
+  const committed = gitOrThrow(wt, ["diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"]);
+  if (committed !== relativePath) {
+    throw new Error(`worker commit must contain only ${relativePath}; got ${committed || "<empty>"}`);
+  }
+}
+
+function hasBoltBranch(proj: string, slug: string): boolean {
+  return runGit(proj, ["rev-parse", "--verify", `refs/heads/bolt-${slug}`]).rc === 0;
+}
+
 interface PoolAttempt {
   readonly attemptId: string;
   readonly unitId: string;
@@ -298,9 +343,10 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     // The worktree directory landed on disk via the real `git worktree add`.
     expect(existsSync(wtPath(proj, "alpha"))).toBe(true);
 
-    // --- Case 2: the conductor's worker would have written impl.txt; stage it so
-    // the real check command (test -f impl.txt) passes (exit 0 = green).
-    writeFileSync(join(wtPath(proj, "alpha"), "impl.txt"), "done\n");
+    // --- Case 2: the conductor's worker commits only its source path; the real
+    // check command (test -f impl.txt) passes (exit 0 = green). Framework fixture
+    // metadata must not ride in the worker's source commit.
+    commitWorkerSource(proj, "alpha", "impl.txt", "done\n");
     const c1 = runRef(proj, ["check", "alpha", "--check-cmd", "test -f impl.txt"]);
     expect(c1.rc).toBe(0);
     expect(JSON.parse(c1.out).converged).toBe(true);
@@ -338,6 +384,10 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     expect(fEnv.converged).toBe(1);
     expect(fEnv.merge_failures).toEqual([]);
     expect(eventCount(proj, "SWARM_UNIT_CONVERGED")).toBe(1);
+    expect(existsSync(join(proj, "impl.txt"))).toBe(true);
+    expect(readFileSync(join(proj, "impl.txt"), "utf-8")).toBe("done\n");
+    expect(existsSync(wtPath(proj, "alpha"))).toBe(false);
+    expect(hasBoltBranch(proj, "alpha")).toBe(false);
   }, scaleTestTime(120000));
 
   // Cases 2, 3, 4, 6 are asserted inside test 1's shared-fixture flow above
@@ -416,8 +466,9 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     const proj = makeSwarmFixture();
     runRef(proj, ["prepare", "--batch", "2", "--units", "win,lie", "--base", "main"]);
     terminalizePool(proj, "2");
-    // `win` genuinely converges; `lie` does NOT (no impl) but is falsely claimed.
-    writeFileSync(join(wtPath(proj, "win"), "win.txt"), "done\n");
+    // `win` genuinely converges with a source-only commit; `lie` does NOT (no
+    // source) but is falsely claimed.
+    commitWorkerSource(proj, "win", "win.txt", "done\n");
     const f = runRef(proj, [
       "finalize",
       "--batch",
@@ -455,7 +506,7 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     const proj = makeSwarmFixture();
     runRef(proj, ["prepare", "--batch", "2", "--units", "wn,le", "--base", "main"]);
     terminalizePool(proj, "2");
-    writeFileSync(join(wtPath(proj, "wn"), "wn.txt"), "done\n");
+    commitWorkerSource(proj, "wn", "wn.txt", "done\n");
     const f = runRef(proj, [
       "finalize",
       "--batch",
@@ -731,5 +782,317 @@ describe("t134 swarm referee — prepare/check/finalize (migrated from t134-swar
     expect(eventCount(proj, "SWARM_UNIT_FAILED")).toBe(1);
     expect(eventCount(proj, "SWARM_BATON_RETURNED")).toBe(1);
     expect(eventCount(proj, "SWARM_COMPLETED")).toBe(1);
+  }, scaleTestTime(120000));
+
+  // ===========================================================================
+  // Issue #3197: committing a protected test does not erase the fork-time
+  // baseline. Both advisory check and authoritative finalize reject the worker,
+  // and no committed source is delivered while the recovery state stays intact.
+  // ===========================================================================
+  test("issue #3197: committed protected-test tampering is rejected without source delivery", () => {
+    const proj = makeSwarmFixture();
+    mkdirSync(join(proj, "spec"), { recursive: true });
+    writeFileSync(join(proj, "spec", "protected.test"), "EXPECTED\n");
+    gitOrThrow(proj, ["add", "--", "spec/protected.test"]);
+    gitOrThrow(proj, ["commit", "-q", "-m", "seed protected test", "--", "spec/protected.test"]);
+
+    const prepared = runRef(proj, [
+      "prepare",
+      "--batch", "4",
+      "--units", "committed-tamper",
+      "--base", "main",
+    ]);
+    expect(prepared.rc).toBe(0);
+
+    const wt = wtPath(proj, "committed-tamper");
+    writeFileSync(join(wt, "spec", "protected.test"), "TAMPERED\n");
+    writeFileSync(join(wt, "worker-source.txt"), "must not land\n");
+    gitOrThrow(wt, ["add", "--", "spec/protected.test", "worker-source.txt"]);
+    gitOrThrow(wt, [
+      "-c", "user.email=t@t",
+      "-c", "user.name=t",
+      "commit", "-q", "-m", "worker tampers with protected test",
+      "--", "spec/protected.test", "worker-source.txt",
+    ]);
+
+    const checked = runRef(proj, [
+      "check",
+      "committed-tamper",
+      "--check-cmd", "test -f worker-source.txt",
+      "--test-file", "spec/protected.test",
+    ]);
+    const checkedEnvelope = JSON.parse(checked.out);
+    terminalizePool(proj, "4");
+    const targetBefore = gitOrThrow(proj, ["rev-parse", "main"]);
+
+    const finalized = runRef(proj, [
+      "finalize",
+      "--batch", "4",
+      "--units", "committed-tamper",
+      "--claimed", "committed-tamper",
+      "--check-cmd", "test -f worker-source.txt",
+      "--test-file", "spec/protected.test",
+    ]);
+    const finalizedEnvelope = JSON.parse(finalized.out);
+    const unit = finalizedEnvelope.units.find(
+      (entry: { unit: string }) => entry.unit === "committed-tamper",
+    );
+
+    expect({
+      checkStatus: checked.rc,
+      checkConverged: checkedEnvelope.converged,
+      checkTampered: checkedEnvelope.tampered,
+      finalizeStatus: finalized.rc,
+      finalizedConverged: finalizedEnvelope.converged,
+      finalizedFailed: finalizedEnvelope.failed,
+      unitStatus: unit?.status,
+      unitTampered: unit?.tampered,
+      targetUnchanged: gitOrThrow(proj, ["rev-parse", "main"]) === targetBefore,
+      sourceLanded: existsSync(join(proj, "worker-source.txt")),
+      worktreePreserved: existsSync(wt),
+      branchPreserved: hasBoltBranch(proj, "committed-tamper"),
+    }).toEqual({
+      checkStatus: 1,
+      checkConverged: true,
+      checkTampered: true,
+      finalizeStatus: 2,
+      finalizedConverged: 0,
+      finalizedFailed: 1,
+      unitStatus: "failed",
+      unitTampered: true,
+      targetUnchanged: true,
+      sourceLanded: false,
+      worktreePreserved: true,
+      branchPreserved: true,
+    });
+  }, scaleTestTime(120000));
+
+  test("issue #3197: finalize delivers source to the non-main base captured by prepare", () => {
+    const proj = makeSwarmFixture();
+    gitOrThrow(proj, ["checkout", "-q", "-b", "delivery"]);
+    const mainBefore = gitOrThrow(proj, ["rev-parse", "main"]);
+    const deliveryBefore = gitOrThrow(proj, ["rev-parse", "delivery"]);
+
+    const prepared = runRef(proj, [
+      "prepare",
+      "--batch", "5",
+      "--units", "prepared-target",
+      "--base", "delivery",
+    ]);
+    expect(prepared.rc).toBe(0);
+    expect(JSON.parse(prepared.out).base).toBe("delivery");
+    commitWorkerSource(proj, "prepared-target", "delivery-source.txt", "delivery only\n");
+    terminalizePool(proj, "5");
+
+    const finalized = runRef(proj, [
+      "finalize",
+      "--batch", "5",
+      "--units", "prepared-target",
+      "--claimed", "prepared-target",
+      "--check-cmd", "test -f delivery-source.txt",
+    ]);
+    const envelope = JSON.parse(finalized.out);
+    const deliveryAfter = gitOrThrow(proj, ["rev-parse", "delivery"]);
+
+    expect({
+      finalizeStatus: finalized.rc,
+      converged: envelope.converged,
+      failed: envelope.failed,
+      mergeFailures: envelope.merge_failures,
+      mainUnchanged: gitOrThrow(proj, ["rev-parse", "main"]) === mainBefore,
+      deliveryAdvanced: deliveryAfter !== deliveryBefore,
+      sourceOnDelivery: runGit(proj, ["cat-file", "-e", `${deliveryAfter}:delivery-source.txt`]).rc === 0,
+      sourceOnMain: runGit(proj, ["cat-file", "-e", `main:delivery-source.txt`]).rc === 0,
+      worktreePreserved: existsSync(wtPath(proj, "prepared-target")),
+      branchPreserved: hasBoltBranch(proj, "prepared-target"),
+    }).toEqual({
+      finalizeStatus: 0,
+      converged: 1,
+      failed: 0,
+      mergeFailures: [],
+      mainUnchanged: true,
+      deliveryAdvanced: true,
+      sourceOnDelivery: true,
+      sourceOnMain: false,
+      worktreePreserved: false,
+      branchPreserved: false,
+    });
+  }, scaleTestTime(120000));
+
+  test("issue #3197: partial source-merge retry preserves completed units and converges the remainder", () => {
+    const proj = makeSwarmFixture();
+    writeFileSync(join(proj, "shared-recovery.txt"), "base\n");
+    gitOrThrow(proj, ["add", "--", "shared-recovery.txt"]);
+    gitOrThrow(proj, ["commit", "-q", "-m", "seed recovery conflict", "--", "shared-recovery.txt"]);
+
+    const prepared = runRef(proj, [
+      "prepare",
+      "--batch", "6",
+      "--units", "alpha-source,beta-source",
+      "--base", "main",
+    ]);
+    expect(prepared.rc).toBe(0);
+    commitWorkerSource(proj, "alpha-source", "alpha-source.txt", "alpha landed once\n");
+    commitWorkerSource(proj, "beta-source", "shared-recovery.txt", "worker beta\n");
+
+    writeFileSync(join(proj, "shared-recovery.txt"), "target beta\n");
+    gitOrThrow(proj, ["add", "--", "shared-recovery.txt"]);
+    gitOrThrow(proj, ["commit", "-q", "-m", "advance recovery target", "--", "shared-recovery.txt"]);
+    terminalizePool(proj, "6");
+
+    const finalizeArgs = [
+      "finalize",
+      "--batch", "6",
+      "--units", "alpha-source,beta-source",
+      "--claimed", "alpha-source,beta-source",
+      "--check-cmd",
+      "test -f alpha-source.txt || grep -Eq '^(worker beta|recovered beta)$' shared-recovery.txt",
+    ];
+    const first = runRef(proj, finalizeArgs);
+    const firstEnvelope = JSON.parse(first.out);
+    const alphaAfterFirst = firstEnvelope.units.find(
+      (entry: { unit: string }) => entry.unit === "alpha-source",
+    );
+    const betaAfterFirst = firstEnvelope.units.find(
+      (entry: { unit: string }) => entry.unit === "beta-source",
+    );
+    const firstConflictPaths = gitOrThrow(proj, ["diff", "--name-only", "--diff-filter=U"]);
+    const alphaCleanupAfterFirst = {
+      worktreeRemoved: !existsSync(wtPath(proj, "alpha-source")),
+      branchRemoved: !hasBoltBranch(proj, "alpha-source"),
+      sourceLanded: readFileSync(join(proj, "alpha-source.txt"), "utf-8") === "alpha landed once\n",
+    };
+
+    if (firstConflictPaths.length > 0) gitOrThrow(proj, ["reset", "--merge", "HEAD"]);
+    const betaWt = wtPath(proj, "beta-source");
+    const recoveryMerge = runGit(betaWt, ["-c", "merge.ff=false", "merge", "--no-ff", "main", "--no-edit"]);
+    // The intent is "merging main conflicts on the shared file", not a specific
+    // git exit code — pin the unmerged path instead.
+    const recoveryMergeConflicted =
+      recoveryMerge.rc !== 0 &&
+      gitOrThrow(betaWt, ["diff", "--name-only", "--diff-filter=U"]) === "shared-recovery.txt";
+    writeFileSync(join(betaWt, "shared-recovery.txt"), "recovered beta\n");
+    gitOrThrow(betaWt, ["add", "--", "shared-recovery.txt", "alpha-source.txt"]);
+    gitOrThrow(betaWt, [
+      "-c", "user.email=t@t",
+      "-c", "user.name=t",
+      "commit", "-q", "-m", "resolve beta source conflict",
+    ]);
+
+    const beforeRetry = gitOrThrow(proj, ["rev-parse", "main"]);
+    const second = runRef(proj, finalizeArgs);
+    const secondEnvelope = JSON.parse(second.out);
+    const alphaAfterRetry = secondEnvelope.units.find(
+      (entry: { unit: string }) => entry.unit === "alpha-source",
+    );
+    const betaAfterRetry = secondEnvelope.units.find(
+      (entry: { unit: string }) => entry.unit === "beta-source",
+    );
+    const afterRetry = gitOrThrow(proj, ["rev-parse", "main"]);
+
+    expect({
+      firstStatus: first.rc,
+      firstConverged: firstEnvelope.converged,
+      firstFailed: firstEnvelope.failed,
+      alphaFirstStatus: alphaAfterFirst?.status,
+      betaFirstStatus: betaAfterFirst?.status,
+      betaMergeFailure: firstEnvelope.merge_failures.some(
+        (entry: { unit: string }) => entry.unit === "beta-source",
+      ),
+      firstConflictPaths,
+      alphaCleanupAfterFirst,
+      recoveryMergeConflicted,
+      retryStatus: second.rc,
+      retryConverged: secondEnvelope.converged,
+      retryFailed: secondEnvelope.failed,
+      alphaRetryStatus: alphaAfterRetry?.status,
+      betaRetryStatus: betaAfterRetry?.status,
+      retryCommitCount: Number(gitOrThrow(proj, ["rev-list", "--count", `${beforeRetry}..${afterRetry}`])),
+      alphaSource: readFileSync(join(proj, "alpha-source.txt"), "utf-8"),
+      betaSource: readFileSync(join(proj, "shared-recovery.txt"), "utf-8"),
+      betaWorktreeRemoved: !existsSync(betaWt),
+      betaBranchRemoved: !hasBoltBranch(proj, "beta-source"),
+    }).toEqual({
+      firstStatus: 2,
+      firstConverged: 1,
+      firstFailed: 1,
+      alphaFirstStatus: "converged",
+      betaFirstStatus: "failed",
+      betaMergeFailure: true,
+      firstConflictPaths: "shared-recovery.txt",
+      alphaCleanupAfterFirst: {
+        worktreeRemoved: true,
+        branchRemoved: true,
+        sourceLanded: true,
+      },
+      recoveryMergeConflicted: true,
+      retryStatus: 0,
+      retryConverged: 2,
+      retryFailed: 0,
+      alphaRetryStatus: "converged",
+      betaRetryStatus: "converged",
+      retryCommitCount: 1,
+      alphaSource: "alpha landed once\n",
+      betaSource: "recovered beta\n",
+      betaWorktreeRemoved: true,
+      betaBranchRemoved: true,
+    });
+  }, scaleTestTime(120000));
+
+  // ===========================================================================
+  // Issue #3197: metadata convergence cannot substitute for source integration.
+  // A genuine unit whose committed source conflicts with main must return the
+  // baton, preserve its worktree/branch, and expose the source merge failure.
+  // ===========================================================================
+  test("issue #3197: source conflict fails finalize and preserves recovery state", () => {
+    const proj = makeSwarmFixture();
+    writeFileSync(join(proj, "source-conflict.txt"), "base version\n");
+    gitOrThrow(proj, ["add", "--", "source-conflict.txt"]);
+    gitOrThrow(proj, ["commit", "-q", "-m", "seed source conflict", "--", "source-conflict.txt"]);
+
+    const prepared = runRef(proj, [
+      "prepare",
+      "--batch", "4",
+      "--units", "source-conflict",
+      "--base", "main",
+    ]);
+    expect(prepared.rc).toBe(0);
+    commitWorkerSource(proj, "source-conflict", "source-conflict.txt", "worker version\n");
+
+    writeFileSync(join(proj, "source-conflict.txt"), "main version\n");
+    gitOrThrow(proj, ["add", "--", "source-conflict.txt"]);
+    gitOrThrow(proj, ["commit", "-q", "-m", "advance main conflict", "--", "source-conflict.txt"]);
+    terminalizePool(proj, "4");
+
+    const f = runRef(proj, [
+      "finalize",
+      "--batch", "4",
+      "--units", "source-conflict",
+      "--claimed", "source-conflict",
+      "--check-cmd", "grep -q '^worker version$' source-conflict.txt",
+    ]);
+
+    try {
+      expect(f.rc).toBe(2);
+      const env = JSON.parse(f.out);
+      expect(env.converged).toBe(0);
+      expect(env.failed).toBe(1);
+      expect(env.merge_failures).toHaveLength(1);
+      expect(env.merge_failures[0].unit).toBe("source-conflict");
+      const unit = env.units.find((entry: { unit: string }) => entry.unit === "source-conflict");
+      expect(unit).toBeDefined();
+      expect(unit.status).toBe("failed");
+      expect(unit.reason).toBe("error");
+      expect(existsSync(wtPath(proj, "source-conflict"))).toBe(true);
+      expect(hasBoltBranch(proj, "source-conflict")).toBe(true);
+      expect(gitOrThrow(proj, ["diff", "--name-only", "--diff-filter=U"])).toBe(
+        "source-conflict.txt",
+      );
+    } finally {
+      // `merge --squash` does not reliably leave MERGE_HEAD, so reset --merge is
+      // the portable abort for its unmerged index/worktree state.
+      const conflicts = gitOrThrow(proj, ["diff", "--name-only", "--diff-filter=U"]);
+      if (conflicts.length > 0) gitOrThrow(proj, ["reset", "--merge", "HEAD"]);
+    }
   }, scaleTestTime(120000));
 });

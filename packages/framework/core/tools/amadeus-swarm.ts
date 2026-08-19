@@ -22,9 +22,11 @@
 //       --repo (P7) selects the sibling repo the batch's worktrees fork inside (a
 //       multi-repo intent requires it; single-repo infers the lone repo); the
 //       resolved name is forwarded to every amadeus-worktree create + bolt start.
-//       The anti-tamper baseline is each worktree's OWN git fork (HEAD) — nothing
-//       is stored; check/finalize re-derive the pristine bytes with `git diff
-//       --quiet HEAD`. Runs before any worker, so it cannot fold into check.
+//       The anti-tamper baseline is the prepared fork: `create` records the base
+//       branch AND the fork SHA on WORKTREE_CREATED, and check/finalize parse that
+//       binding back (parsePreparedForkBinding) instead of trusting a caller flag —
+//       a worker commit cannot move the baseline by moving HEAD.
+//       Runs before any worker, so it cannot fold into check.
 //       --degraded-from records a loud downgrade (an ultra native to another
 //       harness was requested, or a runtime degrade such as claude-ultra with
 //       the Workflow tool unavailable — the conductor ran the subagent floor):
@@ -45,6 +47,7 @@
 //       check alone is never authority to re-spawn a worker.
 //   finalize --batch <n> --units <a,b,c> --claimed <a,b> --check-cmd <cmd>
 //            [--test-file <path>] [--reasons <unit>=<reason>,...]
+//            [--target <branch>] [--strategy <squash|merge|rebase>] [--repo <name>]
 //       The AUTHORITATIVE gate. The conductor's claimed-converged set is an
 //       explicit input and the only thing finalize trusts from it. For each
 //       claimed unit, RE-RUN the check (green + untampered) before any merge: a
@@ -69,6 +72,9 @@
 //   - amadeus-bolt release-merge     -> release the existing per-Bolt HOLD-MERGE
 //     lock before a serialised merge (idempotent — safe if never held). The merge
 //     phase is serial (a one-at-a-time loop), so only one merge is ever in flight.
+//   - amadeus-worktree merge         -> squash the converged Unit's committed source
+//     into the prepared base (--target overrides) after its metadata merge
+//     succeeds, then remove its worktree/branch
 //   - amadeus-bolt fail              -> close a failed unit's Bolt lifecycle
 //     (BOLT_FAILED paired with the BOLT_STARTED that `start --worktree` emitted).
 
@@ -81,12 +87,16 @@ import { ensureOtelBootstrap } from "../otel/bootstrap.ts";
 import { appendAuditEntryViaEvents } from "../otel/migration-adapter.ts";
 import { observeSubprocessSpan } from "../otel/subprocess-span.ts";
 import {
+  auditBlockField,
+  findAllEvents,
   getField,
   parseArgs,
+  readAllAuditShards,
   readBoltDagGeneration,
   recordDir,
   resolveConstructionRepo,
   resolveProjectDir,
+  splitAuditRecords,
   stateFilePath,
   worktreePath,
 } from "./amadeus-lib.ts";
@@ -207,6 +217,84 @@ function runTool(toolFile: string, args: string[], projectDir: string): ToolRun 
   };
 }
 
+type ToolRunner = typeof runTool;
+
+function toolFailureDetail(result: ToolRun): string {
+  return result.stderr.trim() || result.stdout.trim() || "unknown failure";
+}
+
+function mergeGenuineUnits(
+  projectDir: string,
+  batch: string,
+  genuine: readonly string[],
+  repoArgs: readonly string[],
+  toolRunner: ToolRunner,
+  targetFor: (unit: string) => string,
+  strategy: string,
+): { unit: string; detail: string }[] {
+  const failures: { unit: string; detail: string }[] = [];
+  let sourceBlocker: string | undefined;
+  for (const unit of [...genuine].sort()) {
+    if (sourceBlocker !== undefined) {
+      failures.push({
+        unit,
+        detail: `source merge skipped after source merge failure for unit "${sourceBlocker}"`,
+      });
+      continue;
+    }
+
+    const released = toolRunner(
+      "amadeus-bolt.ts",
+      ["release-merge", "--slug", unit, ...repoArgs],
+      projectDir,
+    );
+    if (!released.ok) {
+      failures.push({ unit, detail: `release-merge failed: ${toolFailureDetail(released)}` });
+      continue;
+    }
+
+    const metadata = toolRunner(
+      "amadeus-bolt.ts",
+      [
+        "complete",
+        "--merge",
+        "--slug",
+        unit,
+        "--batch",
+        batch,
+        "--name",
+        unit,
+        ...repoArgs,
+      ],
+      projectDir,
+    );
+    if (!metadata.ok) {
+      failures.push({ unit, detail: `metadata merge failed: ${toolFailureDetail(metadata)}` });
+      continue;
+    }
+
+    const source = toolRunner(
+      "amadeus-worktree.ts",
+      [
+        "merge",
+        "--slug",
+        unit,
+        "--target",
+        targetFor(unit),
+        "--strategy",
+        strategy,
+        ...repoArgs,
+      ],
+      projectDir,
+    );
+    if (!source.ok) {
+      failures.push({ unit, detail: `source merge failed: ${toolFailureDetail(source)}` });
+      sourceBlocker = unit;
+    }
+  }
+  return failures;
+}
+
 // --- The deterministic verdict primitives -----------------------------------
 
 // Tool-owned convergence signal. Running the project's check command in the
@@ -255,44 +343,49 @@ export type FileTamperResult =
   | { status: "error"; detail: string };
 
 export function fileTamperResultForStatuses(
-  headStatus: number | null,
+  baselineStatus: number | null,
   diffStatus: number | null,
   relPath: string,
 ): FileTamperResult {
-  if (headStatus !== 0) {
-    return { status: "error", detail: `protected test file is not tracked at HEAD: ${relPath}` };
+  if (baselineStatus !== 0) {
+    return {
+      status: "error",
+      detail: `protected test file is not tracked at the prepared fork: ${relPath}`,
+    };
   }
   if (diffStatus === 0) return { status: "clean" };
   if (diffStatus === 1) return { status: "tampered" };
   return {
     status: "error",
-    detail: `could not compare protected test file against HEAD (git diff exit ${diffStatus}): ${relPath}`,
+    detail: `could not compare protected test file against the prepared fork (git diff exit ${diffStatus}): ${relPath}`,
   };
 }
 
-// Anti-tamper, re-derived from the worktree's own git fork (stateless). Git diff
-// exits 0 for both an unchanged tracked file and a path absent from HEAD, so the
-// HEAD object must be confirmed before interpreting diff status 0 as clean.
-function fileTampered(projectDir: string, cwd: string, relPath: string): FileTamperResult {
+function fileTampered(
+  projectDir: string,
+  cwd: string,
+  relPath: string,
+  forkSha: string,
+): FileTamperResult {
   const headPath = relPath.split(sep).join("/");
-  const head = observeSubprocessSpan(projectDir, "git", () =>
-    spawnSync("git", ["cat-file", "-e", `HEAD:${headPath}`], {
+  const baseline = observeSubprocessSpan(projectDir, "git", () =>
+    spawnSync("git", ["cat-file", "-e", `${forkSha}:${headPath}`], {
       cwd,
       encoding: "utf-8",
       timeout: 60_000,
     }),
   );
-  if (head.status !== 0) {
-    return fileTamperResultForStatuses(head.status, null, relPath);
+  if (baseline.status !== 0) {
+    return fileTamperResultForStatuses(baseline.status, null, relPath);
   }
   const diff = observeSubprocessSpan(projectDir, "git", () =>
-    spawnSync("git", ["diff", "--quiet", "HEAD", "--", relPath], {
+    spawnSync("git", ["diff", "--quiet", forkSha, "--", relPath], {
       cwd,
       encoding: "utf-8",
       timeout: 60_000,
     }),
   );
-  return fileTamperResultForStatuses(head.status, diff.status, relPath);
+  return fileTamperResultForStatuses(baseline.status, diff.status, relPath);
 }
 
 export interface Verdict {
@@ -302,37 +395,108 @@ export interface Verdict {
   confineError?: string;
 }
 
-// Compute a unit's stateless verdict from on-disk state alone. Re-derives the
-// worktree path from (projectDir, unit) — no stored handle — so check and
-// finalize agree without sharing state.
+export type VerdictBinding =
+  | {
+      readonly testFile?: undefined;
+      readonly forkSha?: undefined;
+      readonly expectedHead?: string;
+    }
+  | {
+      readonly testFile: string;
+      readonly forkSha: string;
+      readonly expectedHead?: string;
+    };
+
+function worktreeHead(projectDir: string, cwd: string): string | null {
+  const result = observeSubprocessSpan(projectDir, "git", () =>
+    spawnSync("git", ["rev-parse", "HEAD"], {
+      cwd,
+      encoding: "utf-8",
+      timeout: 60_000,
+    }),
+  );
+  return result.status === 0 ? result.stdout.trim() : null;
+}
+
+// The fork contract `prepare` captured for one unit: the base branch the
+// worktree forked from and the SHA it forked at. Both come from the unit's
+// WORKTREE_CREATED audit block (Base branch / Base SHA), never from conductor
+// flags — a tamper baseline the caller supplies is no baseline at all.
+export interface PreparedForkBinding {
+  readonly base: string;
+  // null for a legacy WORKTREE_CREATED row that predates Base SHA capture:
+  // the recorded base still names the delivery target, but no anti-tamper
+  // baseline exists, so --test-file callers fail closed on it.
+  readonly forkSha: string | null;
+}
+
+// Parse the newest WORKTREE_CREATED block for `unit` out of the intent's audit
+// shards. Returns null when the unit was never prepared (no block, or a block
+// with no Base branch) — the caller fails closed. A row that predates Base SHA
+// capture keeps its base and carries forkSha: null.
+export function parsePreparedForkBinding(
+  pd: string,
+  unit: string,
+  intent?: string,
+  space?: string,
+): PreparedForkBinding | null {
+  const audit = readAllAuditShards(pd, intent, space);
+  if (audit.length === 0) return null;
+  const matches = findAllEvents(audit, "WORKTREE_CREATED", unit);
+  const newest = matches[matches.length - 1];
+  if (!newest) return null;
+  const base = auditBlockField(newest.block, "Base branch");
+  if (!base) return null;
+  const forkSha = auditBlockField(newest.block, "Base SHA");
+  return { base, forkSha: forkSha || null };
+}
+
+// Compute a unit's verdict from its prepared fork and the worker commit that the
+// conductor verified. The check command must not move HEAD: a check that changes
+// the source under inspection cannot authorize that source for delivery.
 export function verdictFor(
   unit: string,
   projectDir: string,
   checkCmd: string,
-  testFile?: string
+  binding: VerdictBinding = {},
 ): Verdict {
   const wt = worktreePath(projectDir, unit);
   if (!existsSync(wt)) {
     return { exists: false, converged: false, tampered: false };
   }
+  const requiresHeadBinding = binding.expectedHead !== undefined || binding.testFile !== undefined;
+  const beforeHead = requiresHeadBinding ? worktreeHead(projectDir, wt) : null;
   const converged = checkConverged(projectDir, wt, checkCmd);
+  const afterHead = requiresHeadBinding ? worktreeHead(projectDir, wt) : null;
   let tampered = false;
   let confineError: string | undefined;
-  if (testFile) {
+  if (requiresHeadBinding && (beforeHead === null || afterHead === null)) {
+    confineError = "could not resolve the worker HEAD before and after the convergence check";
+  } else if (requiresHeadBinding && beforeHead !== afterHead) {
+    confineError = `worker HEAD changed during the convergence check: ${beforeHead} -> ${afterHead}`;
+  } else if (binding.expectedHead !== undefined && beforeHead !== binding.expectedHead) {
+    confineError = `worker HEAD does not match the verified source binding: expected ${binding.expectedHead}, got ${beforeHead}`;
+  }
+  if (binding.testFile) {
     // Confine the path inside the unit's worktree — a `../` escape would point
     // the guard at a file the worker never touched and silently DISABLE it, so
     // reject it as a configuration error rather than ship a false "untampered".
-    const candidate = resolve(wt, testFile);
+    const candidate = resolve(wt, binding.testFile);
     const root = resolve(wt) + sep;
     if (!candidate.startsWith(root)) {
-      confineError = `--test-file resolves outside the unit worktree: ${testFile}`;
+      confineError = `--test-file resolves outside the unit worktree: ${binding.testFile}`;
     } else {
-      const tamperResult = fileTampered(projectDir, wt, relative(wt, candidate));
+      const tamperResult = fileTampered(
+        projectDir,
+        wt,
+        relative(wt, candidate),
+        binding.forkSha,
+      );
       if (tamperResult.status === "error") confineError = tamperResult.detail;
       else tampered = tamperResult.status === "tampered";
     }
   }
-  return { exists: true, converged, tampered, confineError };
+  return { exists: true, converged, tampered, ...(confineError ? { confineError } : {}) };
 }
 
 // --- Audit emission (this tool owns the whole swarm taxonomy) ---------------
@@ -662,7 +826,12 @@ function handlePrepare(rest: string[]): void {
 
 // Exit 0 ONLY for a genuine convergence (green AND untampered) — the seam an
 // ultra driver and the conductor gate on (a worker's self-claim is never read).
-function handleCheck(rest: string[]): void {
+// exit is injectable so the CLI wiring is drivable in-process by the tests
+// (Bun coverage does not instrument spawned CLI processes).
+export function handleCheck(
+  rest: string[],
+  exit: (code: number) => void = process.exit,
+): void {
   const { positional, flags } = parseArgs(rest);
   const projectDir = resolveProjectDir(flags["project-dir"]);
 
@@ -674,7 +843,31 @@ function handleCheck(rest: string[]): void {
     fail("check requires --check-cmd <shell command; exit 0 = converged>");
   }
 
-  const verdict = verdictFor(unit, projectDir, flags["check-cmd"], flags["test-file"]);
+  let binding: VerdictBinding = {};
+  if (flags["test-file"]) {
+    const preparedFork = parsePreparedForkBinding(
+      projectDir,
+      unit,
+      flags.intent,
+      flags.space,
+    );
+    if (!preparedFork || preparedFork.forkSha === null) {
+      console.log(
+        JSON.stringify({
+          unit,
+          converged: false,
+          tampered: false,
+          reason: "error",
+          detail: `no prepared fork binding for unit "${unit}" (WORKTREE_CREATED with Base SHA absent) — run \`prepare\` first`,
+        })
+      );
+      exit(1);
+      return;
+    }
+    binding = { testFile: flags["test-file"], forkSha: preparedFork.forkSha };
+  }
+
+  const verdict = verdictFor(unit, projectDir, flags["check-cmd"], binding);
   if (!verdict.exists) {
     fail(`no worktree for unit "${unit}" — run \`prepare\` first`);
   }
@@ -688,7 +881,8 @@ function handleCheck(rest: string[]): void {
         detail: verdict.confineError,
       })
     );
-    process.exit(1);
+    exit(1);
+    return;
   }
 
   const genuine = verdict.converged && !verdict.tampered;
@@ -700,7 +894,7 @@ function handleCheck(rest: string[]): void {
   };
   if (verdict.tampered) out.detail = "protected test file was modified";
   console.log(JSON.stringify(out));
-  process.exit(genuine ? 0 : 1);
+  exit(genuine ? 0 : 1);
 }
 
 // --- retry ------------------------------------------------------------------
@@ -894,10 +1088,65 @@ function finishFinalizeInputFailure(
   exit(2);
 }
 
+function resolveFinalizeRepoArgs(
+  projectDir: string,
+  flags: Record<string, string>,
+): string[] {
+  try {
+    const resolved = resolveConstructionRepo(
+      projectDir,
+      flags.repo,
+      flags.intent,
+      flags.space,
+    );
+    return resolved.repo === null ? [] : ["--repo", resolved.repo];
+  } catch (error) {
+    fail(error instanceof Error ? error.message : String(error));
+  }
+}
+
+// True when an earlier finalize already integrated the unit's source — the
+// tool-emitted WORKTREE_MERGED row is the delivery receipt. Lets a retried
+// finalize (after a sibling's source-merge failure stopped the batch) count
+// the delivered unit as converged instead of failing it for a missing worktree.
+// The receipt must belong to the CURRENT fork: a receipt older than the unit's
+// newest WORKTREE_CREATED is a previous delivery of the same slug, not this
+// batch's — counting it would report converged without integrating this
+// batch's source (#3197). Ordering is (timestamp, buffer position), the same
+// contract findAllEvents applies; audit timestamps are second-precision, so
+// the position tie-break decides same-second re-forks by append order.
+function sourceAlreadyIntegrated(
+  pd: string,
+  unit: string,
+  intent?: string,
+  space?: string,
+): boolean {
+  const audit = readAllAuditShards(pd, intent, space);
+  if (audit.length === 0) return false;
+  const rows: { merged: boolean; timestamp: string; pos: number }[] = [];
+  const blocks = splitAuditRecords(audit);
+  for (let pos = 0; pos < blocks.length; pos++) {
+    const event = auditBlockField(blocks[pos], "Event");
+    if (event !== "WORKTREE_MERGED" && event !== "WORKTREE_CREATED") continue;
+    if (auditBlockField(blocks[pos], "Bolt slug") !== unit) continue;
+    const timestamp = auditBlockField(blocks[pos], "Timestamp");
+    if (timestamp === null || timestamp === "") continue;
+    rows.push({ merged: event === "WORKTREE_MERGED", timestamp, pos });
+  }
+  rows.sort((a, b) => {
+    if (a.timestamp !== b.timestamp) return a.timestamp < b.timestamp ? -1 : 1;
+    return a.pos - b.pos;
+  });
+  const hasCreated = rows.some((row) => !row.merged);
+  const newest = rows[rows.length - 1];
+  return hasCreated && newest !== undefined && newest.merged;
+}
+
 export function handleFinalize(
   rest: string[],
   exit: (code: number) => void = process.exit,
   boltFailureEmitter: typeof emitBoltFailed = emitBoltFailed,
+  toolRunner: ToolRunner = runTool,
 ): void {
   const { positional, flags } = parseArgs(rest);
   const projectDir = resolveProjectDir(flags["project-dir"]);
@@ -913,6 +1162,11 @@ export function handleFinalize(
   // The universe of units in the batch; defaults to the claimed set when the
   // conductor passes only --claimed (then declined-unit accounting is a no-op).
   const allUnits = flags.units ? splitCsv(flags.units) : claimed.slice();
+  // Resolve the construction repo before pool reads, checks, metadata merges, or
+  // source integration. A multi-repo invocation without a selector therefore
+  // fails at the same boundary as prepare, and the resolved selector is reused
+  // verbatim by every step of the per-Unit transaction.
+  const repoArgs = resolveFinalizeRepoArgs(projectDir, flags);
   const claimedFailure = claimedUnitsFailureEnvelope(batch, allUnits, claimed);
   if (claimedFailure) { finishFinalizeInputFailure(claimedFailure, exit); return; }
   const poolProjection = createUnitPoolCoordinator(
@@ -943,6 +1197,22 @@ export function handleFinalize(
   const claimedSet = new Set(claimed);
   const testFile = flags["test-file"];
   const checkCmd = flags["check-cmd"];
+  const strategy = flags.strategy ?? "squash";
+  if (!["squash", "merge", "rebase"].includes(strategy)) {
+    fail(`--strategy must be one of: squash, merge, rebase`);
+  }
+
+  // The delivery target and anti-tamper baseline come from the fork contract
+  // `prepare` captured (WORKTREE_CREATED Base branch / Base SHA), never from
+  // conductor memory. --target overrides the captured base; absent both, main
+  // keeps the pre-binding behaviour for worktrees with no creation record.
+  const preparedForks = new Map<string, PreparedForkBinding>();
+  for (const unit of claimed) {
+    const binding = parsePreparedForkBinding(projectDir, unit, flags.intent, flags.space);
+    if (binding) preparedForks.set(unit, binding);
+  }
+  const targetFor = (unit: string): string =>
+    flags.target ?? preparedForks.get(unit)?.base ?? "main";
 
   // Optional per-declined-unit typed reasons: `--reasons a=unsatisfiable,b=budget-exhausted`.
   // The conductor judged WHY each unclaimed unit gave up (knowledge → conductor,
@@ -972,6 +1242,9 @@ export function handleFinalize(
   // declined unit the conductor did not claim.
   const results: UnitResult[] = [];
   const genuine: string[] = [];
+  // Claimed units an earlier finalize already delivered (their worktrees are
+  // gone by design) — counted as converged without a redundant second merge.
+  const alreadyDelivered = new Set<string>();
   for (const unit of allUnits) {
     if (claimedSet.has(unit)) {
       const poolOutcome = poolOutcomes.get(unit);
@@ -984,14 +1257,34 @@ export function handleFinalize(
         });
         continue;
       }
-      const verdict = verdictFor(unit, projectDir, checkCmd, testFile);
-      if (!verdict.exists) {
+      const preparedForkSha = preparedForks.get(unit)?.forkSha ?? null;
+      if (testFile && preparedForkSha === null) {
         results.push({
           unit,
           status: "failed",
           reason: "error",
-          detail: "no worktree on re-verify (prepare not run?)",
+          detail: `no prepared fork binding for unit "${unit}" (WORKTREE_CREATED with Base SHA absent) — run \`prepare\` first`,
         });
+        continue;
+      }
+      const verdict = verdictFor(
+        unit,
+        projectDir,
+        checkCmd,
+        testFile && preparedForkSha !== null ? { testFile, forkSha: preparedForkSha } : {},
+      );
+      if (!verdict.exists) {
+        if (sourceAlreadyIntegrated(projectDir, unit, flags.intent, flags.space)) {
+          alreadyDelivered.add(unit);
+          results.push({ unit, status: "converged" });
+        } else {
+          results.push({
+            unit,
+            status: "failed",
+            reason: "error",
+            detail: "no worktree on re-verify (prepare not run?)",
+          });
+        }
       } else if (verdict.confineError) {
         results.push({ unit, status: "failed", reason: "error", detail: verdict.confineError });
       } else if (verdict.tampered) {
@@ -1035,22 +1328,22 @@ export function handleFinalize(
     }
   }
 
-  // Serialised HOLD-MERGE merge-back of the genuine passes only (sorted for a
-  // deterministic merge order). release-merge is idempotent — safe whether or not
-  // the lock was ever held; complete --merge reaches the add/add-conflict abort
-  // pinned at the composed surface by the worktree-merge tests.
-  const mergeFailures: { unit: string; detail: string }[] = [];
-  for (const unit of [...genuine].sort()) {
-    runTool("amadeus-bolt.ts", ["release-merge", "--slug", unit], projectDir);
-    const merged = runTool(
-      "amadeus-bolt.ts",
-      ["complete", "--merge", "--slug", unit, "--batch", batch, "--name", unit],
-      projectDir
-    );
-    if (!merged.ok) {
-      mergeFailures.push({ unit, detail: merged.stderr.trim() || merged.stdout.trim() });
-    }
-  }
+  // Merge each genuine Unit in deterministic slug order. Metadata remains first:
+  // release the hold, converge state/audit/runtime metadata, then squash the
+  // Unit's committed source through the existing worktree module. A failed
+  // release or metadata merge skips source for that Unit. A source failure stops
+  // the remaining transactions because the target checkout may now hold an
+  // unresolved conflict; every skipped Unit is returned in the same failure
+  // envelope instead of being counted as converged.
+  const mergeFailures = mergeGenuineUnits(
+    projectDir,
+    batch,
+    genuine,
+    repoArgs,
+    toolRunner,
+    targetFor,
+    strategy,
+  );
 
   // A unit that passed re-verify but whose merge-back failed is NOT genuinely
   // converged: the batch's authoritative result is the merged state, not the
@@ -1111,8 +1404,10 @@ export function handleFinalize(
   }
 
   // Merge-result basis (issue #674): a unit only counts as converged once its
-  // merge-back actually succeeded, not merely on the verify-only verdict.
-  const convergedCount = genuine.filter((u) => !mergeFailureDetail.has(u)).length;
+  // merge-back actually succeeded, not merely on the verify-only verdict. Units
+  // an earlier finalize already delivered count on their WORKTREE_MERGED receipt.
+  const convergedCount =
+    genuine.filter((u) => !mergeFailureDetail.has(u)).length + alreadyDelivered.size;
   const failedCount = failedResults.length;
   emitSwarmCompleted(projectDir, batch, convergedCount, failedCount);
 
@@ -1126,7 +1421,7 @@ export function handleFinalize(
   console.log(JSON.stringify(envelope, null, 2));
   // Exit 2 signals "the conductor must take the baton" (a unit failed or a merge
   // failed); exit 0 means every claimed unit was genuinely converged and merged.
-  process.exit(failedCount > 0 || mergeFailures.length > 0 ? 2 : 0);
+  exit(failedCount > 0 || mergeFailures.length > 0 ? 2 : 0);
 }
 
 // --- resolve ----------------------------------------------------------------

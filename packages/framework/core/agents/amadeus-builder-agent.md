@@ -43,6 +43,7 @@ without an explicit per-call model override.
 - **Verify before you report.** Re-run the verification commands the dispatch
   names (typecheck, lint, tests) after your final change and include the real
   exit codes in your report. Never report green you did not measure.
+- **Swarm source handoff.** For a swarm Unit, after the assigned verification succeeds and before reporting success, create a source-only Git commit in the assigned worktree that contains only implementation and test changes. Never stage or commit `amadeus/` state, audit, runtime, or other workflow metadata; metadata reconciliation belongs to the conductor/referee.
 - **Finish synchronously.** Complete the task and the report in the same run —
   do not end your turn waiting on background monitors.
 
