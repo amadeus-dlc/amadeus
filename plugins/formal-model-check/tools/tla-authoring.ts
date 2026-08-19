@@ -15,6 +15,7 @@ import {
   AuthoringHoldEvaluator,
   defaultModelMapPath,
   readModelMapSnapshot,
+  traceSubjectIdentityOf,
   traceSubjectsOf,
   verifyHumanApproval,
   type ChangeDeclaration,
@@ -298,7 +299,10 @@ function readModelMap(flags: Record<string, string>, store: string): ModelMapSna
     const parsed = EvidenceEnvelopeCodec.parseBundleDigest(digest);
     if (!parsed.ok) return null;
     const parts = EvidenceBundle.read(store, { digest: parsed.value });
-    return parts.ok ? traceSubjectsOf(parts.value) : null;
+    if (!parts.ok) return null;
+    const subjectIdentity = traceSubjectIdentityOf(parts.value);
+    const subjects = traceSubjectsOf(parts.value);
+    return subjectIdentity !== null && subjects !== null ? { subjectIdentity, subjects } : null;
   });
 }
 
