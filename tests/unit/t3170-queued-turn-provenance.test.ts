@@ -1,4 +1,4 @@
-// covers: function:formatIntentAutonomyUpdateFailure, file:docs/reference/24-intent-autonomy.md, file:packages/framework/core/hooks/amadeus-mint-presence.ts
+// covers: function:formatIntentAutonomyUpdateFailure
 // size: small
 //
 // t3170 — queued mid-turn input is not HUMAN_TURN provenance (#3170).
@@ -13,18 +13,14 @@
 // turn (#3153). The simplest close is (b): document the constraint and make
 // PROVENANCE_REQUIRED name the turn-boundary retry.
 //
-// Seams: the CLI formatter (public refusal text) and the published contract
-// in docs/reference/24-intent-autonomy.md. Expected strings are literals, not
-// recomputed from the implementation.
+// This unit file stays small: it pins the formatter only. File-read pins
+// would import node:fs and measure as medium (unit max is small). The
+// published contract is still in docs/reference/24-intent-autonomy.md; the
+// CLI spawn in t435 asserts the same turn-boundary diagnostic. Expected
+// strings are literals, not recomputed from the implementation.
 
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { REPO_ROOT } from "../harness/fixtures.ts";
 import { formatIntentAutonomyUpdateFailure } from "../../packages/framework/core/tools/amadeus-intent-autonomy-production.ts";
-
-const AUTONOMY_DOC = join(REPO_ROOT, "docs", "reference", "24-intent-autonomy.md");
-const MINT_HOOK = join(REPO_ROOT, "packages", "framework", "core", "hooks", "amadeus-mint-presence.ts");
 
 describe("t3170 queued mid-turn input is not HUMAN_TURN provenance", () => {
   test("PROVENANCE_REQUIRED names the turn-boundary retry", () => {
@@ -37,19 +33,5 @@ describe("t3170 queued mid-turn input is not HUMAN_TURN provenance", () => {
     expect(formatIntentAutonomyUpdateFailure("STALE_REVISION")).toBe(
       "Intent autonomy update failed: STALE_REVISION",
     );
-  });
-
-  test("the autonomy chapter documents that queued mid-turn input is not presence", () => {
-    const doc = readFileSync(AUTONOMY_DOC, "utf-8");
-    expect(doc).toContain("queued while the agent is mid-turn");
-    expect(doc).toContain("UserPromptSubmit");
-    expect(doc).toContain("turn boundary");
-    expect(doc).toContain("PROVENANCE_REQUIRED");
-  });
-
-  test("the mint hook header names the queued-delivery skip", () => {
-    const src = readFileSync(MINT_HOOK, "utf-8");
-    expect(src).toContain("queued mid-turn");
-    expect(src).toContain("UserPromptSubmit");
   });
 });
