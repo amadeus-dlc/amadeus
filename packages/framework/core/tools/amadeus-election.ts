@@ -856,6 +856,25 @@ function runDirectiveVerb(root: string, verb: string, electionId: string, file: 
   return usageFail();
 }
 
+// #3256: `terminate` is a direct action (like `vote`), not a directive — it
+// closes an orphaned round without ever going through the
+// notify/tally/render/verify report protocol. Extracted out of main() to
+// keep its own usage-validation branching from inflating main()'s
+// complexity; null means "not this verb".
+function runTerminateVerb(root: string, args: CliArgs): number | null {
+  if (args.verb !== "terminate") return null;
+  if (args.electionId === undefined || args.reason === undefined) return usageFail();
+  const terminatedAt = normalizeAt(new Date().toISOString());
+  return emit(
+    terminateRoundElection(
+      root,
+      args.electionId,
+      { reason: args.reason, supersededBy: args.supersededBy ?? null },
+      terminatedAt,
+    ),
+  );
+}
+
 export function main(argv: readonly string[], projectDir?: string): number {
   const args = parseCliArgs(argv);
   if (args === null) return usageFail();
@@ -869,23 +888,9 @@ export function main(argv: readonly string[], projectDir?: string): number {
     if (raw === null) return emit(cliError("decode", "unknown", "fix the input file and retry"));
     return emit(triggeredOpenElection(resolvedProjectDir, root, raw, args.trigger ?? "manual"));
   }
+  const terminated = runTerminateVerb(root, args);
+  if (terminated !== null) return terminated;
   if (args.electionId === undefined) return usageFail();
-  // #3256: `terminate` is a direct action (like `vote`), not a directive —
-  // it closes an orphaned round without ever going through the
-  // notify/tally/render/verify report protocol, so it is dispatched before
-  // the generic directive-file verbs below.
-  if (args.verb === "terminate") {
-    if (args.reason === undefined) return usageFail();
-    const terminatedAt = normalizeAt(new Date().toISOString());
-    return emit(
-      terminateRoundElection(
-        root,
-        args.electionId,
-        { reason: args.reason, supersededBy: args.supersededBy ?? null },
-        terminatedAt,
-      ),
-    );
-  }
   const handled = runElectionVerb(root, args.verb, args.electionId, args.file);
   if (handled !== null) return handled;
   if (args.file === undefined) return usageFail();
