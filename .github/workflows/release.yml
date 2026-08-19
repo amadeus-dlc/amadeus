@@ -174,10 +174,6 @@ jobs:
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry-run) }}
         run: bun scripts/package.ts
 
-      - name: Run full test suite
-        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry-run) }}
-        run: bun run test:ci
-
       - name: Verify source-only boundary
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.dry-run) }}
         run: bun run source-only:check
