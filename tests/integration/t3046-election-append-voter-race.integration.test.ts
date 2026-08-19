@@ -231,24 +231,21 @@ describe("t3046 concurrent-voter appendPending numbering (#3046, ADR-5)", () => 
     }
   });
 
-  // ADR-5 contract 4, second shape (#3183): the SAME voter racing two
-  // DIFFERENT ballots (an amend, or a re-vote, submitted twice concurrently).
-  // The identities differ, so neither call can take the idempotent path, and
-  // appendPending's read-then-write window is genuinely shared: both callers
-  // read the same pending file and both write a whole replacement for it.
+  // ADR-5 contract 4, second shape (#3183, closed by #3225): the SAME voter
+  // racing two DIFFERENT ballots (an amend, or a re-vote, submitted twice
+  // concurrently). The identities differ, so neither call can take the
+  // idempotent path, and appendPending's read-then-write window is genuinely
+  // shared: both callers read the same pending file and both want to write a
+  // whole replacement for it.
   //
-  // What ADR-5 promises here is last-write-wins, stated verbatim in the
-  // module header: "the losing write's ballot is simply not persisted". This
-  // test pins that promise on both sides so it stays visible rather than
-  // implied. Before #3183 the loss was usually accompanied by an "io-error"
-  // from the shared staging file — an accident of the tmp name, not a
-  // designed signal, and absent whenever the timing missed. Per-process
-  // staging names remove the accident, so a lost ballot is now always quiet.
-  // Closing that read-then-write window needs real concurrency control (a
-  // per-voter lock or a compare-and-set retry) and is deliberately NOT part
-  // of #3183; the assertions below therefore accept one OR two survivors, and
-  // will need tightening the day the window is closed.
-  test("concurrent double-post of DIFFERENT ballots from the SAME voter is last-write-wins and never corrupts the store (ADR-5 contract 4)", async () => {
+  // #3225 closes that window with a per-voter mkdir-based lock
+  // (acquirePendingLock/releasePendingLock in amadeus-election-store.ts):
+  // whichever caller loses the race for the lock simply waits, then re-reads
+  // the winner's already-persisted event before appending its own — so BOTH
+  // ballots always survive. Neither may report an error, and the store must
+  // never lose either write: two survivors, always, never one (a lost
+  // ballot) and never zero/three (a torn write or a phantom merge).
+  test("concurrent double-post of DIFFERENT ballots from the SAME voter never loses either ballot (#3225, ADR-5 contract 4)", async () => {
     const ATTEMPTS = 10;
     for (let i = 0; i < ATTEMPTS; i++) {
       const root = freshRoot();
@@ -261,21 +258,24 @@ describe("t3046 concurrent-voter appendPending numbering (#3046, ADR-5)", () => 
         const b = parseResult(resB.stdout);
         expect(a).toMatchObject({ ok: true });
         expect(b).toMatchObject({ ok: true });
-        // The store stays readable and fail-closed-clean either way: the
-        // surviving file decodes, and its per-voter arrivalSequence values are
-        // strictly increasing (readAllPending rejects anything else outright).
+        // #3225: appendPending now serialises same-voter writes, so the
+        // loser re-reads the winner's persisted event instead of clobbering
+        // it. Both arrivalSequence values must be distinct (0 and 1, order
+        // depending on which racer won the lock) rather than colliding.
+        expect(new Set([a.value?.arrivalSequence, b.value?.arrivalSequence]).size).toBe(2);
         const snapshot = ElectionStore.readSnapshot(root, DEFINITION.electionId);
         expect(snapshot.ok).toBe(true);
         if (!snapshot.ok) continue;
-        // Two survivors = both writes landed; one = the documented
-        // last-write-wins loss. Zero (torn write) and three (a merge that
-        // never happened) are the shapes that must never appear.
-        expect(snapshot.value.pending.length).toBeGreaterThanOrEqual(1);
-        expect(snapshot.value.pending.length).toBeLessThanOrEqual(2);
-        for (const survivor of snapshot.value.pending) {
-          expect(survivor.voter).toBe("alice");
-          expect([1, 2]).toContain(survivor.responses[0]?.choiceInternalNo);
-        }
+        // Exactly two survivors — never one (the pre-#3225 lost-ballot
+        // shape) and never zero/three (a torn write or a phantom merge).
+        expect(snapshot.value.pending).toHaveLength(2);
+        const choices = snapshot.value.pending
+          .map((survivor) => {
+            expect(survivor.voter).toBe("alice");
+            return survivor.responses[0]?.choiceInternalNo;
+          })
+          .sort();
+        expect(choices).toEqual([1, 2]);
       } finally {
         rmSync(root, { recursive: true, force: true });
       }
