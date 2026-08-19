@@ -54,11 +54,14 @@ function bornProject(): string {
   return projectDir;
 }
 
-function firstPending(projectDir: string): PendingAdvisory {
-  const store = JSON.parse(
+function readStore(projectDir: string): AdvisoryChoiceStore {
+  return JSON.parse(
     readFileSync(join(docsRoot(projectDir), ".amadeus-advisory-choice.json"), "utf-8"),
   ) as AdvisoryChoiceStore;
-  const pending = store.pending[0];
+}
+
+function firstPending(projectDir: string): PendingAdvisory {
+  const pending = readStore(projectDir).pending[0];
   if (pending === undefined) throw new Error("no pending advisory");
   return pending;
 }
@@ -117,10 +120,7 @@ describe("t2967 recordAdvisoryChoice outcome (FR-ADV-4)", () => {
     if (replay.kind !== "already-settled") return;
     expect(replay.receipts).toHaveLength(1);
     // The replay wrote nothing: the store still holds exactly one receipt.
-    const store = JSON.parse(
-      readFileSync(join(docsRoot(projectDir), ".amadeus-advisory-choice.json"), "utf-8"),
-    ) as AdvisoryChoiceStore;
-    expect(store.receipts).toHaveLength(1);
+    expect(readStore(projectDir).receipts).toHaveLength(1);
   });
 
   test("同一provenanceで異なるchoiceはrefusedであり、already-settledに潰れない", () => {
@@ -144,7 +144,13 @@ describe("t2967 recordAdvisoryChoice outcome (FR-ADV-4)", () => {
   // already-settled must never become a free pass for an advisory this
   // provenance did NOT answer. A second advisory raised after the turn was spent
   // is still open, so the replay is a refusal rather than a settled read.
-  test("spent済みprovenanceでも未回答のadvisoryが残ればrefusedになる", () => {
+  //
+  // The instant of that second raise is INJECTED rather than taken from the wall
+  // clock (#3194). The outcome used to turn on whether the raise happened to land
+  // inside the same wall-clock second as the turn, which made this an intermittent
+  // failure instead of a contract; both sides of that second boundary are pinned
+  // as cases here, and the assertion is the same on both.
+  function refusesReplayWhenSecondRaiseIsAt(raisedAt: (turnTimestamp: string) => string): void {
     projectDir = bornProject();
     expect(guardAdvisoryChoices(projectDir, STAGE, [advisory]).kind).not.toBe("allow");
     const pending = firstPending(projectDir);
@@ -154,14 +160,28 @@ describe("t2967 recordAdvisoryChoice outcome (FR-ADV-4)", () => {
 
     // A second, unanswered advisory at the same checkpoint.
     const second: Advisory = { ...advisory, specIdentity: "sha256:def", message: "advisory: a second raise" };
-    expect(guardAdvisoryChoices(projectDir, STAGE, [advisory, second]).kind).not.toBe("allow");
+    expect(
+      guardAdvisoryChoices(projectDir, STAGE, [advisory, second], undefined, raisedAt(humanTurn.timestamp)).kind,
+    ).not.toBe("allow");
+    // The raise reached the store, so the refusal below is about an advisory that
+    // is genuinely open rather than about a raise that never landed.
+    expect(readStore(projectDir).pending).toHaveLength(2);
 
     const replay = recordAdvisoryChoice(projectDir, "run-now", { kind: "human-turn", ...humanTurn });
     expect(replay.kind).toBe("refused");
-    const store = JSON.parse(
-      readFileSync(join(docsRoot(projectDir), ".amadeus-advisory-choice.json"), "utf-8"),
-    ) as AdvisoryChoiceStore;
-    expect(store.receipts).toHaveLength(1);
+    expect(readStore(projectDir).receipts).toHaveLength(1);
+  }
+
+  test("spent済みprovenanceでも未回答のadvisoryが残ればrefusedになる（同一秒のraise）", () => {
+    refusesReplayWhenSecondRaiseIsAt((turnTimestamp) => turnTimestamp);
+  });
+
+  // The case the intermittent CI failure was: one second later, the advisory is
+  // no less unanswered, so the replay is no less a refusal.
+  test("spent済みprovenanceでも未回答のadvisoryが残ればrefusedになる（turnの次の秒のraise）", () => {
+    refusesReplayWhenSecondRaiseIsAt((turnTimestamp) =>
+      new Date(Date.parse(turnTimestamp) + 1000).toISOString()
+    );
   });
 
   test("接地しないhuman-turnはrefusedで、理由を持つ", () => {
