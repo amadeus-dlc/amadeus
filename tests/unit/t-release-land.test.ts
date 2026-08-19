@@ -17,6 +17,7 @@ import {
   releaseBranchName,
   releaseTagName,
   runReleaseLand,
+  setupPackageVersionOf,
   type ReleaseLandPort,
   type ReleasePrObservation,
 } from "../../scripts/release-land-domain.ts";
@@ -90,6 +91,12 @@ describe("release-land version increment", () => {
   test("names the release branch and tag from the bumped version", () => {
     expect(releaseBranchName("0.1.8")).toBe("release/v0.1.8");
     expect(releaseTagName("0.1.8")).toBe("v0.1.8");
+  });
+
+  test("reads the setup package version without a JSON.parse cast", () => {
+    expect(setupPackageVersionOf({ version: "0.1.7" })).toBe("0.1.7");
+    expect(() => setupPackageVersionOf([])).toThrow("is not an object");
+    expect(() => setupPackageVersionOf({ version: 1 })).toThrow("is missing version");
   });
 
   test("planned version stays current only in bootstrap mode", () => {

@@ -53,6 +53,17 @@ export function isFullSha(value: string): boolean {
   return /^[0-9a-f]{40}$/.test(value);
 }
 
+export function setupPackageVersionOf(value: unknown): string {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error("packages/setup/package.json is not an object");
+  }
+  const version = Reflect.get(value, "version");
+  if (typeof version !== "string" || version.length === 0) {
+    throw new Error("packages/setup/package.json is missing version");
+  }
+  return version;
+}
+
 export function incrementReleaseVersion(version: string, bump: ReleaseBump): string {
   const match = /^([0-9]+)\.([0-9]+)\.([0-9]+)$/.exec(version);
   if (!match) throw new Error(`unsupported version for increment: ${version}`);

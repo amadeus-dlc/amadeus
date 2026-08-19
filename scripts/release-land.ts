@@ -8,6 +8,7 @@ import {
   releaseBranchName,
   releaseTagName,
   runReleaseLand,
+  setupPackageVersionOf,
   type ReleaseBump,
   type ReleaseLandMode,
   type ReleaseLandPort,
@@ -140,13 +141,8 @@ export class ReleaseLandCliPort implements ReleaseLandPort {
   }
 
   currentSetupVersion(): string {
-    const pkg = JSON.parse(readFileSync(join(this.#context.repoRoot, SETUP_PACKAGE_REL), "utf8")) as {
-      version?: unknown;
-    };
-    if (typeof pkg.version !== "string" || pkg.version.length === 0) {
-      throw new Error(`${SETUP_PACKAGE_REL} is missing version`);
-    }
-    return pkg.version;
+    const value: unknown = JSON.parse(readFileSync(join(this.#context.repoRoot, SETUP_PACKAGE_REL), "utf8"));
+    return setupPackageVersionOf(value);
   }
 
   currentHeadSha(): string {
