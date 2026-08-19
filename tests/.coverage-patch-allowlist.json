@@ -5000,6 +5000,42 @@
   {
     "file": "packages/framework/core/tools/amadeus-election-store.ts",
     "selector": {
+      "function": "acquirePendingLock",
+      "fingerprint": "sha256:9153e11a7abe177f2e6a382ac0c23733509eb6f7756ba93cd472446abfc7c6b2",
+      "anchorLines": 1,
+      "targetLines": "1",
+      "class": "catch-arm"
+    },
+    "reason": "#3225: the explicit `continue;` added for NSD001 (making the retry-then-loop control flow visible to the no-silent-drop gate) is the same cross-process-only lock-contention line already covered by the 3-line if-block entry directly above — it only executes on the losing sibling process's retry path, which t3046 exercises for real via Bun.spawn but Bun's in-process LCOV cannot observe (bun-coverage-spawn-blindspot, same rationale).",
+    "expiry": "remove when coverage instrumentation can attribute child-process execution back to the spawning test, or an in-process lock-contention test seam is added"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-store.ts",
+    "selector": {
+      "function": "releasePendingLock",
+      "fingerprint": "sha256:b3599f41bdbd2fd03d1112fffd10d143487f9206df50ff5f88a5ebf7f07b930c",
+      "anchorLines": 1,
+      "targetLines": "1",
+      "class": "catch-arm"
+    },
+    "reason": "#3225: releasePendingLock's rmSync catch is a best-effort cleanup arm (see the adjacent comment) — no test forces rmSync to fail on a lock directory this process just created and holds sole ownership of.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-store.ts",
+    "selector": {
+      "function": "appendPending",
+      "fingerprint": "sha256:ec361686197437bbcfea71601efc5fb6d9079f0239a53f825a05b30fa1bfda63",
+      "anchorLines": 1,
+      "targetLines": "1",
+      "class": "catch-arm"
+    },
+    "reason": "#3225: wrapping appendPending's body in the try/finally that releases the new per-voter lock re-indented this pre-existing pending-mkdir catch header by one level, so the patch gate now sees the `} catch {` line itself as added; the guarded body (return err(\"io-error\")) is already covered by the entry above this block. Same TOCTOU shape (parent must vanish or become a file after load succeeded); t549 covers pending-as-file via readAllPending before this mkdir.",
+    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-election-store.ts",
+    "selector": {
       "function": "integratePending",
       "fingerprint": "sha256:7f9ab216f9d6a4c361e4699838587bd7d3bc556c296cef0b8483ed57516e550f",
       "anchorLines": 1,
