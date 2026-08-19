@@ -105,7 +105,7 @@ bun plugins/formal-model-check/tools/tla-authoring.ts bundle list
 {"ok":true,"refs":[],"corrupted":[]}
 ```
 
-**applicability(適用可否)。** `applicability judge` は変更申告(`{ subjects, kind, rationale }`、`kind` は `new-subject` / `semantic-change` / `impl-only` / `non-target` のいずれか)を受け取り、登録済みモデルマップに対して経路を決めます。`applicability receipt` は同じ判断を行ってレシートを構築し、参照された人間承認を、それが名指す audit シャードに対して検証します。`--persist true` を付けると、そのレシートを `terminal-route-receipt` としてエビデンスストアへ書き込みます。終端経路の hold を解除できる根拠はこれだけです。終端でない経路、および承認が検証できない終端経路では永続化を拒否するため、hold を解除できないレシートがストアへ入ることはありません。CLI は `--name value` の対しか読まないため、値は明示して書きます。終端経路は authoring 作業を伴わず `tla-authoring` ステージが拒否するので、レシートの発行はステージではなく本 CLI の責務です。`applicability series` は subject 集合の series key を導出します。
+**applicability(適用可否)。** `applicability judge` は変更申告(`{ subjects, kind, rationale }`、`kind` は `new-subject` / `semantic-change` / `impl-only` / `non-target` のいずれか)を受け取り、登録済みモデルマップに対して経路を決めます。`applicability receipt` は同じ判断を行ってレシートを構築し、参照された人間承認を、それが名指す audit シャードに対して検証します。`--persist true` を付けると、そのレシートを `terminal-route-receipt` としてエビデンスストアへ書き込みます。終端経路の hold を解除できる根拠はこれだけです。終端でない経路、および承認が検証できない終端経路では永続化を拒否するため、hold を解除できないレシートがストアへ入ることはありません。終端経路で `--persist true` を省略した場合も CLI ゲートが拒否するため、印字だけのレシートでステージを完了できません。CLI は `--name value` の対しか読まないため、値は明示して書きます。終端経路は authoring 作業を伴わず `tla-authoring` ステージが拒否するので、レシートの発行はステージではなく本 CLI の責務です。`applicability series` は subject 集合の series key を導出します。
 
 **hold(保留)。** `hold` は authoring を止めるべきかを評価します。ストアを列挙し、破損エントリが1件でもあれば解放を拒み、現在の identity と series で hold テーブルを走らせます。権威は stdout の型付き verdict であり、終了コードはそれを写すだけです。hold / no-hold を終了コードだけから読んではなりません。
 

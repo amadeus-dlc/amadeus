@@ -75,7 +75,8 @@ export type ApplicabilityRoute = "author-new" | "revise-model" | "impl-only" | "
 export type ApplicabilityFailure =
   | { readonly kind: "undecidable"; readonly row: string; readonly conflicts: readonly string[] }
   | { readonly kind: "missing-evidence"; readonly row: string; readonly detail: string }
-  | { readonly kind: "approval-missing"; readonly route: ApplicabilityRoute };
+  | { readonly kind: "approval-missing"; readonly route: ApplicabilityRoute }
+  | { readonly kind: "terminal-route-receipt-required"; readonly route: "impl-only" | "non-target" };
 
 // The consistent (kind -> route) half of the table, and its inverse. Every row
 // below J2 is 1:1 with a route, so the receipt can name its row from the route

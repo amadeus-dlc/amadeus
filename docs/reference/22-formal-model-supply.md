@@ -219,7 +219,9 @@ store as a `terminal-route-receipt`, which is the only thing the hold table
 accepts as the release for a terminal route. Persisting is refused for a
 non-terminal route and for a terminal route whose approval does not verify, so a
 receipt that could not release a hold never reaches the store. The value is
-spelled out because the CLI reads `--name value` pairs only. Terminal routes
+spelled out because the CLI reads `--name value` pairs only. A terminal route
+without `--persist true` is rejected by the CLI gate, so a print-only receipt
+cannot complete the stage without durable hold-releasing evidence. Terminal routes
 carry no authoring work, so the `tla-authoring` stage refuses them; issuing the
 receipt is this CLI's job rather than the stage's. `applicability series`
 derives the series key for a subject set.
