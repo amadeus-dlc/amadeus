@@ -5901,13 +5901,11 @@ export function retractStrandedWorkflowCompletion(
   for (const field of WORKFLOW_COMPLETION_FIELDS) {
     updated = setFieldStrict(updated, field, "");
   }
-  return {
-    content: updated,
-    auditValue: prepared.stage,
-    notice:
-      `Workflow completion preparation retracted: ${prepared.stage} ` +
-      "(no longer the final in-scope stage; the new final stage prepares its own)\n",
-  };
+  // Statement form for the same reason the guard's refusal uses it: a
+  // constant-only continuation line folds away and reads as uncovered in lcov.
+  let notice = `Workflow completion preparation retracted: ${prepared.stage} `;
+  notice += "(no longer the final in-scope stage; the new final stage prepares its own)\n";
+  return { content: updated, auditValue: prepared.stage, notice };
 }
 
 export function handleRecompose(projectDir: string, flags: Record<string, string>): void {

@@ -5232,14 +5232,14 @@ function evaluateMandatoryPluginStages(
     recovery += `first (it needs a fresh human turn); (2) \`amadeus-utility.ts recompose --add `;
     recovery += `${diverged.join(",")}\`; (3) run and complete the stage(s). Jumping straight to them is `;
     recovery += "refused while the plan says SKIP, so recompose is the only way in.";
-    return guardDenied({
-      reason:
-        `Refusing workflow completion: host-bound plugin stage(s) ${named} are mandatory ` +
-        `for scope "${scope}", but this Intent's execution projection has them SKIP. ` +
-        "The record's plan was frozen when the Intent was born; amadeus/config.json " +
-        "plugin.scope-bindings has moved since, and the two now disagree.",
-      recovery,
-    });
+    // Built by statement, not by a multi-line literal concatenation: a
+    // continuation line holding only constants is folded away, and bun's merged
+    // lcov then reports it as an uncovered DA:0 phantom the patch gate fails on.
+    let reason = `Refusing workflow completion: host-bound plugin stage(s) ${named} are mandatory `;
+    reason += `for scope "${scope}", but this Intent's execution projection has them SKIP. `;
+    reason += "The record's plan was frozen when the Intent was born; amadeus/config.json ";
+    reason += "plugin.scope-bindings has moved since, and the two now disagree.";
+    return guardDenied({ reason, recovery });
   }
   const pending = outstanding[0];
   if (pending !== undefined) {
