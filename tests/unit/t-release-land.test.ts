@@ -433,8 +433,12 @@ describe("release-land CLI merge-queue compatibility", () => {
         throw new Error(`unexpected command: ${command.join(" ")}`);
       },
     };
+    // A pinned committed fixture, NOT the live repo root: a release PR bumps
+    // the real packages/setup/package.json to the next version, so a literal
+    // expectation against the live tree goes red on exactly the PR this CLI
+    // exists to land (measured: release/v0.1.8, run 32219696862).
     const port = new ReleaseLandCliPort({
-      repoRoot: REPO_ROOT,
+      repoRoot: join(import.meta.dir, "..", "fixtures", "release-land-repo"),
       repository: "amadeus-dlc/amadeus",
       botLogin: BOT_LOGIN,
       runner,
