@@ -1,4 +1,5 @@
 // covers: subcommand:amadeus-bolt:approve-batch, function:handleApproveBatch
+// size: medium
 //
 // t3243 — handleApproveBatch's internal error-path must never fall back to
 // an AMBIENT project dir when the caller passed an EXPLICIT one (#3243).
