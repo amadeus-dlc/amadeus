@@ -625,15 +625,22 @@ function hasMatchingAdvisoryPresentation(
   return false;
 }
 
+// `now` stamps the `createdAt` of any pending this raise mints, the same way
+// `recordAdvisoryChoice` and `closeAdvisoryInstancesForStage` take theirs. It
+// exists because the raise instant is a real input to the record-side outcome —
+// a caller that has to pin WHEN an advisory appeared relative to a human turn
+// has no other way to say it, and reading the wall clock instead makes the
+// resulting behaviour a race rather than a contract.
 export function guardAdvisoryChoices(
   projectDir: string,
   stage: string,
   advisories: readonly Advisory[],
   activationHostRoot?: string,
+  now: string = new Date().toISOString(),
 ): AdvisoryChoiceGuardResult {
   if (advisories.length === 0) return { kind: "allow" };
   return withAuditLock(projectDir, () =>
-    guardAdvisoryChoicesLocked(projectDir, stage, advisories, activationHostRoot)
+    guardAdvisoryChoicesLocked(projectDir, stage, advisories, activationHostRoot, now)
   );
 }
 
@@ -641,6 +648,7 @@ function fallbackAdvisoryHold(
   stage: string,
   advisories: readonly Advisory[],
   intentRun: string | null,
+  now: string,
 ): AdvisoryChoiceGuardResult {
   const fallback = advisories.map((advisory) => createPendingAdvisory({
     plugin: advisory.plugin,
@@ -650,7 +658,7 @@ function fallbackAdvisoryHold(
     specIdentity: advisory.specIdentity ?? "unknown-spec",
     intentRun: intentRun ?? "unresolved-intent",
     message: advisory.message,
-  }));
+  }, undefined, now));
   return {
     kind: "hold",
     stage,
@@ -663,6 +671,7 @@ function currentPendingAdvisories(
   stage: string,
   advisories: readonly Advisory[],
   intentRun: string,
+  now: string,
 ): PendingAdvisory[] {
   const current: PendingAdvisory[] = [];
   for (const advisory of advisories) {
@@ -679,7 +688,7 @@ function currentPendingAdvisories(
       candidate.closedAt === undefined && correlationKey(candidate.identity) === key
     );
     if (pending === undefined) {
-      pending = createPendingAdvisory({ ...base, message: advisory.message });
+      pending = createPendingAdvisory({ ...base, message: advisory.message }, undefined, now);
       store.pending.push(pending);
     }
     current.push(pending);
@@ -729,13 +738,14 @@ function guardAdvisoryChoicesLocked(
   projectDir: string,
   stage: string,
   advisories: readonly Advisory[],
-  activationHostRoot?: string,
+  activationHostRoot: string | undefined,
+  now: string,
 ): AdvisoryChoiceGuardResult {
   const intentRun = intentRunIdentity(projectDir);
   const storeResult = readStore(projectDir);
-  if (intentRun === null || !storeResult.ok) return fallbackAdvisoryHold(stage, advisories, intentRun);
+  if (intentRun === null || !storeResult.ok) return fallbackAdvisoryHold(stage, advisories, intentRun, now);
   const store = storeResult.value;
-  const current = currentPendingAdvisories(store, stage, advisories, intentRun);
+  const current = currentPendingAdvisories(store, stage, advisories, intentRun, now);
   writeStore(projectDir, store);
   const verdict = evaluateAdvisoryHold(current, store.receipts);
   if (verdict.kind === "resolved") return { kind: "allow" };
@@ -918,12 +928,28 @@ export function recordAdvisoryChoice(
     // The instance-level gate: an advisory already answered does not accept a
     // second answer from EITHER route until its own evidence says the answer did
     // not settle it.
-    const open = store.pending.filter(
+    //
+    // Two DIFFERENT questions come out of that gate, and only one of them is
+    // about time (#3194). Answering both from one set is what let a still-open
+    // advisory read as settled.
+    //
+    // "Is anything still waiting for an answer at all?" — when a pending was
+    // raised has no bearing on whether it is still unanswered, so this set
+    // carries no time window.
+    const unanswered = store.pending.filter(
+      (pending) => pending.closedAt === undefined && acceptsFreshChoice(pending, store.receipts),
+    );
+    // "Which of those could THIS provenance answer?" — a human turn cannot have
+    // answered an advisory that did not exist when it was typed, so the raise
+    // has to come first. Compared at second granularity because the turn's own
+    // timestamp is truncated to the second on its way to the audit trail
+    // (isoTimestamp), and a finer comparison would read a raise from earlier in
+    // that same second as if it came after. A ladder decision names the
+    // occurrence it settles, so it needs no window at all.
+    const open = unanswered.filter(
       (pending) =>
-        pending.closedAt === undefined &&
-        (provenance.kind === "auto-decision" ||
-          Math.floor(Date.parse(provenance.timestamp) / 1000) >= Math.floor(Date.parse(pending.createdAt) / 1000)) &&
-        acceptsFreshChoice(pending, store.receipts),
+        provenance.kind === "auto-decision" ||
+        Math.floor(Date.parse(provenance.timestamp) / 1000) >= Math.floor(Date.parse(pending.createdAt) / 1000),
     );
     // Single spend (FR-ADV-3): one decision, or one turn, is spent once. What
     // that spend settles is decided below and differs by kind — a turn covers the
@@ -931,11 +957,15 @@ export function recordAdvisoryChoice(
     //
     // Spent already splits three ways (#2967 FR-ADV-4), and the split is what
     // keeps the idempotent case from becoming fail-open. It is `already-settled`
-    // only when this provenance wrote THIS choice and nothing it could still
-    // answer is left open — a pure replay of the pass that already succeeded.
-    // Anything still open means the spend does not cover it, and a second spend
-    // is exactly what single-spend forbids, so that is a refusal rather than a
-    // free pass.
+    // only when this provenance wrote THIS choice and nothing at all is left
+    // unanswered — a pure replay of the pass that already succeeded. The
+    // question here is deliberately NOT "could this provenance have answered
+    // it": an advisory raised after the turn is no less unanswered for having
+    // arrived late, and the caller reads anything other than `refused` as
+    // licence to carry on without going back to the human. So a spend that does
+    // not cover what is still outstanding is a refusal rather than a free pass —
+    // which is also what makes the outcome a contract instead of a race against
+    // the wall clock the two timestamps happen to land on.
     const spent = receiptsSpentBy(store.receipts, provenance);
     if (spent.length > 0) {
       if (!spent.every((receipt) => receipt.choice === choice)) {
@@ -944,7 +974,7 @@ export function recordAdvisoryChoice(
           reason: `this provenance already recorded a different choice: ${spent.map((receipt) => receipt.choice).join(", ")}`,
         };
       }
-      return open.length === 0
+      return unanswered.length === 0
         ? { kind: "already-settled", receipts: spent }
         : {
             kind: "refused",
