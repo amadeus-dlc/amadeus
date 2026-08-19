@@ -61,6 +61,14 @@
       },
       "evidenceBundle": {
         "digest": "sha256:cebe2897bff3d3fed905e298b83c90023bb9eba56ce7b24f614e0301a58a2efb"
+      },
+      "authoringProvenance": {
+        "intentRecord": "amadeus/spaces/default/intents/260813-bolt-pr-attestation",
+        "execution": {
+          "auditShard": "amadeus/spaces/default/intents/260813-bolt-pr-attestation/audit/j5ik2o-mac-studio-lan-9bc851023366.jsonl",
+          "timestamp": "2026-08-14T00:36:30Z",
+          "eventIdentity": "0f7e04ec87a660429a16811abe81427ead2fbb2cba26a4fa2b85b1aafcd0407e"
+        }
       }
     },
     {

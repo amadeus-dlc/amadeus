@@ -12,6 +12,21 @@
 - Focus: Delivery Planning Bolt cardinality、runtime DAG / worktree、PR provenance、attestation、Git / GitHub runner、report-format sensor、orchestrator / state completion guard。
 - Scan mode: 通常の differential refresh。既存 codekb の #2813 current markerを履歴へ降格し、#2985 の Minimal deltaを現在節として統合した。
 
+## #3189 帰属注記
+
+`BoltPrAttestationGate` の model-map 登録（PR #2999、commit `d7ffaa544`）は、次の一次証拠から `260813-bolt-pr-attestation` intent に帰属する。authoring の intent record 本体は PR の着地 commit に含まれていないため、record 配下の成果物ではなく、evidence bundle と本 CodeKB の注記を帰属証跡とする。
+
+- Evidence bundle `sha256:3bd61262…` と `sha256:cebe2897…` の `evidence.parts.approval.shard` は、いずれも `amadeus/spaces/default/intents/260813-bolt-pr-attestation/audit/j5ik2o-mac-studio-lan-9bc851023366.jsonl` を指す。
+- 当該実行の承認アンカーは `timestamp = 2026-08-14T00:36:30Z`、`eventIdentity = 0f7e04ec87a660429a16811abe81427ead2fbb2cba26a4fa2b85b1aafcd0407e` であり、execution/session の識別子として記録する。
+- bundle の `generatedAt` は `2026-08-14T01:23:47.955Z` / `2026-08-14T01:39:34.428Z`（applicability receipt）で、`route = revise-model`、`judgedBy = amadeus-architect-agent`。モデル map はこの連鎖の終端 `cebe2897…` を参照する。
+- PR #2999 の着地日時は `2026-08-14T05:46:18Z`（commit）で、intent record 配下の audit shard と authoring 成果物は同 commit に存在しない。したがって「帰属先 intent は確定、record の完全な回収は不能」と裁定する。
+
+### 将来ガードの裁定
+
+新規の model-map 登録には intent record 帰属を必須とする。`authoringProvenance.intentRecord` と、その配下の `execution.auditShard`・承認 `timestamp`・`eventIdentity` を要求し、欠落または別 intent の shard を指す draft は registration-committer で拒否する。既存の authoring workflow 以前のモデル（`FormalElection` / `MirrorLifecycle` など）は壊さず読み込めるよう、model-map validator 上の provenance は後方互換な optional とし、登録 draft の admission だけを必須化する。
+
+この裁定は `tests/unit/t-formal-verif-model-map-v2.test.ts` の intent/shard 不一致拒否と、`tests/unit/t448-tla-registration.test.ts` の provenance 欠落拒否で、赤→緑の実証を持つ。
+
 ### Read-only と副作用
 
 dirty worktree へ `origin/main` を merge / rebase していない。最新 trunk は `git show` / `git diff` / `git grep` で read-only 照合した。GitHub、state、audit、engine 操作は行っていない。書き込みは本 re-scan と共有 CodeKB 9成果物だけである。

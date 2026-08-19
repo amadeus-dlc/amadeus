@@ -97,6 +97,14 @@ function entryFor(name: string, extra: Record<string, unknown> = {}): Record<str
     model: { path: `amadeus/spaces/default/specs/tla/${name}.tla`, identity: MODEL_IDENTITY },
     cfg: { path: `amadeus/spaces/default/specs/tla/${name}.cfg`, identity: CFG_IDENTITY },
     entries: [{ implPath: "packages/framework/core/tools/amadeus-election.ts", sha256: IMPL_SHA }],
+    authoringProvenance: {
+      intentRecord: "amadeus/spaces/default/intents/260813-bolt-pr-attestation",
+      execution: {
+        auditShard: "amadeus/spaces/default/intents/260813-bolt-pr-attestation/audit/session.jsonl",
+        timestamp: APPROVED_AT,
+        eventIdentity: "e".repeat(64),
+      },
+    },
     ...extra,
   };
 }
