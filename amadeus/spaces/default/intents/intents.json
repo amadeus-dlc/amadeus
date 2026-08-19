@@ -1133,6 +1133,13 @@
     "status": "complete"
   },
   {
+    "uuid": "019ffd42-eb8e-7918-989f-5cb3f0ea8103",
+    "slug": "bolt-pr-attestation",
+    "dirName": "260813-bolt-pr-attestation",
+    "scope": "self-fix",
+    "status": "complete"
+  },
+  {
     "uuid": "019ffbce-7316-7c96-9bcc-8ae7a4714543",
     "slug": "lifecycle-guard-runtime",
     "dirName": "260813-lifecycle-guard-runtime",

@@ -1,0 +1,15 @@
+{
+  "electionId": "E-260813-BOLT-PR-ATTESTATION-RE-LEARNINGS",
+  "kind": "zero-confirm",
+  "question": "Reverse Engineeringの学習候補は今回固有の作業断面保護であり、恒久ルールへの保存を0件としてよいか",
+  "choices": [
+    {
+      "internalNo": 1,
+      "label": "0件で可"
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ]
+}

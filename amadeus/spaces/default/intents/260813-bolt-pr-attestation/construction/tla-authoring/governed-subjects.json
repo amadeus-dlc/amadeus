@@ -1,0 +1,26 @@
+{
+  "documents": [
+    {
+      "path": "amadeus/spaces/default/intents/260811-pr-convergence-gate/inception/requirements-analysis/requirements.md",
+      "kind": "requirements"
+    },
+    {
+      "path": "amadeus/spaces/default/intents/260813-bolt-pr-attestation/inception/requirements-analysis/requirements.md",
+      "kind": "requirements"
+    }
+  ],
+  "subjects": [
+    "FR-2",
+    "FR-3",
+    "FR-4",
+    "FR-5",
+    "FR-BPA-1",
+    "FR-BPA-2",
+    "FR-BPA-4",
+    "FR-BPA-5",
+    "FR-BPA-7",
+    "FR-BPA-8",
+    "NFR-BPA-1",
+    "NFR-BPA-2"
+  ]
+}

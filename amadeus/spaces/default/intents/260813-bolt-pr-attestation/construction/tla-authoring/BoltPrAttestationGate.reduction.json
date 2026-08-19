@@ -1,0 +1,110 @@
+{
+  "declaredIdentity": "sha256:5946d92b6e74ce3df007e03a7e0f32283ddafc42f8816cf004b6c1d73bceb950",
+  "notes": "Delivery Boltのmember Unitを2要素の集合へ縮約し、完全・部分・owner証跡共用・foreign/矛盾の安全上の差を集合一致とbooleanで保存する。候補経路数は0/1/複数、receipt数は0/1へ縮約し、full autonomyの一意性と同一report再試行の冪等性を保存する。receiptはheadとreport identityへ束縛し、verdict/head変更による失効と再発行を区別する。",
+  "items": [
+    {
+      "reductionItem": "2要素のDelivery Bolt member集合",
+      "preservedMeaning": "単一/複数Unitのうち、partial evidenceとrequired-all evidenceの差を表現し、3個以上の具体的slugを追加しても新しい安全状態を増やさない。",
+      "sourceSubjects": ["FR-BPA-1", "FR-BPA-4", "FR-BPA-5", "FR-BPA-7"]
+    },
+    {
+      "reductionItem": "2つの交替するPR head epoch",
+      "preservedMeaning": "report-bound headと現在headの一致・不一致だけを保持し、具体的なSHA値を抽象化する。",
+      "sourceSubjects": ["FR-2", "FR-3", "FR-BPA-2"]
+    },
+    {
+      "reductionItem": "membership/共有tupleのboolean整合性",
+      "preservedMeaning": "Intent/Bolt/Unit集合とPR/head tupleの各具体値を、正規membershipおよび共有tupleが一致するかへ縮約する。",
+      "sourceSubjects": ["FR-BPA-1", "FR-BPA-2", "FR-BPA-7", "FR-BPA-8", "NFR-BPA-1", "NFR-BPA-2"]
+    },
+    {
+      "reductionItem": "owner証跡injectivityのboolean",
+      "preservedMeaning": "具体的なowner別digest・attestation・audit receipt写像を、全member Unitの証跡identityが非共用かへ縮約する。",
+      "sourceSubjects": ["FR-BPA-4", "FR-BPA-7", "NFR-BPA-1"]
+    },
+    {
+      "reductionItem": "候補数0/1/複数とreceipt数0/1",
+      "preservedMeaning": "full autonomyの一意な継続とtyped refusal、および同一report再試行でreceiptが増えず、別report identityでは旧receiptを失効して再発行する差を保存する。",
+      "sourceSubjects": ["FR-BPA-8", "NFR-BPA-2"]
+    }
+  ],
+  "injections": {
+    "TypeOK": {
+      "witness": "head = 0",
+      "fallingMutation": {
+        "find": "  /\\ head \\in {0, 1}",
+        "replace": "  /\\ head \\in {1}"
+      }
+    },
+    "EvidenceCurrentHead": {
+      "witness": "attested",
+      "fallingMutation": {
+        "find": "EvidenceCurrentHead ==\n  (attested \\/ sensorPassed) => reportHead = head",
+        "replace": "EvidenceCurrentHead ==\n  (attested \\/ sensorPassed) => reportHead # head"
+      }
+    },
+    "SensorRequiresAttestation": {
+      "witness": "sensorPassed",
+      "fallingMutation": {
+        "find": "SensorRequiresAttestation ==\n  sensorPassed => attested",
+        "replace": "SensorRequiresAttestation ==\n  sensorPassed => ~attested"
+      }
+    },
+    "AttestationRequiresCompleteBolt": {
+      "witness": "attested",
+      "fallingMutation": {
+        "find": "AttestationRequiresCompleteBolt ==\n  attested =>\n    /\\ reportUnits = Units",
+        "replace": "AttestationRequiresCompleteBolt ==\n  attested =>\n    /\\ reportUnits # Units"
+      }
+    },
+    "SensorRequiresCompleteBolt": {
+      "witness": "sensorPassed",
+      "fallingMutation": {
+        "find": "SensorRequiresCompleteBolt ==\n  sensorPassed =>\n    /\\ reportUnits = Units",
+        "replace": "SensorRequiresCompleteBolt ==\n  sensorPassed =>\n    /\\ reportUnits # Units"
+      }
+    },
+    "OwnerEvidenceIsolated": {
+      "witness": "attested",
+      "fallingMutation": {
+        "find": "OwnerEvidenceIsolated ==\n  (attested \\/ sensorPassed \\/ codeGenerationDone \\/ workflowDone) =>\n    ownerEvidenceDistinct",
+        "replace": "OwnerEvidenceIsolated ==\n  (attested \\/ sensorPassed \\/ codeGenerationDone \\/ workflowDone) =>\n    ~ownerEvidenceDistinct"
+      }
+    },
+    "AutonomyDecisionSafe": {
+      "witness": "authorityDecision = \"continued\"",
+      "fallingMutation": {
+        "find": "  /\\ (authorityDecision = \"continued\" => candidateCount = 1)",
+        "replace": "  /\\ (authorityDecision = \"continued\" => candidateCount # 1)"
+      }
+    },
+    "ReceiptIdempotent": {
+      "witness": "receiptIssued",
+      "fallingMutation": {
+        "find": "  /\\ (receiptIssued => receiptCount = 1)",
+        "replace": "  /\\ (receiptIssued => receiptCount = 0)"
+      }
+    },
+    "ReceiptBoundCurrentReport": {
+      "witness": "receiptIssued",
+      "fallingMutation": {
+        "find": "    /\\ receiptIdentity = reportIdentity",
+        "replace": "    /\\ receiptIdentity # reportIdentity"
+      }
+    },
+    "CodeGenerationGuarded": {
+      "witness": "codeGenerationDone",
+      "fallingMutation": {
+        "find": "CodeGenerationGuarded ==\n  codeGenerationDone =>\n    /\\ reportHead = head",
+        "replace": "CodeGenerationGuarded ==\n  codeGenerationDone =>\n    /\\ reportHead # head"
+      }
+    },
+    "WorkflowGuarded": {
+      "witness": "workflowDone",
+      "fallingMutation": {
+        "find": "WorkflowGuarded ==\n  workflowDone =>\n    /\\ reportHead = head",
+        "replace": "WorkflowGuarded ==\n  workflowDone =>\n    /\\ reportHead # head"
+      }
+    }
+  }
+}

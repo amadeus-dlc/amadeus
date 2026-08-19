@@ -1,0 +1,16 @@
+[
+  { "subject": "FR-2", "invariant": "EvidenceCurrentHead", "rationale": "既存のreport lifecycleは現在headの証跡だけを受理する。" },
+  { "subject": "FR-3", "invariant": "EvidenceCurrentHead", "rationale": "既存attestationは現在PR headへ束縛される。" },
+  { "subject": "FR-4", "invariant": "SensorRequiresAttestation", "rationale": "blocking sensorはattestationなしに通過しない。" },
+  { "subject": "FR-5", "invariant": "WorkflowGuarded", "rationale": "既存completion chokepointはterminal verdictと完全な証跡を要求する。" },
+  { "subject": "FR-BPA-1", "invariant": "AttestationRequiresCompleteBolt", "rationale": "attestationはDelivery Boltの正規member Unit集合全体を要求する。" },
+  { "subject": "FR-BPA-1", "invariant": "TypeOK", "rationale": "member集合、候補数、authority decision、receipt数を有限の正規状態へ制約する。" },
+  { "subject": "FR-BPA-2", "invariant": "EvidenceCurrentHead", "rationale": "全member Unitで共有するPR証跡は同じ現在headへ束縛される。" },
+  { "subject": "FR-BPA-4", "invariant": "OwnerEvidenceIsolated", "rationale": "member Unitごとのowner-bound digest・attestation・audit receiptを共用させない。" },
+  { "subject": "FR-BPA-5", "invariant": "CodeGenerationGuarded", "rationale": "partial evidenceではCode Generation completionを成立させない。" },
+  { "subject": "FR-BPA-7", "invariant": "OwnerEvidenceIsolated", "rationale": "owner証跡のcopy/replayを受理済み状態へ到達させない。" },
+  { "subject": "FR-BPA-8", "invariant": "AutonomyDecisionSafe", "rationale": "full autonomyでは候補1件だけを無質問で継続し、0件または複数件はtyped refusalとする。" },
+  { "subject": "NFR-BPA-1", "invariant": "SensorRequiresCompleteBolt", "rationale": "証跡完全性を検証できない状態はfail-closedとする。" },
+  { "subject": "NFR-BPA-2", "invariant": "ReceiptIdempotent", "rationale": "同一tupleのattestation再試行はreceiptを1件から増やさず同じ状態へ収束する。" },
+  { "subject": "NFR-BPA-2", "invariant": "ReceiptBoundCurrentReport", "rationale": "verdictまたはheadが変わると旧receiptを失効し、新しいreport identityへ再束縛する。" }
+]

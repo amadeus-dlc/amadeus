@@ -1,0 +1,13 @@
+[
+  {
+    "id": "goal-statement",
+    "verdict": "ACHIEVED",
+    "evidence": [
+      {
+        "kind": "deterministic-check",
+        "reference": "amadeus/spaces/default/intents/260813-bolt-pr-attestation/verification/phase-check-construction.md",
+        "digest": "f7d1a78f66fd94cf5efeaf631d5b46215e6a137dad3e22ff48688a103539225b"
+      }
+    ]
+  }
+]
