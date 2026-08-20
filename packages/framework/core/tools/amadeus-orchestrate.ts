@@ -3333,7 +3333,6 @@ export function handleNext(
   // so a carry left behind by a previous run must never leak into this one.
   _pendingAutonomyCarry = null;
   if (refuseBlockedNextEnvironment(projectDir)) return;
-  if (projectDir === undefined) return;
   const flags = parseNextFlags(args);
   const migration = classifyMigrationRequest(args);
 
@@ -3410,7 +3409,7 @@ export function handleNext(
     return;
   }
 
-  const pd = projectDir;
+  const pd = projectDir!;
   if (emitArchivedNextError(pd)) return;
   const stateContent = loadStateFileIfPresent(pd);
   // The active intent's RELATIVE record-dir prefix (amadeus/spaces/<sp>/intents/
