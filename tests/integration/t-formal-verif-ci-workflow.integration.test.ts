@@ -95,6 +95,8 @@ const BASELINE_SHA = readFileSync(
 //     reproducibility. Re-baseline scope was measured, not assumed: reverting
 //     that single line from ci.yml reproduces the previous baseline hash
 //     (57a395d1f0d1…) exactly, so this entry sanctions that edit and nothing else.
+//   - #1983 (merge-time revalidation): re-baseline the merge_group-triggered
+//     coverage and patch-gate execution against the queue base SHA.
 describe("CI workflow structure (formal job isolation + baseline pin)", () => {
   test("contains only the sanctioned edits and an isolated pinned formal job", () => {
     const source = readFileSync(WORKFLOW, "utf8");
