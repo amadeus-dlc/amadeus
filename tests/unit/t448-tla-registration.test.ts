@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { parseTlaModelMap } from "../../plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts";
-import { parseTlaModelMap as parseShippedModelMap } from "../../plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts";
+import { parseTlaModelMap as parseShippedModelMap } from "../../dist/plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts";
 import {
   checkPreconditions,
   composeRegisteredMap,
@@ -69,8 +69,8 @@ describe("model-map validator: optional evidenceBundle key (Q1 ruling A)", () =>
     expect(parsed.ok).toBe(false);
   });
 
-  // The plugin tree carries a generated copy of the validator, and it is the
-  // one the authoring CLI loads, so the same verdicts are pinned on it too.
+  // The neutral bundle is the shipped plugin copy that an install projects
+  // into a host, so the same verdicts are pinned against the authoring source.
   test("the shipped plugin copy reaches the same verdicts", () => {
     expect(parseShippedModelMap(mapBytes([modelEntry("Sample", { evidenceBundle: { digest: BUNDLE_DIGEST } })])).ok)
       .toBe(true);
