@@ -47,6 +47,11 @@ coverage/
 # Local formal-verification toolchain cache (verified before every run).
 /.cache/formal-verif/
 
+# run-model-check-diagnostic.ts writes evidence under <--root>/diagnostic/.
+# CI passes an out-of-repo root (runner.temp), but a manual local run with
+# --root pointed at the repo root leaves this as untracked residue (#2555).
+/diagnostic/
+
 # Claude worktrees
 .claude/worktrees
 
