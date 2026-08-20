@@ -30,7 +30,6 @@ import {
   activationAdvisoryForHost,
 } from "../../plugins/formal-model-check/tools/plugin-activation.ts";
 import { defaultModelMapPath } from "../../plugins/formal-model-check/tools/tla-applicability.ts";
-import { defaultSubjectsPath } from "../../plugins/formal-model-check/tools/tla-authoring.ts";
 import { defaultStoreRoot } from "../../plugins/formal-model-check/tools/tla-evidence.ts";
 
 const roots: string[] = [];
@@ -222,12 +221,6 @@ describe("t481 activation + wrapper consumers on a legacy layout (BR-4/BR-13a)",
     writeCursor(root, "feature-x");
     expect(defaultModelMapPath(root)).toBe(
       join(root, "amadeus", "spaces", "feature-x", "specs", "tla", "model-map.json"),
-    );
-    // Explicitly revised by D4 of #2766: the governed-subjects declaration
-    // moved off `specs/tla/` to the specs root so editing it stays outside the
-    // `tla/**` activation watch glob, like the evidence store beside it.
-    expect(defaultSubjectsPath(root)).toBe(
-      join(root, "amadeus", "spaces", "feature-x", "specs", "authoring-subjects.json"),
     );
     expect(defaultStoreRoot(root)).toBe(
       join(root, "amadeus", "spaces", "feature-x", "specs", "tla-evidence"),

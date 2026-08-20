@@ -50,8 +50,8 @@ assessment here rather than assuming that an absent model means non-target:
 3. Compare the selected subjects with the registered model map and the current
    change. Classify them as `new-subject`, `semantic-change`, `impl-only`, or
    `non-target`; never infer `impl-only` merely because a model already exists.
-4. For a non-empty selected set, run `subjects declare`, then
-   `applicability receipt`, and persist the receipt under the stage record.
+4. For a non-empty selected set, run `applicability receipt` and persist the
+   receipt under the stage record.
    An unregistered selected set must route to `author-new`; a registered set
    whose reachable behaviour changed must route to `revise-model`.
 

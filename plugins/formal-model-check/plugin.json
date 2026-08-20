@@ -72,25 +72,6 @@
       "handoff": {
         "stage": "formal-model-check"
       }
-    },
-    {
-      "code": "authoring-hold",
-      "checkpoints": [
-        "requirements-analysis",
-        "functional-design",
-        "build-and-test"
-      ],
-      "evaluator": {
-        "argv": [
-          "bun",
-          "tools/tla-authoring.ts",
-          "advisory",
-          "hold"
-        ]
-      },
-      "handoff": {
-        "stage": "tla-authoring"
-      }
     }
   ]
 }

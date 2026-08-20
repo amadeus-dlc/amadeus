@@ -169,7 +169,7 @@ describe("the authoring stage document (BR-U5-07, BR-U5-13)", () => {
 
   test("the self-scope entry assesses missing models and closes terminal routes", () => {
     const receiving = stageText.slice(stageText.indexOf("### 1. Assess applicability and receive the route"));
-    expect(receiving).toContain("subjects declare");
+    expect(receiving).toContain("applicability receipt");
     expect(receiving).toContain("author-new");
     expect(receiving).toContain("revise-model");
     expect(receiving).toContain("impl-only");

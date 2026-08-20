@@ -74,7 +74,7 @@ describe("t532 falling-proof — an injected repo-root-relative argv is flagged"
       name: "demo",
       advisories: [
         {
-          code: "authoring-hold",
+          code: "demo-hold",
           checkpoints: ["requirements-analysis"],
           evaluator: { argv: ["bun", "plugins/demo/tools/evaluate.ts", "hold"] },
         },
@@ -89,7 +89,7 @@ describe("t532 falling-proof — an injected repo-root-relative argv is flagged"
       name: "demo",
       advisories: [
         {
-          code: "authoring-hold",
+          code: "demo-hold",
           checkpoints: ["requirements-analysis"],
           evaluator: { argv: ["bun", "tools/evaluate.ts", "hold"] },
         },

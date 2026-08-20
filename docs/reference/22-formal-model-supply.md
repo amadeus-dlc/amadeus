@@ -232,49 +232,6 @@ current identity and series. The typed verdict on stdout is authoritative — th
 exit code only mirrors it, and no caller may read hold or no-hold from the code
 alone.
 
-`advisory hold` is the wrapper the plugin registers as the `authoring-hold`
-advisory at the `requirements-analysis`, `functional-design`, and
-`build-and-test` checkpoints. A checkpoint knows no subjects, so the wrapper
-resolves them from `amadeus/spaces/<space>/specs/authoring-subjects.json`: the documents and stable
-ids a workspace places under formal-verification governance. A workspace that
-declares nothing governs nothing, which is a real no-hold rather than a
-suppressed one — but a declaration file that exists and cannot be read, or names
-an id its documents do not define, fails closed:
-
-```
-bun plugins/formal-model-check/tools/tla-authoring.ts advisory hold
-{"ok":true,"verdict":{"kind":"no-hold"},"reason":"no governed subjects are declared"}
-```
-
-`subjects declare` is the only writer of that declaration. It takes the
-documents and the stable ids to govern, resolves every id against the documents
-before it writes anything, and publishes through a staging file and a rename so
-a reader sees either the old declaration or the new one. An id the documents do
-not define is refused and nothing reaches disk:
-
-```sh
-bun plugins/formal-model-check/tools/tla-authoring.ts subjects declare \
-  --document amadeus/spaces/default/intents/<intent>/inception/requirements-analysis/requirements.md \
-  --kind requirements --id FR-1 --id FR-2
-```
-
-Repeat `--document` and `--kind` in pairs to govern several documents, and
-`--id` once per stable id. The declaration sits at the specs root rather than
-under `specs/tla/`, so editing it stays outside the `tla/**` activation watch
-glob and does not raise the sibling spec-hash advisory — the same placement the
-evidence store already has.
-
-The heading grammar the declaration resolves ids against accepts the forms this
-repository writes: `FR-1`, `NFR-1`, `AC-1`, `FR-CROSS-1`, `FR-1-1`, and the
-zero-padded `FR-001`. An id whose last segment is not numeric, such as `FR-NA`,
-stays outside the grammar and is never collected.
-
-The manifest declares `handoff: { "stage": "tla-authoring" }` for this advisory,
-so a run-now choice at the checkpoint opens the authoring stage rather than
-running a command the engine verifies. Opening the stage does not release the
-hold — only the evaluator returning no-hold does, which in practice means an
-authoring bundle or a persisted terminal-route receipt now covers the subjects.
-
 ## The evidence store
 
 `plugins/formal-model-check/tools/tla-evidence.ts` is a library, not a CLI — it

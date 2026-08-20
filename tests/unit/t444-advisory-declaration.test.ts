@@ -11,7 +11,7 @@ import {
 const DECLARATION = {
   advisories: [
     {
-      code: "authoring-hold",
+      code: "spec-change",
       checkpoints: ["requirements-analysis", "functional-design"],
       evaluator: { argv: ["bun", "plugins/formal-model-check/tools/tla-authoring.ts", "hold"] },
     },
@@ -23,7 +23,7 @@ describe("parseAdvisoryDeclarations", () => {
     const parsed = parseAdvisoryDeclarations(JSON.stringify(DECLARATION));
     expect(parsed.invalid).toEqual([]);
     expect(parsed.declarations).toHaveLength(1);
-    expect(String(parsed.declarations[0]?.code)).toBe("authoring-hold");
+    expect(String(parsed.declarations[0]?.code)).toBe("spec-change");
   });
 
   test("a manifest without advisories declares none, and that is not an error", () => {
@@ -41,7 +41,7 @@ describe("parseAdvisoryDeclarations", () => {
       JSON.stringify({ advisories: [{ ...DECLARATION.advisories[0], evaluator: { argv: "bun hold" } }] }),
     ],
     ["advisories that are not a list", JSON.stringify({ advisories: {} })],
-    ["an entry that is not an object", JSON.stringify({ advisories: ["authoring-hold"] })],
+    ["an entry that is not an object", JSON.stringify({ advisories: ["spec-change"] })],
   ])("reports %s as invalid rather than dropping it", (_label, text) => {
     const parsed = parseAdvisoryDeclarations(text);
     expect(parsed.declarations).toEqual([]);
@@ -84,7 +84,7 @@ describe("advisoryFromEvaluatorRun (BR-U2-20: stdout is the authority)", () => {
       status: 1,
       stdout: JSON.stringify({ ok: false, verdict: { kind: "hold", reasons: [{ kind: "stale-evidence" }] } }),
     });
-    expect(String(raised?.code)).toBe("authoring-hold");
+    expect(String(raised?.code)).toBe("spec-change");
     expect(raised?.plugin).toBe("formal-model-check");
     expect(raised?.stage).toBe("requirements-analysis");
     expect(raised?.message).toContain("stale-evidence");

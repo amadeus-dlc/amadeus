@@ -246,9 +246,11 @@ Q1・Q3・Q17 の裁定(2026-08-15、付録 A 指示 5〜7)で棄却した代替
 | プラグイン | stage ゲート(行 1〜2) | remote write・マージ(行 6・7) | advisory 実行/延期(行 17) | sensor(機械検証 — 下注) |
 |---|---|---|---|---|
 | github-pr-convergence | pr-convergence | **適用先**(規定は core §11c — 行 6 は本プラグイン固有ではない) | — | `pr-convergence-report-format`(**blocking**) |
-| formal-model-check | tla-authoring / formal-model-check | — | `spec-change`・`authoring-hold`(checkpoint: requirements-analysis / functional-design / build-and-test) | `model-completeness`(advisory) |
+| formal-model-check | tla-authoring / formal-model-check | — | `spec-change`(checkpoint: requirements-analysis / functional-design / build-and-test) | `model-completeness`(advisory) |
 | git-drift | — | — | — | `git-drift`(advisory。seam: code-generation / build-and-test) |
 | coverage-patch-quick | — | — | — | —(stages / seams / sensors すべて空。CLI のみ、常に exit 0) |
+
+退役注記: `authoring-hold` は 2026-08-20 の #3187 裁定で退役 — 発火経路は grid 一本。
 
 「advisory」の名を持つ 2 機構は別物であり、混同すると帰属を誤る:
 

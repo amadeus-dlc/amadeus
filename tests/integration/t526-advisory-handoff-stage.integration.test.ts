@@ -22,7 +22,7 @@ const REPO_ROOT = join(import.meta.dir, "..", "..");
 
 const HANDOFF_DECLARATION = [
   {
-    code: "authoring-hold",
+    code: "demo-hold",
     checkpoints: ["requirements-analysis"],
     evaluator: { argv: ["bun", "plugins/demo/tools/evaluate.ts", "hold"] },
     handoff: { stage: "tla-authoring" },
@@ -31,8 +31,8 @@ const HANDOFF_DECLARATION = [
 
 const DECLARED_ADVISORY: Advisory = {
   plugin: "demo",
-  code: "authoring-hold" as Advisory["code"],
-  message: "advisory: demo authoring-hold — no-applicability-receipt",
+  code: "demo-hold" as Advisory["code"],
+  message: "advisory: demo demo-hold — no-applicability-receipt",
   stage: "requirements-analysis",
   target: "amadeus/spaces/default/specs/tla",
   specIdentity: "sha256:hold-1",
@@ -94,7 +94,7 @@ describe("t526 declared advisory handoff stage", () => {
     expect(guarded.kind).toBe("hold");
     if (guarded.kind !== "hold") return;
     expect(guarded.advisories[0]?.handoff_stage).toBe("tla-authoring");
-    expect(declaredHandoffStage(projectDir, "demo", "authoring-hold")).toBe("tla-authoring");
+    expect(declaredHandoffStage(projectDir, "demo", "demo-hold")).toBe("tla-authoring");
   });
 
   test("run-now opens the handoff stage without releasing the hold", () => {
@@ -123,12 +123,13 @@ describe("t526 declared advisory handoff stage", () => {
     expect(guarded.advisories[0]?.handoff_stage).toBeUndefined();
   });
 
-  test("the shipped manifest hands the authoring hold to the tla-authoring stage", () => {
+  test("the shipped manifest hands the spec-change advisory to the formal-model-check stage", () => {
     const manifest = JSON.parse(
       readFileSync(join(REPO_ROOT, "plugins", "formal-model-check", "plugin.json"), "utf8"),
     ) as { advisories: ReadonlyArray<Record<string, unknown>> };
-    const declared = manifest.advisories.find((advisory) => advisory.code === "authoring-hold");
-    expect(declared?.handoff).toEqual({ stage: "tla-authoring" });
+    expect(manifest.advisories.map((advisory) => advisory.code)).toEqual(["spec-change"]);
+    const declared = manifest.advisories.find((advisory) => advisory.code === "spec-change");
+    expect(declared?.handoff).toEqual({ stage: "formal-model-check" });
     expect(declared).not.toHaveProperty("formalCheck");
   });
 });
