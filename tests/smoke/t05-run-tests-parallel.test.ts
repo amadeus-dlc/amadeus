@@ -82,6 +82,9 @@ import { basename, dirname, join } from "node:path";
 import { REPO_ROOT } from "../harness/fixtures.ts";
 import {
   type CoverageSourcePathContext,
+  excludeForeignLcovRecords,
+  formatForeignCoverageExclusionWarning,
+  isCoverageSourceInsideRepo,
   normalizeCoverageSourcePath,
 } from "../lib/coverage-source-path.ts";
 import { normalizeCoverageReport } from "../lib/coverage-normalize.ts";
@@ -317,6 +320,60 @@ describe("coverage source path normalization", () => {
       "amadeus-lib.ts",
     );
     expect(normalizeCoverageSourcePath(source, coveragePathContext)).toBe(source);
+  });
+
+  test("mapped packaged sources land inside the repo; unmapped temp hosts do not", () => {
+    const mapped = join(
+      tmpdir(),
+      "amadeus-pkg-codex-AbC123",
+      ".codex",
+      "tools",
+      "amadeus-lib.ts",
+    );
+    const canonical = normalizeCoverageSourcePath(mapped, coveragePathContext);
+    expect(canonical).toBe(CANONICAL_LIB);
+    expect(isCoverageSourceInsideRepo(canonical, coveragePathContext)).toBe(true);
+
+    const foreign = join(tmpdir(), "composed-host", "tools", "amadeus-lib.ts");
+    expect(normalizeCoverageSourcePath(foreign, coveragePathContext)).toBe(foreign);
+    expect(isCoverageSourceInsideRepo(foreign, coveragePathContext)).toBe(false);
+  });
+
+  test("excludes an unmapped temp-host SF from merged totals and names it in the warning", () => {
+    const mapped = join(
+      tmpdir(),
+      "amadeus-pkg-codex-AbC123",
+      ".codex",
+      "tools",
+      "amadeus-lib.ts",
+    );
+    const canonical = normalizeCoverageSourcePath(mapped, coveragePathContext);
+    const foreign = join(tmpdir(), "composed-host", "tools", "amadeus-lib.ts");
+    const mixed = [
+      "TN:",
+      `SF:${canonical}`,
+      "DA:1,1",
+      "LF:10",
+      "LH:8",
+      "end_of_record",
+      "TN:",
+      `SF:${foreign}`,
+      "DA:1,1",
+      "LF:1000",
+      "LH:50",
+      "end_of_record",
+    ].join("\n");
+
+    const { lcov, excluded } = excludeForeignLcovRecords(mixed, coveragePathContext);
+    expect(excluded).toEqual([foreign]);
+    expect(lcov).toContain(`SF:${canonical}`);
+    expect(lcov).not.toContain(foreign);
+    expect(lcov).toContain("LF:10");
+    expect(lcov).not.toContain("LF:1000");
+
+    const warning = formatForeignCoverageExclusionWarning(excluded);
+    expect(warning).toContain("WARNING: excluded 1 out-of-repo coverage source");
+    expect(warning).toContain(foreign);
   });
 });
 

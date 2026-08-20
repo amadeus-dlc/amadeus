@@ -70,3 +70,49 @@ export function normalizeCoverageSourcePath(
   }
   return normalizedPath;
 }
+
+export function isCoverageSourceInsideRepo(
+  path: string,
+  context: CoverageSourcePathContext,
+): boolean {
+  return pathUnderRoot(path.replace(/\\/g, "/"), context.repoRoot, context.repoRoot) !== null;
+}
+
+// Drop SF records that remain outside the repo after normalizeCoverageSourcePath.
+// Callers must normalize first so known mappings (amadeus-pkg-*, dist/<harness>
+// prefixes) rewrite to in-repo paths and survive. Unmapped temp hosts then
+// stay absolute-outside and are excluded with a loud warning (#2315).
+export function excludeForeignLcovRecords(
+  lcov: string,
+  context: CoverageSourcePathContext,
+): { lcov: string; excluded: string[] } {
+  const excluded: string[] = [];
+  const kept: string[] = [];
+  const trimmed = lcov.replace(/\r\n/g, "\n").trim();
+  if (trimmed.length === 0) return { lcov: "", excluded };
+
+  for (const raw of trimmed.split(/\nend_of_record\b/)) {
+    const record = raw.trim();
+    if (record.length === 0) continue;
+    const sfLine = record.split("\n").find((line) => line.startsWith("SF:"));
+    if (sfLine === undefined) {
+      kept.push(record);
+      continue;
+    }
+    const source = sfLine.slice(3);
+    if (isCoverageSourceInsideRepo(source, context)) {
+      kept.push(record);
+    } else {
+      excluded.push(source);
+    }
+  }
+
+  if (kept.length === 0) return { lcov: "", excluded };
+  return { lcov: `${kept.join("\nend_of_record\n")}\nend_of_record`, excluded };
+}
+
+export function formatForeignCoverageExclusionWarning(excluded: readonly string[]): string | null {
+  if (excluded.length === 0) return null;
+  const listed = excluded.map((path) => `  ${path}`).join("\n");
+  return `WARNING: excluded ${excluded.length} out-of-repo coverage source(s) from project totals (outside repo root and not a known mapping):\n${listed}\n`;
+}

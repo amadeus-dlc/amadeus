@@ -23,7 +23,11 @@ import { availableParallelism, homedir, tmpdir } from "node:os";
 import { basename, delimiter, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildMeta, renderMeta, type MetaCounts } from "./lib/bun-junit-to-meta.ts";
-import { type CoverageSourcePathContext } from "./lib/coverage-source-path.ts";
+import {
+  type CoverageSourcePathContext,
+  excludeForeignLcovRecords,
+  formatForeignCoverageExclusionWarning,
+} from "./lib/coverage-source-path.ts";
 import { normalizeCoverageReport as normalizeCoverageReportImpl } from "./lib/coverage-normalize.ts";
 import {
   DEFAULT_TEST_TIMEOUT_MS,
@@ -519,6 +523,8 @@ interface CoverageTotals {
 // Parse the normalized LCOV string into per-source rows (SF/LF/LH) and sum the
 // hit/line totals across every source. Single parse, shared by the HTML report
 // and the coverage-totals.json emit so the two can never disagree.
+// combineCoverageReports must run excludeForeignLcovRecords first so out-of-repo
+// SF records cannot inflate the project universe (#2315).
 function collectCoverageTotals(lcov: string): CoverageTotals {
   const rows: CoverageRow[] = [];
   let current: CoverageRow | null = null;
@@ -615,8 +621,12 @@ function combineCoverageReports(): void {
     return;
   }
   const normalized = `${normalizeCoverageReport(chunks.join("\n").trim())}\n`;
-  writeFileSync(combined, normalized, "utf8");
-  const totals = collectCoverageTotals(normalized);
+  const { lcov, excluded } = excludeForeignLcovRecords(normalized, COVERAGE_SOURCE_PATH_CONTEXT);
+  const warning = formatForeignCoverageExclusionWarning(excluded);
+  if (warning !== null) process.stderr.write(warning);
+  const combinedLcov = lcov.endsWith("\n") ? lcov : `${lcov}\n`;
+  writeFileSync(combined, combinedLcov, "utf8");
+  const totals = collectCoverageTotals(combinedLcov);
   writeCoverageHtml(totals);
   writeCoverageTotalsJson(totals);
   process.stdout.write(`Coverage report: ${displayLogDirPath(combined)}\n`);
