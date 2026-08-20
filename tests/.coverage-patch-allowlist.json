@@ -5341,5 +5341,17 @@
     },
     "reason": "The real tmux() chokepoint spawns the tmux binary, which CI runners do not have; the backend logic is covered through the injected TmuxRunner seam and the tmuxClientEnv() routing is pinned at source level by t-tui-drive-socket-isolation.",
     "expiry": "remove when a tmux binary is available in CI and a live client test covers the chokepoint"
+  },
+  {
+    "file": "tests/lib/silent-success.ts",
+    "selector": {
+      "function": "listProc",
+      "fingerprint": "sha256:ec361686197437bbcfea71601efc5fb6d9079f0239a53f825a05b30fa1bfda63",
+      "anchorLines": 1,
+      "targetLines": "1",
+      "class": "catch-arm"
+    },
+    "reason": "The /proc readdir catch arm is reachable only where /proc is absent (macOS/win32); the Linux coverage runner always has /proc, and the darwin in-process test proves the arm returns [] there.",
+    "expiry": "remove if the coverage job ever runs on a platform without /proc"
   }
 ]
