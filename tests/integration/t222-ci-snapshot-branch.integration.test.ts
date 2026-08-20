@@ -216,15 +216,19 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(headJob).toContain("bun tests/coverage-patch-gate.ts --check");
     expect(headJob).toContain("bun run coverage:ci -- -P 4");
     expect(headJob).toContain("fetch-depth: 0");
-    expect(headJob).toContain("- name: Fetch pull request base");
-    expect(headJob).toContain(`BASE_REF: \${{ github.event.pull_request.base.ref }}`);
+    expect(headJob).toContain("- name: Fetch merge-group base");
+    expect(headJob).toContain(
+      `BASE_REF: \${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref || github.event.merge_group.base_ref }}`,
+    );
     expect(headJob).toContain(
       `git fetch --no-tags origin "+refs/heads/\${BASE_REF}:refs/remotes/origin/\${BASE_REF}"`,
     );
-    expect(headJob.indexOf("- name: Fetch pull request base")).toBeLessThan(
+    expect(headJob.indexOf("- name: Fetch merge-group base")).toBeLessThan(
       headJob.indexOf("- name: Patch coverage gate"),
     );
-    expect(headJob).toContain(`AMADEUS_PATCH_BASE_REF: origin/\${{ github.event.pull_request.base.ref }}`);
+    expect(headJob).toContain(
+      `AMADEUS_PATCH_BASE_REF: \${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.merge_group.base_sha }}`,
+    );
     // absolute + relative gate: versioned floor plus live merge-base measurement
     // through the project-gate baseline seam, verdict-independent base run,
     // cache keyed by merge-base sha, artifacts verified before comparison
@@ -236,11 +240,31 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(headJob).toContain("needs.changes.outputs.coverage == 'true'");
     expect(baseJob).toContain("needs.changes.outputs.coverage == 'true'");
     expect(coverageJob).toContain("needs.changes.outputs.coverage == 'true'");
+    expect(headJob).toContain("github.event_name == 'merge_group'");
+    expect(baseJob).toContain("github.event.merge_group.base_sha");
+    expect(baseJob).toContain("github.event_name == 'merge_group'");
+    expect(coverageJob).toContain("github.event_name == 'merge_group'");
     // codecov is fully removed — no upload step, no waiting job (#1017 migration)
     expect(yaml).not.toContain("codecov");
     expect(yaml).not.toContain("Codecov");
     expect(snapshotJob).toContain("- changes\n      - coverage");
     expect(snapshotJob).toContain("needs.changes.outputs.coverage == 'true'");
+  });
+
+  test("merge-group revalidation uses the queue base and remains blocking", () => {
+    const yaml = readFileSync(join(import.meta.dir, "../../.github/workflows/ci.yml"), "utf8");
+    const coverageBase = yaml.split("  coverage-base:")[1]?.split("\n  coverage:")[0] ?? "";
+    const coverage = yaml.split("\n  coverage:\n")[1]?.split("\n  metrics-snapshot:")[0] ?? "";
+    const ciSuccess = yaml.split("  ci-success:")[1] ?? "";
+
+    expect(yaml).toContain("merge_group:");
+    expect(yaml).toContain("queue's `merge_group`\n# run is the authoritative pre-merge revalidation");
+    expect(coverageBase).toContain("github.event.merge_group.base_sha");
+    expect(coverageBase).toContain('git merge-base "${BASE_SHA}" HEAD');
+    expect(coverageBase).toContain("bun run coverage:ci -- -P 4");
+    expect(coverage).toContain("github.event_name == 'merge_group'");
+    expect(ciSuccess).toContain("- coverage");
+    expect(ciSuccess).toContain(`require_result "coverage" "\${{ needs.coverage.result }}"`);
   });
 
   test("CI Success passes skipped work but fails closed on detection or required job failures", () => {
