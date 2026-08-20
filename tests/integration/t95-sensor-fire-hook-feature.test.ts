@@ -459,6 +459,39 @@ describe("t95 sensor-fire hook — resolved artifact selection", () => {
     expect(spawnArgvs(proj)).toEqual([]);
   });
 
+  // #2029 — supervisor-mandated check: requirements-analysis-questions.md is a
+  // marker artifact (isMarkerArtifact: "*-questions" suffix). Confirm it is
+  // reachable by the new undefined-term (category: governance) sensor through
+  // the exact-path invocation-scope filter (PR #1758 / sensorAllowsInvocationOutput),
+  // using the REAL requirements-analysis stage's declared produces
+  // (requirements + requirements-analysis-questions — both required, neither
+  // optional) resolved to real paths, not an artificially narrowed scope.
+  test("undefined-term sensor is reachable for requirements-analysis-questions.md through the invocation-scope filter", () => {
+    const proj = makeProjectActive("requirements-analysis");
+    const requirements = join(
+      seededRecordDir(proj),
+      "inception",
+      "requirements-analysis",
+      "requirements.md",
+    );
+    const questions = join(
+      seededRecordDir(proj),
+      "inception",
+      "requirements-analysis",
+      "requirements-analysis-questions.md",
+    );
+
+    expect(
+      runHook(proj, questions, { produces: [requirements, questions] }).status,
+    ).toBe(0);
+    const fired = spawnArgvs(proj).map((argv) => argv[3]).sort();
+    // Cross-check against the REAL compiled graph's own derivation, so a
+    // future glob/category change on any sensor is caught here too, not just
+    // the membership of this one id.
+    expect(fired).toEqual(sensorsFiringFor(questions));
+    expect(fired).toContain("undefined-term");
+  });
+
   test("reverse-engineering declared codekb output fires document sensors", () => {
     const proj = makeProjectActive("reverse-engineering");
     const output = join(

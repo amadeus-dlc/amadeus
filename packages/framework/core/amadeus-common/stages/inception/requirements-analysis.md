@@ -38,6 +38,7 @@ sensors:
   - answer-evidence
   - question-budget
   - depth-budget
+  - undefined-term
 scopes:
   - enterprise
   - feature

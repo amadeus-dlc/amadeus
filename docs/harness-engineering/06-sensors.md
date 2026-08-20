@@ -64,6 +64,7 @@ These manifests ship under `.claude/sensors/`, each prefixed `amadeus-`:
 | `amadeus-upstream-coverage.md` | record-dir markdown output | The prose references each upstream artifact the stage declares it consumes |
 | `amadeus-answer-evidence.md` | a stage's `*-questions.md` | A filled `[Answer]` carries a ruling reference (E-code) or a leader-approval timestamp |
 | `amadeus-depth-budget.md` | Requirements Analysis's `requirements.md` | Bytes per numbered `FR-n` against the ceiling for the workflow's resolved depth — advisory guidance, not a contract |
+| `amadeus-undefined-term.md` | Requirements Analysis's `requirements.md` and `requirements-analysis-questions.md` | A coined multi-word term used in a question heading or option that resolves against no known glossary or local definition — advisory |
 | `amadeus-linter.md` | `.ts` / `.js` code output | Wraps your configured linter (ESLint by default) |
 | `amadeus-type-check.md` | `.ts` / `.tsx` code output | Wraps your configured type-checker (`tsc` by default) |
 | `amadeus-event-registry-drift.md` | the Event Registry and the audit tool | Divergence or cardinality drift across the audit event vocabulary, the state-machine/hooks reference set, and the canonical Event Registry set |

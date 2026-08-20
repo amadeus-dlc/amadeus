@@ -149,6 +149,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "integration/t-sensor-fire-hardening.test.ts",
     "integration/t435-intent-autonomy-production.integration.test.ts",
     "integration/t-transition-guard-audit.test.ts",
+    "integration/t-undefined-term-sensor.test.ts",
     "integration/t102.test.ts",
     "integration/t104.test.ts",
     "integration/t105.test.ts",

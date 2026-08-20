@@ -108,6 +108,7 @@ const EXPECTED_IDS = [
   "scope-sizing",
   "self-scope-consistency",
   "type-check",
+  "undefined-term",
   "upstream-coverage",
 ];
 

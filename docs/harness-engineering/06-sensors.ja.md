@@ -31,6 +31,7 @@
 | `amadeus-upstream-coverage.md` | レコードディレクトリの markdown 出力 | 散文が、ステージが消費すると宣言する各上流成果物を参照していること |
 | `amadeus-answer-evidence.md` | ステージの `*-questions.md` | 記入済みの `[Answer]` が裁定参照(E-code)またはリーダー承認タイムスタンプを持つこと |
 | `amadeus-depth-budget.md` | Requirements Analysis の `requirements.md` | 番号付き `FR-n` 1件あたりのバイト数を、ワークフローの解決済み深度に対する上限と照合する — 契約ではなく advisory なガイダンス |
+| `amadeus-undefined-term.md` | Requirements Analysis の `requirements.md` と `requirements-analysis-questions.md` | 質問の見出しや選択肢で使われた複数語の造語が、既知の用語集にも成果物内の定義にも解決しないことを検出する — advisory |
 | `amadeus-linter.md` | `.ts` / `.js` コード出力 | 設定されたリンター(デフォルトは ESLint)をラップする |
 | `amadeus-type-check.md` | `.ts` / `.tsx` コード出力 | 設定された型チェッカー(デフォルトは `tsc`)をラップする |
 | `amadeus-event-registry-drift.md` | Event Registry と監査ツール | 監査イベント語彙、state-machine/hooks の参照集合、正典 Event Registry 集合の間の乖離および濃度ドリフト |

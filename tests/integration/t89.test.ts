@@ -371,6 +371,7 @@ describe("t89 sensors_applicable resolution (in-process compileStageGraph)", () 
       "scope-sizing",
       "self-scope-consistency",
       "type-check",
+      "undefined-term",
       "upstream-coverage",
     ]);
     const fakeStage = { slug: "x", sensors: ["type-check", "linter"] } as unknown as GraphStage;
