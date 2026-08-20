@@ -124,6 +124,25 @@ function parseH2Headings(body: string): string[] {
 	return headings;
 }
 
+function applyRequiredSectionsContract(
+	result: Result,
+	requiredSections: string[] | undefined,
+	stem: string,
+	headings: string[],
+): { pass: boolean; findingsCount: number } {
+	if (requiredSections !== undefined && !isMarkerArtifact(stem)) {
+		const expected = requiredSections.map(
+			(section) => `## ${section.trim().replace(/^##\s+/, "")}`,
+		);
+		const present = new Set(headings);
+		const missing = expected.filter((heading) => !present.has(heading));
+		result.required_sections = expected;
+		result.required_missing = missing;
+		return { pass: missing.length === 0, findingsCount: missing.length };
+	}
+	return { pass: true, findingsCount: 0 };
+}
+
 // Resolve the template file for an artifact stem in §10 override-before-default
 // order: team dir first, then the framework-default dir; the FIRST existing
 // `<stem>.md` wins. Returns its absolute path, or null when neither tier has one
@@ -280,19 +299,14 @@ export function main(argv: string[] = process.argv.slice(2)): void {
 	// the generic floor, it names the exact H2 sections the stage requires.
 	// Marker artifacts remain entirely exempt from this contract, matching the
 	// dispatcher's no-evaluation path and the existing marker floor exemption.
-	if (flags.requiredSections !== undefined && !isMarkerArtifact(stem)) {
-		const expected = flags.requiredSections.map(
-			(section) => `## ${section.trim().replace(/^##\s+/, "")}`,
-		);
-		const present = new Set(headings);
-		const missing = expected.filter((heading) => !present.has(heading));
-		result.required_sections = expected;
-		result.required_missing = missing;
-		if (missing.length > 0) {
-			pass = false;
-			findings_count += missing.length;
-		}
-	}
+	const required = applyRequiredSectionsContract(
+		result,
+		flags.requiredSections,
+		stem,
+		headings,
+	);
+	pass = pass && required.pass;
+	findings_count += required.findingsCount;
 
 	// Filename-gated extension (units-generation 2.7): unit-of-work-dependency.md
 	// must carry the required fenced ```yaml units: edge block beside its prose.
