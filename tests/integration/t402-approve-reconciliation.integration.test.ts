@@ -31,7 +31,6 @@ import {
   GUARD_EXIT_MARKER,
   GUARD_OBSERVED_MARKER,
   GUARD_WEIGHT_MARKER,
-  PLAN_CORRECTION_EXIT,
   PLAN_DRIFT_WEIGHT,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
 
@@ -364,7 +363,8 @@ describe("t402 approve-time reconciliation (FR-2)", () => {
     expect(message).toContain(GUARD_WEIGHT_MARKER);
     expect(message).toContain(GUARD_EXIT_MARKER);
     expect(message).toContain(PLAN_DRIFT_WEIGHT);
-    expect(message).toContain(PLAN_CORRECTION_EXIT);
+    expect(message).toContain("run the declared batch as a fan-out under the current plan");
+    expect(message).not.toContain("take it to a ruling first");
     expect(message).toContain("batch 1 (2 units: alpha, beta)");
     expect(message).toContain("batch 3 (2 units: delta, epsilon)");
     // The width-1 batch is serial by plan and must not be named as owed.

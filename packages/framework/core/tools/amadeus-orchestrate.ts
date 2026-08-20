@@ -5879,9 +5879,15 @@ function listedGroups(groups: readonly ReadonlySet<string>[]): string {
   return groups.map((group) => `[${listedUnitNames(group)}]`).join("; ");
 }
 
+// Approve-time reconciliation has no ruling/delegate consumer. Keep this exit
+// limited to the two paths that can actually clear the guard: record fan-out
+// evidence under the current plan, or correct the plan to serial and recompile.
+const APPROVE_PLAN_CORRECTION_EXIT =
+  "Correct the plan, not the run: record the dependency that makes these units serial (with its reason) in unit-of-work-dependency.md, re-run `bun <harness>/tools/amadeus-runtime.ts compile`, then re-run `next`. Otherwise, run the declared batch as a fan-out under the current plan so its SWARM evidence can be reconciled at approve time.";
+
 // The VALUES the approve refusal carries — the prose template stays
-// guardMessage's, and the weight and exit are the same two constants the
-// issuance guard cites, so the three ports cannot drift into three dialects.
+// guardMessage's, and the weight remains the measured basis shared with the
+// issuance guard while this approve-only exit names only executable paths.
 //
 // Every name here is read off the verdict and the evidence that produced it;
 // nothing is re-counted at this call site
@@ -5902,7 +5908,7 @@ function swarmEvidenceRejection(batches: readonly DeclaredBatch[], evidence: Swa
     ? " Some SWARM rows carry a different plan generation (or none at all), so they are evidence for a plan this run replaced — re-run the fan-out under the current plan to regenerate them."
     : "";
   const observation = `${declared}, but ${trail}, so these units were built one at a time while the plan said they run in parallel.${staleNote}`;
-  return guardMessage({ observation, weight: PLAN_DRIFT_WEIGHT, exit: PLAN_CORRECTION_EXIT });
+  return guardMessage({ observation, weight: PLAN_DRIFT_WEIGHT, exit: APPROVE_PLAN_CORRECTION_EXIT });
 }
 
 // Per-unit coverage gate (issue #368), DETERMINISTIC enforcement on the approve
