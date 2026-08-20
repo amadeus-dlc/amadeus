@@ -34,6 +34,7 @@ import type { GraphStage } from "./amadeus-graph.ts";
 import {
   activeIntent,
   activeSpace,
+  probeStateResyncToStageGraph,
   resolveProjectDirFromHook,
   resyncStateToStageGraph,
   type StageEntry,
@@ -250,6 +251,8 @@ export type PluginCliDeps = {
   // an empty list, so callers can tell "nothing to resync" from "could not
   // resync at all".
   resyncIntentStates?: (hostRoot: string) => StateResyncRun;
+  // Read-only resync completeness probe for compose --if-stale (#1976).
+  resyncComplete?: (hostRoot: string) => boolean;
   out: (line: string) => void;
   err: (line: string) => void;
 };
@@ -503,6 +506,21 @@ function resyncIntentStates(hostRoot: string): StateResyncRun {
   };
 }
 
+function resyncIsComplete(hostRoot: string): boolean {
+  const read = hostStageGraph(hostRoot);
+  if (read.kind === "invalid") return false;
+  const projectDir = projectDirOfHostRoot(hostRoot);
+  const space = activeSpace(projectDir);
+  const intent = activeIntent(projectDir, space);
+  if (intent === null) return true;
+  const outcomes = probeStateResyncToStageGraph(projectDir, {
+    graph: read.kind === "graph" ? read.graph : undefined,
+    space,
+    intent,
+  });
+  return outcomes.length === 1 && outcomes[0].complete;
+}
+
 export function defaultPluginCliDeps(): PluginCliDeps {
   return {
     discoverPlugins: (root) => discoverPlugins(root),
@@ -525,6 +543,7 @@ export function defaultPluginCliDeps(): PluginCliDeps {
     listPluginSourceDirs,
     writeProjectPlugins,
     resyncIntentStates,
+    resyncComplete: resyncIsComplete,
     out: (l) => console.log(l),
     err: (l) => console.error(l),
   };
@@ -784,7 +803,7 @@ export function isRecordCurrent(
     if (!hostProjectionCurrent(backend, recorded)) return false;
     if (!(deps.derivedProjectionCurrent?.(hostRoot, recorded) ?? true)) return false;
   }
-  return true;
+  return deps.resyncComplete?.(hostRoot) ?? true;
 }
 
 function hostProjectionCurrent(backend: WorkspaceBackend, record: PluginRecord): boolean {

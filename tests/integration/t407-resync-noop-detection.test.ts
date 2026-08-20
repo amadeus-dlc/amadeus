@@ -23,7 +23,7 @@ import { spawnSync } from "node:child_process";
 import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { resyncStateToStageGraph } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { probeStateResyncToStageGraph, resyncStateToStageGraph } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   defaultPluginCliDeps,
   handlePluginCli,
@@ -209,5 +209,63 @@ describe("t407 compose rendering: a failed re-sync is loud, not swallowed", () =
     expect(code).toBe(1);
     expect(errs.join("\n")).toContain("state re-sync failed for default/demo-0badcafe");
     rmSync(host, { recursive: true, force: true });
+  });
+
+  test("compose --if-stale retries when the active intent's resync is incomplete (#1976)", () => {
+    const proj = bornProject();
+    dropRow(proj, "user-stories");
+    dropHeaderComment(proj);
+    const probe = probeStateResyncToStageGraph(proj);
+    expect(probe).toHaveLength(1);
+    expect(probe[0]).toMatchObject({ complete: false, reason: "section-unrecognized" });
+
+    const host = join(proj, ".claude");
+    let recompiled = 0;
+    let resynced = 0;
+    const deps = defaultPluginCliDeps();
+    const code = handlePluginCli(["compose", "--if-stale", "--project-root", host], {
+      ...deps,
+      discoverPlugins: () => [],
+      recompile: () => {
+        recompiled += 1;
+        return true;
+      },
+      generateRunners: () => true,
+      resyncIntentStates: () => {
+        resynced += 1;
+        return { kind: "ran" as const, outcomes: [] };
+      },
+      out: () => {},
+      err: () => {},
+    });
+    expect(code).toBe(0);
+    expect(recompiled).toBe(1);
+    expect(resynced).toBe(1);
+  });
+
+  test("compose --if-stale remains a no-op when digest and resync are current (#1976)", () => {
+    const proj = bornProject();
+    const host = join(proj, ".claude");
+    let recompiled = 0;
+    let resynced = 0;
+    const deps = defaultPluginCliDeps();
+    const code = handlePluginCli(["compose", "--if-stale", "--project-root", host], {
+      ...deps,
+      discoverPlugins: () => [],
+      recompile: () => {
+        recompiled += 1;
+        return true;
+      },
+      generateRunners: () => true,
+      resyncIntentStates: () => {
+        resynced += 1;
+        return { kind: "ran" as const, outcomes: [] };
+      },
+      out: () => {},
+      err: () => {},
+    });
+    expect(code).toBe(0);
+    expect(recompiled).toBe(0);
+    expect(resynced).toBe(0);
   });
 });

@@ -6232,6 +6232,73 @@ export interface StateResyncOutcome {
   inserted: string[];
 }
 
+export interface StateResyncProbeOutcome {
+  space: string;
+  intent: string;
+  complete: boolean;
+  reason: StateResyncStatus;
+}
+
+function probeOneIntent(
+  projectDir: string,
+  space: string,
+  intent: string,
+  graph: StageEntry[],
+): StateResyncProbeOutcome {
+  const incomplete = (reason: StateResyncStatus): StateResyncProbeOutcome => ({
+    space,
+    intent,
+    complete: false,
+    reason,
+  });
+  const complete = (reason: StateResyncStatus): StateResyncProbeOutcome => ({
+    space,
+    intent,
+    complete: true,
+    reason,
+  });
+  let content: string;
+  try {
+    content = readStateFile(projectDir, intent, space);
+  } catch {
+    return incomplete("unreadable");
+  }
+  // Terminal records are intentionally excluded from resync. They are complete
+  // records, not live plans that need to follow the current stage graph.
+  if ((getField(content, "Status") || "") !== "Running") return complete("not-running");
+  const scope = getField(content, "Scope");
+  const scopeDef = scope ? loadScopeMapping()[scope] : undefined;
+  if (!scopeDef) return incomplete("unreadable");
+
+  const section = stageProgressSectionOf(content);
+  if (section === null) return incomplete("section-unrecognized");
+  const rows = parseCheckboxes(section);
+  const graphSlugs = new Set(graph.map((stage) => stage.slug));
+  if (rows.some((row) => !graphSlugs.has(row.slug))) return incomplete("foreign-rows");
+  const rowSlugs = new Set(rows.map((row) => row.slug));
+  return graph.every((stage) => rowSlugs.has(stage.slug)) ? complete("current") : incomplete("resynced");
+}
+
+// Read-only counterpart to resyncStateToStageGraph. A missing row is reported
+// as incomplete even when the composition digest is current, so --if-stale can
+// retry the writer after a prior resync failure.
+export function probeStateResyncToStageGraph(
+  projectDir: string,
+  opts?: { graph?: StageEntry[]; space?: string; intent?: string },
+): StateResyncProbeOutcome[] {
+  const graph = opts?.graph ?? loadStageGraph();
+  const spaces = opts?.space ? [opts.space] : listSpaces(projectDir).map((space) => space.name);
+  const outcomes: StateResyncProbeOutcome[] = [];
+  for (const space of spaces) {
+    const intents = listIntents(projectDir, space)
+      .map((info) => info.dirName)
+      .filter((dirName): dirName is string => dirName !== null)
+      .filter((dirName) => opts?.intent === undefined || dirName === opts.intent);
+    for (const intent of intents) outcomes.push(probeOneIntent(projectDir, space, intent, graph));
+  }
+  return outcomes;
+}
+
 function resyncOneIntent(
   projectDir: string,
   space: string,
