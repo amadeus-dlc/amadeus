@@ -494,4 +494,29 @@ describe("createMirrorLabelGateway", () => {
     const outcome = await gateway.isPullRequest(REPO, 684);
     expect(outcome).toEqual({ kind: "ok", value: false });
   });
+
+  test("isPullRequest fails, classified on the final status, when a 1xx hop precedes a genuinely bad final status", async () => {
+    // parseHttpEnvelopeFinalStatus's http-error branch: the FINAL status
+    // itself is bad (not just an intermediate 1xx/3xx hop). Mirrors the
+    // label path's own "1xx line ahead of a genuinely bad final status"
+    // case above.
+    const { runner } = fakeRunner([
+      {
+        kind: "exited",
+        exitCode: 1,
+        stdout: Buffer.from(
+          "HTTP/1.1 100 Continue\r\n\r\n" +
+            "HTTP/2.0 404 Not Found\r\nContent-Type: application/json\r\n\r\n{}\n",
+        ),
+        stderrTail: "",
+      },
+    ]);
+    const gateway = createMirrorLabelGateway(runner);
+    const outcome = await gateway.isPullRequest(REPO, 684);
+    expect(outcome.kind).toBe("failure");
+    if (outcome.kind === "failure") {
+      expect(outcome.classification).toBe("api");
+      expect(outcome.retryable).toBe(false);
+    }
+  });
 });
