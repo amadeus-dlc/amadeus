@@ -7,6 +7,7 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { currentGitSha } from "../harness/git-sha.ts";
 import { scaleTestTime } from "../lib/test-time-factor.ts";
+import { auditShardName } from "../../packages/framework/core/tools/amadeus-lib.ts";
 
 const ROOT = join(import.meta.dir, "../..");
 const UTILITY = join(ROOT, "packages/framework/core/tools/amadeus-utility.ts");
@@ -56,7 +57,11 @@ ${parked ? "- **Parked**: 2026-07-23T10:00:00Z\n- **Parked At Stage**: requireme
   }], null, 2)}\n`);
   const cursor = join(intents, "active-intent");
   writeFileSync(cursor, `${intent}\n`);
-  const audit = join(auditDir, "fixture.jsonl");
+  // Lifecycle recovery correlates the HUMAN_TURN and its transition event by
+  // the canonical per-clone shard name. Keep the fixture on that same shard;
+  // a generic fixture.jsonl would exercise the stale pre-migration layout and
+  // make the archive delegate fail with an unexpected-shard diagnostic.
+  const audit = join(auditDir, auditShardName(root));
   const rec = (seq: number, timestamp: string, heading: string, event: string) =>
     `${JSON.stringify({
       schemaVersion: 1,
