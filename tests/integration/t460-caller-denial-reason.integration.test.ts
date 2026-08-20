@@ -1,4 +1,5 @@
-// covers: function:authorizeMainConductor, function:callerAuthorizationError
+// covers: function:authorizeMainConductor, function:callerAuthorizationError,
+//         function:detectHarnessTypeForAuthorization
 // size: medium
 //
 // t460 — the Kimi caller-authorization denial REASON contract (FR-1) and the
@@ -12,9 +13,12 @@
 //
 // Mechanism: in-process import of the guard with real carrier fixtures under
 // the OS temp dir (cid:code-generation:fs-tests-integration-first — the guard
-// reads the real filesystem, so this belongs in the integration layer). The
-// harness type is forced through AMADEUS_HARNESS_TYPE, exactly as the RE
-// reproduction did, because the guard is inert on every non-Kimi harness.
+// reads the real filesystem, so this belongs in the integration layer). Each
+// fixture root carries a REAL `.kimi-code/` marker rather than an
+// AMADEUS_HARNESS_TYPE override: since #2326 the guard answers the harness
+// question from process evidence, and a fixture that could only reach the Kimi
+// branch through the environment would be testing a route that no longer
+// exists. The final describe pins that closure from both directions.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -29,15 +33,20 @@ import {
   KIMI_SESSION_ENDED_DENY_RELATIVE_PATH,
   KIMI_SUBAGENT_DENY_RELATIVE_PATH,
 } from "../../packages/framework/core/tools/amadeus-caller-authorization.ts";
+import { detectHarnessTypeForAuthorization } from "../../packages/framework/core/tools/amadeus-harness.ts";
 
 const MAIN_SESSION = "main-session";
 
 const roots: string[] = [];
 let previousHarnessType: string | undefined;
 
+// The baseline is env-NEUTRAL: every assertion below must hold on the harness
+// evidence alone. beforeEach clears the override rather than setting it so an
+// AMADEUS_HARNESS_TYPE inherited from the surrounding session cannot colour a
+// single case.
 beforeEach(() => {
   previousHarnessType = process.env.AMADEUS_HARNESS_TYPE;
-  process.env.AMADEUS_HARNESS_TYPE = "kimi";
+  delete process.env.AMADEUS_HARNESS_TYPE;
 });
 
 afterEach(() => {
@@ -51,11 +60,38 @@ afterEach(() => {
   }
 });
 
-function carrierRoot(): string {
+function tempRoot(): string {
   const root = mkdtempSync(join(tmpdir(), "amadeus-carrier-"));
   roots.push(root);
   mkdirSync(join(root, "amadeus", ".amadeus-sessions"), { recursive: true });
   return root;
+}
+
+/** A workspace whose REAL evidence is Kimi: the shipped `.kimi-code/tools/`. */
+function carrierRoot(): string {
+  const root = tempRoot();
+  mkdirSync(join(root, ".kimi-code", "tools"), { recursive: true });
+  return root;
+}
+
+/** The same workspace shape on a harness the guard is inert for. */
+function nonKimiRoot(): string {
+  const root = tempRoot();
+  mkdirSync(join(root, ".claude", "tools"), { recursive: true });
+  return root;
+}
+
+/** Run `action` with AMADEUS_HARNESS_TYPE forced to `value` (absent when null). */
+function withHarnessTypeEnv<T>(value: string | null, action: () => T): T {
+  const saved = process.env.AMADEUS_HARNESS_TYPE;
+  if (value === null) delete process.env.AMADEUS_HARNESS_TYPE;
+  else process.env.AMADEUS_HARNESS_TYPE = value;
+  try {
+    return action();
+  } finally {
+    if (saved === undefined) delete process.env.AMADEUS_HARNESS_TYPE;
+    else process.env.AMADEUS_HARNESS_TYPE = saved;
+  }
 }
 
 function writeAt(root: string, relative: string, body: string): void {
@@ -236,5 +272,94 @@ describe("carrier faults and role guidance stay fail-closed (FR-1/FR-2)", () => 
     });
 
     expect(message).toContain('--confirm-roles "reviewer"');
+  });
+});
+
+// #2326 — `AMADEUS_HARNESS_TYPE` was read by the guard itself, so exporting any
+// non-Kimi value made authorizeMainConductor return `authorized` before it
+// looked at a single carrier file: the marker, session and role checks were all
+// skipped, on every workspace, by anyone who could set an environment variable.
+// The closure has to hold in BOTH directions — the override must not be able to
+// lift the boundary where it applies, and must not be able to impose it where
+// it does not — because a one-directional fix would just relocate the bypass.
+describe("the harness-type env cannot move an authorization outcome (#2326)", () => {
+  // "" and "not-a-harness" are included deliberately: detectHarnessType()
+  // normalizes both to "unknown", and "unknown" !== "kimi" was the cheapest
+  // form of the bypass — it needed no valid harness name at all.
+  const overrides = ["claude-code", "codex", "manual", "unknown", "not-a-harness", ""];
+
+  test.each(overrides)(
+    'a "%s" override still denies a broken carrier on a real Kimi workspace',
+    (override) => {
+      const root = carrierRoot();
+      writeCurrentSession(root);
+
+      expect(withHarnessTypeEnv(override, () => authorizeMainConductor(root)))
+        .toEqual({ kind: "denied", reason: "marker-absent", role: "unknown" });
+    },
+  );
+
+  test("every denial reason survives a non-Kimi override unchanged", () => {
+    const latch = coherentRoot();
+    writeAt(latch, KIMI_SESSION_ENDED_DENY_RELATIVE_PATH, "session-ended\n");
+    const absent = carrierRoot();
+    writeCurrentSession(absent);
+    const mismatch = coherentRoot();
+    writeCurrentSession(mismatch, "other-harness-session");
+    const active = carrierRoot();
+    writeMarker(active, MAIN_SESSION, { reviewer: 1 });
+    writeCurrentSession(active);
+
+    const cases = [latch, absent, mismatch, active];
+    const baseline = cases.map((root) => denialOf(root));
+    const overridden = withHarnessTypeEnv(
+      "claude-code",
+      () => cases.map((root) => denialOf(root)),
+    );
+
+    expect(overridden).toEqual(baseline);
+    expect(overridden.map((denial) => denial.reason)).toEqual([
+      "deny-latch",
+      "marker-absent",
+      "session-mismatch",
+      "active-role",
+    ]);
+  });
+
+  test("a non-Kimi override does not deny a coherent carrier either", () => {
+    const root = coherentRoot();
+    expect(withHarnessTypeEnv("claude-code", () => authorizeMainConductor(root)))
+      .toEqual({ kind: "authorized" });
+  });
+
+  // The other direction: a "kimi" override on a workspace that is NOT Kimi must
+  // not switch the guard ON. A Claude Code session whose carrier files were
+  // never written would otherwise be denied every mutating verb by an inherited
+  // environment variable — the same defect with the sign flipped.
+  test('a "kimi" override does not impose the guard on a non-Kimi workspace', () => {
+    const root = nonKimiRoot();
+    writeAt(root, KIMI_SESSION_ENDED_DENY_RELATIVE_PATH, "session-ended\n");
+    writeCurrentSession(root, "some-other-session");
+
+    expect(withHarnessTypeEnv("kimi", () => authorizeMainConductor(root)))
+      .toEqual({ kind: "authorized" });
+  });
+
+  // The detector under the guard, pinned directly: whatever the environment
+  // says, the answer tracks the workspace marker.
+  test("the authorization detector reads the workspace, never the env", () => {
+    const kimi = carrierRoot();
+    const claude = nonKimiRoot();
+
+    for (const override of [...overrides, "kimi", null]) {
+      expect(withHarnessTypeEnv(
+        override,
+        () => detectHarnessTypeForAuthorization(kimi),
+      )).toBe("kimi");
+      expect(withHarnessTypeEnv(
+        override,
+        () => detectHarnessTypeForAuthorization(claude),
+      )).toBe("claude-code");
+    }
   });
 });

@@ -89,21 +89,32 @@ function resolution(
   return Object.freeze({ dir, source });
 }
 
-function deriveNonEnvHarnessDir(): HarnessDirResolution {
+// The harness dir this module was INSTALLED under: `<harness-dir>/tools/` is
+// the shipped layout, so the loaded file's own path names the running harness.
+// Nothing outside the process can move it, which is what makes it the first
+// evidence an authorization decision may rely on.
+function scriptPathHarnessDir(): string | null {
   const scriptDir = dirname(fileURLToPath(import.meta.url));
-  if (basename(scriptDir) === "tools") {
-    const candidate = basename(dirname(scriptDir));
-    if (isHarnessDirName(candidate)) {
-      return resolution(candidate, "script-path");
-    }
-  }
+  if (basename(scriptDir) !== "tools") return null;
+  const candidate = basename(dirname(scriptDir));
+  return isHarnessDirName(candidate) ? candidate : null;
+}
 
-  const cwd = process.cwd();
+// The first known harness dir present under `root`, in KNOWN_HARNESS_DIRS
+// order — the marker probe, unchanged, lifted out so both the ambient
+// resolution below and the authorization detection can share it.
+function probedHarnessDir(root: string): string | null {
   for (const candidate of KNOWN_HARNESS_DIRS) {
-    if (existsSync(join(cwd, candidate))) {
-      return resolution(candidate, "cwd-probe");
-    }
+    if (existsSync(join(root, candidate))) return candidate;
   }
+  return null;
+}
+
+function deriveNonEnvHarnessDir(): HarnessDirResolution {
+  const fromScript = scriptPathHarnessDir();
+  if (fromScript !== null) return resolution(fromScript, "script-path");
+  const fromCwd = probedHarnessDir(process.cwd());
+  if (fromCwd !== null) return resolution(fromCwd, "cwd-probe");
   return resolution(".claude", "fallback");
 }
 
@@ -120,6 +131,16 @@ export function harnessDir(): string {
   return resolveHarnessDir().dir;
 }
 
+/**
+ * The harness type for PROVENANCE: what label an intent birth, a telemetry
+ * resource attribute, or a statusline should carry. `AMADEUS_HARNESS_TYPE`
+ * wins here by design — an operator running an unrecognised or embedded host
+ * has to be able to say which harness this run belongs to.
+ *
+ * Never call this to decide an authorization outcome: the override is
+ * caller-controlled, so a gate that reads it can be switched off by exporting
+ * a variable (#2326). Use detectHarnessTypeForAuthorization() there.
+ */
 export function detectHarnessType(): HarnessType {
   const explicitType = process.env.AMADEUS_HARNESS_TYPE;
   if (explicitType !== undefined) {
@@ -130,6 +151,36 @@ export function detectHarnessType(): HarnessType {
   const detected = resolveHarnessDir();
   if (detected.source === "fallback") return "unknown";
   return HARNESS_TYPE_BY_DIR[detected.dir] ?? "unknown";
+}
+
+/**
+ * The harness type an AUTHORIZATION decision may rely on. Derived ONLY from
+ * evidence the caller cannot forge through its environment:
+ *
+ *   1. the installed script path (`<harness-dir>/tools/` of the running tool),
+ *   2. else the harness dir of the workspace under judgement (`projectDir`),
+ *   3. else the harness dir of the process cwd.
+ *
+ * `AMADEUS_HARNESS_TYPE`, `AMADEUS_HARNESS_DIR` and `CLAUDECODE` are all
+ * deliberately ignored. Each is set by whoever spawns the process, so honouring
+ * any of them here would let a Kimi subagent present itself as some other
+ * harness and skip the main-conductor boundary wholesale (#2326).
+ *
+ * `projectDir` is probed BEFORE the cwd because the guard's question is about
+ * the workspace it is guarding: a tool invoked from an unrelated cwd with
+ * `--project-dir <kimi workspace>` must still be judged against that workspace.
+ *
+ * Deliberately uncached, unlike harnessDir(): the answer depends on the
+ * projectDir passed in, and a guard that replies from an earlier workspace's
+ * probe is not answering about the one in front of it.
+ */
+export function detectHarnessTypeForAuthorization(
+  projectDir?: string,
+): HarnessType {
+  const dir = scriptPathHarnessDir() ??
+    (projectDir === undefined ? null : probedHarnessDir(projectDir)) ??
+    probedHarnessDir(process.cwd());
+  return dir === null ? "unknown" : HARNESS_TYPE_BY_DIR[dir] ?? "unknown";
 }
 
 function shippedRulesSubdir(): string | null {

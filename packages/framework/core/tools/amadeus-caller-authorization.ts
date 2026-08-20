@@ -1,6 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { detectHarnessType, harnessDir } from "./amadeus-harness.ts";
+import {
+  detectHarnessTypeForAuthorization,
+  harnessDir,
+} from "./amadeus-harness.ts";
 
 export const KIMI_ACTIVE_SUBAGENTS_RELATIVE_PATH = join(
   "amadeus",
@@ -104,10 +107,18 @@ export function parseActiveSubagents(raw: string): KimiActiveSubagents | null {
   }
 }
 
+// The guard is inert on every non-Kimi harness, so the harness question IS an
+// authorization question: it is answered from real process evidence, never from
+// `AMADEUS_HARNESS_TYPE`. Trusting the override here was the #2326 bypass — any
+// caller could export a non-Kimi value and walk past the marker, session and
+// role checks below. The override keeps its provenance-labelling role in
+// detectHarnessType(); it has no say over this boundary.
 export function authorizeMainConductor(
   projectDir: string,
 ): MainConductorAuthorization {
-  if (detectHarnessType() !== "kimi") return { kind: "authorized" };
+  if (detectHarnessTypeForAuthorization(projectDir) !== "kimi") {
+    return { kind: "authorized" };
+  }
 
   const markerPath = join(projectDir, KIMI_ACTIVE_SUBAGENTS_RELATIVE_PATH);
   const denyPath = join(projectDir, KIMI_SUBAGENT_DENY_RELATIVE_PATH);
@@ -168,11 +179,11 @@ function takeoverCommand(): string {
   return `bun ${harnessDir()}/tools/amadeus-state.ts ${SESSION_TAKEOVER_VERB} --confirm [--project-dir <path>]`;
 }
 
-// The recovery guidance deliberately names only the two supported layers:
-// re-firing SessionStart, and the human-confirmed takeover verb. Overriding the
-// harness type through the environment also lifts the guard, but it does so by
-// disabling the authorization boundary rather than repairing the carrier, so it
-// is never offered here as a recovery route.
+// The recovery guidance names the two supported layers: re-firing SessionStart,
+// and the human-confirmed takeover verb. It names no third one because there is
+// none — since #2326 the harness type this guard reads comes from real process
+// evidence, so no environment variable can lift the boundary in place of
+// repairing the carrier.
 export function callerAuthorizationError(denial: CallerDenialSummary): string {
   const rolesHint = denial.reason === "active-role"
     ? ` Because a role is still active, the takeover additionally requires --confirm-roles "${denial.role}" so the retained role is acknowledged rather than silently seized.`
