@@ -51,6 +51,23 @@ describe("isCoverageSourceInsideRepo", () => {
   test("rejects an absolute path outside the repo root", () => {
     expect(isCoverageSourceInsideRepo(FOREIGN, CONTEXT)).toBe(false);
   });
+
+  test("rejects a path that only looks in-repo before dot-segment collapse", () => {
+    expect(isCoverageSourceInsideRepo("/repo/../tmp/composed-host/a.ts", CONTEXT)).toBe(false);
+  });
+
+  test("folds a relative climb-out path into the known amadeus-candidate mapping", () => {
+    const relativeClimb =
+      "../../../../private/var/folders/zz/T/amadeus-candidate-codex-AbC123/.codex/tools/amadeus-lib.ts";
+    const context: CoverageSourcePathContext = {
+      repoRoot: "/repo/nested/work",
+      tempRoots: ["/private/var/folders/zz/T"],
+    };
+    expect(normalizeCoverageSourcePath(relativeClimb, context)).toBe(IN_REPO);
+    expect(
+      isCoverageSourceInsideRepo(normalizeCoverageSourcePath(relativeClimb, context), context),
+    ).toBe(true);
+  });
 });
 
 describe("excludeForeignLcovRecords — #2315 out-of-repo SF exclusion", () => {
@@ -157,5 +174,24 @@ describe("excludeForeignLcovRecords — #2315 out-of-repo SF exclusion", () => {
     expect(lcov).toBe("");
     expect(excluded).toEqual([]);
     expect(formatForeignCoverageExclusionWarning(excluded)).toBeNull();
+  });
+
+  test("collapses .. so a repo-prefixed escape path is excluded from totals", () => {
+    const escaped = "/repo/../tmp/composed-host/a.ts";
+    const mixed = [record(IN_REPO, 10, 8), record(escaped, 1000, 50)].join("\n");
+    const { lcov, excluded } = excludeForeignLcovRecords(mixed, CONTEXT);
+
+    expect(excluded).toEqual([escaped]);
+    expect(sumTag(lcov, "LF")).toBe(10);
+    expect(lcov).not.toContain(escaped);
+  });
+
+  test("warning text does not pass through raw control characters from SF paths", () => {
+    const nasty = "/tmp/host/\u001b[31mred.ts";
+    const { excluded } = excludeForeignLcovRecords(record(nasty, 1, 0), CONTEXT);
+    const warning = formatForeignCoverageExclusionWarning(excluded);
+    expect(warning).not.toBeNull();
+    expect(warning).not.toContain("\u001b");
+    expect(warning).toContain("red.ts");
   });
 });
