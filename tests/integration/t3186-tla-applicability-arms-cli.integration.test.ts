@@ -401,3 +401,107 @@ describe("undecidable inputs halt (NFR-2 / BR-3)", () => {
     expect(armsOf(body).vocabularyDrift.detail).toContain("models");
   });
 });
+
+// A path the map names but the tree does not hold reaches the arms as
+// `text: null` (tla-authoring.ts `sourceFile`). Each declared source is read at
+// its own step of `driftForModel`, and each step names the file it could not
+// read — an unreadable cfg must not be reported as an unreadable module, and an
+// unreadable governed entry must not be reported as a non-fire. The three tests
+// below pin the three steps separately, so a single collapsed error message
+// cannot satisfy all of them.
+describe("a declared source the tree does not hold halts naming that source (BR-3 / NFR-2)", () => {
+  const CFG_PATH = "amadeus/spaces/default/specs/tla/Fixture.cfg";
+
+  test("a cfg the tree no longer holds halts naming the cfg, not the module", async () => {
+    await registerFixtureModel({ entries: [ALIGNED_PATH] });
+    // The module stays readable, so the only undecidable input is the cfg.
+    rmSync(join(specDir, "Fixture.cfg"));
+    const { exitCode, body } = await judge("semantic-change");
+    expect(exitCode).toBe(1);
+    expect(body.failure).toEqual({
+      kind: "model-source-unreadable",
+      model: "Fixture",
+      path: CFG_PATH,
+    });
+  });
+
+  test("a cfg with no TLC directive is unparseable with the classifier's detail", async () => {
+    await registerFixtureModel({ entries: [ALIGNED_PATH] });
+    // The module parses; only the property classification is undecidable, so
+    // the halt has to name the cfg and carry the classifier's own reason.
+    writeFileSync(join(specDir, "Fixture.cfg"), "\\* only a comment\n", "utf8");
+    const { exitCode, body } = await judge("semantic-change");
+    expect(exitCode).toBe(1);
+    expect(body.failure).toEqual({
+      kind: "model-source-unparseable",
+      model: "Fixture",
+      path: CFG_PATH,
+      detail: "no TLC config directive found: not a .cfg",
+    });
+  });
+
+  test("a governed entry the tree no longer holds halts naming the entry", async () => {
+    await registerFixtureModel({ entries: [ALIGNED_PATH] });
+    // Module, cfg and vocabulary all read cleanly; the drift scan is what the
+    // missing entry makes undecidable, and a quiet `findings: []` would be the
+    // silent non-fire BR-3 forbids.
+    rmSync(join(workspace, ALIGNED_PATH));
+    const { exitCode, body } = await judge("semantic-change");
+    expect(exitCode).toBe(1);
+    expect(body.failure).toEqual({
+      kind: "model-source-unreadable",
+      model: "Fixture",
+      path: ALIGNED_PATH,
+    });
+  });
+});
+
+describe("an unevaluable arm is recorded as such, never as a non-fire (BR-3)", () => {
+  test("a readable --issue-evidence with the declarations unavailable is not-evaluated", async () => {
+    // The pre-registration map (`models: []`) is what the strict schema
+    // refuses, so the declarations are unavailable while the evidence file
+    // itself is present and parseable.
+    const evidence = evidenceFile("evidence-unavailable.md", [
+      { issue: 4244, title: "bug(fixture): 再発", body: `\`${ALIGNED_PATH}\` の分岐。` },
+    ]);
+    const { exitCode, body } = await judge("new-subject", ["--issue-evidence", evidence]);
+    // Not a hard failure: the route is unchanged and the run still succeeds.
+    expect(exitCode).toBe(0);
+    expect(body.route).toBe("author-new");
+    const arms = armsOf(body);
+    expect(arms.defectRecurrence).toEqual({
+      kind: "not-evaluated",
+      detail: arms.vocabularyDrift.detail as string,
+    });
+    expect(arms.defectRecurrence.detail as string).toContain("models");
+    // Non-vacuous: this same evidence shape fires the arm once the governed
+    // paths are available (see "a bug issue naming a governed file forces the
+    // evaluation" above), so `not-evaluated` here is the missing declarations
+    // and not a missing intersection.
+    expect(arms.revisionEvaluation).toEqual({ required: false, reasons: [] });
+  });
+});
+
+describe("--changed must name at least one path (usage)", () => {
+  test("an empty --changed value is a usage error, not an empty coverage set", async () => {
+    const { exitCode, body } = await judge("semantic-change", ["--changed", ""]);
+    expect(exitCode).toBe(2);
+    expect(body.ok).toBe(false);
+    expect(body.error).toBe("--changed must name at least one path");
+  });
+
+  test("a --changed value of only separators and blanks is the same usage error", async () => {
+    const { exitCode, body } = await judge("semantic-change", ["--changed", " , "]);
+    expect(exitCode).toBe(2);
+    expect(body.error).toBe("--changed must name at least one path");
+  });
+
+  test("a --changed value that survives the trim is accepted", async () => {
+    // The positive side of the same predicate: whitespace around a real path is
+    // trimmed away rather than rejected, so the usage error is about emptiness.
+    await registerFixtureModel({ entries: [ALIGNED_PATH] });
+    const { exitCode, body } = await judge("semantic-change", ["--changed", ` ${ALIGNED_PATH} , `]);
+    expect(exitCode).toBe(0);
+    expect(armsOf(body).coverage).toEqual({ kind: "performed", uncovered: [], proposal: null });
+  });
+});
