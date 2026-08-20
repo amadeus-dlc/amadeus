@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 640,
+    "total": 639,
     "enumeratedByClass": {
-      "function": 360,
+      "function": 359,
       "audit": 98,
       "scope": 15,
       "stage": 32,
@@ -31,7 +31,7 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 193,
+      "function": 192,
       "audit": 49,
       "scope": 15,
       "stage": 8,
@@ -3516,18 +3516,6 @@
         {
           "file": "tests/unit/t250-unit-iteration-and-scope-preview.test.ts",
           "mechanism": "none"
-        }
-      ],
-      "status": "covered"
-    },
-    {
-      "unitClass": "function",
-      "unitId": "function:probeStateResyncToStageGraph",
-      "minMechanism": "none",
-      "coveredBy": [
-        {
-          "file": "tests/integration/t407-resync-noop-detection.test.ts",
-          "mechanism": "cli"
         }
       ],
       "status": "covered"
