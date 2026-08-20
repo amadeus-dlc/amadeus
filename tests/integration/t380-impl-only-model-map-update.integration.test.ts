@@ -81,6 +81,41 @@ function makeAuxProject(): string {
   return root;
 }
 
+// #3331 — a map carrying the FULL optional set, written in the parser's own key
+// order so an unchanged record round-trips byte for byte. `authoringProvenance`
+// records which intent authored the model; an implementation-hash refresh has
+// no business touching it, and the byte assertion below is what says so.
+function makeProvenanceProject(): string {
+  const root = makeAuxProject();
+  const mapPath = join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json");
+  const map = JSON.parse(readFileSync(mapPath, "utf8"));
+  const model = map.models[0];
+  // Rebuilt key by key rather than assigned onto: the writer emits one fixed
+  // order (auxiliaries before entries, then the carried tail), and a fixture
+  // authored in some other order would fail the byte assertion below for a
+  // reason that has nothing to do with the refresh under test.
+  map.models[0] = {
+    name: model.name,
+    model: model.model,
+    cfg: model.cfg,
+    auxiliaries: model.auxiliaries,
+    entries: model.entries,
+    vocabulary: model.vocabulary,
+    evidenceBundle: { digest: `sha256:${"a".repeat(64)}` },
+    authoringProvenance: {
+      intentRecord: "amadeus/spaces/default/intents/260813-bolt-pr-attestation",
+      execution: {
+        auditShard:
+          "amadeus/spaces/default/intents/260813-bolt-pr-attestation/audit/clone-9bc851023366.jsonl",
+        timestamp: "2026-08-14T00:36:30Z",
+        eventIdentity: "b".repeat(64),
+      },
+    },
+  };
+  writeFileSync(mapPath, `${JSON.stringify(map, null, 2)}\n`);
+  return root;
+}
+
 function recordedEntry(root: string, implPath: string): { implPath: string; sha256: string } {
   const map = JSON.parse(readFileSync(join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json"), "utf-8"));
   return map.models
@@ -340,5 +375,66 @@ describe("updateModelMap --impl-only", () => {
       expect(after.models[0][field]).toEqual(before.models[0][field]);
     }
     expect(after.models[0].entries).not.toEqual(before.models[0].entries);
+  });
+
+  // #3331 — the regression. canonicalRecord used to enumerate the model keys it
+  // carried across, so `authoringProvenance` (added to the schema after that
+  // list was written) was dropped on every rewrite: the refresh restamped two
+  // implementation hashes and, in the same write, erased the record of which
+  // intent authored the model. The assertion is byte-level on purpose — a
+  // field-by-field comparison would not have caught a key the writer never
+  // emitted, which is exactly how this shipped.
+  test("an impl-only update preserves authoringProvenance byte for byte", async () => {
+    const root = makeProvenanceProject();
+    const mapPath = join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json");
+    const beforeText = readFileSync(mapPath, "utf8");
+    const drifted = "packages/framework/core/tools/amadeus-election-0.ts";
+    const beforeSha = recordedEntry(root, drifted).sha256;
+    const revised = "// implementation 0 revised\n";
+    writeFileSync(join(root, drifted), revised);
+
+    expect(await updateModelMap({ projectRoot: root, implOnly: true })).toMatchObject({
+      ok: true,
+      code: "IMPL_ONLY_UPDATED",
+    });
+
+    const afterText = readFileSync(mapPath, "utf8");
+    const afterSha = Bun.CryptoHasher.hash("sha256", revised, "hex") as string;
+    expect(afterSha).not.toBe(beforeSha);
+    // The ONLY byte difference the refresh is allowed to make.
+    expect(afterText).toBe(beforeText.replace(beforeSha, afterSha));
+    expect(afterText).toContain("authoringProvenance");
+  });
+
+  test("a full update outside --impl-only preserves authoringProvenance too", async () => {
+    const root = makeProvenanceProject();
+    const mapPath = join(root, "amadeus", "spaces", "default", "specs", "tla", "model-map.json");
+    const before = JSON.parse(readFileSync(mapPath, "utf8"));
+    const modelPath = join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.tla");
+    const revisedModel =
+      "---- MODULE FormalElection ----\nCore == INSTANCE FormalElectionCore\nVARIABLE state\n====\n";
+    writeFileSync(modelPath, revisedModel);
+
+    expect(await updateModelMap({ projectRoot: root })).toMatchObject({ ok: true });
+
+    const after = JSON.parse(readFileSync(mapPath, "utf8"));
+    expect(after.models[0].authoringProvenance).toEqual(before.models[0].authoringProvenance);
+    expect(after.models[0].evidenceBundle).toEqual(before.models[0].evidenceBundle);
+    // The model identity DID move — otherwise the carry-over above proves nothing.
+    expect(after.models[0].model.identity).not.toBe(before.models[0].model.identity);
+  });
+
+  // Downstream sanity rather than a second discriminator: a map that LOST its
+  // provenance also validates, so this arm passes with or without the fix. It is
+  // here to prove the carried block does not itself break the checker.
+  test("the map keeps validating after an impl-only refresh carried the provenance", async () => {
+    const root = makeProvenanceProject();
+    writeFileSync(
+      join(root, "packages", "framework", "core", "tools", "amadeus-election-0.ts"),
+      "// implementation 0 revised\n",
+    );
+
+    expect(await updateModelMap({ projectRoot: root, implOnly: true })).toMatchObject({ ok: true });
+    expect(await checkModelCompleteness({ projectRoot: root })).toMatchObject({ pass: true });
   });
 });

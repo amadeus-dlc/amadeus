@@ -730,6 +730,36 @@ export async function checkModelCompleteness(
   return checkModelCompletenessInternal({ ...options, mapRelativePath });
 }
 
+// The model keys canonicalRecord RECOMPUTES below. Everything else the parser
+// preserved is carried across verbatim by carriedModelFields().
+//
+// Listing what is recomputed — rather than what is carried — is the point
+// (#3331). The previous spelling enumerated the carried keys, so every optional
+// key added to the schema after that list was written was silently dropped on
+// the next rewrite: `evidenceBundle` had to be patched in once already, and
+// `authoringProvenance` was lost the same way, erasing which intent authored a
+// model on a refresh that only ever meant to restamp implementation hashes.
+// Inverted, an unknown key is carried by default and only a deliberate edit
+// here can drop one.
+const RECOMPUTED_MODEL_KEYS: ReadonlySet<string> = new Set([
+  "name",
+  "model",
+  "cfg",
+  "auxiliaries",
+  "entries",
+]);
+
+// The parser builds every model with the same key order, so the carried tail is
+// deterministic and an unchanged record round-trips byte for byte.
+function carriedModelFields(model: ModelMapModel): Record<string, unknown> {
+  const carried: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(model)) {
+    if (RECOMPUTED_MODEL_KEYS.has(key)) continue;
+    carried[key] = value;
+  }
+  return carried;
+}
+
 function canonicalRecord(
   map: ModelMap,
   assets: AssetEvaluation,
@@ -763,10 +793,10 @@ function canonicalRecord(
             implPath: entry.implPath,
             sha256: currentEntry.get(entry.implPath) ?? entry.sha256,
           })),
-          ...(model.vocabulary ? { vocabulary: model.vocabulary } : {}),
-          // An impl-only refresh rewrites the whole record, so the registered
-          // evidence reference has to be carried across or it is silently lost.
-          ...(model.evidenceBundle ? { evidenceBundle: model.evidenceBundle } : {}),
+          // An impl-only refresh rewrites the whole record, so vocabulary, the
+          // registered evidence reference and the authoring provenance all have
+          // to be carried across or they are silently lost (#3331).
+          ...carriedModelFields(model),
         };
       }),
     },
