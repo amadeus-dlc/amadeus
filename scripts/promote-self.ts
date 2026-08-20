@@ -42,6 +42,7 @@ import { planMerge, renderManagedBlock } from "../packages/setup/src/domain/kimi
 import { createApplyWrite } from "../packages/setup/src/ports/apply-write.ts";
 import { createFsRead, createFsWrite } from "../packages/setup/src/ports/fsops.ts";
 import { DistributionTransactionCoordinator } from "./distribution-transaction.ts";
+import { writeSelfDevelopmentIntegrityAttestation } from "../packages/framework/core/tools/amadeus-selfdev-integrity.ts";
 // The self-install face set is defined ONCE, next to the eight package faces it
 // is deliberately narrower than. This script consumes it; it never re-declares
 // an equal-valued list under another name (#1575).
@@ -840,6 +841,12 @@ export async function promoteSelfMain(
     if (postApply !== null) {
       const ran = await postApply.run(repoRoot);
       if (ran !== 0) return ran;
+    }
+    // Only the real build path can mint build-success evidence. Test seams and
+    // --no-build promotions deliberately leave the prior disposable attestation
+    // untouched rather than claiming a build occurred.
+    if (!noBuild && repoRoot === REPO_ROOT && freshness === runPackageFreshness) {
+      writeSelfDevelopmentIntegrityAttestation(repoRoot);
     }
     console.log("promote-self: project-local self install updated");
     return 0;

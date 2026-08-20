@@ -26,6 +26,7 @@ import {
   type LifecycleGuardDecision,
   type LifecycleGuardVerdict,
 } from "./amadeus-lifecycle-guard.ts";
+import { selfDevelopmentIntegrityAdapter } from "./amadeus-selfdev-integrity.ts";
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -4498,6 +4499,18 @@ export const INTENT_BIRTH_GUARDS: readonly LifecycleGuardAdapter<
     checkpoint: "intent-birth",
     order: 30,
     evaluate: evaluateBirthRepoSet,
+  },
+  {
+    id: "intent-birth.self-development-integrity",
+    checkpoint: "intent-birth",
+    order: 40,
+    evaluate: (context) =>
+      selfDevelopmentIntegrityAdapter().evaluate({
+        projectDir: context.projectDir,
+        scope: context.flags.scope ?? "",
+        selfDevelopmentWorkspace: isSelfDevWorkspace(context.projectDir),
+        runtimeHarness: harnessDir(),
+      }),
   },
 ]);
 
