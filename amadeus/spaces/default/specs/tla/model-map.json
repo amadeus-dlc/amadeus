@@ -19,6 +19,22 @@
         {
           "implPath": "packages/framework/core/tools/amadeus-state.ts",
           "sha256": "9c018e551d73ab539ec9f4d6399f4684b9419cf80739c0ac35655310dc669790"
+        },
+        {
+          "implPath": "plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts",
+          "sha256": "d7c0cf5926227e27d78bc321333040fa796b97b39d80098f141d8609f73962bd"
+        },
+        {
+          "implPath": "plugins/github-pr-convergence/tools/pr-convergence-attestation.ts",
+          "sha256": "534a2199228a05df24703f3d7d7f930463925d64ed16a7a02b851ee47d036fa1"
+        },
+        {
+          "implPath": "plugins/github-pr-convergence/tools/pr-convergence-cli.ts",
+          "sha256": "41b47ae7fc46a8d7d8a593a243d847230fa24388cfc526e0b9585de02972d984"
+        },
+        {
+          "implPath": "plugins/github-pr-convergence/tools/pr-convergence-predicate.ts",
+          "sha256": "3023968edaf67831ccde08d16c41c055a068661858b300dcd88748e4ab311e17"
         }
       ],
       "vocabulary": {
@@ -193,6 +209,22 @@
         {
           "implPath": "packages/framework/core/tools/amadeus-state.ts",
           "sha256": "9c018e551d73ab539ec9f4d6399f4684b9419cf80739c0ac35655310dc669790"
+        },
+        {
+          "implPath": "plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts",
+          "sha256": "d7c0cf5926227e27d78bc321333040fa796b97b39d80098f141d8609f73962bd"
+        },
+        {
+          "implPath": "plugins/github-pr-convergence/tools/pr-convergence-attestation.ts",
+          "sha256": "534a2199228a05df24703f3d7d7f930463925d64ed16a7a02b851ee47d036fa1"
+        },
+        {
+          "implPath": "plugins/github-pr-convergence/tools/pr-convergence-cli.ts",
+          "sha256": "41b47ae7fc46a8d7d8a593a243d847230fa24388cfc526e0b9585de02972d984"
+        },
+        {
+          "implPath": "plugins/github-pr-convergence/tools/pr-convergence-predicate.ts",
+          "sha256": "3023968edaf67831ccde08d16c41c055a068661858b300dcd88748e4ab311e17"
         }
       ],
       "vocabulary": {

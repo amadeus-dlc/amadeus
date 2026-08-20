@@ -426,6 +426,99 @@ describe("TLA model loader real-filesystem boundary", () => {
     });
   });
 
+  // #2929 FR-BND-2/5: the loader used to carry its own boundary — a
+  // `packages/framework/core/tools` root hardcoded beside the validator's
+  // definition — so a governed plugin entry parsed fine and was then rejected
+  // at read time. These tests pin the single shared predicate on the loader
+  // side: in-boundary plugin entries load, everything else still fails closed.
+  const PLUGIN_ENTRY = "plugins/github-pr-convergence/tools/pr-convergence-cli.ts";
+
+  function fixtureWithPluginEntry(sha256Override?: string): Fixture {
+    const fixture = createFixture();
+    const source = readFileSync(join(REPOSITORY_ROOT, PLUGIN_ENTRY));
+    const destination = join(fixture.root, PLUGIN_ENTRY);
+    mkdirSync(dirname(destination), { recursive: true });
+    writeFileSync(destination, source);
+    const map = JSON.parse(readFileSync(fixture.mapPath, "utf8")) as {
+      schemaVersion: number;
+      models: MutableModel[];
+    };
+    const target = map.models.find((model) => model.name === "FormalElection");
+    if (!target) throw new Error("FormalElection must be registered");
+    // `packages/...` < `plugins/...`, so appending keeps the sorted-unique
+    // entries invariant the validator enforces per model.
+    target.entries = [...target.entries, {
+      implPath: PLUGIN_ENTRY,
+      sha256: sha256Override ?? createHash("sha256").update(source).digest("hex"),
+    }];
+    writeFileSync(fixture.mapPath, `${JSON.stringify(map, null, 2)}\n`);
+    return { ...fixture, modelMap: map as unknown as ModelMap };
+  }
+
+  test("verifies a governed plugin implementation entry inside the shared boundary", () => {
+    const fixture = fixtureWithPluginEntry();
+    expect(loadVerifiedTlaSourcesInternal(fixture.moduleUrl)).toMatchObject({ ok: true });
+  });
+
+  test("still rejects a plugin entry whose real path escapes the implementation boundary", () => {
+    // In-repository but outside the boundary: only the shared predicate — not
+    // a bare repository-root containment check — catches this one.
+    const insideRepoFixture = fixtureWithPluginEntry();
+    const strayPath = join(insideRepoFixture.root, "stray-impl.ts");
+    copyFileSync(join(insideRepoFixture.root, PLUGIN_ENTRY), strayPath);
+    const pluginReal = realpathSync(join(insideRepoFixture.root, PLUGIN_ENTRY));
+    const insideRepoFs = realFileSystem({
+      realpath: (path) => path === pluginReal ? strayPath : realpathSync(path),
+    });
+    const insideRepo = loadVerifiedTlaSourcesInternal(insideRepoFixture.moduleUrl, insideRepoFs);
+    expect(insideRepo).toMatchObject({
+      ok: false,
+      error: { kind: "SOURCE_DRIFT", relativePath: PLUGIN_ENTRY },
+    });
+    if (insideRepo.ok) throw new Error("expected SOURCE_DRIFT");
+    expect(insideRepo.error.detail).toContain("implementation entry is not a regular in-boundary file");
+
+    // Fully outside the repository root: the relative path escapes with `..`
+    // and the shared predicate rejects it structurally.
+    const outsideRepoFixture = fixtureWithPluginEntry();
+    const outsideRoot = mkdtempSync(join(tmpdir(), "amadeus-tla-outside-"));
+    temporaryRoots.push(outsideRoot);
+    const outsidePath = join(outsideRoot, "pr-convergence-cli.ts");
+    copyFileSync(join(outsideRepoFixture.root, PLUGIN_ENTRY), outsidePath);
+    const outsidePluginReal = realpathSync(join(outsideRepoFixture.root, PLUGIN_ENTRY));
+    const outsideRepoFs = realFileSystem({
+      realpath: (path) => path === outsidePluginReal ? realpathSync(outsidePath) : realpathSync(path),
+    });
+    expect(loadVerifiedTlaSourcesInternal(outsideRepoFixture.moduleUrl, outsideRepoFs)).toMatchObject({
+      ok: false,
+      error: { kind: "SOURCE_DRIFT", relativePath: PLUGIN_ENTRY },
+    });
+  });
+
+  test("reports hash drift on a governed plugin entry with the --impl-only recovery step", () => {
+    const fixture = fixtureWithPluginEntry();
+    writeFileSync(join(fixture.root, PLUGIN_ENTRY), "// drift\n", { flag: "a" });
+    const result = loadVerifiedTlaSourcesInternal(fixture.moduleUrl);
+    expect(result).toMatchObject({
+      ok: false,
+      error: { kind: "SOURCE_DRIFT", code: "SOURCE_DRIFT", relativePath: PLUGIN_ENTRY },
+    });
+    if (result.ok) throw new Error("expected SOURCE_DRIFT");
+    expect(result.error.detail).toContain("hash differs");
+    expect(result.error.detail).toContain("--impl-only");
+  });
+
+  test("reports hash drift when the recorded plugin sha256 does not match the bytes", () => {
+    const fixture = fixtureWithPluginEntry("c".repeat(64));
+    const result = loadVerifiedTlaSourcesInternal(fixture.moduleUrl);
+    expect(result).toMatchObject({
+      ok: false,
+      error: { kind: "SOURCE_DRIFT", relativePath: PLUGIN_ENTRY },
+    });
+    if (result.ok) throw new Error("expected SOURCE_DRIFT");
+    expect(result.error.detail).toContain("hash differs");
+  });
+
   test("reports drift in a registered model that is not the execution model", () => {
     const fixture = createFixture();
     const watched = fixture.modelMap.models.find((model) => model.name !== "FormalElection");

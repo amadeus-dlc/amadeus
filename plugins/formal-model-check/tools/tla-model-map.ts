@@ -3,6 +3,8 @@ export {
   evaluateTlaModelReadiness,
   findModelMapModel,
   IMPL_ONLY_UPDATE_HINT,
+  IMPLEMENTATION_PATHS,
+  isCanonicalImplementationPath,
   LegacySpecError,
   parseAuthoringProvenance,
   type ModelLoadError,

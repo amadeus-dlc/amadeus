@@ -7,7 +7,7 @@ import {
   statSync,
 } from "node:fs";
 import type { Stats } from "node:fs";
-import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { canonicalIdentity } from "./canonical.ts";
 import type { Result } from "./contract.ts";
@@ -27,6 +27,7 @@ import {
   TLA_EXECUTION_MODEL_NAME,
   TLA_MODEL_MAP_PATH,
   evaluateTlaModelReadiness,
+  isCanonicalImplementationPath,
   resolveSpecRoots,
   tlaModelMapPath,
   tlaSpecDirPath,
@@ -288,7 +289,17 @@ function verifyImplementationEntries(
   modelMap: ModelMap,
   fs: TlaFileSystem,
 ): Result<void, SourceDriftError> {
-  const implementationRoot = resolve(repositoryRoot, "packages", "framework", "core", "tools");
+  // The implementation boundary has ONE definition — the validator's
+  // isCanonicalImplementationPath (#2929 FR-BND-2). The loader previously kept
+  // a second, narrower one (a hardcoded packages/framework/core/tools root),
+  // so a governed plugin entry parsed and then failed at read time.
+  //
+  // The base for the relative path is the repository root's REAL path, for the
+  // same reason the spec-directory check realpaths its boundary first: a
+  // symlinked checkout component would otherwise make an in-boundary entry look
+  // like an escape. A realPath outside the root yields a `..`-prefixed or
+  // absolute relative path, which the shared predicate rejects structurally.
+  const rootReal = realpathIfExists(repositoryRoot, fs);
   for (const entry of modelMap.models.flatMap((model) => model.entries)) {
     const absolutePath = resolve(repositoryRoot, entry.implPath);
     let linkStat: Stats;
@@ -296,7 +307,8 @@ function verifyImplementationEntries(
     try {
       linkStat = fs.lstat(absolutePath);
       realPath = fs.realpath(absolutePath);
-      if (linkStat.isSymbolicLink() || !fs.stat(realPath).isFile() || !isContained(implementationRoot, realPath)) {
+      const realRelative = relative(rootReal, realPath).split(sep).join("/");
+      if (linkStat.isSymbolicLink() || !fs.stat(realPath).isFile() || !isCanonicalImplementationPath(realRelative)) {
         return drift(entry.implPath, "implementation entry is not a regular in-boundary file");
       }
     } catch {
