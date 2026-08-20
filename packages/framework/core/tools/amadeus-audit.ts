@@ -648,7 +648,9 @@ export function handleAppendRaw(
   // locked writer; this removes the old v1 serializer without inventing a
   // misleading registry event.
   try {
-    const result = appendJournalRecordV2(
+    // allowSealed preserves append-raw's legacy contract, so this call cannot
+    // return the post-complete suppression arm.
+    appendJournalRecordV2(
       {
         schemaVersion: JOURNAL_SCHEMA_VERSION_V2,
         eventId: randomUUID(),
@@ -669,9 +671,6 @@ export function handleAppendRaw(
       space,
       { allowSealed: true },
     );
-    if (result.appended === false) {
-      jsonError(`Failed to append raw audit record: ${result.reason}`);
-    }
   } catch (cause) {
     if (cause instanceof AuditLockAcquireError) {
       jsonError("Failed to acquire audit lock after retries");

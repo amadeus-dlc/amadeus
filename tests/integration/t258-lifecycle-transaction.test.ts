@@ -160,6 +160,38 @@ function appendLifecycle(
 }
 
 describe("intent lifecycle transaction CLI", () => {
+  test("allows registered lifecycle events on a completed intent in-process", () => {
+    const fixture = scaffold("complete");
+    const result = appendLifecycleAuditEntryUnlocked(
+      "INTENT_ARCHIVED",
+      { "User Input": "archive requested" },
+      fixture.root,
+      fixture.intent,
+      "default",
+      basename(fixture.audit),
+    );
+
+    expect(result.appended).toBe(true);
+    expect(result.event).toBe("INTENT_ARCHIVED");
+    expect(eventCount(fixture.audit, "INTENT_ARCHIVED")).toBe(1);
+  });
+
+  test("returns the complete-seal outcome for an invalid runtime lifecycle event", () => {
+    const fixture = scaffold("complete");
+    const eventType = "NOT_REGISTERED" as never;
+    const result = appendLifecycleAuditEntryUnlocked(
+      eventType,
+      {},
+      fixture.root,
+      fixture.intent,
+      "default",
+      basename(fixture.audit),
+    );
+
+    expect(result).toMatchObject({ appended: false, reason: "intent-complete", event: eventType });
+    expect(eventCount(fixture.audit, "NOT_REGISTERED")).toBe(0);
+  });
+
   test("rejects a lifecycle audit shard outside the audit directory", () => {
     const fixture = scaffold("in-flight");
     expect(() => appendLifecycleAuditEntryUnlocked(

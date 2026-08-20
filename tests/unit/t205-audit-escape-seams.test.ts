@@ -18,6 +18,7 @@
 // intent). Import surface mirrors t111.test.ts (dist/claude copy, not core).
 
 import { afterAll, describe, expect, test } from "bun:test";
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -25,7 +26,7 @@ import {
   appendLifecycleAuditEntryUnlocked,
   handleAppendRaw,
 } from "../../dist/claude/.claude/tools/amadeus-audit.ts";
-import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import { auditLockDir, readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const tmpRoots: string[] = [];
 // A project holding ONE intent record: ensureAuditFile lazily creates that
@@ -72,6 +73,39 @@ afterAll(() => {
 });
 
 describe("audit escape seams wired at their call sites", () => {
+  test("append-raw reports a live lock holder through its JSON error seam", () => {
+    const proj = freshProject();
+    const previousLockBase = process.env.AMADEUS_LOCK_BASE_DIR;
+    process.env.AMADEUS_LOCK_BASE_DIR = join(proj, "locks");
+    const lockDir = auditLockDir(proj);
+    mkdirSync(lockDir, { recursive: true });
+    writeFileSync(join(lockDir, "owner.json"), JSON.stringify({
+      pid: process.pid,
+      startedAtMs: Date.now(),
+    }));
+
+    class ProcessExit extends Error {}
+    const originalExit = process.exit.bind(process);
+    const originalStderr = process.stderr.write.bind(process.stderr);
+    let stderr = "";
+    process.exit = ((code?: number) => {
+      throw new ProcessExit(String(code ?? 0));
+    }) as typeof process.exit;
+    process.stderr.write = ((chunk: string | Uint8Array) => {
+      stderr += typeof chunk === "string" ? chunk : chunk.toString();
+      return true;
+    }) as typeof process.stderr.write;
+    try {
+      expect(() => handleAppendRaw("Custom Heading", "body", proj)).toThrow(ProcessExit);
+    } finally {
+      process.exit = originalExit;
+      process.stderr.write = originalStderr;
+      if (previousLockBase === undefined) delete process.env.AMADEUS_LOCK_BASE_DIR;
+      else process.env.AMADEUS_LOCK_BASE_DIR = previousLockBase;
+    }
+    expect(stderr).toContain("Failed to acquire audit lock after retries");
+  }, scaleTestTime(10000));
+
   test("write path: the lifecycle writer collapses a field value's CR/LF via escapeAuditValue", () => {
     const proj = freshProject();
     // Embedded newline + a forged **Event** marker must NOT create a second
