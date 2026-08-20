@@ -119,6 +119,10 @@ function runRead(proj: string, slug: string): SpawnResult {
 function makeProject(audit: string, state: string): string {
   const proj = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-t90-")));
   tempDirs.push(proj);
+  // This is a real Amadeus workspace fixture: carry the same marker used by
+  // the project-dir resolver so CLI stderr remains the JSON contract's only
+  // non-data channel.
+  mkdirSync(join(proj, ".claude", "tools"), { recursive: true });
   mkdirSync(recordRoot(proj), { recursive: true });
   // State FIRST: a dir only counts as a record once it holds amadeus-state.md,
   // and auditFilePath() resolves nothing (and refuses) until one does — the same
@@ -138,6 +142,7 @@ function makeProject(audit: string, state: string): string {
 function makeBareProject(): string {
   const proj = toPortablePath(mkdtempSync(join(tmpdir(), "amadeus-t90-")));
   tempDirs.push(proj);
+  mkdirSync(join(proj, ".claude", "tools"), { recursive: true });
   mkdirSync(recordRoot(proj), { recursive: true });
   return proj;
 }

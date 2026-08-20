@@ -166,6 +166,15 @@ function seedProject(): void {
   seedStateFile(proj, FIX_BUILD_STAGE); // Scope: fix, Depth: Minimal, Current Stage: build-and-test
 }
 
+function seedBareProject(): void {
+  host = makeSilentHost();
+  setEnv("AMADEUS_STAGE_GRAPH", STOCK_GRAPH);
+  setEnv("AMADEUS_PLUGINS_HOST_ROOT", host);
+  __resetGraphCache();
+  _resetStageGraphForTests();
+  proj = createTestProject();
+}
+
 function emittedDirective(): { kind: string; stage?: string; depth?: string } {
   handleNext([], proj);
   return JSON.parse(logs.join("\n").trim()) as { kind: string; stage?: string; depth?: string };
@@ -283,5 +292,23 @@ describe("t486 next delivers depth", () => {
     const directive = JSON.parse(logs.join("\n").trim()) as { kind: string; depth?: string };
     expect(directive.kind).toBe("run-stage");
     expect(directive.depth).toBe("Minimal");
+  });
+});
+
+describe("t486 no-state jump carries the resolved project provenance", () => {
+  test("a no-state phase jump reaches the real run-stage emitter", () => {
+    seedBareProject();
+    handleNext(["--scope", "feature", "--phase", "ideation"], proj, "env");
+    const directive = JSON.parse(logs.join("\n").trim()) as { kind: string; stage?: string };
+    expect(directive.kind).toBe("run-stage");
+    expect(directive.stage).toBe("intent-capture");
+  });
+
+  test("a no-state stage jump reaches the real directive builder", () => {
+    seedBareProject();
+    handleNext(["--scope", "feature", "--stage", "requirements-analysis"], proj, "env");
+    const directive = JSON.parse(logs.join("\n").trim()) as { kind: string; stage?: string };
+    expect(directive.kind).toBe("run-stage");
+    expect(directive.stage).toBe("requirements-analysis");
   });
 });

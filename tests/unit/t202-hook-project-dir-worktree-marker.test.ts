@@ -100,13 +100,40 @@ function evalResolve(
   return (r.stdout ?? "").trim();
 }
 
+function evalResolveWithDiagnostics(
+  libPath: string,
+  hookPath: string,
+  opts: { cwd: string; env?: Record<string, string | undefined>; payloadCwd?: string },
+): { resolved: string; stderr: string } {
+  const payloadArg = opts.payloadCwd === undefined ? "" : `, ${JSON.stringify(opts.payloadCwd)}`;
+  const r = spawnSync(
+    "bun",
+    [
+      "-e",
+      `import { resolveProjectDirFromHook } from ${JSON.stringify(libPath)}; console.log(resolveProjectDirFromHook(${JSON.stringify(`file://${hookPath}`)}${payloadArg}));`,
+    ],
+    {
+      encoding: "utf-8",
+      cwd: opts.cwd,
+      env: {
+        ...process.env,
+        CLAUDE_PROJECT_DIR: undefined,
+        ...opts.env,
+      } as NodeJS.ProcessEnv,
+    },
+  );
+  expect(r.status).toBe(0);
+  return { resolved: (r.stdout ?? "").trim(), stderr: r.stderr ?? "" };
+}
+
 describe("t202 resolveProjectDirFromHook — worktree marker rung (issue #641)", () => {
   test("1: worktree cwd with its own amadeus/+tools marker resolves to the WORKTREE, not the hook script's main checkout", () => {
     const tmp = realpathSync(mkdtempSync(join(tmpdir(), "t202-")));
     try {
       const { worktreeDir, hookPath } = makeWorktreeFixture(tmp);
-      const resolved = evalResolve(CLAUDE_LIB, hookPath, { cwd: worktreeDir });
-      expect(resolved).toBe(worktreeDir);
+      const result = evalResolveWithDiagnostics(CLAUDE_LIB, hookPath, { cwd: worktreeDir });
+      expect(result.resolved).toBe(worktreeDir);
+      expect(result.stderr).toBe("");
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
@@ -243,4 +270,5 @@ describe("t202 resolveProjectDirFromHook — worktree marker rung (issue #641)",
       rmSync(tmp, { recursive: true, force: true });
     }
   });
+
 });

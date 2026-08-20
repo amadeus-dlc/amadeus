@@ -229,16 +229,24 @@ export function stripProjectDir(argv: string[]): { projectDirArg?: string; rest:
   return { projectDirArg, rest };
 }
 
-export function resolveProjectDir(explicitDir?: string): string {
+export type ProjectDirSource = "explicit" | "env" | "marker" | "script-path" | "cwd";
+
+export type ResolvedProjectDir = {
+  projectDir: string;
+  source: ProjectDirSource;
+};
+
+export function resolveProjectDirWithSource(explicitDir?: string): ResolvedProjectDir {
   // 1. Explicit --project-dir argument
-  if (explicitDir) return explicitDir;
+  if (explicitDir) return { projectDir: explicitDir, source: "explicit" };
 
   // 2. CLAUDE_PROJECT_DIR env var. It stays ABOVE the marker rung below:
   //    callers that set it to a workspace OTHER than the one their cwd sits in
   //    (test fixtures, tools driving a scratch project) depend on it winning,
   //    and it is the documented way to point a tool at another workspace
   //    besides the --project-dir argument.
-  if (process.env.CLAUDE_PROJECT_DIR) return process.env.CLAUDE_PROJECT_DIR;
+  const envDir = process.env.CLAUDE_PROJECT_DIR;
+  if (envDir) return { projectDir: envDir, source: "env" };
 
   // 3. CWD (or an ancestor) carries its own amadeus workspace marker
   //    (issue #2352). With env unset, rung 4 below derives the project from
@@ -247,26 +255,11 @@ export function resolveProjectDir(explicitDir?: string): string {
   //    the main record. A worktree ships its own amadeus/ record tree, so
   //    prefer it, using the same canonical predicate the hook ladder applies
   //    at the same position (issue #641; resolveProjectDirFromHook rung 3).
-  const markerDir = findWorkspaceMarkerAncestor(process.cwd());
-  if (markerDir) return markerDir;
+  return resolveProjectDirAfterEnvWithSource("tools", import.meta.url);
+}
 
-  // 4. Script path derivation (open-set): this module ships at
-  //    <project>/<harness>/tools/, so strip "<harness>/tools" for ANY harness
-  //    dir name — the project root is the dir two levels up.
-  const scriptDir = dirname(fileURLToPath(import.meta.url));
-  const fromScript = stripHarnessLeaf(scriptDir, "tools");
-  if (fromScript) return fromScript;
-
-  // 5. CWD has a known harness directory (dev repo).
-  const cwd = process.cwd();
-  for (const h of KNOWN_HARNESS_DIRS) {
-    if (existsSync(join(cwd, h))) {
-      return cwd;
-    }
-  }
-
-  // Fallback to CWD
-  return cwd;
+export function resolveProjectDir(explicitDir?: string): string {
+  return resolveProjectDirWithSource(explicitDir).projectDir;
 }
 
 // If `dir` is "<root>/<harness>/<leaf>" with <harness> a harness-dir name and
@@ -318,6 +311,28 @@ function findWorkspaceMarkerAncestor(startDir: string): string | null {
   }
 }
 
+// Resolve the rungs below CLAUDE_PROJECT_DIR without consulting the
+// environment. Keeping this path pure preserves the established return order
+// and makes the selected rung available to the provenance seam.
+function resolveProjectDirAfterEnvWithSource(
+  leaf: "tools" | "hooks",
+  importMetaUrl: string,
+): ResolvedProjectDir {
+  const markerDir = findWorkspaceMarkerAncestor(process.cwd());
+  if (markerDir) return { projectDir: markerDir, source: "marker" };
+
+  const scriptDir = dirname(fileURLToPath(importMetaUrl));
+  const fromScript = stripHarnessLeaf(scriptDir, leaf);
+  if (fromScript) return { projectDir: fromScript, source: "script-path" };
+
+  const cwd = process.cwd();
+  for (const h of KNOWN_HARNESS_DIRS) {
+    if (existsSync(join(cwd, h))) return { projectDir: cwd, source: "cwd" };
+  }
+
+  return { projectDir: cwd, source: "cwd" };
+}
+
 // --- Hook project dir resolution ---
 
 // `payloadCwd` is the `cwd` field of the harness hook's stdin payload — the
@@ -331,13 +346,23 @@ export function resolveProjectDirFromHook(
   importMetaUrl: string,
   payloadCwd?: string | null,
 ): string {
+  return resolveProjectDirFromHookWithSource(importMetaUrl, payloadCwd).projectDir;
+}
+
+export function resolveProjectDirFromHookWithSource(
+  importMetaUrl: string,
+  payloadCwd?: string | null,
+): ResolvedProjectDir {
   // 1. Hook payload cwd, but only when it carries its own workspace marker —
   //    an arbitrary session cwd (a subdirectory, an unrelated repo) must not
   //    hijack resolution. Marker-less payload cwd falls through to the ladder.
-  if (payloadCwd && hasWorkspaceMarker(payloadCwd)) return payloadCwd;
+  if (payloadCwd && hasWorkspaceMarker(payloadCwd)) {
+    return { projectDir: payloadCwd, source: "marker" };
+  }
 
   // 2. CLAUDE_PROJECT_DIR env var
-  if (process.env.CLAUDE_PROJECT_DIR) return process.env.CLAUDE_PROJECT_DIR;
+  const envDir = process.env.CLAUDE_PROJECT_DIR;
+  if (envDir) return { projectDir: envDir, source: "env" };
 
   // 3. CWD (or an ancestor) carries its own amadeus workspace marker
   //    (issue #641). In a worktree session the hook SCRIPTS live in the
@@ -346,24 +371,7 @@ export function resolveProjectDirFromHook(
   //    the worktree. Search upward from cwd for a dir that itself has an
   //    "amadeus/" tree and a "<harness>/tools/" tree, and prefer it over the
   //    script-path derivation.
-  const markerDir = findWorkspaceMarkerAncestor(process.cwd());
-  if (markerDir) return markerDir;
-
-  // 4. Script path derivation (open-set): hooks ship at
-  //    <project>/<harness>/hooks/, so strip "<harness>/hooks" for ANY harness.
-  const scriptDir = dirname(fileURLToPath(importMetaUrl));
-  const fromScript = stripHarnessLeaf(scriptDir, "hooks");
-  if (fromScript) return fromScript;
-
-  // 5. CWD has a known harness directory (dev repo).
-  const cwd = process.cwd();
-  for (const h of KNOWN_HARNESS_DIRS) {
-    if (existsSync(join(cwd, h))) {
-      return cwd;
-    }
-  }
-
-  return cwd;
+  return resolveProjectDirAfterEnvWithSource("hooks", importMetaUrl);
 }
 
 // --- Machine-injected turn classification (shared catalog) --------------------
@@ -1335,6 +1343,7 @@ export function ensureStageDiaryForDirective(
   projectDir: string,
   memoryPathRel: string,
   space: string,
+  projectDirSource: ProjectDirSource = "explicit",
 ): StageDiaryOutcome {
   if (memoryPathNamesIntentRecord(memoryPathRel)) {
     return ensureStageDiary(projectDir, memoryPathRel);
@@ -1342,7 +1351,9 @@ export function ensureStageDiaryForDirective(
   const records = listIntentDirs(projectDir, space);
   if (records.length > 0) {
     console.error(
-      `amadeus: stage diary skipped — record prefix unresolved while ${records.length} intent record(s) exist (see #1279)`,
+      `amadeus: cursor resolution failed under projectDir ${JSON.stringify(projectDir)} ` +
+        `(source: ${projectDirSource}); stage diary skipped — record prefix unresolved ` +
+        `while ${records.length} intent record(s) exist (see #1279)`,
     );
     return "skipped-unresolved";
   }

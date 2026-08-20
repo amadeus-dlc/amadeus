@@ -132,4 +132,5 @@ describe("t481 resolveProjectDir — worktree workspace-marker rung (issue #2352
     process.chdir(worktreeDir);
     expect(resolveProjectDir("/explicit/dir")).toBe("/explicit/dir");
   });
+
 });

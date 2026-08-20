@@ -174,6 +174,8 @@ import {
   recordDirMatches,
   recoverBoltDag,
   resolveProjectDir,
+  resolveProjectDirWithSource,
+  type ProjectDirSource,
   runtimeGraphPath,
   type StageEntry,
   type UnitKind,
@@ -2347,14 +2349,19 @@ function isCodekb(node: GraphStage): boolean {
 // codekbRepoName(projectDir); `space` is the active-space cursor. When absent
 // (a non-codekb caller, e.g. a test invoking buildRunStageDirective with
 // defaults) the codekb branch never fires and the record-dir path stands.
-export type CodekbCtx = { projectDir: string; space: string; codekbRepo: string };
+export type CodekbCtx = {
+  projectDir: string;
+  projectDirSource: ProjectDirSource;
+  space: string;
+  codekbRepo: string;
+};
 
 // Build the CodekbCtx for a live projectDir, resolving the active-space cursor
 // and the deterministic codekb repo name (both read-only). One place so the
 // `next` happy path, the jump paths, and the report-side per-unit coverage guard
 // share the same construction instead of repeating the object literal.
-function codekbCtxFor(pd: string): CodekbCtx {
-  return { projectDir: pd, space: activeSpace(pd), codekbRepo: codekbRepoName(pd) };
+function codekbCtxFor(pd: string, projectDirSource: ProjectDirSource = "explicit"): CodekbCtx {
+  return { projectDir: pd, projectDirSource, space: activeSpace(pd), codekbRepo: codekbRepoName(pd) };
 }
 
 // Resolve a single artifact vocabulary name to its canonical amadeus-docs/... path
@@ -2979,7 +2986,12 @@ function buildRunStageDirective(
   // it carries the live projectDir; the ctx-less test/default path writes
   // nothing. ensureStageDiary never overwrites an existing diary (#1080).
   if (codekbCtx) {
-    ensureStageDiaryForDirective(codekbCtx.projectDir, directive.memory_path, codekbCtx.space);
+    ensureStageDiaryForDirective(
+      codekbCtx.projectDir,
+      directive.memory_path,
+      codekbCtx.space,
+      codekbCtx.projectDirSource,
+    );
   }
   const depth = resolveDepth(stateContent, scope);
   if (depth !== undefined) directive.depth = depth;
@@ -3309,7 +3321,11 @@ function emitReadonlyLatchDone(
 // The `next` handler — pure read of workflow state, emits exactly one
 // directive. Its only write is the machine-local sensor-invocation projection
 // emit() drops beside the hooks-health heartbeat for run-stage directives.
-export function handleNext(args: string[], projectDir: string | undefined): void {
+export function handleNext(
+  args: string[],
+  projectDir: string | undefined,
+  projectDirSource: ProjectDirSource = "explicit",
+): void {
   // Record the project this handler operates on so emit()'s ERROR_LOGGED lands
   // here, not the ambient CLAUDE_PROJECT_DIR, under in-process drivers (#1389).
   _handlerProjectDir = projectDir;
@@ -3393,7 +3409,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
     return;
   }
 
-  const pd = resolveProjectDir(projectDir);
+  const pd = projectDir!;
   if (emitArchivedNextError(pd)) return;
   const stateContent = loadStateFileIfPresent(pd);
   // The active intent's RELATIVE record-dir prefix (amadeus/spaces/<sp>/intents/
@@ -3407,7 +3423,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
   // place a KNOWN_CODEKB_STAGES artifact under amadeus/spaces/<space>/codekb/
   // <repo>/ (dropping the intents/<slug> tail) without re-reading the disk in
   // the pure resolver. codekbRepoName is read-only (intentRepos never throws).
-  const codekbCtx = codekbCtxFor(pd);
+  const codekbCtx = codekbCtxFor(pd, projectDirSource);
 
   // Branch 2.4 - REPAIR_STALLED suspension (issue #2912). When bounded Quality
   // Repair parks a semi/full run, the stop lives in the Intent autonomy
@@ -3738,7 +3754,7 @@ export function handleNext(args: string[], projectDir: string | undefined): void
     if (emitComposedPluginStageIfInstalled(flags, scope, projectType, recordPrefix, codekbCtx, pluginHostRoot(), stateContent)) {
       return;
     }
-    emitJumpDirective(flags, scope, pd, projectType);
+    emitJumpDirective(flags, scope, pd, projectType, projectDirSource);
     return;
   }
 
@@ -5255,6 +5271,7 @@ function emitJumpDirective(
   scope: string,
   projectDir: string,
   projectType: "brownfield" | "greenfield" | null = null,
+  projectDirSource: ProjectDirSource,
 ): void {
   // --phase initialization is rejected up front (applies with or without state).
   if (flags.phase && canonicalisePhase(flags.phase) === "initialization") {
@@ -5328,7 +5345,14 @@ function emitJumpDirective(
     // codekb ctx is computed from the same live projectDir (no handleNext-cached
     // value reaches this inline site), so a codekb stage jumped-to here still
     // resolves under amadeus/spaces/<space>/codekb/<repo>/.
-    emitRunStageForSlug(first.slug, projectType, scope, null, relativeRecordDir(projectDir), codekbCtxFor(projectDir));
+    emitRunStageForSlug(
+      first.slug,
+      projectType,
+      scope,
+      null,
+      relativeRecordDir(projectDir),
+      codekbCtxFor(projectDir, projectDirSource),
+    );
     return;
   }
 
@@ -5365,7 +5389,17 @@ function emitJumpDirective(
   // No-state jump: scope feeds the gate; stateContent is null (no workflow yet).
   // codekb ctx computed off the same live projectDir as the inline recordPrefix
   // (same rationale as the --phase inline site above).
-  emit(buildRunStageDirective(node, projectType, UNIT_NAME_PLACEHOLDER, scope, null, relativeRecordDir(projectDir), codekbCtxFor(projectDir)));
+  emit(
+    buildRunStageDirective(
+      node,
+      projectType,
+      UNIT_NAME_PLACEHOLDER,
+      scope,
+      null,
+      relativeRecordDir(projectDir),
+      codekbCtxFor(projectDir, projectDirSource),
+    ),
+  );
 }
 
 // Pull `target_slug` AND `direction` out of `amadeus-jump.ts resolve`'s stdout
@@ -7401,8 +7435,9 @@ function main(): void {
 
   // Telemetry process span (opt-in; no-op unless observability.enabled).
   // Resolution failures must not change the CLI contract — skip silently.
+  const resolvedProject = resolveProjectDirWithSource(projectDir);
   try {
-    initProcessObservability(`tool:amadeus-orchestrate:${subcommand ?? "?"}`, resolveProjectDir(projectDir));
+    initProcessObservability(`tool:amadeus-orchestrate:${subcommand ?? "?"}`, resolvedProject.projectDir);
   } catch {
     // no resolvable workflow -> nothing to observe
   }
@@ -7416,16 +7451,16 @@ function main(): void {
   // byte-unchanged.
   switch (subcommand) {
     case "next":
-      handleNext(subArgs, resolveProjectDir(projectDir));
+      handleNext(subArgs, resolvedProject.projectDir, resolvedProject.source);
       break;
     case "report":
-      handleReport(subArgs, resolveProjectDir(projectDir));
+      handleReport(subArgs, resolvedProject.projectDir);
       break;
     case "resolve-failure":
-      handleFailureRuling(subArgs, resolveProjectDir(projectDir));
+      handleFailureRuling(subArgs, resolvedProject.projectDir);
       break;
     case "park":
-      handlePark(subArgs, resolveProjectDir(projectDir));
+      handlePark(subArgs, resolvedProject.projectDir);
       break;
     case "gate-reserve":
       handleGateReserve(subArgs, projectDir);

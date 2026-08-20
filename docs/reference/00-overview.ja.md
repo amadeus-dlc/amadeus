@@ -21,6 +21,7 @@ AI-DLC を **使って** ソフトウェアを構築する場合は、まず [�
 | 章 | トピック |
 |---------|-------|
 | [Architecture](01-architecture.ja.md) | 5層モデル、[Configuration layers](01-architecture.ja.md#configuration-layers) のルーティング原則、実行モデル、設計上の決定 |
+| [ADR: プロジェクトディレクトリ解決順](adr/0001-project-dir-resolution-order.ja.md) | `CLAUDE_PROJECT_DIR` の優先順位と不一致診断に関する決定記録 |
 | [Plane Architecture](02-plane-architecture.ja.md) | control / data / management プレーンの分離とその境界 |
 | [Orchestrator](03-orchestrator.ja.md) | SKILL.md コンダクター: フォワーディングループ、ゲートの儀式、駆動する状態機械 |
 | [Stage Protocol](04-stage-protocol.ja.md) | 振る舞いの契約: 承認ゲート、コンプライアンスチェックリスト |

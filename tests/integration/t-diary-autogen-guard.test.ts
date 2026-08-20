@@ -17,6 +17,7 @@ import { join } from "node:path";
 import {
   ensureStageDiaryForDirective,
   memoryPathNamesIntentRecord,
+  resolveProjectDirWithSource,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const REPO_TEMPLATE = join(
@@ -34,6 +35,7 @@ const REL_DIARY_FALLBACK =
 
 let projectDir: string;
 let savedHarness: string | undefined;
+let savedProjectDir: string | undefined;
 
 function seedTemplate(): void {
   const dir = join(projectDir, ".claude", "knowledge", "amadeus-shared");
@@ -54,12 +56,16 @@ function seedRecordDirs(names: string[]): void {
 beforeEach(() => {
   projectDir = mkdtempSync(join(tmpdir(), "diary-guard-"));
   savedHarness = process.env.AMADEUS_HARNESS_DIR;
+  savedProjectDir = process.env.CLAUDE_PROJECT_DIR;
   process.env.AMADEUS_HARNESS_DIR = ".claude";
+  process.env.CLAUDE_PROJECT_DIR = projectDir;
 });
 
 afterEach(() => {
   if (savedHarness === undefined) delete process.env.AMADEUS_HARNESS_DIR;
   else process.env.AMADEUS_HARNESS_DIR = savedHarness;
+  if (savedProjectDir === undefined) delete process.env.CLAUDE_PROJECT_DIR;
+  else process.env.CLAUDE_PROJECT_DIR = savedProjectDir;
   rmSync(projectDir, { recursive: true, force: true });
 });
 
@@ -101,17 +107,26 @@ describe("ensureStageDiaryForDirective", () => {
   test("edge: fallback memory_path WITH record dirs -> loud advisory, no file", () => {
     seedTemplate();
     seedRecordDirs(["260719-alpha", "260720-beta"]);
+    const resolved = resolveProjectDirWithSource();
+    expect(resolved).toEqual({ projectDir, source: "env" });
     const errs: string[] = [];
     const original = console.error;
     console.error = ((msg?: unknown) => { errs.push(String(msg)); }) as typeof console.error;
     try {
-      const result = ensureStageDiaryForDirective(projectDir, REL_DIARY_FALLBACK, "default");
+      const result = ensureStageDiaryForDirective(
+        resolved.projectDir,
+        REL_DIARY_FALLBACK,
+        "default",
+        resolved.source,
+      );
       expect(result).toBe("skipped-unresolved");
     } finally {
       console.error = original;
     }
     expect(existsSync(join(projectDir, REL_DIARY_FALLBACK))).toBe(false);
     expect(errs.length).toBe(1);
+    expect(errs[0]).toContain(JSON.stringify(projectDir));
+    expect(errs[0]).toContain("source: env");
     expect(errs[0]).toContain("record prefix unresolved");
     expect(errs[0]).toContain("2 intent record(s)");
     expect(errs[0]).toContain("#1279");
@@ -121,11 +136,18 @@ describe("ensureStageDiaryForDirective", () => {
   // no intent to write into and nothing has gone wrong.
   test("edge: fallback memory_path with NO record dirs -> silent pre-birth skip", () => {
     seedTemplate();
+    const resolved = resolveProjectDirWithSource();
+    expect(resolved).toEqual({ projectDir, source: "env" });
     const errs: string[] = [];
     const original = console.error;
     console.error = ((msg?: unknown) => { errs.push(String(msg)); }) as typeof console.error;
     try {
-      const result = ensureStageDiaryForDirective(projectDir, REL_DIARY_FALLBACK, "default");
+      const result = ensureStageDiaryForDirective(
+        resolved.projectDir,
+        REL_DIARY_FALLBACK,
+        "default",
+        resolved.source,
+      );
       expect(result).toBe("skipped-prebirth");
     } finally {
       console.error = original;
