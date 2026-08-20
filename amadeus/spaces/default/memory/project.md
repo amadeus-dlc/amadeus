@@ -13,7 +13,7 @@
 - ソロ運用でも Bolt 実装は最初から git worktree 分離で行い、本線ツリーのブランチ切替で実装しない。source-only 境界下の新規 worktree は自己インストール面を欠くため、依存インストールと `bun run build` を移設の定型手順に含める <!-- cid:code-generation:solo-bolt-worktree-required -->
 - サブエージェントに engine/state の変更操作(`amadeus-orchestrate.ts` の next/report/park、`amadeus-state.ts`、`amadeus-log.ts`、`amadeus-bolt.ts`)をさせない。状態遷移・ゲート提示・レビュー・学習リチュアルは conductor のみが行う。prompt 明示だけに頼らず、調査・レビューは書込不可のサブエージェント種別に限定し、drafting では 1 エージェント = 1 成果物パスに固定する <!-- cid:practices-discovery:c2-engine-mutation-ban -->
 - 常任グラント(standing grant)が覆うのはステージゲートの承認のみで、内容裁定の代答には使えない <!-- cid:approval-handoff:c2-grant-gates-only -->
-- semi/full の Intent autonomy が有効な間、§13 学習選定やステージ内の判断質問は人間へ直接提示せず `amadeus-bolt decide-question` の梯子で裁定し、fail-closed の結果のみ人間へ回す。常任グラントとは別機構であり適用境界を混同しない <!-- cid:scope-definition:c1-semi-ladder-routing -->
+- semi/full の Intent autonomy が有効な間、§13 学習選定やステージ内の判断質問は人間へ直接提示せず `amadeus-bolt decide-question` の梯子で裁定し、fail-closed の結果のみ人間へ回す。常任グラントとは別機構であり適用境界を混同しない。§13 学習選定については、本則が team.md の `cid:requirements-analysis:learnings-election`(「§13 学習選定は選挙にかける」)を狭める形で優先する — autonomy none では従来どおり選挙が正規経路であり、本則はそれを否定しない <!-- cid:scope-definition:c1-semi-ladder-routing -->
 - AskUserQuestion が dismiss された場合は沈黙を承認とみなさず、推奨値も選択扱いにしない。適用可能な最も具体的な既存規則で判定し、根拠を成果物へ明記する <!-- cid:practices-discovery:c2-dismiss-not-approval -->
 - units-generation を SKIP する degrade スコープでも、code-generation 成果物は `construction/<slug>/code-generation/` の unit ディレクトリ様式に置く。複数 unit の並行実装では、unit ディレクトリ作成と directive 捕捉を conductor が unit ごとに直列で所有する(全 unit covered 後の再取得は fail-closed) <!-- cid:code-generation:c1-degrade-batch-directive-capture -->
 - Issue と承認済み成果物にある決定を再質問しない。質問は矛盾か、実装を阻む要件欠落に限る。UX・互換性など既存実装の流儀で決まる事項は既存パターンを読んで合わせる <!-- cid:requirements-analysis:c5 -->
