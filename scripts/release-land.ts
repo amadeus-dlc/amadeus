@@ -179,6 +179,13 @@ export class ReleaseLandCliPort implements ReleaseLandPort {
 
   createAndPushTag(version: string, sha: string): void {
     const tag = releaseTagName(version);
+    // The merge queue creates the squash commit after the workflow checked
+    // the repository out, so the object this run must tag is not local yet.
+    // `git tag` takes the 40-hex argument as a raw object id and dies with
+    // "fatal: bad object type." when it was never fetched (#3302). Ask
+    // origin for that exact commit first; a fetch failure stops the release
+    // before any tag exists.
+    command(this.#context, ["git", "fetch", "--no-tags", "origin", sha]);
     command(this.#context, ["git", "tag", "-a", tag, "-m", `Release ${tag}`, sha]);
     command(this.#context, ["git", "push", "origin", tag]);
   }

@@ -408,6 +408,74 @@ describe("release-land CLI merge-queue compatibility", () => {
     }
   });
 
+  test("fetches the queue commit before tagging it (#3302)", () => {
+    // The merge queue creates the squash commit after the workflow's
+    // checkout, so the object is absent unless the lander asks origin for
+    // it. Git resolves a 40-hex argument as a raw object id, so tagging an
+    // unfetched commit dies with "fatal: bad object type." rather than a
+    // ref-resolution error. This runner reproduces that: only what the
+    // lander explicitly fetches becomes locally present.
+    const commands: string[][] = [];
+    const localObjects = new Set<string>();
+    const runner: CommandRunner = {
+      run(command) {
+        commands.push(command);
+        if (command[0] === "git" && command[1] === "fetch") {
+          localObjects.add(command[command.length - 1]);
+          return { stdout: "", stderr: "" };
+        }
+        if (command[0] === "git" && command[1] === "tag") {
+          const target = command[command.length - 1];
+          if (!localObjects.has(target)) throw new Error("fatal: bad object type.");
+          return { stdout: "", stderr: "" };
+        }
+        return { stdout: "", stderr: "" };
+      },
+    };
+    const port = new ReleaseLandCliPort({
+      repoRoot: "/tmp/amadeus-release-land",
+      repository: "amadeus-dlc/amadeus",
+      botLogin: BOT_LOGIN,
+      runner,
+    });
+
+    port.createAndPushTag("0.1.8", MERGE_SHA);
+
+    const fetchIndex = commands.findIndex(
+      (command) => command[0] === "git" && command[1] === "fetch" && command.includes(MERGE_SHA),
+    );
+    const tagIndex = commands.findIndex((command) => command[0] === "git" && command[1] === "tag");
+    expect(fetchIndex).toBeGreaterThanOrEqual(0);
+    expect(tagIndex).toBeGreaterThanOrEqual(0);
+    expect(fetchIndex).toBeLessThan(tagIndex);
+    expect(commands[fetchIndex]).toEqual(["git", "fetch", "--no-tags", "origin", MERGE_SHA]);
+  });
+
+  test("a queue commit that origin will not serve fails loudly instead of tagging (#3302)", () => {
+    const commands: string[][] = [];
+    const runner: CommandRunner = {
+      run(command) {
+        commands.push(command);
+        if (command[0] === "git" && command[1] === "fetch") {
+          throw new Error(`fatal: couldn't find remote ref ${command[command.length - 1]}`);
+        }
+        return { stdout: "", stderr: "" };
+      },
+    };
+    const port = new ReleaseLandCliPort({
+      repoRoot: "/tmp/amadeus-release-land",
+      repository: "amadeus-dlc/amadeus",
+      botLogin: BOT_LOGIN,
+      runner,
+    });
+
+    expect(() => port.createAndPushTag("0.1.8", MERGE_SHA)).toThrow("couldn't find remote ref");
+    // A failed fetch must stop the release: no tag is created and nothing is
+    // pushed, so a half-tagged release state cannot appear.
+    expect(commands.some((command) => command[0] === "git" && command[1] === "tag")).toBe(false);
+    expect(commands.some((command) => command[0] === "git" && command[1] === "push")).toBe(false);
+  });
+
   test("rejects a non-positive deadline or poll interval", () => {
     const required = ["--repository", "amadeus-dlc/amadeus", "--bot-login", BOT_LOGIN, "--bump", "patch"];
     expect(() => parseReleaseLandArgs([...required, "--deadline-seconds", "0"])).toThrow(
