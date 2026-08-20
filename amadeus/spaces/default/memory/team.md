@@ -43,7 +43,7 @@
 - 独立レビューの観点: 完全性(実測)、正本と生成物の同期、surgical、落ちる実証、検証エビデンスの実測 exit code、無申告の逸脱。PR 発行前に deslop を通し、除去後は全検証コマンドを再実行する <!-- cid:requirements-analysis:independent-review-on-pr -->
 - AI は PR のマージを自発実行しない。CI green とレビュー READY を実測してユーザーへ諮り、承認後にスカッシュマージする。実行前に mergeable・現 head の必須 CI・verdict を再実測し、head が実質変化していれば増分再レビューのうえ再度諮る <!-- cid:requirements-analysis:leader-executes-merge -->
 - Issue のクローズは PR の MERGED 状態と着地面の実読・grep の出力を確認した後にのみ行う <!-- cid:requirements-analysis:close-after-landing-verification -->
-- §13 学習選定は選挙にかける。候補一覧(採用案+不採用理由)または「0件でよいか」を諮り、裁定成立後に記録する。ゲート報告には候補列挙か明示の「0件」を同梱する <!-- cid:requirements-analysis:learnings-election -->
+- §13 学習選定は選挙にかける。候補一覧(採用案+不採用理由)または「0件でよいか」を諮り、裁定成立後に記録する。ゲート報告には候補列挙か明示の「0件」を同梱する。ただし semi/full の Intent autonomy が有効な間は `cid:scope-definition:c1-semi-ladder-routing`(project.md)が優先し、決定経路は `amadeus-bolt decide-question` の5段梯子になる(ソロ選挙の結果はその1段として取り込まれる)。選挙への直行が正規経路なのは autonomy が none の場合に限る <!-- cid:requirements-analysis:learnings-election -->
 
 ### ノルムの保守
 
