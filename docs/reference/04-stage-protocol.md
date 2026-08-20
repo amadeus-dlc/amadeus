@@ -412,6 +412,23 @@ audit log entries.
 
 *(Protocol Section 4)*
 
+### Construction iteration axis
+
+The Construction walk is `stage-major` by default. In that mode, the engine
+completes a Construction stage for every Unit before moving to the next stage.
+Teams that need each Unit's stages to stay together can opt into `unit-major`:
+
+```bash
+bun .claude/tools/amadeus-state.ts set-construction-iteration unit-major
+```
+
+The command writes runtime-only `Construction Iteration` metadata to the active
+intent. It accepts only `stage-major` and `unit-major`; use
+`set-construction-iteration stage-major` to restore the default. The choice does
+not alter scope membership or the compiled graph. On the next `next`, the
+orchestrator evaluates the selected axis against the same Unit/stage coverage
+ledger.
+
 ### Checkbox States
 
 | Checkbox | Meaning |

@@ -4881,6 +4881,54 @@ function settlePerUnitOutcomes(
   }
 }
 
+function selectNextConstructionUnit(
+  node: GraphStage,
+  scope: string,
+  units: readonly string[],
+  cancelledUnits: ReadonlySet<string>,
+  projectDir: string,
+  recordPrefix: string | null,
+  codekbCtx: CodekbCtx,
+  unitKinds: ReadonlyMap<string, UnitKind>,
+  stateContent: string | null,
+): string | null {
+  const constructionStages = subgraphForScope(scope).filter(
+    (candidate) => candidate.phase === "construction",
+  );
+  const constructionStageBySlug = new Map(
+    constructionStages.map((candidate) => [candidate.slug, candidate] as const),
+  );
+  const cancelledByStage = new Map(
+    constructionStages.map((candidate) => [
+      candidate.slug,
+      candidate.slug === node.slug
+        ? cancelledUnits
+        : cancelledConstructionUnits(projectDir, candidate.slug),
+    ] as const),
+  );
+  return selectNextUnitForStage(
+    node.slug,
+    units,
+    (u, candidateStage) => {
+      const candidateNode = constructionStageBySlug.get(candidateStage);
+      if (candidateNode === undefined) return false;
+      return (
+        cancelledByStage.get(candidateStage)?.has(u) === true ||
+        unitCovered(
+          projectDir,
+          candidateNode,
+          u,
+          recordPrefix,
+          codekbCtx,
+          unitKinds.get(u),
+        )
+      );
+    },
+    readConstructionIteration(stateContent),
+    constructionStages.map((candidate) => candidate.slug),
+  );
+}
+
 // Emit ONE iteration of a per-unit Construction stage. The engine owns the
 // for_each loop here: it resolves the next uncovered unit, substitutes the real
 // unit name for {unit-name} in every path, and suppresses the gate for EVERY
@@ -4990,18 +5038,17 @@ function emitPerUnitRunStage(
     projectDir, node, units, cancelledUnits, recordPrefix, codekbCtx, unitKinds,
   );
 
-  // Delegate the next-unit selection to the canonical construction-iteration
-  // seam (selectNextUnitForStage → nextConstructionStep, FR-2 item 8). The
-  // coverage ledger is the per-unit artifacts on disk (unitCovered), passed as
-  // the predicate so the pure decision owns the pick. Over this SINGLE stage's
-  // matrix both axes resolve to the first uncovered unit, so the emitted
-  // directive is byte-identical on the default path (NFR-3 / BR-U05-02); the
-  // iteration axis is read so the canonical decision, not an ad-hoc loop, decides.
-  const pickUnit = selectNextUnitForStage(
-    node.slug,
+  // Delegate next-unit selection to the canonical construction-iteration seam.
+  const pickUnit = selectNextConstructionUnit(
+    node,
+    scope,
     units,
-    (u) => cancelledUnits.has(u) || unitCovered(projectDir, node, u, recordPrefix, codekbCtx, unitKinds.get(u)),
-    readConstructionIteration(stateContent),
+    cancelledUnits,
+    projectDir,
+    recordPrefix,
+    codekbCtx,
+    unitKinds,
+    stateContent,
   );
   if (pickUnit === null) {
     // Every unit is already covered, but the checkbox is still in-flight: the

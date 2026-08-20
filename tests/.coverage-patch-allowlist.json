@@ -2082,9 +2082,9 @@
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "handleSetConstructionIteration",
-      "fingerprint": "sha256:4cd7c0de9c7688ca419ca832d3a727643bfc4ac5dd4a65042ad7e6914ea17619",
-      "anchorLines": 2,
-      "targetLines": "1-2"
+      "fingerprint": "sha256:b40c41acef345f467243b3c0241eadd26d7a106a1273311ac9648752d58e078a",
+      "anchorLines": 6,
+      "targetLines": "1-6"
     },
     "reason": "Usage-error emit in handleSetConstructionIteration for the missing-argument branch (U05). error() is `never` (process.exit), so driving this arm in-process would terminate the test runner; it is exercised by the shipped-subprocess reject case in tests/integration/t250 (exit code + byte-identity asserted). Spawn-only error-exit row per spawn-blindspot-two-step (ii); the happy path is covered in-process by the same file's in-process handler drive.",
     "expiry": "remove if error() gains a test-injectable non-exiting seam"

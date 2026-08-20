@@ -82,6 +82,7 @@ describe("t250 set-construction-iteration (mutation-before-reject)", () => {
     const r = run(STATE, ["set-construction-iteration", "--project-dir", p]);
     expect(r.status).not.toBe(0);
     expect(r.out).toContain("Usage: amadeus-state.ts set-construction-iteration");
+    expect(r.out).toContain("unit-major walks each Unit through Construction stages");
     expect(readFileSync(sp, "utf-8")).toBe(before);
   });
 

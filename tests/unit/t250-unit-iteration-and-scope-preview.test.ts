@@ -189,6 +189,29 @@ describe("t250 selectNextUnitForStage (per-stage engine seam)", () => {
     ).toBe("u3");
   });
 
+  test("full stage list keeps selection within the requested stage", () => {
+    const stages = ["functional-design", "code-generation"];
+    const covered = new Set([coverageKey("u1", "functional-design")]);
+    const isCovered = (unit: string, stage: string): boolean =>
+      covered.has(coverageKey(unit, stage));
+    expect(
+      selectNextUnitForStage("code-generation", units, isCovered, "stage-major", stages),
+    ).toBe("u1");
+    expect(
+      selectNextUnitForStage("code-generation", units, isCovered, "unit-major", stages),
+    ).toBe("u1");
+  });
+
+  test("unit-major does not reuse a covered unit when the next cell is another stage", () => {
+    const stages = ["functional-design", "code-generation"];
+    const covered = new Set([coverageKey("u1", "functional-design")]);
+    const isCovered = (unit: string, stage: string): boolean =>
+      covered.has(coverageKey(unit, stage));
+    expect(
+      selectNextUnitForStage("functional-design", units, isCovered, "unit-major", stages),
+    ).toBe("u2");
+  });
+
   test("returns null when every unit is covered", () => {
     expect(
       selectNextUnitForStage("code-generation", units, () => true, "stage-major"),

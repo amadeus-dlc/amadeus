@@ -473,6 +473,22 @@ Run any of them with `bun .claude/tools/<tool>.ts <subcommand>`.
 
 `bun .claude/tools/amadeus-graph.ts validate-grid --proposal <path> [--strict] [--project-type <t>] [--keywords <csv>]` validates an arbitrary `{"<stage>": "EXECUTE"|"SKIP"}` JSON grid. Lenient mode mirrors `validate-scope` (an off-path required producer is advisory); `--strict` hard-rejects it (the recompose posture). `--keywords` checks each granted keyword against the keywords existing scopes already claim: a collision is a hard error naming the incumbent scope (the composer runs this before writing gate-granted keywords). Exit 1 iff invalid; the JSON result lands on stdout.
 
+### `amadeus-state.ts set-construction-iteration` - choose Construction walk order
+
+Construction defaults to `stage-major`: it completes a Construction stage for
+each Unit before moving to the next stage. To opt into `unit-major`, which walks
+each Unit through the in-scope Construction stages before moving to the next
+Unit, set the runtime field on the active intent:
+
+```bash
+bun .claude/tools/amadeus-state.ts set-construction-iteration unit-major
+```
+
+Use `stage-major` to restore the default order. The setting is runtime metadata;
+it does not change the compiled plan or the set of eligible stages. The next
+`amadeus-orchestrate next` reads the setting and applies the selected axis to
+the Construction coverage ledger.
+
 ### `amadeus-sensor` — inspect and fire Sensors
 
 Sensors are deterministic checks that run after every `Write` or `Edit` to a stage output (see [Rules and the Learning Loop](09-rules-and-the-learning-loop.md) and reference [Sensor System](../reference/07-sensor-system.md)). The PostToolUse hook fires them for you; this tool lets you list, describe, and manually fire one.
