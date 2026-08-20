@@ -57,6 +57,7 @@ import {
 	resolveProjectDir,
 	sensorsDir,
 	stripProjectDir,
+	isMarkerArtifact,
 	withAuditLock,
 } from "./amadeus-lib.ts";
 import { attachProcessTraceContext, initProcessObservability } from "./amadeus-observability.ts";
@@ -569,6 +570,17 @@ export async function handleFire(args: string[], projectDirArg?: string): Promis
 		dispatchError(
 			`output path "${outputPath}" does not match sensor "${id}" filter "${matches}"`,
 		);
+	}
+
+	// Marker artifacts are workflow-control files, not prose documents. Keep
+	// the required-sections and upstream-coverage exemptions symmetric: a
+	// marker is not evaluated at all, so it emits neither PASS nor FAIL.
+	const outputStem = basename(outputPath).replace(/\.md$/, "");
+	if (
+		(id === "required-sections" || id === "upstream-coverage") &&
+		isMarkerArtifact(outputStem)
+	) {
+		process.exit(0);
 	}
 
 	// --- 1e. Generate Fire id (8 hex chars) ---
