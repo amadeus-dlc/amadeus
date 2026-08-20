@@ -15,6 +15,7 @@ import { randomUUID } from "node:crypto";
 import { readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import type { Result } from "./contract.ts";
 import { parseAuthoringProvenance, parseTlaModelMap } from "./amadeus-formal-verif-model-map.ts";
+import { AUTHORING_ROUTES } from "./authoring-routes.ts";
 import { verifyHumanApproval } from "./tla-applicability.ts";
 import type { ApplicabilityReceipt, HumanApprovalRef } from "./tla-applicability.ts";
 import type { IdentityComparison, VerifiedBundle } from "./tla-evidence.ts";
@@ -80,11 +81,14 @@ export type PreconditionFailure =
 export type RegistrationFailure =
   | { readonly kind: "preconditions-failed"; readonly failures: readonly PreconditionFailure[] }
   | { readonly kind: "validator-rejected"; readonly detail: string }
+  | { readonly kind: "revise-target-missing"; readonly name: string }
   | { readonly kind: "concurrent-modification" }
   | { readonly kind: "io-failure"; readonly detail: string };
 
+/** The two routes a registration can arrive on, and the two the composer serves. */
+export type AuthoringRoute = "author-new" | "revise-model";
+
 const BUNDLE_DIGEST = /^sha256:[0-9a-f]{64}$/;
-const AUTHORING_ROUTES: ReadonlySet<string> = new Set(["author-new", "revise-model"]);
 
 function ok<T>(value: T): Result<T, never> {
   return { ok: true, value };
@@ -219,25 +223,53 @@ export function parseModelMapSnapshot(bytes: string): Result<ModelMapSnapshot, R
   return ok({ bytes, document });
 }
 
+// author-new adds an entry the map does not have yet, so the draft joins the
+// existing ones and the whole list is put back in name order.
+function appended(models: readonly unknown[], draft: ModelMapEntryDraft): readonly unknown[] {
+  return [...models, draft].sort((left, right) => {
+    const leftName = (left as { name: string }).name;
+    const rightName = (right as { name: string }).name;
+    return leftName < rightName ? -1 : leftName > rightName ? 1 : 0;
+  });
+}
+
+// revise-model rewrites an entry that is already registered, so the draft takes
+// the place of the one carrying its name — and a name the map does not carry is
+// refused rather than appended, which is the fail-open this closes (FR-REG-2).
+// A second entry of the same name cannot exist: the snapshot was validated, and
+// unique names are one of the map's invariants.
+function revised(
+  models: readonly unknown[],
+  draft: ModelMapEntryDraft,
+): Result<readonly unknown[], RegistrationFailure> {
+  const target = models.findIndex((entry) => (entry as { name?: unknown }).name === draft.name);
+  if (target < 0) return err<RegistrationFailure>({ kind: "revise-target-missing", name: draft.name });
+  const composed = [...models];
+  composed[target] = draft;
+  return ok(composed);
+}
+
 /**
  * Compose the bytes a successful registration would publish and run the whole
  * map — not the draft alone — through the existing validator, so cross-entry
  * invariants (unique, sorted names) are closed before anything is written
  * (business-logic-model.md §1 step 3). The existing entries are re-serialized
  * from their own parsed objects, so their bytes are preserved (BR-U4-17).
+ *
+ * What the draft does to the map is the route's business: author-new appends,
+ * revise-model replaces by name. The route is required rather than defaulted so
+ * a caller cannot reach one arm by forgetting the other (FR-REG-1).
  */
 export function composeRegisteredMap(
   snapshot: ModelMapSnapshot,
   draft: ModelMapEntryDraft,
+  route: AuthoringRoute,
 ): Result<string, RegistrationFailure> {
   const models = snapshot.document.models;
   if (!Array.isArray(models)) return rejected("model map must hold a models array");
-  const composed = [...models, draft].sort((left, right) => {
-    const leftName = (left as { name: string }).name;
-    const rightName = (right as { name: string }).name;
-    return leftName < rightName ? -1 : leftName > rightName ? 1 : 0;
-  });
-  const bytes = `${JSON.stringify({ ...snapshot.document, models: composed }, null, 2)}\n`;
+  const composed = route === "revise-model" ? revised(models, draft) : ok(appended(models, draft));
+  if (!composed.ok) return composed;
+  const bytes = `${JSON.stringify({ ...snapshot.document, models: composed.value }, null, 2)}\n`;
   const validated = parseTlaModelMap(new TextEncoder().encode(bytes));
   return validated.ok ? ok(bytes) : rejected(validated.error.detail);
 }
@@ -335,7 +367,11 @@ function commit(
   const snapshot = parseModelMapSnapshot(snapshotBytes);
   if (!snapshot.ok) return snapshot;
 
-  const composed = composeRegisteredMap(snapshot.value, draft.value);
+  // Precondition (a) already parsed this into one of the two authoring routes,
+  // so this carries that checked fact to the composer rather than deciding it
+  // a second time.
+  const route = checked.value.applicability.route as AuthoringRoute;
+  const composed = composeRegisteredMap(snapshot.value, draft.value, route);
   if (!composed.ok) return composed;
 
   try {

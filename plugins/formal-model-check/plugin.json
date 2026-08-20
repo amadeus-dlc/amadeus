@@ -18,6 +18,7 @@
   "tools": [
     "tools/amadeus-formal-verif-model-map.ts",
     "tools/amadeus-sensor-model-completeness.ts",
+    "tools/authoring-routes.ts",
     "tools/canonical.ts",
     "tools/ci-docker-trace.ts",
     "tools/ci-model-check-artifacts.ts",
