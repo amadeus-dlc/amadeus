@@ -100,6 +100,7 @@ async function loadCoreRuntime(): Promise<CoreRuntime> {
 }
 
 async function autoComposePlugins(projectDir: string, context: PiExtensionContext): Promise<void> {
+  if (!existsSync(join(projectDir, ".pi"))) return;
   try {
     const core = await loadCoreRuntime();
     // Pi's session_start equivalent of the amadeus-plugin-compose hook.

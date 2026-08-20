@@ -1,4 +1,4 @@
-// covers: function:resyncStateToStageGraph
+// covers: function:resyncStateToStageGraph, function:probeStateResyncToStageGraph
 //
 // t407 — the post-compose state re-sync detects a silent no-op of
 // `replaceStageProgressSection` instead of reporting a green `resynced` (#1963).
