@@ -62,9 +62,8 @@
    gitignore されたクローンごとの active file です。活性化では active file が
    存在しないときだけ canonical の内容をコピーします。既存の active file は
    一切上書きせず、Amadeus の canonical hook 契約を満たしていなければ
-   処理を止めます。Amadeus の self repository では、`./scripts/run-codex.sh` が
-   Codex の起動または agmsg writer の適用より先に、
-   同じ活性化処理を実行します。
+   処理を止めます。Codex の起動または agmsg writer の適用より先に、
+   この活性化を実行してください。
 
 3. プロジェクトを trust します。Codex の trust は **2 層** あり、どちらも
    `$CODEX_HOME/config.toml` に事前シードする必要があります:
@@ -337,7 +336,7 @@ hermetic integration test は CI の blocking gate ですが、外部の agmsg /
 bridge が実際に起動し、再起動後も動くことまでは証明しません。monitor bridge の
 変更を検証するときは、Issue を完了する前に次の opt-in 確認を行います。
 
-1. 手動の `inbox.sh` poller をすべて止め、`./scripts/run-codex.sh` から新しい Codex
+1. 手動の `inbox.sh` poller をすべて止め、hook を活性化したうえで新しい Codex
    session を起動します。
 2. 最初の turn を送り、delivery mode が `monitor` で、bridge が alive と報告する
    ことを確認します。

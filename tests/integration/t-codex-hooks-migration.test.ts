@@ -173,7 +173,7 @@ function createSelfMigrationFixture(
   );
   writeFileSync(join(seed, "scripts", "package.ts"), "// package marker\n");
   writeFileSync(join(seed, "scripts", "promote-self.ts"), "// self marker\n");
-  writeFileSync(join(seed, "scripts", "run-codex.sh"), "#!/usr/bin/env bash\n");
+  writeFileSync(join(seed, "scripts", "worktree-gc.sh"), "#!/usr/bin/env bash\n");
   git(seed, "add", ".");
   git(seed, "commit", "-qm", "pre-fix self repository");
   git(seed, "remote", "add", "origin", origin);
@@ -557,8 +557,8 @@ describe("Codex hooks self migration", () => {
 
   test("rejects staged changes before touching active hooks", () => {
     const fixture = createSelfMigrationFixture();
-    writeFileSync(join(fixture.checkout, "scripts", "run-codex.sh"), "staged\n");
-    git(fixture.checkout, "add", "scripts/run-codex.sh");
+    writeFileSync(join(fixture.checkout, "scripts", "worktree-gc.sh"), "staged\n");
+    git(fixture.checkout, "add", "scripts/worktree-gc.sh");
     expectRejectedWithoutMutation(fixture, "STAGED_CHANGES");
   });
 
@@ -570,7 +570,7 @@ describe("Codex hooks self migration", () => {
 
   test("rejects unrelated tracked changes before touching active hooks", () => {
     const fixture = createSelfMigrationFixture();
-    writeFileSync(join(fixture.checkout, "scripts", "run-codex.sh"), "unrelated\n");
+    writeFileSync(join(fixture.checkout, "scripts", "worktree-gc.sh"), "unrelated\n");
     expectRejectedWithoutMutation(fixture, "UNRELATED_TRACKED_CHANGES");
   });
 
