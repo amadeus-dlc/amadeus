@@ -31,6 +31,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   loadStageGraph,
+  listIntents,
   parseCheckboxes,
   resyncStateToStageGraph,
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
@@ -66,6 +67,8 @@ function recordDirOf(proj: string): string {
 const statePathOf = (proj: string): string => join(recordDirOf(proj), "amadeus-state.md");
 const readState = (proj: string): string => readFileSync(statePathOf(proj), "utf-8");
 const writeState = (proj: string, s: string): void => writeFileSync(statePathOf(proj), s, "utf-8");
+const statePathFor = (proj: string, intent: string): string =>
+  join(proj, "amadeus", "spaces", "default", "intents", intent, "amadeus-state.md");
 
 const tempDirs: string[] = [];
 afterAll(() => {
@@ -258,6 +261,30 @@ describe("t394 compose wiring: the re-sync runs after the graph is recompiled", 
       ["user-stories"],
     ]);
     expect(readState(proj)).toMatch(/^- \[ \] user-stories — EXECUTE$/m);
+  });
+
+  test("the production re-sync dep touches only the active intent (#2557)", () => {
+    const proj = bornProject();
+    expect(run(proj, "amadeus-utility.ts", ["intent-birth", "--scope", "feature"]).status).toBe(0);
+    const intents = listIntents(proj).map((info) => info.dirName).filter((dir): dir is string => dir !== null);
+    expect(intents).toHaveLength(2);
+    const active = readFileSync(join(proj, "amadeus", "spaces", "default", "intents", "active-intent"), "utf-8").trim();
+    const inactive = intents.find((intent) => intent !== active);
+    expect(inactive).toBeDefined();
+
+    const inactivePath = statePathFor(proj, inactive as string);
+    const inactiveBefore = readFileSync(inactivePath, "utf-8");
+    const activePath = statePathFor(proj, active);
+    writeFileSync(activePath, readFileSync(activePath, "utf-8").replace(/^- \[ \] user-stories —.*\n/m, ""));
+    writeFileSync(inactivePath, inactiveBefore.replace(/^- \[ \] user-stories —.*\n/m, ""));
+
+    const resync = defaultPluginCliDeps().resyncIntentStates?.(join(proj, ".claude"));
+    expect(resync?.kind).toBe("ran");
+    const outcomes = resync?.kind === "ran" ? resync.outcomes : [];
+    expect(outcomes.map((outcome) => outcome.intent)).toEqual([active]);
+    expect(outcomes[0].status).toBe("resynced");
+    expect(readFileSync(activePath, "utf-8")).toMatch(/^- \[ \] user-stories — EXECUTE$/m);
+    expect(readFileSync(inactivePath, "utf-8")).toBe(inactiveBefore.replace(/^- \[ \] user-stories —.*\n/m, ""));
   });
 
   test("a host root that is not a harness dir IS the project dir", () => {

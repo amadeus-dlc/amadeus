@@ -32,6 +32,8 @@ import { fileURLToPath } from "node:url";
 import { harnessStageEntry, isHarnessDirName, KNOWN_HARNESS_DIRS, rulesSubdirFor } from "./amadeus-harness.ts";
 import type { GraphStage } from "./amadeus-graph.ts";
 import {
+  activeIntent,
+  activeSpace,
   resolveProjectDirFromHook,
   resyncStateToStageGraph,
   type StageEntry,
@@ -487,10 +489,16 @@ function resyncIntentStates(hostRoot: string): StateResyncRun {
       reason: read.reason,
     };
   }
+  const projectDir = projectDirOfHostRoot(hostRoot);
+  const space = activeSpace(projectDir);
+  const intent = activeIntent(projectDir, space);
+  if (intent === null) return { kind: "ran", outcomes: [] };
   return {
     kind: "ran",
-    outcomes: resyncStateToStageGraph(projectDirOfHostRoot(hostRoot), {
+    outcomes: resyncStateToStageGraph(projectDir, {
       graph: read.kind === "graph" ? read.graph : undefined,
+      space,
+      intent,
     }),
   };
 }
