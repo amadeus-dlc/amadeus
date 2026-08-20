@@ -1668,13 +1668,14 @@ export function nextConstructionStep(
 
 /** Convenience over `nextConstructionStep` for the engine's per-unit emission:
  *  given ordered units, the coverage predicate, the iteration axis, and the
- *  in-scope Construction stages, return the unit from the next uncovered cell.
- *  The stage argument to `isCovered` is required when a full stage list is
- *  supplied so the unit-major axis can observe the whole matrix. The optional
- *  list preserves the historical single-stage behavior for callers that do not
- *  need cross-stage ordering. Pure over its inputs — the caller supplies
- *  coverage as a predicate, so the engine's FS-backed `unitCovered` stays
- *  outside the decision — hence unit-testable in-process. */
+ *  in-scope Construction stages, return the unit from the next uncovered cell
+ *  when it belongs to the requested stage, otherwise the first uncovered unit
+ *  in that stage. The stage argument to `isCovered` is required when a full
+ *  stage list is supplied so the unit-major axis can observe the whole matrix.
+ *  The optional list preserves the historical single-stage behavior for
+ *  callers that do not need cross-stage ordering. Pure over its inputs — the
+ *  caller supplies coverage as a predicate, so the engine's FS-backed
+ *  `unitCovered` stays outside the decision — hence unit-testable in-process. */
 export function selectNextUnitForStage(
   stage: string,
   units: readonly string[],
@@ -1689,7 +1690,16 @@ export function selectNextUnitForStage(
     }
   }
   const step = nextConstructionStep({ iteration, covered }, { units, stages });
-  return step.kind === "run" ? step.unit : null;
+  if (step.kind === "run" && step.stage === stage) return step.unit;
+
+  // This helper is called while emitting one concrete stage. A unit-major
+  // matrix may point at a later stage for the same unit; that cell cannot be
+  // emitted by the current stage, so continue with the first uncovered unit in
+  // this stage instead of reusing a covered unit from the global step.
+  for (const u of units) {
+    if (!isCovered(u, stage)) return u;
+  }
+  return null;
 }
 
 /** Scope cost summary (FR-2 item 9). `stageCount` is the number of EXECUTE
