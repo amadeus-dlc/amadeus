@@ -8,7 +8,8 @@
 // GUARANTEE-PRINCIPLE GATE (a test's mechanism must be >= the unit's
 // minMechanism), and EMITS tests/.coverage-registry.json.
 //
-// WHY IT EXISTS. A new arg-dispatch case, a new VALID_EVENT_TYPES member, or a
+// WHY IT EXISTS. A new arg-dispatch case, a new canonical event in the OTel
+// Event Registry, or a
 // new scope-mapping.json key changes the enumerated universe. If nobody wrote a
 // `covers:` claim for it, the unit lands status=UNCOVERED, the regenerated
 // registry differs from the committed one, and `--check` exits 1 naming the
@@ -101,7 +102,7 @@ const STAGES_SOURCE_ROOT = existsSync(COMMON_STAGES_DIR)
   : "dist/claude/.claude/skills/amadeus/stages";
 const SCOPE_MAPPING_PATH = join(TOOLS_DIR, "data", "scope-mapping.json");
 const SCOPE_GRID_PATH = join(TOOLS_DIR, "data", "scope-grid.json");
-const AUDIT_PATH = join(TOOLS_DIR, "amadeus-audit.ts");
+const EVENT_REGISTRY_PATH = join(REPO_ROOT, "dist", "claude", ".claude", "otel", "event-registry.ts");
 const LIB_PATH = join(TOOLS_DIR, "amadeus-lib.ts");
 const GRAPH_PATH = join(TOOLS_DIR, "amadeus-graph.ts");
 const STATE_PATH = join(TOOLS_DIR, "amadeus-state.ts");
@@ -165,7 +166,7 @@ export function mechanismFromSegment(seg: string): Mechanism {
 // legitimately verify a unit of that class.
 //
 //   function (exported lib/graph fn)  -> none  (importable, pure-ish)
-//   audit    (VALID_EVENT_TYPES member)-> none  (state.ts spawn proves emission)
+//   audit    (registry canonical event)-> none  (state.ts spawn proves emission)
 //   scope    (scope-mapping.json key)  -> none  (data; loadScopeMapping in-proc)
 //   stage    (*.md under stages/)      -> none  (data; compile reads off disk)
 //   hook     (hook .ts file)           -> none  (spawnable deterministically)
@@ -427,33 +428,20 @@ export function enumerateSubcommands(): Unit[] {
   return units;
 }
 
-/** VALID_EVENT_TYPES Set members in amadeus-audit.ts (~:19). Read the Set body
- *  fresh; pull every quoted UPPER_SNAKE literal. */
+/** Canonical audit-event vocabulary, read as DATA from the OTel Event Registry
+ *  (otel/event-registry.ts, drift-guard set (b)) — the single vocabulary of
+ *  record. The legacy VALID_EVENT_TYPES table in amadeus-audit.ts is dead
+ *  production code since the v1 writer deletion and is no longer parsed here
+ *  (#1845); its removal is deferred to the #1841 migration cluster. */
 export function enumerateAuditEvents(): Unit[] {
-  const src = readFileSync(AUDIT_PATH, "utf-8");
-  const m = /const\s+VALID_EVENT_TYPES\s*=\s*new\s+Set\s*\(\s*\[/.exec(src);
-  if (!m) return [];
-  // Slice from the `[` to its matching `]`.
-  const open = src.indexOf("[", m.index);
-  let depth = 0;
-  let body = "";
-  for (let i = open; i < src.length; i++) {
-    const ch = src[i];
-    if (ch === "[") depth++;
-    else if (ch === "]") {
-      depth--;
-      if (depth === 0) {
-        body = src.slice(open + 1, i);
-        break;
-      }
-    }
-  }
-  const ids = [...body.matchAll(/"([A-Z][A-Z0-9_]*)"/g)].map((x) => x[1]);
-  return ids.map((id) => ({
+  const registry = require(EVENT_REGISTRY_PATH) as {
+    canonicalAuditEvents(): string[];
+  };
+  return registry.canonicalAuditEvents().map((id) => ({
     unitClass: "audit" as const,
     unitId: id,
     minMechanism: MIN_MECHANISM.audit,
-    source: "dist/claude/.claude/tools/amadeus-audit.ts",
+    source: "dist/claude/.claude/otel/event-registry.ts",
   }));
 }
 

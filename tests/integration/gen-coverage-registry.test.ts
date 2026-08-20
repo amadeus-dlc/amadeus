@@ -231,6 +231,7 @@ describe("--check freshness diff (the ratchet mechanism)", () => {
     registry: string;
     ratchet: string;
     auditPath: string;
+    eventRegistryPath: string;
   } {
     const root = mkdtempSync(join(tmpdir(), "cov-check-"));
     const srcRoot = join(root, "srcroot");
@@ -243,6 +244,11 @@ describe("--check freshness diff (the ratchet mechanism)", () => {
     cpSync(
       join(REPO_ROOT, "dist", "claude", ".claude", "hooks"),
       join(srcRoot, "dist", "claude", ".claude", "hooks"),
+      { recursive: true },
+    );
+    cpSync(
+      join(REPO_ROOT, "dist", "claude", ".claude", "otel"),
+      join(srcRoot, "dist", "claude", ".claude", "otel"),
       { recursive: true },
     );
     cpSync(
@@ -265,7 +271,14 @@ describe("--check freshness diff (the ratchet mechanism)", () => {
       "tools",
       "amadeus-audit.ts",
     );
-    return { root, srcRoot, registry, ratchet, auditPath };
+    const eventRegistryPath = join(
+      srcRoot,
+      "dist", "claude",
+      ".claude",
+      "otel",
+      "event-registry.ts",
+    );
+    return { root, srcRoot, registry, ratchet, auditPath, eventRegistryPath };
   }
 
   function genInto(t: ReturnType<typeof buildTempTree>) {
@@ -314,16 +327,26 @@ describe("--check freshness diff (the ratchet mechanism)", () => {
       // Baseline FIRST (clean), so the committed registry omits the new event.
       expect(genInto(t).status).toBe(0);
 
-      // Now inject a fake new audit event into the TEMP source's
-      // VALID_EVENT_TYPES Set. The set's first member is "STAGE_STARTED"; we
-      // add a sibling after it.
-      const audit = readFileSync(t.auditPath, "utf-8");
-      const injected = audit.replace(
-        '"STAGE_STARTED",',
-        '"STAGE_STARTED",\n  "FAKE_INJECTED_EVENT",',
+      // Now inject a fake new canonical event into the TEMP copy of the OTel
+      // Event Registry — the generator's vocabulary source since #1845 (the
+      // legacy VALID_EVENT_TYPES table is no longer read). Splice a minimal
+      // canonical def in ahead of the "amadeus.workflow.completed" entry.
+      const registrySrc = readFileSync(t.eventRegistryPath, "utf-8");
+      const injected = registrySrc.replace(
+        'name: "amadeus.workflow.completed",',
+        'name: "amadeus.fake.injected",\n' +
+          '    auditEvent: "FAKE_INJECTED_EVENT",\n' +
+          '    durability: "canonical",\n' +
+          '    category: "utility",\n' +
+          "    requiredAttributes: [],\n" +
+          "    optionalAttributes: [],\n" +
+          "    schemaVersion: 1,\n" +
+          "  },\n" +
+          "  {\n" +
+          '    name: "amadeus.workflow.completed",',
       );
-      expect(injected).not.toBe(audit); // the anchor really matched
-      writeFileSync(t.auditPath, injected);
+      expect(injected).not.toBe(registrySrc); // the anchor really matched
+      writeFileSync(t.eventRegistryPath, injected);
 
       // The enumerated universe now has one more audit unit (uncovered) that
       // the committed registry does not — freshness diff must fail.
