@@ -32,10 +32,31 @@
 // t144, which spawns against real dist trees.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { resolveProjectDir } from "../../packages/framework/core/tools/amadeus-lib.ts";
+
+const SOURCE_LIB = join(dirname(fileURLToPath(import.meta.url)), "../../packages/framework/core/tools/amadeus-lib.ts");
+
+function evalResolveProjectDirWithDiagnostics(cwd: string, envDir: string): { resolved: string[]; stderr: string } {
+  const r = spawnSync(
+    "bun",
+    [
+      "-e",
+      `import { resolveProjectDir } from ${JSON.stringify(SOURCE_LIB)}; console.log(JSON.stringify([resolveProjectDir(), resolveProjectDir()]));`,
+    ],
+    {
+      encoding: "utf-8",
+      cwd,
+      env: { ...process.env, CLAUDE_PROJECT_DIR: envDir } as NodeJS.ProcessEnv,
+    },
+  );
+  expect(r.status).toBe(0);
+  return { resolved: JSON.parse((r.stdout ?? "").trim()) as string[], stderr: r.stderr ?? "" };
+}
 
 // Build a main-checkout-shaped dir plus a worktree under it, each carrying its
 // own workspace marker (an "amadeus/" dir AND a "<harness>/tools/" dir).
@@ -131,5 +152,29 @@ describe("t481 resolveProjectDir — worktree workspace-marker rung (issue #2352
     const { worktreeDir } = makeWorktreeFixture(tmp);
     process.chdir(worktreeDir);
     expect(resolveProjectDir("/explicit/dir")).toBe("/explicit/dir");
+  });
+
+  test("8: a marker-miss env value is retained and diagnosed once per process", () => {
+    const unmarked = join(tmp, "unmarked");
+    mkdirSync(unmarked, { recursive: true });
+    process.chdir(unmarked);
+
+    const result = evalResolveProjectDirWithDiagnostics(unmarked, "/from/env");
+    expect(result.resolved).toEqual(["/from/env", "/from/env"]);
+    expect(result.stderr.match(/\[amadeus\]/g)).toHaveLength(1);
+    expect(result.stderr).toContain('CLAUDE_PROJECT_DIR="/from/env"');
+    expect(result.stderr).toContain("workspace marker predicate");
+    expect(result.stderr).toContain(JSON.stringify(unmarked));
+  });
+
+  test("9: an env value inside a marker-carrying workspace is silent", () => {
+    const { mainDir } = makeWorktreeFixture(tmp);
+    const unmarked = join(tmp, "unmarked");
+    mkdirSync(unmarked, { recursive: true });
+    process.chdir(unmarked);
+
+    const result = evalResolveProjectDirWithDiagnostics(unmarked, mainDir);
+    expect(result.resolved).toEqual([mainDir, mainDir]);
+    expect(result.stderr).toBe("");
   });
 });

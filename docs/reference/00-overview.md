@@ -21,6 +21,7 @@ If you are **using** AI-DLC to build software, start with the [User Guide](../gu
 | Chapter | Topic |
 |---------|-------|
 | [Architecture](01-architecture.md) | 5-layer model, [Configuration layers](01-architecture.md#configuration-layers) routing principle, execution model, design decisions |
+| [ADR: Project directory resolution order](adr/0001-project-dir-resolution-order.md) | Decision record for `CLAUDE_PROJECT_DIR` precedence and mismatch diagnostics |
 | [Plane Architecture](02-plane-architecture.md) | The control / data / management plane separation and its boundaries |
 | [Orchestrator](03-orchestrator.md) | The SKILL.md conductor: the forwarding loop, the gate ritual, the state machine it drives |
 | [Stage Protocol](04-stage-protocol.md) | Behavioral contract: approval gates, compliance checklist |
