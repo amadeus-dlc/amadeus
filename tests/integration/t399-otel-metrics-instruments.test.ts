@@ -268,6 +268,36 @@ describe("durations pair across process boundaries (#1868 §6)", () => {
     expect(statSync(join(dir, "pending-stage-fresh.start")).mtimeMs).toBeGreaterThan(old.getTime());
     expect(() => statSync(stalePath)).toThrow();
   });
+
+  test("reports marker cleanup failures loudly and continues", () => {
+    const dir = join(docsRoot(proj)!, ".amadeus-otel");
+    const blockedPath = join(dir, "pending-stage-blocked.start");
+    mkdirSync(join(blockedPath, "child"), { recursive: true });
+    const old = new Date(Date.now() - 25 * 60 * 60 * 1000);
+    utimesSync(blockedPath, old, old);
+    const originalError = console.error;
+    const errors: string[] = [];
+    console.error = (...parts: unknown[]) => errors.push(parts.join(" "));
+    try {
+      expect(() => reclaimStaleDurationMarkers(proj)).not.toThrow();
+    } finally {
+      console.error = originalError;
+    }
+    expect(statSync(blockedPath).isDirectory()).toBe(true);
+    expect(errors.join("\n")).toContain("stale-marker cleanup skipped");
+  });
+
+  test("reports a sweep failure loudly and remains fail-open", () => {
+    const originalError = console.error;
+    const errors: string[] = [];
+    console.error = (...parts: unknown[]) => errors.push(parts.join(" "));
+    try {
+      expect(() => reclaimStaleDurationMarkers(null as unknown as string)).not.toThrow();
+    } finally {
+      console.error = originalError;
+    }
+    expect(errors.join("\n")).toContain("stale-marker sweep skipped");
+  });
 });
 
 describe("the canonical event observer derives four instruments (#1868 §6)", () => {

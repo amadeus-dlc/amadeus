@@ -115,6 +115,16 @@ export const DURATION_MARKER_TTL_MS = 24 * 60 * 60 * 1000;
 
 const DURATION_MARKER_NAME = /^pending-(?:stage|subagent)-[A-Za-z0-9._-]+\.start$/;
 
+function reclaimOneStaleDurationMarker(path: string, name: string, cutoff: number): void {
+  try {
+    if (statSync(path).mtimeMs >= cutoff) return;
+    rmSync(path, { force: true });
+  } catch (error) {
+    console.error(`amadeus: stale-marker cleanup skipped for ${name}: ${String(error)}`);
+    return;
+  }
+}
+
 // Marker filenames are derived from a key the emitter supplies (a stage slug,
 // an agent type), so the derivation has to survive a key that is not a legal
 // filename. Everything outside the safe class collapses to `_`, and the result
@@ -139,16 +149,11 @@ export function reclaimStaleDurationMarkers(projectDir: string, nowMs = Date.now
     const cutoff = nowMs - DURATION_MARKER_TTL_MS;
     for (const name of readdirSync(dir)) {
       if (!DURATION_MARKER_NAME.test(name)) continue;
-      try {
-        const path = join(dir, name);
-        if (statSync(path).mtimeMs >= cutoff) continue;
-        rmSync(path, { force: true });
-      } catch {
-        // A concurrent completion or an unreadable marker is harmless.
-      }
+      reclaimOneStaleDurationMarker(join(dir, name), name, cutoff);
     }
-  } catch {
-    // fail-open
+  } catch (error) {
+    console.error(`amadeus: stale-marker sweep skipped: ${String(error)}`);
+    return;
   }
 }
 
