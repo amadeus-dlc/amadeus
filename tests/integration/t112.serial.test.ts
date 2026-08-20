@@ -90,6 +90,10 @@ const REAL_RUN_TESTS_EXIT_CODE = join(
   "lib",
   "run-tests-exit-code.ts",
 );
+// run-tests.ts also imports lib/silent-success.ts (the #1982 silent-success
+// gates). Same static-import reason as the files above: without it the copied
+// runner cannot even load, and every exit code here collapses to 1.
+const REAL_SILENT_SUCCESS = join(import.meta.dir, "..", "lib", "silent-success.ts");
 
 const scratchRoots: string[] = [];
 
@@ -143,6 +147,7 @@ function driveRunner(nFail: number, nPass: number): { code: number; stdout: stri
   copyFileSync(REAL_RUN_TESTS_ARGS, join(libDir, "run-tests-args.ts"));
   copyFileSync(REAL_TEST_TIME_FACTOR, join(libDir, "test-time-factor.ts"));
   copyFileSync(REAL_RUN_TESTS_EXIT_CODE, join(libDir, "run-tests-exit-code.ts"));
+  copyFileSync(REAL_SILENT_SUCCESS, join(libDir, "silent-success.ts"));
 
   // Distinct numeric stems keep glob ordering deterministic and avoid collisions
   // between the fail/pass families.

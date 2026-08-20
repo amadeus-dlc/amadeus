@@ -340,6 +340,162 @@ bun tests/gen-coverage-registry.ts --check  # コミット済みレジストリ�
   カバレッジを受け入れる)には、**PR に記録された明示的なユーザー承認**が必要です —
   これは通常のリフレッシュではなく、意図的なポリシー判断です。
 
+## Silent-Success ゲート
+
+テストファイルは、何も証明していないのに `PASS` を報告できます。その失敗のうち
+3 つの形態はランナーが既に保持している成果物から検出可能であり、
+`bun tests/run-tests.ts` は実行するすべてのファイルで 3 つとも検査します。検出
+ロジックは `tests/lib/silent-success.ts`(純関数)にあり、`tests/run-tests.ts` は
+I/O の配線のみを行います。
+
+違反は**そのファイル 1 件**のメタを `STATUS=FAIL`(`FAILED >= 1`)へ反転させます —
+ランナーが import クラッシュに対して既に行っている合成と同じです — ので、
+`exit == 失敗ファイル数` の契約は不変です: ゲートされた 1 ファイルはカウント 1 増分
+です。検出結果はそのファイルの `=== START/DONE ===` ブロック内に
+`GATE <name>:` 行として出力されます。
+
+### ゲート 1 — アサーション 0 件
+
+1 件以上の testcase を実行しながら `expect()` を **0 回**しか評価しなかった
+ファイルは失敗しようがなく、その `PASS` は何も証明しません。bun の JUnit ルートが
+`assertions="0"` を持つので、ゲートはそれを読みます。
+
+意図的に違反と**しない**もの: 空スイート(bun は outfile を一切書かず、import
+クラッシュとバイト同一 — こちらはランナーの exit-code 経路が既に捕捉します)、
+全 testcase がスキップされたファイル(それはゲート 2 の対象)、`assertions` 属性を
+持たない JUnit ドキュメント(属性の出力をやめた将来の bun が、パース上の仮定で
+スイート全体を赤にしてはならない)。
+
+免除は 2 系統:
+
+- ファイルのソース中の **`// assertion-free: <reason>`** — import や shape が
+  throw しないことそのものが主旨の、意図的に構造的なファイル向け。reason は必須
+  で、理由のないマーカーは免除になりません。
+- **`zeroAssertion` ベースラインエントリ** — issue 参照つきの既存債務向け。
+
+### ゲート 2 — 恒常的な自己 SKIP
+
+`test.skip`(または bun が同様に記録する条件付き早期 return)はケースを恒久的に
+未実行のまま保ちます。bun は JUnit ドキュメントで `<skipped />` を付けます。SKIP は
+**期限つき**の免除としては正当ですが、恒久的で未レビューの穴としては正当では
+ありません。そこで、すべての自己 SKIP は理由と失効日つきでコミット済み台帳に登録
+され、未登録の SKIP と失効済みエントリはどちらも違反です。
+
+スコープ: JUnit レベルの `<skipped />` ケースのみ、つまり**ファイル自身**が決めた
+SKIP です。ランナー自身の `STATUS=SKIP` ファイル(Claude substrate ゲート)は対象外
+— あれはランナーが stdout 上で可視に宣言する決定であって、テストが静かに実行を
+辞退するものではありません。
+
+すべての実行は、違反の有無やモードに関わらず、サマリブロックに census を出力
+します:
+
+```text
+self-skipped tests: 2 distinct case(s) this run
+  tests/unit/t11.test.ts :: reads a real socket (x1) — registered age=41d expires=2026-11-18
+  tests/unit/tX.test.ts :: conditional case (x1) — UNREGISTERED
+```
+
+この行がカウンタ証跡です: SKIP がどれだけの期間持ち越されているか、免除がいつ
+切れるか。失効エントリの更新は意識的な行為です — SKIP を正当化した条件がまだ
+成り立つかを再確認してから日付を動かします。
+
+### ゲート 3 — プロセスリーク
+
+ランナーはすべてのテスト子プロセスの環境に `AMADEUS_TEST_NAME=<basename>` を
+注入します。`bun test` の子プロセスが終了した後、その**正確な**環境エントリを
+まだ保持している同一ユーザのプロセスは、そのファイルの孤児であり、他の何者も
+同じマーカーを持ち得ません(値はファイルごとなので、`--parallel` 下の並行ワーカー
+が相互検出することはありません)。
+
+- **Linux** は `/proc/<pid>/environ` を走査し、NUL 区切りエントリの全体一致で
+  照合するため、マッチは正確です。競合や権限拒否による読み取り失敗は無視します。
+- **macOS** は `ps xeww -o pid=,command=` を実行し、マーカーを空白区切りの
+  トークン全体として照合します。ベストエフォートであり、それがデフォルトで
+  report-only である理由です。
+- **Windows** は非対応: 走査はスキップされ、何も出力されません。
+
+最初の走査で何も見つからなければ検査は即座に終わるため、行儀のよいファイルの
+コストは走査 1 回・待機なしです。何かがまだマークされている場合のみ、100 ms 間隔
+で最大 2000 ms の猶予ウィンドウをポーリングし、その後もマーカーを保持しているもの
+がリークです。
+
+リークしたプロセスは、`report` モードでもベースライン登録済みでも、あらゆる
+モードで**回収**(`SIGKILL`)されます。所有ファイルは終了済みなので誰も使っておらず、
+放置は長時間実行での孤児蓄積(#1811)そのものだからです。ランナー自身の pid は
+決して対象になりません。
+
+### モード
+
+`AMADEUS_SILENT_SUCCESS_GATE` が 3 ゲート共通のモードを選択します:
+
+| 値 | 効果 |
+|---|---|
+| `off` | 3 ゲートすべて無効。文書化された脱出ハッチで、ベースラインの読み込みもスキップします。 |
+| `report` | すべて評価して出力するが、ファイルの status は決して反転しない。report 実行は `strict` が落とすものの正直なプレビューです。 |
+| `strict` | 3 ゲートすべて fail-closed。 |
+| *(未設定)* | ゲートごとのデフォルト(下表)。 |
+
+未設定時のデフォルト:
+
+| ゲート | デフォルト |
+|---|---|
+| zero-assertion | どこでも `strict` — bun が常に出力する成果物を読むだけで、ベースライン化後は環境非依存。 |
+| self-SKIP | `GITHUB_ACTIONS=true` なら `strict`、それ以外は `report`。編集中の開発者を台帳の記帳で止めない; 台帳の強制は CI の役割。 |
+| process-leak | `GITHUB_ACTIONS=true` **かつ** Linux なら `strict`、それ以外は `report`。プロセス環境を正確に検分できるプラットフォームだけがビルドを落とせる。 |
+
+`AMADEUS_SILENT_SUCCESS_LEAK=fail` はリークゲートをプラットフォームを問わず
+fail-closed に強制します(macOS の開発マシンでゲートの failing アームへ到達する
+手段です)。`off` はこれよりも優先されます — 脱出ハッチは絶対です。
+
+`AMADEUS_SILENT_SUCCESS_GATE` の認識できない値は WARNING を出して未設定時の
+デフォルトへフォールバックし、決して `off` にはなりません: タイポでゲートが
+黙って無効化されてはならないためです。
+
+解決されたモードは実行冒頭に 1 回出力されます:
+
+```text
+Silent-success gates: zero-assertion=strict skip=report leak=report
+```
+
+### ベースライン: `tests/.silent-success-baseline.json`
+
+```json
+{
+  "schemaVersion": 1,
+  "zeroAssertion": [
+    { "file": "tests/unit/x.test.ts", "reason": "why", "issue": "#1982" }
+  ],
+  "skips": [
+    {
+      "file": "tests/integration/y.test.ts",
+      "test": "*",
+      "reason": "why",
+      "issue": "#1982",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    }
+  ],
+  "leaks": [
+    { "file": "tests/e2e/z.test.ts", "reason": "why", "issue": "#1982" }
+  ]
+}
+```
+
+- `file` はリポジトリ相対・スラッシュ区切りで、完全一致。
+- `test` は JUnit testcase の `name` と照合。`"*"` はファイル内の全ケースを
+  カバーします(動的な名前を持つ条件付き SKIP に必要)。
+- 日付は UTC `YYYY-MM-DD`。`expires` が過去日で SKIP がまだ観測されるなら違反。
+  失効日当日はまだ通ります。
+- ベースラインファイルの**不在**は空のベースライン(免除なし)。
+- **不正な**ベースライン — パース不能な JSON、未知の `schemaVersion`、欠落・空の
+  必須フィールド、非 ISO 日付 — は **fail-closed**: ランナーは理由を出力し、何も
+  実行する前に exit 2 します(`tests/callsite-guard.ts` と同じ姿勢)。「免除なし」
+  や「全部免除」へ黙って劣化することは決してありません。
+
+方向は**規約として shrink-only** で、レビューで強制されます: エントリは債務の
+返済とともに減り、新しい違反を通すために追加されることはありません。機械的に
+追加できてしまう `--update` ライターは意図的に存在しません。
+
 ## トリガーポイント
 
 | トリガー | レイヤー | コマンド | 場所 |
@@ -440,6 +596,8 @@ construction 中盤のステージ(例: code-generation)にジャンプするテ
 | `AMADEUS_TEST_TIMEOUT` | `1800` | `claude -p` 呼び出しごとのタイムアウト(秒)。`0` で無効化。 |
 | `AMADEUS_TUI_SETTING_SOURCES` | `project` | ライブ `claude` TUI 起動に注入される設定ソース。ユーザー/ローカルの Claude 設定を意図的に含める焦点を絞ったキャリブレーションでのみ `default` または空値を使う。 |
 | `AMADEUS_TUI_TRACE_POLL_MS` | `10000` | 長いジャーニーが次のメニューまたはディスク終端子を待っている間の、TUI NDJSON トレースにおける `answer_gate_poll` スナップショット間の最小間隔。 |
+| `AMADEUS_SILENT_SUCCESS_GATE` | *(未設定)* | 3 つの silent-success ゲート共通のモード: `off`、`report`、`strict`。未設定はゲートごとのデフォルト。[Silent-Success ゲート](#silent-success-ゲート)を参照。 |
+| `AMADEUS_SILENT_SUCCESS_LEAK` | *(未設定)* | `fail` でプロセスリークゲートをプラットフォームを問わず fail-closed に強制(Linux CI 限定のデフォルトを上書き)。`AMADEUS_SILENT_SUCCESS_GATE=off` が優先。 |
 
 ## CLI リファレンス
 

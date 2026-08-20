@@ -216,10 +216,28 @@
     "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
   },
   {
+    "path": "tests/integration/t1982-silent-success-runner.integration.test.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
+  },
+  {
+    "path": "tests/integration/t1982-silent-success-runner.integration.test.ts",
+    "sink": "sleep",
+    "count": 1,
+    "reason": "Fixed 100ms poll cadence for the process-table lag loop; the deadline it polls against is already scaled via scaleTestTime."
+  },
+  {
     "path": "tests/lib/run-tests-args.ts",
     "sink": "timing-constant",
     "count": 1,
     "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
+  },
+  {
+    "path": "tests/lib/silent-success.ts",
+    "sink": "timing-constant",
+    "count": 1,
+    "reason": "FR-7 production deadline: the #1982 process-leak grace window is the runner's own wall-clock budget for an orphan to be reaped, not test timing, and must stay exact."
   },
   {
     "path": "tests/smoke/t05-run-tests-parallel.test.ts",

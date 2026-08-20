@@ -1,0 +1,160 @@
+{
+  "schemaVersion": 1,
+  "description": "Registered exemptions for the silent-success gates (#1982). Direction is shrink-only: entries come out as the debt is paid, and are never added to wave a new violation through. There is deliberately no --update writer. Populated from a full `bun tests/run-tests.ts -P 4` census in report mode on 2026-08-20 (1068 files: zero zero-assertion violations, zero process leaks, 14 self-skipped testcases). See docs/reference/09-testing.md.",
+  "zeroAssertion": [],
+  "skips": [
+    {
+      "file": "tests/integration/t-codex-hooks-migration.test.ts",
+      "test": "renders invalid UTF-8 path bytes as hexadecimal diagnostics",
+      "reason": "Platform-gated by `test.skipIf(process.platform !== \"linux\")`: the fixture needs a filename holding a raw 0x80 byte, which only Linux accepts. Runs for real on Linux CI; skipped on macOS/Windows.",
+      "issue": "#1982",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    },
+    {
+      "file": "tests/integration/t-formal-verif-run-model-check-real.integration.test.ts",
+      "test": "runs the FormalElection production composition in-process with completion evidence",
+      "reason": "Opt-in real-TLC toolchain gate: needs AMADEUS_RUN_REAL_TLC=1 on darwin with JAVA_HOME set. Unset everywhere by default, including CI.",
+      "issue": "#1982",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    },
+    {
+      "file": "tests/integration/t-formal-verif-run-model-check-real.integration.test.ts",
+      "test": "runs the MirrorLifecycle production composition in-process with completion evidence",
+      "reason": "Opt-in real-TLC toolchain gate: needs AMADEUS_RUN_REAL_TLC=1 on darwin with JAVA_HOME set. Unset everywhere by default, including CI.",
+      "issue": "#1982",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    },
+    {
+      "file": "tests/integration/t-formal-verif-run-model-check-real.integration.test.ts",
+      "test": "detects a temporary cross-question result mutant with a receipt-bound trace",
+      "reason": "Opt-in real-TLC toolchain gate: needs AMADEUS_RUN_REAL_TLC=1 on darwin with JAVA_HOME set. Unset everywhere by default, including CI.",
+      "issue": "#1982",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    },
+    {
+      "file": "tests/integration/t-formal-verif-run-model-check-real.integration.test.ts",
+      "test": "detects a temporary established-result wipe mutant with a receipt-bound trace",
+      "reason": "Opt-in real-TLC toolchain gate: needs AMADEUS_RUN_REAL_TLC=1 on darwin with JAVA_HOME set. Unset everywhere by default, including CI.",
+      "issue": "#1982",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    },
+    {
+      "file": "tests/integration/t-formal-verif-run-model-check-real.integration.test.ts",
+      "test": "detects a temporary out-of-held rerun mutant with a receipt-bound trace",
+      "reason": "Opt-in real-TLC toolchain gate: needs AMADEUS_RUN_REAL_TLC=1 on darwin with JAVA_HOME set. Unset everywhere by default, including CI.",
+      "issue": "#1982",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    },
+    {
+      "file": "tests/integration/t-formal-verif-run-model-check-real.integration.test.ts",
+      "test": "measures one warm-up and five Darwin production runs",
+      "reason": "Opt-in real-TLC performance gate: needs the real-TLC toolchain gate above plus AMADEUS_RUN_REAL_TLC_PERFORMANCE=1. Held out of CI so wall-clock measurement cannot red a shared runner.",
+      "issue": "#1982",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    },
+    {
+      "file": "tests/integration/t434-intent-completion-live-seam.integration.test.ts",
+      "test": "executes every native harness command and validates Judge/election observations",
+      "reason": "Opt-in live credential seam: needs AMADEUS_INTENT_COMPLETION_LIVE=1, which spends real credentials across five harnesses. Unset everywhere by default, including CI.",
+      "issue": "#1982",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    },
+    {
+      "file": "tests/unit/t11.test.ts",
+      "test": "26: Bedrock opus-4-6 model abbreviates to BR:opus-4-6",
+      "reason": "Unconditional `test.skip` marked TEMP-DISABLED: asserts the BR: prefix, which needs Bedrock model detection. Disabled on EVERY machine, not environment-gated, so it is real debt awaiting a decision to re-enable or delete.",
+      "issue": "#3306",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    },
+    {
+      "file": "tests/unit/t11.test.ts",
+      "test": "28: model and context appear after agent",
+      "reason": "Unconditional `test.skip` marked TEMP-DISABLED: asserts the BR: prefix, which needs Bedrock model detection. Disabled on EVERY machine, not environment-gated, so it is real debt awaiting a decision to re-enable or delete.",
+      "issue": "#3306",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    },
+    {
+      "file": "tests/unit/t11.test.ts",
+      "test": "29: Bedrock sonnet abbreviates to BR:sonnet-4",
+      "reason": "Unconditional `test.skip` marked TEMP-DISABLED: asserts the BR: prefix, which needs Bedrock model detection. Disabled on EVERY machine, not environment-gated, so it is real debt awaiting a decision to re-enable or delete.",
+      "issue": "#3306",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    },
+    {
+      "file": "tests/unit/t11.test.ts",
+      "test": "34: shipped Opus 4.7 Bedrock ID abbreviates to BR:opus-4-7",
+      "reason": "Unconditional `test.skip` marked TEMP-DISABLED: asserts the BR: prefix, which needs Bedrock model detection. Disabled on EVERY machine, not environment-gated, so it is real debt awaiting a decision to re-enable or delete.",
+      "issue": "#3306",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    },
+    {
+      "file": "tests/unit/t140-sdk-drive-model-resolution.test.ts",
+      "test": "bare project defaults to the shipped dist model/env",
+      "reason": "Unconditional `test.skip` marked TEMP-DISABLED: asserts the shipped dist Bedrock model/env defaults. Disabled on EVERY machine, not environment-gated, so it is real debt awaiting a decision to re-enable or delete.",
+      "issue": "#3306",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    },
+    {
+      "file": "tests/unit/t140-sdk-drive-model-resolution.test.ts",
+      "test": "shipped dist settings win over project settings by default",
+      "reason": "Unconditional `test.skip` marked TEMP-DISABLED: asserts the shipped dist Bedrock model/env defaults. Disabled on EVERY machine, not environment-gated, so it is real debt awaiting a decision to re-enable or delete.",
+      "issue": "#3306",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    },
+    {
+      "file": "tests/integration/t1982-silent-success-runner.integration.test.ts",
+      "test": "a leaked child fails the run, is named by pid, and is actually reaped",
+      "reason": "Platform-gated by skipIf(win32): the leak gate is scan-less on Windows by design and the fixtures need POSIX sleep/true. Runs for real on Linux CI and macOS.",
+      "issue": "#1982",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    },
+    {
+      "file": "tests/integration/t1982-silent-success-runner.integration.test.ts",
+      "test": "a baselined leak still gets reaped and reported, but does not fail the run",
+      "reason": "Platform-gated by skipIf(win32): the leak gate is scan-less on Windows by design and the fixtures need POSIX sleep/true. Runs for real on Linux CI and macOS.",
+      "issue": "#1982",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    },
+    {
+      "file": "tests/integration/t1982-silent-success-runner.integration.test.ts",
+      "test": "a well-behaved file produces no leak output at all",
+      "reason": "Platform-gated by skipIf(win32): the leak gate is scan-less on Windows by design and the fixtures need POSIX sleep/true. Runs for real on Linux CI and macOS.",
+      "issue": "#1982",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    },
+    {
+      "file": "tests/integration/t1982-silent-success-runner.integration.test.ts",
+      "test": "runPsWithEnvironment returns this user's process table",
+      "reason": "Platform-gated by skipIf(win32): the leak gate is scan-less on Windows by design and the fixtures need POSIX sleep/true. Runs for real on Linux CI and macOS.",
+      "issue": "#1982",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    },
+    {
+      "file": "tests/integration/t1982-silent-success-runner.integration.test.ts",
+      "test": "the real platform scan finds a marked child and stops finding it once it exits",
+      "reason": "Platform-gated by skipIf(win32): the leak gate is scan-less on Windows by design and the fixtures need POSIX sleep/true. Runs for real on Linux CI and macOS.",
+      "issue": "#1982",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    }
+  ],
+  "leaks": []
+}
