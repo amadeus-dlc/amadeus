@@ -55,6 +55,16 @@ export interface MirrorLabelGateway {
     issueNumber: number,
     label: string,
   ): Promise<GatewayOutcome<void>>;
+  // Distinguishes a `#N` reference that is actually a pull request (#2020):
+  // the Project field's PR-number-appended-after-issue-approval convention
+  // means a later re-fire of an attach boundary could otherwise mislabel a
+  // PR as an in-progress issue. Read-only and advisory — a failed check
+  // resolves to "proceed with the add" (see runMirrorLabelSync), preserving
+  // the module's overall fail-open contract.
+  isPullRequest(
+    repository: RepositoryIdentity,
+    issueNumber: number,
+  ): Promise<GatewayOutcome<boolean>>;
 }
 
 // Every unique `#N` in the `Project` state field, in first-appearance order.
@@ -93,6 +103,11 @@ export async function runMirrorLabelSync(
   const failures: MirrorLabelSyncFailure[] = [];
   let attempted = 0;
   for (const issue of plan.add) {
+    // #2020: skip a target the gateway positively confirms is a pull request
+    // rather than an issue — never mislabel it. A failed/inconclusive check
+    // falls through to the add, matching this module's fail-open contract.
+    const prCheck = await gateway.isPullRequest(repository, issue);
+    if (prCheck.kind === "ok" && prCheck.value) continue;
     attempted += 1;
     const outcome = await gateway.addIssueLabels(repository, issue, [IN_PROGRESS_LABEL]);
     if (outcome.kind === "failure") {

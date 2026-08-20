@@ -7,6 +7,7 @@ import {
   addLabelsArgv,
   createMirrorLabelGateway,
   removeLabelArgv,
+  viewArgv,
 } from "../../packages/framework/core/tools/amadeus-github-gateway.ts";
 import {
   IN_PROGRESS_LABEL,
@@ -101,7 +102,10 @@ const REPO: RepositoryIdentity = {
 
 type Call = { op: "add" | "remove"; issue: number };
 
-function fakeGateway(failOn: ReadonlySet<number> = new Set()): {
+function fakeGateway(
+  failOn: ReadonlySet<number> = new Set(),
+  prNumbers: ReadonlySet<number> = new Set(),
+): {
   gateway: MirrorLabelGateway;
   calls: Call[];
 } {
@@ -120,6 +124,9 @@ function fakeGateway(failOn: ReadonlySet<number> = new Set()): {
         return failOn.has(issueNumber)
           ? { kind: "failure", classification: "network", summary: "boom", retryable: true, effect: "not-started" }
           : { kind: "ok", value: undefined };
+      },
+      async isPullRequest(_repo, issueNumber) {
+        return { kind: "ok", value: prNumbers.has(issueNumber) };
       },
     },
   };
@@ -170,6 +177,46 @@ describe("runMirrorLabelSync", () => {
     expect(report.failures).toEqual([
       { issue: 9, operation: "remove", label: IN_PROGRESS_LABEL, detail: "boom" },
     ]);
+  });
+
+  // #2020: a `#N` reference in the Project field can be a PR number appended
+  // after the intent's issue was approved. A confirmed PR must never be
+  // labelled — the gateway is asked first, and the add is skipped entirely.
+  test("a confirmed pull request in the add plan is skipped, never labelled", async () => {
+    const { gateway, calls } = fakeGateway(new Set(), new Set([684]));
+    const report = await runMirrorLabelSync({ add: [697, 684], remove: [] }, REPO, gateway);
+    expect(calls).toEqual([{ op: "add", issue: 697 }]);
+    expect(report.attempted).toBe(1);
+    expect(report.failures).toEqual([]);
+  });
+
+  // The discrimination check is advisory: if it fails or is inconclusive, the
+  // module falls back to its existing fail-open contract and still adds.
+  test("an inconclusive pull-request check falls open and still adds the label", async () => {
+    const calls: Call[] = [];
+    const gateway: MirrorLabelGateway = {
+      async addIssueLabels(_repo, issueNumber) {
+        calls.push({ op: "add", issue: issueNumber });
+        return { kind: "ok", value: undefined };
+      },
+      async removeIssueLabel(_repo, issueNumber) {
+        calls.push({ op: "remove", issue: issueNumber });
+        return { kind: "ok", value: undefined };
+      },
+      async isPullRequest() {
+        return {
+          kind: "failure",
+          classification: "network",
+          summary: "boom",
+          retryable: true,
+          effect: "no-effect-confirmed",
+        };
+      },
+    };
+    const report = await runMirrorLabelSync({ add: [684], remove: [] }, REPO, gateway);
+    expect(calls).toEqual([{ op: "add", issue: 684 }]);
+    expect(report.attempted).toBe(1);
+    expect(report.failures).toEqual([]);
   });
 });
 
@@ -291,6 +338,185 @@ describe("createMirrorLabelGateway", () => {
     expect(outcome.kind).toBe("failure");
     if (outcome.kind === "failure") {
       expect(outcome.classification).toBe("invalid-response");
+    }
+  });
+
+  // #2020: `gh api --include` prints one status line per hop, so a leading
+  // 1xx (informational) or 3xx (redirect) line must not decide the outcome —
+  // only the final status line does.
+  test("a leading 1xx informational line is skipped; the final 2xx status succeeds", async () => {
+    const { runner } = fakeRunner([
+      {
+        kind: "exited",
+        exitCode: 0,
+        stdout: Buffer.from(
+          "HTTP/1.1 100 Continue\r\n\r\nHTTP/2.0 200 OK\r\nContent-Type: application/json\r\n\r\n[]\n",
+        ),
+        stderrTail: "",
+      },
+    ]);
+    const gateway = createMirrorLabelGateway(runner);
+    const outcome = await gateway.addIssueLabels(REPO, 7, ["in-progress"]);
+    expect(outcome.kind).toBe("ok");
+  });
+
+  test("a redirect chain's final status decides the outcome, not the first (3xx) line", async () => {
+    const { runner } = fakeRunner([
+      {
+        kind: "exited",
+        exitCode: 0,
+        stdout: Buffer.from(
+          "HTTP/2.0 301 Moved Permanently\r\nLocation: https://api.github.com/x\r\n\r\n" +
+            "HTTP/2.0 200 OK\r\nContent-Type: application/json\r\n\r\n[]\n",
+        ),
+        stderrTail: "",
+      },
+    ]);
+    const gateway = createMirrorLabelGateway(runner);
+    const outcome = await gateway.addIssueLabels(REPO, 7, ["in-progress"]);
+    expect(outcome.kind).toBe("ok");
+  });
+
+  test("a 1xx line ahead of a genuinely bad final status still fails, classified on the final status", async () => {
+    const { runner } = fakeRunner([
+      {
+        kind: "exited",
+        exitCode: 1,
+        stdout: Buffer.from(
+          "HTTP/1.1 100 Continue\r\n\r\nHTTP/2.0 404 Not Found\r\nContent-Type: application/json\r\n\r\n{}\n",
+        ),
+        stderrTail: "",
+      },
+    ]);
+    const gateway = createMirrorLabelGateway(runner);
+    const outcome = await gateway.addIssueLabels(REPO, 7, ["in-progress"]);
+    expect(outcome.kind).toBe("failure");
+  });
+
+  test("only 1xx status lines observed (no final status) is an invalid-response failure", async () => {
+    const { runner } = fakeRunner([
+      {
+        kind: "exited",
+        exitCode: 0,
+        stdout: Buffer.from("HTTP/1.1 100 Continue\r\n\r\n"),
+        stderrTail: "",
+      },
+    ]);
+    const gateway = createMirrorLabelGateway(runner);
+    const outcome = await gateway.addIssueLabels(REPO, 7, ["in-progress"]);
+    expect(outcome.kind).toBe("failure");
+    if (outcome.kind === "failure") {
+      expect(outcome.classification).toBe("invalid-response");
+    }
+  });
+
+  // #2020: isPullRequest — the advisory discrimination check runMirrorLabelSync
+  // uses to avoid mislabelling a PR number picked up from the Project field.
+  test("isPullRequest reports true when the remote issue carries a pull_request field", async () => {
+    const { runner, argvs } = fakeRunner([
+      envelope(200, JSON.stringify({ pull_request: { url: "https://api.github.com/x" } })),
+    ]);
+    const gateway = createMirrorLabelGateway(runner);
+    const outcome = await gateway.isPullRequest(REPO, 684);
+    expect(outcome).toEqual({ kind: "ok", value: true });
+    expect(argvs[0]).toEqual(viewArgv(REPO, 684));
+  });
+
+  test("isPullRequest reports false for a plain issue", async () => {
+    const { runner } = fakeRunner([envelope(200, JSON.stringify({ title: "an issue" }))]);
+    const gateway = createMirrorLabelGateway(runner);
+    const outcome = await gateway.isPullRequest(REPO, 697);
+    expect(outcome).toEqual({ kind: "ok", value: false });
+  });
+
+  test("isPullRequest surfaces a transport failure as a typed failure (caller falls open)", async () => {
+    const { runner } = fakeRunner([{ kind: "spawn-error" }]);
+    const gateway = createMirrorLabelGateway(runner);
+    const outcome = await gateway.isPullRequest(REPO, 684);
+    expect(outcome.kind).toBe("failure");
+  });
+
+  test("isPullRequest treats a body JSON.parse cannot decode as an invalid-response failure", async () => {
+    // parseHttpEnvelope's own "single" opener check only requires the body to
+    // START with `{`, so a truncated/malformed object still reaches
+    // isPullRequest's own JSON.parse (as opposed to a body not starting with
+    // `{`, which parseHttpEnvelope itself already rejects as malformed before
+    // isPullRequest ever runs).
+    const { runner } = fakeRunner([envelope(200, "{not valid json")]);
+    const gateway = createMirrorLabelGateway(runner);
+    const outcome = await gateway.isPullRequest(REPO, 684);
+    expect(outcome.kind).toBe("failure");
+    if (outcome.kind === "failure") {
+      expect(outcome.classification).toBe("invalid-response");
+    }
+  });
+
+  // #2020 CodeRabbit follow-up: isPullRequest went through interpretApiResult
+  // in strict mode, whose parseHttpEnvelope treats ANY non-2xx status in the
+  // chain (a leading 100 Continue, or a 301 redirect hop) as the outcome —
+  // so a resource that legitimately resolves to 200 was misread as a
+  // failure, and runMirrorLabelSync's fail-open contract then proceeded to
+  // label-add a confirmed PR instead of skipping it. Consistent with the
+  // label path's finalLabelHttpStatus, isPullRequest must judge on the
+  // FINAL non-1xx status, tolerating a preceding informational/redirect line.
+  test("isPullRequest tolerates a leading 100 Continue before the final 200", async () => {
+    const { runner } = fakeRunner([
+      {
+        kind: "exited",
+        exitCode: 0,
+        stdout: Buffer.from(
+          "HTTP/1.1 100 Continue\r\n\r\n" +
+            "HTTP/2.0 200 OK\r\nContent-Type: application/json\r\n\r\n" +
+            `${JSON.stringify({ pull_request: { url: "https://api.github.com/x" } })}\n`,
+        ),
+        stderrTail: "",
+      },
+    ]);
+    const gateway = createMirrorLabelGateway(runner);
+    const outcome = await gateway.isPullRequest(REPO, 684);
+    expect(outcome).toEqual({ kind: "ok", value: true });
+  });
+
+  test("isPullRequest judges the final status after a 301 redirect hop, not the first (3xx) line", async () => {
+    const { runner } = fakeRunner([
+      {
+        kind: "exited",
+        exitCode: 0,
+        stdout: Buffer.from(
+          "HTTP/2.0 301 Moved Permanently\r\nLocation: https://api.github.com/x\r\n\r\n" +
+            "HTTP/2.0 200 OK\r\nContent-Type: application/json\r\n\r\n" +
+            `${JSON.stringify({ title: "an issue" })}\n`,
+        ),
+        stderrTail: "",
+      },
+    ]);
+    const gateway = createMirrorLabelGateway(runner);
+    const outcome = await gateway.isPullRequest(REPO, 684);
+    expect(outcome).toEqual({ kind: "ok", value: false });
+  });
+
+  test("isPullRequest fails, classified on the final status, when a 1xx hop precedes a genuinely bad final status", async () => {
+    // parseHttpEnvelopeFinalStatus's http-error branch: the FINAL status
+    // itself is bad (not just an intermediate 1xx/3xx hop). Mirrors the
+    // label path's own "1xx line ahead of a genuinely bad final status"
+    // case above.
+    const { runner } = fakeRunner([
+      {
+        kind: "exited",
+        exitCode: 1,
+        stdout: Buffer.from(
+          "HTTP/1.1 100 Continue\r\n\r\n" +
+            "HTTP/2.0 404 Not Found\r\nContent-Type: application/json\r\n\r\n{}\n",
+        ),
+        stderrTail: "",
+      },
+    ]);
+    const gateway = createMirrorLabelGateway(runner);
+    const outcome = await gateway.isPullRequest(REPO, 684);
+    expect(outcome.kind).toBe("failure");
+    if (outcome.kind === "failure") {
+      expect(outcome.classification).toBe("api");
+      expect(outcome.retryable).toBe(false);
     }
   });
 });
