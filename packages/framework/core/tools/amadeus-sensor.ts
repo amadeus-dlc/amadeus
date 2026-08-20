@@ -583,6 +583,13 @@ export async function handleFire(args: string[], projectDirArg?: string): Promis
 	// marker is not evaluated at all, so it emits neither PASS nor FAIL.
 	exitForMarkerExemption(id, outputPath);
 
+	if (stageNode.bundle !== undefined) {
+		process.stderr.write(
+			`amadeus-sensor: warning: stage "${stageSlug}" declares bundle "${stageNode.bundle}", ` +
+			"but no sensor consumer is registered; the field is not enforced.\n",
+		);
+	}
+
 	// --- 1e. Generate Fire id (8 hex chars) ---
 	const fireId = generateFireId();
 
@@ -644,6 +651,12 @@ export async function handleFire(args: string[], projectDirArg?: string): Promis
 			process.env.AMADEUS_TEMPLATES_DIR ?? memoryTemplatesDir(projectDir);
 		scriptArgs.push("--templates-dir", templatesDir);
 		scriptArgs.push("--template-eligible", eligible.join(","));
+		if (stageNode.required_sections !== undefined) {
+			scriptArgs.push(
+				"--required-sections",
+				JSON.stringify(stageNode.required_sections),
+			);
+		}
 		// §10 MIDDLE branch: the framework-default templates dir (engine-shipped,
 		// read-only, space-independent). The sensor consults it ONLY when the team
 		// override above misses, so resolution is team → framework-default → floor.
