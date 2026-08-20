@@ -119,13 +119,19 @@ function makeProject(requirements: string, withEvidence: boolean): string {
 
 type FireResult = Readonly<{ verdicts: string[]; details: string }>;
 
-function fireUpstreamCoverage(proj: string): FireResult {
+function fireUpstreamCoverage(
+  proj: string,
+  outputName = "requirements.md",
+): FireResult {
   const outputPath = join(
     recordRoot(proj),
     "inception",
     "requirements-analysis",
-    "requirements.md",
+    outputName,
   );
+  if (outputName !== "requirements.md") {
+    writeFileSync(outputPath, "Question: what remains unresolved?\n", "utf-8");
+  }
   const res = spawnSync(
     BUN,
     [
@@ -187,5 +193,14 @@ describe("t3181 upstream-coverage now covers issue-evidence (FR-EVD-7)", () => {
     unlinkSync(join(recordRoot(proj), "ideation", "intent-capture", "issue-evidence.md"));
     const after = fireUpstreamCoverage(proj);
     expect(after.verdicts).toEqual(["amadeus.sensor.failed", "amadeus.sensor.passed"]);
+  });
+
+  test("does not evaluate marker artifacts", () => {
+    const result = fireUpstreamCoverage(
+      makeProject(UNCITED, true),
+      "requirements-questions.md",
+    );
+    expect(result.verdicts).toEqual([]);
+    expect(result.details).toBe("");
   });
 });
