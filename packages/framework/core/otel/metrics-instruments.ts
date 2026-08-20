@@ -28,7 +28,7 @@
 // by the `spans-`/`logs-`/`metrics-` prefix plus a `.jsonl` suffix, and these
 // match neither.
 
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadStageGraph } from "../tools/amadeus-lib.ts";
 import { telemetryDir } from "../tools/amadeus-observability.ts";
@@ -108,6 +108,13 @@ export function recordTokenUsage(usage: TokenUsage): void {
 
 export type DurationKind = "stage" | "subagent";
 
+// A normal stage or subagent run should finish well inside a day; keeping a
+// full-day TTL avoids reclaiming a genuinely long-running marker while
+// bounding crash debris to at most one day after the next metrics touch.
+export const DURATION_MARKER_TTL_MS = 24 * 60 * 60 * 1000;
+
+const DURATION_MARKER_NAME = /^pending-(?:stage|subagent)-[A-Za-z0-9._-]+\.start$/;
+
 // Marker filenames are derived from a key the emitter supplies (a stage slug,
 // an agent type), so the derivation has to survive a key that is not a legal
 // filename. Everything outside the safe class collapses to `_`, and the result
@@ -121,10 +128,35 @@ function markerPath(projectDir: string, kind: DurationKind, key: string): string
   return join(dir, `pending-${kind}-${safe}.start`);
 }
 
+// Reclaim abandoned duration markers opportunistically. Marker mtime is the
+// age signal: the file's contents are the producer's start instant and may be
+// supplied by a clock different from the reclaimer's clock. Every operation
+// is best-effort so metrics cleanup can never affect the caller's workflow.
+export function reclaimStaleDurationMarkers(projectDir: string, nowMs = Date.now()): void {
+  try {
+    const dir = telemetryDir(projectDir);
+    if (dir === null || !existsSync(dir)) return;
+    const cutoff = nowMs - DURATION_MARKER_TTL_MS;
+    for (const name of readdirSync(dir)) {
+      if (!DURATION_MARKER_NAME.test(name)) continue;
+      try {
+        const path = join(dir, name);
+        if (statSync(path).mtimeMs >= cutoff) continue;
+        rmSync(path, { force: true });
+      } catch {
+        // A concurrent completion or an unreadable marker is harmless.
+      }
+    }
+  } catch {
+    // fail-open
+  }
+}
+
 // Park the start instant for a later process to consume. Fail-open: a workspace
 // with no resolvable record simply measures no duration.
 export function markDurationStart(projectDir: string, kind: DurationKind, key: string, atMs = Date.now()): void {
   try {
+    reclaimStaleDurationMarkers(projectDir);
     const path = markerPath(projectDir, kind, key);
     if (path === null) return;
     mkdirSync(join(path, ".."), { recursive: true });
@@ -141,6 +173,7 @@ export function markDurationStart(projectDir: string, kind: DurationKind, key: s
 // a second completion cannot re-measure the same interval.
 export function takeDurationStart(projectDir: string, kind: DurationKind, key: string): number | null {
   try {
+    reclaimStaleDurationMarkers(projectDir);
     const path = markerPath(projectDir, kind, key);
     if (path === null || !existsSync(path)) return null;
     const parsed = Number.parseInt(readFileSync(path, "utf-8").trim(), 10);

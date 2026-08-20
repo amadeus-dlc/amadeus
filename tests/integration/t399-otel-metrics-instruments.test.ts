@@ -8,15 +8,17 @@
 // markers, a spawned hook) so it lives here rather than in the unit layer.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { ensureMeterBootstrap, ensureOtelBootstrap } from "../../dist/claude/.claude/otel/bootstrap.ts";
 import { birthIntent, docsRoot, recordDir } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { emitEvent } from "../../dist/claude/.claude/otel/logger-provider.ts";
+import { resetObservabilityConfigCache } from "../../dist/claude/.claude/tools/amadeus-observability.ts";
 import { registeredMeterProjectDir } from "../../dist/claude/.claude/otel/meter-provider.ts";
 import {
   markDurationStart,
   observeCanonicalEventForMetrics,
+  reclaimStaleDurationMarkers,
   recordGateIteration,
   recordOperationFailure,
   recordStageDuration,
@@ -24,6 +26,7 @@ import {
   recordTokenUsage,
   takeDurationStart,
 } from "../../dist/claude/.claude/otel/metrics-instruments.ts";
+import { runRelay } from "../../dist/claude/.claude/otel/relay.ts";
 import { instrumentDef } from "../../dist/claude/.claude/otel/metrics-vocabulary.ts";
 import type { InstrumentName } from "../../dist/claude/.claude/otel/metrics-vocabulary.ts";
 import { supplyTokenUsage } from "../../dist/claude/.claude/otel/resource-suppliers.ts";
@@ -231,6 +234,39 @@ describe("durations pair across process boundaries (#1868 §6)", () => {
     const names = readdirSync(join(docsRoot(proj)!, ".amadeus-otel"));
     expect(names).toContain("pending-stage-code-generation.start");
     expect(names.filter((name) => name.endsWith(".jsonl"))).toEqual([]);
+  });
+
+  test("the real Relay selector ignores marker files", async () => {
+    writeFileSync(
+      join(proj, "amadeus", "config.json"),
+      `${JSON.stringify({ observability: { enabled: true, otlp: { endpoint: "http://collector.test" } } })}\n`,
+      "utf-8",
+    );
+    resetObservabilityConfigCache();
+    markDurationStart(proj, "stage", "code-generation", Date.now());
+    const posted: string[] = [];
+    const summary = await runRelay(proj, {
+      post: async (url) => {
+        posted.push(url);
+        return { ok: true, detail: "" };
+      },
+    });
+    expect(summary.status).toBe("flushed");
+    expect(summary.result?.sent).toBe(0);
+    expect(posted).toEqual([]);
+  });
+
+  test("reclaims stale markers while preserving fresh markers", () => {
+    const dir = join(docsRoot(proj)!, ".amadeus-otel");
+    markDurationStart(proj, "stage", "stale", Date.now());
+    const stalePath = join(dir, "pending-stage-stale.start");
+    const old = new Date(Date.now() - 25 * 60 * 60 * 1000);
+    utimesSync(stalePath, old, old);
+    markDurationStart(proj, "stage", "fresh", Date.now());
+
+    expect(() => reclaimStaleDurationMarkers(proj)).not.toThrow();
+    expect(statSync(join(dir, "pending-stage-fresh.start")).mtimeMs).toBeGreaterThan(old.getTime());
+    expect(() => statSync(stalePath)).toThrow();
   });
 });
 
