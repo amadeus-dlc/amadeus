@@ -181,8 +181,8 @@ describe("t52 — meta-test on t48 drift detection (migrated from t52-drift-meta
 
   test("reverse check catches an undocumented emission [.sh test 2]", () => {
     const sb = makeSandbox();
-    // Append a stray emission with an event name in neither VALID_EVENT_TYPES
-    // nor the doc registry. A real emitAudit(...) line bypasses the
+    // Append a stray emission with an event name in neither the canonical Event
+    // Registry nor the doc registry. A real emitAudit(...) line bypasses the
     // comment-stripping decommented() helper (t48:33-35).
     const f = distFile(sb, STATE_TS);
     writeFileSync(

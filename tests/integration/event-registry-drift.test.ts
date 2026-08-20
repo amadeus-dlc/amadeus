@@ -1,10 +1,9 @@
-// covers: otel:event-registry otel:event-registry-drift file:tools/amadeus-audit.ts file:tools/amadeus-journal.ts
+// covers: otel:event-registry otel:event-registry-drift file:tools/amadeus-journal.ts
 //
-// VER-1 drift guard, layer 2 (unit test). Asserts the four-set equality of
-// FR-EVT-1 against the SHIPPED bytes (dist/claude/.claude), with the 79
-// cardinality pinned so vacuous equality fails:
+// VER-1 drift guard, layer 2 (integration test). Asserts the registry-backed
+// four-set equality of FR-EVT-1 against the SHIPPED bytes (dist/claude/.claude),
+// with the canonical cardinality pinned so vacuous equality fails:
 //   (a) state machine + hooks reference set == (b) canonical registry set
-//   (b) == VALID_EVENT_TYPES (the v1 writer's closed vocabulary)
 //   (c) AuditLogExporter accept set == (b), exercised functionally per event
 //   (d) journal reader decode set — the v1 reader is open (accepts any event
 //       name), so the interim assertion is that it decodes every canonical
@@ -17,7 +16,6 @@
 import { describe, expect, test } from "bun:test";
 import {
   collectDriftSets,
-  extractAuditVocabulary,
   findRegistryDrift,
 } from "../../dist/claude/.claude/otel/event-registry-drift.ts";
 import {
@@ -37,8 +35,6 @@ import {
 import { isJournalEntryV2 } from "../../dist/claude/.claude/tools/amadeus-journal.ts";
 import { createAuditLogExporter } from "../../dist/claude/.claude/otel/audit-log-exporter.ts";
 import { AMADEUS_SRC } from "../harness/fixtures.ts";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 
 const SETS = collectDriftSets(AMADEUS_SRC);
 
@@ -51,7 +47,7 @@ describe("registry internal consistency (VER-1)", () => {
     expect(EXPECTED_CANONICAL_COUNT).toBe(98);
     expect(canonicalAuditEvents().length).toBe(98);
     expect(SETS.registryCanonical.size).toBe(98);
-    expect(SETS.auditVocabulary.size).toBe(98);
+    expect(SETS.stateMachineReferences.size).toBe(98);
   });
 
   test("canonical defs always map to the audit journal; telemetry defs never do (FR-EXP-4)", () => {
@@ -77,8 +73,8 @@ describe("four-set equality (FR-EVT-1)", () => {
     expect(findRegistryDrift(SETS)).toEqual([]);
   });
 
-  test("(b) canonical registry == VALID_EVENT_TYPES vocabulary", () => {
-    expect([...SETS.registryCanonical].sort()).toEqual([...SETS.auditVocabulary].sort());
+  test("(b) canonical registry supplies the vocabulary used by the reference scan", () => {
+    expect([...SETS.registryCanonical].sort()).toEqual([...canonicalAuditEvents()].sort());
   });
 
   test("(a) every canonical event is referenced by state machine code or hooks (no writer-only events, BR-6)", () => {
@@ -148,7 +144,7 @@ describe("drift rejection (VER-3: the guard must actually refuse)", () => {
   });
 
   test("an emptied vocabulary fails on cardinality instead of passing vacuously", () => {
-    const tampered = { ...SETS, auditVocabulary: new Set<string>() };
+    const tampered = { ...SETS, registryCanonical: new Set<string>() };
     expect(findRegistryDrift(tampered).join("\n")).toContain("cardinality");
   });
 
@@ -185,18 +181,10 @@ describe("FR-EVT-7 — the exception span event is telemetry", () => {
   });
 });
 
-describe("extraction parity with the t28 vocabulary guard", () => {
-  test("extractAuditVocabulary agrees with the t28 sed-range rule on the shipped amadeus-audit.ts", () => {
-    const body = readFileSync(join(AMADEUS_SRC, "tools", "amadeus-audit.ts"), "utf-8");
-    const vocab = extractAuditVocabulary(body);
-    expect(vocab.length).toBe(98);
-    expect(vocab).toEqual([...SETS.auditVocabulary].sort());
-  });
-});
-
 describe("patch-gate edge coverage — vocabulary extraction and journal-reader set", () => {
-  test("extractAuditVocabulary refuses a source without the VALID_EVENT_TYPES table (drift.ts:65)", () => {
-    expect(() => extractAuditVocabulary("// no table here\n")).toThrow(/VALID_EVENT_TYPES table not found/);
+  test("collectDriftSets remains registry-backed when the audit tool has no copied vocabulary", () => {
+    expect(SETS.registryCanonical.size).toBe(EXPECTED_CANONICAL_COUNT);
+    expect(SETS.stateMachineReferences.size).toBe(EXPECTED_CANONICAL_COUNT);
   });
 
   test("a tampered journal-reader decode set is a finding naming the set (drift.ts:147-148)", () => {

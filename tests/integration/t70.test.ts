@@ -51,7 +51,7 @@
 //   - state Completed = init stage count:  :2009 (graph init-phase count) -> :2071 (=== 3); init stages get [x] :1996
 //   - state Project Root = projectDir:     :2064
 //   - state State Version literal `7`:     :2051
-//   - WORKSPACE_SCANNED audit emit:        :1914 (VALID_EVENT_TYPES member, amadeus-audit.ts:42)
+//   - WORKSPACE_SCANNED audit emit:        :1914 (canonical Event Registry member)
 //   - init stdout "Project type: ...":     :2151
 //   - greenfield-todo stub = bare README:  tests/fixtures/greenfield-todo/README.md (no source/manifest/framework)
 //   - no gate in the init path (no AskUserQuestion):  SKILL.md:82,138 (init prints state and STOPs)

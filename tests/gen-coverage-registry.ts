@@ -9,8 +9,8 @@
 // minMechanism), and EMITS tests/.coverage-registry.json.
 //
 // WHY IT EXISTS. A new arg-dispatch case, a new canonical event in the OTel
-// Event Registry, or a
-// new scope-mapping.json key changes the enumerated universe. If nobody wrote a
+// Event Registry, or a new scope-mapping.json key changes the enumerated
+// universe. If nobody wrote a
 // `covers:` claim for it, the unit lands status=UNCOVERED, the regenerated
 // registry differs from the committed one, and `--check` exits 1 naming the
 // gap. Coverage cannot silently rot because the universe is recomputed from
@@ -430,9 +430,8 @@ export function enumerateSubcommands(): Unit[] {
 
 /** Canonical audit-event vocabulary, read as DATA from the OTel Event Registry
  *  (otel/event-registry.ts, drift-guard set (b)) — the single vocabulary of
- *  record. The legacy VALID_EVENT_TYPES table in amadeus-audit.ts is dead
- *  production code since the v1 writer deletion and is no longer parsed here
- *  (#1845); its removal is deferred to the #1841 migration cluster. */
+ *  record. The audit tool has no second vocabulary table; its canonical event
+ *  names are no longer parsed from tools/amadeus-audit.ts (#1845). */
 export function enumerateAuditEvents(): Unit[] {
   const registry = require(EVENT_REGISTRY_PATH) as { canonicalAuditEvents(): string[] };
   return registry.canonicalAuditEvents().map((id) => ({

@@ -1,11 +1,11 @@
-// covers: doc:12-state-machine.md(audit-event-taxonomy), doc:audit-format.md(event-registry), data:amadeus-audit.ts(VALID_EVENT_TYPES), function:handleApprove, function:handleReject, function:handleGateStart, function:handleRevise, function:handleSkip, function:handleCompleteWorkflow, function:handleAdvance, function:handleReuseArtifact, function:handleIntentBirth
+// covers: doc:12-state-machine.md(audit-event-taxonomy), doc:audit-format.md(event-registry), data:otel/event-registry.ts(canonical-audit-events), function:handleApprove, function:handleReject, function:handleGateStart, function:handleRevise, function:handleSkip, function:handleCompleteWorkflow, function:handleAdvance, function:handleReuseArtifact, function:handleIntentBirth
 //
 // t48 — Drift test for the audit event taxonomy: docs vs code.
 // Migrated from tests/integration/t48-audit-event-emitters.sh (TAP plan 16). The
 // .sh declared NO `# covers:` header — its subject is the cross-consistency of
 // three SOURCE-TEXT surfaces (it is a static-analysis meta-test, not a runtime
 // behaviour test): the emitter registry in docs/reference/12-state-machine.md,
-// the VALID_EVENT_TYPES Set literal in tools/amadeus-audit.ts, the Event Registry
+// the canonical Event Registry in otel/event-registry.ts, the Event Registry
 // in knowledge/amadeus-shared/audit-format.md, and the emission call sites across
 // tools/ + hooks/.
 //
@@ -15,13 +15,12 @@
 // and doc files read off disk. So this twin reads the same files and applies
 // the same scanning logic in TypeScript, in-process. Zero spawns, zero LLM,
 // zero tokens. (The point of a drift test is text-vs-text agreement; parsing
-// the source text — rather than importing VALID_EVENT_TYPES, which amadeus-audit
-// .ts does NOT export — is the faithful surface, and is exactly what the .sh
-// did via `sed -n '/new Set(\[/,/\]);/p'`.)
+// the source text and canonical registry are the faithful surfaces for this
+// drift check.
 //
 // Source / surfaces under test:
 //   - docs/reference/12-state-machine.md   (## Audit event taxonomy tables)
-//   - dist/claude/.claude/tools/amadeus-audit.ts:19  VALID_EVENT_TYPES = new Set([...])
+//   - dist/claude/.claude/otel/event-registry.ts  canonical audit-event rows
 //   - dist/claude/.claude/knowledge/amadeus-shared/audit-format.md  (## Event Registry)
 //   - dist/claude/.claude/tools/*.ts + hooks/*.ts  (emission call sites)
 //   - dist/claude/.claude/tools/amadeus-state.ts     (pairing handler bodies)
@@ -40,10 +39,10 @@
 //
 // Old TAP -> new test parity (1:1, every .sh assertion -> a named test()):
 //   .sh test 1  assert_file_exists DOC               -> "state-machine doc exists"
-//   .sh test 2  assert_eq REGISTRY_COUNT TS_COUNT     -> "emitter registry row count matches VALID_EVENT_TYPES"
+//   .sh test 2  assert_eq REGISTRY_COUNT TS_COUNT     -> "emitter registry row count matches canonical registry"
 //   .sh test 3  forward: doc row -> call site         -> "forward: every doc (event, emitter) row has a matching call site"
 //   .sh test 4  reverse: call site -> doc row         -> "reverse: every source emission site is in the doc"
-//   .sh test 5  tertiary: deleted events not present  -> "tertiary: deleted events have no emission sites and are not in VALID_EVENT_TYPES"
+//   .sh test 5  tertiary: deleted events not present  -> "tertiary: deleted events have no emission sites and are not in the canonical registry"
 //   .sh test 6  check_pairing handleApprove           -> "pairing: handleApprove emits GATE_APPROVED + STAGE_COMPLETED"
 //   .sh test 7  check_pairing handleReject            -> "pairing: handleReject emits GATE_REJECTED + STAGE_REVISING"
 //   .sh test 8  check_pairing handleGateStart         -> "pairing: handleGateStart emits STAGE_AWAITING_APPROVAL"
@@ -60,6 +59,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { canonicalAuditEvents } from "../../dist/claude/.claude/otel/event-registry.ts";
 
 // Keep this static drift detector self-contained. t52 copies only dist/, docs/
 // and tests/ into a sandbox; importing the general fixture module would pull in
@@ -70,7 +70,7 @@ const AMADEUS_SRC = join(REPO_ROOT, "dist", "claude", ".claude");
 const DOC = join(REPO_ROOT, "docs", "reference", "12-state-machine.md");
 const TOOLS_DIR = join(AMADEUS_SRC, "tools");
 const HOOKS_DIR = join(AMADEUS_SRC, "hooks");
-const AUDIT_TS = join(TOOLS_DIR, "amadeus-audit.ts");
+const CANONICAL_EVENTS = new Set(canonicalAuditEvents());
 const STATE_TS = join(TOOLS_DIR, "amadeus-state.ts");
 const UTIL_TS = join(TOOLS_DIR, "amadeus-utility.ts");
 const AUDIT_FORMAT = join(AMADEUS_SRC, "knowledge", "amadeus-shared", "audit-format.md");
@@ -172,18 +172,6 @@ function rowEvent(row: string): string {
   return m ? m[1] : "";
 }
 
-/** VALID_EVENT_TYPES count, parsed from the Set literal text exactly as the .sh
- *  did: sed -n '/new Set(\[/,/\]);/p' | grep -cE '"[A-Z_]+"' (.sh:82-83). */
-function validEventTypeCount(): number {
-  const lines = readFileSync(AUDIT_TS, "utf-8").split("\n");
-  const start = lines.findIndex((l) => /new Set\(\[/.test(l));
-  const end = lines.findIndex((l, i) => i >= start && /\]\);/.test(l));
-  if (start < 0 || end < 0) throw new Error("amadeus-audit.ts: Set literal not found");
-  return lines
-    .slice(start, end + 1)
-    .filter((l) => /"[A-Z_]+"/.test(l)).length;
-}
-
 describe("t48 audit event-emitter drift (migrated from t48-audit-event-emitters.sh, plan 16)", () => {
   // .sh test 1 ---------------------------------------------------------------
   test("state-machine doc exists [.sh test 1]", () => {
@@ -191,12 +179,12 @@ describe("t48 audit event-emitter drift (migrated from t48-audit-event-emitters.
   });
 
   // .sh test 2 ---------------------------------------------------------------
-  test("emitter registry row count matches VALID_EVENT_TYPES [.sh test 2]", () => {
+  test("emitter registry row count matches canonical Event Registry [.sh test 2]", () => {
     const rows = registryRows();
     expect(rows.length).toBeGreaterThan(0); // .sh's `[ -z "$REGISTRY" ]` guard
-    // The source of truth is VALID_EVENT_TYPES; a stale hard-coded count would
+    // The source of truth is the canonical Event Registry; a stale hard-coded count would
     // silently hide drift, so we derive both and compare (.sh:81-85).
-    expect(rows.length).toBe(validEventTypeCount());
+    expect(rows.length).toBe(CANONICAL_EVENTS.size);
   });
 
   // .sh CHECK 1 / test 3 -----------------------------------------------------
@@ -217,6 +205,14 @@ describe("t48 audit event-emitter drift (migrated from t48-audit-event-emitters.
       }
       for (const rel of emitters) {
         const abs = join(AMADEUS_SRC, rel);
+        // ARTIFACT_ATTESTED is documented against the audit CLI gateway. The
+        // event name is intentionally absent from that tool's source now that
+        // the copied vocabulary table is gone; registry membership is the
+        // executable proof that the gateway accepts it.
+        if (rel === "tools/amadeus-audit.ts" && CANONICAL_EVENTS.has(event)) {
+          checked++;
+          continue;
+        }
         if (!existsSync(abs)) {
           failures.push(`${event} -> ${rel}: file not found`);
           continue;
@@ -283,7 +279,7 @@ describe("t48 audit event-emitter drift (migrated from t48-audit-event-emitters.
   });
 
   // .sh CHECK 3 / test 5 -----------------------------------------------------
-  test("tertiary: deleted events have no emission sites and are not in VALID_EVENT_TYPES [.sh test 5]", () => {
+  test("tertiary: deleted events have no emission sites and are not in the canonical registry [.sh test 5]", () => {
     const deleted = [
       "JUMP_AUTO_STOPPED",
       "GATE_AUTO_APPROVED",
@@ -295,7 +291,6 @@ describe("t48 audit event-emitter drift (migrated from t48-audit-event-emitters.
       "WORKFLOW_RESUMED",
     ];
     const failures: string[] = [];
-    const auditLive = decommented(readFileSync(AUDIT_TS, "utf-8"));
     for (const event of deleted) {
       // No live emission call site anywhere in source.
       const resurrected = ALL_SOURCE_FILES.some((f) => {
@@ -305,9 +300,9 @@ describe("t48 audit event-emitter drift (migrated from t48-audit-event-emitters.
       if (resurrected) {
         failures.push(`${event} has an emission call site (deleted event resurrected)`);
       }
-      // Not reinstated into VALID_EVENT_TYPES (decommented view).
-      if (new RegExp(`"${event}"`).test(auditLive)) {
-        failures.push(`${event} reinstated in VALID_EVENT_TYPES`);
+      // Not reinstated into the canonical Event Registry.
+      if (CANONICAL_EVENTS.has(event)) {
+        failures.push(`${event} reinstated in the canonical Event Registry`);
       }
     }
     expect(failures).toEqual([]);

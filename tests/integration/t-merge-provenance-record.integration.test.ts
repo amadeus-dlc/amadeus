@@ -30,6 +30,7 @@ import { auditFilePath } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { resetOtelBootstrapForTests } from "../../dist/claude/.claude/otel/bootstrap.ts";
 import { resetFatalLatchForTests } from "../../dist/claude/.claude/otel/fatal-latch.ts";
 import { resetLoggerProviderForTests } from "../../dist/claude/.claude/otel/logger-provider.ts";
+import { canonicalAuditEvents } from "../../dist/claude/.claude/otel/event-registry.ts";
 import { auditRowsFrom, countAuditEvent } from "../harness/audit-records.ts";
 import { cleanupTestProject, createTestProject, DEFAULT_RECORD_DIR, seedStateFile } from "../harness/fixtures.ts";
 
@@ -150,13 +151,10 @@ describe("recordDelegatedMerge (C11/FR-9)", () => {
     expect(before.ok).toBe(true);
     const body = readFileSync(auditFilePath(proj), "utf-8");
     expect(countAuditEvent(body, "GATE_APPROVED")).toBe(0);
-    // Direct registration check: GATE_APPROVED must still be a valid event
-    // type in the audit vocabulary — a deletion would silently satisfy the
+    // Direct registration check: GATE_APPROVED must still be a canonical event
+    // type in the Event Registry — a deletion would silently satisfy the
     // count-zero assertion above.
-    const auditSource = readFileSync("dist/claude/.claude/tools/amadeus-audit.ts", "utf-8");
-    const vocab = auditSource.match(/const VALID_EVENT_TYPES = new Set\(\[([\s\S]*?)\]\)/);
-    expect(vocab).not.toBeNull();
-    expect(vocab ? vocab[1] : "").toContain('"GATE_APPROVED"');
+    expect(canonicalAuditEvents()).toContain("GATE_APPROVED");
   });
 
   test("the generic audit CLI cannot mint DELEGATED_MERGE_RECORDED (validation bypass closed)", () => {

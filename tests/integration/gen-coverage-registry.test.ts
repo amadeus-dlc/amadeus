@@ -329,7 +329,7 @@ describe("--check freshness diff (the ratchet mechanism)", () => {
 
       // Now inject a fake new canonical event into the TEMP copy of the OTel
       // Event Registry — the generator's vocabulary source since #1845 (the
-      // legacy VALID_EVENT_TYPES table is no longer read). Splice a minimal
+      // copied audit vocabulary is no longer read). Splice a minimal
       // canonical def in ahead of the "amadeus.workflow.completed" entry.
       const registrySrc = readFileSync(t.eventRegistryPath, "utf-8");
       const injected = registrySrc.replace(

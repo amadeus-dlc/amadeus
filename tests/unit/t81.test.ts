@@ -39,11 +39,11 @@
 //       that block scoping (resets at `## ` headings and `---`).
 //   - .sh Test 3  read t28's pinned $TS_COUNT, assert == 68  -> Test 3:
 //       same observable. Reads the canonical event-count list the tool
-//       enforces (VALID_EVENT_TYPES via amadeus-audit.ts) AND cross-checks
+//       enforces the canonical Event Registry AND cross-checks
 //       t28's pin. This PR's discriminator reuse introduces no new event, so
 //       the framework total stays 68 (the reconciled #367/#369 baseline). STRONGER: rather
 //       than only re-reading t28's literal, we also confirm the live tool's
-//       VALID_EVENT_TYPES set has exactly 68 entries by counting the rows it
+//       canonical Event Registry has exactly 98 entries
 //       rejects/accepts — pinning the actual contract t28 mirrors. To avoid
 //       coupling to t28's internal regex we keep the t28-literal read too.
 //   - .sh Test 4  second override emit (Reason: write-failure-permission-
@@ -78,6 +78,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { readAllAuditShards } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import { cleanupTestProject, createTestProject, seededStateFile } from "../harness/fixtures.ts";
+import { canonicalAuditEvents } from "../../dist/claude/.claude/otel/event-registry.ts";
 
 const BUN = process.execPath; // the bun running this test
 const REPO_ROOT = join(import.meta.dir, "..", "..");
@@ -204,8 +205,8 @@ describe("t81 amadeus-state practices-event — bolt-plan-marker-conflict overri
   test("3: framework event count includes Goal and Loop Monitor lifecycle events", () => {
     // The .sh read t28's pinned $TS_COUNT. Under milestone 4, t28 is now a
     // .test.ts (no `assert_eq N "$TS_COUNT"` line to grep), so pin the SAME
-    // observable against the SOURCE OF TRUTH instead — VALID_EVENT_TYPES in
-    // amadeus-audit.ts — which is stronger (it asserts the real count, not a
+    // observable against the SOURCE OF TRUTH instead — the canonical Event
+    // Registry — which is stronger (it asserts the real count, not a
     // sibling test's transcription of it). bolt-plan-marker-conflict reuses
     // PRACTICES_OVERRIDE (discriminator-field disambiguation) and registers no
     // new event. The framework total is 79: the v0.6.0 Wave 4 milestone 16
@@ -235,14 +236,7 @@ describe("t81 amadeus-state practices-event — bolt-plan-marker-conflict overri
     // plus LEARNING_ZERO_CONFIRMED + LEARNING_CANDIDATE_ADDED (ADR-6, +2) = 96,
     // plus WORKFLOW_WAITING_ENTERED + WORKFLOW_WAITING_RESUMED (RFC-0001
     // FR-3/ADR-4, waiting is a terminal distinct from park, +2) = 98.
-    const auditSrc = readFileSync(
-      join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-audit.ts"),
-      "utf-8",
-    );
-    const block = auditSrc.match(/const VALID_EVENT_TYPES = new Set\(\[([\s\S]*?)\]\)/);
-    expect(block).not.toBeNull();
-    const count = (block ? block[1].match(/"[A-Z0-9_]+"/g) : null)?.length ?? -1;
-    expect(count).toBe(98);
+    expect(canonicalAuditEvents().length).toBe(98);
   });
 
   // --- Test 4: milestone 8 write-failure path coexists (different Reason value) ---

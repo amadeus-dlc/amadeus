@@ -23,7 +23,7 @@
 **主要なアーキテクチャ決定**(§5 に詳細):
 - 規律定義を新設 `grilling-protocol.md` に単一ソース化(stage-protocol への全文インライン案を却下 — 肥大回避+スキルとの共有)
 - question-rendering annex は4ハーネスとも**無変更**(バッチサイズ1+説明文への推奨根拠織り込みで既存の枠内に収めた)
-- 新しい監査イベント種別を追加せず、既存 VALID_EVENT_TYPES の範囲内で実現
+- 新しい監査イベント種別を追加せず、既存の正典 Event Registry の範囲内で実現
 
 **技術スタック**: Bun(TypeScript, ESM)/ Biome 2.4系 / typescript ^6。フレームワークバージョン 1.0.0 → **1.1.0** にバンプ(CHANGELOG `## [1.1.0] - 2026-07-07`)。
 

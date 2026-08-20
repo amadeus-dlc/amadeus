@@ -4,7 +4,7 @@
 // the ENTRY, against the OTel event registry.
 //
 // WHY THE ENTRY AND NOT THE WRITER. The vocabulary check exists today, but it
-// lives inside appendAuditEntry (VALID_EVENT_TYPES, amadeus-audit.ts:392) — the
+// lives inside appendAuditEntry and consults the canonical Event Registry — the
 // LEGACY writer, which the legacy-writer-removal Bolt deletes. A guard that
 // lives only in the code being deleted is a guard with a scheduled expiry: once
 // the CLI reaches the canonical path, an unregistered event would travel to

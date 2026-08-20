@@ -1,11 +1,11 @@
-// covers: file:skills/amadeus/SKILL.md, file:tools/amadeus-audit.ts, file:knowledge/amadeus-shared/audit-format.md, file:knowledge/amadeus-shared/state-template.md, file:amadeus-common/protocols/stage-protocol.md, file:amadeus-common/stages/construction/code-generation.md
+// covers: file:skills/amadeus/SKILL.md, file:otel/event-registry.ts, file:knowledge/amadeus-shared/audit-format.md, file:knowledge/amadeus-shared/state-template.md, file:amadeus-common/protocols/stage-protocol.md, file:amadeus-common/stages/construction/code-generation.md
 //
 // In-process port of tests/integration/t47-construction-bolts.sh (TAP plan 12),
 // mechanism = none. The .sh is a Construction Bolt-by-Bolt vocabulary check: it
 // greps the SHIPPED implementation files for the durable anchors of the Bolt
 // vocabulary that survived the engine cutover — the retired "Construction Phase
 // N" sub-step labels (must be GONE from SKILL.md), the four Bolt audit events
-// registered in amadeus-audit.ts, the BOLT_STARTED row in audit-format.md, the
+// registered in the canonical Event Registry, the BOLT_STARTED row in audit-format.md, the
 // Construction Autonomy Mode state field in state-template.md, the stage-protocol
 // Glossary entry tying a Bolt to stages 3.1-3.5 (with 3.6/3.7 once at the end),
 // and the orchestrator-managed gating note in code-generation.md.
@@ -35,8 +35,8 @@
 //
 // Source under test (read fresh each run):
 //   dist/claude/.claude/skills/amadeus/SKILL.md                                (SKILL_MD)
-//   dist/claude/.claude/tools/amadeus-audit.ts                                 (AUDIT_TS)
-//     :68-71 VALID_EVENT_TYPES registers BOLT_STARTED / BOLT_COMPLETED /
+//   dist/claude/.claude/otel/event-registry.ts                                 (EVENT_REGISTRY)
+//     canonical registry rows contain BOLT_STARTED / BOLT_COMPLETED /
 //            BOLT_FAILED / AUTONOMY_MODE_SET
 //   dist/claude/.claude/knowledge/amadeus-shared/audit-format.md               (AUDIT_FORMAT)
 //     :109 documents the BOLT_STARTED row
@@ -52,10 +52,9 @@
 //                   one per N, each asserting SKILL.md does NOT contain the label
 //                   (the failure-event half of this guard: the label being
 //                    REINTRODUCED must make the test go red).
-//   .sh tests 5-8  (amadeus-audit.ts registers the 4 Bolt events)-> 4 tests, one
+//   .sh tests 5-8  (the Event Registry registers the 4 Bolt events)-> 4 tests, one
 //                   per event, each asserting the quoted event literal is present.
-//                   STRONGER: assert it lands in the VALID_EVENT_TYPES array, not
-//                   merely anywhere in the file.
+//                   STRONGER: assert it is present in the canonical registry.
 //   .sh test 9     (audit-format.md documents BOLT_STARTED)     -> "audit-format.md documents BOLT_STARTED"
 //   .sh test 10    (state-template.md has Construction Autonomy Mode) -> "state-template.md exposes Construction Autonomy Mode"
 //   .sh test 11    (stage-protocol Glossary ties Bolt to 3.1-3.5 + 3.6/3.7 once) -> "stage-protocol.md Glossary ..."
@@ -65,16 +64,14 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { AMADEUS_SRC } from "../harness/fixtures.ts";
+import { canonicalAuditEvents } from "../../dist/claude/.claude/otel/event-registry.ts";
 
 // The six shipped files the .sh's path vars pointed at.
 const SKILL_MD = readFileSync(
   join(AMADEUS_SRC, "skills", "amadeus", "SKILL.md"),
   "utf-8",
 );
-const AUDIT_TS = readFileSync(
-  join(AMADEUS_SRC, "tools", "amadeus-audit.ts"),
-  "utf-8",
-);
+const EVENT_REGISTRY = new Set(canonicalAuditEvents());
 const AUDIT_FORMAT = readFileSync(
   join(AMADEUS_SRC, "knowledge", "amadeus-shared", "audit-format.md"),
   "utf-8",
@@ -113,19 +110,10 @@ describe("t47 Construction Bolt vocabulary (migrated from t47-construction-bolts
   }
 
   // =========================================================================
-  // Tests 5-8 — the four Bolt audit events are registered in amadeus-audit.ts.
+  // Tests 5-8 — the four Bolt audit events are registered in the Event Registry.
   // The .sh grepped for the quoted event literal `"<EVENT>"`. STRONGER here:
-  // assert each event literal lands inside the VALID_EVENT_TYPES array (the
-  // registry the validator gates on), not merely anywhere in the file.
+  // assert each event is present in the canonical registry.
   // =========================================================================
-  // Slice the VALID_EVENT_TYPES array literal out of the source (computed at
-  // describe scope, asserted inside each test). The validator gates appended
-  // events against this array, so membership here is the real contract.
-  function validEventTypesBlock(): string {
-    const start = AUDIT_TS.indexOf("VALID_EVENT_TYPES");
-    const close = AUDIT_TS.indexOf("]", start);
-    return start >= 0 && close > start ? AUDIT_TS.slice(start, close + 1) : "";
-  }
 
   for (const event of [
     "BOLT_STARTED",
@@ -133,11 +121,8 @@ describe("t47 Construction Bolt vocabulary (migrated from t47-construction-bolts
     "BOLT_FAILED",
     "AUTONOMY_MODE_SET",
   ] as const) {
-    test(`amadeus-audit.ts registers ${event} in VALID_EVENT_TYPES`, () => {
-      // .sh: grep -q "\"<EVENT>\"" — the quoted literal is present.
-      expect(AUDIT_TS.includes(`"${event}"`)).toBe(true);
-      // STRONGER: it is a member of the VALID_EVENT_TYPES array specifically.
-      expect(validEventTypesBlock().includes(`"${event}"`)).toBe(true);
+    test(`the Event Registry registers ${event}`, () => {
+      expect(EVENT_REGISTRY.has(event)).toBe(true);
     });
   }
 

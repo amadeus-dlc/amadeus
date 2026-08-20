@@ -25,7 +25,7 @@
 //   A1 STATE_A grep 'Test Strategy.*Minimal'  -> assertStateField "Test Strategy" === "Minimal"
 //                                                 (config-change setField, utility.ts:2389; VALID_TEST_STRATEGIES, utility.ts:68-72)
 //   A2 AUDIT_A grep 'TEST_STRATEGY_CHANGED'    -> assertAuditEvent "TEST_STRATEGY_CHANGED"
-//                                                 (appendAuditEvent, utility.ts:2406; VALID_EVENT_TYPES, amadeus-audit.ts:60)
+//                                                 (appendAuditEvent, utility.ts:2406; Event Registry)
 //   B1 CLAUDE_OUTPUT contains "Unknown test    -> UNPORTABLE to a deterministic SDK surface (LLM-prose
 //      strategy"                                  validation by SKILL.md:114). Deterministic equivalent
 //                                                  (CLI die() -> stderr, utility.ts:2373) is covered by

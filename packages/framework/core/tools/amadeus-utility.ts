@@ -234,8 +234,8 @@ function refuseWithoutAudit(msg: string): never {
   process.exit(1);
 }
 
-// Thin wrapper around the canonical appendAuditEntry. All events must be in
-// amadeus-audit.ts VALID_EVENT_TYPES. Throws on invalid event or audit failure —
+// Thin wrapper around the canonical appendAuditEntry. All events must be in the
+// canonical Event Registry. Throws on invalid event or audit failure —
 // caller is expected to let that propagate (birth failures should stop birth).
 //
 // Lock-aware (mirrors amadeus-state.ts emitAudit): handleIntentBirth wraps the
