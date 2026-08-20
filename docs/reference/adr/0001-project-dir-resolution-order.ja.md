@@ -1,18 +1,20 @@
 # ADR-0001: プロジェクトディレクトリ解決順
 
+> 言語: [English](0001-project-dir-resolution-order.md) | **日本語**
+
 - Status: Accepted
 - Date: 2026-08-20
 - Scope: `resolveProjectDir` と `resolveProjectDirFromHook`
 
 ## Context
 
-Issue #1279 では、プロジェクトディレクトリの解決順が cursor に依存する
-engine 経路の成否を決めることが確認された。`CLAUDE_PROJECT_DIR` が main
-checkout や、workspace marker を持たない別ツリーを指すと、環境変数の段が
-プロセスをその解決不能なツリーに固定する。そこで Issue #1287 (E-DAGRA3)
-は、この横断的な順序を変更する前に ADR を作ることを求めた。CLI と hook の
-両 resolver が同じ優先順位を持つため、片方だけを変更すると新たな非対称性
-が生じる。
+Issue #1279 では、プロジェクトディレクトリの解決後に cursor 依存の
+engine 経路が失敗し得ることが確認された。`CLAUDE_PROJECT_DIR` が誤った
+workspace を指すと、環境変数の段が契約どおりに動作していても、その
+project directory の下で active-space または active-intent の解決が空に
+なることがある。そこで Issue #1287 (E-DAGRA3) は、この横断的な順序を
+変更する前に ADR を作ることを求めた。CLI と hook の両 resolver が同じ優先順位
+を持つため、片方だけを変更すると新たな非対称性が生じる。
 
 正規の workspace predicate は、`amadeus/` ディレクトリと既知ハーネスの
 `tools/` ディレクトリの組み合わせである。marker の不一致は診断できる状態
@@ -30,27 +32,28 @@ project、別 workspace を意図的に対象にする呼び出し元は、こ�
 上書きする。hook 起動、チームの worktree、fixture、scratch project-root
 override に影響するため、採用には全呼び出し元の棚卸しが必要である。
 
-### 選択肢 2: 環境変数優先を維持し、不一致を loud に診断する
+### 選択肢 2: 環境変数優先を維持し、cursor 解決失敗を診断する
 
-既存の契約を維持しつつ、環境変数の値が marker を持つ workspace の内外に
-ない場合、値、失敗した marker predicate、次段で選ばれるディレクトリを含む
-stderr 診断をプロセスあたり一度だけ出す。意図的な override を維持したまま、
-cursor/worktree の不一致を operator と CI に見えるようにする。
+既存の契約を維持しつつ、選択された project directory の下で active-space
+または active-intent の解決に失敗した場合、project directory と、その値の
+provenance（`CLAUDE_PROJECT_DIR`、workspace marker、script path、CWD）を含む
+stderr 診断を出す。marker-less scratch fixture が cursor を解決しない場合は
+無音のままとし、問題が確定する cursor 解決境界で診断する。
 
 ## Decision
 
 選択肢 2 を採用する。`CLAUDE_PROJECT_DIR` は、workspace-marker、script-path、
-CWD fallback の各段より上位に、両 resolver で維持する。marker 不一致の診断は
-プロセスあたり最大一度だけ出し、resolver の返り値は環境変数の値を変更しない。
-環境変数の値自体が marker を持つ workspace の内部または配下にある場合は、診断
-を出さない。
+CWD fallback の各段より上位に、両 resolver で維持する。resolver は選択した
+project directory の source を小さな provenance seam で記録する。intent record
+が存在するのに cursor 解決に失敗した場合、その失敗面が project directory と
+source を含む診断を出す。project directory の解決自体は無音で、選択した値を
+変更しない。
 
 ## Consequences
 
 - 明示的な環境変数 override との互換性を維持できる。
-- marker を持たない環境変数値が原因の worktree/cursor 障害が、無音ではなく
-  stderr で見える。
-- 診断はプロセスあたり一行に制限され、resolver の繰り返し呼び出しでログを
-  埋め尽くさない。
+- active-space または active-intent の解決失敗が、project directory と source
+  を伴って失敗地点で見える。
+- cursor を解決しない scratch fixture からは、新たな stderr が出ない。
 - 将来、優先順位を変更する場合は別の ADR とし、選択肢 1 に列挙した呼び出し元を
   改めて検討する。
