@@ -8,7 +8,10 @@
 // shard reads. The CLI (tla-authoring.ts) only dispatches.
 
 import { createHash } from "node:crypto";
+import { AUTHORING_ROUTES } from "./authoring-routes.ts";
 import type { Result } from "./contract.ts";
+import { ApplicabilityArms } from "./tla-applicability-arms.ts";
+import type { ArmsAssessment, ArmsFailure, ArmsSources } from "./tla-applicability-arms.ts";
 import { resolveSpecRoots } from "./tla-model-map.ts";
 import type {
   AggregateDigest,
@@ -118,16 +121,24 @@ function err<E>(error: E): Result<never, E> {
  * Stable IDs are document-scoped, so both the aggregate identity and the ID
  * must match before a declaration intersects a registered model (#3250).
  */
+function intersectingModels(
+  subjectIdentity: AggregateDigest,
+  subjects: readonly StableId[],
+  models: readonly RegisteredModel[],
+): readonly RegisteredModel[] {
+  return models.filter(
+    (model) =>
+      model.subjectIdentity === subjectIdentity &&
+      subjects.some((subject) => model.traceSubjects.includes(subject)),
+  );
+}
+
 function intersectsRegisteredModel(
   subjectIdentity: AggregateDigest,
   subjects: readonly StableId[],
   models: readonly RegisteredModel[],
 ): boolean {
-  return models.some(
-    (model) =>
-      model.subjectIdentity === subjectIdentity &&
-      subjects.some((subject) => model.traceSubjects.includes(subject)),
-  );
+  return intersectingModels(subjectIdentity, subjects, models).length > 0;
 }
 
 /** The J1..J6 table, evaluated top down; the first matching row decides. */
@@ -150,6 +161,60 @@ function judge(input: ApplicabilityInput): Result<ApplicabilityRoute, Applicabil
   return ok(CONSISTENT_ROUTES[key] as ApplicabilityRoute);
 }
 
+// ---------------------------------------------------------------------------
+// The arm stage (#3186): between the J-table and the receipt
+// ---------------------------------------------------------------------------
+
+export interface ArmedRoute {
+  readonly route: ApplicabilityRoute;
+  readonly arms: ArmsAssessment;
+}
+
+/**
+ * The one refusal the arms add: an `impl-only` route while an arm is firing.
+ * The route itself is untouched — J4 still says `impl-only` — but the run may
+ * not end there quietly. Closing it takes the existing terminal-route receipt
+ * with its verified human approval, which is where a "no revision needed"
+ * ruling is recorded; no new declaration surface exists to close it with
+ * (business-rules.md BR-4 / NFR-1).
+ */
+export interface RevisionEvaluationRequired {
+  readonly kind: "revision-evaluation-required";
+  readonly route: "impl-only";
+  readonly reasons: readonly string[];
+}
+
+export type ArmedFailure = ApplicabilityFailure | ArmsFailure | RevisionEvaluationRequired;
+
+/**
+ * Judge, then run the arms over the models the declaration intersects. The
+ * J-table decides first and its verdict is carried through unchanged; the arms
+ * are an added stage, never a re-classification (BR-1).
+ */
+function judgeWithArms(
+  input: ApplicabilityInput,
+  sources: ArmsSources,
+): Result<ArmedRoute, ArmedFailure> {
+  const judged = judge(input);
+  if (!judged.ok) return judged;
+  const models =
+    input.registeredModels === null
+      ? []
+      : intersectingModels(input.subjectIdentity, input.declaration.subjects, input.registeredModels.models).map(
+          (model) => model.name,
+        );
+  const assessed = ApplicabilityArms.assess(models, sources);
+  if (!assessed.ok) return err<ArmedFailure>(assessed.error);
+  return ok({ route: judged.value, arms: assessed.value });
+}
+
+/** `null` when the run may continue on this route as judged. */
+function silentFallRefusal(armed: ArmedRoute): RevisionEvaluationRequired | null {
+  return armed.route === "impl-only" && armed.arms.revisionEvaluation.required
+    ? { kind: "revision-evaluation-required", route: "impl-only", reasons: armed.arms.revisionEvaluation.reasons }
+    : null;
+}
+
 /** A reference to the real HUMAN_TURN that approved a terminal route. */
 export interface HumanApprovalRef {
   readonly shard: string;
@@ -167,6 +232,13 @@ export interface ApplicabilityReceipt {
   readonly humanApproval: HumanApprovalRef | null;
   readonly generatedAt: string;
   readonly predecessor: PredecessorRef;
+  /**
+   * What the arms saw at the moment the route was taken (#3186 / FR-ARM-3).
+   * `null` only when the caller judged without them. On a terminal route this
+   * is the record of the ruling: the approval verified below is the human word
+   * that "no revision is needed", and this field is the evidence it answers.
+   */
+  readonly arms: ArmsAssessment | null;
 }
 
 export interface ReceiptOptions {
@@ -175,6 +247,7 @@ export interface ReceiptOptions {
   readonly predecessor: PredecessorRef;
   /** Injected provenance check: does this ref name a real HUMAN_TURN? */
   readonly verifyApproval: (approval: HumanApprovalRef) => boolean;
+  readonly arms?: ArmsAssessment | null;
 }
 
 // The two routes that end the workflow on a human's word alone, so both are
@@ -207,12 +280,15 @@ function buildReceipt(
     humanApproval: terminal ? approval : null,
     generatedAt: options.generatedAt,
     predecessor: options.predecessor,
+    arms: options.arms ?? null,
   });
 }
 
 export const ApplicabilityJudge = {
   subjectSeriesKey,
   judge,
+  judgeWithArms,
+  silentFallRefusal,
   buildReceipt,
   rowForRoute: (route: ApplicabilityRoute): string => ROUTE_ROWS[route],
 } as const;
@@ -298,8 +374,6 @@ function seriesTips(entries: readonly SeriesEntry[]): readonly SeriesEntry[] {
   );
   return entries.filter((entry) => !superseded.has(entry.ref.digest as string));
 }
-
-const AUTHORING_ROUTES: ReadonlySet<string> = new Set(["author-new", "revise-model"]);
 
 /** Is the tip's subject set traced by a registered model (registration done)? */
 function registered(receipt: RecordedReceipt, modelMap: ModelMapSnapshot): boolean {

@@ -226,6 +226,40 @@ carry no authoring work, so the `tla-authoring` stage refuses them; issuing the
 receipt is this CLI's job rather than the stage's. `applicability series`
 derives the series key for a subject set.
 
+**The firing arms.** Classification says which route a change takes; it does not
+notice a model the implementation has grown past. Both applicability verbs
+therefore run two arms and one coverage check over every registered model the
+declaration intersects — every model, never a named one — after the route is
+decided and before the receipt is built, and report the result on the same JSON
+line under `arms`.
+
+*Vocabulary drift* compares the string-literal value sets a module declares with
+the literal clusters its governed sources enumerate: a cluster that covers a
+declared value set in full and adds a literal the model has never heard of is
+drift. The report names the finding and the model's checked-property class
+(`invariants-only` or `has-properties`), so a ruling can see how much the
+registered check could have caught. *Defect recurrence* takes
+`--issue-evidence <path>` and fires when a bug issue in that evidence names a
+governed implementation file — one distinct file is enough. The *pin-set
+coverage* check takes `--changed <path,...>` and records the changed files the
+governed entries do not cover, proposing them as an entries extension; a gap is
+never a reclassification to `non-target` and never a halt, and an absent
+`--changed` set is reported as "coverage check not performed" rather than passed
+over. An undecidable input — a module or config that cannot be parsed, a
+registered vocabulary the module does not define, a supplied evidence file that
+is not issue evidence — is a typed failure, never a quiet "nothing fired".
+
+When an arm fires, `applicability judge` refuses an `impl-only` route instead of
+answering it quietly: the route stands, but the change has to be ruled on. The
+ruling is recorded through the terminal-route receipt that already carries its
+verified human approval, and the arm evidence rides in that receipt; there is no
+separate declaration file, flag, or skip branch, so a past ruling never disarms
+a later run. The arms force a judgement about whether the model needs revising —
+they do not force a TLC run on every change. That is the two-layer posture: the
+everyday CI layer runs property-based, unit, and integration tests, while
+exhaustive model checking stays reserved for changes to a concurrent protocol's
+specification.
+
 **The hold.** `hold` evaluates whether authoring must stop: it lists the store,
 refuses to release on any corrupted entry, and runs the hold table over the
 current identity and series. The typed verdict on stdout is authoritative — the

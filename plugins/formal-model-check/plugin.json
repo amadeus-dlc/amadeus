@@ -38,6 +38,7 @@
     "tools/run-model-check-source.ts",
     "tools/run-model-check.ts",
     "tools/run-skeleton-ci.ts",
+    "tools/tla-applicability-arms.ts",
     "tools/tla-applicability.ts",
     "tools/tla-arm.ts",
     "tools/tla-authoring.ts",

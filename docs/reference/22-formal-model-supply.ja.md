@@ -107,6 +107,12 @@ bun plugins/formal-model-check/tools/tla-authoring.ts bundle list
 
 **applicability(適用可否)。** `applicability judge` は変更申告(`{ subjects, kind, rationale }`、`kind` は `new-subject` / `semantic-change` / `impl-only` / `non-target` のいずれか)を受け取り、登録済みモデルマップに対して経路を決めます。`applicability receipt` は同じ判断を行ってレシートを構築し、参照された人間承認を、それが名指す audit シャードに対して検証します。`--persist true` を付けると、そのレシートを `terminal-route-receipt` としてエビデンスストアへ書き込みます。終端経路の hold を解除できる根拠はこれだけです。終端でない経路、および承認が検証できない終端経路では永続化を拒否するため、hold を解除できないレシートがストアへ入ることはありません。終端経路で `--persist true` を省略した場合も CLI ゲートが拒否するため、印字だけのレシートでステージを完了できません。CLI は `--name value` の対しか読まないため、値は明示して書きます。終端経路は authoring 作業を伴わず `tla-authoring` ステージが拒否するので、レシートの発行はステージではなく本 CLI の責務です。`applicability series` は subject 集合の series key を導出します。
 
+**発火する2本の腕。** 分類は変更がどの経路を通るかを決めますが、実装が先へ進んでモデルが置き去りになった事実には気づきません。そこで applicability の2つの verb は、申告が交差する登録済みモデル**すべて**(特定モデルのハードコードはしません)に対して、経路確定後・レシート構築前に2本の腕と1つの被覆確認を走らせ、その結果を同じ JSON 行の `arms` に載せます。
+
+*語彙 drift* は、モジュールが宣言する文字列リテラル値集合と、その governed ソースが列挙するリテラルのクラスタを照合します。宣言済み値集合を丸ごと含み、かつモデルが知らないリテラルを加えているクラスタが drift です。報告には検出内容に加えてモデルの検査プロパティクラス(`invariants-only` / `has-properties`)を含め、登録済みの検査がどこまで見えていたのかを裁定者に示します。*欠陥再発* は `--issue-evidence <path>` を入力に取り、その証跡内の bug Issue が governed な実装ファイルを名指したときに発火します(distinct 1件で十分)。*ピン集合の被覆確認* は `--changed <path,...>` を入力に取り、governed entries が覆っていない変更ファイルを記録して entries 拡張として提示します。被覆不足は `non-target` への再分類でも halt でもなく、`--changed` 未供給は「被覆確認未実施」として明記され、黙って素通りすることはありません。判定不能な入力 — parse できないモジュールや config、モジュールが定義していない登録済み語彙、issue evidence ではないファイル — は型付き失敗であり、「何も発火しなかった」に潰しません。
+
+腕が発火したとき、`applicability judge` は `impl-only` 経路を静かに肯定せず拒否します。経路自体は変わりませんが、モデル改訂の要否を裁定しなければ先へ進めません。裁定は、既に人間承認の検証を伴う terminal-route レシートとして記録され、腕のエビデンスもそのレシートに載ります。裁定済みを記録する別ファイル・フラグ・スキップ分岐は存在しないため、過去の裁定が後続の検査を無効化することもありません。腕が強制するのは「モデル改訂の要否判定」であって、全変更への TLC 実行ではありません。これが二層の検証姿勢です — 日常の CI 層は property-based / unit / integration を回し、網羅的なモデル検査は並行プロトコルの仕様変更にのみ留保します。
+
 **hold(保留)。** `hold` は authoring を止めるべきかを評価します。ストアを列挙し、破損エントリが1件でもあれば解放を拒み、現在の identity と series で hold テーブルを走らせます。権威は stdout の型付き verdict であり、終了コードはそれを写すだけです。hold / no-hold を終了コードだけから読んではなりません。
 
 ## エビデンスストア

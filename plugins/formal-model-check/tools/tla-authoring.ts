@@ -8,7 +8,14 @@
 // every judgement lives in tla-evidence.ts.
 
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
+import type {
+  ArmsSources,
+  GovernedModelSources,
+  ModelSourceDeclarations,
+  SourceFile,
+} from "./tla-applicability-arms.ts";
+import { parseTlaModelMap } from "./tla-model-map.ts";
 import {
   ApplicabilityJudge,
   AuthoringHoldEvaluator,
@@ -69,8 +76,10 @@ const USAGE = [
   "  bundle list [--store <dir>]",
   "  bundle head [--store <dir>]",
   "  applicability judge --declaration <path> --identity <digest> [--model-map <path>] [--store <dir>]",
+  "                      [--issue-evidence <path>] [--changed <path,path,...>]",
   "  applicability receipt --declaration <path> --identity <digest> --approval <path|none>",
   "                        [--model-map <path>] [--store <dir>] [--audit-dir <dir>]",
+  "                        [--issue-evidence <path>] [--changed <path,path,...>]",
   "                        [--predecessor <root|digest>] [--generated-at <iso>] [--generated-by <name>]",
   "                        [--persist true]",
   "  applicability series --subjects <id,id,...>",
@@ -317,10 +326,93 @@ const CHANGE_KINDS: ReadonlySet<string> = new Set([
   "non-target",
 ]);
 
+// --- U4 arms (#3186): the bytes the firing predicates judge ----------------
+
+/**
+ * The workspace the map's paths are written against. Every path in the map is
+ * workspace-root relative and the map itself sits at
+ * `<root>/amadeus/spaces/<space>/specs/tla/model-map.json`, so the root is read
+ * back out of the map's own location rather than assumed to be the working
+ * directory — a judgement run from a subdirectory reads the same bytes.
+ */
+function workspaceRootOf(mapPath: string): string {
+  const specDir = dirname(resolve(process.cwd(), mapPath));
+  const tail = specDir.split(sep).slice(-5);
+  const canonical =
+    tail.length === 5 && tail[0] === "amadeus" && tail[1] === "spaces" && tail[3] === "specs" && tail[4] === "tla";
+  // A map somewhere else names paths relative to the working directory, which
+  // is the only root left to read them against.
+  return canonical ? resolve(specDir, "..", "..", "..", "..", "..") : process.cwd();
+}
+
+/**
+ * Read one declared source. A path the map names but the tree does not hold
+ * comes back as `text: null`, which the arm stage turns into a fail-closed halt
+ * for the models it actually evaluates — never into a quiet non-fire.
+ */
+function sourceFile(root: string, path: string): SourceFile {
+  const file = readTextFile(resolve(root, path));
+  return { path, text: file.ok ? file.text : null };
+}
+
+/**
+ * The governed sources the arms read, straight from the model map's own schema.
+ * A map the strict schema cannot read (a fixture map, a pre-schema map) leaves
+ * the arms `unavailable` with the reason attached, so the judgement says the
+ * arms did not run rather than that nothing fired.
+ */
+function readModelSourceDeclarations(flags: Record<string, string>): ModelSourceDeclarations {
+  const path = modelMapPathOf(flags);
+  if (path === null) return { kind: "unavailable", detail: "--model-map must not be empty" };
+  let bytes: Uint8Array;
+  try {
+    bytes = readFileSync(path);
+  } catch (cause) {
+    return { kind: "unavailable", detail: cause instanceof Error ? cause.message : String(cause) };
+  }
+  const parsed = parseTlaModelMap(bytes, path);
+  if (!parsed.ok) return { kind: "unavailable", detail: parsed.error.detail };
+
+  const root = workspaceRootOf(path);
+  const models: GovernedModelSources[] = parsed.value.models.map((model) => ({
+    name: model.name,
+    spec: sourceFile(root, model.model.path),
+    auxiliaries: (model.auxiliaries ?? []).map((auxiliary) => sourceFile(root, auxiliary.path)),
+    cfg: sourceFile(root, model.cfg.path),
+    vocabulary: model.vocabulary ?? null,
+    entries: model.entries.map((entry) => sourceFile(root, entry.implPath)),
+  }));
+  const governedPaths = [
+    ...new Set(parsed.value.models.flatMap((model) => model.entries.map((entry) => entry.implPath))),
+  ];
+  return { kind: "available", models, governedPaths };
+}
+
+function armSources(flags: Record<string, string>): ArmsSources | Emitted {
+  const changedRaw = flags.changed;
+  const changedPaths =
+    changedRaw === undefined
+      ? null
+      : changedRaw.split(",").map((path) => path.trim()).filter((path) => path !== "");
+  if (changedPaths !== null && changedPaths.length === 0) {
+    return usageError("--changed must name at least one path");
+  }
+  const evidencePath = flags["issue-evidence"];
+  return {
+    declarations: readModelSourceDeclarations(flags),
+    // The conductor supplies this path, so it is read as given rather than
+    // through the map's workspace root (business-rules.md BR-7: no plugin ->
+    // core import, no record-path knowledge in the judge).
+    issueEvidence: evidencePath === undefined ? null : sourceFile(process.cwd(), evidencePath),
+    changedPaths,
+  };
+}
+
 type JudgeContext = {
   readonly input: Parameters<typeof ApplicabilityJudge.judge>[0];
   readonly declaration: ChangeDeclaration;
   readonly store: string;
+  readonly arms: ArmsSources;
 };
 
 // The inputs both applicability verbs need, or the Emitted they both fail with.
@@ -340,9 +432,13 @@ function judgeContext(flags: Record<string, string>): JudgeContext | Emitted {
   const declaration = parseDeclaration(document.value);
   if (declaration === null) return usageError("--declaration must hold { subjects, kind, rationale }");
 
+  const arms = armSources(flags);
+  if (isEmitted(arms)) return arms;
+
   return {
     declaration,
     store,
+    arms,
     input: { subjectIdentity: identity, declaration, registeredModels: readModelMap(flags, store) },
   };
 }
@@ -351,11 +447,21 @@ function isEmitted<T extends object>(value: T | Emitted): value is Emitted {
   return "exitCode" in value;
 }
 
+/**
+ * The judgement plus its arms. An `impl-only` route with an arm firing is
+ * refused here rather than answered with a quiet success: the drift or the
+ * recurrence has to be ruled on, and the ruling is the terminal-route receipt
+ * (#3186 / FR-ARM-1).
+ */
 function applicabilityJudge(flags: Record<string, string>): Emitted {
   const context = judgeContext(flags);
   if (isEmitted(context)) return context;
-  const judged = ApplicabilityJudge.judge(context.input);
-  return judged.ok ? succeeded({ route: judged.value }) : failed(judged.error);
+  const judged = ApplicabilityJudge.judgeWithArms(context.input, context.arms);
+  if (!judged.ok) return failed(judged.error);
+  const refusal = ApplicabilityJudge.silentFallRefusal(judged.value);
+  return refusal === null
+    ? succeeded({ route: judged.value.route, arms: judged.value.arms })
+    : { exitCode: 1, body: { ok: false, failure: refusal, route: judged.value.route, arms: judged.value.arms } };
 }
 
 function readApproval(flags: Record<string, string>): HumanApprovalRef | null | Emitted {
@@ -436,19 +542,24 @@ function applicabilityReceipt(flags: Record<string, string>): Emitted {
   const settings = receiptSettings(flags);
   if (isEmitted(settings)) return settings;
 
-  const judged = ApplicabilityJudge.judge(context.input);
+  // The receipt path runs the arms too, but does not refuse a firing
+  // `impl-only`: this is the one place where a ruling can be recorded, and the
+  // verified human approval below is that ruling (business-rules.md BR-4).
+  const judged = ApplicabilityJudge.judgeWithArms(context.input, context.arms);
   if (!judged.ok) return failed(judged.error);
-  if ((judged.value === "impl-only" || judged.value === "non-target") && !settings.persist) {
-    return failed({ kind: "terminal-route-receipt-required", route: judged.value });
+  const route = judged.value.route;
+  if ((route === "impl-only" || route === "non-target") && !settings.persist) {
+    return failed({ kind: "terminal-route-receipt-required", route });
   }
-  if (settings.persist && !TERMINAL_ROUTES.has(judged.value)) {
-    return failed({ kind: "not-a-terminal-route", route: judged.value });
+  if (settings.persist && !TERMINAL_ROUTES.has(route)) {
+    return failed({ kind: "not-a-terminal-route", route });
   }
 
-  const built = ApplicabilityJudge.buildReceipt(judged.value, context.input, approval, {
+  const built = ApplicabilityJudge.buildReceipt(route, context.input, approval, {
     judgedBy: settings.generatedBy,
     generatedAt: settings.generatedAt,
     predecessor: settings.predecessor,
+    arms: judged.value.arms,
     verifyApproval: (ref) => {
       const shard = readTextFile(join(settings.auditDir, ref.shard));
       return shard.ok && verifyHumanApproval(shard.text, ref);

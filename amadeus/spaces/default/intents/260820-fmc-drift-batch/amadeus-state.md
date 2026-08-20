@@ -11,7 +11,7 @@
 - **Harness Version**: {"state":"unavailable","reason":"native-harness-version-not-exposed"}
 - **Model**: {"state":"unavailable","reason":"native-model-not-exposed"}
 - **Worktree Path**:
-- **Bolt Refs**: [advisory-retirement, boundary-three-face, revise-model-commit]
+- **Bolt Refs**: [advisory-retirement, applicability-arms, boundary-three-face, revise-model-commit]
 - **Practices Affirmed Timestamp**:
 
 ## Scope Configuration
