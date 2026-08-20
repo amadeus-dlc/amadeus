@@ -1666,26 +1666,29 @@ export function nextConstructionStep(
   return { kind: "done" };
 }
 
-/** Convenience over `nextConstructionStep` for the engine's per-stage per-unit
- *  emission (the code-generation for_each loop): given the ordered units, a
- *  coverage predicate for THIS stage, and the iteration axis, return the next
- *  unit to run, or `null` when every unit is already covered for the stage. Pure
- *  over its inputs — the caller supplies coverage as a predicate, so the engine's
- *  FS-backed `unitCovered` stays outside the decision — hence unit-testable
- *  in-process. Over the single-stage matrix both axes agree (first uncovered
- *  unit), which is exactly why wiring this into the per-stage emission is
- *  byte-identical on the default path. */
+/** Convenience over `nextConstructionStep` for the engine's per-unit emission:
+ *  given ordered units, the coverage predicate, the iteration axis, and the
+ *  in-scope Construction stages, return the unit from the next uncovered cell.
+ *  The stage argument to `isCovered` is required when a full stage list is
+ *  supplied so the unit-major axis can observe the whole matrix. The optional
+ *  list preserves the historical single-stage behavior for callers that do not
+ *  need cross-stage ordering. Pure over its inputs — the caller supplies
+ *  coverage as a predicate, so the engine's FS-backed `unitCovered` stays
+ *  outside the decision — hence unit-testable in-process. */
 export function selectNextUnitForStage(
   stage: string,
   units: readonly string[],
-  isCovered: (unit: string) => boolean,
+  isCovered: (unit: string, stage: string) => boolean,
   iteration: ConstructionIteration,
+  stages: readonly string[] = [stage],
 ): string | null {
   const covered = new Set<string>();
   for (const u of units) {
-    if (isCovered(u)) covered.add(coverageKey(u, stage));
+    for (const candidateStage of stages) {
+      if (isCovered(u, candidateStage)) covered.add(coverageKey(u, candidateStage));
+    }
   }
-  const step = nextConstructionStep({ iteration, covered }, { units, stages: [stage] });
+  const step = nextConstructionStep({ iteration, covered }, { units, stages });
   return step.kind === "run" ? step.unit : null;
 }
 

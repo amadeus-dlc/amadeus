@@ -6482,7 +6482,8 @@ function handleMerge(args: string[]): void {
 export function handleSetConstructionIteration(args: string[]): void {
   if (args.length < 1) {
     error(
-      "Usage: amadeus-state.ts set-construction-iteration <stage-major|unit-major>",
+      "Usage: amadeus-state.ts set-construction-iteration <stage-major|unit-major> " +
+        "(stage-major is the default; unit-major walks each Unit through Construction stages)",
     );
   }
   const parsed = parseConstructionIteration(args[0]);

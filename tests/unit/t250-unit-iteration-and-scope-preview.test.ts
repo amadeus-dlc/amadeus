@@ -189,6 +189,19 @@ describe("t250 selectNextUnitForStage (per-stage engine seam)", () => {
     ).toBe("u3");
   });
 
+  test("full stage list makes unit-major and stage-major choose different units", () => {
+    const stages = ["functional-design", "code-generation"];
+    const covered = new Set([coverageKey("u1", "functional-design")]);
+    const isCovered = (unit: string, stage: string): boolean =>
+      covered.has(coverageKey(unit, stage));
+    expect(
+      selectNextUnitForStage("code-generation", units, isCovered, "stage-major", stages),
+    ).toBe("u2");
+    expect(
+      selectNextUnitForStage("code-generation", units, isCovered, "unit-major", stages),
+    ).toBe("u1");
+  });
+
   test("returns null when every unit is covered", () => {
     expect(
       selectNextUnitForStage("code-generation", units, () => true, "stage-major"),
