@@ -33,16 +33,38 @@ export function unitDir(): string {
 	return process.env.AMADEUS_PRECOMMIT_UNIT_DIR ?? join(REPO_ROOT, "tests", "unit");
 }
 
+function splitLines(text: string): string[] {
+	return text
+		.split("\n")
+		.map((l) => l.trim())
+		.filter((l) => l.length > 0);
+}
+
 export function stagedFiles(): string[] {
 	const injected = process.env.AMADEUS_PRECOMMIT_STAGED_FILES;
-	const lines =
-		injected !== undefined
-			? injected.split("\n")
-			: spawnSync("git", ["diff", "--cached", "--name-only", "--diff-filter=ACMR"], {
-					cwd: REPO_ROOT,
-					encoding: "utf-8",
-				}).stdout.split("\n");
-	return lines.map((l) => l.trim()).filter((l) => l.length > 0);
+	if (injected !== undefined) return splitLines(injected);
+
+	// `-c core.quotepath=false` so non-ASCII staged paths come back as raw
+	// UTF-8 (matching how `covers: file:<path>` headers are written) instead
+	// of git's default octal-escaped quoting (e.g. "\346\227\245...").
+	const result = spawnSync(
+		"git",
+		["-c", "core.quotepath=false", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+		{ cwd: REPO_ROOT, encoding: "utf-8" },
+	);
+	// Fail-safe, not fail-crash: a hook is DX convenience, not an enforcement
+	// boundary (CI is the real gate) — any spawn error, non-zero git exit, or
+	// missing stdout skips the step (staged.size === 0 in main()) rather than
+	// throwing and blocking the commit.
+	if (result.error !== undefined || result.status !== 0 || typeof result.stdout !== "string") {
+		console.error(
+			`precommit-related-unit-tests: \`git diff --cached\` failed (${
+				result.error?.message ?? `git exited ${result.status}`
+			}) — skipping the related-unit-tests step.`,
+		);
+		return [];
+	}
+	return splitLines(result.stdout);
 }
 
 /** Every `*.test.ts` file directly under `dir` whose `covers: file:<path>`

@@ -26,6 +26,7 @@
     "tests/unit/t-package-write-sweep.serial.test.ts",
     "tests/unit/t-phase-check-gate-seam.test.ts",
     "tests/unit/t-phase-progress-rollup-seam.test.ts",
+    "tests/unit/t-precommit-related-unit-tests.test.ts",
     "tests/unit/t-runner-prune-seam.test.ts",
     "tests/unit/t-runtime-dispatch-seam.test.ts",
     "tests/unit/t-runtime-learnings-seam.test.ts",

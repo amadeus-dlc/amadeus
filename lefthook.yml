@@ -14,9 +14,17 @@
 pre-commit:
   parallel: false
   commands:
+    # lefthook orders commands alphanumerically by name unless `priority` is
+    # set (https://lefthook.dev/configuration/parallel/) — "lint" < "related-
+    # unit-tests" < "typecheck" would otherwise run lint before typecheck.
+    # Pin the intended fail-fast order (typecheck, then lint, then the
+    # diff-scoped unit tests) explicitly.
     typecheck:
+      priority: 1
       run: bun run typecheck
     lint:
+      priority: 2
       run: bun run lint
     related-unit-tests:
+      priority: 3
       run: bun scripts/precommit-related-unit-tests.ts

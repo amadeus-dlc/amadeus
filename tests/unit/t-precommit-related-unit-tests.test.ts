@@ -5,16 +5,23 @@
 // (relatedUnitTests, stagedFiles, unitDir, buildFilterPattern) plus main()'s
 // full body, driven in-process.
 //
+// Lives under tests/unit/ (not tests/integration/) despite measuring
+// `medium` (real node:fs use, and node:child_process appears throughout the
+// mocking below) — grandfathered in tests/.test-size-purity-allowlist.json,
+// same as its sibling driveExit precedent tests/unit/t-sensor-fire-seam.test.ts.
+// It has to live here: scripts/precommit-related-unit-tests.ts's own
+// unitDir() only scans tests/unit/ for `covers:`-linked tests, so this file
+// must be IN that directory for the hook to protect its own selection logic
+// on a future change to the script.
+//
 // node:child_process is mocked once, module-wide, BEFORE the dynamic import
 // of the script under test (mirrors tests/integration/t-bolt-failure-transitions.test.ts's
 // mock.module convention — a static top-level import would bind the real
-// spawnSync before the mock installs). The mock passes any "git ..." argv
-// through to the REAL spawnSync unchanged (stagedFiles()'s git-diff call is
-// read-only and safe to run for real against this repo — its content is
-// never asserted on, only that the code path executes without throwing),
-// and intercepts only the "run-tests.ts" argv main() spawns, so main()'s
-// full body — including its process.exit — is driven for real without ever
-// recursively spawning the actual test runner.
+// spawnSync before the mock installs). "run-tests.ts" spawns are always
+// intercepted; "git" spawns are captured for assertions and, when
+// `gitDiffMock` is set, return a controlled result (to drive the fail-safe
+// paths below) — otherwise they pass through to the REAL spawnSync (safe,
+// read-only) so the default-branch test still exercises a real git call.
 
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import * as childProcess from "node:child_process";
@@ -26,6 +33,10 @@ const realSpawnSync = childProcess.spawnSync;
 
 let capturedRunTestsArgs: string[] | null = null;
 let mockRunTestsStatus: number | null = 0;
+
+let capturedGitDiffArgs: string[] | null = null;
+let gitDiffMock: { error?: Error; status?: number | null; stdout?: string | undefined } | null =
+	null;
 
 mock.module("node:child_process", () => ({
 	...childProcess,
@@ -41,6 +52,20 @@ mock.module("node:child_process", () => ({
 				status: mockRunTestsStatus,
 				signal: null,
 			};
+		}
+		if (command === "git" && argv.includes("diff")) {
+			capturedGitDiffArgs = argv;
+			if (gitDiffMock !== null) {
+				return {
+					pid: 1,
+					output: [null, gitDiffMock.stdout ?? null, ""],
+					stdout: gitDiffMock.stdout,
+					stderr: "",
+					status: gitDiffMock.status ?? 0,
+					error: gitDiffMock.error,
+					signal: null,
+				};
+			}
 		}
 		// biome-ignore lint/suspicious/noExplicitAny: passthrough to the real spawnSync's own overloaded signature
 		return realSpawnSync(command as any, args as any, options as any);
@@ -65,6 +90,8 @@ afterEach(() => {
 	rmSync(dir, { recursive: true, force: true });
 	capturedRunTestsArgs = null;
 	mockRunTestsStatus = 0;
+	capturedGitDiffArgs = null;
+	gitDiffMock = null;
 });
 
 function write(name: string, body: string): void {
@@ -166,6 +193,40 @@ describe("stagedFiles", () => {
 		// path executes and returns an array without throwing.
 		expect(Array.isArray(stagedFiles())).toBe(true);
 	});
+
+	test("passes -c core.quotepath=false so non-ASCII paths aren't octal-escaped", () => {
+		delete process.env.AMADEUS_PRECOMMIT_STAGED_FILES;
+		stagedFiles();
+		expect(capturedGitDiffArgs).not.toBeNull();
+		const args = capturedGitDiffArgs as string[];
+		const cIndex = args.indexOf("-c");
+		expect(cIndex).toBeGreaterThanOrEqual(0);
+		expect(args[cIndex + 1]).toBe("core.quotepath=false");
+	});
+
+	test("round-trips a non-ASCII path exactly as git (with quotepath=false) reports it", () => {
+		delete process.env.AMADEUS_PRECOMMIT_STAGED_FILES;
+		gitDiffMock = { status: 0, stdout: "packages/日本語ファイル.ts\n" };
+		expect(stagedFiles()).toEqual(["packages/日本語ファイル.ts"]);
+	});
+
+	test("fail-safe: a spawn error (e.g. git not on PATH) skips rather than throws", () => {
+		delete process.env.AMADEUS_PRECOMMIT_STAGED_FILES;
+		gitDiffMock = { error: new Error("spawnSync git ENOENT") };
+		expect(stagedFiles()).toEqual([]);
+	});
+
+	test("fail-safe: a non-zero git exit skips rather than throws", () => {
+		delete process.env.AMADEUS_PRECOMMIT_STAGED_FILES;
+		gitDiffMock = { status: 1, stdout: "" };
+		expect(stagedFiles()).toEqual([]);
+	});
+
+	test("fail-safe: missing stdout skips rather than throws", () => {
+		delete process.env.AMADEUS_PRECOMMIT_STAGED_FILES;
+		gitDiffMock = { status: 0, stdout: undefined };
+		expect(stagedFiles()).toEqual([]);
+	});
 });
 
 describe("unitDir", () => {
@@ -226,6 +287,13 @@ describe("main — early-return branches (no spawn)", () => {
 		process.env.AMADEUS_PRECOMMIT_STAGED_FILES = "README.md";
 		process.env.AMADEUS_PRECOMMIT_UNIT_DIR = dir; // empty fixture dir — no covers claims at all
 		main();
+		expect(capturedRunTestsArgs).toBeNull();
+	});
+
+	test("a failed git diff (no injection seam) does not crash main() — skips instead", () => {
+		delete process.env.AMADEUS_PRECOMMIT_STAGED_FILES;
+		gitDiffMock = { error: new Error("spawnSync git ENOENT") };
+		expect(() => main()).not.toThrow();
 		expect(capturedRunTestsArgs).toBeNull();
 	});
 });
