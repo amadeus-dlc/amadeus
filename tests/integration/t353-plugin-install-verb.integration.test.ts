@@ -297,9 +297,9 @@ describe("t353 plugin install verb (U2, #1597)", () => {
         seen.push([...argv]);
         return { status: 0, stdout: JSON.stringify({ ok: true, verdict: { kind: "no-hold" } }) };
       }, (message) => warnings.push(message));
-      // The plugin-owned activation evaluator runs before the declared
-      // authoring-hold route on this bare fixture (no spec model map).
-      expect(raised.some((advisory) => String(advisory.code) === "authoring-hold")).toBe(false);
+      // The plugin-owned activation evaluator returns no-hold on this bare
+      // fixture (no spec model map), so nothing is raised.
+      expect(raised.some((advisory) => String(advisory.code) === "spec-change")).toBe(false);
       expect(seen).toEqual([
         [
           "bun",
@@ -308,11 +308,10 @@ describe("t353 plugin install verb (U2, #1597)", () => {
           harness,
           "requirements-analysis",
         ],
-        ["bun", join(project, "plugins", PLUGIN, "tools", "tla-authoring.ts"), "advisory", "hold"],
       ]);
       expect(seen.every((argv) => existsSync(argv[1] as string))).toBe(true);
       expect(warnings).toEqual([]);
-      expect(declaredHandoffStage(project, PLUGIN, "authoring-hold")).toBe("tla-authoring");
+      expect(declaredHandoffStage(project, PLUGIN, "spec-change")).toBe("formal-model-check");
     } finally {
       rmSync(project, { recursive: true, force: true });
     }

@@ -96,7 +96,7 @@ function declareAdvisoriesInStaging(advisories: unknown): void {
 // to the located plugin root before running the evaluator.
 const HOLD_DECLARATION = [
   {
-    code: "authoring-hold",
+    code: "demo-hold",
     checkpoints: ["requirements-analysis"],
     evaluator: { argv: ["bun", "tools/evaluate.ts", "hold"] },
   },
@@ -130,7 +130,7 @@ describe("declared advisory supply", () => {
       JSON.stringify({ ok: false, verdict: { kind: "hold", reasons: [{ kind: "no-applicability-receipt" }] } }),
     );
     expect(raised).toHaveLength(1);
-    expect(String(raised[0]?.code)).toBe("authoring-hold");
+    expect(String(raised[0]?.code)).toBe("demo-hold");
     expect(raised[0]?.message).toContain("no-applicability-receipt");
     // argv only: the declaration is executed as a vector, never a shell string.
     // The relative script path resolves against the located plugin root (FR-2).
@@ -214,7 +214,7 @@ describe("declared advisory supply from the staging face (consumer layout)", () 
       (message) => warnings.push(message),
     );
     expect(raised).toHaveLength(1);
-    expect(String(raised[0]?.code)).toBe("authoring-hold");
+    expect(String(raised[0]?.code)).toBe("demo-hold");
     expect(seen).toEqual([["bun", join(hostRoot, ".amadeus-plugin-src", "demo", "tools", "evaluate.ts"), "hold"]]);
     expect(warnings).toEqual([]);
   });
@@ -234,7 +234,7 @@ describe("declared advisory supply from the staging face (consumer layout)", () 
       JSON.stringify({ ok: false, verdict: { kind: "hold", reasons: [{ kind: "no-applicability-receipt" }] } }),
     );
     expect(raised).toHaveLength(1);
-    expect(String(raised[0]?.code)).toBe("authoring-hold");
+    expect(String(raised[0]?.code)).toBe("demo-hold");
     expect(seen).toEqual([["bun", join(projectRoot, "plugins", "demo", "tools", "evaluate.ts"), "hold"]]);
   });
 
@@ -244,13 +244,13 @@ describe("declared advisory supply from the staging face (consumer layout)", () 
     composeDemo();
     declareAdvisoriesInStaging([
       {
-        code: "authoring-hold",
+        code: "demo-hold",
         checkpoints: ["requirements-analysis"],
         evaluator: { argv: ["bun", "tools/evaluate.ts", "hold"] },
         handoff: { stage: "tla-authoring" },
       },
     ]);
-    expect(declaredHandoffStage(projectRoot, "demo", "authoring-hold", undefined, join(hostRoot, ".amadeus-plugin-src")))
+    expect(declaredHandoffStage(projectRoot, "demo", "demo-hold", undefined, join(hostRoot, ".amadeus-plugin-src")))
       .toBe("tla-authoring");
   });
 
@@ -260,7 +260,7 @@ describe("declared advisory supply from the staging face (consumer layout)", () 
     const stage = declaredHandoffStage(
       projectRoot,
       "demo",
-      "authoring-hold",
+      "demo-hold",
       undefined,
       join(hostRoot, ".amadeus-plugin-src"),
       (message) => warnings.push(message),
@@ -278,7 +278,7 @@ describe("declared advisory supply from the staging face (consumer layout)", () 
       },
     };
 
-    expect(declaredHandoffStage(projectRoot, "demo", "authoring-hold", fs)).toBeNull();
+    expect(declaredHandoffStage(projectRoot, "demo", "demo-hold", fs)).toBeNull();
   });
 });
 
@@ -290,8 +290,8 @@ describe("the shipped formal-model-check declaration", () => {
     );
     const parsed = parseAdvisoryDeclarations(manifest);
     expect(parsed.invalid).toEqual([]);
-    expect(parsed.declarations.map((declaration) => String(declaration.code))).toEqual(["spec-change", "authoring-hold"]);
-    expect(parsed.declarations[1]?.checkpoints).toEqual([
+    expect(parsed.declarations.map((declaration) => String(declaration.code))).toEqual(["spec-change"]);
+    expect(parsed.declarations[0]?.checkpoints).toEqual([
       "requirements-analysis",
       "functional-design",
       "build-and-test",
@@ -323,8 +323,8 @@ describe("declared advisory hold symmetry across next and report", () => {
 
   const DECLARED_ADVISORY: Advisory = {
     plugin: "demo",
-    code: "authoring-hold" as Advisory["code"],
-    message: "advisory: demo authoring-hold — no-applicability-receipt",
+    code: "demo-hold" as Advisory["code"],
+    message: "advisory: demo demo-hold — no-applicability-receipt",
     stage: "requirements-analysis",
     target: "amadeus/spaces/default/specs/tla",
     specIdentity: "sha256:hold-1",
@@ -402,7 +402,7 @@ describe("declared advisory hold symmetry across next and report", () => {
     }
 
     const reason = advisoryReportHoldReason(projectDir, stage, hostRoot, holdRunner());
-    expect(reason ?? "").toContain("authoring-hold");
+    expect(reason ?? "").toContain("demo-hold");
     expect(reason ?? "").not.toContain("formal model check artifacts");
   });
 
@@ -420,7 +420,7 @@ describe("declared advisory hold symmetry across next and report", () => {
     guardAdvisoryChoices(projectDir, stage, [DECLARED_ADVISORY], hostRoot);
     chooseAtCheckpoint(projectDir, "run-now");
     const reason = advisoryReportHoldReason(projectDir, stage) ?? "";
-    expect(reason).toContain("authoring-hold");
+    expect(reason).toContain("demo-hold");
     expect(reason).toContain("evaluator to return no-hold");
   });
 

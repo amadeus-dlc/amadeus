@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runTlaAuthoring } from "../../plugins/formal-model-check/tools/tla-authoring.ts";
@@ -337,57 +337,25 @@ describe("hold — the expected demo of Bolt 2", () => {
   });
 });
 
-describe("advisory hold — the declared evaluator wrapper", () => {
-  async function advisoryHold(subjectsFile: string): Promise<{ exitCode: number; body: Record<string, unknown> }> {
-    return await run([
-      "advisory", "hold",
-      "--subjects-file", subjectsFile,
-      "--store", storeRoot,
-      "--model-map", modelMapPath,
+// #3187: the governed-subjects advisory path is retired outright - no shim and
+// no deprecation message, so its verbs are simply unknown to the dispatcher.
+describe("the retired governance verbs (#3187)", () => {
+  test("the advisory group is rejected as an unknown command", async () => {
+    const { exitCode, body } = await run(["advisory", "hold", "--store", storeRoot]);
+    expect(exitCode).toBe(2);
+    expect(body.error).toBe("unknown command: advisory");
+    expect(String(body.usage)).not.toContain("advisory");
+  });
+
+  test("the subjects group is rejected as an unknown command", async () => {
+    const { exitCode, body } = await run([
+      "subjects", "declare",
+      "--document", join(workspace, "requirements.md"),
+      "--kind", "requirements",
+      "--id", "FR-001",
     ]);
-  }
-
-  test("a subjects file that exists but cannot be read fails closed, not no-hold", async () => {
-    const looped = join(workspace, "governed-loop.json");
-    symlinkSync(looped, looped);
-    const { exitCode, body } = await advisoryHold(looped);
-    expect(exitCode).toBe(1);
-    expect((body.failure as { kind: string }).kind).toBe("governed-subjects-unreadable");
-  });
-
-  test("a workspace governing no subjects is a real no-hold, evaluated not suppressed", async () => {
-    const { exitCode, body } = await advisoryHold(join(workspace, "absent.json"));
-    expect(exitCode).toBe(0);
-    expect((body.verdict as { kind: string }).kind).toBe("no-hold");
-    expect(String(body.reason)).toContain("no governed subjects");
-  });
-
-  test("a governed subject with no evidence holds", async () => {
-    writeFileSync(join(workspace, "requirements.md"), "### FR-001\ngoverned body\n", "utf8");
-    const subjects = writeJson("governed.json", {
-      documents: [{ path: join(workspace, "requirements.md"), kind: "requirements" }],
-      subjects: ["FR-001"],
-    });
-    const { exitCode, body } = await advisoryHold(subjects);
-    expect(exitCode).toBe(1);
-    expect((body.verdict as { kind: string }).kind).toBe("hold");
-  });
-
-  test("a governed id the documents do not define fails closed", async () => {
-    writeFileSync(join(workspace, "requirements.md"), "### FR-001\ngoverned body\n", "utf8");
-    const subjects = writeJson("governed-missing.json", {
-      documents: [{ path: join(workspace, "requirements.md"), kind: "requirements" }],
-      subjects: ["FR-001", "FR-777"],
-    });
-    const { exitCode, body } = await advisoryHold(subjects);
-    expect(exitCode).toBe(1);
-    expect((body.failure as { kind: string }).kind).toBe("unresolvable-id");
-  });
-
-  test("a malformed governance declaration fails closed rather than releasing", async () => {
-    const subjects = writeJson("governed-broken.json", { documents: [], subjects: [] });
-    const { exitCode, body } = await advisoryHold(subjects);
-    expect(exitCode).toBe(1);
-    expect((body.failure as { kind: string }).kind).toBe("governed-subjects-unreadable");
+    expect(exitCode).toBe(2);
+    expect(body.error).toBe("unknown command: subjects");
+    expect(String(body.usage)).not.toMatch(/subjects\s+declare/);
   });
 });

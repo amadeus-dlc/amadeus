@@ -1924,10 +1924,6 @@
           "mechanism": "none"
         },
         {
-          "file": "tests/integration/t528-authoring-hold-end-to-end.integration.test.ts",
-          "mechanism": "none"
-        },
-        {
           "file": "tests/integration/t529-advisory-hold-trace.integration.test.ts",
           "mechanism": "none"
         }

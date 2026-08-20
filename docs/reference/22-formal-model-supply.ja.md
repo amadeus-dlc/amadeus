@@ -109,27 +109,6 @@ bun plugins/formal-model-check/tools/tla-authoring.ts bundle list
 
 **hold(保留)。** `hold` は authoring を止めるべきかを評価します。ストアを列挙し、破損エントリが1件でもあれば解放を拒み、現在の identity と series で hold テーブルを走らせます。権威は stdout の型付き verdict であり、終了コードはそれを写すだけです。hold / no-hold を終了コードだけから読んではなりません。
 
-`advisory hold` は、plugin が `requirements-analysis`・`functional-design`・`build-and-test` の各チェックポイントへ `authoring-hold` advisory として登録するラッパーです。チェックポイントは subject を知らないため、ラッパーが `amadeus/spaces/<space>/specs/authoring-subjects.json` から解決します。これはワークスペースが形式検証の統治下に置く文書と stable id の宣言です。何も宣言しないワークスペースは何も統治しておらず、これは抑制された no-hold ではなく真の no-hold です。一方、存在するが読めない宣言ファイルや、文書が定義しない id を名指す宣言は fail-closed します。
-
-```sh
-bun plugins/formal-model-check/tools/tla-authoring.ts advisory hold
-{"ok":true,"verdict":{"kind":"no-hold"},"reason":"no governed subjects are declared"}
-```
-
-その宣言ファイルの唯一の書き手が `subjects declare` です。統治対象の文書と stable id を受け取り、書き込む前に全 id を文書に対して解決し、staging ファイルと rename を経て公開します。読み手が見るのは常に旧宣言か新宣言のどちらかです。文書が定義しない id は拒否され、ディスクには何も残りません。
-
-```sh
-bun plugins/formal-model-check/tools/tla-authoring.ts subjects declare \
-  --document amadeus/spaces/default/intents/<intent>/inception/requirements-analysis/requirements.md \
-  --kind requirements --id FR-1 --id FR-2
-```
-
-複数の文書を統治するときは `--document` と `--kind` を対で繰り返し、`--id` は stable id ごとに1回ずつ指定します。宣言ファイルは `specs/tla/` の下ではなく specs ルートに置きます。これにより編集が activation の監視 glob `tla/**` の外に留まり、兄弟の spec-hash advisory を発火させません。エビデンスストアと同じ配置です。
-
-宣言の id 解決に使う見出し文法は、本リポジトリが実際に書いている形を受理します: `FR-1`・`NFR-1`・`AC-1`・`FR-CROSS-1`・`FR-1-1`、および3桁ゼロ埋めの `FR-001`。最後のセグメントが数字でない `FR-NA` のような id は文法の外に留まり、自動収集されません。
-
-manifest はこの advisory に `handoff: { "stage": "tla-authoring" }` を宣言しています。したがってチェックポイントでの run-now 選択は、engine が検証するコマンドの実行ではなく authoring ステージの起動になります。ステージを開いても hold は解除されません。解除するのは評価器が no-hold を返すこと、すなわち authoring bundle か永続化された terminal-route レシートが当該 subject を覆った場合だけです。
-
 ## エビデンスストア
 
 `plugins/formal-model-check/tools/tla-evidence.ts` は CLI ではなくライブラリです。自身のエントリポイントを持たず、`tla-authoring.ts` から利用されます。エビデンスストアへの唯一の書き手であり、ストアは `--store` フラグで移さない限り `amadeus/spaces/<space>/specs/tla-evidence` に置かれます。

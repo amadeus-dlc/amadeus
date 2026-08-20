@@ -21,8 +21,8 @@ const STORE_FILE = ".amadeus-advisory-choice.json";
 
 const HELD_ADVISORY: Advisory = {
   plugin: "demo",
-  code: "authoring-hold" as Advisory["code"],
-  message: "advisory: demo authoring-hold — hold (no-applicability-receipt)",
+  code: "demo-hold" as Advisory["code"],
+  message: "advisory: demo demo-hold — hold (no-applicability-receipt)",
   stage: "requirements-analysis",
   target: "amadeus/spaces/default/specs/tla",
   specIdentity: "sha256:hold-1",
@@ -61,7 +61,7 @@ describe("t529 the advisory hold leaves a trace across its transitions", () => {
     const pending = storeOf(projectDir).pending;
     expect(pending).toHaveLength(1);
     expect(pending[0]?.identity.checkpoint).toBe("requirements-analysis");
-    expect(String(pending[0]?.identity.code)).toBe("authoring-hold");
+    expect(String(pending[0]?.identity.code)).toBe("demo-hold");
     expect(typeof pending[0]?.createdAt).toBe("string");
     expect(pending[0]?.closedAt).toBeUndefined();
   });

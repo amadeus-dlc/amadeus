@@ -14,7 +14,6 @@ import { runTlaAuthoring } from "../../plugins/formal-model-check/tools/tla-auth
 let workspace = "";
 let storeRoot = "";
 let modelMapPath = "";
-let subjectsPath = "";
 let requirementsPath = "";
 let approvalPath = "";
 
@@ -38,16 +37,14 @@ function writeJson(name: string, value: unknown): string {
   return path;
 }
 
-async function declareSubjects(): Promise<string> {
+async function governedIdentity(): Promise<string> {
   const { exitCode, body } = await run([
-    "subjects", "declare",
-    "--document", requirementsPath,
-    "--kind", "requirements",
-    "--id", "FR-1",
-    "--out", subjectsPath,
+    "identity", "extract",
+    "--doc", requirementsPath,
+    "--doc-kind", "requirements",
   ]);
   expect(exitCode).toBe(0);
-  return body.identity as string;
+  return body.aggregateDigest as string;
 }
 
 function receiptArgv(kind: string, identity: string, approval: string, persist: readonly string[]): string[] {
@@ -64,10 +61,13 @@ function receiptArgv(kind: string, identity: string, approval: string, persist: 
   ];
 }
 
-function holdArgv(): string[] {
+async function holdArgv(identity: string): Promise<string[]> {
+  const { exitCode, body } = await run(["applicability", "series", "--subjects", "FR-1"]);
+  expect(exitCode).toBe(0);
   return [
-    "advisory", "hold",
-    "--subjects-file", subjectsPath,
+    "hold",
+    "--identity", identity,
+    "--series", body.series as string,
     "--store", storeRoot,
     "--model-map", modelMapPath,
   ];
@@ -77,7 +77,6 @@ beforeEach(() => {
   workspace = mkdtempSync(join(tmpdir(), "terminal-receipt-"));
   storeRoot = join(workspace, "tla-evidence");
   modelMapPath = join(workspace, "model-map.json");
-  subjectsPath = join(workspace, "authoring-subjects.json");
   requirementsPath = join(workspace, "requirements.md");
   mkdirSync(storeRoot, { recursive: true });
   writeFileSync(requirementsPath, "### FR-1\ngoverned body\n", "utf8");
@@ -96,8 +95,8 @@ afterEach(() => {
 
 describe("t527 terminal route receipt persistence", () => {
   test("a persisted non-target receipt releases the authoring hold", async () => {
-    const identity = await declareSubjects();
-    const held = await run(holdArgv());
+    const identity = await governedIdentity();
+    const held = await run(await holdArgv(identity));
     expect(held.exitCode).toBe(1);
     expect((held.body.verdict as { kind: string }).kind).toBe("hold");
 
@@ -110,13 +109,13 @@ describe("t527 terminal route receipt persistence", () => {
     expect(read.exitCode).toBe(0);
     expect((read.body.evidence as { kind: string }).kind).toBe("terminal-route-receipt");
 
-    const released = await run(holdArgv());
+    const released = await run(await holdArgv(identity));
     expect(released.exitCode).toBe(0);
     expect(released.body.verdict).toEqual({ kind: "no-hold", basis: { digest } });
   });
 
   test("without --persist a terminal route is rejected before a receipt can be lost", async () => {
-    const identity = await declareSubjects();
+    const identity = await governedIdentity();
     const refused = await run(receiptArgv("non-target", identity, approvalPath, []));
     expect(refused.exitCode).toBe(1);
     expect(refused.body.failure).toEqual({ kind: "terminal-route-receipt-required", route: "non-target" });
@@ -125,7 +124,7 @@ describe("t527 terminal route receipt persistence", () => {
   });
 
   test("a non-terminal route refuses to persist rather than storing the wrong kind", async () => {
-    const identity = await declareSubjects();
+    const identity = await governedIdentity();
     const refused = await run(receiptArgv("new-subject", identity, "none", ["--persist", "true"]));
     expect(refused.exitCode).toBe(1);
     expect((refused.body.failure as { kind: string }).kind).toBe("not-a-terminal-route");
@@ -134,7 +133,7 @@ describe("t527 terminal route receipt persistence", () => {
   });
 
   test("a terminal route with no verified approval persists nothing", async () => {
-    const identity = await declareSubjects();
+    const identity = await governedIdentity();
     const refused = await run(receiptArgv("non-target", identity, "none", ["--persist", "true"]));
     expect(refused.exitCode).toBe(1);
     expect((refused.body.failure as { kind: string }).kind).toBe("approval-missing");
@@ -143,7 +142,7 @@ describe("t527 terminal route receipt persistence", () => {
   });
 
   test("--persist only accepts the explicit true value the flag grammar allows", async () => {
-    const identity = await declareSubjects();
+    const identity = await governedIdentity();
     const refused = await run(receiptArgv("non-target", identity, approvalPath, ["--persist", "yes"]));
     expect(refused.exitCode).toBe(2);
     const listed = await run(["bundle", "list", "--store", storeRoot]);

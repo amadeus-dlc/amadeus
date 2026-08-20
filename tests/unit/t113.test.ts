@@ -118,8 +118,8 @@ function executeAdvisoryHandoff(): Record<string, unknown> {
     handoff_stages: ["tla-authoring"],
     advisories: [{
       plugin: "formal-model-check",
-      code: "authoring-hold",
-      message: "advisory: formal-model-check authoring hold",
+      code: "declared-hold",
+      message: "advisory: formal-model-check declared hold",
       checkpoint: "functional-design",
       target: "amadeus/spaces/default/specs/tla",
       spec_identity: "sha256:abc",
