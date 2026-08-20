@@ -354,6 +354,165 @@ satisfies both a fixed absolute minimum and a merge-base-relative tolerance.
   less coverage) requires **explicit user approval recorded in the PR** — it is
   a deliberate policy decision, not a routine refresh.
 
+## Silent-Success Gates
+
+A test file can report `PASS` while proving nothing. Three shapes of that are
+detectable from artifacts the runner already holds, and `bun tests/run-tests.ts`
+checks all three on every file it runs. The detection logic lives in
+`tests/lib/silent-success.ts` (pure functions); `tests/run-tests.ts` only wires
+the I/O.
+
+A violation flips **that one file's** meta to `STATUS=FAIL` with `FAILED >= 1` —
+the same synthesis the runner already performs for an import crash — so the
+`exit == number of failed files` contract is unchanged: one gated file is one
+more count. Findings print as `GATE <name>:` lines inside that file's
+`=== START/DONE ===` block.
+
+### Gate 1 — zero assertion
+
+A file that executed at least one testcase and evaluated **zero** `expect()`
+calls cannot fail, so its `PASS` proves nothing. bun's JUnit root carries
+`assertions="0"`, which is what the gate reads.
+
+Deliberately *not* violations: the empty suite (bun writes no outfile at all,
+which is byte-identical to an import crash — already caught by the runner's
+exit-code path); a file whose every testcase was skipped (that is gate 2's
+subject); and a JUnit document with no `assertions` attribute at all (a future
+bun that stops emitting it must not turn the suite red on a parsing assumption).
+
+Two exemptions:
+
+- **`// assertion-free: <reason>`** anywhere in the file's source, for a file
+  that is intentionally structural — one whose whole point is that an import or
+  a shape does not throw. The reason is mandatory; a reasonless marker does not
+  exempt.
+- A **`zeroAssertion` baseline entry**, for existing debt, carrying an issue
+  reference.
+
+### Gate 2 — chronic self-SKIP
+
+A `test.skip` (or a conditional early return that bun records the same way)
+keeps a case permanently unexecuted. bun marks it `<skipped />` in the JUnit
+document. A skip is legitimate as a **time-boxed** exemption; it is not
+legitimate as a permanent, unreviewed hole. So every self-skip is registered in
+the committed ledger with a reason and an expiry, and either an unregistered
+skip or an expired entry is a violation.
+
+Scope: JUnit-level `<skipped />` cases only, i.e. a skip the **file** decided
+on. The runner's own `STATUS=SKIP` files (the Claude substrate gate) are not
+covered — that is the runner announcing a visible decision on stdout, not a test
+quietly declining to run.
+
+Every run prints a census in the summary block, in every mode, whether or not
+anything is in violation:
+
+```
+self-skipped tests: 2 distinct case(s) this run
+  tests/unit/t11.test.ts :: reads a real socket (x1) — registered age=41d expires=2026-11-18
+  tests/unit/tX.test.ts :: conditional case (x1) — UNREGISTERED
+```
+
+That line is the counter evidence: how long a skip has been carried, and when
+its exemption runs out. Renewing an expired entry is a conscious act — re-check
+whether the condition that justified the skip still holds, then move the date.
+
+### Gate 3 — process leak
+
+The runner injects `AMADEUS_TEST_NAME=<basename>` into every test child's
+environment. After the `bun test` child exits, any surviving same-user process
+still carrying that **exact** environment entry is an orphan from that file, and
+nothing else can carry the same marker (the value is per-file, so concurrent
+workers under `--parallel` cannot cross-detect).
+
+- **Linux** iterates `/proc/<pid>/environ` and matches whole NUL-separated
+  entries, so the match is exact. Reads that race or are denied are ignored.
+- **macOS** runs `ps xeww -o pid=,command=` and matches the marker as a whole
+  space-delimited token. Best-effort, which is why it is report-only by default.
+- **Windows** is unsupported: the scan is skipped and nothing is printed.
+
+The first scan finding nothing ends the check immediately, so a well-behaved
+file pays one scan and no waiting. Only when something is still marked does the
+runner poll every 100 ms up to a 2000 ms grace window; whatever still carries
+the marker afterwards is a leak.
+
+Leaked processes are **reaped** (`SIGKILL`) in every mode, including `report`
+and when the file is baselined. The owning file has finished, so nothing is
+still using them, and leaving them behind is how a long run accumulates orphans
+(#1811). The runner's own pid is never a target.
+
+### Modes
+
+`AMADEUS_SILENT_SUCCESS_GATE` selects the mode for all three gates:
+
+| Value | Effect |
+|---|---|
+| `off` | All three gates disabled. The documented escape hatch; it also skips loading the baseline. |
+| `report` | Evaluate and print everything; never flip a file's status. A report run is an honest preview of what `strict` would fail on. |
+| `strict` | All three fail-closed. |
+| *(unset)* | Per-gate defaults, below. |
+
+Unset defaults:
+
+| Gate | Default |
+|---|---|
+| zero-assertion | `strict` everywhere — it reads an artifact bun always emits and is environment-independent once baselined. |
+| self-SKIP | `strict` when `GITHUB_ACTIONS=true`, else `report`. A developer mid-edit should not be blocked by ledger bookkeeping; CI is where the ledger is enforced. |
+| process-leak | `strict` when `GITHUB_ACTIONS=true` **and** the platform is Linux, else `report`. Only the platform with exact process-environment inspection is allowed to fail a build. |
+
+`AMADEUS_SILENT_SUCCESS_LEAK=fail` forces the leak gate fail-closed on any
+platform (this is how the gate's failing arm is reachable on a macOS developer
+machine). `off` still wins over it — the escape hatch is absolute.
+
+An unrecognized `AMADEUS_SILENT_SUCCESS_GATE` value prints a warning and falls
+back to the unset defaults, never to `off`: a typo must not silently disable a
+gate.
+
+The resolved modes print once at the top of the run:
+
+```
+Silent-success gates: zero-assertion=strict skip=report leak=report
+```
+
+### Baseline: `tests/.silent-success-baseline.json`
+
+```json
+{
+  "schemaVersion": 1,
+  "zeroAssertion": [
+    { "file": "tests/unit/x.test.ts", "reason": "why", "issue": "#1982" }
+  ],
+  "skips": [
+    {
+      "file": "tests/integration/y.test.ts",
+      "test": "*",
+      "reason": "why",
+      "issue": "#1982",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    }
+  ],
+  "leaks": [
+    { "file": "tests/e2e/z.test.ts", "reason": "why", "issue": "#1982" }
+  ]
+}
+```
+
+- `file` is repo-relative with forward slashes, matched exactly.
+- `test` matches the JUnit testcase `name`; `"*"` covers every case in the file,
+  which is what conditional skips with dynamic names need.
+- Dates are UTC `YYYY-MM-DD`. An `expires` date in the past, with the skip still
+  observed, is a violation; the expiry day itself still passes.
+- A **missing** baseline file is an empty baseline (no exemptions).
+- A **malformed** baseline — unparseable JSON, an unknown `schemaVersion`, a
+  missing or empty required field, a non-ISO date — is **fail-closed**: the
+  runner prints the reason and exits 2 before running anything, mirroring
+  `tests/callsite-guard.ts`. It never degrades into "no exemptions configured"
+  or "everything exempt".
+
+The direction is **shrink-only by convention**, enforced at review: entries come
+out as the debt is paid and are not added to wave a new violation through. There
+is deliberately no `--update` writer that would let one be added mechanically.
+
 ## Trigger Points
 
 | Trigger | Layer | Command | Where |
@@ -456,6 +615,8 @@ To add artifact assertions to an existing e2e workflow test under `tests/e2e/`:
 | `AMADEUS_TEST_TIMEOUT` | `1800` | Per-`claude -p` call timeout in seconds. Set to `0` to disable. |
 | `AMADEUS_TUI_SETTING_SOURCES` | `project` | Setting sources injected into live `claude` TUI launches. Use `default` or an empty value only for focused calibration that intentionally includes user/local Claude settings. |
 | `AMADEUS_TUI_TRACE_POLL_MS` | `10000` | Minimum interval between `answer_gate_poll` snapshots in TUI NDJSON traces while a long journey is waiting for the next menu or disk terminator. |
+| `AMADEUS_SILENT_SUCCESS_GATE` | *(unset)* | Mode for all three silent-success gates: `off`, `report`, or `strict`. Unset uses the per-gate defaults. See [Silent-Success Gates](#silent-success-gates). |
+| `AMADEUS_SILENT_SUCCESS_LEAK` | *(unset)* | `fail` forces the process-leak gate fail-closed on any platform, overriding its Linux-CI-only default. `AMADEUS_SILENT_SUCCESS_GATE=off` still wins. |
 
 All new test timing must pass an unscaled baseline through `scaleTestTime` from
 `tests/lib/test-time-factor.ts`. Scale the timeout/deadline and its associated

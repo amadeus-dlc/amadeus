@@ -270,7 +270,15 @@ const TMUX_SOCKET = process.env.AMADEUS_TUI_TMUX_SOCKET || "amadeus-tui";
 
 function tmux(args: string[]): { code: number; stdout: string; stderr: string } {
   // `-L <socket>` MUST precede the tmux command; it selects the private server.
-  const r = spawnSync("tmux", ["-L", TMUX_SOCKET, ...args], { encoding: "utf-8" });
+  //
+  // AMADEUS_TEST_NAME is stripped: the first client invocation daemonizes the
+  // private tmux SERVER, which the serial tui tests then share across files by
+  // design. The runner's per-file leak marker (#1982) must not survive into
+  // that shared substrate, or the leak gate would flag — and reap — the server
+  // as a leak of whichever file happened to start it.
+  const env = { ...process.env };
+  delete env.AMADEUS_TEST_NAME;
+  const r = spawnSync("tmux", ["-L", TMUX_SOCKET, ...args], { encoding: "utf-8", env });
   return { code: r.status ?? 1, stdout: r.stdout ?? "", stderr: r.stderr ?? "" };
 }
 

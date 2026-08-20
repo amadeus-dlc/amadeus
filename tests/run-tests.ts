@@ -36,6 +36,34 @@ import {
 import { exitCodeFor } from "./lib/run-tests-exit-code.ts";
 import { buildTestsTotals, writeTestsTotals } from "./lib/run-tests-totals.ts";
 import {
+  anyGateActive,
+  BASELINE_BASENAME as SILENT_SUCCESS_BASELINE_BASENAME,
+  defaultProcessScanIo,
+  detectLeakedProcesses,
+  EMPTY_BASELINE,
+  isLeakBaselined,
+  judgeSkip,
+  judgeZeroAssertion,
+  LEAK_GRACE_MS,
+  LEAK_POLL_MS,
+  leakMarker,
+  loadBaseline,
+  parseJUnitGateSummary,
+  reapProcesses,
+  recordSkips,
+  renderLeakLines,
+  renderSkipCensus,
+  renderSkipViolation,
+  renderZeroAssertionViolation,
+  resolveGateModes,
+  scanForMarkedProcesses,
+  type GateMode,
+  type GateModes,
+  type SilentSuccessBaseline,
+  type SkipObservation,
+  todayUtc,
+} from "./lib/silent-success.ts";
+import {
   beginObservation,
   buildMeasuredRecord,
   buildTestSizeReport,
@@ -194,6 +222,40 @@ if (args.filter) {
     process.exit(2);
   }
 }
+
+// --- Silent-success gates (#1982) -------------------------------------------
+// Three detectors for a file that reports PASS while proving nothing: zero
+// evaluated assertions, a chronic self-SKIP, and a leaked child process. The
+// detection logic lives in lib/silent-success.ts as pure functions; this file
+// only wires the I/O. The baseline is read ONCE here, not per file.
+const silentSuccessResolution = resolveGateModes(process.env, process.platform);
+const silentSuccessModes: GateModes = silentSuccessResolution.modes;
+if (silentSuccessResolution.warning !== null) {
+  process.stderr.write(`WARNING: ${silentSuccessResolution.warning}\n`);
+}
+
+function loadSilentSuccessBaseline(): SilentSuccessBaseline {
+  if (!anyGateActive(silentSuccessModes)) return EMPTY_BASELINE;
+  const loaded = loadBaseline(join(SCRIPT_DIR, SILENT_SUCCESS_BASELINE_BASENAME));
+  if (loaded.kind === "failed") {
+    // Fail-closed, mirroring tests/callsite-guard.ts: a baseline the runner
+    // cannot understand must stop the run, never degrade into "no exemptions
+    // configured" (which would fail every legitimate entry) or into "everything
+    // exempt" (which would disable the gates silently — the exact failure mode
+    // #1982 exists to remove).
+    process.stderr.write(
+      `ERROR: tests/${SILENT_SUCCESS_BASELINE_BASENAME} is unusable -- ${loaded.detail}\n` +
+        "  The silent-success gates are fail-closed on a broken baseline.\n" +
+        "  Fix the file, or set AMADEUS_SILENT_SUCCESS_GATE=off to run without the gates.\n",
+    );
+    process.exit(2);
+  }
+  return loaded.doc;
+}
+
+const silentSuccessBaseline = loadSilentSuccessBaseline();
+// Run-wide self-SKIP census, keyed by "<repo-relative file>\0<testcase name>".
+const skipCensus = new Map<string, SkipObservation>();
 
 function utcStamp(): string {
   return new Date().toISOString().replace(/\.\d{3}Z$/, "Z").replace(/:/g, "-");
@@ -611,6 +673,132 @@ async function runSpawnCapture(
   return { rc, output: Buffer.concat(chunks).toString("utf8") };
 }
 
+// macOS process scan (#1982 gate 3). `xeww` selects THIS user's processes,
+// appends their environment, and disables column truncation, so the marker the
+// runner injected into the test child is visible verbatim. Linux reads
+// /proc/<pid>/environ directly and never reaches this. spawnSync is deliberate:
+// the scan is one short read per file, and blocking the runner's own event loop
+// for it does not slow the test children (separate processes).
+function runPsWithEnvironment(): string | null {
+  const r = spawnSync("ps", ["xeww", "-o", "pid=,command="], {
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  if (r.status !== 0 || typeof r.stdout !== "string") return null;
+  return r.stdout;
+}
+
+const processScanIo = defaultProcessScanIo(runPsWithEnvironment);
+
+// Every gate helper reports the same shape: what to print, and whether this
+// file must flip to FAIL. `report` mode prints exactly what `strict` would fail
+// on — only `flip` differs — so a report run is an honest preview of the gate.
+interface GateResult {
+  readonly lines: string[];
+  readonly flip: boolean;
+}
+
+function zeroAssertionGate(
+  rel: string,
+  file: string,
+  meta: MetaCounts,
+  summary: ReturnType<typeof parseJUnitGateSummary>,
+  mode: GateMode,
+): GateResult {
+  let source: string | null = null;
+  try {
+    source = readFileSync(file, "utf8");
+  } catch {
+    // Unreadable source only costs the marker exemption; the baseline still applies.
+  }
+  const verdict = judgeZeroAssertion({
+    file: rel,
+    status: meta.status,
+    summary,
+    source,
+    baseline: silentSuccessBaseline,
+  });
+  if (verdict.kind === "violation") {
+    return { lines: renderZeroAssertionViolation(rel, verdict.executed), flip: mode === "strict" };
+  }
+  if (verdict.kind === "exempt") {
+    return {
+      lines: [
+        `GATE zero-assertion: ${rel} evaluated 0 assertions; exempt via ${verdict.via} -- ${verdict.reason}`,
+      ],
+      flip: false,
+    };
+  }
+  return { lines: [], flip: false };
+}
+
+function skipGate(rel: string, skippedTests: readonly string[], mode: GateMode): GateResult {
+  recordSkips(skipCensus, rel, skippedTests);
+  const today = todayUtc();
+  const offenders: string[] = [];
+  for (const test of new Set(skippedTests)) {
+    const verdict = judgeSkip(rel, test, silentSuccessBaseline, today);
+    if (verdict.kind === "unregistered") offenders.push(`"${test}" -- UNREGISTERED`);
+    else if (verdict.kind === "expired") {
+      offenders.push(`"${test}" -- ledger entry EXPIRED on ${verdict.entry.expires}`);
+    }
+  }
+  if (offenders.length === 0) return { lines: [], flip: false };
+  return { lines: renderSkipViolation(rel, offenders), flip: mode === "strict" };
+}
+
+async function leakGate(rel: string, base: string, mode: GateMode): Promise<GateResult> {
+  const marker = leakMarker(base);
+  const leaked = await detectLeakedProcesses({
+    scan: () => scanForMarkedProcesses(marker, processScanIo),
+    sleep: (ms) => new Promise((done) => setTimeout(done, ms)),
+    now: () => Date.now(),
+    graceMs: LEAK_GRACE_MS,
+    pollMs: LEAK_POLL_MS,
+  });
+  if (leaked.length === 0) return { lines: [], flip: false };
+  const flip = mode === "strict" && isLeakBaselined(rel, silentSuccessBaseline) === undefined;
+  // Reaping happens in EVERY mode: the owning file has finished, so nothing is
+  // still using these processes, and leaving them behind is how a long run
+  // accumulates orphans (#1811).
+  const reaped = reapProcesses(leaked, process.pid, (pid) => process.kill(pid, "SIGKILL"));
+  return { lines: renderLeakLines(rel, leaked, reaped, flip), flip };
+}
+
+/**
+ * Evaluate the three silent-success gates for one finished file. Returns the
+ * lines to print inside that file's output block and MUTATES `meta` when a gate
+ * fires in strict mode — the same STATUS=FAIL / failed>=1 synthesis buildMeta
+ * performs for an import crash, so the runner's "exit == failed files" contract
+ * counts a gated file exactly like any other failure.
+ */
+async function applySilentSuccessGates(
+  file: string,
+  base: string,
+  meta: MetaCounts,
+  xml: string,
+): Promise<string[]> {
+  if (!anyGateActive(silentSuccessModes)) return [];
+  const rel = testsRel(file);
+  const summary = parseJUnitGateSummary(xml);
+  const modes = silentSuccessModes;
+  const results: GateResult[] = [];
+
+  if (modes.zeroAssertion !== "off") {
+    results.push(zeroAssertionGate(rel, file, meta, summary, modes.zeroAssertion));
+  }
+  if (modes.skip !== "off") results.push(skipGate(rel, summary.skippedTests, modes.skip));
+  if (modes.leak !== "off") results.push(await leakGate(rel, base, modes.leak));
+
+  if (results.some((r) => r.flip) && meta.status !== "FAIL") {
+    meta.status = "FAIL";
+    meta.failed = Math.max(meta.failed, 1);
+    meta.rc = meta.rc === 0 ? 1 : meta.rc;
+  }
+  return results.flatMap((r) => r.lines);
+}
+
 async function runBunTestFile(
   file: string,
   collector: SizeCollector,
@@ -697,13 +885,16 @@ async function runBunTestFile(
   const meta = buildMeta(xml, name, run.rc);
   // Preserve a duration even if a future Bun omits root time.
   if (meta.duration === "0") meta.duration = String(Math.max(0, (Date.now() - start) / 1000));
-  writeMeta(name, meta);
 
   // Close the observation window for the post-run dynamic-size report (#699).
   // meta.duration is a string (renderMeta shape); parse it and hand the session
   // a finite JUnit value or null (→ the backend's fallback measurement). The
   // isolation wrapper degrades any backend fault to a note + null, so this can
   // never affect STATUS or the runner's exit contract.
+  //
+  // This closes BEFORE the silent-success gates run so gate latency (a process
+  // scan, and at most one grace window when something is still marked) is never
+  // charged to the file's measured size.
   const junit = Number(meta.duration);
   const measuredSeconds = finishObservation(
     collector.session,
@@ -713,10 +904,17 @@ async function runBunTestFile(
   );
   if (measuredSeconds !== null) collector.durations.set(file, measuredSeconds);
 
+  // Silent-success gates (#1982). Evaluated before the meta is persisted: a
+  // strict-mode violation flips STATUS here, so the file lands in the tier
+  // aggregation as one more failed file.
+  const gateLines = await applySilentSuccessGates(file, base, meta, xml);
+  writeMeta(name, meta);
+
   const status = meta.status;
   const body = run.output;
   const doneBlock = (): void => {
     if (!args.debug) process.stdout.write(body);
+    for (const line of gateLines) process.stdout.write(`${line}\n`);
     process.stdout.write(status === "FAIL" ? `--- FAIL: ${base} ---\n` : `--- PASS: ${base} ---\n`);
     process.stdout.write(`=== DONE ${base} (${status}) ===\n`);
   };
@@ -833,6 +1031,21 @@ function printSummary(collector: SizeCollector): void {
   process.stdout.write(`Failed assertions: ${totalFailed}\n`);
   if (args.verbose && logDir) {
     process.stdout.write(`Log directory: ${displayLogDirPath(logDir)}\n`);
+  }
+  // Self-SKIP census (#1982 gate 2). Printed in every mode the skip gate is on,
+  // including `report`: the counter evidence that a skip is being carried, how
+  // long it has been carried, and when its exemption runs out. Observability
+  // only — its own try/catch so a rendering fault can neither perturb the exit
+  // code nor suppress the size matrix below.
+  try {
+    if (silentSuccessModes.skip !== "off") {
+      process.stdout.write("------------------------------\n");
+      for (const line of renderSkipCensus([...skipCensus.values()], silentSuccessBaseline, todayUtc())) {
+        process.stdout.write(`${line}\n`);
+      }
+    }
+  } catch {
+    // census reporting is best-effort; never let it perturb the runner's contract
   }
   // Observability only — MUST NOT affect the process exit code (t112 pins
   // exit == failed-file count). Any failure here is swallowed.
@@ -1015,6 +1228,11 @@ async function main(): Promise<number> {
 
   process.stdout.write("AI-DLC Testing Harness\n");
   process.stdout.write("======================\n");
+  if (anyGateActive(silentSuccessModes)) {
+    process.stdout.write(
+      `Silent-success gates: zero-assertion=${silentSuccessModes.zeroAssertion} skip=${silentSuccessModes.skip} leak=${silentSuccessModes.leak}\n`,
+    );
+  }
 
   // Dynamic-size collector (#699), threaded through every file-running path so
   // the post-run report reflects exactly the files that executed this run.
