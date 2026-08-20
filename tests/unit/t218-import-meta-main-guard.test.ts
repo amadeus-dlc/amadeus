@@ -78,6 +78,41 @@ function drive(fn: () => void): number {
   return status;
 }
 
+function driveWithOutput(fn: () => void): {
+  status: number;
+  stdout: string;
+  stderr: string;
+} {
+  const origExit = process.exit.bind(process);
+  const origOut = process.stdout.write.bind(process.stdout);
+  const origErr = process.stderr.write.bind(process.stderr);
+  let stdout = "";
+  let stderr = "";
+  process.exit = ((code?: number) => {
+    throw new ExitSignal(code ?? 0);
+  }) as typeof process.exit;
+  process.stdout.write = ((chunk: string | Uint8Array) => {
+    stdout += chunk.toString();
+    return true;
+  }) as typeof process.stdout.write;
+  process.stderr.write = ((chunk: string | Uint8Array) => {
+    stderr += chunk.toString();
+    return true;
+  }) as typeof process.stderr.write;
+  let status = 0;
+  try {
+    fn();
+  } catch (e) {
+    if (e instanceof ExitSignal) status = e.code;
+    else throw e;
+  } finally {
+    process.exit = origExit;
+    process.stdout.write = origOut;
+    process.stderr.write = origErr;
+  }
+  return { status, stdout, stderr };
+}
+
 // (i) Import side effect: importing the module must NOT fire the CLI. Probed in
 // a child process (a clean import graph) so it is independent of this file's own
 // static imports. Pre-fix (bare `main()`) the import fires main() → non-zero
@@ -122,6 +157,68 @@ describe("#846 — exported main() drives in-process", () => {
     for (const name of ["x-questions.md", "x-timestamp.md"]) {
       const p = tmpArtifact(name, "single line, no headings\n");
       expect(drive(() => requiredSectionsMain(["--output-path", p]))).toBe(0);
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("required-sections main enforces the declared section contract", () => {
+    const p = tmpArtifact("required.md", "# Title\n\n## Overview\n");
+    const result = driveWithOutput(() =>
+      requiredSectionsMain([
+        "--output-path",
+        p,
+        "--required-sections",
+        JSON.stringify(["Overview", "Details"]),
+      ]),
+    );
+    expect(result.status).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      pass: false,
+      required_missing: ["## Details"],
+    });
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  test("required-sections rejects invalid section declarations by category", () => {
+    const cases = [
+      {
+        label: "invalid JSON",
+        raw: "not-json",
+        message: "--required-sections must be valid JSON",
+      },
+      {
+        label: "non-array",
+        raw: JSON.stringify({ section: "Overview" }),
+        message: "--required-sections must be a JSON array of non-empty strings",
+      },
+      {
+        label: "empty string",
+        raw: JSON.stringify([""]),
+        message: "--required-sections must be a JSON array of non-empty strings",
+      },
+      {
+        label: "whitespace string",
+        raw: JSON.stringify(["   "]),
+        message: "--required-sections must be a JSON array of non-empty strings",
+      },
+      {
+        label: "non-string element",
+        raw: JSON.stringify(["Overview", 42]),
+        message: "--required-sections must be a JSON array of non-empty strings",
+      },
+    ];
+    for (const item of cases) {
+      const p = tmpArtifact(`${item.label}.md`, "# Title\n\n## Overview\n");
+      const result = driveWithOutput(() =>
+        requiredSectionsMain([
+          "--output-path",
+          p,
+          "--required-sections",
+          item.raw,
+        ]),
+      );
+      expect(result.status, item.label).toBe(1);
+      expect(result.stderr, item.label).toContain(item.message);
       rmSync(dir, { recursive: true, force: true });
     }
   });

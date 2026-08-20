@@ -511,10 +511,7 @@ function exitForMarkerExemption(sensorId: string, outputPath: string): void {
 
 function warnForUnconsumedBundle(stage: { bundle?: string }, stageSlug: string): void {
 	if (stage.bundle === undefined) return;
-	process.stderr.write(
-		`amadeus-sensor: warning: stage "${stageSlug}" declares bundle "${stage.bundle}", ` +
-			"but no sensor consumer is registered; the field is not enforced.\n",
-	);
+	process.stderr.write(`amadeus-sensor: warning: stage "${stageSlug}" declares bundle "${stage.bundle}", but no sensor consumer is registered; the field is not enforced.\n`);
 }
 
 function appendRequiredSectionsArgs(
@@ -600,8 +597,8 @@ export async function handleFire(args: string[], projectDirArg?: string): Promis
 	// Marker artifacts are workflow-control files, not prose documents. Keep
 	// the required-sections and upstream-coverage exemptions symmetric: a
 	// marker is not evaluated at all, so it emits neither PASS nor FAIL.
-	exitForMarkerExemption(id, outputPath);
 	warnForUnconsumedBundle(stageNode, stageSlug);
+	exitForMarkerExemption(id, outputPath);
 
 	// --- 1e. Generate Fire id (8 hex chars) ---
 	const fireId = generateFireId();
