@@ -271,7 +271,7 @@ interface Flags {
 	outputPath?: string;
 }
 
-function parseFlags(argv: string[]): Flags {
+export function parseFlags(argv: string[]): Flags {
 	const out: Flags = {};
 	for (let i = 0; i < argv.length; i++) {
 		const arg = argv[i];

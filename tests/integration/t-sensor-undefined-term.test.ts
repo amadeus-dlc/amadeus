@@ -8,7 +8,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { evaluateUndefinedTerm } from "../../packages/framework/core/tools/amadeus-sensor-undefined-term.ts";
+import {
+	evaluateUndefinedTerm,
+	fail,
+	main,
+	parseFlags,
+} from "../../packages/framework/core/tools/amadeus-sensor-undefined-term.ts";
 import { cleanupTestProject, createTestProject } from "../harness/fixtures.ts";
 
 // A minimal, self-contained fixture glossary — isolates these tests from
@@ -234,6 +239,18 @@ describe("evaluateUndefinedTerm — D3 artifact-local and sibling-artifact defin
 		);
 		expect(evaluateUndefinedTerm(questions, projectDir).pass).toBe(true);
 	});
+
+	test("the forward sibling direction: requirements.md reads its definitions from requirements-analysis-questions.md", () => {
+		const requirements = writeArtifact(
+			"requirements.md",
+			"## Q1: rogue budget line の扱い\n\nA. rogue budget line を無視する\nX. Other (please specify)\n",
+		);
+		writeArtifact(
+			"requirements-analysis-questions.md",
+			"## Terminology\n\n**Rogue budget line**: a working definition.\n",
+		);
+		expect(evaluateUndefinedTerm(requirements, projectDir).pass).toBe(true);
+	});
 });
 
 describe("evaluateUndefinedTerm — plural fold", () => {
@@ -257,5 +274,97 @@ describe("evaluateUndefinedTerm — plural fold", () => {
 			"## Q1: rogue budget lines の扱い\n\nA. rogue budget lines を無視する\nX. Other (please specify)\n",
 		);
 		expect(evaluateUndefinedTerm(path, projectDir).pass).toBe(true);
+	});
+});
+
+describe("parseFlags — argv parsing (CLI seam, driven in-process)", () => {
+	test("parses --stage and --output-path in order", () => {
+		expect(parseFlags(["--stage", "requirements-analysis", "--output-path", "/tmp/x.md"])).toEqual({
+			stage: "requirements-analysis",
+			outputPath: "/tmp/x.md",
+		});
+	});
+
+	test("parses the same two flags in reverse order", () => {
+		expect(parseFlags(["--output-path", "/tmp/x.md", "--stage", "requirements-analysis"])).toEqual({
+			stage: "requirements-analysis",
+			outputPath: "/tmp/x.md",
+		});
+	});
+
+	test("ignores an unrecognized token instead of consuming it as a value", () => {
+		const flags = parseFlags(["--unknown", "value", "--stage", "requirements-analysis"]);
+		expect(flags.stage).toBe("requirements-analysis");
+		expect(flags.outputPath).toBeUndefined();
+	});
+
+	test("an empty argv yields no flags", () => {
+		expect(parseFlags([])).toEqual({});
+	});
+});
+
+// main() and fail() both end in process.exit, so driving them in-process would
+// terminate the test runner; trap it into a throwable instead (mirrors
+// tests/unit/t-sensor-fire-seam.test.ts's driveExit convention) so the exit
+// code and stdout/stderr content can be asserted without a process boundary.
+class ExitSignal {
+	constructor(readonly code: number) {}
+}
+
+function driveExit(fn: () => void): { status: number; stdout: string; stderr: string } {
+	const origExit = process.exit.bind(process);
+	const origStdoutWrite = process.stdout.write.bind(process.stdout);
+	const origStderrWrite = process.stderr.write.bind(process.stderr);
+	let stdout = "";
+	let stderr = "";
+	process.exit = ((code?: number) => {
+		throw new ExitSignal(code ?? 0);
+	}) as typeof process.exit;
+	process.stdout.write = ((chunk: string) => {
+		stdout += chunk;
+		return true;
+	}) as typeof process.stdout.write;
+	process.stderr.write = ((chunk: string) => {
+		stderr += chunk;
+		return true;
+	}) as typeof process.stderr.write;
+	let status = 0;
+	try {
+		fn();
+	} catch (e) {
+		if (e instanceof ExitSignal) status = e.code;
+		else throw e;
+	} finally {
+		process.exit = origExit;
+		process.stdout.write = origStdoutWrite;
+		process.stderr.write = origStderrWrite;
+	}
+	return { status, stdout, stderr };
+}
+
+describe("main() / fail() — CLI entry (driven in-process via a process.exit trap)", () => {
+	test("fail() writes the sensor-prefixed message to stderr and exits 1", () => {
+		const r = driveExit(() => fail("boom"));
+		expect(r.status).toBe(1);
+		expect(r.stderr).toBe("amadeus-sensor-undefined-term: boom\n");
+	});
+
+	test("main() exits 1 with a usage message when --stage is missing", () => {
+		const r = driveExit(() => main(["--output-path", "/tmp/x.md"]));
+		expect(r.status).toBe(1);
+		expect(r.stderr).toContain("--stage is required");
+	});
+
+	test("main() exits 1 with a usage message when --output-path is missing", () => {
+		const r = driveExit(() => main(["--stage", "requirements-analysis"]));
+		expect(r.status).toBe(1);
+		expect(r.stderr).toContain("--output-path is required");
+	});
+
+	test("main() evaluates the artifact and exits 0 with a JSON result on stdout", () => {
+		const path = writeArtifact("requirements-analysis-questions.md", "# No candidates here.\n");
+		const r = driveExit(() => main(["--stage", "requirements-analysis", "--output-path", path]));
+		expect(r.status).toBe(0);
+		expect(JSON.parse(r.stdout.trim())).toEqual({ pass: true, findings_count: 0, terms: [] });
 	});
 });
