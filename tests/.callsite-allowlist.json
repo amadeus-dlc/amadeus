@@ -1,6 +1,16 @@
 {
-  "description": "Legacy audit/telemetry call sites still awaiting migration onto the canonical emit path (VER-4). Shrink-only: adding a site fails CI. Regenerate with: bun tests/callsite-guard.ts --update",
+  "description": "Legacy audit/telemetry and v1 journal serializer call sites. The explicit residual entries are intentional converter/recovery/codec compatibility paths; shrink-only: adding a site fails CI. Regenerate with: bun tests/callsite-guard.ts --update",
   "direction": "shrink-only",
-  "total": 0,
-  "sites": {}
+  "total": 3,
+  "sites": {
+    "packages/framework/core/tools/amadeus-journal-convert.ts": {
+      "serializeJournalEntry": 1
+    },
+    "packages/framework/core/tools/amadeus-journal.ts": {
+      "serializeJournalEntry": 1
+    },
+    "packages/framework/core/tools/amadeus-state.ts": {
+      "serializeJournalEntry": 1
+    }
+  }
 }

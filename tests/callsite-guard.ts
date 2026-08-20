@@ -4,11 +4,11 @@
 // WHAT THIS IS. A deterministic shrink-only ratchet over the legacy audit and
 // telemetry call sites, shaped after tests/complexity-gate.ts (the canonical
 // gate template) and tests/coverage-project-gate.ts. It scans the product
-// source for direct `appendAuditEntry` / `appendAuditEntryUnlocked` calls and
-// legacy `observe()` / `observeSubprocess()` usage, compares the census
-// against a committed allowlist, and fails CI when a call site is ADDED. The
-// allowlist only ratchets down (--update prunes what was migrated); it never
-// admits a new site silently.
+// source for direct legacy writer calls, `serializeJournalEntry` v1 writer
+// calls, and legacy `observe()` / `observeSubprocess()` usage, compares the
+// census against a committed allowlist, and fails CI when a call site is ADDED.
+// The allowlist only ratchets down (--update prunes what was migrated); it
+// never admits a new site silently.
 //
 // THE RULES (business-rules.md BR-7/BR-8/BR-9/BR-12):
 //   - a site in a file absent from the allowlist            -> VIOLATION
@@ -16,7 +16,9 @@
 //   - fewer sites, or a file that lost all of them           -> OK (migration)
 //   - missing/malformed allowlist                            -> fail-closed
 //   - the residual site list is printed on every run so the walk to zero (the
-//     FR-MIG-4(c) deletion-gate condition, owned by U8) is always visible
+//     FR-MIG-4(c) deletion-gate condition, owned by U8) is always visible;
+//     intentional v1 codec/conversion/recovery exceptions remain explicit
+//     registered entries until their owning migrations land
 //
 // WHY COUNTS AND NOT LINE PINS. An allowlist of file:line identifiers goes
 // stale the moment an unrelated edit shifts a file, and every later PR then
@@ -45,11 +47,14 @@ import { fileURLToPath } from "node:url";
 // ---------------------------------------------------------------------------
 
 // The legacy symbols a migrated call site must no longer use. `appendAuditEntry*`
-// is the v1 audit writer (FR-MIG-1); `observe*` is the pre-OTel timing wrapper
-// that FR-TRC-1 replaces with Trace API spans.
+// is the v1 audit writer (FR-MIG-1); `serializeJournalEntry` is the v1 journal
+// serializer and is guarded because a production disk-writing call site must
+// not become invisible to the deletion gate; `observe*` is the pre-OTel timing
+// wrapper that FR-TRC-1 replaces with Trace API spans.
 export const GUARDED_SYMBOLS = [
   "appendAuditEntry",
   "appendAuditEntryUnlocked",
+  "serializeJournalEntry",
   "observe",
   "observeSubprocess",
 ] as const;
@@ -61,6 +66,18 @@ const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const SCAN_ROOTS = ["packages/framework/core", "scripts"] as const;
 
 const ALLOWLIST_BASENAME = ".callsite-allowlist.json";
+
+// Explicit v1 compatibility registrations. These are not live canonical
+// writers: the converter must emit backward-compatible v1 JSONL, the state
+// tool's recovery path atomically commits a dense five-row batch and is owned
+// by a separate migration, and the journal module's branch is codec dispatch.
+// Keeping the paths documented beside the guard makes an allowlisted residual
+// auditable instead of turning the shrink-only file into an unexplained count.
+export const JUSTIFIED_V1_SERIALIZER_PATHS = {
+  "packages/framework/core/tools/amadeus-journal-convert.ts": "backward conversion output",
+  "packages/framework/core/tools/amadeus-state.ts": "atomic approval recovery batch; separate owner",
+  "packages/framework/core/tools/amadeus-journal.ts": "serializer dispatch codec, not a disk writer",
+} as const;
 
 export function allowlistPath(): string {
   return join(REPO_ROOT, "tests", ALLOWLIST_BASENAME);
@@ -269,7 +286,7 @@ export function parseAllowlist(body: string): LoadedAllowlist {
 // argument leaves its continuation lines at DA:0 in bun's lcov, which reads as
 // uncovered patch lines (cid:code-generation:bun-multiline-arg-da0).
 const ALLOWLIST_DESCRIPTION =
-  "Legacy audit/telemetry call sites still awaiting migration onto the canonical emit path (VER-4). Shrink-only: adding a site fails CI. Regenerate with: bun tests/callsite-guard.ts --update";
+  "Legacy audit/telemetry and v1 journal serializer call sites. The explicit residual entries are intentional converter/recovery/codec compatibility paths; shrink-only: adding a site fails CI. Regenerate with: bun tests/callsite-guard.ts --update";
 
 export function renderAllowlist(census: Census): string {
   const doc = { description: ALLOWLIST_DESCRIPTION, direction: "shrink-only", total: totalSites(census), sites: census };
@@ -342,8 +359,8 @@ export function runCheck(options: CheckOptions = {}): number {
     return fail("NEW_CALLSITE", [
       ...verdict.added,
       "",
-      "The legacy audit writer and the pre-OTel observe() wrapper are being retired (FR-MIG-1/FR-TRC-1).",
-      "Emit through otel/logger-provider.ts emitEvent, or open a span through otel/tracer-provider.ts.",
+      "The legacy audit writer, v1 journal serializer, and pre-OTel observe() wrapper are being retired (FR-MIG-1/FR-TRC-1).",
+      "Emit through otel/logger-provider.ts emitEvent, or open a span through otel/tracer-provider.ts; register intentional v1 compatibility paths in the allowlist with an English justification.",
       "The allowlist only ratchets down — it cannot be grown to admit a new site.",
     ]);
   }
