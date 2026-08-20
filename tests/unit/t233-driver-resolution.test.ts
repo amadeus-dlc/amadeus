@@ -12,10 +12,10 @@
 
 import { describe, expect, spyOn, test } from "bun:test";
 import {
-  DRIVER_VALUES,
   type DriverResolution,
   handleResolve,
   type HarnessName,
+  RAW_DRIVER_VALUES,
   resolveDriver,
 } from "../../packages/framework/core/tools/amadeus-swarm.ts";
 
@@ -188,12 +188,17 @@ describe("handleResolve — rejected env value (fail-closed: exit 1, empty stdou
       expect(out.exitCode).toBe(1);
       expect(out.stdout).toEqual([]);
       const error = JSON.parse(out.stderr[0]).error as string;
-      // BR-7: the message includes the three allowed driver values (not verbatim-pinned).
-      for (const value of DRIVER_VALUES) {
-        expect(error).toContain(value);
+      const [allowedValuesText, echoedRawText] = error.split(" — got ");
+      // BR-7: the message includes the raw-acceptable driver values (not verbatim-pinned).
+      for (const value of RAW_DRIVER_VALUES) {
+        expect(allowedValuesText).toContain(value);
       }
+      // #1205: "subagent" is a resolved outcome, never a raw AMADEUS_USE_SWARM
+      // value — it must not be listed among the allowed values (it may still
+      // legitimately appear in the echoed raw value below, e.g. bad="subagent").
+      expect(allowedValuesText).not.toContain("subagent");
       // SNR-1: the raw value is echoed, nothing else leaks.
-      expect(error).toContain(JSON.stringify(bad));
+      expect(echoedRawText).toBe(JSON.stringify(bad));
     });
   }
 });

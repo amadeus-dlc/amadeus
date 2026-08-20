@@ -130,6 +130,14 @@ type FailureReason = "unsatisfiable" | "budget-exhausted" | "cap-exhausted" | "e
 export type DriverName = "subagent" | "claude-ultra" | "codex-ultra" | "pi";
 export const DRIVER_VALUES: readonly DriverName[] = ["subagent", "claude-ultra", "codex-ultra", "pi"];
 
+// The raw AMADEUS_USE_SWARM values resolveDriver actually accepts as input.
+// "subagent" is excluded: it is only ever a *resolved* outcome (the native
+// floor), never a raw value a caller may set — resolveDriver rejects it like
+// any other unrecognised token. Kept separate from DRIVER_VALUES (the full
+// driver vocabulary, also used for --degraded-from) so the two lists don't
+// silently drift back into each other.
+export const RAW_DRIVER_VALUES: readonly DriverName[] = DRIVER_VALUES.filter((value) => value !== "subagent");
+
 // The harnesses whose driver selection resolve arbitrates. Kept as a runtime
 // array (not a bare type union) so the `--harness` CLI check is a real array
 // membership test — a type-only union would erase at runtime and let an unknown
@@ -1451,7 +1459,7 @@ export function handleResolve(
   if (resolution.kind === "rejected") {
     console.error(
       JSON.stringify({
-        error: `AMADEUS_USE_SWARM must be unset or one of: ${DRIVER_VALUES.join(", ")} — got ${JSON.stringify(resolution.raw)}`,
+        error: `AMADEUS_USE_SWARM must be unset or one of: ${RAW_DRIVER_VALUES.join(", ")} — got ${JSON.stringify(resolution.raw)}`,
       }),
     );
     exit(1);

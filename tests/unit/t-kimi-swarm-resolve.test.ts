@@ -115,14 +115,15 @@ describe("handleResolve — --harness kimi", () => {
     });
   });
 
-  test("an unknown driver → fail-closed: exit 1, empty stdout, error lists the drivers", () => {
+  test("an unknown driver → fail-closed: exit 1, empty stdout, error lists only the raw-acceptable drivers", () => {
     const out = driveResolve("kimi-ultra", ["--harness", "kimi"]);
     expect(out.exitCode).toBe(1);
     expect(out.stdout).toEqual([]);
     const error = JSON.parse(out.stderr[0]).error as string;
-    for (const value of DRIVER_VALUES) {
-      expect(error).toContain(value);
-    }
-    expect(error).toContain(JSON.stringify("kimi-ultra"));
+    // #1205: "subagent" is a resolved outcome, never a raw AMADEUS_USE_SWARM
+    // value — the error must not list it as if it were settable.
+    expect(error).toBe(
+      'AMADEUS_USE_SWARM must be unset or one of: claude-ultra, codex-ultra, pi — got "kimi-ultra"',
+    );
   });
 });
