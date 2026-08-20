@@ -55,6 +55,41 @@ assessment here rather than assuming that an absent model means non-target:
    An unregistered selected set must route to `author-new`; a registered set
    whose reachable behaviour changed must route to `revise-model`.
 
+#### The firing predicates
+
+Classification alone does not notice a model that the implementation has grown
+past, so the judgement carries two arms and one coverage check. They run after
+the route is decided and before the receipt is built, over every registered
+model the selected subjects intersect — every model, never a named one.
+
+- **Vocabulary drift.** For each intersected model, compare the string-literal
+  value sets its module declares with the literal clusters its governed sources
+  enumerate. A cluster that covers a declared value set in full and adds a
+  literal the model has never heard of is drift. The judgement also reports the
+  model's checked-property class — `invariants-only` or `has-properties` — so a
+  ruling can see how much the registered check could have caught. A registered
+  vocabulary the module does not define, and a module or config that cannot be
+  parsed, are halts: undecidable is never reported as "nothing fired".
+- **Defect recurrence.** With `--issue-evidence <path>`, bug issues in the
+  supplied evidence that name a governed implementation file force the same
+  evaluation. One distinct governed file is enough. No path supplied is a
+  recorded non-input; a supplied file that is not issue evidence is a halt.
+- **Pin-set coverage.** With `--changed <path,...>`, files the governed entries
+  do not cover are recorded and proposed as an entries extension. A gap never
+  reclassifies the change to `non-target` and never halts. No `--changed` set is
+  recorded as "coverage check not performed" rather than passed over in silence.
+
+When an arm fires, `impl-only` is refused rather than answered quietly: the
+route stands, but the run has to rule on whether the model needs revising. A
+ruling of "no revision needed" is recorded through the terminal-route receipt
+that already carries its human approval — there is no separate declaration to
+file, and no ruling suppresses the next run's checks.
+
+The arms force a judgement about model revision; they do not force a TLC run on
+every change. That is the two-layer posture this plugin is bound to: everyday CI
+runs the property-based, unit, and integration layers, and exhaustive model
+checking stays reserved for changes to a concurrent protocol's specification.
+
 If no subject meets the formal-model criterion, record a terminal
 `not-applicable` assessment with the inspected identifiers and stop the stage
 successfully. For `impl-only` and `non-target`, persist the terminal-route
