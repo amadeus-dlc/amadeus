@@ -509,6 +509,22 @@ function exitForMarkerExemption(sensorId: string, outputPath: string): void {
 	if (markerSensor && isMarkerArtifact(outputStem)) process.exit(0);
 }
 
+function warnForUnconsumedBundle(stage: { bundle?: string }, stageSlug: string): void {
+	if (stage.bundle === undefined) return;
+	process.stderr.write(`amadeus-sensor: warning: stage "${stageSlug}" declares bundle "${stage.bundle}", but no sensor consumer is registered; the field is not enforced.\n`);
+}
+
+function appendRequiredSectionsArgs(
+	stage: { required_sections?: string[] },
+	scriptArgs: string[],
+): void {
+	if (stage.required_sections === undefined) return;
+	scriptArgs.push(
+		"--required-sections",
+		JSON.stringify(stage.required_sections),
+	);
+}
+
 // --- Subcommand: fire ---
 //
 // Step 1 — validate + resolve all inputs + generate Fire id (no lock).
@@ -581,6 +597,7 @@ export async function handleFire(args: string[], projectDirArg?: string): Promis
 	// Marker artifacts are workflow-control files, not prose documents. Keep
 	// the required-sections and upstream-coverage exemptions symmetric: a
 	// marker is not evaluated at all, so it emits neither PASS nor FAIL.
+	warnForUnconsumedBundle(stageNode, stageSlug);
 	exitForMarkerExemption(id, outputPath);
 
 	// --- 1e. Generate Fire id (8 hex chars) ---
@@ -644,6 +661,7 @@ export async function handleFire(args: string[], projectDirArg?: string): Promis
 			process.env.AMADEUS_TEMPLATES_DIR ?? memoryTemplatesDir(projectDir);
 		scriptArgs.push("--templates-dir", templatesDir);
 		scriptArgs.push("--template-eligible", eligible.join(","));
+		appendRequiredSectionsArgs(stageNode, scriptArgs);
 		// §10 MIDDLE branch: the framework-default templates dir (engine-shipped,
 		// read-only, space-independent). The sensor consults it ONLY when the team
 		// override above misses, so resolution is team → framework-default → floor.

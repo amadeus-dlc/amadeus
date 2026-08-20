@@ -22,7 +22,10 @@ import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { sensorsDir } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
+import {
+  _resetStageGraphForTests,
+  sensorsDir,
+} from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 import {
   decideOutcomeOrScriptError,
   handleFire,
@@ -32,6 +35,7 @@ import {
   scriptErrorOutcome,
   stripProjectDir,
 } from "../../dist/claude/.claude/tools/amadeus-sensor.ts";
+import { __resetGraphCache } from "../../dist/claude/.claude/tools/amadeus-graph.ts";
 import {
   cleanupTestProject,
   createTestProject,
@@ -144,6 +148,17 @@ describe("amadeus-sensor fire seam — decideOutcomeOrScriptError (FR-9)", () =>
 const STAGE = "intent-capture";
 const SENSOR_ID = "required-sections";
 const STUB_SRC_DIR = join(FIXTURES_DIR, "v05-mr9-sensor-fire", "scripts");
+const DEFAULT_STAGE_GRAPH = join(
+  import.meta.dir,
+  "..",
+  "..",
+  "dist",
+  "claude",
+  ".claude",
+  "tools",
+  "data",
+  "stage-graph.json",
+);
 
 class ExitSignal extends Error {
   constructor(public readonly code: number) {
@@ -179,12 +194,58 @@ async function driveExit(fn: () => void | Promise<void>): Promise<number> {
   return status;
 }
 
+async function driveExitWithStderr(
+  fn: () => void | Promise<void>,
+): Promise<{ status: number; stderr: string }> {
+  const origExit = process.exit.bind(process);
+  const origErr = process.stderr.write.bind(process.stderr);
+  let stderr = "";
+  process.exit = ((code?: number) => {
+    throw new ExitSignal(code ?? 0);
+  }) as typeof process.exit;
+  process.stderr.write = ((chunk: string | Uint8Array) => {
+    stderr += chunk.toString();
+    return true;
+  }) as typeof process.stderr.write;
+  let status = 0;
+  try {
+    await fn();
+  } catch (e) {
+    if (e instanceof ExitSignal) status = e.code;
+    else throw e;
+  } finally {
+    process.exit = origExit;
+    process.stderr.write = origErr;
+  }
+  return { status, stderr };
+}
+
 describe("amadeus-sensor fire seam — dispatch drive (FR-8/FR-9, in-process)", () => {
   let proj: string;
   let scriptDir: string;
   let manifestDir: string;
   let outPath: string;
+  let stageGraphDir: string | undefined;
   const prevEnv: Record<string, string | undefined> = {};
+
+  function useBundleStageGraph(): void {
+    stageGraphDir = mkdtempSync(join(tmpdir(), "amadeus-fire-seam-graph-"));
+    const graph = JSON.parse(readFileSync(DEFAULT_STAGE_GRAPH, "utf-8")) as Array<
+      Record<string, unknown>
+    >;
+    const stage = graph.find((candidate) => candidate.slug === STAGE);
+    if (!stage) throw new Error(`stage graph is missing ${STAGE}`);
+    stage.bundle = "book";
+    stage.required_sections = ["Overview", "Details"];
+    writeFileSync(
+      join(stageGraphDir, "stage-graph.json"),
+      `${JSON.stringify(graph, null, 2)}\n`,
+      "utf-8",
+    );
+    process.env.AMADEUS_STAGE_GRAPH = join(stageGraphDir, "stage-graph.json");
+    _resetStageGraphForTests();
+    __resetGraphCache();
+  }
 
   function setStubManifest(stubBasename: string, timeoutSeconds = 5): void {
     writeFileSync(
@@ -229,6 +290,7 @@ describe("amadeus-sensor fire seam — dispatch drive (FR-8/FR-9, in-process)", 
       "CLAUDE_PROJECT_DIR",
       "AMADEUS_SENSORS_DIR",
       "AMADEUS_SENSOR_SCRIPT_DIR",
+      "AMADEUS_STAGE_GRAPH",
     ]) {
       prevEnv[k] = process.env[k];
     }
@@ -243,9 +305,13 @@ describe("amadeus-sensor fire seam — dispatch drive (FR-8/FR-9, in-process)", 
       if (v === undefined) delete process.env[k];
       else process.env[k] = v;
     }
+    _resetStageGraphForTests();
+    __resetGraphCache();
     cleanupTestProject(proj);
     cleanupTestProject(scriptDir);
     cleanupTestProject(manifestDir);
+    if (stageGraphDir) cleanupTestProject(stageGraphDir);
+    stageGraphDir = undefined;
   });
 
   test("main dispatches `fire` and the passing fire path exits 0", async () => {
@@ -254,6 +320,36 @@ describe("amadeus-sensor fire seam — dispatch drive (FR-8/FR-9, in-process)", 
       main(["fire", SENSOR_ID, "--stage", STAGE, "--output-path", outPath]),
     );
     expect(status).toBe(0);
+  });
+
+  test("marker artifact still emits the stage bundle warning", async () => {
+    setStubManifest("amadeus-sensor-stub-pass.ts");
+    useBundleStageGraph();
+    const markerPath = join(proj, "artifact-questions.md");
+    writeFileSync(markerPath, "Question: what remains unresolved?\n", "utf-8");
+    const result = await driveExitWithStderr(() =>
+      handleFire([
+        SENSOR_ID,
+        "--stage",
+        STAGE,
+        "--output-path",
+        markerPath,
+      ]),
+    );
+    expect(result.status).toBe(0);
+    expect(result.stderr).toContain(
+      'stage "intent-capture" declares bundle "book"',
+    );
+  });
+
+  test("required sections are forwarded to the sensor script", async () => {
+    setStubManifest("amadeus-sensor-stub-pass.ts");
+    useBundleStageGraph();
+    expect(
+      await driveExit(() =>
+        handleFire([SENSOR_ID, "--stage", STAGE, "--output-path", outPath]),
+      ),
+    ).toBe(0);
   });
 
   test("a FAILED fire whose detail write cannot mkdir folds to script-error and still exits 0", async () => {

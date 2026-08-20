@@ -34,6 +34,9 @@ interface Result {
 	// stage does not declare template-eligible (the stem==artifact key is
 	// unsound for questions/timestamp markers). Surfaced, not fatal.
 	config_warning?: string;
+	// Stage-declared section names threaded by the dispatcher.
+	required_sections?: string[];
+	required_missing?: string[];
 	// Populated only when the output is a questions/timestamp marker: the generic
 	// ≥2-H2 prose floor is exempted (E-FVEPD) because such markers intentionally
 	// omit ≥2-H2 shape. `pass` is forced true with zero findings; this field
@@ -63,6 +66,9 @@ interface Flags {
 	// applies ONLY when basename(outputPath) stem ∈ this set; otherwise it is
 	// ignored + a config warning emitted. Absent/empty → no artifact is eligible.
 	templateEligible?: string[];
+	// JSON-encoded stage frontmatter `required_sections` names. JSON keeps
+	// section names containing commas unambiguous across the process boundary.
+	requiredSections?: string[];
 }
 
 function parseFlags(argv: string[]): Flags {
@@ -82,6 +88,21 @@ function parseFlags(argv: string[]): Flags {
 				.split(",")
 				.map((s) => s.trim())
 				.filter((s) => s.length > 0);
+		} else if (arg === "--required-sections") {
+			const raw = requireFlagValue(argv, ++i, "--required-sections", fail);
+			let parsed: unknown;
+			try {
+				parsed = JSON.parse(raw);
+			} catch {
+				fail("--required-sections must be valid JSON");
+			}
+			if (
+				!Array.isArray(parsed) ||
+				parsed.some((section) => typeof section !== "string" || section.trim() === "")
+			) {
+				fail("--required-sections must be a JSON array of non-empty strings");
+			}
+			out.requiredSections = parsed as string[];
 		}
 	}
 	return out;
@@ -101,6 +122,25 @@ function parseH2Headings(body: string): string[] {
 		headings.push(line);
 	}
 	return headings;
+}
+
+function applyRequiredSectionsContract(
+	result: Result,
+	requiredSections: string[] | undefined,
+	stem: string,
+	headings: string[],
+): { pass: boolean; findingsCount: number } {
+	if (requiredSections !== undefined && !isMarkerArtifact(stem)) {
+		const expected = requiredSections.map(
+			(section) => `## ${section.trim().replace(/^##\s+/, "")}`,
+		);
+		const present = new Set(headings);
+		const missing = expected.filter((heading) => !present.has(heading));
+		result.required_sections = expected;
+		result.required_missing = missing;
+		return { pass: missing.length === 0, findingsCount: missing.length };
+	}
+	return { pass: true, findingsCount: 0 };
 }
 
 // Resolve the template file for an artifact stem in §10 override-before-default
@@ -254,6 +294,19 @@ export function main(argv: string[] = process.argv.slice(2)): void {
 			result.template_missing = missing;
 		}
 	}
+
+	// Stage-declared required_sections is an explicit heading contract. Unlike
+	// the generic floor, it names the exact H2 sections the stage requires.
+	// Marker artifacts remain entirely exempt from this contract, matching the
+	// dispatcher's no-evaluation path and the existing marker floor exemption.
+	const required = applyRequiredSectionsContract(
+		result,
+		flags.requiredSections,
+		stem,
+		headings,
+	);
+	pass = pass && required.pass;
+	findings_count += required.findingsCount;
 
 	// Filename-gated extension (units-generation 2.7): unit-of-work-dependency.md
 	// must carry the required fenced ```yaml units: edge block beside its prose.

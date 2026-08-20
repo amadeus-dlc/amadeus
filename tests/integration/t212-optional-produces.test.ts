@@ -412,6 +412,8 @@ describe("t212 optional_produces per-unit routing and coverage", () => {
       (name) => name !== "frontend-components",
     );
     functional.optional_produces = ["frontend-components"];
+    functional.bundle = "book";
+    functional.required_sections = ["Overview", "Details"];
     const graphPath = join(dir, "stage-graph.json");
     writeFileSync(graphPath, `${JSON.stringify(graph, null, 2)}\n`, "utf-8");
     return graphPath;
@@ -748,11 +750,124 @@ console.log(JSON.stringify({ pass: true }));
     );
 
     expect(result.status).toBe(0);
+    expect(result.stderr).toContain(
+      'stage "functional-design" declares bundle "book"',
+    );
     const args = JSON.parse(readFileSync(capturePath, "utf-8")) as string[];
     const eligibleIndex = args.indexOf("--template-eligible");
     expect(eligibleIndex).toBeGreaterThan(-1);
     expect(args[eligibleIndex + 1]?.split(",")).toContain(
       "frontend-components",
     );
+    const requiredSectionsIndex = args.indexOf("--required-sections");
+    expect(requiredSectionsIndex).toBeGreaterThan(-1);
+    expect(JSON.parse(args[requiredSectionsIndex + 1] ?? "null")).toEqual([
+      "Overview",
+      "Details",
+    ]);
+  }, scaleTestTime(30_000));
+
+  test("bundle warning still emits for marker artifacts", () => {
+    const project = seedProject();
+    const dir = mkdtempSync(join(tmpdir(), "amadeus-t212-marker-bundle-"));
+    scratch.push(dir);
+    const manifests = join(dir, "manifests");
+    const scripts = join(dir, "scripts");
+    mkdirSync(manifests);
+    mkdirSync(scripts);
+    const outputPath = join(project, "frontend-components-questions.md");
+    writeFileSync(outputPath, "Question: what remains unresolved?\n", "utf-8");
+    writeFileSync(
+      join(manifests, "amadeus-required-sections.md"),
+      [
+        "---",
+        "id: required-sections",
+        "kind: deterministic",
+        "command: bun .claude/tools/capture-args.ts",
+        "default_severity: advisory",
+        "description: marker bundle warning",
+        "---",
+        "# Capture",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+    writeFileSync(
+      join(scripts, "capture-args.ts"),
+      "console.log(JSON.stringify({ pass: true }));\n",
+      "utf-8",
+    );
+
+    const result = spawnSync(
+      process.execPath,
+      [
+        sensorDispatcher,
+        "fire",
+        "required-sections",
+        "--stage",
+        "functional-design",
+        "--output-path",
+        outputPath,
+        "--project-dir",
+        project,
+      ],
+      {
+        encoding: "utf-8",
+        env: isolatedEnv(sourceGraph(), {
+          AMADEUS_SENSORS_DIR: manifests,
+          AMADEUS_SENSOR_SCRIPT_DIR: scripts,
+        }),
+      },
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stderr).toContain(
+      'stage "functional-design" declares bundle "book"',
+    );
+  }, scaleTestTime(30_000));
+
+  test("required_sections fails incomplete output and passes conforming output", () => {
+    const sensor = join(
+      REPO_ROOT,
+      "packages/framework/core/tools/amadeus-sensor-required-sections.ts",
+    );
+    const dir = mkdtempSync(join(tmpdir(), "amadeus-t212-required-sections-"));
+    scratch.push(dir);
+    const outputPath = join(dir, "functional-design.md");
+    const run = (body: string) => {
+      writeFileSync(outputPath, body, "utf-8");
+      const result = spawnSync(
+        process.execPath,
+        [
+          sensor,
+          "--stage",
+          "functional-design",
+          "--output-path",
+          outputPath,
+          "--required-sections",
+          JSON.stringify(["Overview", "Details"]),
+        ],
+        { encoding: "utf-8" },
+      );
+      expect(result.status, result.stderr).toBe(0);
+      return JSON.parse(result.stdout.trim()) as {
+        pass: boolean;
+        h2_count: number;
+        required_missing?: string[];
+      };
+    };
+
+    const incomplete = run(
+      "# Functional Design\n\n## Overview\n\nEnough prose.\n\n## Other\n\nUnrelated prose.\n",
+    );
+    expect(incomplete.pass).toBe(false);
+    expect(incomplete.h2_count).toBe(2);
+    expect(incomplete.required_missing).toEqual(["## Details"]);
+
+    const conforming = run(
+      "# Functional Design\n\n## Overview\n\nOne.\n\n## Details\n\nTwo.\n",
+    );
+    expect(conforming.pass).toBe(true);
+    expect(conforming.required_missing).toEqual([]);
   }, scaleTestTime(30_000));
 });
