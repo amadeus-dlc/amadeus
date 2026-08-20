@@ -225,7 +225,10 @@ import {
   type ProductionWaitingStop,
   type ProductionStageFailureResult,
 } from "./amadeus-intent-autonomy-production.ts";
-import { detectHarnessType } from "./amadeus-harness.ts";
+import {
+  detectHarnessType,
+  detectHarnessTypeForAuthorization,
+} from "./amadeus-harness.ts";
 import { initProcessObservability } from "./amadeus-observability.ts";
 import { projectSensorInvocation } from "./amadeus-sensor-invocation.ts";
 import {
@@ -308,9 +311,13 @@ import {
 // The advisory supply declared by plugins composed into the current host.
 import { advisoriesForHost } from "./amadeus-advisory-declaration.ts";
 
+// Which side of this branch a caller lands on decides whether the trusted
+// session id comes from the host-stamped carrier or from an environment
+// variable the caller sets itself, so the harness question is answered from
+// real process evidence (#2326). The two branches themselves are unchanged.
 function trustedHostSessionId(projectDir: string | undefined): string | undefined {
   const pd = resolveProjectDir(projectDir);
-  return detectHarnessType() === "kimi"
+  return detectHarnessTypeForAuthorization(pd) === "kimi"
     ? readCurrentSessionId(pd) ?? undefined
     : process.env.AMADEUS_TRUSTED_SESSION_ID;
 }
@@ -6671,10 +6678,13 @@ export function handleReport(args: string[], projectDir: string | undefined): vo
     return;
   }
   const isGated = node.phase !== "initialization";
+  // The reservation-carrier requirement is what stops a Kimi caller approving
+  // its own gate, so the harness test is authorization-grade: real evidence
+  // only, never AMADEUS_HARNESS_TYPE (#2326).
   if (
     isGated &&
     stageCheckbox.state !== "completed" &&
-    detectHarnessType() === "kimi"
+    detectHarnessTypeForAuthorization(pd) === "kimi"
   ) {
     emit(errorDirective(
       `Kimi gate approval for "${slug}" requires the stage reservation carrier from gate-reserve.`,
@@ -7192,7 +7202,10 @@ export function handleGateReserve(
     emitStateNeutralError("gate-reserve requires --stage <slug>.");
     return;
   }
-  if (detectHarnessType() !== "kimi") {
+  // Kimi-only by real evidence: this verb arms a presence reservation, so an
+  // AMADEUS_HARNESS_TYPE that could reach it would be a route into the Kimi
+  // approval machinery from a harness that never established a carrier (#2326).
+  if (detectHarnessTypeForAuthorization(resolveProjectDir(projectDir)) !== "kimi") {
     emitStateNeutralError("gate-reserve is available only on the Kimi harness.");
     return;
   }
@@ -7264,7 +7277,9 @@ export function handleGateReject(
     );
     return;
   }
-  if (detectHarnessType() !== "kimi") {
+  // Same boundary as gate-reserve above: consuming a reservation is Kimi-only
+  // by real evidence, not by an environment variable (#2326).
+  if (detectHarnessTypeForAuthorization(resolveProjectDir(projectDir)) !== "kimi") {
     emitStateNeutralError("gate-reject is available only on the Kimi harness.");
     return;
   }

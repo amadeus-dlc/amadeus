@@ -139,7 +139,7 @@ import {
   requiredArtifactsForUnit,
 } from "./amadeus-graph.ts";
 import { KNOWN_HARNESS_DIRS } from "./amadeus-harness.js";
-import { detectHarnessType } from "./amadeus-harness.ts";
+import { detectHarnessTypeForAuthorization } from "./amadeus-harness.ts";
 import { autonomyDigest, declaredFullAutonomy, isMilestoneInteraction } from "./amadeus-intent-autonomy.ts";
 import {
   buildAutoDecisionSummary,
@@ -1148,9 +1148,13 @@ function observeToolRun(subcommand: string | undefined): void {
   }
 }
 
+// Which side of this branch a caller lands on decides whether the trusted
+// session id comes from the host-stamped carrier or from an environment
+// variable the caller sets itself, so the harness question is answered from
+// real process evidence (#2326). The two branches themselves are unchanged.
 function trustedHostSessionId(): string | undefined {
   const pd = resolveProjectDir(projectDir);
-  return detectHarnessType() === "kimi"
+  return detectHarnessTypeForAuthorization(pd) === "kimi"
     ? readCurrentSessionId(pd) ?? undefined
     : process.env.AMADEUS_TRUSTED_SESSION_ID;
 }

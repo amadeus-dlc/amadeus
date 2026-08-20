@@ -155,10 +155,14 @@ authorized, the verb reports `taken_over: false` and writes nothing.
 
 After a takeover, `next`, `report`, `park`, and `unpark` all work again.
 
-> Setting `AMADEUS_HARNESS_TYPE` to a non-Kimi value also silences the guard,
-> but it does so by switching the authorization boundary off rather than
-> repairing anything — it is a known escape hatch, not a recovery route, and it
-> leaves the stale carrier in place for the next session to trip over.
+> Setting `AMADEUS_HARNESS_TYPE` to a non-Kimi value used to silence the guard
+> as well, by switching the authorization boundary off rather than repairing
+> anything. That escape hatch is closed: the guard now reads the harness from
+> real process evidence — the installed tool's own path, then the harness
+> directory of the workspace it is judging — so no environment variable moves
+> its verdict in either direction. Re-firing SessionStart and the
+> human-confirmed `session-takeover` verb are the only two ways out of a denial.
+> The variable keeps its documented provenance-labelling role at intent birth.
 
 ---
 

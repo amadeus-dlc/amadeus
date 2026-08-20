@@ -560,7 +560,7 @@ intent birth 時に記録するハーネス provenance を上書きします。�
 
 **優先順位:** `AMADEUS_HARNESS_TYPE` が環境変数として存在すると、`CLAUDECODE` シグナルおよびハーネス dot-directory 検出より優先されます。空文字または不正な値は `unknown` に正規化され、自動検出へフォールスルーしません。
 
-**効果の範囲:** 正規化した値を新規 intent の `amadeus-state.md` へ `- **Harness**: <value>` として1回だけ書き込みます。この optional フィールドを持たない既存 state も引き続き有効です。
+**効果の範囲:** 正規化した値を新規 intent の `amadeus-state.md` へ `- **Harness**: <value>` として1回だけ書き込みます。この optional フィールドを持たない既存 state も引き続き有効です。これはラベル専用です。認可・ゲーティングの判定 — Kimi main-conductor ゲート、presence mint の route 要求、gate approve の reservation carrier 要求、`gate-reserve` / `gate-reject` の Kimi 限定可用性 — はハーネスを実プロセス証拠から判定し、この環境変数を一切参照しません。
 
 正準の runtime 契約は [Hooks and Tools リファレンス](../reference/06-hooks-and-tools.ja.md#runtime-環境変数)であり、このガイドは利用者向けの設定導線です。
 

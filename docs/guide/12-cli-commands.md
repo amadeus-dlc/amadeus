@@ -566,7 +566,7 @@ Override the harness provenance recorded when an intent is born. This is useful 
 
 **Precedence:** the presence of `AMADEUS_HARNESS_TYPE` takes priority over the `CLAUDECODE` signal and harness dot-directory detection. An empty or invalid value is normalized to `unknown` and does not fall through to automatic detection.
 
-**Scope of effect:** the normalized value is written once to the new intent's `amadeus-state.md` as `- **Harness**: <value>`. Existing state files without this optional field remain valid.
+**Scope of effect:** the normalized value is written once to the new intent's `amadeus-state.md` as `- **Harness**: <value>`. Existing state files without this optional field remain valid. It is a label only: authorization and gating decisions — the Kimi main-conductor guard, the presence-mint route requirement, the gate-approve reservation carrier, and the Kimi-only availability of `gate-reserve` / `gate-reject` — read the harness from real process evidence and ignore this variable entirely.
 
 The canonical runtime contract is the [Hooks and Tools reference](../reference/06-hooks-and-tools.md#runtime-environment-variables); this guide is the user-facing setup path.
 
