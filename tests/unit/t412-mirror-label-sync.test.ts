@@ -450,4 +450,48 @@ describe("createMirrorLabelGateway", () => {
       expect(outcome.classification).toBe("invalid-response");
     }
   });
+
+  // #2020 CodeRabbit follow-up: isPullRequest went through interpretApiResult
+  // in strict mode, whose parseHttpEnvelope treats ANY non-2xx status in the
+  // chain (a leading 100 Continue, or a 301 redirect hop) as the outcome —
+  // so a resource that legitimately resolves to 200 was misread as a
+  // failure, and runMirrorLabelSync's fail-open contract then proceeded to
+  // label-add a confirmed PR instead of skipping it. Consistent with the
+  // label path's finalLabelHttpStatus, isPullRequest must judge on the
+  // FINAL non-1xx status, tolerating a preceding informational/redirect line.
+  test("isPullRequest tolerates a leading 100 Continue before the final 200", async () => {
+    const { runner } = fakeRunner([
+      {
+        kind: "exited",
+        exitCode: 0,
+        stdout: Buffer.from(
+          "HTTP/1.1 100 Continue\r\n\r\n" +
+            "HTTP/2.0 200 OK\r\nContent-Type: application/json\r\n\r\n" +
+            `${JSON.stringify({ pull_request: { url: "https://api.github.com/x" } })}\n`,
+        ),
+        stderrTail: "",
+      },
+    ]);
+    const gateway = createMirrorLabelGateway(runner);
+    const outcome = await gateway.isPullRequest(REPO, 684);
+    expect(outcome).toEqual({ kind: "ok", value: true });
+  });
+
+  test("isPullRequest judges the final status after a 301 redirect hop, not the first (3xx) line", async () => {
+    const { runner } = fakeRunner([
+      {
+        kind: "exited",
+        exitCode: 0,
+        stdout: Buffer.from(
+          "HTTP/2.0 301 Moved Permanently\r\nLocation: https://api.github.com/x\r\n\r\n" +
+            "HTTP/2.0 200 OK\r\nContent-Type: application/json\r\n\r\n" +
+            `${JSON.stringify({ title: "an issue" })}\n`,
+        ),
+        stderrTail: "",
+      },
+    ]);
+    const gateway = createMirrorLabelGateway(runner);
+    const outcome = await gateway.isPullRequest(REPO, 684);
+    expect(outcome).toEqual({ kind: "ok", value: false });
+  });
 });

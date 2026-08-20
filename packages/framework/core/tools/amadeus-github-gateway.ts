@@ -265,28 +265,29 @@ function findLineEnd(
 // Grammar: P HTTP blocks
 //   `HTTP/<ver> <3-digit> <reason> EOL *(header EOL) EOL`   (EOL = LF or CRLF)
 // then a single JSON body (object for a single op, array for a page), an
-// optional trailing LF, and EOF. Header bytes are consumed raw; only the tail
-// after the last blank line is JSON. Any non-2xx status short-circuits to
-// http-error so the failure normalizer can read the number.
-export function parseHttpEnvelope(
-  stdout: Buffer,
-  mode: "single" | "array",
-): EnvelopeParse {
-  const bin = stdout.toString("latin1");
+// optional trailing LF, and EOF. Header bytes are consumed raw; the tail
+// after the last blank line is the body, at whatever byte position the walk
+// stops. Shared by parseHttpEnvelope (below) and parseHttpEnvelopeFinalStatus
+// (#2020 CodeRabbit follow-up): both need the identical CRLF/LF-tolerant hop
+// walk (see findLineEnd's own comment for why bare-LF status lines matter),
+// and only differ in how they judge the collected statuses.
+function walkHttpEnvelopeStatuses(
+  bin: string,
+): { statuses: readonly number[]; bodyPos: number } | null {
   let pos = 0;
   const statuses: number[] = [];
 
   while (bin.startsWith("HTTP/", pos)) {
     const statusEol = findLineEnd(bin, pos);
-    if (statusEol === null) return { kind: "malformed" };
+    if (statusEol === null) return null;
     const match = STATUS_LINE_RE.exec(bin.slice(pos, statusEol.end));
-    if (match === null) return { kind: "malformed" };
+    if (match === null) return null;
     statuses.push(Number(match[1]));
 
     let headerPos = statusEol.next;
     for (;;) {
       const headerEol = findLineEnd(bin, headerPos);
-      if (headerEol === null) return { kind: "malformed" };
+      if (headerEol === null) return null;
       if (headerEol.end === headerPos) {
         headerPos = headerEol.next; // blank line terminates the header block
         break;
@@ -296,20 +297,79 @@ export function parseHttpEnvelope(
     pos = headerPos;
   }
 
-  if (statuses.length === 0) return { kind: "malformed" };
+  if (statuses.length === 0) return null;
+  return { statuses, bodyPos: pos };
+}
+
+// The body-shape check shared by both envelope readers: a single JSON body
+// (object for a single op, array for a page), trailing LF optional.
+function extractEnvelopeBody(
+  bin: string,
+  bodyPos: number,
+  mode: "single" | "array",
+): string | null {
+  let bodyBin = bin.slice(bodyPos);
+  if (bodyBin.endsWith("\n")) bodyBin = bodyBin.slice(0, -1);
+  if (bodyBin.length === 0) return null;
+  const opener = bodyBin[0];
+  if (mode === "single" ? opener !== "{" : opener !== "[") return null;
+  return bodyBin;
+}
+
+// Any non-2xx status short-circuits to http-error so the failure normalizer
+// can read the number. Used by every caller except isPullRequest (below).
+export function parseHttpEnvelope(
+  stdout: Buffer,
+  mode: "single" | "array",
+): EnvelopeParse {
+  const bin = stdout.toString("latin1");
+  const walk = walkHttpEnvelopeStatuses(bin);
+  if (walk === null) return { kind: "malformed" };
+  const { statuses, bodyPos } = walk;
+
   const firstBad = statuses.find((s) => s < 200 || s >= 300);
   if (firstBad !== undefined) return { kind: "http-error", status: firstBad };
+  if (mode === "single" && statuses.length !== 1) return { kind: "malformed" };
 
-  let bodyBin = bin.slice(pos);
-  if (bodyBin.endsWith("\n")) bodyBin = bodyBin.slice(0, -1);
-  if (bodyBin.length === 0) return { kind: "malformed" };
+  const bodyBin = extractEnvelopeBody(bin, bodyPos, mode);
+  if (bodyBin === null) return { kind: "malformed" };
 
-  const opener = bodyBin[0];
-  if (mode === "single") {
-    if (statuses.length !== 1 || opener !== "{") return { kind: "malformed" };
-  } else if (opener !== "[") {
-    return { kind: "malformed" };
+  return {
+    kind: "ok",
+    statuses,
+    jsonText: Buffer.from(bodyBin, "latin1").toString("utf-8"),
+  };
+}
+
+// #2020 CodeRabbit follow-up: parseHttpEnvelope's firstBad short-circuit
+// (comment above) is deliberately strict for its many other single/array
+// callers, but that makes it wrong for isPullRequest — `gh api --include` on
+// a resource read prints one status line per hop of a redirect chain (and a
+// leading 1xx informational line before the real status), so the first
+// status is not necessarily the outcome, exactly the shape #2020 already
+// fixed for the label path via finalLabelHttpStatus. This variant walks the
+// SAME envelope grammar but judges on the FINAL non-1xx status instead, and
+// (unlike parseHttpEnvelope) does not reject a multi-status envelope in
+// "single" mode — a redirect/1xx chain legitimately produces more than one
+// status line for a single logical read.
+export function parseHttpEnvelopeFinalStatus(
+  stdout: Buffer,
+  mode: "single" | "array",
+): EnvelopeParse {
+  const bin = stdout.toString("latin1");
+  const walk = walkHttpEnvelopeStatuses(bin);
+  if (walk === null) return { kind: "malformed" };
+  const { statuses, bodyPos } = walk;
+
+  const finalStatus = finalLabelHttpStatus(statuses);
+  // Only 1xx informational lines were observed — no final status to judge.
+  if (finalStatus === null) return { kind: "malformed" };
+  if (finalStatus < 200 || finalStatus >= 300) {
+    return { kind: "http-error", status: finalStatus };
   }
+
+  const bodyBin = extractEnvelopeBody(bin, bodyPos, mode);
+  if (bodyBin === null) return { kind: "malformed" };
 
   return {
     kind: "ok",
@@ -664,12 +724,21 @@ function interpretApiResult(
   result: MirrorProcessResult,
   mode: "single" | "array",
   op: OpKind,
+  // #2020 CodeRabbit follow-up: "final-status" swaps in
+  // parseHttpEnvelopeFinalStatus (tolerates a leading 1xx/redirect hop,
+  // judges on the final status) instead of parseHttpEnvelope's strict
+  // firstBad short-circuit. Every existing caller omits this and keeps the
+  // original strict behavior; only isPullRequest opts in.
+  envelopeMode: "strict" | "final-status" = "strict",
 ): ApiInterpretation {
   if (result.kind !== "exited") {
     return { kind: "failure", failure: processFailure(result, op) };
   }
 
-  const env = parseHttpEnvelope(result.stdout, mode);
+  const env =
+    envelopeMode === "final-status"
+      ? parseHttpEnvelopeFinalStatus(result.stdout, mode)
+      : parseHttpEnvelope(result.stdout, mode);
   if (env.kind === "http-error") {
     const { classification, retryable } = classifyHttpStatus(env.status);
     return {
@@ -1233,7 +1302,11 @@ export function createMirrorLabelGateway(
         args: viewArgv(repository, issueNumber),
         profile: "single",
       });
-      const interp = interpretApiResult(result, "single", "read-only");
+      // "final-status": `gh api --include` on a resource read prints one
+      // status line per hop, so a leading 1xx or a redirect's 3xx must not
+      // decide the outcome — only the final status does (#2020 CodeRabbit
+      // follow-up, consistent with the label path's finalLabelHttpStatus).
+      const interp = interpretApiResult(result, "single", "read-only", "final-status");
       if (interp.kind === "failure") return interp.failure;
       let payload: unknown;
       try {
