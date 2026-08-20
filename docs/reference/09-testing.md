@@ -517,12 +517,36 @@ is deliberately no `--update` writer that would let one be added mechanically.
 
 | Trigger | Layer | Command | Where |
 |---------|-------|---------|-------|
-| `git commit` | L1 | `bun tests/run-tests.ts` | Local (pre-commit hook) |
+| `git commit` | fast subset of L1 | `bun run typecheck` + `bun run lint` + diff-scoped unit tests | Local (pre-commit hook) |
 | CI pipeline | L2 | `bun tests/run-tests.ts --ci` | CI/CD pipeline |
 | Release / merge to main | L3 | `bun tests/run-tests.ts --release` | CI/CD pipeline |
 | Daily schedule / manual dispatch | perf | `bash tests/run-tests.sh --perf` | `.github/workflows/perf.yml` (non-blocking) |
 
-L1 can be enforced via a git pre-commit hook: `bun tests/run-tests.ts || exit 1`.
+### Pre-commit hook (#1984)
+
+`bun install` installs a git `pre-commit` hook automatically (via the `prepare` script and
+[lefthook](https://github.com/evilmartians/lefthook), configured in `lefthook.yml`). It
+runs, in order:
+
+1. `bun run typecheck` — whole-repo, ~8-10s.
+2. `bun run lint` — whole-repo Biome check, well under a second.
+3. `bun scripts/precommit-related-unit-tests.ts` — only the `tests/unit/*.test.ts` files
+   whose `// covers: file:<path>` header (the same header the coverage registry parses,
+   see `tests/gen-coverage-registry.ts`'s `parseCoversHeader`) names a file in `git diff
+   --cached --name-only`. A staged file with no covering unit test, or a commit that stages
+   no source files at all, runs zero tests and exits 0 — this hook enforces "existing
+   coverage still passes", not "coverage exists" (that is the [Silent-Success
+   Gates](#silent-success-gates)' and #1979's job).
+
+Whole-repo typecheck+lint plus a small diff-scoped unit slice keeps the hook comfortably
+under a ~30s budget regardless of repo size (running the full unit tier every commit would
+not). Heavier integration/e2e tests stay CI's job — this hook is a fast local subset of L1,
+not L1 itself.
+
+**Skip**: `git commit --no-verify` (a native git flag, always available, no lefthook-specific
+escape needed). CI (`bun run check` plus the full test suite) always re-verifies afterward,
+so a skipped or uninstalled hook never lets a real problem land unnoticed — the hook is a
+DX convenience, not the enforcement boundary.
 
 ## Stubs
 

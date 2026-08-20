@@ -24,6 +24,10 @@ bun run build
 # start the harness you are developing
 ```
 
+`bun install` also installs a git `pre-commit` hook (typecheck + lint + diff-scoped unit
+tests, ~10s) — see [Testing § Pre-commit hook](docs/reference/09-testing.md#pre-commit-hook-1984)
+for what it runs and how to skip it (`git commit --no-verify`).
+
 `bun run build` generates every `dist/<harness>/` tree and this repository's local self-install surfaces. These outputs stay untracked. CI compares two isolated builds for byte reproducibility and runs `bun run source-only:check` to enforce the Git boundary.
 
 Adding a whole new harness? See [Porting to a New Harness](docs/harness-engineering/09-porting-to-a-new-harness.md).
