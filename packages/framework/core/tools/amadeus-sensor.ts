@@ -503,6 +503,12 @@ function stageTemplateEligibleArtifacts(stage: {
 	]);
 }
 
+function exitForMarkerExemption(sensorId: string, outputPath: string): void {
+	const outputStem = basename(outputPath).replace(/\.md$/, "");
+	const markerSensor = sensorId === "required-sections" || sensorId === "upstream-coverage";
+	if (markerSensor && isMarkerArtifact(outputStem)) process.exit(0);
+}
+
 // --- Subcommand: fire ---
 //
 // Step 1 — validate + resolve all inputs + generate Fire id (no lock).
@@ -575,13 +581,7 @@ export async function handleFire(args: string[], projectDirArg?: string): Promis
 	// Marker artifacts are workflow-control files, not prose documents. Keep
 	// the required-sections and upstream-coverage exemptions symmetric: a
 	// marker is not evaluated at all, so it emits neither PASS nor FAIL.
-	const outputStem = basename(outputPath).replace(/\.md$/, "");
-	if (
-		(id === "required-sections" || id === "upstream-coverage") &&
-		isMarkerArtifact(outputStem)
-	) {
-		process.exit(0);
-	}
+	exitForMarkerExemption(id, outputPath);
 
 	// --- 1e. Generate Fire id (8 hex chars) ---
 	const fireId = generateFireId();
