@@ -5271,7 +5271,7 @@ function emitJumpDirective(
   scope: string,
   projectDir: string,
   projectType: "brownfield" | "greenfield" | null = null,
-  projectDirSource: ProjectDirSource = "explicit",
+  projectDirSource: ProjectDirSource,
 ): void {
   // --phase initialization is rejected up front (applies with or without state).
   if (flags.phase && canonicalisePhase(flags.phase) === "initialization") {
