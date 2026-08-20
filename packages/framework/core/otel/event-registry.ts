@@ -1,7 +1,7 @@
 // event-registry.ts — the typed Event Registry (FR-EVT-1).
 //
 // The canonical half of the registry covers the full 90-event audit
-// vocabulary (#1672; VALID_EVENT_TYPES in tools/amadeus-audit.ts) — every
+// vocabulary (#1672) — every
 // canonical name maps 1:1 onto the EXISTING v1 audit event vocabulary so the
 // current readers understand the records unchanged. The telemetry half
 // carries events that must NEVER reach the audit journal (FR-EXP-4): free-form

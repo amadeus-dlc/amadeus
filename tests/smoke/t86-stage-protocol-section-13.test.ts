@@ -1,7 +1,7 @@
-// covers: doc:amadeus-common/protocols/stage-protocol.md(section-13), doc:knowledge/amadeus-shared/audit-format.md(MEMORY_EMPTY), doc:docs/reference/12-state-machine.md(MEMORY_EMPTY), data:amadeus-audit.ts(VALID_EVENT_TYPES), doc:skills/amadeus/SKILL.md(run-stage-gate-branch), function:appendAuditEntry
+// covers: doc:amadeus-common/protocols/stage-protocol.md(section-13), doc:knowledge/amadeus-shared/audit-format.md(MEMORY_EMPTY), doc:docs/reference/12-state-machine.md(MEMORY_EMPTY), data:otel/event-registry.ts(MEMORY_EMPTY), doc:skills/amadeus/SKILL.md(run-stage-gate-branch), function:appendAuditEntry
 //
 // t86 — pins stage-protocol §13 (Learnings Ritual) prose + the MEMORY_EMPTY
-// audit-event registration + the SKILL.md run-stage-gate-branch wiring that
+// canonical audit-event registration + the SKILL.md run-stage-gate-branch wiring that
 // makes the orchestrator actually CALL the §13 gate (surface/persist). Migrated
 // from tests/smoke/t86-stage-protocol-section-13.sh (TAP plan 7, pure bash +
 // grep, no bun/claude — L1).
@@ -11,10 +11,9 @@
 //   * stage-protocol.md / audit-format.md / 12-state-machine.md / SKILL.md ->
 //     read the real bytes in-process and assert the literal contract
 //     (mechanism none — a structural/prose check, the same surface grep hit).
-//   * the MEMORY_EMPTY registration in amadeus-audit.ts is STRENGTHENED beyond the
-//     .sh's `grep '"MEMORY_EMPTY"'`: the tool's `VALID_EVENT_TYPES` Set is a
-//     module-private const (NOT exported, amadeus-audit.ts:19), so we exercise the
-//     real validity gate by SPAWNING the CLI `append MEMORY_EMPTY` and proving it
+//   * the MEMORY_EMPTY registration in the Event Registry is STRENGTHENED beyond
+//     the .sh's `grep '"MEMORY_EMPTY"'`: we exercise the real validity gate by
+//     SPAWNING the CLI `append MEMORY_EMPTY` and proving it
 //     is ACCEPTED (exit 0, appended:true) rather than rejected. That spawn proves
 //     the literal IS registered in the live Set, not merely present as source
 //     text — equal-or-stronger. (mechanism cli for that one case.)
@@ -27,10 +26,10 @@
 //     :860-861,921 two-surface learnings routing + `sensors: frontmatter` +
 //             `matches:` capability glob; the `applies_to` fossil is GONE
 //     :935  `### Why stage files stay immutable`
-//   dist/claude/.claude/tools/amadeus-audit.ts
-//     :19,:101  VALID_EVENT_TYPES Set contains "MEMORY_EMPTY"
+//   dist/claude/.claude/otel/event-registry.ts
+//     canonical registry contains "MEMORY_EMPTY"
 //     :214  appendAuditEntry(eventType, fields, projectDir) — throws on an
-//           event NOT in VALID_EVENT_TYPES (the in-proc validity proof for the
+//           event NOT in the Event Registry (the in-proc validity proof for the
 //           well-known control event we append alongside)
 //   dist/claude/.claude/knowledge/amadeus-shared/audit-format.md
 //     :167,:171  `MEMORY_EMPTY` registry rows
@@ -49,7 +48,7 @@
 //   .sh test 2 (four canonical headings)            -> "§13 documents all four canonical memory.md headings (bolded)"
 //   .sh test 3 (two-surface routing, no applies_to) -> "§13 routes via two-surface learnings + sensors: frontmatter bind, applies_to fossil gone"
 //   .sh test 4 (MEMORY_EMPTY in three sources)      -> "MEMORY_EMPTY registered in audit-format.md + 12-state-machine.md (prose)"
-//                                                      + STRONGER "amadeus-audit CLI accepts MEMORY_EMPTY (registered in the live VALID_EVENT_TYPES Set)"
+//                                                      + STRONGER "amadeus-audit CLI accepts MEMORY_EMPTY (registered in the live Event Registry)"
 //   .sh test 5 ('Why stage files stay immutable')   -> "§13 carries the 'Why stage files stay immutable' invariant H3"
 //   .sh test 6 (SKILL.md wires the §13 gate)        -> "SKILL.md run-stage gate branch wires the §13 gate (surface + persist, unconditional)"
 //   .sh test 7 (Test-Run block declares skip) was dropped per #369: the SKILL.md
@@ -71,7 +70,7 @@ const STAGE_PROTOCOL = join(
   "protocols",
   "stage-protocol.md",
 );
-const AUDIT_TS = join(AMADEUS_SRC, "tools", "amadeus-audit.ts");
+const EVENT_REGISTRY_TS = join(AMADEUS_SRC, "otel", "event-registry.ts");
 const AUDIT_MD = join(AMADEUS_SRC, "knowledge", "amadeus-shared", "audit-format.md");
 const STATE_MACHINE = join(REPO_ROOT, "docs", "reference", "12-state-machine.md");
 const SKILL = join(AMADEUS_SRC, "skills", "amadeus", "SKILL.md");
@@ -163,13 +162,13 @@ describe("t86 stage-protocol §13 + MEMORY_EMPTY + SKILL.md gate wiring (migrate
     expect(read(STATE_MACHINE).includes("`MEMORY_EMPTY`")).toBe(true);
     // Source-text presence in amadeus-audit.ts too (the .sh's third grep); the
     // CLI case below proves it is actually live in the runtime Set.
-    expect(read(AUDIT_TS).includes('"MEMORY_EMPTY"')).toBe(true);
+    expect(read(EVENT_REGISTRY_TS).includes('"MEMORY_EMPTY"')).toBe(true);
   });
 
   // --- .sh test 4 (data half: STRONGER than the .sh's source grep) ---------
-  test("amadeus-audit CLI accepts MEMORY_EMPTY (registered in the live VALID_EVENT_TYPES Set) [.sh test 4 — data half, STRONGER]", () => {
-    // VALID_EVENT_TYPES is a module-private const (amadeus-audit.ts:19), so we
-    // exercise the real validity gate: an event NOT in the Set causes
+  test("amadeus-audit CLI accepts MEMORY_EMPTY (registered in the live Event Registry) [.sh test 4 — data half, STRONGER]", () => {
+    // The CLI validates against the canonical Event Registry, so we
+    // exercise the real validity gate: an event not in the registry causes
     // appendAuditEntry to throw and the CLI to exit non-zero with an error JSON
     // (the t18 contract). MEMORY_EMPTY MUST be accepted — exit 0, appended:true.
     // createTestProject seeds the per-intent record + active-intent cursor;

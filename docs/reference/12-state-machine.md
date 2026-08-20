@@ -560,8 +560,8 @@ The drift test at `tests/integration/t48-audit-event-emitters.test.ts` catches d
 When you change state-machine behavior, update both the code and this chapter in the **same commit**. The rule catches itself via the drift test, but the cost of fixing drift after the fact (chasing down who owns which event across three files) is much higher than updating one table.
 
 Specifically:
-- Adding an event → add to `VALID_EVENT_TYPES` in `amadeus-audit.ts`, add the emitter, add to the appropriate table above.
-- Deleting an event → remove from `VALID_EVENT_TYPES`, remove emitter, remove the row here, grep the codebase for any stale prose or tests.
+- Adding an event → add it to the canonical Event Registry, add the emitter, and add it to the appropriate table above.
+- Deleting an event → remove it from the canonical Event Registry, remove the emitter, remove the row here, and grep the codebase for stale prose or tests.
 - Renaming an emitter file → update the Emitter column in every table row that points at it.
 
 ---

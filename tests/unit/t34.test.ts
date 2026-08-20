@@ -60,7 +60,7 @@
 //       does not over-guard across processes) (same observable).
 //   - .sh Test 12 ERROR_LOGGED survives taxonomy validation     -> Test 12:
 //       errorLoggedCount === 1 (the row actually lands; regression guard for
-//       ERROR_LOGGED's presence in VALID_EVENT_TYPES, amadeus-audit.ts:65)
+//       ERROR_LOGGED's presence in the canonical Event Registry)
 //       (same observable) + STRONGER: assert the surfaced JSON error on stderr
 //       so the swallowed-write path can't pass on a missing row alone.
 //
@@ -228,7 +228,7 @@ describe("t34 ERROR_LOGGED via emitError (migrated from t34-tool-error-logged.sh
   });
 
   test("12: ERROR_LOGGED survives taxonomy validation (row actually lands)", () => {
-    // Regression guard: if ERROR_LOGGED were removed from VALID_EVENT_TYPES,
+    // Regression guard: if ERROR_LOGGED were removed from the canonical Event Registry,
     // appendAuditEntry would throw, emitError would swallow it, and the row
     // would be missing. Assert it lands AND that the JSON error surfaced (so a
     // silently-swallowed write can't masquerade as success).
