@@ -54,6 +54,11 @@ describe("t222 CI snapshot publication boundary", () => {
     });
   });
 
+  test("29 changed files stay below the large-change risk boundary", () => {
+    const paths = Array.from({ length: 29 }, (_, index) => `docs/large-change-${index}.md`);
+    expect(detectChanges(paths).risk).toBe("false");
+  });
+
   test("untracked distribution changes request the source-only drift guard", () => {
     expect(detectChanges(["dist/claude/.claude/tools/generated.ts"])).toEqual({
       full: "false",

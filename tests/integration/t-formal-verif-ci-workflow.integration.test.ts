@@ -100,6 +100,9 @@ const BASELINE_SHA = readFileSync(
 //   - #1981 (risk-based CI tiering): add the risk detector output, the full
 //     risk e2e tier, and PR/merge-group formal-model-check promotion, with both
 //     risk jobs conditionally required through CI Success.
+//   - #1981 review follow-up: disable checkout credential persistence in the
+//     risk e2e job; the formal job's checkout remains covered by its normalized
+//     formal block contract.
 describe("CI workflow structure (formal job isolation + baseline pin)", () => {
   test("contains only the sanctioned edits and an isolated pinned formal job", () => {
     const source = readFileSync(WORKFLOW, "utf8");
