@@ -435,4 +435,19 @@ describe("createMirrorLabelGateway", () => {
     const outcome = await gateway.isPullRequest(REPO, 684);
     expect(outcome.kind).toBe("failure");
   });
+
+  test("isPullRequest treats a body JSON.parse cannot decode as an invalid-response failure", async () => {
+    // parseHttpEnvelope's own "single" opener check only requires the body to
+    // START with `{`, so a truncated/malformed object still reaches
+    // isPullRequest's own JSON.parse (as opposed to a body not starting with
+    // `{`, which parseHttpEnvelope itself already rejects as malformed before
+    // isPullRequest ever runs).
+    const { runner } = fakeRunner([envelope(200, "{not valid json")]);
+    const gateway = createMirrorLabelGateway(runner);
+    const outcome = await gateway.isPullRequest(REPO, 684);
+    expect(outcome.kind).toBe("failure");
+    if (outcome.kind === "failure") {
+      expect(outcome.classification).toBe("invalid-response");
+    }
+  });
 });
