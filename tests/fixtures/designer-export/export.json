@@ -1089,7 +1089,8 @@
         "upstream-coverage",
         "answer-evidence",
         "question-budget",
-        "depth-budget"
+        "depth-budget",
+        "undefined-term"
       ],
       "scopes": [
         "enterprise",
@@ -1159,6 +1160,12 @@
           "path": ".claude/sensors/amadeus-depth-budget.md",
           "matches": "**/inception/requirements-analysis/requirements.md",
           "category": "document-shape"
+        },
+        {
+          "id": "undefined-term",
+          "path": ".claude/sensors/amadeus-undefined-term.md",
+          "matches": "**/requirements-analysis/{requirements,requirements-analysis-questions}.md",
+          "category": "governance"
         }
       ]
     },

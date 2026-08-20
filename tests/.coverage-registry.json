@@ -6700,6 +6700,10 @@
           "mechanism": "cli"
         },
         {
+          "file": "tests/integration/t-undefined-term-sensor.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/integration/t212-optional-produces.test.ts",
           "mechanism": "cli"
         },

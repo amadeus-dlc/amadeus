@@ -201,6 +201,7 @@ the PostToolUse hook at fire time, not by the resolver at compile time.
 | `amadeus-upstream-coverage.md` | `**/{amadeus-docs,intents,codekb}/**` |
 | `amadeus-answer-evidence.md` | `**/*-questions.md` |
 | `amadeus-depth-budget.md` | `**/inception/requirements-analysis/requirements.md` |
+| `amadeus-undefined-term.md` | `**/requirements-analysis/{requirements,requirements-analysis-questions}.md` |
 | `amadeus-linter.md` | `**/*.{ts,js}` |
 | `amadeus-type-check.md` | `**/*.{ts,tsx}` |
 | `amadeus-event-registry-drift.md` | `**/{event-registry,amadeus-audit}.ts` |
