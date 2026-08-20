@@ -406,7 +406,7 @@ quietly declining to run.
 Every run prints a census in the summary block, in every mode, whether or not
 anything is in violation:
 
-```
+```text
 self-skipped tests: 2 distinct case(s) this run
   tests/unit/t11.test.ts :: reads a real socket (x1) — registered age=41d expires=2026-11-18
   tests/unit/tX.test.ts :: conditional case (x1) — UNREGISTERED
@@ -469,7 +469,7 @@ gate.
 
 The resolved modes print once at the top of the run:
 
-```
+```text
 Silent-success gates: zero-assertion=strict skip=report leak=report
 ```
 

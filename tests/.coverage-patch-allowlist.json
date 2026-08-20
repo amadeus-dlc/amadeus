@@ -5330,5 +5330,16 @@
     },
     "reason": "The import.meta.main CLI wrapper's process.exit(await runMirrorOrphanMain(...)) call only runs in a spawned process; Bun does not attribute a spawned process's execution back to the parent LCOV report (cid:code-generation:bun-coverage-spawn-blindspot). runMirrorOrphanMain itself is fully driven in-process by tests/integration/t3147-amadeus-mirror-orphan.integration.test.ts across diagnose (error and candidate-found arms) and repair (closed, refused, and error arms).",
     "expiry": "remove if Bun starts attributing spawned-process coverage back to the parent LCOV report"
+  },
+  {
+    "file": "tests/harness/tui-drive.ts",
+    "selector": {
+      "function": "tmux",
+      "fingerprint": "sha256:a12b1e515db460e35463f22f303fa0ed16f6da5e5a6c5e09acc781865088f125",
+      "anchorLines": 1,
+      "targetLines": "1"
+    },
+    "reason": "The real tmux() chokepoint spawns the tmux binary, which CI runners do not have; the backend logic is covered through the injected TmuxRunner seam and the tmuxClientEnv() routing is pinned at source level by t-tui-drive-socket-isolation.",
+    "expiry": "remove when a tmux binary is available in CI and a live client test covers the chokepoint"
   }
 ]

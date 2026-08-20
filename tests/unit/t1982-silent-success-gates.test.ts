@@ -31,7 +31,10 @@ import {
   type ProcessScanIo,
   reapProcesses,
   recordSkips,
+  renderLeakLines,
   renderSkipCensus,
+  renderSkipViolation,
+  renderZeroAssertionViolation,
   resolveGateModes,
   scanForMarkedProcesses,
   type SilentSuccessBaseline,
@@ -671,5 +674,69 @@ describe("t1982 gate 3: process leak", () => {
     });
     expect(isLeakBaselined("tests/e2e/z.test.ts", baseline)?.reason).toBe("known");
     expect(isLeakBaselined("tests/e2e/other.test.ts", baseline)).toBeUndefined();
+  });
+});
+
+describe("t1982 ps token boundaries", () => {
+  const MARKER = "AMADEUS_TEST_NAME=t33.test.ts";
+
+  test("a marker embedded in another variable's VALUE is not a hit (left boundary)", () => {
+    const out = `  77 /bin/sleep 120 X=prefix-${MARKER}`;
+    expect(parsePsProcessLines(out, MARKER, new Set())).toEqual([]);
+  });
+
+  test("a boundary-failing first occurrence cannot shadow a genuine later one", () => {
+    const out = `  78 /bin/sleep 120 OLD=${MARKER}.bak ${MARKER} PATH=/usr/bin`;
+    const found = parsePsProcessLines(out, MARKER, new Set());
+    expect(found.map((p) => p.pid)).toEqual([78]);
+  });
+});
+
+describe("t1982 baseline row validation", () => {
+  test("a non-object row in a section fails closed", () => {
+    const loaded = parseBaseline(JSON.stringify({ schemaVersion: 1, zeroAssertion: [42] }));
+    expect(loaded.kind).toBe("failed");
+    if (loaded.kind === "failed") expect(loaded.detail).toBe("zeroAssertion[0] must be an object");
+  });
+
+  test("zeroAssertion and leaks share one validator, so both name their own section", () => {
+    const missing = parseBaseline(JSON.stringify({ schemaVersion: 1, leaks: [{ file: "f" }] }));
+    expect(missing.kind).toBe("failed");
+    if (missing.kind === "failed") {
+      expect(missing.detail).toBe('leaks[0] needs non-empty "file", "reason", and "issue"');
+    }
+  });
+});
+
+describe("t1982 gate output rendering", () => {
+  test("the zero-assertion finding names the file, the count, and every remedy", () => {
+    const lines = renderZeroAssertionViolation("tests/unit/x.test.ts", 3);
+    expect(lines[0]).toBe(
+      "GATE zero-assertion: tests/unit/x.test.ts ran 3 testcase(s) and evaluated 0 assertions",
+    );
+    const body = lines.join("\n");
+    expect(body).toContain("// assertion-free: <reason>");
+    expect(body).toContain('"zeroAssertion"');
+  });
+
+  test("the skip finding lists the offenders and the ledger remedy", () => {
+    const lines = renderSkipViolation("tests/unit/y.test.ts", ['"case a" -- UNREGISTERED']);
+    expect(lines[0]).toBe(
+      "GATE skip: tests/unit/y.test.ts self-skipped 1 testcase(s) with no valid ledger entry",
+    );
+    expect(lines[1]).toBe('  "case a" -- UNREGISTERED');
+    expect(lines.join("\n")).toContain('"skips"');
+  });
+
+  test("the leak finding names each pid, the reap count, and (only when failing) the fix", () => {
+    const procs = [{ pid: 41, command: "sleep 120" }];
+    const failing = renderLeakLines("tests/unit/z.test.ts", procs, 1, true);
+    expect(failing[0]).toContain("left 1 process(es) running");
+    expect(failing).toContain("  pid 41: sleep 120");
+    expect(failing).toContain("  reaped 1 of 1 (SIGKILL)");
+    expect(failing.join("\n")).toContain("must not outlive itself");
+
+    const reportOnly = renderLeakLines("tests/unit/z.test.ts", procs, 1, false);
+    expect(reportOnly.join("\n")).not.toContain("must not outlive itself");
   });
 });

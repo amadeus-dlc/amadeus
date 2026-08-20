@@ -36,6 +36,7 @@
 // deliberately no `--update` writer that would let a violation be waved through
 // mechanically.
 
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 
 // ---------------------------------------------------------------------------
@@ -197,34 +198,22 @@ function asRows(value: unknown, section: string): { rows: Record<string, unknown
   return { rows };
 }
 
-function parseZeroAssertion(value: unknown): { entries: ZeroAssertionEntry[] } | { detail: string } {
-  const parsed = asRows(value, "zeroAssertion");
+// zeroAssertion and leaks entries share one shape (file/reason/issue), so one
+// parser serves both sections — a field added for one cannot silently miss the
+// other.
+function parseFileReasonIssue(
+  value: unknown,
+  section: string,
+): { entries: { file: string; reason: string; issue: string }[] } | { detail: string } {
+  const parsed = asRows(value, section);
   if ("detail" in parsed) return parsed;
-  const entries: ZeroAssertionEntry[] = [];
+  const entries: { file: string; reason: string; issue: string }[] = [];
   for (const [index, row] of parsed.rows.entries()) {
-    const where = `zeroAssertion[${index}]`;
     const file = requireString(row, "file");
     const reason = requireString(row, "reason");
     const issue = requireString(row, "issue");
     if (file === null || reason === null || issue === null) {
-      return { detail: `${where} needs non-empty "file", "reason", and "issue"` };
-    }
-    entries.push({ file, reason, issue });
-  }
-  return { entries };
-}
-
-function parseLeaks(value: unknown): { entries: LeakEntry[] } | { detail: string } {
-  const parsed = asRows(value, "leaks");
-  if ("detail" in parsed) return parsed;
-  const entries: LeakEntry[] = [];
-  for (const [index, row] of parsed.rows.entries()) {
-    const where = `leaks[${index}]`;
-    const file = requireString(row, "file");
-    const reason = requireString(row, "reason");
-    const issue = requireString(row, "issue");
-    if (file === null || reason === null || issue === null) {
-      return { detail: `${where} needs non-empty "file", "reason", and "issue"` };
+      return { detail: `${section}[${index}] needs non-empty "file", "reason", and "issue"` };
     }
     entries.push({ file, reason, issue });
   }
@@ -286,11 +275,11 @@ export function parseBaseline(body: string): LoadedBaseline {
     };
   }
 
-  const zeroAssertion = parseZeroAssertion(doc.zeroAssertion);
+  const zeroAssertion = parseFileReasonIssue(doc.zeroAssertion, "zeroAssertion");
   if ("detail" in zeroAssertion) return { kind: "failed", detail: zeroAssertion.detail };
   const skips = parseSkips(doc.skips);
   if ("detail" in skips) return { kind: "failed", detail: skips.detail };
-  const leaks = parseLeaks(doc.leaks);
+  const leaks = parseFileReasonIssue(doc.leaks, "leaks");
   if ("detail" in leaks) return { kind: "failed", detail: leaks.detail };
 
   return {
@@ -619,9 +608,24 @@ export function environBufferHasMarker(environ: string, marker: string): boolean
 // macOS `ps xeww -o pid=,command=` prints `<pid> <argv...> <KEY=VALUE...>` on
 // one line per process (`x` selects this user's processes, `e` appends the
 // environment, `ww` disables column truncation). Entries are space-separated,
-// so the marker must be followed by whitespace or end-of-line; a bare substring
-// test would also match a longer basename that merely starts with this one.
+// so a hit counts only as a whole token: the marker must start at the line
+// head or after whitespace AND end at end-of-line or before whitespace.
+// Checking only one side would match `X=prefix-AMADEUS_TEST_NAME=t33.test.ts`
+// (no left boundary) or a longer basename (no right boundary); and every
+// occurrence is tried, so a boundary-failing first hit (e.g. `...=t33.test.ts.bak`)
+// cannot shadow a genuine later one.
 const PS_LINE_RE = /^\s*(\d+)\s+(.*)$/;
+
+function hasMarkerToken(rest: string, marker: string): boolean {
+  for (let at = rest.indexOf(marker); at >= 0; at = rest.indexOf(marker, at + 1)) {
+    const before = at === 0 ? "" : rest.charAt(at - 1);
+    const after = rest.charAt(at + marker.length);
+    const leftOk = before === "" || /\s/.test(before);
+    const rightOk = after === "" || /\s/.test(after);
+    if (leftOk && rightOk) return true;
+  }
+  return false;
+}
 
 export function parsePsProcessLines(
   output: string,
@@ -635,10 +639,7 @@ export function parsePsProcessLines(
     const pid = Number(m[1]);
     if (!Number.isFinite(pid) || excludePids.has(pid)) continue;
     const rest = m[2] as string;
-    const at = rest.indexOf(marker);
-    if (at < 0) continue;
-    const after = rest.charAt(at + marker.length);
-    if (after !== "" && !/\s/.test(after)) continue;
+    if (!hasMarkerToken(rest, marker)) continue;
     // The command is everything before the environment block; keeping the head
     // of the line is enough to identify the offender without dumping the whole
     // inherited environment into CI output.
@@ -769,8 +770,23 @@ export function renderLeakLines(
 // stays readable and importable without node:child_process side effects.
 // ---------------------------------------------------------------------------
 
+// macOS process scan (#1982 gate 3). `xeww` selects THIS user's processes,
+// appends their environment, and disables column truncation, so the marker the
+// runner injected into the test child is visible verbatim. spawnSync is
+// deliberate: the scan is one short read per file, and blocking the caller's
+// event loop for it does not slow the test children (separate processes).
+export function runPsWithEnvironment(): string | null {
+  const r = spawnSync("ps", ["xeww", "-o", "pid=,command="], {
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+    stdio: ["ignore", "pipe", "ignore"],
+  });
+  if (r.status !== 0 || typeof r.stdout !== "string") return null;
+  return r.stdout;
+}
+
 export function defaultProcessScanIo(
-  runPs: () => string | null,
+  runPs: () => string | null = runPsWithEnvironment,
   platform: string = process.platform,
   selfPid: number = process.pid,
 ): ProcessScanIo {

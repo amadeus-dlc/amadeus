@@ -114,6 +114,46 @@
       "issue": "#3306",
       "firstObserved": "2026-08-20",
       "expires": "2026-11-18"
+    },
+    {
+      "file": "tests/integration/t1982-silent-success-runner.integration.test.ts",
+      "test": "a leaked child fails the run, is named by pid, and is actually reaped",
+      "reason": "Platform-gated by skipIf(win32): the leak gate is scan-less on Windows by design and the fixtures need POSIX sleep/true. Runs for real on Linux CI and macOS.",
+      "issue": "#1982",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    },
+    {
+      "file": "tests/integration/t1982-silent-success-runner.integration.test.ts",
+      "test": "a baselined leak still gets reaped and reported, but does not fail the run",
+      "reason": "Platform-gated by skipIf(win32): the leak gate is scan-less on Windows by design and the fixtures need POSIX sleep/true. Runs for real on Linux CI and macOS.",
+      "issue": "#1982",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    },
+    {
+      "file": "tests/integration/t1982-silent-success-runner.integration.test.ts",
+      "test": "a well-behaved file produces no leak output at all",
+      "reason": "Platform-gated by skipIf(win32): the leak gate is scan-less on Windows by design and the fixtures need POSIX sleep/true. Runs for real on Linux CI and macOS.",
+      "issue": "#1982",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    },
+    {
+      "file": "tests/integration/t1982-silent-success-runner.integration.test.ts",
+      "test": "runPsWithEnvironment returns this user's process table",
+      "reason": "Platform-gated by skipIf(win32): the leak gate is scan-less on Windows by design and the fixtures need POSIX sleep/true. Runs for real on Linux CI and macOS.",
+      "issue": "#1982",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
+    },
+    {
+      "file": "tests/integration/t1982-silent-success-runner.integration.test.ts",
+      "test": "the real platform scan finds a marked child and stops finding it once it exits",
+      "reason": "Platform-gated by skipIf(win32): the leak gate is scan-less on Windows by design and the fixtures need POSIX sleep/true. Runs for real on Linux CI and macOS.",
+      "issue": "#1982",
+      "firstObserved": "2026-08-20",
+      "expires": "2026-11-18"
     }
   ],
   "leaks": []

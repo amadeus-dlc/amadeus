@@ -30,7 +30,20 @@ import { copyFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { REPO_ROOT } from "../harness/fixtures.ts";
+import {
+  defaultProcessScanIo,
+  leakMarker,
+  loadBaseline,
+  runPsWithEnvironment,
+  scanForMarkedProcesses,
+} from "../lib/silent-success.ts";
 import { scaleTestTime } from "../lib/test-time-factor.ts";
+
+// The leak gate is scan-less on win32 by design (no cheap process-environment
+// read), and the leak fixtures need POSIX `sleep`/`true`, so the process-leak
+// cases are skipped there. Each skipped name is registered in
+// tests/.silent-success-baseline.json -- the gate's own ledger discipline.
+const IS_WIN = process.platform === "win32";
 
 const REAL_TESTS_DIR = join(REPO_ROOT, "tests");
 const REAL_RUNNER_TS = join(REAL_TESTS_DIR, "run-tests.ts");
@@ -311,7 +324,7 @@ describe("t1982 gate 2: chronic self-SKIP, end to end", () => {
   }, scaleTestTime(PER_TEST_TIMEOUT));
 });
 
-describe("t1982 gate 3: process leak, end to end", () => {
+describe.skipIf(IS_WIN)("t1982 gate 3: process leak, end to end", () => {
   test("a leaked child fails the run, is named by pid, and is actually reaped", () => {
     const repo = makeScratchRepo({ "t3-leak.test.ts": LEAK_FIXTURE }, EMPTY_BASELINE_DOC);
     // Default mode, plus the explicit leak override: this proves the documented
@@ -454,4 +467,92 @@ describe("t1982 baseline handling, end to end", () => {
 
     expect(r.out).toContain("Silent-success gates: zero-assertion=report skip=report leak=report");
   }, scaleTestTime(PER_TEST_TIMEOUT));
+});
+
+// The lib's real I/O seams, driven IN PROCESS. The scratch-runner cases above
+// execute them too, but only inside a spawned child, which the coverage run
+// cannot attribute; these calls make the same arms measurable.
+describe("t1982 lib I/O seams, in process", () => {
+  test("loadBaseline reads and validates a real file", () => {
+    const dir = mkdtempSync(join(tmpdir(), "t1982-baseline-"));
+    scratchRoots.push(dir);
+    const path = join(dir, "baseline.json");
+    writeFileSync(
+      path,
+      baselineDoc({
+        zeroAssertion: [{ file: "tests/unit/a.test.ts", reason: "debt", issue: "#1982" }],
+      }),
+      "utf8",
+    );
+    const loaded = loadBaseline(path);
+    expect(loaded.kind).toBe("loaded");
+    if (loaded.kind === "loaded") {
+      expect(loaded.doc.zeroAssertion).toEqual([
+        { file: "tests/unit/a.test.ts", reason: "debt", issue: "#1982" },
+      ]);
+    }
+  });
+
+  test("loadBaseline fails closed when the path exists but cannot be read as a file", () => {
+    const dir = mkdtempSync(join(tmpdir(), "t1982-baseline-dir-"));
+    scratchRoots.push(dir);
+    // A directory passes existsSync but readFileSync throws (EISDIR): the
+    // "could not be read" arm, distinct from both "missing" and "malformed".
+    const loaded = loadBaseline(dir);
+    expect(loaded.kind).toBe("failed");
+    if (loaded.kind === "failed") expect(loaded.detail).toContain("could not be read");
+  });
+
+  test.skipIf(IS_WIN)("runPsWithEnvironment returns this user's process table", () => {
+    const out = runPsWithEnvironment();
+    expect(out).not.toBeNull();
+    // Our own bun process is one of this user's processes.
+    expect(out).toContain(String(process.pid));
+  });
+
+  test("defaultProcessScanIo exposes the real platform reads", () => {
+    const io = defaultProcessScanIo();
+    expect(io.selfPid).toBe(process.pid);
+    if (process.platform === "linux") {
+      expect(io.listProc()).toContain(String(process.pid));
+      expect(io.readEnviron(process.pid) ?? "").toContain("PATH=");
+      expect(io.readCmdline(process.pid)).not.toBeNull();
+    } else {
+      // No /proc: every read degrades to "nothing", never to a throw.
+      expect(io.listProc()).toEqual([]);
+      expect(io.readEnviron(process.pid)).toBeNull();
+      expect(io.readCmdline(process.pid)).toBeNull();
+    }
+  });
+
+  test.skipIf(IS_WIN)(
+    "the real platform scan finds a marked child and stops finding it once it exits",
+    async () => {
+      // A probe basename no real test file carries, so a concurrently running
+      // suite can never collide with this scan.
+      const probeBase = `zz-t1982-probe-${process.pid}.test.ts`;
+      const marker = leakMarker(probeBase);
+      const io = defaultProcessScanIo();
+      const child = Bun.spawn(["sleep", "30"], {
+        env: { ...process.env, AMADEUS_TEST_NAME: probeBase },
+        stdio: ["ignore", "ignore", "ignore"],
+      });
+      try {
+        const found = scanForMarkedProcesses(marker, io);
+        expect(found.map((p) => p.pid)).toContain(child.pid);
+      } finally {
+        child.kill("SIGKILL");
+      }
+      await child.exited;
+      // The table read can lag the exit by a beat; poll briefly.
+      const deadline = Date.now() + scaleTestTime(5000);
+      let still = scanForMarkedProcesses(marker, io);
+      while (still.some((p) => p.pid === child.pid) && Date.now() < deadline) {
+        await Bun.sleep(100);
+        still = scanForMarkedProcesses(marker, io);
+      }
+      expect(still.map((p) => p.pid)).not.toContain(child.pid);
+    },
+    scaleTestTime(30_000),
+  );
 });

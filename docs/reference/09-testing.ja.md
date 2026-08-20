@@ -389,7 +389,7 @@ SKIP です。ランナー自身の `STATUS=SKIP` ファイル(Claude substrate 
 すべての実行は、違反の有無やモードに関わらず、サマリブロックに census を出力
 します:
 
-```
+```text
 self-skipped tests: 2 distinct case(s) this run
   tests/unit/t11.test.ts :: reads a real socket (x1) — registered age=41d expires=2026-11-18
   tests/unit/tX.test.ts :: conditional case (x1) — UNREGISTERED
@@ -453,7 +453,7 @@ fail-closed に強制します(macOS の開発マシンでゲートの failing �
 
 解決されたモードは実行冒頭に 1 回出力されます:
 
-```
+```text
 Silent-success gates: zero-assertion=strict skip=report leak=report
 ```
 

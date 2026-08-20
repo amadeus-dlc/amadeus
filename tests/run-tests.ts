@@ -673,23 +673,9 @@ async function runSpawnCapture(
   return { rc, output: Buffer.concat(chunks).toString("utf8") };
 }
 
-// macOS process scan (#1982 gate 3). `xeww` selects THIS user's processes,
-// appends their environment, and disables column truncation, so the marker the
-// runner injected into the test child is visible verbatim. Linux reads
-// /proc/<pid>/environ directly and never reaches this. spawnSync is deliberate:
-// the scan is one short read per file, and blocking the runner's own event loop
-// for it does not slow the test children (separate processes).
-function runPsWithEnvironment(): string | null {
-  const r = spawnSync("ps", ["xeww", "-o", "pid=,command="], {
-    encoding: "utf8",
-    maxBuffer: 64 * 1024 * 1024,
-    stdio: ["ignore", "pipe", "ignore"],
-  });
-  if (r.status !== 0 || typeof r.stdout !== "string") return null;
-  return r.stdout;
-}
-
-const processScanIo = defaultProcessScanIo(runPsWithEnvironment);
+// Real process-scan I/O for gate 3: /proc on Linux, `ps xeww` on macOS (both
+// live in lib/silent-success.ts so tests can drive them in-process).
+const processScanIo = defaultProcessScanIo();
 
 // Every gate helper reports the same shape: what to print, and whether this
 // file must flip to FAIL. `report` mode prints exactly what `strict` would fail
@@ -761,8 +747,17 @@ async function leakGate(rel: string, base: string, mode: GateMode): Promise<Gate
   const flip = mode === "strict" && isLeakBaselined(rel, silentSuccessBaseline) === undefined;
   // Reaping happens in EVERY mode: the owning file has finished, so nothing is
   // still using these processes, and leaving them behind is how a long run
-  // accumulates orphans (#1811).
-  const reaped = reapProcesses(leaked, process.pid, (pid) => process.kill(pid, "SIGKILL"));
+  // accumulates orphans (#1811). A fresh marker scan immediately before the
+  // kill re-confirms each pid still belongs to a marked process, so a pid that
+  // exited since detection (and could have been reused by an unrelated
+  // process) is never signalled. The residual detect-to-kill window is the
+  // microseconds between this scan and process.kill.
+  const confirmed = new Set(scanForMarkedProcesses(marker, processScanIo).map((p) => p.pid));
+  const reaped = reapProcesses(
+    leaked.filter((p) => confirmed.has(p.pid)),
+    process.pid,
+    (pid) => process.kill(pid, "SIGKILL"),
+  );
   return { lines: renderLeakLines(rel, leaked, reaped, flip), flip };
 }
 

@@ -28,6 +28,7 @@ import {
   type Backend,
   createTmuxBackend,
   main,
+  tmuxClientEnv,
 } from "../harness/tui-drive.ts";
 
 const DRIVER_SRC = readFileSync(
@@ -156,5 +157,24 @@ describe("tui-drive tmux backend runs on a private socket (developer-session saf
       args: ["s", true],
     });
     expect(calls).toContainEqual({ operation: "kill", args: ["s"] });
+  });
+});
+
+describe("tui-drive tmux clients never carry the per-file leak marker (#1982)", () => {
+  // The private tmux SERVER is daemonized by the first client and shared across
+  // the serial tui files by design; if that client's environment carried the
+  // runner-injected AMADEUS_TEST_NAME, the silent-success leak gate would flag
+  // and reap the shared server as a leak of whichever file started it.
+  test("tmuxClientEnv strips AMADEUS_TEST_NAME and keeps everything else", () => {
+    const env = tmuxClientEnv({ AMADEUS_TEST_NAME: "t1.test.ts", PATH: "/usr/bin", TERM: "xterm" });
+    expect(env.AMADEUS_TEST_NAME).toBeUndefined();
+    expect(env.PATH).toBe("/usr/bin");
+    expect(env.TERM).toBe("xterm");
+  });
+
+  test("the real tmux() chokepoint routes its spawn through tmuxClientEnv", () => {
+    // Source-level pin, same idiom as the -L socket guard above: the contract
+    // lives at one chokepoint and must not silently regress.
+    expect(DRIVER_SRC).toContain("env: tmuxClientEnv()");
   });
 });
