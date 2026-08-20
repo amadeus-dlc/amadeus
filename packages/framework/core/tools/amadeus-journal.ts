@@ -25,8 +25,8 @@
 import { createHash } from "node:crypto";
 
 // Bumped when a wire-incompatible change lands; readers accept <= current.
-// v1 is the switchover wire format still produced by the live writers
-// (amadeus-audit.ts / amadeus-state.ts); keep this constant at 1 for them.
+// v1 remains available for the backward converter and the atomic approval
+// recovery batch; live canonical audit paths use schema v2.
 export const JOURNAL_SCHEMA_VERSION = 1;
 
 // Schema v2 (FR-JRN-1): OTel-shaped records carried natively by the journal.
@@ -350,6 +350,8 @@ export function serializeJournalEntryV2(entry: JournalEntryV2): string {
 // Version-dispatching serializer for mixed-version record lists (merge
 // output, View normalization round-trips).
 export function serializeJournalRecord(record: JournalRecord): string {
+  // This is a codec dispatch, not a disk-writing call site. The deletion gate
+  // registers this v1 branch explicitly so a future writer cannot hide here.
   return isJournalEntryV2(record) ? serializeJournalEntryV2(record) : serializeJournalEntry(record);
 }
 

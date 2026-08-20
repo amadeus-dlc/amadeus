@@ -4,12 +4,18 @@ import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { exceedsMedianLatencyBudget } from "../lib/latency-median-budget-gate.ts";
 import { appendLifecycleAuditEntryUnlocked } from "../../packages/framework/core/tools/amadeus-audit.ts";
 import {
+  isJournalEntryV2,
+  journalRecordField,
+  readJournalRecords,
+} from "../../packages/framework/core/tools/amadeus-journal.ts";
+import {
   auditLockDir,
+  auditShardName,
   type IntentLifecycleAuditEvent,
   type LifecycleTransactionHooks,
   runIntentLifecycleTransactionLocked,
@@ -43,7 +49,7 @@ function scaffold(status: string, active = true): { root: string; intent: string
     }], null, 2)}\n`,
   );
   if (active) writeFileSync(join(intents, "active-intent"), `${intent}\n`);
-  const audit = join(auditDir, "fixture.jsonl");
+  const audit = join(auditDir, auditShardName(root));
   writeFileSync(audit, ledgerLine(1, "Human Turn", "HUMAN_TURN", "2026-07-23T10:00:00Z", intent));
   return { root, intent, audit };
 }
@@ -82,10 +88,25 @@ function ledgerLine(
 
 /** Parse a JSONL shard file into records ([] when absent). */
 function auditRecords(shardPath: string): AuditRecord[] {
-  return readFileSync(shardPath, "utf-8")
-    .split("\n")
-    .filter((line) => line.trim().length > 0)
-    .map((line) => JSON.parse(line) as AuditRecord);
+  const text = readFileSync(shardPath, "utf-8");
+  return readJournalRecords(text).map((record) => {
+    if (!isJournalEntryV2(record)) return record;
+    const fields = Object.fromEntries(
+      Object.entries(record.attributes)
+        .filter(([key]) => key !== "Event")
+        .map(([key, value]) => [key, typeof value === "string" ? value : JSON.stringify(value)]),
+    );
+    return {
+      schemaVersion: record.schemaVersion,
+      seq: record.seq,
+      cloneId: record.cloneId,
+      intentId: record.intentId,
+      timestamp: record.timestamp,
+      heading: record.eventName,
+      event: journalRecordField(record, "Event"),
+      fields,
+    };
+  });
 }
 
 function eventCount(shardPath: string, event: string): number {
@@ -139,6 +160,38 @@ function appendLifecycle(
 }
 
 describe("intent lifecycle transaction CLI", () => {
+  test("allows registered lifecycle events on a completed intent in-process", () => {
+    const fixture = scaffold("complete");
+    const result = appendLifecycleAuditEntryUnlocked(
+      "INTENT_ARCHIVED",
+      { "User Input": "archive requested" },
+      fixture.root,
+      fixture.intent,
+      "default",
+      basename(fixture.audit),
+    );
+
+    expect(result.appended).toBe(true);
+    expect(result.event).toBe("INTENT_ARCHIVED");
+    expect(eventCount(fixture.audit, "INTENT_ARCHIVED")).toBe(1);
+  });
+
+  test("returns the complete-seal outcome for an invalid runtime lifecycle event", () => {
+    const fixture = scaffold("complete");
+    const eventType = "NOT_REGISTERED" as never;
+    const result = appendLifecycleAuditEntryUnlocked(
+      eventType,
+      {},
+      fixture.root,
+      fixture.intent,
+      "default",
+      basename(fixture.audit),
+    );
+
+    expect(result).toMatchObject({ appended: false, reason: "intent-complete", event: eventType });
+    expect(eventCount(fixture.audit, "NOT_REGISTERED")).toBe(0);
+  });
+
   test("rejects a lifecycle audit shard outside the audit directory", () => {
     const fixture = scaffold("in-flight");
     expect(() => appendLifecycleAuditEntryUnlocked(
@@ -269,7 +322,8 @@ describe("intent lifecycle transaction CLI", () => {
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("requires an unconsumed HUMAN_TURN");
     expect(readFileSync(registryPath, "utf-8")).toBe(beforeRegistry);
-    expect(readFileSync(fixture.audit, "utf-8")).toBe(beforeAudit);
+    expect(readFileSync(fixture.audit, "utf-8")).not.toBe(beforeAudit);
+    expect(eventCount(fixture.audit, "INTENT_ARCHIVED")).toBe(0);
   });
 
   // #2585. Second-granular audit timestamps make two HUMAN_TURN blocks in one
@@ -376,7 +430,7 @@ describe("intent lifecycle transaction CLI", () => {
         fromStatus: "in-flight",
         toStatus: "archived",
         humanTurn: {
-          shard: "fixture.jsonl",
+          shard: basename(fixture.audit),
           timestamp: "2026-07-23T10:00:00Z",
         },
         userInput: "archive requested",
@@ -423,7 +477,7 @@ describe("intent lifecycle transaction CLI", () => {
       mkdirSync(join(record, "audit"), { recursive: true });
       writeFileSync(join(record, "amadeus-state.md"), "# AI-DLC State Tracking\n");
       writeFileSync(
-        join(record, "audit", `fixture-${index}.jsonl`),
+        join(record, "audit", auditShardName(root)),
         ledgerLine(
           1,
           "Human Turn",
@@ -457,7 +511,7 @@ describe("intent lifecycle transaction CLI", () => {
     for (let index = 0; index < 8; index++) {
       expect(
         eventCount(
-          join(intentsDir, `260723-intent-${index}`, "audit", `fixture-${index}.jsonl`),
+          join(intentsDir, `260723-intent-${index}`, "audit", auditShardName(root)),
           "INTENT_ARCHIVED",
         ),
       ).toBe(1);

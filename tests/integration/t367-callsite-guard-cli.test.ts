@@ -36,13 +36,15 @@ afterEach(() => {
 });
 
 describe("scanRepository — the live corpus", () => {
-  // The corpus is empty now: the migration finished and the legacy writer is
-  // deleted (FR-MIG-5 / U8). That makes the detector the only thing standing
-  // between "no legacy call sites left" and "the scanner stopped matching" —
-  // the two look identical from the census alone. So emptiness is asserted
-  // together with the detector's own non-vacuity, against planted source.
-  test("the live corpus is empty, and the detector that says so is not vacuous", () => {
-    expect(scanRepository()).toEqual([]);
+  // The migration leaves three explicit v1 compatibility registrations. The
+  // census is asserted together with the detector's own non-vacuity, against
+  // planted source, so the residual report cannot silently become vacuous.
+  test("the live corpus matches its justified residual census, and detection is not vacuous", () => {
+    expect(buildCensus(scanRepository())).toEqual({
+      "packages/framework/core/tools/amadeus-journal-convert.ts": { serializeJournalEntry: 1 },
+      "packages/framework/core/tools/amadeus-journal.ts": { serializeJournalEntry: 1 },
+      "packages/framework/core/tools/amadeus-state.ts": { serializeJournalEntry: 1 },
+    });
 
     const planted = detectCallsites(
       "packages/framework/core/tools/planted.ts",
@@ -162,9 +164,15 @@ describe("main — argument handling", () => {
     expect(main(["--check", "--report", path])).toBe(0);
 
     const parsed = JSON.parse(readFileSync(path, "utf-8"));
-    // Zero is the terminal state, not an absent measurement — the report is
-    // still written, and its shape is still the report's.
-    expect(parsed.total).toBe(0);
+    // Three explicit v1 compatibility registrations remain in the live
+    // corpus: the converter, the approval-recovery batch, and the codec
+    // dispatch. The report must preserve that legitimate residual shape.
+    expect(parsed.total).toBe(3);
+    expect(parsed.byFile).toEqual({
+      "packages/framework/core/tools/amadeus-journal-convert.ts": 1,
+      "packages/framework/core/tools/amadeus-journal.ts": 1,
+      "packages/framework/core/tools/amadeus-state.ts": 1,
+    });
     expect(typeof parsed.generatedAt).toBe("string");
   });
 

@@ -1,16 +1,15 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { appendFileSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import {
-  JOURNAL_SCHEMA_VERSION,
+  JOURNAL_SCHEMA_VERSION_V2,
   type JournalEntryV2,
-  serializeJournalEntry,
   serializeJournalEntryV2,
   splitJournalLines,
 } from "./amadeus-journal.ts";
 import {
-  acquireAuditLock,
   activeIntent,
+  activeSpace,
   AuditLockAcquireError,
   auditBlockField,
   auditCloneId,
@@ -21,11 +20,9 @@ import {
   isoTimestamp,
   parseFieldArgs,
   relativeRecordDir,
-  releaseAuditLock,
   resolveProjectDir,
   validateBoltSlug,
   withAuditLock,
-  writeFileAtomic,
   worktreeAuditFilePath,
   worktreePath,
 } from "./amadeus-lib.ts";
@@ -458,16 +455,30 @@ export type JournalAppendOutcome =
   | { readonly appended: true }
   | { readonly appended: false; readonly reason: "intent-complete" };
 
+export type JournalAppendOptions = {
+  // The legacy append-raw command historically bypassed the post-complete
+  // seal. Preserve that CLI contract while it moves to the v2 row writer.
+  readonly allowSealed?: boolean;
+};
+
 // A sealed legacy Intent needs exactly one post-proposal HUMAN_TURN so a human
 // can authorize reconstruction. The exception closes as soon as
 // approve-legacy-migration creates goal-lineage.json; ordinary CLI minting is
 // still rejected because this predicate accepts only the journal event name.
-function allowsSealedLegacyHumanTurn(
+function allowsSealedAuditEvent(
   eventName: string,
   projectDir: string,
   intent?: string,
   space?: string,
 ): boolean {
+  if (
+    eventName === "amadeus.intent.archived" ||
+    eventName === "amadeus.intent.unarchived" ||
+    eventName === "amadeus.goal.change.proposed" ||
+    eventName === "amadeus.goal.legacy.migrated"
+  ) {
+    return true;
+  }
   if (eventName !== "amadeus.human.turn") return false;
   const shardDir = auditShardDir(projectDir, intent, space);
   if (shardDir === null) return false;
@@ -491,7 +502,8 @@ export function appendJournalRecordV2(
   record: Omit<JournalEntryV2, "seq">,
   projectDir: string,
   intent?: string,
-  space?: string
+  space?: string,
+  options?: JournalAppendOptions,
 ): JournalAppendOutcome {
   return withAuditLock(
     projectDir,
@@ -501,7 +513,8 @@ export function appendJournalRecordV2(
       // on the definite "complete" only; "unknown" falls through to the append.
       if (
         intentStatusForAudit(projectDir, intent, space) === "complete" &&
-        !allowsSealedLegacyHumanTurn(record.eventName, projectDir, intent, space)
+        !options?.allowSealed &&
+        !allowsSealedAuditEvent(record.eventName, projectDir, intent, space)
       ) {
         const targetDir = activeIntent(projectDir, space, intent) ?? "(unresolved)";
         process.stderr.write(
@@ -529,10 +542,20 @@ function escapeFieldValues(fields: Record<string, string>): Record<string, strin
   return escaped;
 }
 
+const LIFECYCLE_OTEL_EVENT_NAMES = {
+  INTENT_ARCHIVED: "amadeus.intent.archived",
+  INTENT_UNARCHIVED: "amadeus.intent.unarchived",
+  GOAL_CHANGE_PROPOSED: "amadeus.goal.change.proposed",
+  LEGACY_GOAL_MIGRATED: "amadeus.goal.legacy.migrated",
+} as const;
+
 // Trusted lifecycle-only writer. Lifecycle transitions may start from a
-// completed intent, so this deliberately bypasses the general post-complete
-// append seal while retaining the closed event vocabulary. The caller owns the
-// workspace lock and has already reserved a HUMAN_TURN in `shardName`.
+// completed intent, so the canonical append path explicitly permits these
+// registered lifecycle events while retaining the closed event vocabulary. The
+// caller owns the workspace lock and has already reserved a HUMAN_TURN in
+// `shardName`. This uses the same locked v2 append seam as the OTel audit
+// exporter, with the registry event name and legacy Event projection carried
+// in the row; it keeps the lifecycle API's caller-supplied fields intact.
 export function appendLifecycleAuditEntryUnlocked(
   eventType:
     | "INTENT_ARCHIVED"
@@ -551,20 +574,31 @@ export function appendLifecycleAuditEntryUnlocked(
   const shardDir = auditShardDir(projectDir, intent, space);
   if (shardDir === null) throw new Error(`Cannot resolve audit directory for intent ${intent}`);
   mkdirSync(shardDir, { recursive: true });
-  const path = join(shardDir, shardName);
-  const previous = existsSync(path) ? readFileSync(path, "utf-8") : "";
   const ts = isoTimestamp();
-  const line = serializeJournalEntry({
-    schemaVersion: JOURNAL_SCHEMA_VERSION,
-    seq: splitJournalLines(previous).length + 1,
-    cloneId: auditCloneId(projectDir),
-    intentId: intent,
-    timestamp: ts,
-    heading: EVENT_HEADINGS[eventType] ?? eventType,
-    event: eventType,
-    fields: escapeFieldValues(fields),
-  });
-  writeFileAtomic(path, previous + line);
+  const escapedFields = escapeFieldValues(fields);
+  const result = appendJournalRecordV2(
+    {
+      schemaVersion: JOURNAL_SCHEMA_VERSION_V2,
+      eventId: randomUUID(),
+      timestamp: ts,
+      eventName: LIFECYCLE_OTEL_EVENT_NAMES[eventType],
+      attributes: { ...escapedFields, Event: eventType },
+      intentId: intent,
+      space,
+      cloneId: auditCloneId(projectDir),
+      traceId: null,
+      spanId: null,
+      traceFlags: 0,
+      idempotencyKey: randomUUID(),
+      canonical: true,
+    },
+    projectDir,
+    intent,
+    space,
+  );
+  if (result.appended === false) {
+    return { appended: false, reason: result.reason, event: eventType, timestamp: ts };
+  }
   return { appended: true, event: eventType, timestamp: ts };
 }
 
@@ -606,31 +640,42 @@ export function handleAppendRaw(
   const rejection = rawPresenceMintRejection(heading, body.replace(/\\n/g, "\n"));
   if (rejection) throw new Error(rejection);
   const ts = isoTimestamp();
-
-  if (!acquireAuditLock(projectDir)) {
-    jsonError("Failed to acquire audit lock after retries");
-  }
-
+  const space = activeSpace(projectDir);
+  const intent = auditIntentId(projectDir, undefined, space);
+  const expandedBody = unescapeAuditBody(body);
+  // append-raw has no registered canonical event or v2 rawBody envelope. Keep
+  // its free-form payload as typed v2 attributes while sharing the canonical
+  // locked writer; this removes the old v1 serializer without inventing a
+  // misleading registry event.
   try {
-    const path = ensureAuditFile(projectDir);
-
-    // Interpret literal \n sequences in the body as actual newlines
-    const expandedBody = unescapeAuditBody(body);
-
-    const line = serializeJournalEntry({
-      schemaVersion: JOURNAL_SCHEMA_VERSION,
-      seq: nextShardSeq(path),
-      cloneId: auditCloneId(projectDir),
-      intentId: auditIntentId(projectDir),
-      timestamp: ts,
-      heading,
-      event: null,
-      rawBody: expandedBody,
-    });
-
-    appendFileSync(path, line, "utf-8");
-  } finally {
-    releaseAuditLock(projectDir);
+    // allowSealed preserves append-raw's legacy contract, so this call cannot
+    // return the post-complete suppression arm.
+    appendJournalRecordV2(
+      {
+        schemaVersion: JOURNAL_SCHEMA_VERSION_V2,
+        eventId: randomUUID(),
+        timestamp: ts,
+        eventName: "amadeus.audit.raw",
+        attributes: { Heading: heading, "Raw Body": expandedBody },
+        intentId: intent,
+        space,
+        cloneId: auditCloneId(projectDir),
+        traceId: null,
+        spanId: null,
+        traceFlags: 0,
+        idempotencyKey: randomUUID(),
+        canonical: true,
+      },
+      projectDir,
+      undefined,
+      space,
+      { allowSealed: true },
+    );
+  } catch (cause) {
+    if (cause instanceof AuditLockAcquireError) {
+      jsonError("Failed to acquire audit lock after retries");
+    }
+    throw cause;
   }
 
   jsonSuccess({ appended: true, heading, timestamp: ts });

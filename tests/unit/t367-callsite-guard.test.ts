@@ -2,8 +2,8 @@
 //
 // U7 (callsite-migration) — the call-site guard's pure core (VER-4, BR-7/8/12).
 //
-// The guard detects direct `appendAuditEntry` / `appendAuditEntryUnlocked`
-// calls and legacy `observe()` / `observeSubprocess()` usage, compares the
+// The guard detects direct legacy writer calls, v1 `serializeJournalEntry`
+// calls, and legacy `observe()` / `observeSubprocess()` usage, compares the
 // census against a committed allowlist, and admits SHRINKAGE ONLY: a new site,
 // or one more site in a file already listed, is a CI rejection.
 //
@@ -18,6 +18,7 @@ import {
   buildCensus,
   detectCallsites,
   diffAgainstAllowlist,
+  runCheck,
   totalSites,
 } from "../callsite-guard.ts";
 
@@ -61,6 +62,12 @@ describe("detectCallsites — what counts as a call site", () => {
 
   test("a bare identifier without a call is not a call site", () => {
     expect(detectCallsites("core/x.ts", "const fn = appendAuditEntry;")).toEqual([]);
+  });
+
+  test("detects v1 serializer calls so production writers cannot hide from the gate", () => {
+    expect(detectCallsites("core/x.ts", "serializeJournalEntry(entry);")).toEqual([
+      { file: "core/x.ts", line: 1, symbol: "serializeJournalEntry" },
+    ]);
   });
 
   // Regression (PR #1733 Bugbot, Medium): one `RegExp.test` per line counted a
@@ -146,5 +153,11 @@ describe("diffAgainstAllowlist — the shrink-only ratchet (BR-8, BR-12)", () =>
 
     expect(verdict.kind).toBe("violations");
     expect(verdict.kind === "violations" && verdict.added.join(" ")).toContain("observe");
+  });
+
+  test("the executable gate rejects a deliberately planted serializer call site", () => {
+    expect(runCheck({
+      census: { "core/planted.ts": { serializeJournalEntry: 1 } },
+    })).toBe(1);
   });
 });

@@ -185,7 +185,10 @@ export function convertShardText(
     ...(block.event === null ? { rawBody: block.rawBody ?? "" } : { fields: block.fields ?? {} }),
     ...(block.opaque === true ? { opaque: true as const } : {}),
   }));
-  return { entries, jsonl: entries.map(serializeJournalEntry).join("") };
+  // Intentional v1 output: this command is the backward conversion bridge and
+  // must produce lossless legacy JSONL for consumers that have not migrated.
+  // The deletion gate registers this compatibility call site explicitly.
+  return { entries, jsonl: entries.map((entry) => serializeJournalEntry(entry)).join("") };
 }
 
 

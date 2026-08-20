@@ -328,13 +328,13 @@ describe("amadeus-audit CLI shell (Bun.spawnSync env seam)", () => {
       const raw = readAllAuditShards(proj)
         .split("\n")
         .filter((l) => l.trim() !== "")
-        .map((l) => JSON.parse(l) as { heading: string; event: string | null; rawBody?: string });
-      // handleAppendRaw lands an untyped record: event null, the custom heading
-      // on the envelope, and the body preserved verbatim.
+        .map((l) => JSON.parse(l) as { eventName: string; attributes?: { Heading?: string; "Raw Body"?: string } });
+      // handleAppendRaw lands a v2 compatibility record with the custom
+      // heading and body preserved as typed attributes.
       expect(raw).toHaveLength(1);
-      expect(raw[0].heading).toBe("Custom Event");
-      expect(raw[0].event).toBeNull();
-      expect(raw[0].rawBody).toBe("**Event**: CUSTOM\n**Details**: Something happened");
+      expect(raw[0].eventName).toBe("amadeus.audit.raw");
+      expect(raw[0].attributes?.Heading).toBe("Custom Event");
+      expect(raw[0].attributes?.["Raw Body"]).toBe("**Event**: CUSTOM\n**Details**: Something happened");
     });
   });
 });
