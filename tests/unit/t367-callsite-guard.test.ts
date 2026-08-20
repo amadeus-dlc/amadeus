@@ -14,12 +14,10 @@
 // monotone-decrease property BR-12 requires.
 
 import { describe, expect, test } from "bun:test";
-import { rmSync, writeFileSync } from "node:fs";
 import {
   buildCensus,
   detectCallsites,
   diffAgainstAllowlist,
-  renderAllowlist,
   runCheck,
   totalSites,
 } from "../callsite-guard.ts";
@@ -158,15 +156,8 @@ describe("diffAgainstAllowlist — the shrink-only ratchet (BR-8, BR-12)", () =>
   });
 
   test("the executable gate rejects a deliberately planted serializer call site", () => {
-    const allowlistPath = `${import.meta.dir}/.tmp-t367-allowlist-${crypto.randomUUID()}.json`;
-    try {
-      writeFileSync(allowlistPath, renderAllowlist({}), "utf-8");
-      expect(runCheck({
-        allowlistPath,
-        census: { "core/planted.ts": { serializeJournalEntry: 1 } },
-      })).toBe(1);
-    } finally {
-      rmSync(allowlistPath, { force: true });
-    }
+    expect(runCheck({
+      census: { "core/planted.ts": { serializeJournalEntry: 1 } },
+    })).toBe(1);
   });
 });
