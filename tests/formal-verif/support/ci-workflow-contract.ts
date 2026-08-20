@@ -29,7 +29,7 @@ interface Workflow {
 
 export const U4_DISPATCH_LINE = "  workflow_dispatch: {}\n";
 export const U4_EMPTY_BASE_BRANCH = `          if [[ -z "\${BASE_SHA}" ]]; then
-            printf 'full=false\\ndrift=false\\ncoverage=false\\n' >> "\${GITHUB_OUTPUT}"
+            printf 'full=false\\ndrift=false\\ncoverage=false\\nrisk=false\\n' >> "\${GITHUB_OUTPUT}"
             exit 0
           fi
 
@@ -100,7 +100,9 @@ function inspectFormalJob(
   jobs: Readonly<Record<string, WorkflowJob>>,
 ): string[] {
   const findings: string[] = [];
-  if (formal.if !== "github.event_name == 'workflow_dispatch'") {
+  if (
+    formal.if !== "github.event_name == 'workflow_dispatch' || ((github.event_name == 'pull_request' || github.event_name == 'merge_group') && needs.changes.outputs.risk == 'true')"
+  ) {
     findings.push("formal job event condition drifted");
   }
   if (
@@ -111,13 +113,15 @@ function inspectFormalJob(
   ) {
     findings.push("formal job runtime or permissions drifted");
   }
-  if (formal.needs !== undefined) findings.push("formal job must remain independent");
+  if (formal.needs !== "changes") findings.push("formal job must depend on changes");
   const ciSuccessNeeds = jobs["ci-success"]?.needs;
   if (
-    (Array.isArray(ciSuccessNeeds) && ciSuccessNeeds.includes("formal-model-check"))
-    || ciSuccessNeeds === "formal-model-check"
+    !(
+      (Array.isArray(ciSuccessNeeds) && ciSuccessNeeds.includes("formal-model-check"))
+      || ciSuccessNeeds === "formal-model-check"
+    )
   ) {
-    findings.push("ci-success must not depend on formal job");
+    findings.push("ci-success must depend on formal job");
   }
   return [...findings, ...inspectFormalSteps(formal)];
 }

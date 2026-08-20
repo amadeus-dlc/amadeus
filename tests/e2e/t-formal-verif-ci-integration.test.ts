@@ -92,7 +92,7 @@ describe("U4 CI event behavior", () => {
     const fixture = repository();
     expect(executeChanges(fixture, "workflow_dispatch", "")).toEqual({
       status: 0,
-      output: "full=false\ndrift=false\ncoverage=false\n",
+      output: "full=false\ndrift=false\ncoverage=false\nrisk=false\n",
       stderr: "",
     });
   });
