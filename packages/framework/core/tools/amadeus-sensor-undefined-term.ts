@@ -58,7 +58,7 @@ function isDefined(candidate: string, defined: ReadonlySet<string>): boolean {
 
 // The same row shape the canonical glossary and every project working
 // glossary use: `| **Term** | Definition |` (optionally with a trailing
-// `| Source |` cell). Mirrors scripts/glossary-projection.ts's ROW_RE.
+// `| Source |` cell).
 const TABLE_ROW_RE = /^\|\s*\*\*(.+?)\*\*\s*\|/u;
 
 function extractTableTerms(body: string): Set<string> {
