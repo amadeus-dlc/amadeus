@@ -127,4 +127,35 @@ describe("excludeForeignLcovRecords — #2315 out-of-repo SF exclusion", () => {
     expect(warning).toContain(FOREIGN);
     expect(warning).toContain(other);
   });
+
+  test("keeps a record that has no SF line instead of dropping it silently", () => {
+    const noSource = ["TN:", "DA:1,1", "end_of_record"].join("\n");
+    const mixed = [noSource, record(IN_REPO, 10, 8), record(FOREIGN, 1000, 50)].join("\n");
+    const { lcov, excluded } = excludeForeignLcovRecords(mixed, CONTEXT);
+
+    expect(excluded).toEqual([FOREIGN]);
+    expect(lcov).toContain("TN:");
+    expect(lcov).toContain("DA:1,1");
+    expect(lcov).toContain(`SF:${IN_REPO}`);
+    expect(lcov).not.toContain(FOREIGN);
+  });
+
+  test("an all-foreign corpus yields empty lcov and names every path", () => {
+    const other = "/tmp/composed-host/tools/amadeus-lib.ts";
+    const only = [record(FOREIGN, 1000, 50), record(other, 2, 1)].join("\n");
+    const { lcov, excluded } = excludeForeignLcovRecords(only, CONTEXT);
+
+    expect(lcov).toBe("");
+    expect(excluded).toEqual([FOREIGN, other]);
+    expect(formatForeignCoverageExclusionWarning(excluded)).toContain(
+      "WARNING: excluded 2 out-of-repo coverage source",
+    );
+  });
+
+  test("empty input yields empty lcov and no warning", () => {
+    const { lcov, excluded } = excludeForeignLcovRecords("", CONTEXT);
+    expect(lcov).toBe("");
+    expect(excluded).toEqual([]);
+    expect(formatForeignCoverageExclusionWarning(excluded)).toBeNull();
+  });
 });
