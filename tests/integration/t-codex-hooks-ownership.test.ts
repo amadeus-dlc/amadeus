@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, spyOn, test } from "bun:test";
 import * as nodeFs from "node:fs";
 import {
-  chmodSync,
   copyFileSync,
   existsSync,
   mkdirSync,
@@ -24,7 +23,6 @@ import {
 } from "../../packages/framework/harness/codex/tools/amadeus-codex-hooks.ts";
 
 const ROOT = resolve(import.meta.dir, "../..");
-const RUN_CODEX = join(ROOT, "scripts", "run-codex.sh");
 const AMADEUS_UTILITY = join(
   ROOT,
   "packages/framework/core/tools/amadeus-utility.ts",
@@ -231,39 +229,6 @@ describe("Codex hooks ownership", () => {
     for (const tracked of git(projectDir, "ls-files").split("\n").filter(Boolean)) {
       expect(readFileSync(join(projectDir, tracked), "utf8")).not.toContain(projectDir);
     }
-  });
-
-  test("run-codex activates hooks before the Codex command starts", () => {
-    const projectDir = mkdtempSync(join(tmpdir(), "amadeus-run-codex-"));
-    const home = mkdtempSync(join(tmpdir(), "amadeus-run-codex-home-"));
-    tempDirs.push(projectDir, home);
-    copyHooksHelper(projectDir);
-    copyFileSync(
-      join(ROOT, ".codex", "hooks.json.example"),
-      join(projectDir, ".codex", "hooks.json.example"),
-    );
-    const binDir = join(home, ".agents", "bin");
-    mkdirSync(binDir, { recursive: true });
-    const shim = join(binDir, "codex");
-    writeFileSync(
-      shim,
-      '#!/usr/bin/env bash\nset -eu\ntest -f "$PWD/.codex/hooks.json" || { echo "active hooks missing before command" >&2; exit 42; }\nprintf "codex-started\\n"\n',
-    );
-    chmodSync(shim, 0o755);
-
-    const launched = Bun.spawnSync({
-      cmd: ["bash", RUN_CODEX],
-      cwd: projectDir,
-      env: { ...process.env, HOME: home },
-      stderr: "pipe",
-      stdout: "pipe",
-    });
-
-    expect(launched.exitCode, launched.stderr.toString()).toBe(0);
-    expect(launched.stdout.toString()).toContain("codex-started");
-    expect(readFileSync(join(projectDir, ".codex", "hooks.json"))).toEqual(
-      readFileSync(join(projectDir, ".codex", "hooks.json.example")),
-    );
   });
 
   test("activation preserves a valid active file and rejects a stale one without overwriting", () => {

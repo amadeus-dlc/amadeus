@@ -15,5 +15,4 @@
 # Run `mise trust` once in this repository to activate it.
 [tools]
 java = "temurin-26.0.1+8"
-"npm:@openai/codex" = "0.146.0"
 "npm:takt" = "0.58.0"

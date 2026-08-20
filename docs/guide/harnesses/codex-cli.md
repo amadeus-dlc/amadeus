@@ -62,9 +62,8 @@ tree is **generated** as ignored local output from `packages/framework/core/` + 
    that Codex integrations such as agmsg may update. Activation copies the
    canonical bytes only when the active file is absent. It preserves an
    existing active file byte-for-byte and stops if that file no longer
-   satisfies the canonical Amadeus hook contract. In the Amadeus self
-   repository, `./scripts/run-codex.sh` invokes the
-   same activation before launching Codex or applying an agmsg writer.
+   satisfies the canonical Amadeus hook contract. Run this activation before
+   launching Codex or applying an agmsg writer.
 
 3. Trust the project. Codex trust is **two layers**, and both must be
    pre-seeded in `$CODEX_HOME/config.toml`:
@@ -342,8 +341,8 @@ the external agmsg/Codex push bridge starts and survives a real restart. When
 validating a monitor-bridge change, complete this opt-in check before calling
 the issue finished:
 
-1. Stop every manual `inbox.sh` poller, then launch a new Codex session from
-   `./scripts/run-codex.sh`.
+1. Stop every manual `inbox.sh` poller, activate the hooks, then launch a new
+   Codex session.
 2. Send the first turn and confirm that delivery mode is `monitor` and the
    bridge reports itself alive.
 3. Have a human stop and restart the session, then send one turn in the
