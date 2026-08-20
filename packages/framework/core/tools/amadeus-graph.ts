@@ -1692,10 +1692,6 @@ export function selectNextUnitForStage(
   const step = nextConstructionStep({ iteration, covered }, { units, stages });
   if (step.kind === "run" && step.stage === stage) return step.unit;
 
-  // This helper is called while emitting one concrete stage. A unit-major
-  // matrix may point at a later stage for the same unit; that cell cannot be
-  // emitted by the current stage, so continue with the first uncovered unit in
-  // this stage instead of reusing a covered unit from the global step.
   for (const u of units) {
     if (!isCovered(u, stage)) return u;
   }
