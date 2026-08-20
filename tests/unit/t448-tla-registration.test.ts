@@ -272,7 +272,7 @@ describe("draft admission and map composition (BR-U4-05/12/17)", () => {
     expect(parsed.value.name).toBe("Sample");
   });
 
-  test("composes the draft into the map, sorted by name, and keeps the existing entry byte for byte", () => {
+  test("author-new composes the draft into the map, sorted by name, and keeps the existing entry byte for byte", () => {
     const snapshot = parseModelMapSnapshot(EXISTING_MAP);
     expect(snapshot.ok).toBe(true);
     if (!snapshot.ok) return;
@@ -280,9 +280,10 @@ describe("draft admission and map composition (BR-U4-05/12/17)", () => {
       evidenceBundle: { digest: BUNDLE_DIGEST },
       authoringProvenance: AUTHORING_PROVENANCE,
     }));
+    expect(draft.ok).toBe(true);
     if (!draft.ok) return;
 
-    const composed = composeRegisteredMap(snapshot.value, draft.value);
+    const composed = composeRegisteredMap(snapshot.value, draft.value, "author-new");
     expect(composed.ok).toBe(true);
     if (!composed.ok) return;
     const document = JSON.parse(composed.value);
@@ -291,16 +292,21 @@ describe("draft admission and map composition (BR-U4-05/12/17)", () => {
     expect(composed.value.endsWith("\n")).toBe(true);
   });
 
-  test("refuses a draft that duplicates a registered name (validator on the whole map)", () => {
+  // Scoped to the author-new arm: a duplicate name is what append means there.
+  // The revise-model arm reaches the same name by replacement instead
+  // (FR-REG-4, route-dependent composition below).
+  test("author-new refuses a draft that duplicates a registered name (validator on the whole map)", () => {
     const snapshot = parseModelMapSnapshot(EXISTING_MAP);
+    expect(snapshot.ok).toBe(true);
     if (!snapshot.ok) return;
     const draft = parseEntryDraft(modelEntry("Mirror", {
       evidenceBundle: { digest: BUNDLE_DIGEST },
       authoringProvenance: AUTHORING_PROVENANCE,
     }));
+    expect(draft.ok).toBe(true);
     if (!draft.ok) return;
 
-    const composed = composeRegisteredMap(snapshot.value, draft.value);
+    const composed = composeRegisteredMap(snapshot.value, draft.value, "author-new");
     expect(composed.ok).toBe(false);
     if (composed.ok) return;
     expect(composed.error).toMatchObject({ kind: "validator-rejected" });
@@ -309,5 +315,68 @@ describe("draft admission and map composition (BR-U4-05/12/17)", () => {
   test("refuses a snapshot the existing validator rejects", () => {
     expect(parseModelMapSnapshot('{"schemaVersion":3,"models":[]}').ok).toBe(false);
     expect(parseModelMapSnapshot("not json").ok).toBe(false);
+  });
+});
+
+// The revise-model arm (#2289 / FR-REG-1..3). Before the route reached the
+// composer, an absent-name revise draft was appended and accepted — the
+// fail-open XR-260820-2289 F1 names. The three faces below pin the replacement,
+// the loud refusal that closes that fail-open, and the author-new arm's
+// unchanged duplicate-name verdict.
+const REVISED_MIRROR = {
+  ...modelEntry("Mirror"),
+  evidenceBundle: { digest: BUNDLE_DIGEST },
+  authoringProvenance: AUTHORING_PROVENANCE,
+};
+
+const TWO_ENTRY_MAP = `${JSON.stringify(
+  { schemaVersion: 2, models: [modelEntry("Election"), modelEntry("Mirror")] },
+  null,
+  2,
+)}\n`;
+
+function admittedDraft(value: Record<string, unknown>) {
+  const draft = parseEntryDraft(value);
+  expect(draft.ok).toBe(true);
+  if (!draft.ok) throw new Error(`expected the draft to be admitted: ${draft.error.kind}`);
+  return draft.value;
+}
+
+function admittedSnapshot(bytes: string) {
+  const snapshot = parseModelMapSnapshot(bytes);
+  expect(snapshot.ok).toBe(true);
+  if (!snapshot.ok) throw new Error(`expected the snapshot to parse: ${snapshot.error.kind}`);
+  return snapshot.value;
+}
+
+describe("route-dependent composition (FR-REG-1..3)", () => {
+  test("revise-model replaces the entry of the same name and leaves the others byte for byte", () => {
+    const snapshot = admittedSnapshot(TWO_ENTRY_MAP);
+    const draft = admittedDraft(REVISED_MIRROR);
+
+    const composed = composeRegisteredMap(snapshot, draft, "revise-model");
+    expect(composed.ok).toBe(true);
+    if (!composed.ok) throw new Error(`expected the revision to compose: ${composed.error.kind}`);
+    const document = JSON.parse(composed.value);
+    expect(document.models.map((model: { name: string }) => model.name)).toEqual(["Election", "Mirror"]);
+    expect(document.models[1]).toEqual(REVISED_MIRROR);
+    // The draft's own provenance is what the revised entry carries
+    // (FR-REG-3, last writer wins).
+    expect(document.models[1].authoringProvenance).toEqual(AUTHORING_PROVENANCE);
+    expect(JSON.stringify(document.models[0], null, 2)).toEqual(JSON.stringify(modelEntry("Election"), null, 2));
+    expect(composed.value.endsWith("\n")).toBe(true);
+  });
+
+  test("revise-model refuses a draft naming no registered entry instead of appending it (FR-REG-2)", () => {
+    const snapshot = admittedSnapshot(EXISTING_MAP);
+    const draft = admittedDraft(modelEntry("Absent", {
+      evidenceBundle: { digest: BUNDLE_DIGEST },
+      authoringProvenance: AUTHORING_PROVENANCE,
+    }));
+
+    const composed = composeRegisteredMap(snapshot, draft, "revise-model");
+    expect(composed.ok).toBe(false);
+    if (composed.ok) throw new Error("expected the absent revision target to be refused");
+    expect(composed.error).toEqual({ kind: "revise-target-missing", name: "Absent" });
   });
 });
