@@ -98,6 +98,36 @@ describe("core model-map parser rejection branches", () => {
       .toMatchObject({ ok: false, error: { code: "MODEL_MAP_INVALID" } });
   });
 
+  // #2929 FR-BND-1: the boundary is the general plugin tool shape
+  // `plugins/<kebab>/tools/<kebab>.ts`, not one hardcoded plugin directory.
+  test.each([
+    "plugins/github-pr-convergence/tools/pr-convergence-cli.ts",
+    "plugins/github-pr-convergence/tools/amadeus-sensor-pr-convergence-report-format.ts",
+    "plugins/formal-model-check/tools/tla-model-loader-internal.ts",
+  ])("accepts the governed plugin implementation path %p", (implPath) => {
+    expect(parseTlaModelMap(bytes(wrap({ entries: [entry(implPath)] })))).toMatchObject({ ok: true });
+  });
+
+  // The boundary stays narrow in every other direction: a non-`tools`
+  // directory, a non-kebab plugin or file segment, and a nested tools path all
+  // stay outside it.
+  test.each([
+    "plugins/github-pr-convergence/lib/pr-convergence-cli.ts",
+    "plugins/GitHubPrConvergence/tools/pr-convergence-cli.ts",
+    "plugins/github-pr-convergence/tools/prConvergenceCli.ts",
+    "plugins/github--pr-convergence/tools/pr-convergence-cli.ts",
+    "plugins/github-pr-convergence/tools/nested/pr-convergence-cli.ts",
+    "plugins/github-pr-convergence/tools/pr-convergence-cli.js",
+  ])("rejects the near-miss plugin implementation path %p", (implPath) => {
+    expect(parseTlaModelMap(bytes(wrap({ entries: [entry(implPath)] }))))
+      .toMatchObject({ ok: false, error: { code: "MODEL_MAP_INVALID" } });
+  });
+
+  test("still rejects a core tools path whose basename breaks the amadeus- prefix", () => {
+    expect(parseTlaModelMap(bytes(wrap({ entries: [entry("packages/framework/core/tools/election.ts")] }))))
+      .toMatchObject({ ok: false, error: { code: "MODEL_MAP_INVALID" } });
+  });
+
   test("rejects an entry sha256 that is not a lowercase SHA-256 value", () => {
     expect(parseTlaModelMap(bytes(wrap({ entries: [entry(undefined, "g".repeat(64))] }))))
       .toMatchObject({ ok: false, error: { code: "MODEL_MAP_INVALID" } });

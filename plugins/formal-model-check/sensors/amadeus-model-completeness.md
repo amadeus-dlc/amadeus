@@ -5,7 +5,7 @@ command: bun {{HARNESS_DIR}}/plugins/formal-model-check/tools/amadeus-sensor-mod
 default_severity: advisory
 description: Detects drift between each registered TLA model and its canonical implementation files
 category: formal-verification
-matches: "**/{amadeus/spaces/*/specs/tla/**,packages/framework/core/tools/amadeus-election*.ts,packages/framework/core/tools/amadeus-mirror-*.ts}"
+matches: "**/{amadeus/spaces/*/specs/tla/**,packages/framework/core/tools/amadeus-election*.ts,packages/framework/core/tools/amadeus-mirror-*.ts,packages/framework/core/tools/amadeus-orchestrate.ts,packages/framework/core/tools/amadeus-state.ts,*/plugins/github-pr-convergence/tools/*.ts}"
 input_schema:
   output_path: string
   stage_slug: string

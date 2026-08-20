@@ -245,9 +245,18 @@ type Result<T, E> =
 export type TlaModelReadiness = Result<ModelMap, ModelLoadError>;
 
 const SHA256 = /^[0-9a-f]{64}$/;
-const IMPLEMENTATION_PATHS: readonly [string, RegExp][] = [
-  ["packages/framework/core/tools/", /^amadeus-[a-z0-9]+(?:-[a-z0-9]+)*\.ts$/],
-  ["plugins/formal-model-check/tools/", /^[a-z0-9]+(?:-[a-z0-9]+)*\.ts$/],
+// The canonical implementation boundary, as whole repository-relative paths
+// (#2929 FR-BND-1). A model may pin engine tools under the framework core and
+// plugin tools under any plugin's `tools/` directory — the general plugin shape
+// `plugins/<kebab>/tools/<kebab>.ts` subsumes the former formal-model-check
+// tuple, so that one is gone rather than kept beside it (OQ-3: a second
+// definition of a subsumed set is drift waiting to happen).
+//
+// Exported because the loader verifies the same boundary at read time
+// (FR-BND-2): one definition, two consumers, no second hardcoded root.
+export const IMPLEMENTATION_PATHS: readonly RegExp[] = [
+  /^packages\/framework\/core\/tools\/amadeus-[a-z0-9]+(?:-[a-z0-9]+)*\.ts$/,
+  /^plugins\/[a-z0-9]+(?:-[a-z0-9]+)*\/tools\/[a-z0-9]+(?:-[a-z0-9]+)*\.ts$/,
 ];
 // TLA module identifiers, which also fix the file names a model owns inside
 // the canonical spec directory.
@@ -327,12 +336,10 @@ function parseAssetIdentity(
   return { ok: true, value: { path: value.path, identity: value.identity } };
 }
 
-function isCanonicalImplementationPath(value: unknown): value is string {
+export function isCanonicalImplementationPath(value: unknown): value is string {
   if (typeof value !== "string" || value.includes("\\") || posix.isAbsolute(value)) return false;
   if (posix.normalize(value) !== value || value.split("/").includes("..")) return false;
-  return IMPLEMENTATION_PATHS.some(([prefix, file]) =>
-    value.startsWith(prefix) && file.test(posix.basename(value))
-  );
+  return IMPLEMENTATION_PATHS.some((pattern) => pattern.test(value));
 }
 
 function parseEntries(value: unknown): Result<readonly ModelMapEntry[], ModelLoadError> {
