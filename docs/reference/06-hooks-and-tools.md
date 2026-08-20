@@ -466,7 +466,7 @@ This table is the canonical contract for the harness-provenance environment over
 
 | Variable | Default | Contract |
 |----------|---------|----------|
-| `AMADEUS_HARNESS_TYPE` | Unset | Optional intent-birth provenance override. Exact valid values are `claude-code`, `codex`, `cursor`, `opencode`, `kiro`, `kimi`, `unknown`, and `manual`. Presence takes priority over `CLAUDECODE` and harness dot-directory detection. An empty or invalid value is normalized to `unknown` without falling through, and only the normalized value is written once to the new state as the optional V7 `Harness` field. |
+| `AMADEUS_HARNESS_TYPE` | Unset | Optional intent-birth provenance override. Exact valid values are `claude-code`, `codex`, `cursor`, `opencode`, `kiro`, `kimi`, `unknown`, and `manual`. Presence takes priority over `CLAUDECODE` and harness dot-directory detection. An empty or invalid value is normalized to `unknown` without falling through, and only the normalized value is written once to the new state as the optional V7 `Harness` field. Provenance only: no authorization or gating decision reads it. Those call `detectHarnessTypeForAuthorization()`, which ignores this variable (and `AMADEUS_HARNESS_DIR` and `CLAUDECODE`) and derives the harness from the installed tool's path, then the judged workspace's harness directory, then the process cwd. |
 
 ### Design Rationale
 

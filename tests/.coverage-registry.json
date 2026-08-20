@@ -5067,6 +5067,10 @@
       "minMechanism": "none",
       "coveredBy": [
         {
+          "file": "tests/integration/t2326-gating-env-independence.integration.test.ts",
+          "mechanism": "cli"
+        },
+        {
           "file": "tests/integration/t296-hook-launch-and-worktree-resolution.test.ts",
           "mechanism": "cli"
         },

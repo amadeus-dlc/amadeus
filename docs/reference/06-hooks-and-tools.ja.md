@@ -464,7 +464,7 @@ bun .claude/tools/amadeus-utility.ts <subcommand>
 
 | 変数 | デフォルト | 契約 |
 |------|-----------|------|
-| `AMADEUS_HARNESS_TYPE` | 未設定 | intent birth の任意 provenance override。有効な値は厳密に `claude-code`、`codex`、`cursor`、`opencode`、`kiro`、`kimi`、`unknown`、`manual`。環境変数として存在すると `CLAUDECODE` およびハーネス dot-directory 検出より優先される。空文字または不正値はフォールスルーせず `unknown` に正規化し、正規化済み値だけを新規 state の optional V7 `Harness` フィールドへ1回記録する。 |
+| `AMADEUS_HARNESS_TYPE` | 未設定 | intent birth の任意 provenance override。有効な値は厳密に `claude-code`、`codex`、`cursor`、`opencode`、`kiro`、`kimi`、`unknown`、`manual`。環境変数として存在すると `CLAUDECODE` およびハーネス dot-directory 検出より優先される。空文字または不正値はフォールスルーせず `unknown` に正規化し、正規化済み値だけを新規 state の optional V7 `Harness` フィールドへ1回記録する。provenance 専用であり、認可・ゲーティングの判定は一切参照しない。それらは `detectHarnessTypeForAuthorization()` を使い、この変数(および `AMADEUS_HARNESS_DIR`、`CLAUDECODE`)を無視して、インストールされたツールのパス → 判定対象ワークスペースのハーネスディレクトリ → プロセス cwd の順に実証拠からハーネスを導出する。 |
 
 ### 設計根拠
 

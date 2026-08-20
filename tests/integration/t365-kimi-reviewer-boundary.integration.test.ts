@@ -810,12 +810,22 @@ describe("Kimi reviewer boundary and gate provenance", () => {
     );
     expect(missingStage.kind).toBe("error");
 
-    const wrongHarness = withHarness("codex", () =>
+    // #2326 — the harness override is inert here. This root's real evidence is
+    // Kimi (its `.kimi-code/` marker), so a "codex" AMADEUS_HARNESS_TYPE no
+    // longer closes gate-reserve; the call is the same idempotent retry as
+    // above, down to the reservation id and an unchanged ledger. The genuine
+    // wrong-harness refusal — a workspace that really is not Kimi — is pinned
+    // in t2326-gating-env-independence.
+    const overriddenHarness = withHarness("codex", () =>
       captureDirective(() =>
         handleGateReserve(["--stage", "requirements-analysis"], root)
       )
     );
-    expect(wrongHarness.kind).toBe("error");
+    expect(overriddenHarness.kind).toBe("await-approval");
+    expect(overriddenHarness.presence_reservation_id).toBe(
+      first.presence_reservation_id,
+    );
+    expect(readAllAuditShards(root)).toBe(auditAfterFirst);
 
     const missingSessionRoot = freshWorkflow();
     unlinkSync(

@@ -145,6 +145,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "integration/t-otel-resource.test.ts",
     "integration/t224-state-set-failclosed.test.ts",
     "integration/t233-set-status-retreat-guard.integration.test.ts",
+    "integration/t2326-gating-env-independence.integration.test.ts",
     "integration/t-practices-promote-contract.test.ts",
     "integration/t-sensor-fire-hardening.test.ts",
     "integration/t435-intent-autonomy-production.integration.test.ts",

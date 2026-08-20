@@ -62,7 +62,7 @@ import {
   choiceFromExactPrompt,
   recordAdvisoryChoice,
 } from "../tools/amadeus-advisory-choice.ts";
-import { detectHarnessType } from "../tools/amadeus-harness.ts";
+import { detectHarnessTypeForAuthorization } from "../tools/amadeus-harness.ts";
 import { initProcessObservability } from "../tools/amadeus-observability.ts";
 import {
   hostSessionCapability,
@@ -145,7 +145,13 @@ try {
     mintHumanPresence({
       projectDir,
       capability: hostSessionCapability(context.sessionId),
-      requireReservationRoute: detectHarnessType() === "kimi",
+      // Kimi alone requires the reservation to be bound to a carrier-bearing
+      // host event, so this flag is a strictness dial on a security boundary,
+      // not a label: it is read from real process evidence, never from
+      // AMADEUS_HARNESS_TYPE, which a caller could otherwise export to relax
+      // its own presence mint (#2326).
+      requireReservationRoute:
+        detectHarnessTypeForAuthorization(projectDir) === "kimi",
       ...(context.route === null ? {} : { route: context.route }),
     });
     const promptChoice = context.prompt === null ? null : choiceFromExactPrompt(context.prompt);
