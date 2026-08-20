@@ -29,7 +29,9 @@ afterEach(() => {
 
 type LabelCall = { op: "add" | "remove"; issue: number; label: string };
 
-function fakeLabelGateway(): { gateway: MirrorLabelGateway; calls: LabelCall[] } {
+function fakeLabelGateway(
+  prNumbers: ReadonlySet<number> = new Set(),
+): { gateway: MirrorLabelGateway; calls: LabelCall[] } {
   const calls: LabelCall[] = [];
   return {
     calls,
@@ -41,6 +43,9 @@ function fakeLabelGateway(): { gateway: MirrorLabelGateway; calls: LabelCall[] }
       async removeIssueLabel(_repo, issueNumber, label) {
         calls.push({ op: "remove", issue: issueNumber, label });
         return { kind: "ok", value: undefined };
+      },
+      async isPullRequest(_repo, issueNumber) {
+        return { kind: "ok", value: prNumbers.has(issueNumber) };
       },
     },
   };
@@ -100,6 +105,30 @@ describe("mirror boundary label sync wiring", () => {
     expect(labels.calls).toEqual([
       { op: "add", issue: 684, label: "in-progress" },
       { op: "add", issue: 688, label: "in-progress" },
+      { op: "add", issue: ISSUE, label: "in-progress" },
+    ]);
+  });
+
+  // #2020: a `#N` reference in the Project field can be a PR number appended
+  // after the intent's issue was approved. Confirm the wiring end-to-end:
+  // the gateway's isPullRequest check keeps a confirmed PR out of the add plan.
+  test("intent-initialized skips a Project reference the gateway confirms is a pull request", async () => {
+    const fx = fixtureWithRefs();
+    const gateway = new ProjectGateway(markerBody());
+    const labels = fakeLabelGateway(new Set([688]));
+    const outcome = await runMirrorLifecycleBoundary(
+      boundaryRequest(fx, { kind: "intent-initialized", instance: "b-1" }),
+      {
+        gateway,
+        ports: fx.ports,
+        now: () => NOW,
+        newOperationId: () => "op-1",
+        labelGateway: labels.gateway,
+      },
+    );
+    expect(outcome.kind).toBe("ok");
+    expect(labels.calls).toEqual([
+      { op: "add", issue: 684, label: "in-progress" },
       { op: "add", issue: ISSUE, label: "in-progress" },
     ]);
   });
@@ -170,6 +199,9 @@ describe("mirror boundary label sync wiring", () => {
           effect: "not-started",
         };
       },
+      async isPullRequest() {
+        return { kind: "ok", value: false };
+      },
     };
     const outcome = await runMirrorLifecycleBoundary(
       boundaryRequest(fx, { kind: "intent-initialized", instance: "b-3" }),
@@ -193,6 +225,9 @@ describe("mirror boundary label sync wiring", () => {
       },
       async removeIssueLabel() {
         throw new Error("label gateway exploded");
+      },
+      async isPullRequest() {
+        return { kind: "ok", value: false };
       },
     };
     const outcome = await runMirrorLifecycleBoundary(

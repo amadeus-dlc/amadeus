@@ -1175,6 +1175,16 @@ function labelHttpStatuses(stdout: Buffer): readonly number[] {
   return [...text.matchAll(LABEL_STATUS_LINE_RE)].map((match) => Number(match[1]));
 }
 
+// The final (last) status line decides the outcome, after dropping 1xx
+// informational lines: `gh api --include` prints one status line per hop of a
+// redirect chain, so the first status is not necessarily the outcome, and 1xx
+// is never a final outcome by definition (#2020). null means only 1xx lines
+// were observed — no final status to judge.
+function finalLabelHttpStatus(statuses: readonly number[]): number | null {
+  const finalCandidates = statuses.filter((status) => status >= 200);
+  return finalCandidates.length === 0 ? null : finalCandidates[finalCandidates.length - 1]!;
+}
+
 export function createMirrorLabelGateway(
   runner: MirrorProcessRunner,
 ): MirrorLabelGateway {
@@ -1190,11 +1200,15 @@ export function createMirrorLabelGateway(
     if (statuses.length === 0) {
       return failure("invalid-response", false, "outcome-unknown", result.exitCode, null);
     }
-    const bad = statuses.find((status) => status < 200 || status >= 300);
-    if (bad !== undefined) {
-      if (okStatuses.has(bad)) return ok<void>(undefined);
-      const { classification, retryable } = classifyHttpStatus(bad);
-      return failure(classification, retryable, "outcome-unknown", result.exitCode, bad);
+    const finalStatus = finalLabelHttpStatus(statuses);
+    if (finalStatus === null) {
+      // Only 1xx informational lines were observed — no final status to judge.
+      return failure("invalid-response", false, "outcome-unknown", result.exitCode, null);
+    }
+    if (finalStatus < 200 || finalStatus >= 300) {
+      if (okStatuses.has(finalStatus)) return ok<void>(undefined);
+      const { classification, retryable } = classifyHttpStatus(finalStatus);
+      return failure(classification, retryable, "outcome-unknown", result.exitCode, finalStatus);
     }
     return ok<void>(undefined);
   };
@@ -1206,6 +1220,28 @@ export function createMirrorLabelGateway(
     // idempotent, so absence counts as success.
     removeIssueLabel(repository, issueNumber, label) {
       return call(removeLabelArgv(repository, issueNumber, label), new Set([404]));
+    },
+    // #2020: advisory PR/issue discrimination for the label-add path. A
+    // failure here (transport error, malformed envelope) is returned as a
+    // typed failure like every other read; runMirrorLabelSync's caller-side
+    // fail-open contract is what turns "inconclusive" into "proceed with the
+    // add" — this check must never itself become a reason to skip a
+    // legitimate issue.
+    async isPullRequest(repository, issueNumber) {
+      const result = await runner.run({
+        executable: "gh",
+        args: viewArgv(repository, issueNumber),
+        profile: "single",
+      });
+      const interp = interpretApiResult(result, "single", "read-only");
+      if (interp.kind === "failure") return interp.failure;
+      let payload: unknown;
+      try {
+        payload = JSON.parse(interp.jsonText);
+      } catch {
+        return invalidResponse("read-only");
+      }
+      return ok<boolean>(isPullRequestEntry(payload));
     },
   };
 }
