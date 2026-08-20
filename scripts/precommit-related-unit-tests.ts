@@ -29,7 +29,7 @@ import { parseCoversHeader } from "../tests/gen-coverage-registry.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-function unitDir(): string {
+export function unitDir(): string {
 	return process.env.AMADEUS_PRECOMMIT_UNIT_DIR ?? join(REPO_ROOT, "tests", "unit");
 }
 
@@ -65,7 +65,14 @@ export function relatedUnitTests(staged: ReadonlySet<string>, dir: string): stri
 	return related.sort();
 }
 
-function main(): void {
+/** Builds the `--filter` extended-regex `run-tests.ts` expects: an exact
+ *  alternation of the given basenames, each regex-escaped. */
+export function buildFilterPattern(basenames: readonly string[]): string {
+	const escaped = basenames.map((b) => b.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+	return `^(${escaped.join("|")})$`;
+}
+
+export function main(): void {
 	const staged = new Set(stagedFiles());
 	if (staged.size === 0) {
 		console.log("precommit-related-unit-tests: no staged files — nothing to run.");
@@ -83,8 +90,7 @@ function main(): void {
 	console.log(`precommit-related-unit-tests: running ${basenames.length} related unit test(s):`);
 	for (const b of basenames) console.log(`  - ${b}`);
 
-	const escaped = basenames.map((b) => b.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
-	const pattern = `^(${escaped.join("|")})$`;
+	const pattern = buildFilterPattern(basenames);
 	const result = spawnSync(
 		"bun",
 		[join(REPO_ROOT, "tests", "run-tests.ts"), "--unit", "--filter", pattern],
