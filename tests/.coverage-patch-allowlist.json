@@ -2192,11 +2192,11 @@
     "file": "packages/framework/core/tools/amadeus-swarm.ts",
     "selector": {
       "function": "<module>",
-      "fingerprint": "sha256:7db7bf1439e840fcaf1592fe5d36bfd76db60f3335e9a577c3097720da9474fb",
-      "anchorLines": 149,
-      "targetLines": "1-149"
+      "fingerprint": "sha256:d976f126276e8e90229df405d5d094302e4b6d52c97bfb8d3072766929251ad6",
+      "anchorLines": 157,
+      "targetLines": "1-157"
     },
-    "reason": "Fixed-pool CLI adapters parse native facts and delegate every mutation to createUnitPoolCoordinator. Their command protocol is exercised through the shipped CLI by tests/integration/t135-invoke-swarm.test.ts and pinned across all harnesses by t425; coordinator semantics and rejection branches are driven in-process by tests/unit/t425-unit-pool.test.ts. Bun cannot attribute spawned adapter execution.",
+    "reason": "Fixed-pool CLI adapters parse native facts and delegate every mutation to createUnitPoolCoordinator. Their command protocol is exercised through the shipped CLI by tests/integration/t135-invoke-swarm.test.ts and pinned across all harnesses by t425; coordinator semantics and rejection branches are driven in-process by tests/unit/t425-unit-pool.test.ts. Bun cannot attribute spawned adapter execution. Selector refreshed for #1205: RAW_DRIVER_VALUES (8 new lines) added inside this module-level range.",
     "expiry": "remove when fixed-pool handlers receive injectable argv, repository, output, and exit ports"
   },
   {
