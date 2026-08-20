@@ -1,0 +1,22 @@
+# Pre-commit fail-fast gate (#1984). Dev-only: installed by `bun install`'s
+# `prepare` script into every contributor's local .git/hooks/, never shipped
+# in dist/<harness>/ (this repository's own git hooks are not part of the
+# distributable framework).
+#
+# Typecheck and lint already run whole-repo (both comfortably inside the
+# budget below); the unit tier is scoped to only the tests that `covers:`
+# a staged file (scripts/precommit-related-unit-tests.ts) so the hook stays
+# fast regardless of repo size. Heavier integration/e2e tests stay CI's job.
+#
+# Skip: `git commit --no-verify` (native git flag, always available). CI
+# (`bun run check` + the full test suite) is the enforcement backstop for
+# any commit made with the hook skipped or not installed.
+pre-commit:
+  parallel: false
+  commands:
+    typecheck:
+      run: bun run typecheck
+    lint:
+      run: bun run lint
+    related-unit-tests:
+      run: bun scripts/precommit-related-unit-tests.ts
