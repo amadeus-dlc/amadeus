@@ -434,9 +434,7 @@ export function enumerateSubcommands(): Unit[] {
  *  production code since the v1 writer deletion and is no longer parsed here
  *  (#1845); its removal is deferred to the #1841 migration cluster. */
 export function enumerateAuditEvents(): Unit[] {
-  const registry = require(EVENT_REGISTRY_PATH) as {
-    canonicalAuditEvents(): string[];
-  };
+  const registry = require(EVENT_REGISTRY_PATH) as { canonicalAuditEvents(): string[] };
   return registry.canonicalAuditEvents().map((id) => ({
     unitClass: "audit" as const,
     unitId: id,
