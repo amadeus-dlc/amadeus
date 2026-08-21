@@ -458,10 +458,11 @@ describe("Plan.forUpgrade — the manifest decides where the doc lives (#3388 sp
       });
       if (result.type !== "ok") throw new Error("expected ok");
       // --force bypasses the ladder AND the manifest follow: the real name wins.
-      // The disposition is then BR-U11's ordinary manifest lookup — a path the
-      // manifest never recorded is treated as framework-owned, hence "update".
+      // The real name is not in the manifest, so a shared manifest-unknown path
+      // takes the fail-safe backup-then-copy disposition before overwrite.
       const entry = result.value.entries().find((e) => e.path === "CLAUDE.md");
-      expect(entry?.action).toBe("update");
+      expect(entry?.action).toBe("backup");
+      expect(entry?.forced).toBe(true);
       expect(entry?.sourcePath).toBeUndefined();
       expect(result.value.entries().some((e) => e.path === "CLAUDE-AMADEUS.md")).toBe(false);
       expect(result.value.onboardingNotices()).toEqual([]);
