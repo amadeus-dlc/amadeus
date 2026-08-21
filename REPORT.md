@@ -13,7 +13,7 @@ The supervisor ruling selected the fail-safe behavior: an existing shared destin
 - Updated the existing `setup-plan` expectation and rationale.
 - Added an end-to-end upgrade regression proving that a user-owned `CLAUDE.md` is backed up as `CLAUDE.md.<timestamp>.bk` before the new onboarding content is copied over it.
 
-## Falling proof
+## Failing proof
 
 Before the production change, the new regression failed with `update` instead of `backup`, and the real pipeline produced zero backup files. After the change, both the unit plan assertion and the filesystem-level regression pass; the backup contains the user's original bytes.
 
