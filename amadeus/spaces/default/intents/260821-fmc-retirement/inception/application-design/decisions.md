@@ -49,3 +49,14 @@
 - **Consequences**: PR は大きい(±170 ファイル級)が中間赤ゼロ。レビューは削除 diff 中心で機械検証可能(述語群)。
 - **Alternatives Rejected**: レイヤー別多 Bolt — 中間状態が構造的に赤(NFR-1 違反)、かつ multi-member 別 PR 配送は暫定禁止ノルムに抵触。
 - **Security/Compliance**: なし。
+
+## ADR-7: Project Coverage Gate 相対条件の retained-basis 拡張(承認後追補 — ユーザー裁定 A)
+
+> 承認後追補(2026-08-21)。§12a code-generation iteration 1 BLOCKER の是正として、実装済みの逸脱へ設計根拠を遡及文書化する。裁定主体はユーザー(実 HUMAN_TURN、AskUserQuestion 回答「A) ゲート拡張(推奨)」)であり、本 ADR はその裁定の記録である。
+
+- **Context**: 本 intent の高被覆コード削除(41 ファイル / 10,078 行 / 被覆 99.09%)により、Project Coverage Gate の相対条件(全体母集団比較)が混合効果で構造的に赤(初回 −0.6955pp)。waiver は ADR-4 で却下済みクラス。対処選択肢をユーザーへ提示し、裁定 A =「相対比較を残存ファイル母集団で再計算(削除の混合効果だけ除去、実質劣化は捕捉継続)。落ちる実証付きで本 PR に同梱」が成立。
+- **Decision**: `tests/coverage-project-gate.ts` の相対条件を retained basis(baseline を head に残存するファイルへ制限して再計算)へ拡張。絶対条件は不変。per-source 読取は新設 `tests/lib/lcov-file-totals.ts` を単一定義とし、lcov と totals emit の不一致は `LCOV_TOTALS_MISMATCH` で fail-closed。
+- **Consequences(blast radius)**: 本変更は intent を越えて全将来 PR のゲート意味論に効く恒久変更。削除の混合効果は除外される一方、残存コードの実質劣化・新規コードの未被覆は従来どおり捕捉(落ちる実証 (b) で注入赤を実測)。CI は base ジョブが lcov を totals と同一 run で搬送(cache key v2 繰り上げで per-file 欠落の無音 hit を防止)。
+- **フォールバックの根拠(NFR-2 適合)**: 「片側の per-file 入力欠落時は従来の全体比較へフォールバック」は互換シムではなく fail-safe の選択である — 全体比較は retained 比較より**厳しい側**(削除の混合効果を除外しない)であり、赤を緑に変える経路が構造的に存在しない。入力が揃いながら矛盾する場合は fail-closed(`LCOV_TOTALS_MISMATCH`)。使用 basis は pass/fail 両出力へ明記され無音でない。
+- **Alternatives Rejected**: (a) allowlist waiver — ADR-4 却下クラス(実測可能な被覆の偽装)。(b) policy 緩和(閾値・baseline 操作)— 実質劣化の検出力を恒久に下げる。(c) ゲート変更を別ガバナンス PR に分離 — 本 PR が構造赤のままマージ不能になり、裁定 A の逐語「本 PR に同梱」に反する。分離しない代償として落ちる実証 3 点(旧赤/新緑の A/B・注入赤・unit 54 pass)を同梱した。
+- **Security/Compliance**: なし。

@@ -24,3 +24,37 @@
 ## swarm 収束記録
 
 referee check: 1回目 converged:true / tampered:true(t341 を protected 指定したが設計自体が差し替えを指示 — 弱体化は expect 件数非減少で機械確認済みの設計許容内検出)→ protected 指定なし再実行で converged:true / tampered:false。settle-release succeeded(pool terminal)。配送は per-unit Bolt PR(finalize 不使用 — cid:code-generation:c1-swarm-pr-delivery)。
+
+## Review — Iteration 1
+
+- **Verdict:** NOT-READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-21T07:54:26Z
+- **Iteration:** 1
+- **Scope decision:** none
+
+Gate拡張(追補1)が unit-of-work write scope・requirements/NFR に未接地、write scope 未追補、FR-DOC-1/DEL-3/DEL-4 の名指しトレース不足
+
+### Findings
+
+- BLOCKER | code-summary.md:23-29 追補1のProject Coverage Gate拡張がwrite scope・requirements/NFRに未接地(ADR/設計根拠の遡及文書化またはPR分離が必要)
+- BLOCKER | unit-of-work.md write scope が追補1/2 のファイル群を未宣言(承認済み unit 境界が実配送に対し stale)
+- FOLLOW-UP | code-summary.md 逸脱節に追補1/2 への cross-ref がない
+- FOLLOW-UP | FR-DOC-1 の t3028・FR-DEL-3 の graph compile 不在確認・FR-DEL-4 の runner-gen regen が名指しで未トレース
+- NIT | measured GraphQL fixture のリテラル置換について fixture 側への provenance 注記を提案
+
+## Review — Iteration 2
+
+- **Verdict:** READY
+- **Reviewer:** amadeus-architecture-reviewer-agent
+- **Date:** 2026-08-21T07:54:26Z
+- **Iteration:** 2
+- **Scope decision:** none
+
+iteration 1 の BLOCKER/MAJOR は ADR-7・write scope 追補・cross-ref・FR トレーサビリティ実測で解消。新規 BLOCKER なし
+
+### Findings
+
+- FOLLOW-UP | code-generation-plan.md:5 の cid:code-generation:c5-followup-routing は不在 — 実在は cid:build-and-test:c5-260809-followup-routing。次回接触時に訂正
+- FOLLOW-UP | unit-of-work.md 追補行の tests/run-tests.ts / t112.serial.test.ts が code-summary 追補1/2 の叙述で個別裏取りされていない — 一行追記を推奨
+- NIT | 追補2 の FR-TEST-6 引用は名指し主語(3 unit)より広い適用 — AC 準拠だが一句の区別注記を推奨

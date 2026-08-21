@@ -1822,5 +1822,11 @@
     "dirName": "260821-e-260821-fmc-fmc-s13",
     "createdAt": "2026-08-21T01:14:55Z",
     "status": "recorded"
+  },
+  {
+    "electionId": "E-260821-FMCR-FD-S13",
+    "dirName": "260821-e-260821-fmcr-fd-s13",
+    "createdAt": "2026-08-21T04:44:53Z",
+    "status": "recorded"
   }
 ]
