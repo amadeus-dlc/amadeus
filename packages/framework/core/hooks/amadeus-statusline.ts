@@ -357,6 +357,9 @@ async function main(): Promise<void> {
   printLine(withAutonomySegment(output, state, projectDir), right);
 }
 
-if (import.meta.main) {
+async function runStatuslineEntrypoint(): Promise<void> {
+  if (!import.meta.main) return;
   await main();
 }
+
+await runStatuslineEntrypoint();
