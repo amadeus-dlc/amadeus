@@ -996,10 +996,18 @@ function attestationBindsDelivery(
   work: DeliveryWork,
   ref: { readonly repo: string; readonly number: number },
 ): boolean {
+  return attestationBindsDeliveryIdentity(receipt, work, ref) && receipt.pr === ref.number;
+}
+
+/** The delivery identity shared by sibling receipts, excluding their PR. */
+function attestationBindsDeliveryIdentity(
+  receipt: ReportAttestation,
+  work: DeliveryWork,
+  ref: { readonly repo: string; readonly number: number },
+): boolean {
   return receipt.intent === work.intent && receipt.intentUuid === work.intentUuid &&
     receipt.record === work.record && receipt.bolt === work.bolt && receipt.unit === work.unit &&
-    sameMemberUnits(receipt.memberUnits, work.units) &&
-    receipt.repo === ref.repo && receipt.pr === ref.number;
+    sameMemberUnits(receipt.memberUnits, work.units) && receipt.repo === ref.repo;
 }
 
 function sameMemberUnits(actual: readonly string[] | undefined, expected: readonly string[]): boolean {
@@ -1212,6 +1220,27 @@ function finalRecordOnDisk(path: string): FinalRecord | null {
   return { kind, body, receipt };
 }
 
+type SiblingPrVerification =
+  | { readonly kind: "merged" }
+  | { readonly kind: "not-merged"; readonly reason: string };
+
+/** A sibling receipt is skippable only when its own PR state is read as MERGED. */
+async function verifySiblingPrMerged(
+  repo: string,
+  number: number,
+  seams: CliSeams,
+): Promise<SiblingPrVerification> {
+  const ref = parsePrRef(repo, number);
+  if (ref === null) return { kind: "not-merged", reason: "the sibling PR reference is invalid" };
+  const runner = await createGhRunner(seams.ghSpawn);
+  if (!runner.ok) return { kind: "not-merged", reason: `GitHub state could not be read (${describeGhError(runner.error)})` };
+  const state = await fetchRawPrState(runner.value, ref);
+  if (!state.ok) return { kind: "not-merged", reason: `GitHub state could not be read (${describeGhError(state.error)})` };
+  return state.value.state === "MERGED"
+    ? { kind: "merged" }
+    : { kind: "not-merged", reason: `the PR state is ${state.value.state ?? "unavailable"}` };
+}
+
 /**
  * Finalising a record whose verdict is already final (#3149 class A).
  *
@@ -1239,6 +1268,13 @@ async function finaliseMergedInPlace(
     if (outcome.exitCode !== 0) return outcome;
     paths.push(outcome.stdout.trim());
   }
+  if (paths.length === 0) {
+    return {
+      exitCode: 1,
+      stdout: "",
+      stderr: "merged finalisation refused: no member receipt binds to a pull request\n",
+    };
+  }
   return { exitCode: 0, stdout: `${paths.join("\n")}\n`, stderr: "" };
 }
 
@@ -1256,11 +1292,25 @@ async function finaliseUnitInPlace(
     return refuse(`merged finalisation refused: ${unit} carries no final record for this merge to close`);
   }
   const { body, receipt } = current;
-  if (
-    !attestationIsIntact(receipt, body) ||
-    !attestationBindsDelivery(receipt, { ...delivery.work, unit }, options.ref)
-  ) {
+  if (!attestationIsIntact(receipt, body)) {
     return refuse("report attestation is missing, tampered, copied, or replayed");
+  }
+  const work = { ...delivery.work, unit };
+  if (!attestationBindsDelivery(receipt, work, options.ref)) {
+    if (!attestationBindsDeliveryIdentity(receipt, work, options.ref)) {
+      return refuse("report attestation is missing, tampered, copied, or replayed");
+    }
+    const sibling = await verifySiblingPrMerged(options.ref.repo, receipt.pr, seams);
+    if (sibling.kind !== "merged") {
+      return refuse(
+        `sibling unit ${unit} receipt is bound to PR #${receipt.pr}, but PR is not verifiably MERGED (${sibling.reason})`,
+      );
+    }
+    return {
+      exitCode: 0,
+      stdout: `skipped sibling unit ${unit}: receipt is bound to PR #${receipt.pr}, which is MERGED`,
+      stderr: "",
+    };
   }
   // The proof speaks for the one attested head it measured: a member Unit left
   // at some other head was never put to git, exactly as on the landed path.
