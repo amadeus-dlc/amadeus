@@ -6,6 +6,7 @@ export type LiveAdapterId =
   | "claude-print"
   | "claude-sdk"
   | "claude-tui"
+  | "kimi-print"
   | "kiro-tui";
 export type CapabilityStatus = "supported" | "unsupported" | "unverified";
 
@@ -93,6 +94,23 @@ export const LIVE_CAPABILITIES = [
       sourcePathKeys: ["HOME", "CLAUDE_CONFIG_DIR"],
     },
     isolationSummary: "fresh project/home; project settings only; run-private tmux socket and session",
+  },
+  {
+    id: "kimi-print",
+    harness: "kimi",
+    transport: "print",
+    optInKey: "AMADEUS_KIMI_PRINT_LIVE",
+    minimumVersion: "0.28.1",
+    measuredVersion: "0.37.2",
+    status: "supported",
+    anchorKinds: ["exit", "file"],
+    environment: {
+      allowedKeys: ["PATH", "LANG", "LC_ALL", "NO_COLOR"],
+      sensitiveKeys: ["KIMI_API_KEY", "MOONSHOT_API_KEY"],
+      sourcePathKeys: ["HOME", "KIMI_CODE_HOME", "AMADEUS_KIMI_SOURCE_HOME"],
+    },
+    isolationSummary:
+      "fresh project/home; source OAuth entries bound by reference, never copied; scratch-local config, sessions and logs",
   },
   {
     id: "kiro-tui",
