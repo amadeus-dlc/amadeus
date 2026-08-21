@@ -1,4 +1,4 @@
-// covers: domain:setup-onboarding-ladder
+// covers: domain:setup-onboarding-ladder, function:onboardingAlternateFor, function:decideOnboardingDestination, function:noticeFor
 // size: small
 //
 // #3388's destination ladder for the onboarding doc, as a pure decision seam:
@@ -58,7 +58,7 @@ describe("decideOnboardingDestination — the three rungs (#3388 spec 1-3)", () 
       primaryExists: true,
       alternateExists: false,
     });
-    expect(decision).toEqual({ type: "alternate", dest: "AGENTS-AMADEUS.md" });
+    expect(decision).toEqual({ type: "alternate", dest: "AGENTS-AMADEUS.md", primaryExists: true });
   });
 
   test("rung 3: both names occupied blocks the write entirely", () => {
@@ -68,7 +68,7 @@ describe("decideOnboardingDestination — the three rungs (#3388 spec 1-3)", () 
       primaryExists: true,
       alternateExists: true,
     });
-    expect(decision).toEqual({ type: "blocked", dest: "CLAUDE-AMADEUS.md" });
+    expect(decision).toEqual({ type: "blocked", dest: "CLAUDE-AMADEUS.md", primaryExists: true });
   });
 
   test("edge case: an existing alternate alone does not divert a free real name", () => {
@@ -117,15 +117,29 @@ describe("noticeFor — guidance is owed exactly when the real name was not used
   });
 
   test("alternate and blocked destinations each carry both names", () => {
-    expect(noticeFor("CLAUDE.md", { type: "alternate", dest: "CLAUDE-AMADEUS.md" })).toEqual({
+    expect(noticeFor("CLAUDE.md", { type: "alternate", dest: "CLAUDE-AMADEUS.md", primaryExists: true })).toEqual({
       kind: "alternate",
       primary: "CLAUDE.md",
       alternate: "CLAUDE-AMADEUS.md",
+      primaryExists: true,
     });
-    expect(noticeFor("AGENTS.md", { type: "blocked", dest: "AGENTS-AMADEUS.md" })).toEqual({
+    expect(noticeFor("AGENTS.md", { type: "blocked", dest: "AGENTS-AMADEUS.md", primaryExists: true })).toEqual({
       kind: "blocked",
       primary: "AGENTS.md",
       alternate: "AGENTS-AMADEUS.md",
+      primaryExists: true,
+    });
+  });
+
+  test("an alternate destination whose real name is free says so, rather than claiming a collision", () => {
+    // The upgrade-follows-the-manifest route: the doc goes to the alternate
+    // because that is where it was installed, not because the real name is
+    // taken — and the user may have deleted their own file since.
+    expect(noticeFor("CLAUDE.md", { type: "alternate", dest: "CLAUDE-AMADEUS.md", primaryExists: false })).toEqual({
+      kind: "alternate",
+      primary: "CLAUDE.md",
+      alternate: "CLAUDE-AMADEUS.md",
+      primaryExists: false,
     });
   });
 });

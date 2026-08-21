@@ -282,7 +282,13 @@ function buildUpgradeEntries(root: string, target: string, source: UpgradeSource
 function routeUpgradeDestination(relPath: string, target: string, source: UpgradeSource, force: boolean): OnboardingDestination {
   const alternate = onboardingAlternateFor(relPath);
   if (alternate === null || force) return Object.freeze({ type: "primary", dest: relPath });
-  if (source.knowsPath(alternate)) return Object.freeze({ type: "alternate", dest: alternate });
+  // The manifest is followed regardless of what sits at the real name today —
+  // the user may have deleted their own CLAUDE.md since the install — so the
+  // real name is probed rather than assumed occupied. Without it the notice
+  // would tell a user with no CLAUDE.md that "CLAUDE.md already exists".
+  if (source.knowsPath(alternate)) {
+    return Object.freeze({ type: "alternate", dest: alternate, primaryExists: existsSync(join(target, relPath)) });
+  }
   if (source.knowsPath(relPath)) return Object.freeze({ type: "primary", dest: relPath });
   return probeOnboardingLadder(relPath, target, force);
 }

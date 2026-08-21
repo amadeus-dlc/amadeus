@@ -85,7 +85,7 @@ import {
 import { dirname, join } from "node:path";
 import {
   AMADEUS_SRC,
-  CLAUDE_ONBOARDING_DOC,
+  requireOnboardingDoc,
   copyTreeWithRetry,
   createTestProject,
   DEFAULT_RECORD_DIR,
@@ -129,7 +129,7 @@ function mkproj(): string {
   copyTreeWithRetry(AMADEUS_SRC, join(pd, ".claude"));
   // #3388: the onboarding doc ships as the real project-root CLAUDE.md.
   const claudeMd = join(pd, "CLAUDE.md");
-  if (!existsSync(claudeMd) && existsSync(CLAUDE_ONBOARDING_DOC)) cpSync(CLAUDE_ONBOARDING_DOC, claudeMd);
+  if (!existsSync(claudeMd)) cpSync(requireOnboardingDoc(), claudeMd);
   const settingsExample = join(pd, ".claude", "settings.json.example");
   const settings = join(pd, ".claude", "settings.json");
   if (!existsSync(settings) && existsSync(settingsExample)) cpSync(settingsExample, settings);

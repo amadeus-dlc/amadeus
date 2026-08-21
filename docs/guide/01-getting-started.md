@@ -204,12 +204,24 @@ command -v bun    >/dev/null && echo "✓ bun"          || echo "✗ bun"
 # Install (engine + the workspace shell sibling)
 cp -r dist/claude/.claude/ your-project/.claude/
 cp -r dist/claude/amadeus/   your-project/amadeus/
-cp -n dist/claude/CLAUDE.md  your-project/CLAUDE.md
 cp -n your-project/.claude/settings.json.example your-project/.claude/settings.json
+
+# Onboarding doc — walk the same destination ladder the installer does, because
+# CLAUDE.md is the one payload file your project very likely already owns.
+if [ ! -e your-project/CLAUDE.md ]; then
+  cp dist/claude/CLAUDE.md your-project/CLAUDE.md            # free name: take it
+elif [ ! -e your-project/CLAUDE-AMADEUS.md ]; then
+  cp dist/claude/CLAUDE.md your-project/CLAUDE-AMADEUS.md    # taken: land beside your file
+  echo '@CLAUDE-AMADEUS.md' >> your-project/CLAUDE.md        # ...and import it, or it stays inert
+else
+  echo 'CLAUDE.md and CLAUDE-AMADEUS.md both exist — merge dist/claude/CLAUDE.md in by hand'
+fi
 
 # Launch Claude Code in your project
 cd your-project && claude
 ```
+
+Never overwrite an existing `CLAUDE.md`: it is your project's own instructions, and Claude Code loads *only* `CLAUDE.md` — an unimported `CLAUDE-AMADEUS.md` is a silent no-op, which is why the `@`-import line is part of the step and not an optional extra. `bunx amadeus-setup install` walks this ladder for you (and records a manifest so `upgrade` keeps updating the doc wherever it landed); the copy commands above are the fallback when the installer is not reachable.
 
 Inside the Claude Code session:
 

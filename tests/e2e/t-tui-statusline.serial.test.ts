@@ -28,15 +28,13 @@ import {
   waitForTui,
   tmuxUnavailableReason,
 } from "../harness/tui-client.ts";
-import { copyTreeWithRetry } from "../harness/fixtures.ts";
+import { copyTreeWithRetry, requireOnboardingDoc } from "../harness/fixtures.ts";
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
-// #3388: the onboarding doc ships as the real project-root CLAUDE.md.
-const CLAUDE_ONBOARDING_DOC = join(import.meta.dir, "..", "..", "dist", "claude", "CLAUDE.md");
 // Bun runs the TypeScript entrypoint natively on every platform.
 
 // `wait` returns nonzero on timeout — we want a boolean for the idempotent modal
@@ -69,7 +67,7 @@ describe("t-tui-statusline (statusline renders in a real terminal)", () => {
         copyTreeWithRetry(AMADEUS_SRC, destClaude);
         // #3388: the onboarding doc ships as the real project-root CLAUDE.md.
         const claudeMd = join(sandbox, "CLAUDE.md");
-        if (!existsSync(claudeMd) && existsSync(CLAUDE_ONBOARDING_DOC)) cpSync(CLAUDE_ONBOARDING_DOC, claudeMd);
+        if (!existsSync(claudeMd)) cpSync(requireOnboardingDoc(), claudeMd);
         const settingsExample = join(destClaude, "settings.json.example");
         const settingsPath = join(destClaude, "settings.json");
         if (!existsSync(settingsPath) && existsSync(settingsExample)) cpSync(settingsExample, settingsPath);

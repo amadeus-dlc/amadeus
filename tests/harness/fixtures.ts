@@ -65,6 +65,20 @@ export const AMADEUS_SRC = join(REPO_ROOT, "dist", "claude", ".claude");
 // .claude/, exactly like every AGENTS.md harness — no .example, no manual copy.
 export const CLAUDE_ONBOARDING_DOC = join(REPO_ROOT, "dist", "claude", "CLAUDE.md");
 
+// #3388: every fixture that seeds a Claude project copies the onboarding doc
+// from the distributable. If the distributable has not been built, the doc is
+// simply absent — and a fixture that quietly skipped the copy would hand the
+// test a project with no method layer, which is the #3386 failure mode dressed
+// up as a passing run. The missing source is a broken fixture, so it throws.
+export function requireOnboardingDoc(): string {
+  if (!existsSync(CLAUDE_ONBOARDING_DOC)) {
+    throw new Error(
+      `fixture setup: ${CLAUDE_ONBOARDING_DOC} is missing. The distributable is not built — run \`bun run dist\` before this suite.`,
+    );
+  }
+  return CLAUDE_ONBOARDING_DOC;
+}
+
 // The per-intent WORKSPACE layout the fixtures seed (P9 — the flat amadeus-docs/
 // layout is retired). A fixture project gets a SEED-style shell (amadeus/active-space
 // + spaces/default/) plus ONE default intent record so the path helpers resolve
@@ -921,7 +935,7 @@ export function setupIntegrationProject(
   copyTreeWithRetry(AMADEUS_SRC, join(proj, ".claude"));
   // #3388: the onboarding doc ships as the real project-root CLAUDE.md.
   const claudeMd = join(proj, "CLAUDE.md");
-  if (!existsSync(claudeMd) && existsSync(CLAUDE_ONBOARDING_DOC)) cpSync(CLAUDE_ONBOARDING_DOC, claudeMd);
+  if (!existsSync(claudeMd)) cpSync(requireOnboardingDoc(), claudeMd);
   const settingsExample = join(proj, ".claude", "settings.json.example");
   const settings = join(proj, ".claude", "settings.json");
   if (!existsSync(settings) && existsSync(settingsExample)) {
@@ -1116,7 +1130,7 @@ export function setupWorkspaceJourney(harness: JourneyHarness = "claude"): Works
     cpSync(join(CLAUDE_DIST, ".claude"), join(root, ".claude"), { recursive: true });
     // #3388: the onboarding doc ships as the real project-root CLAUDE.md.
     const claudeMd = join(root, "CLAUDE.md");
-    if (!existsSync(claudeMd) && existsSync(CLAUDE_ONBOARDING_DOC)) cpSync(CLAUDE_ONBOARDING_DOC, claudeMd);
+    if (!existsSync(claudeMd)) cpSync(requireOnboardingDoc(), claudeMd);
     const settingsExample = join(root, ".claude", "settings.json.example");
     const settings = join(root, ".claude", "settings.json");
     if (!existsSync(settings) && existsSync(settingsExample)) cpSync(settingsExample, settings);

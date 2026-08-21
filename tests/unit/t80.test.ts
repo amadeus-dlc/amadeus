@@ -46,7 +46,7 @@
 // (trims to "") — covering both shapes the .sh allowed.
 
 import { normalizeAuditRecord } from "../harness/audit-records.ts";
-import { copyTreeWithRetry } from "../harness/fixtures.ts";
+import { copyTreeWithRetry, requireOnboardingDoc } from "../harness/fixtures.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -65,8 +65,6 @@ import {
 } from "../../dist/claude/.claude/tools/amadeus-lib.ts";
 
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
-// #3388: the onboarding doc ships as the real project-root CLAUDE.md.
-const CLAUDE_ONBOARDING_DOC = join(import.meta.dir, "..", "..", "dist", "claude", "CLAUDE.md");
 const STATE_TS = join(AMADEUS_SRC, "tools", "amadeus-state.ts");
 const GREENFIELD_STUB = join(import.meta.dir, "..", "fixtures", "greenfield-todo");
 
@@ -165,7 +163,7 @@ describe("t80 practices-event --type empty (spawnSync CLI-boundary, parity-only)
     copyTreeWithRetry(AMADEUS_SRC, join(proj, ".claude"));
     // #3388: the onboarding doc ships as the real project-root CLAUDE.md.
     const claudeMd = join(proj, "CLAUDE.md");
-    if (!existsSync(claudeMd) && existsSync(CLAUDE_ONBOARDING_DOC)) cpSync(CLAUDE_ONBOARDING_DOC, claudeMd);
+    if (!existsSync(claudeMd)) cpSync(requireOnboardingDoc(), claudeMd);
     const settingsExample = join(proj, ".claude", "settings.json.example");
     const settings = join(proj, ".claude", "settings.json");
     if (!existsSync(settings) && existsSync(settingsExample)) cpSync(settingsExample, settings);

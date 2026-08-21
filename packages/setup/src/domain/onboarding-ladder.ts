@@ -29,21 +29,28 @@ export const ONBOARDING_DOC_BASENAMES: readonly string[] = Object.freeze(["CLAUD
 export type OnboardingNoticeKind = "alternate" | "blocked";
 
 // What the reporter needs to phrase the wiring guidance: which name was wanted,
-// which one the ladder landed on (or would have), and how far it got.
+// which one the ladder landed on (or would have), how far it got — and whether
+// the real name is occupied right now. That last fact does not follow from the
+// kind: upgrade routes the doc to the alternate because the installed manifest
+// records it there (plan.routeUpgradeDestination), whether or not the user still
+// keeps a file at the real name. Phrasing every alternate as "the real name
+// already exists" would state a collision that may not exist any more.
 export type OnboardingNotice = {
   readonly kind: OnboardingNoticeKind;
   readonly primary: string;
   readonly alternate: string;
+  readonly primaryExists: boolean;
 };
 
 export type OnboardingDestination =
   // Write to the payload's own relative path — either it is not a ladder file,
   // --force is in effect, or the real name is free.
   | { readonly type: "primary"; readonly dest: string }
-  // Rung 2: the real name is taken, so the doc lands on the alternate.
-  | { readonly type: "alternate"; readonly dest: string }
+  // Rung 2: the doc lands on the alternate. `primaryExists` is the observed
+  // state of the real name, carried so the notice never has to assume it.
+  | { readonly type: "alternate"; readonly dest: string; readonly primaryExists: boolean }
   // Rung 3: both names are taken. Nothing is written and nothing is recorded.
-  | { readonly type: "blocked"; readonly dest: string };
+  | { readonly type: "blocked"; readonly dest: string; readonly primaryExists: boolean };
 
 export type OnboardingProbe = {
   readonly relPath: string;
@@ -69,13 +76,18 @@ export function decideOnboardingDestination(probe: OnboardingProbe): OnboardingD
   if (alternate === null) return Object.freeze({ type: "primary", dest: probe.relPath });
   if (probe.force) return Object.freeze({ type: "primary", dest: probe.relPath });
   if (!probe.primaryExists) return Object.freeze({ type: "primary", dest: probe.relPath });
-  if (!probe.alternateExists) return Object.freeze({ type: "alternate", dest: alternate });
-  return Object.freeze({ type: "blocked", dest: alternate });
+  if (!probe.alternateExists) return Object.freeze({ type: "alternate", dest: alternate, primaryExists: probe.primaryExists });
+  return Object.freeze({ type: "blocked", dest: alternate, primaryExists: probe.primaryExists });
 }
 
 // The notice a non-"primary" destination owes the user, or null when the doc
 // landed on its real name and needs no wiring at all.
 export function noticeFor(relPath: string, destination: OnboardingDestination): OnboardingNotice | null {
   if (destination.type === "primary") return null;
-  return Object.freeze({ kind: destination.type, primary: relPath, alternate: destination.dest });
+  return Object.freeze({
+    kind: destination.type,
+    primary: relPath,
+    alternate: destination.dest,
+    primaryExists: destination.primaryExists,
+  });
 }

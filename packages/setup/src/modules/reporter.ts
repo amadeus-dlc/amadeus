@@ -67,14 +67,24 @@ export function renderPlanReport(plan: Plan, note?: string): string {
   if (notices.length > 0) {
     lines.push("Onboarding doc:");
     for (const notice of notices) {
-      lines.push(
-        notice.kind === "alternate"
-          ? `  ${notice.primary} already exists — installing to ${notice.alternate} instead (manual wiring required).`
-          : `  ${notice.primary} and ${notice.alternate} both exist — not installed (manual wiring required).`,
-      );
+      lines.push(noticeLine(notice));
     }
   }
   return lines.join("\n");
+}
+
+// The one-line plan-report form of a notice. An upgrade that follows the
+// installed manifest to the alternate reaches here with primaryExists=false
+// whenever the user has since removed their own file at the real name, so
+// "already exists" is stated only when it was actually observed.
+function noticeLine(notice: OnboardingNotice): string {
+  if (notice.kind === "blocked") {
+    return `  ${notice.primary} and ${notice.alternate} both exist — not installed (manual wiring required).`;
+  }
+  if (notice.primaryExists) {
+    return `  ${notice.primary} already exists — installing to ${notice.alternate} instead (manual wiring required).`;
+  }
+  return `  Installing to ${notice.alternate}, where the previous install placed it — ${notice.primary} must import it (manual wiring required).`;
 }
 
 // #3388, completion condition 2: the alternate onboarding filename is inert
@@ -87,7 +97,11 @@ export function renderOnboardingWiring(notices: readonly OnboardingNotice[], har
   for (const notice of notices) {
     lines.push("");
     if (notice.kind === "alternate") {
-      lines.push(`  ${notice.primary} already existed, so the onboarding doc was written to ${notice.alternate}.`);
+      lines.push(
+        notice.primaryExists
+          ? `  ${notice.primary} already existed, so the onboarding doc was written to ${notice.alternate}.`
+          : `  The onboarding doc was written to ${notice.alternate}, where the previous install placed it.`,
+      );
     } else {
       lines.push(`  ${notice.primary} and ${notice.alternate} both already existed, so no onboarding doc was written.`);
     }

@@ -91,7 +91,7 @@ describe("renderPlanReport — onboarding ladder notices (#3388)", () => {
   test("states the divert in words rather than leaving it to be inferred from the Add list", () => {
     const plan = fakePlan(
       [planEntry({ path: "CLAUDE-AMADEUS.md", action: "add", class: "shared", sourcePath: "CLAUDE.md" })],
-      [{ kind: "alternate", primary: "CLAUDE.md", alternate: "CLAUDE-AMADEUS.md" }],
+      [{ kind: "alternate", primary: "CLAUDE.md", alternate: "CLAUDE-AMADEUS.md", primaryExists: true }],
     );
     const text = reporter.renderPlanReport(plan);
     expect(text).toContain("Onboarding doc:");
@@ -99,8 +99,22 @@ describe("renderPlanReport — onboarding ladder notices (#3388)", () => {
     expect(text).toContain("CLAUDE-AMADEUS.md");
   });
 
+  test("an alternate whose real name is absent never claims the real name already exists", () => {
+    // Upgrade following the installed manifest to the alternate: the divert is a
+    // record of where the doc lives, not evidence that CLAUDE.md is occupied.
+    const plan = fakePlan(
+      [planEntry({ path: "CLAUDE-AMADEUS.md", action: "update", class: "shared", sourcePath: "CLAUDE.md" })],
+      [{ kind: "alternate", primary: "CLAUDE.md", alternate: "CLAUDE-AMADEUS.md", primaryExists: false }],
+    );
+    const text = reporter.renderPlanReport(plan);
+    expect(text).toContain("Onboarding doc:");
+    expect(text).not.toContain("CLAUDE.md already exists");
+    expect(text).toContain("where the previous install placed it");
+    expect(text).toContain("CLAUDE.md must import it");
+  });
+
   test("a blocked doc is reported even though it produced no plan entry", () => {
-    const plan = fakePlan([], [{ kind: "blocked", primary: "AGENTS.md", alternate: "AGENTS-AMADEUS.md" }]);
+    const plan = fakePlan([], [{ kind: "blocked", primary: "AGENTS.md", alternate: "AGENTS-AMADEUS.md", primaryExists: true }]);
     const text = reporter.renderPlanReport(plan);
     expect(text).toContain("AGENTS.md and AGENTS-AMADEUS.md both exist");
     expect(text).toContain("not installed");
@@ -121,7 +135,7 @@ describe("renderOnboardingWiring (#3388 completion condition 2)", () => {
 
   test("claude is told the exact @-import line to add", () => {
     const text = reporter.renderOnboardingWiring(
-      [{ kind: "alternate", primary: "CLAUDE.md", alternate: "CLAUDE-AMADEUS.md" }],
+      [{ kind: "alternate", primary: "CLAUDE.md", alternate: "CLAUDE-AMADEUS.md", primaryExists: true }],
       claudeHarness(),
     );
     expect(text).not.toBeNull();
@@ -131,9 +145,21 @@ describe("renderOnboardingWiring (#3388 completion condition 2)", () => {
     expect(text ?? "").toContain("inert");
   });
 
+  test("the wiring block drops the 'already existed' claim when the real name is free", () => {
+    const text = reporter.renderOnboardingWiring(
+      [{ kind: "alternate", primary: "CLAUDE.md", alternate: "CLAUDE-AMADEUS.md", primaryExists: false }],
+      claudeHarness(),
+    );
+    const body = text ?? "";
+    expect(body).not.toContain("already existed");
+    expect(body).toContain("where the previous install placed it");
+    // The step the user owes is unchanged — the alternate is inert either way.
+    expect(body).toContain('"@CLAUDE-AMADEUS.md"');
+  });
+
   test("an AGENTS.md harness is told to merge, since it has no @-import", () => {
     const text = reporter.renderOnboardingWiring(
-      [{ kind: "alternate", primary: "AGENTS.md", alternate: "AGENTS-AMADEUS.md" }],
+      [{ kind: "alternate", primary: "AGENTS.md", alternate: "AGENTS-AMADEUS.md", primaryExists: true }],
       codexHarness(),
     );
     expect(text ?? "").toContain("Merge AGENTS-AMADEUS.md into AGENTS.md");
@@ -143,7 +169,7 @@ describe("renderOnboardingWiring (#3388 completion condition 2)", () => {
 
   test("a blocked doc adds the move-aside-and-re-run step ahead of the wiring step", () => {
     const text = reporter.renderOnboardingWiring(
-      [{ kind: "blocked", primary: "CLAUDE.md", alternate: "CLAUDE-AMADEUS.md" }],
+      [{ kind: "blocked", primary: "CLAUDE.md", alternate: "CLAUDE-AMADEUS.md", primaryExists: true }],
       claudeHarness(),
     );
     const body = text ?? "";
@@ -206,7 +232,7 @@ describe("renderSuccess (US-A6)", () => {
     const verify = VerifyResult.of([{ name: "harness-dir", ok: true, detail: "exists" }]);
     const next = NextSteps.of(claudeHarness(), ResolvedVersion.fromRelease(semver.value), "/tmp/project");
     const wiring = reporter.renderOnboardingWiring(
-      [{ kind: "alternate", primary: "CLAUDE.md", alternate: "CLAUDE-AMADEUS.md" }],
+      [{ kind: "alternate", primary: "CLAUDE.md", alternate: "CLAUDE-AMADEUS.md", primaryExists: true }],
       claudeHarness(),
     );
     const text = reporter.renderSuccess(fakeApplyResult(), verify, next, wiring);

@@ -5353,5 +5353,17 @@
     },
     "reason": "The /proc readdir catch arm is reachable only where /proc is absent (macOS/win32); the Linux coverage runner always has /proc, and the darwin in-process test proves the arm returns [] there.",
     "expiry": "remove if the coverage job ever runs on a platform without /proc"
+  },
+  {
+    "file": "packages/setup/src/domain/onboarding-ladder.ts",
+    "selector": {
+      "function": "<module>",
+      "fingerprint": "sha256:65bc917948d9411bc33d1434b9d53d42808714165053f615e17b281dc00cc18c",
+      "anchorLines": 32,
+      "targetLines": "1-32",
+      "class": "type-only"
+    },
+    "reason": "This range is the module's block of TypeScript type declarations \u2014 the notice, destination and probe shapes \u2014 and holds no runtime statement. Every branch that reads them is covered directly by the setup ladder and setup plan unit suites, but Bun emits zero-hit DA records for the type-only declarations only in the merged suite.",
+    "expiry": "remove when the patch gate excludes type-only lines or Bun stops emitting DA records for them"
   }
 ]

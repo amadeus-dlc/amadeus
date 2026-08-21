@@ -327,7 +327,9 @@ describe("Plan.forInstall — onboarding ladder rung 2: name taken (#3388 spec 2
       // The payload path survives as sourcePath so the applier copies the right
       // bytes to the new destination.
       expect(diverted?.sourcePath).toBe("CLAUDE.md");
-      expect(plan.onboardingNotices()).toEqual([{ kind: "alternate", primary: "CLAUDE.md", alternate: "CLAUDE-AMADEUS.md" }]);
+      expect(plan.onboardingNotices()).toEqual([
+        { kind: "alternate", primary: "CLAUDE.md", alternate: "CLAUDE-AMADEUS.md", primaryExists: true },
+      ]);
     });
   });
 
@@ -338,7 +340,9 @@ describe("Plan.forInstall — onboarding ladder rung 2: name taken (#3388 spec 2
 
       const plan = planForInstall(sourceRoot, target, false);
       expect(plan.entries().map((e) => e.path).sort()).toEqual(["AGENTS-AMADEUS.md", "settings.json"]);
-      expect(plan.onboardingNotices()).toEqual([{ kind: "alternate", primary: "AGENTS.md", alternate: "AGENTS-AMADEUS.md" }]);
+      expect(plan.onboardingNotices()).toEqual([
+        { kind: "alternate", primary: "AGENTS.md", alternate: "AGENTS-AMADEUS.md", primaryExists: true },
+      ]);
     });
   });
 
@@ -366,7 +370,9 @@ describe("Plan.forInstall — onboarding ladder rung 3: both names taken (#3388 
       // Not written AND not recorded: a manifest entry for a file we never
       // installed would let the next upgrade "follow" it onto the user's file.
       expect(plan.entries().map((e) => e.path)).toEqual(["settings.json"]);
-      expect(plan.onboardingNotices()).toEqual([{ kind: "blocked", primary: "CLAUDE.md", alternate: "CLAUDE-AMADEUS.md" }]);
+      expect(plan.onboardingNotices()).toEqual([
+        { kind: "blocked", primary: "CLAUDE.md", alternate: "CLAUDE-AMADEUS.md", primaryExists: true },
+      ]);
     });
   });
 });
@@ -411,8 +417,54 @@ describe("Plan.forUpgrade — the manifest decides where the doc lives (#3388 sp
       expect(entry?.sourcePath).toBe("CLAUDE.md");
       expect(result.value.entries().some((e) => e.path === "CLAUDE.md")).toBe(false);
       expect(result.value.onboardingNotices()).toEqual([
-        { kind: "alternate", primary: "CLAUDE.md", alternate: "CLAUDE-AMADEUS.md" },
+        { kind: "alternate", primary: "CLAUDE.md", alternate: "CLAUDE-AMADEUS.md", primaryExists: true },
       ]);
+    });
+  });
+
+  test("a user who since deleted their own CLAUDE.md is not told it still exists", () => {
+    withTempDirs((sourceRoot, target) => {
+      seedOnboardingSource(sourceRoot, "CLAUDE.md");
+      // Same manifest as the rung-2 install above, but the user has removed the
+      // file that caused the divert. The doc still follows the manifest to the
+      // alternate — the notice just must not assert a collision that is gone.
+      writeFileSync(join(target, "CLAUDE-AMADEUS.md"), "# shipped onboarding doc\n");
+      const md5 = createHash("md5").update("# shipped onboarding doc\n").digest("hex");
+      const source = manifestedSource([{ path: "CLAUDE-AMADEUS.md", class: "shared", required: false, md5 }]);
+
+      const result = Plan.forUpgrade(fakePayload(sourceRoot), source, claudeHarness(), target, {
+        force: false,
+        startedAt: "2026-07-08T12:00:00.000Z",
+      });
+      if (result.type !== "ok") throw new Error("expected ok");
+      expect(result.value.entries().find((e) => e.path === "CLAUDE-AMADEUS.md")?.action).toBe("update");
+      expect(result.value.onboardingNotices()).toEqual([
+        { kind: "alternate", primary: "CLAUDE.md", alternate: "CLAUDE-AMADEUS.md", primaryExists: false },
+      ]);
+    });
+  });
+
+  test("--force routes the doc back to its real name, manifest alternate and all (#3388 spec 4)", () => {
+    withTempDirs((sourceRoot, target) => {
+      seedOnboardingSource(sourceRoot, "CLAUDE.md");
+      writeFileSync(join(target, "CLAUDE.md"), "# the user's own instructions\n");
+      writeFileSync(join(target, "CLAUDE-AMADEUS.md"), "# shipped onboarding doc\n");
+      const md5 = createHash("md5").update("# shipped onboarding doc\n").digest("hex");
+      const source = manifestedSource([{ path: "CLAUDE-AMADEUS.md", class: "shared", required: false, md5 }]);
+
+      const result = Plan.forUpgrade(fakePayload(sourceRoot), source, claudeHarness(), target, {
+        force: true,
+        startedAt: "2026-07-08T12:00:00.000Z",
+      });
+      if (result.type !== "ok") throw new Error("expected ok");
+      // --force bypasses the ladder AND the manifest follow: the real name wins.
+      // The disposition is then BR-U11's ordinary manifest lookup — a path the
+      // manifest never recorded is treated as framework-owned, hence "update".
+      const entry = result.value.entries().find((e) => e.path === "CLAUDE.md");
+      expect(entry?.action).toBe("update");
+      expect(entry?.sourcePath).toBeUndefined();
+      expect(result.value.entries().some((e) => e.path === "CLAUDE-AMADEUS.md")).toBe(false);
+      expect(result.value.onboardingNotices()).toEqual([]);
     });
   });
 
@@ -447,7 +499,7 @@ describe("Plan.forUpgrade — the manifest decides where the doc lives (#3388 sp
       expect(result.value.entries().some((e) => e.path === "CLAUDE.md")).toBe(false);
       expect(result.value.entries().find((e) => e.path === "CLAUDE-AMADEUS.md")?.action).toBe("add");
       expect(result.value.onboardingNotices()).toEqual([
-        { kind: "alternate", primary: "CLAUDE.md", alternate: "CLAUDE-AMADEUS.md" },
+        { kind: "alternate", primary: "CLAUDE.md", alternate: "CLAUDE-AMADEUS.md", primaryExists: true },
       ]);
     });
   });
