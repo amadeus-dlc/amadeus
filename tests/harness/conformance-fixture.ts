@@ -64,15 +64,6 @@ export function seedHoldingHost(projectRoot: string, hostRoot: string): void {
   clearFixtureVerdict(hostRoot);
 }
 
-/** Record a verdict on the host, which releases the advisory (no-hold). */
-export function recordFixtureVerdict(hostRoot: string): void {
-  mkdirSync(hostRoot, { recursive: true });
-  writeFileSync(
-    join(hostRoot, FIXTURE_VERDICT_STATE),
-    `${JSON.stringify({ recordedAt: "2026-07-27T00:00:00Z" })}\n`,
-  );
-}
-
 /** Remove any recorded verdict, so the next evaluation holds again. */
 export function clearFixtureVerdict(hostRoot: string): void {
   rmSync(join(hostRoot, FIXTURE_VERDICT_STATE), { force: true });
