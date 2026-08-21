@@ -32,12 +32,58 @@
 // today -> fix -> hook works from main AND worktrees, survives worktree
 // deletion" proof #3419 asks for.
 
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import * as childProcess from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { isLinkedWorktree, main as prepareMain } from "../../scripts/lefthook-prepare.ts";
+
+const { spawnSync } = childProcess;
+// Captured BEFORE mock.module runs -- mock.module rewrites the live
+// "node:child_process" module namespace in place, so a property read of
+// `childProcess.spawnSync` made AFTER registration (e.g. from inside the
+// mock factory's own body, at call time) resolves to the mock itself and
+// self-recurses infinitely. Capturing the function value here, while the
+// binding still points at the real implementation, is what lets the
+// passthrough branch below actually reach the real spawnSync.
+const realSpawnSync = childProcess.spawnSync;
+
+// main()'s default `runInstall` (used whenever it's called with just a
+// `cwd`, i.e. the real `import.meta.main` entrypoint path) really spawns
+// `lefthook install` -- exercised below by mocking node:child_process so
+// that ONE call is intercepted while every "git" call (this test's own
+// scratch-repo setup, and main()'s own isLinkedWorktree() resolution)
+// still passes through to the real spawnSync. Mirrors the module-wide
+// mock.module + dynamic-import-after-mock convention established in
+// tests/integration/t-bolt-failure-transitions.test.ts.
+let capturedLefthookArgs: string[] | null = null;
+let capturedLefthookCwd: string | undefined;
+let mockLefthookStatus: number | null = 0;
+
+mock.module("node:child_process", () => ({
+	...childProcess,
+	spawnSync: ((command: unknown, args?: unknown, options?: unknown) => {
+		if (command === "lefthook") {
+			capturedLefthookArgs = Array.isArray(args) ? args.map(String) : [];
+			capturedLefthookCwd =
+				options !== null && typeof options === "object" && "cwd" in options
+					? (options as { cwd?: string }).cwd
+					: undefined;
+			return {
+				pid: 1,
+				output: [null, "", ""],
+				stdout: "",
+				stderr: "",
+				status: mockLefthookStatus,
+				signal: null,
+			};
+		}
+		// biome-ignore lint/suspicious/noExplicitAny: passthrough to the real spawnSync's own overloaded signature
+		return realSpawnSync(command as any, args as any, options as any);
+	}) as typeof childProcess.spawnSync,
+}));
+
+const { isLinkedWorktree, main: prepareMain } = await import("../../scripts/lefthook-prepare.ts");
 
 let root: string;
 let worktree: string;
@@ -96,6 +142,9 @@ afterEach(() => {
 	spawnSync("git", ["-C", root, "worktree", "remove", "--force", worktree], { encoding: "utf-8" });
 	rmSync(root, { recursive: true, force: true });
 	rmSync(join(worktree, ".."), { recursive: true, force: true });
+	capturedLefthookArgs = null;
+	capturedLefthookCwd = undefined;
+	mockLefthookStatus = 0;
 });
 
 describe("vulnerability class (today's behavior): a worktree install hijacks the shared hook", () => {
@@ -171,6 +220,26 @@ describe("fix: scripts/lefthook-prepare.ts's main()/isLinkedWorktree()", () => {
 			return 0;
 		});
 		expect(called).toBe(1);
+		expect(code).toBe(0);
+	});
+
+	test("main()'s default runInstall really spawns `lefthook install` in cwd when called with just a cwd", () => {
+		mockLefthookStatus = 0;
+		const code = prepareMain(root);
+		expect(code).toBe(0);
+		expect(capturedLefthookArgs).toEqual(["install"]);
+		expect(capturedLefthookCwd).toBe(root);
+	});
+
+	test("main()'s default runInstall propagates lefthook's own exit status", () => {
+		mockLefthookStatus = 3;
+		const code = prepareMain(root);
+		expect(code).toBe(3);
+	});
+
+	test("main()'s default runInstall treats a null status as 0 (defensive default)", () => {
+		mockLefthookStatus = null;
+		const code = prepareMain(root);
 		expect(code).toBe(0);
 	});
 });
