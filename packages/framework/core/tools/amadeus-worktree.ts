@@ -831,10 +831,10 @@ export function ignoredTerritoryRoots(
   // blanket rule that broad leaves no directory distinguishable from it.
   if (IGNORE_PROBE_NAMES.some((name) => ignoredProbes.has(name))) return roots;
 
-  const swallowsAnyName = (dir: string): boolean =>
+  const swallowsArbitraryName = (dir: string): boolean =>
     IGNORE_PROBE_NAMES.every((name) => ignoredProbes.has(`${dir}/${name}`));
   for (const path of ignoredPaths) {
-    const territory = ancestorDirsOf(path).find(swallowsAnyName);
+    const territory = ancestorDirsOf(path).find(swallowsArbitraryName);
     if (territory !== undefined) roots.set(path, territory);
   }
   return roots;

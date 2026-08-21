@@ -466,11 +466,6 @@ describe("t209 source classification (#3197) — pure seam", () => {
     expect(ignoredStatusPaths(porcelain)).toEqual(["dist/generated.js", "dist/"]);
   });
 
-  // Real-git fixture: the territory probe must not classify a directory as
-  // generated output when the ignore rule matches only the probe's own literal
-  // name (or one probe's stem) — only a rule broad enough to swallow BOTH
-  // dissimilar probe names (`dir/**`, `dir/*`) counts. Uses a throwaway repo so
-  // the verdict comes from git itself, independent of ambient git config.
   // The probe's own failure arm. `check-ignore` exits 1 for "nothing matched",
   // which is an answer; anything above that is a fault the merge must refuse on
   // rather than silently classify nothing as territory and delete the rest.
@@ -480,9 +475,17 @@ describe("t209 source classification (#3197) — pure seam", () => {
     const root = mkdtempSync(join(tmpdir(), "amadeus-t209-nogit-"));
     // The rejection path resolves a project dir before it prints. Point it at
     // the fixture, which carries no state file, so the error stays on stderr
-    // and no ERROR_LOGGED row is written into a real workspace.
-    const savedProjectDir = process.env.CLAUDE_PROJECT_DIR;
+    // and no ERROR_LOGGED row is written into a real workspace. GIT_DIR /
+    // GIT_WORK_TREE are cleared so an ambient repository binding cannot turn
+    // the intended exit-128 fault into a successful check against it.
+    const savedEnv = {
+      CLAUDE_PROJECT_DIR: process.env.CLAUDE_PROJECT_DIR,
+      GIT_DIR: process.env.GIT_DIR,
+      GIT_WORK_TREE: process.env.GIT_WORK_TREE,
+    };
     process.env.CLAUDE_PROJECT_DIR = root;
+    delete process.env.GIT_DIR;
+    delete process.env.GIT_WORK_TREE;
     try {
       mkdirSync(join(root, "dist"), { recursive: true });
       const rejection = captureRejection(() => {
@@ -493,12 +496,19 @@ describe("t209 source classification (#3197) — pure seam", () => {
       expect(rejection.message).toContain("merge rejected: ");
       expect(rejection.message).toContain("could not classify ignored source paths");
     } finally {
-      if (savedProjectDir === undefined) delete process.env.CLAUDE_PROJECT_DIR;
-      else process.env.CLAUDE_PROJECT_DIR = savedProjectDir;
+      for (const [key, value] of Object.entries(savedEnv)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
       rmSync(root, { recursive: true, force: true });
     }
   });
 
+  // Real-git fixture: the territory probe must not classify a directory as
+  // generated output when the ignore rule matches only the probe's own literal
+  // name (or one probe's stem) — only a rule broad enough to swallow BOTH
+  // dissimilar probe names (`dir/**`, `dir/*`) counts. Uses a throwaway repo so
+  // the verdict comes from git itself, independent of ambient git config.
   test("ignoredTerritoryRoots: a probe-name-only ignore rule does not create territory", () => {
     const root = mkdtempSync(join(tmpdir(), "amadeus-t209-probe-"));
     // Isolate from ambient git config: a developer-machine global excludes
