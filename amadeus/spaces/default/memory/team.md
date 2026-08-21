@@ -82,7 +82,7 @@
 
 テストは Bun で unit・integration・smoke を日常 CI に載せ、e2e と形式検証は対象リスクに応じて追加する。実行可能な振る舞いの追加・変更・欠陥修正は TDD を既定かつ必須とする。実装前に合意済みの公開 seam へ失敗テストを1件追加して Red を実測し、それを通す最小実装で Green にする vertical slice を1件ずつ反復する。テストの一括先行・実装後のテスト追加・実装後の落ちる実証は TDD 実施とみなさない。エラーパス・復旧分岐・防御的 catch も「実行可能な振る舞い」に含まれ、この既定の適用対象である — レビュー指摘対応で追加する分岐を含め、エラーパスのテスト後回しを許容しない。適用外は (1) 振る舞いを持たない文書・書式だけの変更 (2) 振る舞い不変のリファクタリング (3) 正本から機械生成される投影物だけの同期 (4) 破棄する探索的 spike に限り、適用外でも既存テストの前後 Green・characterization test・drift check・文書検査を行う。挙動変更を含むリファクタリング、正本・generator・投影規則の変更、機械的に消費される文書は適用外にしない。変更が小さい・急ぎ・テストが難しい・既存 seam がないことも理由にしない。seam が未確定なら実装前に停止して合意を取り、迷えば TDD に倒す。coverage ratchet、patch coverage、complexity、生成物 drift は blocking gate として維持する <!-- cid:code-generation:tdd-default-with-narrow-exceptions -->
 
-検証は二層で運用する。日常 CI は property-based/unit/integration を回し、並行プロトコル(状態機械・相互排除の不変量)の spec 変更時のみ単一形式モデルの完全探索(TLA+/TLC 等)を専用ジョブで追加する(全変更への一律義務化はしない)<!-- cid:build-and-test:two-layer-verification-posture -->
+検証は日常 CI の property-based/unit/integration を基本とする。形式検証面(並行プロトコル spec 変更時の単一形式モデル完全探索)は FMC 退役(intent 260821-fmc-retirement、2026-08-21)により当面持たない — 再設計時に本則へ再導入を裁定する <!-- cid:build-and-test:two-layer-verification-posture -->
 
 複数の test path を列挙して実行する場合は、実行前に全 path の実在を機械確認し、実行後に期待ファイル数と runner の報告数を照合する — ランナーは不存在 path を無音で除外したまま成功しうる <!-- cid:build-and-test:test-path-set-completeness -->
 
