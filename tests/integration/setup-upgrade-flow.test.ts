@@ -57,6 +57,10 @@ function v2Entries(): TarFixtureEntry[] {
   ];
 }
 
+function withOnboarding(entries: TarFixtureEntry[], content: string): TarFixtureEntry[] {
+  return [...entries, { type: "file", name: "dist/claude/CLAUDE.md", content: Buffer.from(content) }];
+}
+
 function fakeHttp(archive: Buffer, tag: `v${string}`): Http {
   const checksums = buildReleaseAssetChecksums(archive, tag);
   return {
@@ -132,6 +136,11 @@ async function installV1(target: string): Promise<number> {
   return main(["install", "--harness", "claude", "--target", target, "--yes"], realPorts(archive, "v1.0.0"));
 }
 
+async function installV1WithOnboarding(target: string): Promise<number> {
+  const archive = buildCodeloadFixture("amadeus-1.0.0", withOnboarding(v1Entries(), "# shipped onboarding v1\n"));
+  return main(["install", "--harness", "claude", "--target", target, "--yes"], realPorts(archive, "v1.0.0"));
+}
+
 describe("upgrade pipeline — normal upgrade, no customization (FR-005/FR-016)", () => {
   test("owned/shared files update to v2 content and the manifest advances", async () => {
     const target = mkdtempSync(join(tmpdir(), "amadeus-setup-upgrade-flow-normal-"));
@@ -174,6 +183,32 @@ describe("upgrade pipeline — customization preserved (FR-008/NFR-002)", () => 
 
       // user-preserved (memory/) content is never touched, customized or not.
       expect(readFileSync(join(target, "amadeus", "spaces", "default", "memory", "org.md"), "utf8")).toBe("# org rules v1\n");
+    } finally {
+      rmSync(target, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("upgrade pipeline — manifest-unknown onboarding under --force (#3403)", () => {
+  test("backs up the user's CLAUDE.md before replacing the manifest-unknown primary", async () => {
+    const target = mkdtempSync(join(tmpdir(), "amadeus-setup-upgrade-flow-manifest-unknown-onboarding-"));
+    const userContent = "# the user's own instructions\n";
+    try {
+      writeFileSync(join(target, "CLAUDE.md"), userContent);
+      expect(await installV1WithOnboarding(target)).toBe(0);
+      expect(existsSync(join(target, "CLAUDE-AMADEUS.md"))).toBe(true);
+
+      const archive = buildCodeloadFixture("amadeus-1.1.0", withOnboarding(v2Entries(), "# shipped onboarding v2\n"));
+      const exitCode = await main(
+        ["upgrade", "--harness", "claude", "--target", target, "--yes", "--force"],
+        realPorts(archive, "v1.1.0"),
+      );
+      expect(exitCode).toBe(0);
+      expect(readFileSync(join(target, "CLAUDE.md"), "utf8")).toBe("# shipped onboarding v2\n");
+
+      const backups = readdirSync(target).filter((name) => /^CLAUDE\.md\.\d{8}T\d{6}Z\.bk$/.test(name));
+      expect(backups).toHaveLength(1);
+      expect(readFileSync(join(target, backups[0] as string), "utf8")).toBe(userContent);
     } finally {
       rmSync(target, { recursive: true, force: true });
     }

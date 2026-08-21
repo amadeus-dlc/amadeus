@@ -262,7 +262,14 @@ function buildUpgradeEntries(root: string, target: string, source: UpgradeSource
     }
 
     const actualMd5 = md5OfFileSync(join(target, destPath));
-    const disposition = source.dispositionFor(destPath, cls, actualMd5);
+    // #3403: --force can route an onboarding document back to its primary name
+    // even when the installed manifest recorded the alternate. An existing
+    // shared destination absent from that manifest is user data, not known
+    // framework-owned content, so preserve it before the forced copy.
+    const disposition: Disposition =
+      opts.force && cls === "shared" && !source.knowsPath(destPath)
+        ? Object.freeze({ type: "backup-then-copy" })
+        : source.dispositionFor(destPath, cls, actualMd5);
     // Not a bypassed conflict (there is none in upgrade) — `forced` only flags
     // "a backup happened even under --force" so BR-U12 (backups are never
     // skipped by --force) stays visible in the plan report.
