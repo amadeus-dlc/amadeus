@@ -641,6 +641,20 @@ describe("#3149 — the in-place finalisation answers for each member Unit separ
     expect(out.stderr).toContain("GitHub state could not be read");
   });
 
+  test("keeps the generic refusal for an intact receipt with another delivery identity", async () => {
+    const f = await convergedPair();
+    reattest(f, SECOND, (receipt) => ({ ...receipt, intentUuid: "another-intent" }));
+    merge(f, f.branchHead);
+    f.branchGone = true;
+    moveCheckoutOn(f);
+
+    const out = await runCli(memberArgs("report", f), seams(f));
+
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain("report attestation is missing, tampered, copied, or replayed");
+    expect(memberBody(f)).not.toContain("- merge commit:");
+  });
+
   test("a member Unit with no record on disk is refused, not invented", async () => {
     const f = await convergedPair();
     rmSync(reportPathFor(f.record, SECOND));

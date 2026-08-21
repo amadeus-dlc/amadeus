@@ -1268,13 +1268,7 @@ async function finaliseMergedInPlace(
     if (outcome.exitCode !== 0) return outcome;
     paths.push(outcome.stdout.trim());
   }
-  if (paths.length === 0) {
-    return {
-      exitCode: 1,
-      stdout: "",
-      stderr: "merged finalisation refused: no member receipt binds to a pull request\n",
-    };
-  }
+  if (paths.length === 0) return { exitCode: 1, stdout: "", stderr: "merged finalisation refused: no member receipt binds to a pull request\n" };
   return { exitCode: 0, stdout: `${paths.join("\n")}\n`, stderr: "" };
 }
 
