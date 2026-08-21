@@ -764,7 +764,7 @@ M	plugins/github-pr-convergence/tools/pr-convergence-cli.ts
 
 機序は `architecture.md`、コンポーネント境界は `component-inventory.md`、テスト面と台帳は `code-quality-assessment.md` の各対応節を参照。
 
-## 差分リフレッシュで観測した構造変化と、focus 2 件の患部配置（260818-priority-bug-batch-4、現在、observed `127be70c5`）
+## 差分リフレッシュで観測した構造変化と、focus 2 件の患部配置（260818-priority-bug-batch-4、履歴、observed `127be70c5`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260820-fmc-drift-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: base `23d4ae767956cd56fc28fa78abe28096712eff8a` → observed `127be70c5d7a584016f88a5d44e8715904020721`。区間は **5 コミット / 99 files changed, 7314 insertions(+), 61 deletions(-)**（本節の実測）。
 
@@ -902,3 +902,109 @@ packages/framework/core/amadeus-common/stages/construction/infrastructure-design
 | #2837 | `tests/integration/t135-invoke-swarm.test.ts` — 現行は `--batch` を全てハードコードしており、batch 番号の**導出**をテストしていない。`tests/unit/t113.test.ts:303-322` は `prepared_batch` / `retry_unit` の pair 整合のみ |
 
 **新規テストファイルを足す場合は `tests/.coverage-registry.json` の regen 同梱が必須**（`cid:build-and-test:c1`、`bun tests/gen-coverage-registry.ts`）。本区間でも新規 8 スイートに対し registry が **+48 −5** で同期されている（本節の実測）。
+
+## 差分リフレッシュで観測した構造変化と、focus 4 件の患部配置（260820-fmc-drift-batch、現在、observed `e86fbe125`）
+
+**観測 ref**: base `c8c393bba` → observed `e86fbe125`（97 commits、除外前 566 files / +32638 −3949、除外後 176 files / +14920 −1380）。行番号はすべて observed 断面で本節の起草時に確認した。
+
+### 1. 構造変化 — 新規 4 / 削除 4 / 移設 1
+
+`git diff --name-status -M c8c393bba..e86fbe125 -- packages/ plugins/ scripts/ .github/` の実測:
+
+| 種別 | パス | 規模 |
+|---|---|---|
+| A | `packages/framework/core/tools/amadeus-mirror-orphan.ts` | +377 |
+| A | `scripts/release-land.ts` | +306 |
+| A | `scripts/release-land-domain.ts` | +219 |
+| A | `plugins/formal-model-check/docs/terminal-route-receipt-audit.md` | +41 |
+| D | `plugins/formal-model-check/tools/advisory-model-check.ts` | −314（移設） |
+| D | `packages/setup/.release-it.json` | 外部ツール設定の撤去 |
+| D | `scripts/run-claude.sh` / `scripts/run-codex.sh` | −10 / −45（#3299） |
+| **R094** | `plugins/formal-model-check/tools/advisory-model-check.ts` → **`tests/lib/advisory-model-check.ts`** | #3078 — 未宣言 plugin tool の検出 |
+
+**R094 の意味**: `plugins/<name>/tools/` は plugin.json の `tools[]` で明示宣言される面であり、t3078 が git-tracked ファイル集合との一致を blocking 検査する。テストヘルパはそこに置けないため `tests/lib/` へ移った。**plugin ツリーの境界が厳格化した変更**であり、以後 plugin 配下に「宣言しないファイル」を置くことはできない。
+
+テスト側の新規は **A 行 24 件、うち `*.test.ts` が 17 件**（述語 = `git diff --name-status -M c8c393bba..e86fbe125 -- tests/` の A 行に `grep -c '\.test\.ts$'`。残り 7 件は台帳・fixture・helper: `tests/.silent-success-baseline.json` / `tests/lib/silent-success.ts` / `tests/test-time-factor-census.md` / `tests/fixtures/live-llm-regression-priority.json` / `tests/fixtures/release-land-repo/packages/setup/package.json` / `tests/fixtures/state-formal-model-check.md`、および R094 で移設された `tests/lib/advisory-model-check.ts`）。由来は #1982（t1982 unit/integration + `tests/lib/silent-success.ts` + `tests/.silent-success-baseline.json`）、#3078、#3088、#3147、#3183、#3239、#3243、#3249（2 本）、#3256、#3280、release-land、live LLM journey（e2e + fixture 2 件）に分かれる。削除は `tests/integration/t-run-codex-project-target.test.ts` の 1 件（`run-codex.sh` の撤去に伴う）。
+
+### 2. テスト規模（observed 実測、述語 = `ls tests/<層>/*.ts | wc -l`。helper / fixture を含む母集団であり、metrics コレクタの `tests.files`（observed 側 1070）とは述語が異なる）
+
+| 層 | ファイル数 |
+|---|---|
+| smoke | 16 |
+| unit | 439 |
+| integration | 616 |
+| e2e | 98 |
+| formal-verif | 1 |
+| **合計** | **1170**（`ls tests/{smoke,unit,integration,e2e,formal-verif}/*.ts \| wc -l` の実測と一致） |
+
+tla 関連テストは 55 ファイル（t402〜t557 と `t-formal-verif-*` 群）。
+
+### 3. focus 4 件の患部配置
+
+#### 3.1 #3186（語彙 drift 検出の腕）
+
+| 面 | パス | 位置 |
+|---|---|---|
+| モデル側（証拠） | `amadeus/spaces/default/specs/tla/PrConvergenceGate.tla` | `:14` `Verdicts` / `:15` `TerminalVerdicts` |
+| 同（同型） | `amadeus/spaces/default/specs/tla/BoltPrAttestationGate.tla` | `:22-23`（逐語同一の 2 行） |
+| stage 契約（発火述語の置き場） | `plugins/formal-model-check/stages/tla-authoring.md` | `:51` の `semantic-change` 近傍 |
+| 判定器 | `plugins/formal-model-check/tools/tla-applicability.ts` | `:143`（key 構成）/ `:182` `TERMINAL_ROUTES` / `:97` `"non-target:true": "J2d"` |
+| 交差判定（#3261 で改訂済み） | 同 | `:121-133` |
+| 入力データ | `amadeus/spaces/default/specs/tla/model-map.json` | 各モデルの `vocabulary.namedInvariants` / `traceStateVariables` |
+
+#### 3.2 #2289（replace-by-name）
+
+| 面 | パス | 位置 |
+|---|---|---|
+| compose（追加専用） | `plugins/formal-model-check/tools/tla-registration.ts` | `:229-243`（呼び出し `:338`） |
+| commit | 同 | `:314-355`（digest 照合は `:324-327`） |
+| provenance 必須化（#3263） | 同 | `:203-206` |
+| 前提ゲート | 同 | `:110` |
+| route 定義（複製 1） | 同 | `:87` |
+| route 定義（複製 2） | `plugins/formal-model-check/tools/tla-applicability.ts` | `:302`（消費 `:314`） |
+| 名前一意性 validator | `plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts` | `:615` |
+| optional キー宣言 | 同 | `:368` `OPTIONAL_MODEL_KEYS` |
+| 本番経路 | `plugins/formal-model-check/tools/tla-authoring.ts` | `:830` `createRegistrationPorts` / `:838` `RegistrationCommitter.commit` |
+| 自己参照比較テスト | **`tests/unit/t448-tla-registration.test.ts`**（同じ t448 番号を持つ `tests/integration/t448-pr-convergence-cli.integration.test.ts` / `tests/unit/t448-autonomy-statusline-segment.test.ts` とは別ファイル） | `:2-3`（同一 module specifier の 2 import。逐語でいずれも `"../../plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts"`）/ `:74-82`（test `"the shipped plugin copy reaches the same verdicts"`）/ 同名拒否 pin `:294-307` |
+
+#### 3.3 #2929（IMPLEMENTATION_PATHS の三面）
+
+| 面 | パス | 位置 |
+|---|---|---|
+| validator 境界 | `plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts` | `:248-251`（拒否 `:349-351`、述語 `:330-336` `isCanonicalImplementationPath`、呼び出し `:619` `checkAssetSpaceContainment`） |
+| ローダー境界 | `plugins/formal-model-check/tools/tla-model-loader-internal.ts` | `:291` `implementationRoot`、判定 `:299`、drift 返却 `:300`、`isContained` 定義 `:141-146` |
+| sensor glob | `plugins/formal-model-check/sensors/amadeus-model-completeness.md` | `:8` |
+| 第 3 の containment 述語 | `plugins/formal-model-check/tools/run-model-check-artifacts.ts` | `:129` `isContained` |
+| registeredEntries / canonicalRecord | `plugins/formal-model-check/tools/amadeus-sensor-model-completeness.ts` | `:233` / `:733-775` |
+| validator 境界の既存テスト | `tests/unit/t-formal-verif-canonical-core.test.ts` | `:1`（逐語 `outside the canonical implementation boundary`）、`:96` |
+| ローダー境界のテスト | — | **不在**（`git grep -c -F 'is not a regular in-boundary file' -- tests/` → 0 hit / exit 1） |
+
+#### 3.4 #3187（advisory authoring-hold の退役面）
+
+| 面 | パス | 位置 | 処理 |
+|---|---|---|---|
+| advisory 宣言 | `plugins/formal-model-check/plugin.json` | `:77` | 該当エントリのみ削除 |
+| hold 実装 | `plugins/formal-model-check/tools/tla-authoring.ts` | `:574-599`（ENOENT 分岐は `:576` に逐語コメント） | 削除 |
+| subjects 書き手 | 同 | `:632-647` `publishSubjects` / `:649-670` `subjectsDeclare`（出力先 `:667`） | 削除 |
+| subjects path | 同 | `:529-530` `defaultSubjectsPath`（`:530` に `authoring-subjects` の実リテラル） | 削除 |
+| dispatch / USAGE | 同 | `:900-901` / `:77,80-81` | 削除 |
+| stage 手順 | `plugins/formal-model-check/stages/tla-authoring.md` | `:53` | 削除 |
+| doc 対訳 | `docs/reference/22-formal-model-supply.md` / `.ja.md` | — | 同一変更で同期 |
+| RFC 参照 | `amadeus/spaces/default/specs/rfc/0001-intent-autonomy-modes.md` | `:249` | 履歴記述として扱うか要判断 |
+| **engine（同名別物）** | `packages/framework/core/tools/amadeus-orchestrate.ts` | `:5675` / `:6606` / `:6639` | **無変更**（`advisoryReportHoldReason` を受けるローカル変数名。汎用 advisory 機構で `spec-change` も同経路） |
+| blocking pin | **`tests/integration/t450-tla-authoring-stage-e2e.integration.test.ts`**（同番号の `t450-autonomy-flag-branch.test.ts` / `t450-pr-convergence-report-format-sensor.integration.test.ts` / `tests/unit/t450-autonomy-flag-apply.test.ts` とは別ファイル） | `expect(receiving).toContain("subjects declare")` | 同時処理が必須 |
+| 削除対象テスト | **`tests/integration/t528-authoring-hold-end-to-end.integration.test.ts`** / **`tests/integration/t524-subjects-declare-writer.integration.test.ts`**（同番号の `t528-report-ack-kind` / `t524-mint-presence-dist-exclusion` は無関係） | t528 は `:128` / `:134` / `:186` の 3 テスト | 削除 |
+| 期待値更新テスト | t113 / t353 / t444 / t445 / t526 / t529 / t532（**番号は test-id prefix であり 1 番号が複数ファイルを持つ** — 実ファイルは実装時に `git grep -l -F 'authoring-hold' -- tests/` を再実行して確定する） | `authoring-hold` を宣言集合の一要素として数える面 | 更新（削除ではない） |
+| coverage 台帳 | `tests/.coverage-registry.json` | `:1927` | regen（`bun tests/gen-coverage-registry.ts`） |
+
+### 4. base 引用からの行番号訂正 3 件
+
+前区間からの行シフト（主に #3261 / #3262 / #3263 による）で、次の 3 件が base 引用と食い違う。**observed 断面での再解決値を正とする。**
+
+| base 引用 | observed の実測 | 述語 |
+|---|---|---|
+| `tla-model-loader-internal.ts:498` 呼び出し側 `loadVerifiedTlaSourcesInternal` | **`:528`**（宣言は `:464` で一致） | `grep -n "loadVerifiedTlaSourcesInternal" plugins/formal-model-check/tools/tla-model-loader-internal.ts` → `464:export function …` / `528:  const sources = loadVerifiedTlaSourcesInternal(moduleUrl, fs);` |
+| `amadeus-sensor-model-completeness.ts:1000-1078` `updateModelMap` | **`:1000` は `performModelMapUpdate`**。export `updateModelMap` は **`:1121`**（本体末尾 `:1135-1136`）、内部 `updateModelMapInternal` は **`:1082`** | `grep -n "updateModelMap" plugins/formal-model-check/tools/amadeus-sensor-model-completeness.ts` → `1082:async function updateModelMapInternal(` / `1121:export async function updateModelMap(` / `1135:  return updateModelMapInternal({ ...options, mapRelativePath });` |
+| `tla-authoring.ts:521` `defaultSubjectsPath` | **`:529`**（`advisoryHold` は `:574`、`subjectsDeclare` の出力先は `:667`） | `grep -n "defaultSubjectsPath\|function advisoryHold" plugins/formal-model-check/tools/tla-authoring.ts` → `529:export function defaultSubjectsPath(` / `574:function advisoryHold(` / `667:  const path = flags.out ?? defaultSubjectsPath();` |
+
+その他 20 件超の base 引用（`tla-applicability.ts:302` / `tla-registration.ts:87` / `:229-243` / `:314-355` / `amadeus-formal-verif-model-map.ts:248-251` / `:330-336` / `:348-352` / `:615` / `:668-679` / `tla-model-loader-internal.ts:291` / `:141-146` / `amadeus-sensor-model-completeness.ts:233` / `sensors/amadeus-model-completeness.md:8` / `run-model-check-artifacts.ts:129` / `tla-authoring.ts:830,838` / t448 `:2-3`,`:74-82`,`:294-307` / `t-formal-verif-canonical-core.test.ts:96`）は observed で一致した。`tla-model-loader-internal.ts:298-300` は宣言 `:287` / 判定 `:299` / drift 返却 `:300` へ細分され、`amadeus-sensor-model-completeness.ts:733-776` は `:733-775`（末尾 1 行差）である。

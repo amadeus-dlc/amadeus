@@ -2371,7 +2371,7 @@ base `89053172ed8b5bb270e254aea029a13291d10b6b` → observed `23d4ae767956cd56fc
 
 詳細は `architecture.md` / `component-inventory.md` / `code-structure.md` の各対応節を参照。
 
-## 区間の公開契約の変化と、focus 2 件が触れる契約面（260818-priority-bug-batch-4、現在、observed `127be70c5`）
+## 区間の公開契約の変化と、focus 2 件が触れる契約面（260818-priority-bug-batch-4、履歴、observed `127be70c5`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260820-fmc-drift-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 base `23d4ae767956cd56fc28fa78abe28096712eff8a` → observed `127be70c5d7a584016f88a5d44e8715904020721`（5 コミット）。**本区間は CLI verb が 1 件増え、artifact 語彙が 1 件増え、gateway の export が 5 件増えた区間**である。前区間で動いた監査スキーマと sensor 契約は、本区間では動いていない。
 
@@ -2496,3 +2496,48 @@ status is available to it.
 **契約面から見た制約**: #3106 の是正は `SETTLED_UNIT_OUTCOME`（発行側の 1 値）と `readSettledUnitOutcomes` の拒否条件（読み側の 1 行）を**同時に**開く必要がある — 片方だけを開くと、発行された cancelled 行が読み側で `INVALID_SETTLED_ROW` になる。下流の `KNOWN_OUTCOMES` は既に `cancelled` を受理するため、fanout 側の語彙拡張は不要である。#2837 の是正は `INVOKE_SWARM_FIELDS` の閉語彙を広げるか、`amadeus-swarm.ts` に read verb を足すかの分岐であり、**いずれも公開契約の追加**になる（是正方式は未決）。
 
 詳細は `architecture.md` / `component-inventory.md` / `code-structure.md` の各対応節を参照。
+
+## 区間の公開契約の変化と、focus 4 件が触れる契約面（260820-fmc-drift-batch、現在、observed `e86fbe125`）
+
+**観測 ref**: base `c8c393bba` → observed `e86fbe125`（97 commits）。行番号はすべて observed 断面で本節の起草時に確認した。
+
+### 1. 新設された CLI 契約
+
+| 契約 | 所在 | 内容 |
+|---|---|---|
+| `amadeus-mirror-orphan.ts` | `packages/framework/core/tools/amadeus-mirror-orphan.ts`（+377、USAGE は `:297`） | 孤児化した Intent Mirror Issue の診断・修復（#3271）。回帰は `tests/unit/t3147-amadeus-mirror-orphan.test.ts` / `tests/integration/t3147-amadeus-mirror-orphan.integration.test.ts` |
+| election `terminate` verb | `packages/framework/core/tools/amadeus-election.ts` | USAGE `:44` の verb 集合が **`open\|next\|status\|vote\|notify\|tally\|render\|verify\|report\|terminate`** へ拡張（#3256 / #3272）。実装 `:346` `terminateRoundElection`。`--reason <text>` / `--superseded-by <ref>` を受ける |
+| `release-land` | `scripts/release-land.ts`（+306）+ `scripts/release-land-domain.ts`（+219） | `release.yml` の `workflow_dispatch` から呼ばれる着地オーケストレータ。外部ツール `release-it` を置換 |
+
+### 2. 既存契約の変化
+
+| 契約 | 変化 |
+|---|---|
+| election の状態語彙 | **`"terminated"` が第一級の終端として追加**。`amadeus-election.ts:736` の有効値は `draft / open / collecting / partial / tallied / rendered / recorded / terminated` の **8 値**。`:190-193` 逐語コメント `a terminated round is a dead end exactly like "recorded"`。遷移は `:357` により **collecting（または terminated への冪等再実行）からのみ**許され、それ以外は逐語 `terminate is only valid for a round stuck in collecting` で拒否。`:859-865` により `terminate` は directive ではなく `vote` と同じ直接アクションである |
+| `invoke-swarm` directive | `--batch` が directive 搬送値になった（#2837 / PR #3202）。8 conductor 面の散文が `--batch <n>` の手動指定から `--batch <directive.batch>` へ同期。pi 面の逐語（observed）: `` `--batch` is never guessed or re-derived: pass `directive.batch`, the engine's 1-origin batch identity and the durable Unit Pool id every later call for this batch is keyed by. `` あわせて `--check-cmd` / `--test-file` は **engine が供給しない conductor 知識**であると明文化された |
+| `amadeus-swarm finalize` | source-only の統合ステップが加わった（#3197 / PR #3212）。conductor 面の逐語: `finalize` は `[--target <branch>] [--strategy <squash\|merge\|rebase>]` を受け、既定は prepare が捕捉した base と `squash`。`finalize` は workflow metadata を先に reconcile し、その後 worker の commit 済み source を統合する |
+| pr-convergence CLI | `pr-convergence-cli.ts` +237 −16。supersede された unit の正直なクロージャ経路（#3239 / #3270）と、merge-attested landed report を code-generation で受理する経路（#3265）。sensor manifest（`plugins/github-pr-convergence/sensors/amadeus-pr-convergence-report-format.md`）も +4 −1 で同期 |
+| tla-authoring CLI | **terminal route の receipt 永続化が CLI ゲートで強制**（#3262）。`tla-authoring.ts:424` が `--persist` の値を検査し、`:447` が `failed({kind:"terminal-route-receipt-required", route: judged.value})` を返す。同 failure kind は `tla-applicability.ts:80` にも宣言。stage 契約 `plugins/formal-model-check/stages/tla-authoring.md:60-64` の逐語: ``The CLI gate rejects a terminal route unless `applicability receipt` is called with `--persist true` `` |
+| tla registration の draft 契約 | **`authoringProvenance` が必須化**（#3263）。`tla-registration.ts:203-206` 逐語 `return rejected("draft must carry authoringProvenance");` |
+| audit イベント契約 | canonical 基数は **98 で不変**（`tests/integration/event-registry-drift.test.ts:51-53`）。`optionalAttributes` の追加が 2 件 — `RECOMPOSED` に `"Workflow completion retracted"`（#3249。`packages/framework/core/otel/event-registry.ts` の逐語コメント `Optional so RECOMPOSED rows emitted before the retraction existed stay valid.`）、worktree 系イベントに `"Base SHA"` |
+| plugin manifest 契約 | `plugins/formal-model-check/plugin.json` は `stages`（`formal-model-check` / `tla-authoring`）、`sensors`（1 件）、`tools`（**35 件を明示宣言**）、`advisories`（`spec-change` / `authoring-hold` の 2 件）を持つ。t3078 が git-tracked な `plugins/<name>/tools/*.ts` との一致を **blocking** で検査するようになった |
+| テストランナー契約 | `tests/run-tests.ts` に silent-success 3 ゲートの環境変数契約が加わった。`resolveGateModes`（`tests/lib/silent-success.ts:96`）が `"off" \| "report" \| "strict"` の 3 モードを解決し、`anyGateActive`（`:127`）で有効判定する。台帳 basename は `:135` の `BASELINE_BASENAME`、schema version は `:136` の `BASELINE_SCHEMA_VERSION = 1` |
+
+### 3. 撤去された契約
+
+| 契約 | 根拠 |
+|---|---|
+| `scripts/run-claude.sh` / `scripts/run-codex.sh` | #3299（ローカルランナースクリプトと codex ツールチェーンピンの退役）。付随して `tests/integration/t-run-codex-project-target.test.ts` も削除 |
+| `packages/setup/.release-it.json` + devDependency `release-it` | リリース着地の自前化（#3214 系） |
+| plugin ツリー内のテストヘルパ | `plugins/formal-model-check/tools/advisory-model-check.ts` → `tests/lib/advisory-model-check.ts` へ R094 移設（#3078）。**plugin `tools[]` は宣言と実ファイルが一致していなければならない、という契約の厳格化** |
+
+### 4. focus 4 件が触れる契約面
+
+| Issue | 契約面 | 追加/変更の性格 |
+|---|---|---|
+| #3186 | stage 契約 `stages/tla-authoring.md` の発火述語（現状 0 hit）、`model-map.json` の `vocabulary.namedInvariants` / `traceStateVariables` の消費 | **契約の追加**（既存の宣言データに述語を足す。データ形式の変更は不要） |
+| #2289 | `composeRegisteredMap` の arity（現状 2、route 非受理）、`RegistrationCommitter.commit` の受け渡し、`AUTHORING_ROUTES` の語彙 | **内部契約の変更**。加えて **`authoringProvenance` の帰属規則が新設対象**（draft 必須 / map optional / 実データ 1-of-4 という非対称を、置換時にどう解決するかが未定義） |
+| #2929 | `IMPLEMENTATION_PATHS`（validator）、`implementationRoot`（ローダー）、`matches` glob（sensor）の**三面同時**。3 つの別名 containment 述語（`isCanonicalImplementationPath` / loader `isContained` / `run-model-check-artifacts.ts:129` `isContained`） | **契約の統一**。片面だけの是正は失敗を下流へ移す |
+| #3187 | `plugin.json` の `advisories[]` から `authoring-hold` を撤去、`tla-authoring.ts` の USAGE（`:77,80-81`）から `advisory hold` / `subjects declare` を撤去、stage 手順 `:53` の撤去 | **契約の削除**。`docs/reference/22-formal-model-supply.{md,ja.md}` が唯一の説明面であり同一変更で同期が必要 |
+
+**未決**: 4 件とも是正方式は裁定されていない（`memory/team.md` P1）。とくに #2289 の `authoringProvenance` 帰属は、既存 3 モデルが provenance を持たない以上、置換操作が「新しい provenance を刻む」のか「元の不在を保つ」のかを決めなければ実装できない。**本スキャンはこの選択を行わない。**

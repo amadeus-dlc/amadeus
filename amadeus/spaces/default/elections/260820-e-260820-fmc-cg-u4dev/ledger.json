@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "ballots": [
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260820-FMC-CG-U4DEV",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-u4-deviations",
+          "choiceInternalNo": 1,
+          "goa": 3,
+          "reservation": "(a) FD の落ちる実証節が MirrorLifecycle/FormalElection の非発火を同一述語レベルで要求することは既存 FD 条項であり builder の発明でないことを確認済み。(b) 文字どおりの述語の自己矛盾は実ファイルから独立再導出済み: MirrorLifecycleCore.tla の Statuses(7 literals)/ NonCloseOps={create,sync} に対し、governed の amadeus-mirror-types.ts の MirrorProjectSyncState={synced,pending,safety-blocked}(∩=2・非包含)と MirrorOperation={create,sync,close}(⊇NonCloseOps・∩=2・非包含)が両方とも FD 文字形を発火させる。(c) 追認の条件として、FD 本文を次回改訂サイクルで精緻化述語(S = モデル全宣言語彙・サイズ≥2 の宣言済み値集合の完全被覆条件)へ明文修正すること — 現行本文は弱い per-set 形のままで将来の読者を誤導する。",
+          "rationale": "一次資料で検証済み。FD 陽例2件は精緻化後も発火維持(cluster {converged,override,landed,superseded} が TerminalVerdicts={converged,override} を完全被覆)。単調強化は論理的に確認: 完全被覆された集合 V(|V|≥2)自体が元の式の S として |C∩V|≥2 ∧ C⊄V を満たす。MirrorLifecycle は非空虚な陰例(実宣言値集合≥4・精緻化述語で非発火)、FormalElection は空虚な陰例(TLA+ モデル値で文字列リテラル値集合ゼロ — テストが明示 assert)。棄却された代替(auxiliaries 無視)は Statuses/NonCloseOps が auxiliary の MirrorLifecycleCore.tla に居るため MirrorLifecycle まで空虚化し、FD の非空虚陰例要求に反する。機械的適応3件も確認(doctor-seam 分類・t3078 強制・plugin.json:41 実在)。D1 は承認済み FD 自身の受け入れ条件内の実測済み欠陥を解消する必然の精緻化であり、意図(真の語彙 drift の検出、モデル内上位集合/別名関係の非検出)を保存する。"
+        }
+      ],
+      "submittedAt": "2026-08-20T22:45:00Z",
+      "receivedAt": "2026-08-20T22:44:51Z"
+    },
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260820-FMC-CG-U4DEV",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-u4-deviations",
+          "choiceInternalNo": 1,
+          "goa": 2,
+          "reservation": "一次資料から敵対的に再導出して全主張を確認。(1) 偽陽性は実在(MirrorLifecycleCore.tla:205-206 Statuses 7 lits × amadeus-mirror-types.ts:352 MirrorProjectSyncState ∩=2 非包含、:15 MirrorOperation × Core.tla:535 NonCloseOps ∩=2 非包含 — いずれも FD 文字形を発火)。(2) 実装の精緻化述語(tla-applicability-arms.ts:120-163)は builder 要約より精密な2部構成 — 宣言済み集合 S(|S|≥2)の完全被覆 AND モデル全語彙に不在のリテラル≥1 — 後者が MirrorOperation==Operations 型の完全一致ケースを新偽陽性にしない要石であり、builder の一行要約はこれを省略していたが設計は健全。単調強化の証明成立: 被覆⇒C∩S=S(≥2)、unknown リテラル⇒C⊄S。(3) 陽例2件の発火維持・(4) FormalElection 空虚陰例の明示 assert(t3186:99-103)・(5) 矛盾が承認済み FD 内部のものであること(business-logic-model.md:26,:9)を確認。未検証残余: 落ちる実証の red→green 再実行、model-map パス解決と t3078 強制の深部監査(低リスクの機械項目)。",
+          "rationale": "builder の主張でなく一次資料(MirrorLifecycleCore.tla / amadeus-mirror-types.ts / tla-applicability-arms.ts の実述語 / pr-convergence-cli.ts / BoltPrAttestationGate.tla / FormalElection 両 .tla / t3186 テスト)から独立再導出し、全主張が敵対的検証に耐えた。実述語は builder 要約が省略した unknown-literal 条件を持ち、それが精緻化自体を偽陽性フリーに保つ。D1 は承認済み FD が自身の受け入れ条件と矛盾する述語の、証明可能な単調強化であり、無申告の意味変更ではない — 機械的適応3件と共に追認。"
+        }
+      ],
+      "submittedAt": "2026-08-20T22:45:00Z",
+      "receivedAt": "2026-08-20T22:45:54Z"
+    }
+  ]
+}

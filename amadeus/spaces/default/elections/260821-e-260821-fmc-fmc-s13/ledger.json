@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "ballots": [
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260821-FMC-FMC-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-learnings-selection",
+          "choiceInternalNo": 1,
+          "goa": 1,
+          "reservation": null,
+          "rationale": "diary(amadeus/spaces/default/intents/260820-fmc-drift-batch/construction/formal-model-check/memory.md:5,6)の2候補を実測確認。候補1は.claude/plugins/formal-model-check/stages/formal-model-check.md:37-39が『A missing or contradictory outcome is a halt. For an explicit run with no preceding applicability outcome, resolve the requested model + config as before』『CI acceptance checks every pair declared...sequentially and in declaration order』と明文で規定しており、これは新規の一般化可能な学習ではなく既存ステージ本文の平易な読解の実践に過ぎない。候補2はproject.md:208のcid:formal-model-check:c2が逐語で『run-model-check-ci.ts run の CI acceptance は...ローカルでは...構造的にARTIFACT_VERIFY_FAILURE...run-model-check.ts の単一モデル経路を使う』と既に規定済みであり、本ランはこの既決ノルムの機械適用そのもの(2026-08-18 learned、本ランは2026-08-20)。両候補とも『新規知識の追加』ではなく『既存規範の正しい適用』に該当し、conductorの0件採用案を支持する。"
+        }
+      ],
+      "submittedAt": "2026-08-21T01:15:31Z",
+      "receivedAt": "2026-08-21T01:17:03Z"
+    },
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260821-FMC-FMC-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-learnings-selection",
+          "choiceInternalNo": 1,
+          "goa": 2,
+          "reservation": "候補1は plugins/formal-model-check/stages/formal-model-check.md の frontmatter condition 行(『Explicit single-stage runs check the selected registered model or all registered models.』)に既出で、git log -p --follow で当該行はコミット ba74e9e5d(PR #2477、本 intent 以前)で追加済みと確認した — 平易な読解であり新規学習の価値なし。候補2は project.md:208 の cid:formal-model-check:c2(learned 2026-08-18、本 intent 以前)が --out repo外・run-model-check.ts 単一モデル経路・CI acceptance のローカル ARTIFACT_VERIFY_FAILURE の3点を逐語で被覆済みと確認した — 機械的再適用であり不採用が妥当。両候補とも diary(construction/formal-model-check/memory.md)の記述内容と実測が一致し、0件採用の反証は得られなかった。",
+          "rationale": "候補1は既存 frontmatter(PR #2477で追加済み)の平易な読解に過ぎず、候補2は既存 cid:formal-model-check:c2(2026-08-18 learned)の機械的再適用であることをそれぞれ一次資料で確認した。いずれも新規のノルム化価値を持たないため、conductor の0件採用案を支持する。"
+        }
+      ],
+      "submittedAt": "2026-08-21T01:16:39Z",
+      "receivedAt": "2026-08-21T01:17:03Z"
+    }
+  ]
+}

@@ -4144,7 +4144,7 @@ lifecycle 側の主座は `tests/unit/t481-pr-convergence-lifecycle.test.ts`、s
 
 機序は `architecture.md`、コンポーネント境界は `component-inventory.md`、配置は `code-structure.md` の各対応節を参照。
 
-## 品質指標の区間差分と、focus 2 件のテスト空白（260818-priority-bug-batch-4、現在、observed `127be70c5`）
+## 品質指標の区間差分と、focus 2 件のテスト空白（260818-priority-bug-batch-4、履歴、observed `127be70c5`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260820-fmc-drift-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: base `23d4ae767956cd56fc28fa78abe28096712eff8a` → observed `127be70c5d7a584016f88a5d44e8715904020721`（5 コミット）。
 
@@ -4227,3 +4227,105 @@ lifecycle 側の主座は `tests/unit/t481-pr-convergence-lifecycle.test.ts`、s
 | dist parity | **本スキャンでは未測定**（`bun run build` は read-only 制約により未実行）。追跡ファイルの `dist/` 面は区間の変更ファイル一覧に不在 |
 
 **新規テストが drift guard を持つ点を記録する。** `tests/integration/t2415-re-scan-exclusion-contract.integration.test.ts` は契約散文とコード定数の一致を検査するが、その検査を **source 断面だけでなく全 delivered tree** に対して行う（`:159` 近傍）。ソース断面だけの green が配送路の退行を隠す形（`cid:requirements-analysis:c2-acceptance-at-delivery-tree`）に対する、正しい形の実装である。
+
+## 品質指標の区間差分と、focus 4 件の技術的負債シグナル（260820-fmc-drift-batch、現在、observed `e86fbe125`）
+
+**観測 ref**: base `c8c393bba` → observed `e86fbe125`（97 commits）。
+
+### 1. 品質指標
+
+**測定元**: `metrics/2026-08-18T04-53-24-170Z-43a2e2978678.json`（base 側 = base 以前の最後の snapshot）と `metrics/2026-08-20T06-35-41-011Z-e452d3892135.json`（observed 側 = 区間内最後の snapshot、対応コミット `e452d3892`）の `collectors.<name>.values` を `bun -e` で直読。
+
+| 指標 | base 側 | observed 側 | 差 |
+|---|---|---|---|
+| coverage percent | 93.41203240015948 | 93.58238736717489 | **+0.1704pp** |
+| coverage hits / lines | 96064 / 102839 | 98021 / 104743 | +1957 / +1904 |
+| test files / assertions | 1055 / 14030 | 1070 / 14332 | **+15** / +302 |
+| failed files / assertions | 0 / 0 | 0 / 0 | 横ばい |
+| unit_small / integration_medium | 273 / 588 | 277 / 599 | +4 / +11 |
+| e2e_medium | 87 | 88 | +1 |
+| loc core / tests / scripts | 150065 / 388125 / 13092 | 151910 / 398684 / 13630 | +1845 / **+10559** / +538 |
+| ccn 関数数 / 閾値超過 / max | 7340 / 32 / 38 | 7428 / **32** / **38** | +88 / **±0** / **±0** |
+| bugs total / open / closed | 405 / **13** / 392 | 416 / **0** / 416 | +11 / **−13** / +24 |
+
+**coverage は 3 区間連続で上昇**（+0.0020pp → +0.0132pp → **+0.1704pp**）。新規行の被覆率は **約 102.8%**（1957/1904、派生値、算出式併記 — 100% を超えるのは既存未被覆行が新規テストで被覆されたためで、新規行だけの被覆率ではない）。
+
+**複雑度は増えていない。** 関数数が +88 でありながら閾値超過 32・max 38 が横ばいである。
+
+**bugs の `open` が 0 に到達した。** ただし**この計数の母集団述語は本スキャンでは測定していない** — 本 intent の focus 4 件は observed 断面で機構が実在する（§3）ため、`bugs` コレクタの母集団は 4 件を含まない。open 0 を「未解決の課題ゼロ」と読んではならない。
+
+**`loc tests` の +10559 が区間最大の増分**である。これは #1982（`tests/lib/silent-success.ts` + `run-tests.ts` +214 + 台帳）、release-land のテストと fixture、live LLM journey e2e、および新規テストファイル群の合計である。
+
+**テストファイル数の 2 つの計数は突き合わない — 突き合わせは行っていない。** git 断面の実測は `git diff --name-status -M c8c393bba..e86fbe125 -- tests/` の A 行のうち `*.test.ts` が **17**、D 行のうち `*.test.ts` が **1**（`tests/integration/t-run-codex-project-target.test.ts`）で **net +16**。一方 metrics コレクタの `tests.files` は **+15**（1055 → 1070）である。差 1 の由来は特定していない（コレクタの母集団述語を本スキャンでは測定していない）。**両者を一致するものとして扱わない。** なお `ls tests/{smoke,unit,integration,e2e,formal-verif}/*.ts | wc -l` は **1170** を返し、これは helper / fixture を含む述語なのでコレクタの 1070 とは母集団が異なる。
+
+### 2. 品質機構の新設 — silent-success 3 ゲート（#1982）
+
+**このリポジトリで初めて、「テストが実際には何も検証していない」を機械検出する機構が入った。**
+
+| ゲート | 検出対象 | 初期免除 |
+|---|---|---|
+| zero-assertion | アサーションを 1 件も実行せず成功したファイル | **0** |
+| skip | 恒常的に SKIP されている testcase | **19** |
+| leak | テスト終了後に残るマーク付きプロセス | **0** |
+
+台帳 `tests/.silent-success-baseline.json` の `description` 逐語:
+
+```
+Registered exemptions for the silent-success gates (#1982). Direction is
+shrink-only: entries come out as the debt is paid, and are never added to wave a
+new violation through. There is deliberately no --update writer. Populated from a
+full `bun tests/run-tests.ts -P 4` census in report mode on 2026-08-20 (1068
+files: zero zero-assertion violations, zero process leaks, 14 self-skipped
+testcases). See docs/reference/09-testing.md.
+```
+
+**品質上の意味は 3 つある。**
+
+1. **fail-closed on a broken baseline**（`tests/run-tests.ts:244-248` 逐語 `The silent-success gates are fail-closed on a broken baseline.`）。台帳破損時に「全件免除」へ落ちる設計であれば、それ自体が `memory/team.md` P2 の言う検証劇場になる — その失敗形を構造的に閉じている。
+2. **writer を持たない**。免除の追加は手作業でしか行えず、`--update` 相当の自動化が意図的に存在しない。これは `tests/.coverage-ratchet.json` の単調ラチェットと同型の設計である。
+3. **初期 census で zero-assertion 0 / leak 0** を得ており、**ゲートは既存の債務を隠すために導入されたのではない**（19 件の SKIP のみが債務として登録されている）。
+
+**本 intent の全 unit がこのゲートの射程に入る。** とくに #3187 は 9 本のテストを削除・更新するため、SKIP 免除の 19 件と交差しないかを実装時に確認する必要がある（実装時に台帳を再読）。
+
+**なお `docs/reference/09-testing.{md,ja.md}` が +161 / +158 でこの機構を文書化している** — 区間の docs 変更 18 面のうち最大である。
+
+### 3. Technical Debt Signals — focus 4 件が触れる 7 件
+
+| # | シグナル | 実測（observed） | クラス |
+|---|---|---|---|
+| 1 | **t448 の自己参照比較** | `tests/unit/t448-tla-registration.test.ts:2-3` が同一 module specifier を 2 つの名前で import（両行とも逐語 `"../../plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts"`）。`:74-82` の test `"the shipped plugin copy reaches the same verdicts"` は同一オブジェクトを比較している。直前のコメント（`:72-73`）は逐語 `The plugin tree carries a generated copy of the validator, and it is the one the authoring CLI loads, so the same verdicts are pinned on it too.` と述べるが、**実際には 1 つの実装しか読んでいない** | `memory/team.md` Forbidden の検証劇場。#2890 での無音退化。**#2289 で必ず触るファイル** |
+| 2 | **validator / loader の述語不整合** | `IMPLEMENTATION_PATHS`（`amadeus-formal-verif-model-map.ts:248-251`）は `plugins/formal-model-check/tools/` を許可、`implementationRoot`（`tla-model-loader-internal.ts:291`）は `packages/framework/core/tools/` 固定 | 2026-08-11 から休眠中の契約違反。**#2929 の中核** |
+| 3 | **3 つの別名 containment 述語** | `isCanonicalImplementationPath`（`amadeus-formal-verif-model-map.ts:330-336`）/ loader の `isContained`（`tla-model-loader-internal.ts:141-146`）/ `run-model-check-artifacts.ts:129` の `isContained`。census `git grep -n -F 'function isContained' -- plugins/ packages/ tests/ scripts/` → **2 定義 / exit 0**（validator 側は別名のため hit しない） | `cid:code-generation:cg2-agreeing-predicate-drift` |
+| 4 | **sensor glob と model-map の被覆非対称** | 13 entries 中、自動発火は **9**（FormalElection 5 + MirrorLifecycle 4）。PrConvergenceGate 2 + BoltPrAttestationGate 2 = **4 entries は glob 外**。**本区間でまさにその 4 entries のハッシュが手動 resync された** | 検証の無音欠落 |
+| 5 | **`authoringProvenance` の required / optional 非対称** | draft は必須（`tla-registration.ts:203-206`）、map スキーマは optional（`amadeus-formal-verif-model-map.ts:368` `OPTIONAL_MODEL_KEYS`）、実データは **1-of-4**（BoltPrAttestationGate のみ PRESENT） | #3263 が本区間で作った新しい非対称。**#2289 の未定義な裁定点** |
+| 6 | **`AUTHORING_ROUTES` の 2 箇所複製** | census `git grep -n -F 'AUTHORING_ROUTES' -- plugins/ packages/ tests/` → **4 hit / exit 0**（定義 `tla-applicability.ts:302` / `tla-registration.ts:87`、消費 `:314` / `:110`） | `cid:code-generation:cg2-agreeing-predicate-drift` |
+| 7 | **`landed` 語彙欠落が 2 モデルに同型** | `PrConvergenceGate.tla:14` と `BoltPrAttestationGate.tla:22-23` が逐語同一の `Verdicts` / `TerminalVerdicts` を持つ。census `git grep -c -F 'landed' -- amadeus/spaces/default/specs/tla/` → MirrorLifecycleAsImplemented 1 / MirrorLifecycleCore 3、**exit 0**（PR 系 2 モデルは 0 hit）。対照 `converged` → 各 5 / 5 / 1、**exit 0** | **#3186 のエビデンス基盤は題名の 1 モデルより広い** |
+
+### 4. テスト空隙
+
+| focus | 空隙 | 置き場（既存の対になる位置） |
+|---|---|---|
+| #2929 | **ローダー境界のテストが 0 件**。`git grep -c -F 'is not a regular in-boundary file' -- tests/` → **0 hit / exit 1**（不一致であってエラーではない）。対照 `outside the canonical implementation boundary` → `tests/unit/t-formal-verif-canonical-core.test.ts:1` / **exit 0** | 同 `t-formal-verif-canonical-core.test.ts`。**落ちる実証は 2 本必要**（validator は既存、loader は新規） |
+| #3186 | **語彙 drift の検出テストが不在**（検出述語そのものが不在なので当然） | stage 契約の e2e である `tests/integration/t450-tla-authoring-stage-e2e.integration.test.ts` の近傍 |
+| #2289 | **replace-by-name の成功系テストが不在**。存在するのは拒否側の pin（`tests/unit/t448-tla-registration.test.ts:294-307` の test `"refuses a draft that duplicates a registered name (validator on the whole map)"`）のみ | 同ファイル。**この pin は #2289 の実装で期待値が反転する** |
+| #3187 | 退役側なので新規テストではなく **削除 2 / 期待値更新 7** | §3 の表（`code-structure.md` の対応節） |
+
+**#2289 の実装で注意が要る点**: `tests/unit/t448-tla-registration.test.ts:294-307` の同名拒否 pin は `if (!snapshot.ok) return;` / `if (!draft.ok) return;` という早期 return を持つ。**parse が失敗するとアサーションを 1 件も実行せずに成功する形**であり、#1982 の zero-assertion ゲートが検出するクラスに構造上該当する（現在の台帳が zeroAssertion 0 件なのは、実行時に parse が成功しているためである）。`authoringProvenance` 必須化のような契約変更で fixture が parse できなくなると、**テストは赤くならず黙って通る**。#2289 の実装でこの pin を触るなら、早期 return を明示的な失敗へ変えるのが正しい形である。
+
+### 5. 台帳の resync 実績（区間内）
+
+| 台帳 | 規模 | 内容 |
+|---|---|---|
+| `tests/.coverage-registry.json` | +31 −3 | 新規テストファイルに対する regen |
+| `tests/.coverage-ratchet.json` | +1 −1 | `function` **191 → 192** |
+| `tests/.coverage-patch-allowlist.json` | +137 −21 | 意味的セレクタの再アンカー |
+| `tests/.test-time-factor-allowlist.json` | **+138** | 新規 `tests/test-time-factor-census.md`（+38）を伴う |
+| `tests/.silent-success-baseline.json` | **新規（160 行）** | #1982 |
+| `amadeus/spaces/default/specs/tla/model-map.json` | +14 −6 | 実装ハッシュピン 6 件 + `authoringProvenance` 1 件 |
+
+**本 intent が触る面から発火する台帳**（実装時の resync 対象）:
+
+- `tests/` を触る → `tests/.coverage-registry.json` の regen（`bun tests/gen-coverage-registry.ts`、`cid:build-and-test:c1`）と **#1982 の 3 ゲート**
+- `plugins/` を触る → `plugin.json` の `tools[]` 宣言と実ファイルの一致（t3078、blocking）
+- `packages/framework/core/tools/amadeus-orchestrate.ts` / `amadeus-state.ts` を触る場合のみ → model-map の実装ハッシュピン 4 箇所（`cid:build-and-test:bt-ledger-resync`）。**focus 4 件はいずれもこの 2 ファイルを患部に持たないため、通常は発火しない**
+- `packages/framework/harness/` の conductor 散文を触る → `tests/` の `toContain` pin（`cid:build-and-test:bt-prose-literal-test-ledger`。本区間でも 8 面が同期された）

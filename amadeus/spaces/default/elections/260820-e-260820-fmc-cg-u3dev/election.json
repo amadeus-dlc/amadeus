@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 2,
+  "electionId": "E-260820-FMC-CG-U3DEV",
+  "kind": "design-deviation",
+  "questions": [
+    {
+      "questionId": "q-u3-deviations",
+      "text": "code-generation U3 advisory-retirement(#3187、worktree commit 2647fb4b1)の builder が FD からの逸脱3件を申告し停止・報告した。裁定を求める。【D1】stages/tla-authoring.md:53 の手順4を FD は『削除して後続を詰める』と指示したが、実ファイルでは手順4が最終手順で subjects declare と存続契約(applicability receipt --persist true — t450 が依存)の両方を運ぶため、builder は subjects declare 呼出のみ削除し receipt 文を保持した。【D2】t527 の処分を FD は『:80 の subjectsPath fixture 行の除去のみ』と指示したが、実ファイルは全テストが declareSubjects()(退役 verb)を呼んでおり :80 のみの除去ではファイルが壊れるため、builder は #3262 receipt 検証というファイルの宣言目的を保持したまま helper を存続 verb(identity extract / applicability series / flat hold)へ再配線した(5 pass / 0 fail)。【D3】census 9キーのうち3キーが tests/fixtures/pr-convergence/measured-pr-2268.graphql.json(PR #2268 の GitHub GraphQL 実測キャプチャ、6テストが消費、キーは歴史的レビューコメント散文内のみ)に残存 — FD 除外リスト外。builder は実測キャプチャの改変は P2 違反かつ6テスト破壊のため非改変とし、除外 (b)(工程記録/git 履歴)と同類と帰属して継続、FD 除外リストへの明記を要請した。提案: 3件とも実ファイル形状に基づく必然的適応として追認し、conductor が FD の census 除外リストへ fixture を追補する(選択肢1)。D1/D2 は存続挙動の保護であり FD の意図(退役機構のみの完全撤去・存続面の非接触)に整合、D3 の非改変は P2 に整合する。",
+      "choices": [
+        {
+          "internalNo": 1,
+          "label": "3件とも追認 + FD 除外リスト追補",
+          "description": "builder の適応を承認済み改訂として記録し、conductor が FD census 除外へ fixture を1行追補する"
+        },
+        {
+          "internalNo": 2,
+          "label": "D1/D2 追認、D3 は差し戻し",
+          "description": "fixture の扱いを別途検討(census AC の再設計)"
+        },
+        {
+          "internalNo": 3,
+          "label": "全件差し戻し",
+          "description": "builder へ FD 文字どおりの実装を要求する"
+        }
+      ]
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

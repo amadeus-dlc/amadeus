@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 2,
+  "electionId": "E-260820-FMC-NFR-S13",
+  "kind": "learnings-selection",
+  "questions": [
+    {
+      "questionId": "q-learnings-selection",
+      "text": "nfr-design (intent 260820-fmc-drift-batch、4 unit の per-unit NFR design) の §13 学習選定。surface 候補は c1 の1件のみ: 「nfr-requirements 群 absent-and-expected 時は requirements.md NFR-1〜3 を直接参照し上流 id を発明しない / Construction 質問例外規律で質問ファイル非作成 / produces は kind pruning どおり2本」。これはステージ本文(Step 2/Step 6 の明文指示)と produces_kinds 機構の適用記録であり、新規の横断ノルム性を持たない — 提案は『0件でよい』(c1 不採用、一次記録は stage memory.md と各成果物)。なお本ステージの §12a で反復した FOLLOW-UP(FD 兄弟成果物引用の file:line ピン欠落)は各 unit の Review 節に記録済みで、code-generation の成果物様式で閉じる申し送りであり、ノルム化するほどの新規則性はない(既存 cid:requirements-analysis:mechanism-cite-verify-at-draft の適用例)との判定も含めて諮る。",
+      "choices": [
+        {
+          "internalNo": 1,
+          "label": "0件でよい",
+          "description": "c1 は既存規定の適用記録、引用ピン反復指摘も既存 cid の適用例 — ノルム追加なし"
+        },
+        {
+          "internalNo": 2,
+          "label": "0件不可 — c1 を採用",
+          "description": "absent-and-expected 処理の定型を project.md へ記録する"
+        },
+        {
+          "internalNo": 3,
+          "label": "0件不可 — 引用ピン規律を採用",
+          "description": "FD 兄弟成果物引用の file:line 必須化を既存 cid への追補として記録する"
+        }
+      ]
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

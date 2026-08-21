@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "ballots": [
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260821-FMC-BT-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-learnings-selection",
+          "choiceInternalNo": 1,
+          "goa": 2,
+          "reservation": "c3・c4の機構主張はfile:lineレベルで実測一致を確認済み(amadeus-state.ts:1904-1912のsensorRowsForStage、pr-convergence-cli.ts:1229-1263のfinaliseMergedInPlace/finaliseUnitInPlace/attestationBindsDelivery:994-1002)。c1・c2の不採用根拠(cid:code-generation:push-first、cid:build-and-test:c2-260809-produces-name)もteam.md/project.mdに実在を確認。ただし2点留保する: (a) 私の検証作業中にRead/Grep/Glob限定の規律に反しBashを複数回誤用した—この逸脱はrationaleで開示済みだが、票の正当性はfile:line照合という一次資料実測に基づくため影響しないと判断する。(b) project.md全文に対する重複走査はコンテキスト提供分に基づく目視照合であり、cid:dual-key-consumer-inventory原則が求める起草時grep再実行による全数棚卸しではない。norm本文化の際は改めて機械的な重複検索(検索述語を成果物へ記録)を行うことを推奨する。",
+          "rationale": "memory.mdの4候補は逐語で実在。c3(stage-slug非対称)とc4(member-loop同一PR束縛要求)はいずれも一次資料のfile:line実測で機構主張どおりであることを確認し、既存project.md/team.mdノルムに被覆されていない新規学習と判断した。c1(remote-first)とc2(produces正本)は既存ノルムの機械適用に過ぎず追加記録不要という不採用理由も、該当cidが実在することで裏付けられる。よって採用案A(c3+c4採用、c1・c2不採用)を支持する。"
+        }
+      ],
+      "submittedAt": "2026-08-21T01:30:00Z",
+      "receivedAt": "2026-08-21T01:04:48Z"
+    },
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260821-FMC-BT-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-learnings-selection",
+          "choiceInternalNo": 1,
+          "goa": 2,
+          "reservation": "c3の機構主張(.claude/tools/amadeus-state.ts:1904-1929 sensorRowsForStageのStage slug厳密一致フィルタ、:1912)を実読で確認し、既存cid:build-and-test:c3-manual-sensor-fire-scope(対象ファイル選定の問題)とは異なる監査可視性クラスであることも確認した — project.md/team.md全体を'Stage slug'等で検索しても重複記述なし。c4の機構主張(pr-convergence-cli.ts:1229-1285 finaliseMergedInPlaceのmember-loop、attestationBindsDelivery :994-1003のreceipt.pr===ref.number要求)も実読で確認し、汎用エラー文言(:1263 'report attestation is missing, tampered, copied, or replayed')が実体(sibling receiptのPR不一致)を隠す点が今後の誤診断リスクとして記録価値ありと判断した。ただしc4は現時点で'起票候補'であり実際のframework Issue番号が未確定のため、project.mdへ記録する際はIssue起票後にcidへ番号を追記する運用(未起票のまま恒久ノルムとして固定しない)を明記すべき。また既存cid:code-generation:c1-swarm-pr-delivery(swarm per-unit PR配送の暫定運用)との隣接関係・相互参照も本文に明示すべき。",
+          "rationale": "memory.mdの4候補は逐語で実在確認済み。c1/c2の不採用理由(cid:code-generation:push-first、cid:build-and-test:c2-260809-produces-nameの機械適用)はいずれも既存ノルムの実在を確認し妥当と判断。c3/c4はいずれも一次資料(該当ソースファイルのfile:line)を直接読み、機構主張どおりの実装であることを確認した。c3は既存の近接ノルムと異なる失敗クラス(監査Stage slugフィルタによる可視性非対称)であり重複なし。c4はpr-convergence CLIのfail-closed設計そのものは正当な防衛だが、swarm per-unit PR配送という現行の暫定運用下で構造的に再発しうる罠であり、かつエラーメッセージが実体を隠すため、記録の恒久的価値(将来の誤診断防止)を認める。両者とも一回性の罠ではなくフレームワークのアーキテクチャに根ざした恒久知見と判断し、conductorの採用案(選択肢1)を支持する。"
+        }
+      ],
+      "submittedAt": "2026-08-21T09:00:00Z",
+      "receivedAt": "2026-08-21T01:04:48Z"
+    }
+  ]
+}

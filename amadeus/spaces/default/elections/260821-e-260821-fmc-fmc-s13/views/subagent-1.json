@@ -1,0 +1,32 @@
+{
+  "electionId": "E-260821-FMC-FMC-S13",
+  "voter": "subagent-1",
+  "questions": [
+    {
+      "questionId": "q-learnings-selection",
+      "text": "formal-model-check ステージの §13 学習選定。diary(2026-08-20 の spec-change advisory run-now による明示 single-stage 実行時の記録)から2候補が surface された。conductor の採用案は『0件採用』。候補1: 先行 applicability outcome を持たない explicit run はステージ本文 Step 1 の explicit-run 腕 = 全登録モデル(4本)検査とした — ステージ本文の平易な読解であり新規学習ではない。候補2: CI acceptance 経路はローカルで構造的に ARTIFACT_VERIFY_FAILURE になるため run-model-check.ts の単一モデル経路 ×4 を --out repo外で実行 — 既存ノルム cid:formal-model-check:c2(2026-08-18 学習済み、project.md 実在)の機械適用そのもの。いずれも既存ノルム・本文の適用であり新規記録価値なしとして0件を諮る。",
+      "ordered": [
+        {
+          "internalNo": 4,
+          "label": "両方採用",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 2,
+          "label": "候補1 を採用(explicit-run 腕の解釈をノルム化)",
+          "displayNo": 2
+        },
+        {
+          "internalNo": 1,
+          "label": "0件採用でよい(候補1 = 本文の平易読解、候補2 = 既存 cid:formal-model-check:c2 の機械適用)",
+          "displayNo": 3
+        },
+        {
+          "internalNo": 3,
+          "label": "候補2 を採用(c2 への追補が必要)",
+          "displayNo": 4
+        }
+      ]
+    }
+  ]
+}

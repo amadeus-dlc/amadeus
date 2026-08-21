@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 2,
+  "electionId": "E-260820-FMC-CG-S13",
+  "kind": "learnings-selection",
+  "questions": [
+    {
+      "questionId": "q-learnings-selection",
+      "text": "code-generation (intent 260820-fmc-drift-batch、swarm 2 batch / 4 unit / PR 4本配送) の §13 学習選定。surface 候補5件のうち採用提案は2件: 【L-A(c1/c5 統合)】swarm invoke 時の配送形の確定 — swarm finalize のローカル merge 段(main checkout HEAD 必須 + local trunk merge)は本プロジェクトの確定済み配送規範(FR-X-2: Bolt PR + merge queue)と構造的に衝突するため使わず、referee は pool 管理 verb(resolve/prepare/acquire/confirm-dispatch/check/settle-release)までを正とし、配送は per-unit PR(record bundle → create → converge → queue)で行う。engine は finalize なしでも pool terminal で次 batch を発行する(実測)。SKILL 契約からの乖離は毎回 diary へ記録する。【L-B(c2)】t146 衛生クラスの拡張実測 — plugin .md prose(sensor manifest の glob 分岐含む)内の repo-root 相対 plugins/<x>/tools/ パスリテラルは t146 が拒否する。glob では */plugins/... の anchored 形が意味論を保存して回避できる(本番 matchesGlob で事前検証する手順込み)。不採用提案: c3(patch coverage の error-path クラス — 既存 TDD 既定 cid:code-generation:tdd-default-with-narrow-exceptions のエラーパス条項の適用例)、c4(record 事後化での FOLLOW-UP 閉包点パターン — 既存 cid:build-and-test:c5-260809-followup-routing の適用例)。",
+      "choices": [
+        {
+          "internalNo": 1,
+          "label": "L-A + L-B 両方採用",
+          "description": "swarm 配送形と t146 glob 回避形を project.md Learnings Inbox へ"
+        },
+        {
+          "internalNo": 2,
+          "label": "L-A のみ採用",
+          "description": "配送形のみノルム化"
+        },
+        {
+          "internalNo": 3,
+          "label": "L-B のみ採用",
+          "description": "t146 クラスのみノルム化"
+        },
+        {
+          "internalNo": 4,
+          "label": "0件で可",
+          "description": "全候補とも既存規定の適用例と判断する場合"
+        }
+      ]
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

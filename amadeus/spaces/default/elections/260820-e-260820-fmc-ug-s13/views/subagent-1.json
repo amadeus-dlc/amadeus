@@ -1,0 +1,36 @@
+{
+  "electionId": "E-260820-FMC-UG-S13",
+  "voter": "subagent-1",
+  "questions": [
+    {
+      "questionId": "q-learnings-selection",
+      "text": "units-generation (intent 260820-fmc-drift-batch) の §13 学習選定。候補3件のうち project.md へ永続化するものを選べ。提案は『0件で可』— c1 (質問0問の判定) はステージ規定の exceptionally clear 条件の適用記録、c2 (story-map の FR trace 化) はスコープ SKIP 時の様式判断 (intent 固有)、c3 (FR-REG-5 の2 unit 分割維持) は ADR-1 の帰結 (intent 固有)。なお本ステージ §12a の実質的学習候補「並列 unit の write scope 非交差主張は生成台帳 (coverage-registry 等) の共有書込を織り込んで書く」は既存ノルム cid:build-and-test:registry-merge-recomposition が既に台帳交差の解決を規定しており、新規則性の判定は投票者に委ねる (採用する場合は choice 4)。",
+      "ordered": [
+        {
+          "internalNo": 3,
+          "label": "c3 を採用",
+          "description": "循環回避の unit 分割形を project.md へ",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 2,
+          "label": "c1 を採用",
+          "description": "質問0問の判定基準を project.md へ",
+          "displayNo": 2
+        },
+        {
+          "internalNo": 1,
+          "label": "0件で可 (全候補不採用)",
+          "description": "3候補とも既存規定の適用/intent固有。台帳交差も既存ノルムの適用例",
+          "displayNo": 3
+        },
+        {
+          "internalNo": 4,
+          "label": "台帳交差の織り込み則を採用",
+          "description": "「unit 非交差主張は生成台帳の共有書込を明示してから立てる」を既存ノルムへの追補として project.md へ",
+          "displayNo": 4
+        }
+      ]
+    }
+  ]
+}

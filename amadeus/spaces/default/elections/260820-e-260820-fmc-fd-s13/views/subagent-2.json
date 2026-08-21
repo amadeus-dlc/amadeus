@@ -1,0 +1,36 @@
+{
+  "electionId": "E-260820-FMC-FD-S13",
+  "voter": "subagent-2",
+  "questions": [
+    {
+      "questionId": "q-learnings-selection",
+      "text": "functional-design (intent 260820-fmc-drift-batch、4 unit の per-unit FD) の §13 学習選定。surface 候補 c1〜c7 のうち c1(質問0問の判定)/c2(OQ-2 両モデル登録)/c3(RegExp リスト形状)/c5(t3078 述語方向と条件付き write scope)/c6(OQ-1/4/AD-2 の確定値)/c7(U2 前提の明記 — 後に是正で置換済み)は intent 固有の設計事実で FD 成果物が一次記録のため不採用を提案。横断ノルム候補は2件: 【L-A】(c4 + U4 iteration 2 の実測)落ちる実証を含む FD では、配送順の手順番号列と TDD Red 先行の時系列を明示的に区別する(番号順どおりだと Red が観測不能になる自己矛盾クラス)。また per-unit 成果物は他 unit の着地順を「着地済み」の前提事実として書かない — 必要なら述語レベル/fixture レベルの二層落ちる実証へ分解し、同種文言は表セル含む文書内全表現を総なめして揃える(表現残存で §12a iteration を1回消費した実測: U4 iteration 1→2)。【L-B】(U4 の実測)reviewer_max_iterations 到達後の是正は quality-repair 機構(amadeus-bolt observe-quality)が正規経路 — complete-review は上限超 iteration の永続化を fail-closed で拒否する(逐語 review iteration exceeds the directive limit)ため、修復後の READY は reviewer ledger でなく quality evidence(observe-quality の kind:READY + evidenceFingerprint)として記録される。両台帳の役割分担を混同せず、reviewer verdict を手で書き足さない。実測: U4 で repair 承認 → 是正 → fresh invocation の READY(findings 0)→ iteration 3 拒否 → observe-quality READY sha256:4d417197…。提案は L-A + L-B 両方採用(choice 4)。",
+      "ordered": [
+        {
+          "internalNo": 1,
+          "label": "0件で可(全候補不採用)",
+          "description": "L-A/L-B とも既存規定の適用例に留まると判断する場合",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 4,
+          "label": "L-A + L-B 両方採用",
+          "description": "2件とも横断ノルムとして project.md Learnings Inbox へ",
+          "displayNo": 2
+        },
+        {
+          "internalNo": 2,
+          "label": "L-A のみ採用",
+          "description": "落ちる実証の手順順序と着地順非依存の規律を project.md へ",
+          "displayNo": 3
+        },
+        {
+          "internalNo": 3,
+          "label": "L-B のみ採用",
+          "description": "iteration 上限後の quality-repair 経路の規律を project.md へ",
+          "displayNo": 4
+        }
+      ]
+    }
+  ]
+}

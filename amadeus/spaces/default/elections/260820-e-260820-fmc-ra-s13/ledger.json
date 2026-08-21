@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "ballots": [
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260820-FMC-RA-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-learnings-selection",
+          "choiceInternalNo": 1,
+          "goa": 2,
+          "reservation": "c3は一般化可能と判定(独立確認: .claude/agents/amadeus-product-lead-agent.md と amadeus-architecture-reviewer-agent.md はいずれもTools: Read, Grep, Globのみでmailbox返送手段を持たず、stage-protocol.md §12a Flowはdirective.reviewer指名の宣言型checkerへの委任を必須とするため、本ハーネスのmailbox運用が続く限り全ステージの§12aで再発する構造的問題)。永続化する記述には、影響範囲を明確にするため『§12a対象の宣言型reviewer(amadeus-product-lead-agent / amadeus-architecture-reviewer-agentなど、SendMessage/Task非保有)全般』であることと、回避策(general-purpose型+プロンプト強制read-only+SendMessage返送)がtool強制からprompt強制への縮退である旨(read-only規律の弱化として明記し監査対象にする)を含めることを求める。",
+          "rationale": "diary(requirements-analysis/memory.md Deviations)とstage-protocol.md §12a、両reviewer agentのfrontmatter(Tools欄)を実読して独立検証した。既存memory/knowledge/codekb全体をgrepしたが同種の記録は0件で初出。ハーネス構成(mailbox+SendMessage必須)とプロトコル契約(宣言型checker指名必須)の組み合わせから、この無音化は本intent固有の偶発ではなく、同構成が続く限り毎ステージ再発する構造的リスクだと判断した。"
+        }
+      ],
+      "submittedAt": "2026-08-20T13:05:00Z",
+      "receivedAt": "2026-08-20T12:16:50Z"
+    },
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260820-FMC-RA-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-learnings-selection",
+          "choiceInternalNo": 1,
+          "goa": 3,
+          "reservation": "採用に賛成するが、本文永続化時は一般則としての適用範囲を明記すること。実測(.claude/agents/amadeus-product-lead-agent.md:8 `tools: [Read, Grep, Glob]`)から、この tools 構成(SendMessage 非搭載)は同種の read-only reviewer 型(amadeus-architecture-reviewer-agent も同一 tools 構成)すべてに及ぶ構造的制約であり、本ステージ・本 intent 固有の偶発事象ではない。一方、無音化の根本原因は「amadeus-product-lead-agent 自体」ではなく「conductor セッションが agent-team/mailbox 構成(SendMessage 経由の非同期通信を前提とする実行環境)で動いていること」にある — 通常の同期的 Agent tool 呼び出し(Task 起動)では宣言型サブエージェントも戻り値をそのまま返せるため無音化しない。したがって永続化する文言は『amadeus-product-lead-agent は無音化する』ではなく『conductor が agent-team/mailbox 構成で動作しているときに宣言型 read-only reviewer(SendMessage 非搭載)を起動すると無音化する』と、発火条件(mailbox 構成下)を明示した形にすべき。この限定を付けたうえでの一般化可能性(同一 tools 構成の他 reviewer agent、他ステージの §12a 起動全てに及ぶ)は実測(2回再現)と静的なエージェント定義の両方から支持できる。",
+          "rationale": "diary(inception/requirements-analysis/memory.md:10)の実測: amadeus-product-lead-agent を宣言型で2回起動し両方とも無音 idle 化、3回目以降 general-purpose + プロンプト強制 read-only + SendMessage 返送へ切替で解消。.claude/agents/amadeus-product-lead-agent.md:8 で tools: [Read, Grep, Glob] を確認 — SendMessage 不在は個体差ではなくエージェント定義そのものの恒久的性質。project.md 全文 grep(mailbox/宣言型/product-lead-agent/architecture-reviewer-agent/read-only reviewer/無音)で同種学習の既存記録なしを確認(is-新規)。§12a Reviewer Invocation 契約(stage-protocol.md:1127-1185)自体は起動手段(宣言型/Task/mailbox)を規定せず、この非互換はハーネス実行構成(agent-team)と静的エージェント定義の組み合わせから生じる。以上より c3 は c1/c2/c4(intent 固有裁定)と異なり、agent-team 構成が続く限り毎回同じ形で再発する運用知識であり、発火条件を明記したうえで project.md への永続化に賛成する。"
+        }
+      ],
+      "submittedAt": "2026-08-20T12:17:06Z",
+      "receivedAt": "2026-08-20T12:17:11Z"
+    }
+  ]
+}

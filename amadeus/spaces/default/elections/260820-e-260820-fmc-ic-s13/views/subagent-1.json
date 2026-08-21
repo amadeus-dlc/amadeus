@@ -1,0 +1,36 @@
+{
+  "electionId": "E-260820-FMC-IC-S13",
+  "voter": "subagent-1",
+  "questions": [
+    {
+      "questionId": "q-learnings-selection",
+      "text": "intent-capture (intent 260820-fmc-drift-batch) の §13 学習選定。memory.md から surface された候補3件のうち、method ファイル (project.md) へ永続化する候補を選べ。提案は『0件で可』— c1 は本 intent 固有のバッチ構成記録 (一般化不能)、c2 は本ハーネスセッションの一時的ツール欠如 (恒久ノルムではない)、c3 は既存 §3 semi/full 規定の再確認 (既に protocol 本文にある規則の重複)。",
+      "ordered": [
+        {
+          "internalNo": 4,
+          "label": "c3 を採用",
+          "description": "full 宣言前の PROVENANCE_REQUIRED は人間の実ターン1回を要する旨を project.md へ",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 2,
+          "label": "c1 を採用",
+          "description": "issue-first self-feature バッチの束ね方 (4 Issue = 1 intent) を project.md へ",
+          "displayNo": 2
+        },
+        {
+          "internalNo": 3,
+          "label": "c2 を採用",
+          "description": "TaskUpdate 不在ハーネスでの状態同期は report 経路が担う旨を project.md へ",
+          "displayNo": 3
+        },
+        {
+          "internalNo": 1,
+          "label": "0件で可 (全候補不採用)",
+          "description": "3候補とも session固有/既存規則の重複であり永続化しない",
+          "displayNo": 4
+        }
+      ]
+    }
+  ]
+}

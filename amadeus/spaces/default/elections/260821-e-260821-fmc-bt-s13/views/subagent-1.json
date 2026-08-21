@@ -1,0 +1,32 @@
+{
+  "electionId": "E-260821-FMC-BT-S13",
+  "voter": "subagent-1",
+  "questions": [
+    {
+      "questionId": "q-learnings-selection",
+      "text": "build-and-test ステージの §13 学習選定。diary から4候補が surface された。conductor の採用案は『c3 と c4 を採用、c1 と c2 は不採用』。不採用理由: c1(origin/main scratch worktree での実測)は既存ノルム remote-first(cid:code-generation:push-first)と P2 の機械適用であり新規学習ではない。c2(produces 名の directive 正)は既存ノルム cid:build-and-test:c2-260809-produces-name の機械適用そのもの。採用理由: c3(blocking sensor の stage-slug 非対称 — 手動 fire の --stage 申告値で audit 記録され guard は stage slug 一致行だけを読む。回復は同一 artifact への正しい stage 名義の再 fire + checkout 束縛 receipt は原 mint 文脈 worktree での再測定→audit union 回収)は既存ノルム c3-manual-sensor-fire-scope が未被覆の新規クラス。c4(pr-convergence CLI finaliseMergedInPlace の member-loop が全 member receipt に同一 PR 束縛を要求し、1 bolt の member units が別 PR で配送された形を構造的に閉じられない — 逐語 report attestation is missing, tampered, copied, or replayed、実体は sibling receipt の pr 不一致)は #3378 暫定運用に固有の未被覆クラスで起票候補を伴う。どの案を採るか。",
+      "ordered": [
+        {
+          "internalNo": 2,
+          "label": "c4 のみ採用(c3 は一回性の罠として記録不要)",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 3,
+          "label": "c3 のみ採用(c4 は Issue 起票で足り、ノルム化不要)",
+          "displayNo": 2
+        },
+        {
+          "internalNo": 1,
+          "label": "採用案A: c3+c4 を採用し project.md へ記録(c1・c2 は既存ノルム機械適用のため不採用)。c4 は framework Issue 起票候補の明記を含む",
+          "displayNo": 3
+        },
+        {
+          "internalNo": 4,
+          "label": "全件不採用(0件でよい)",
+          "displayNo": 4
+        }
+      ]
+    }
+  ]
+}

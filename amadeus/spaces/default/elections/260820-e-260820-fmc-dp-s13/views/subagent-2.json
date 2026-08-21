@@ -1,0 +1,30 @@
+{
+  "electionId": "E-260820-FMC-DP-S13",
+  "voter": "subagent-2",
+  "questions": [
+    {
+      "questionId": "q-learnings-selection",
+      "text": "delivery-planning (intent 260820-fmc-drift-batch) の §13 学習選定。候補2件のうち project.md へ永続化するものを選べ。提案は『0件で可』— c1 (質問1問への絞り込み) は上流裁定の消費記録、c2 (bolt-plan の parser 契約準拠) は既存ノルム cid:code-generation:multiunit-pr-procedure の適用記録。いずれも新規則を構成しない。",
+      "ordered": [
+        {
+          "internalNo": 1,
+          "label": "0件で可 (全候補不採用)",
+          "description": "2候補とも既存規定/上流裁定の適用記録",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 2,
+          "label": "c1 を採用",
+          "description": "上流裁定済み事項の質問絞り込み慣行を project.md へ",
+          "displayNo": 2
+        },
+        {
+          "internalNo": 3,
+          "label": "c2 を採用",
+          "description": "parser 契約準拠の慣行を project.md へ",
+          "displayNo": 3
+        }
+      ]
+    }
+  ]
+}

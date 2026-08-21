@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "ballots": [
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260820-FMC-IC-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-learnings-selection",
+          "choiceInternalNo": 1,
+          "goa": 1,
+          "reservation": null,
+          "rationale": "独立実測: (1) c3 は stage-protocol.md 129行目『After that real human turn, run amadeus-bolt set-autonomy --mode full...』に既記載、かつ PROVENANCE_REQUIRED は amadeus-intent-autonomy.ts 等に既実装済みの機構であり永続化は既存規則の重複。(2) c1 は project.md 既存則 cid:intent-capture:c4-2(規模だけで複数intentへ分割しない)の本intentへの適用結果であり、一般化可能な新規則を構成しない。(3) c2 は本ハーネスセッションに Task 管理ツールが不在という一時的条件の記録で、report経路による状態同期は元々の標準動作であり恒久ノルムではない。diary自体もInterpretations/Deviations/Tradeoffsの3行のみで再現可能な技術的知見を含まない。3候補とも不採用が妥当。"
+        }
+      ],
+      "submittedAt": "2026-08-20T07:35:00Z",
+      "receivedAt": "2026-08-20T07:26:18Z"
+    },
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260820-FMC-IC-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-learnings-selection",
+          "choiceInternalNo": 1,
+          "goa": 1,
+          "reservation": null,
+          "rationale": "独立実測: c1(4 Issue=1 self-feature intentのバッチ束ね)は project.md の既存 cid:intent-capture:c4-2『規模だけを理由に複数intentへ分割しない、1intentが監査anchor』と同一原理の個別適用であり重複。c2(TaskUpdate不在ハーネスでのreport経路同期)はmemory.md Deviations節が明示する通り本harnessセッション固有のツール欠如であり、ツール構成が変われば成立しなくなる恒久ノルムたり得ない。c3(full宣言前PROVENANCE_REQUIREDが実HUMAN_TURN1回を要する)はamadeus-intent-autonomy.ts/amadeus-autonomy-review.ts等に既に実装済みのコード契約であり、stage-protocol.md §3(semi/full決定はdecide-question梯子、監査済みfullは human question提示なし)とP4(遠隔承認は実HUMAN_TURN由来のdelegateのみ)が既にこの要件をカバーしている。3候補とも一般化可能な新規恒久ノルムに該当せず0件が妥当。"
+        }
+      ],
+      "submittedAt": "2026-08-20T07:25:55Z",
+      "receivedAt": "2026-08-20T07:26:08Z"
+    }
+  ]
+}
