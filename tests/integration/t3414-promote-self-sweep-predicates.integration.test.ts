@@ -1,10 +1,14 @@
 // covers: file:scripts
-// size: small
+// size: medium
 //
-// t3414 — the deletion-sweep predicates in scripts/promote-self.ts (issue
-// #3414). Mechanism: pure imports of the script's exported helpers plus one
-// tmpdir for the source-identity scan; zero spawn, zero LLM. The end-to-end
-// drive through promoteSelfMain lives in
+// t3414 (integration) — the deletion-sweep predicates in
+// scripts/promote-self.ts (issue #3414). Mechanism: direct imports of the
+// script's exported helpers driven against tmpdir fixtures; zero spawn, zero
+// LLM. It sits in the integration tier because two of the four predicates
+// (authoringPluginNames, pruneEmptySweptDirs) ARE filesystem readers and
+// removers — measuring them means touching a real tree, which is a medium
+// signal and therefore not a unit-tier test. The end-to-end drive through
+// promoteSelfMain lives in
 // tests/integration/t3414-promote-self-deletion-sweep.integration.test.ts.
 //
 // WHAT IS UNDER TEST:
