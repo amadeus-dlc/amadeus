@@ -802,7 +802,7 @@ amadeus-product-agent、amadeus-design-agent、amadeus-delivery-agent、amadeus-
 
 1. **Invoke.** `directive.reviewer` で名指しされたエージェントへ委譲し、ステージ定義パス、Q&A ファイル、生成された成果物パス、フロントマターの任意の検証ツールを渡す — ビルダーの `memory.md` やプランは決して渡さない。レビュアーが独立した判断を形成するため。
 2. **Review.** レビュアーは定義、Q&A、成果物を読み、リストされた検証ツールを実行し、**READY** または **NOT-READY** の判定とともに `## Review` セクションを主要成果物に append する。
-3. **Verdict.** READY → learnings の儀式、その後ゲートへ進む。NOT-READY でイテレーションが `reviewer_max_iterations`(デフォルト2)未満で残っている → リードエージェントが指摘に対処するため再実行し、レビュアーが再チェックする。`semi` / `full`でNOT-READYが残ればblockingなquality obligationとなり、健全になるまでrepair/replanするか、`REPAIR_STALLED`としてparkする。`none`でイテレーションが尽きた場合だけ、未解決の指摘を注記してhuman gateへ進む。
+3. **Verdict.** READY → learnings の儀式、その後ゲートへ進む。NOT-READY でイテレーションが `reviewer_max_iterations`(デフォルト2)未満で残っている → リードエージェントが指摘に対処するため再実行し、レビュアーが再チェックする。`semi` / `full`でNOT-READYが残ればblockingなquality obligationとなり、健全になるまでrepair/replanするか、`REPAIR_STALLED`としてparkする。予算を使い切った時点で降りたrepair裁定は、durableなquality-repair receiptに束縛された形で`complete-review`に記録され、レビューのイテレーションをちょうど1回だけ追加で買う(§12a step 3)。`none`でイテレーションが尽きた場合だけ、未解決の指摘を注記してhuman gateへ進む。
 
 レビュアー自身はworkflow stateを直接変更せず、`reviewer`フィールドのないstageでは発火しません。`semi` / `full`のblockingな収束はQuality Repair Pluginが所有します。[Stage Definition](15-stage-definition.ja.md) の `reviewer` / `reviewer_max_iterations` フロントマターフィールドを参照。
 

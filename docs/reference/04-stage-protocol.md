@@ -961,7 +961,10 @@ learnings → gate.
    with iterations remaining below `reviewer_max_iterations` (default 2) → the lead
    agent re-runs to address the findings and the reviewer re-checks. In `semi` or
    `full`, any remaining NOT-READY finding becomes a blocking quality obligation:
-   repair/replan continues until healthy or parks as `REPAIR_STALLED`. In `none`,
+   repair/replan continues until healthy or parks as `REPAIR_STALLED`. A repair
+   ruling that lands on the spent budget funds exactly one further review
+   iteration, recorded through `complete-review` against the durable
+   quality-repair receipt (§12a step 3). In `none`,
    exhausted findings proceed to the human gate with the unresolved findings noted.
 
 The reviewer does not directly mutate workflow state and does not fire for stages

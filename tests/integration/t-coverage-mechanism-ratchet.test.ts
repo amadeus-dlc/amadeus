@@ -132,6 +132,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "integration/t3120-grant-ceremony-preview-command.integration.test.ts",
     "integration/t3181-issue-evidence-fetch.integration.test.ts",
     "integration/t3181-issue-evidence-upstream-coverage.integration.test.ts",
+    "integration/t3415-repair-funded-review-iteration.integration.test.ts",
     "integration/hook-dispatcher.integration.test.ts",
     "integration/t-advisory-choice-record.test.ts",
     "integration/t-advisory-decision-cli.integration.test.ts",

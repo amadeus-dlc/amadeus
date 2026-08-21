@@ -205,7 +205,11 @@ function localRuntime(current: Fixture, input: unknown) {
   const deps = {
     cwd: () => current.root,
     fs: {
-      exists: (path: string) => files.has(path),
+      // A directory "exists" when the virtual tree holds a file under it, while
+      // `stat().isFile()` stays false for it — the shape the runtime's
+      // file-vs-directory checks assume.
+      exists: (path: string) =>
+        files.has(path) || [...files.keys()].some((entry) => entry.startsWith(`${path}/`)),
       stat: (path: string) => ({ isFile: () => files.has(path) }),
       readFile: (path: string | 0, _encoding: "utf8") => {
         if (path === 0) return stdin;
@@ -213,6 +217,13 @@ function localRuntime(current: Fixture, input: unknown) {
         if (content === undefined) throw new Error(`missing virtual file: ${path}`);
         return content;
       },
+      readdir: (path: string) => [
+        ...new Set(
+          [...files.keys()]
+            .filter((entry) => entry.startsWith(`${path}/`))
+            .map((entry) => entry.slice(path.length + 1).split("/")[0]!),
+        ),
+      ],
       appendFile: (path: string, content: string, _encoding: "utf8") => {
         files.set(path, `${files.get(path) ?? ""}${content}`);
       },
@@ -720,9 +731,22 @@ describe("t245 reviewer protocol production caller", () => {
       current.directive.reviewer = "amadeus-product-lead-agent";
       return reviewCarrier(current.directive, reviewResult());
     }, "review result persona does not match");
+    // The cap is re-derived from the stage definition (Issue #3415), so the
+    // fixture's undeclared cap is the documented default of 2 and an iteration
+    // past it is refused without touching the carrier's declaration.
+    reject(
+      (current) => reviewCarrier(current.directive, reviewResult([], [], 3)),
+      "review iteration exceeds",
+    );
+    // A carrier that raises the cap, or drops the field so the old truthiness
+    // check degraded to "no limit at all", is now a tampered directive.
     reject((current) => {
-      current.directive.reviewer_max_iterations = 1;
-      return reviewCarrier(current.directive, reviewResult([], [], 2));
+      current.directive.reviewer_max_iterations = 3;
+      return reviewCarrier(current.directive, reviewResult([], [], 3));
+    }, "directive review iteration cap does not match the stage definition");
+    reject((current) => {
+      delete current.directive.reviewer_max_iterations;
+      return reviewCarrier(current.directive, reviewResult([], [], 9));
     }, "review iteration exceeds");
     reject((current) => reviewCarrier(current.directive, reviewResult(
       [{}, {}],
