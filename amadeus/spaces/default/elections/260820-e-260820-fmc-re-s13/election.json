@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 2,
+  "electionId": "E-260820-FMC-RE-S13",
+  "kind": "learnings-selection",
+  "questions": [
+    {
+      "questionId": "q-learnings-selection",
+      "text": "reverse-engineering (intent 260820-fmc-drift-batch) の §13 学習選定。memory.md の候補3件のうち project.md へ永続化する候補を選べ。提案は『0件で可』— c1 (base 選定) は既存ノルム cid:reverse-engineering:c1 の距離最小規則の適用記録、c2 (xrev 不採用) は既存ノルム cid:reverse-engineering:c5-xrev-currency-schema-migration 系の currency 判定の適用記録、c3 (除外削減実測) はステージ本文が要求する記録そのもの。いずれも新規則を構成しない。",
+      "choices": [
+        {
+          "internalNo": 1,
+          "label": "0件で可 (全候補不採用)",
+          "description": "3候補とも既存ノルム/ステージ規定の適用記録であり永続化しない"
+        },
+        {
+          "internalNo": 2,
+          "label": "c1 を採用",
+          "description": "base 選定の距離最小規則を project.md へ"
+        },
+        {
+          "internalNo": 3,
+          "label": "c2 を採用",
+          "description": "xrev currency 判定の適用形を project.md へ"
+        },
+        {
+          "internalNo": 4,
+          "label": "c3 を採用",
+          "description": "除外削減率の記録慣行を project.md へ"
+        }
+      ]
+    }
+  ],
+  "voters": [
+    "subagent-1",
+    "subagent-2"
+  ],
+  "state": "recorded"
+}

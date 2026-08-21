@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "ballots": [
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260820-FMC-AD-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-learnings-selection",
+          "choiceInternalNo": 2,
+          "goa": 2,
+          "reservation": "c3の実質(importグラフ前提を書く前に順方向・逆方向の両方をgrepで実測する)は、team.mdのcid:requirements-analysis:mechanism-cite-verify-at-draftが既に持つ「不在主張は全域grepで反証確認する」の直接適用であり、ADR-1で実施した実測(git grep順方向2hit/逆方向0hit exit1)はこの既存句が要求する技法そのもの。diary自身も本件を『mechanism-cite-verify-at-draftの適用漏れ』と自己申告しており、独立の一般則ではなく適用の失敗例。将来同種の落とし穴を防ぐ価値があるとしても、それは既存則の実行徹底(全域=両方向を含む)の問題であり、project.mdへ別エントリとして永続化すると既存則との重複・将来の矛盾監査対象を増やすだけで正味の抑止力を高めない。",
+          "rationale": "既存則の文面(『不在主張は全域grepで反証確認する』)がimportグラフの循環前提という具体ケースを既に包摂しており、c3は新しい検査面を追加しない。0件裁定が妥当。"
+        }
+      ],
+      "submittedAt": "2026-08-20T12:53:22Z",
+      "receivedAt": "2026-08-20T12:53:27Z"
+    },
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260820-FMC-AD-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-learnings-selection",
+          "choiceInternalNo": 1,
+          "goa": 2,
+          "reservation": "既存則 mechanism-cite-verify-at-draft は『file:line で機構を引くときの実在・意味論適合・一意性確認』『不在主張の全域grep反証』を定めるが、いずれも単一方向の主張検証を想定した文言であり、循環判定(A→B かつ B↛A)のような相互排他の2方向を同時に立証する必要がある構造的主張への適用は明文化されていない。ADR-1 は実測でこの欠落が顕在化(初回A案は逆方向の既在依存を見落とし撤回・改訂、§12a 2往復のコスト実測)しており、c3 は既存則の単純な適用例ではなく、その適用面を『import グラフ等の関係主張は両方向を実測してから書く』へ具体的に拡張する追補と判断する。永続化時は本 intent 固有の記述(leaf モジュール名・AUTHORING_ROUTES 等)を含めず一般形で書き、mechanism-cite-verify-at-draft への追補として cid を付し、根拠(decisions.md ADR-1 の両方向 grep 実測コマンドと exit code、memory.md §12a 2往復)を併記すること。c1/c2 は本 intent 固有の構成判断であり汎化根拠が薄いため不採用が妥当。",
+          "rationale": "c3 は既存則(不在主張の反証確認・機構引用の起草時実測)の文言が単一方向の主張検証しかカバーしておらず、循環なし等の双方向関係の主張を明示的に要求していない点で独立のギャップを埋める。ADR-1 の実測(registration→applicability の既在逆依存を見落として A 案を撤回・C 案へ改訂、§12a 2往復)は再発性のある落とし穴であり、project.md の既存 Corrections が多数採用している『既存則への追補』形式と同型のため、一般形へ言い換えた上で採用が妥当と判断した。c1/c2 は intent 固有の構成判断・申し送りであり、他 intent への汎化可能性が実測・記述のいずれからも確認できないため不採用とする。"
+        }
+      ],
+      "submittedAt": "2026-08-20T12:52:42Z",
+      "receivedAt": "2026-08-20T12:53:05Z"
+    }
+  ]
+}

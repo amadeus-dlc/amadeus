@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "ballots": [
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260820-FMC-SD-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-learnings-selection",
+          "choiceInternalNo": 1,
+          "goa": 1,
+          "reservation": null,
+          "rationale": "c1はステージ本文Step 3が既に明記する既定gating規定(SETTLED全件時はscope-boundary質問を省略)の実行記録であり新規則ではない。c2はtla-authoring.tsが唯一の共有ファイルという本intent固有の実測事実に基づく個別判断であり、一般化可能な恒久ノルムの根拠に乏しい。両候補ともproject.mdへの永続化には不適格。"
+        }
+      ],
+      "submittedAt": "2026-08-20T07:31:57Z",
+      "receivedAt": "2026-08-20T07:32:03Z"
+    },
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260820-FMC-SD-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-learnings-selection",
+          "choiceInternalNo": 1,
+          "goa": 1,
+          "reservation": null,
+          "rationale": "c1は.claude/amadeus-common/stages/ideation/scope-definition.md:62(Step 3)がすでに『when the inventory is non-empty and every entry is SETTLED, omit both bullets entirely』と明記する既存規定であり、memory.mdのInterpretationsエントリ自身が『ステージ規定どおり省略(Step 3のgating規定の適用)』と記す実行記録に過ぎず新規則ではない。c2は依存設計のTradeoffsエントリが『tla-authoring.tsの共有1本のみ順序依存』という本intent固有の個別ファイル所有権実測に基づく判断であり、一般化可能な恒久ノルムへ抽象化されていない。両候補とも永続化不要。"
+        }
+      ],
+      "submittedAt": "2026-08-20T07:32:19Z",
+      "receivedAt": "2026-08-20T07:32:22Z"
+    }
+  ]
+}

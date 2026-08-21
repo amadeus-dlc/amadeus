@@ -1,0 +1,30 @@
+{
+  "electionId": "E-260820-FMC-AD-S13",
+  "voter": "subagent-1",
+  "questions": [
+    {
+      "questionId": "q-learnings-selection",
+      "text": "application-design (intent 260820-fmc-drift-batch) の §13 学習選定。候補3件のうち project.md へ永続化するものを選べ。提案は『c3 のみ採用(一般形へ言い換え)』— c3 の実質は『ADR で「循環しない」「依存しない」等の import グラフ前提を置くときは、起草時に両方向の import census を実測してから書く(mechanism-cite-verify-at-draft の import グラフ面への適用)』であり、本 intent で BLOCKER として顕在化し2往復のレビューコストを生んだ再発性のある落とし穴。c1/c2 は intent 固有の構成判断・申し送り記録。",
+      "ordered": [
+        {
+          "internalNo": 1,
+          "label": "c3 のみ採用 (一般形へ言い換え)",
+          "description": "import グラフ前提の起草時実測義務を project.md Corrections へ",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 2,
+          "label": "0件で可 (全候補不採用)",
+          "description": "c3 も既存 mechanism-cite-verify-at-draft の適用例にすぎないとして永続化しない",
+          "displayNo": 2
+        },
+        {
+          "internalNo": 3,
+          "label": "c3 + 他も採用",
+          "description": "reservation で採用集合を明示",
+          "displayNo": 3
+        }
+      ]
+    }
+  ]
+}

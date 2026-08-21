@@ -1,0 +1,30 @@
+{
+  "electionId": "E-260820-FMC-RA-S13",
+  "voter": "subagent-1",
+  "questions": [
+    {
+      "questionId": "q-learnings-selection",
+      "text": "requirements-analysis (intent 260820-fmc-drift-batch) の §13 学習選定。候補4件のうち project.md へ永続化するものを選べ。提案は『c3 のみ採用』— c3 (mailbox ハーネスでは宣言型 read-only reviewer が結果返送手段を持たず無音化するため、general-purpose + プロンプト強制 read-only + SendMessage 返送で運用する) は本ハーネス構成が続く限り毎ステージ再発する運用知識で一般化可能。c1/c2 は本 intent 固有の裁定記録、c4 は本 intent 固有の構成判断。",
+      "ordered": [
+        {
+          "internalNo": 1,
+          "label": "c3 のみ採用",
+          "description": "reviewer 返送経路の運用知識を project.md Corrections へ。他3候補は不採用",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 2,
+          "label": "0件で可 (全候補不採用)",
+          "description": "c3 も session固有として永続化しない",
+          "displayNo": 2
+        },
+        {
+          "internalNo": 3,
+          "label": "c3 + 他も採用",
+          "description": "reservation で採用集合を明示",
+          "displayNo": 3
+        }
+      ]
+    }
+  ]
+}

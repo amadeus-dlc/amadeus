@@ -3121,7 +3121,7 @@ pi は **packager 側では第一級**である（`scripts/plugin-projection.ts:
 
 **focus 2 件の患部は上表 §F のとおり `amadeus-state.ts` を含まない**（RE/RA の stage 契約、`amadeus-orchestrate.ts` の resolver、`amadeus-graph.ts` の不変量、`amadeus-github-gateway.ts`）。ただしこれは**現時点で同定できた患部集合についての観測**であって、実装が触る面の確定ではない — 是正方式が未決である以上、write scope の最終的な交差有無は design 以降の裁定に依存する。機序は `architecture.md`、配置は `code-structure.md`、テスト面と台帳は `code-quality-assessment.md` の各対応節を参照。
 
-## 区間のコンポーネント増減と、focus 2 件が触れる既存コンポーネント（260818-priority-bug-batch-4、現在、observed `127be70c5`）
+## 区間のコンポーネント増減と、focus 2 件が触れる既存コンポーネント（260818-priority-bug-batch-4、履歴、observed `127be70c5`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260820-fmc-drift-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **観測 ref**: base `23d4ae767956cd56fc28fa78abe28096712eff8a` → observed `127be70c5d7a584016f88a5d44e8715904020721`（5 コミット / 99 files changed, 7314 insertions(+), 61 deletions(-)、`git rev-list --count` と `git diff --shortstat`、本節の実測）。
 
@@ -3233,3 +3233,73 @@ face の実体: claude / codex / kimi / kiro / kiro-ide は `packages/framework/
 **solo skip arm の位置**（`:6767-6781`）: `handleFailureRuling`（`:6733`）の Skip 分岐は solo arm と pool arm（`:6783-6785`）に分かれ、solo arm は `BOLT_COMPLETED`（`Outcome: "cancelled"` / `Reason: "skipped"`）を 1 行書くだけで **pool を経由しない**。pool arm は `pool.skipFailedUnit` を呼ぶ。この分岐が非対称の発生点である。
 
 **是正時に同じ関数を触る隣接面**: `settlePerUnitOutcomes` のスキップ条件は 3 つ（`:4706` の `batch === undefined`、同行の `cancelledUnits.has(unit)`、`:4707-4709` の `!unitCovered`）に加えて `:4711` の `appended.has(key)` 冪等ガードがある。batch identity が解決できない Unit も同じく pending 源になりうる点は、本 focus の範囲外だが同一関数の棚卸し対象である。
+
+## 区間のコンポーネント増減と、focus 4 件が触れる既存コンポーネント（260820-fmc-drift-batch、現在、observed `e86fbe125`）
+
+**観測 ref**: base `c8c393bba` → observed `e86fbe125`（97 commits）。
+
+### 1. 新規コンポーネント 4 / 撤去 4 / 移設 1
+
+| 種別 | コンポーネント | 所在 | 役割 |
+|---|---|---|---|
+| 新規 | **Mirror orphan repair CLI** | `packages/framework/core/tools/amadeus-mirror-orphan.ts`（+377） | 孤児化した Intent Mirror Issue の診断・修復（#3271） |
+| 新規 | **Release land orchestrator** | `scripts/release-land.ts`（+306） | `workflow_dispatch` からのリリース着地。副作用層 |
+| 新規 | **Release land domain** | `scripts/release-land-domain.ts`（+219） | 同ドメインの純ロジック層。テストはこちらだけを import する |
+| 新規 | **Silent-success gate library** | `tests/lib/silent-success.ts` | アサーション 0 件 / 恒常 SKIP / プロセスリークの判定を純関数として提供（#1982） |
+| 撤去 | ローカルランナースクリプト | `scripts/run-claude.sh` / `scripts/run-codex.sh` | #3299 |
+| 撤去 | release-it 設定 | `packages/setup/.release-it.json` | 自前ドメインへの置換 |
+| 移設 | advisory model-check ヘルパ | `plugins/formal-model-check/tools/` → **`tests/lib/advisory-model-check.ts`**（R094） | #3078 — plugin `tools[]` の宣言と実ファイルの一致を blocking 化したため |
+
+### 2. 既存コンポーネントの規模変化（上位 10、`git diff --numstat`）
+
+| コンポーネント | +/− | 主な由来 |
+|---|---|---|
+| `amadeus-swarm.ts` | +347 −52 | #3197（finalize の source 統合）、#2837 |
+| `amadeus-worktree.ts` | +299 −5 | #3197 |
+| `amadeus-election-store.ts` | +268 −83 | #3256（terminate）、#3225（per-voter lock）、#3183（per-process staging 名） |
+| `pr-convergence-cli.ts` | +237 −16 | #3239 / #3270（supersede クロージャ）、#3265（landed 受理） |
+| `amadeus-orchestrate.ts` | +203 −40 | #3267、#3194、#3268、#2837、#3106 |
+| `amadeus-migrate.ts` | +119 −22 | #3151（短い git tool-index 読み取りの再読） |
+| `amadeus-election.ts` | +94 −4 | #3256（terminate verb） |
+| `amadeus-state.ts` | +94 −13 | #3267、#3106 |
+| `amadeus-sensor-pr-convergence-report-format.ts` | +76 −13 | #3265 |
+| `amadeus-formal-verif-model-map.ts` | **+69 −3** | **#3263（`authoringProvenance` の optional キー宣言）** |
+
+**model-map の実装ハッシュピンが 6 件再 resync された**（`amadeus/spaces/default/specs/tla/model-map.json` +14 −6）: `amadeus-orchestrate.ts` ×2（PrConvergenceGate / BoltPrAttestationGate）、`amadeus-state.ts` ×2（同）、`amadeus-election.ts` / `amadeus-election-store.ts` 各 1（FormalElection）。加えて **BoltPrAttestationGate に `authoringProvenance` が追加**され、新規 tla-evidence 1 件（`f258519902a8a014….json`）が入った。
+
+### 3. formal-model-check plugin の現行構成（observed 実測）
+
+`plugins/formal-model-check/plugin.json` を `bun -e` で直読:
+
+| 面 | 値 |
+|---|---|
+| stages | **2**（`formal-model-check` / `tla-authoring`） |
+| sensors | **1**（`sensors/amadeus-model-completeness.md`） |
+| tools | **35**（明示宣言。t3078 が git-tracked ファイル集合との一致を blocking 検査） |
+| advisories | **2**（`spec-change` / `authoring-hold`。両者とも checkpoints は `requirements-analysis` / `functional-design` / `build-and-test`、handoff は `formal-model-check`） |
+
+**`authoring-hold` の evaluator は `bun tools/tla-authoring.ts advisory hold`、`spec-change` は `bun tools/plugin-activation.ts advisory {host-root} {stage}`** — 別ツールであり、#3187 の退役は `advisories[]` から前者のエントリだけを外す形になる。
+
+### 4. model-map の登録内容（observed 実測）
+
+schemaVersion 2、**4 モデル / 13 entries**、全 entries が `packages/framework/core/tools/` 配下（plugin 配下 0 件）。
+
+| モデル | entries | vocabulary（namedInvariants / traceStateVariables） | sensor glob で自動発火するか | `authoringProvenance` |
+|---|---|---|---|---|
+| FormalElection | 5 | 7 / 5 | **する**（`amadeus-election*.ts`） | ABSENT |
+| MirrorLifecycle | 4 | 3 / 3 | **する**（`amadeus-mirror-*.ts`） | ABSENT |
+| PrConvergenceGate | 2 | 5 / 8 | **しない**（pin が `amadeus-orchestrate.ts` / `amadeus-state.ts`） | ABSENT |
+| BoltPrAttestationGate | 2 | 11 / 21 | **しない**（同上） | **PRESENT**（本区間で追加） |
+
+**自動発火は 9/13 entries**。本区間はまさに自動発火しない 4 entries のうち 4 件のハッシュを手動 resync しており、被覆の非対称が実運用で現れている（#2929 の第三面）。
+
+### 5. focus 4 件が触れる既存コンポーネント
+
+| Issue | 触れるコンポーネント | 交差の有無 |
+|---|---|---|
+| #3186 | `tla-applicability.ts`（判定器）、`stages/tla-authoring.md`（stage 契約）、`model-map.json`（読取のみ） | **#2289 と `tla-applicability.ts` で交差**（`AUTHORING_ROUTES` の定義・消費） |
+| #2289 | `tla-registration.ts`、`amadeus-formal-verif-model-map.ts`、`tla-authoring.ts`（本番経路）、`tests/unit/t448-tla-registration.test.ts` | **#2929 と `amadeus-formal-verif-model-map.ts` で交差**、**#3187 と `tla-authoring.ts` で交差** |
+| #2929 | `amadeus-formal-verif-model-map.ts`、`tla-model-loader-internal.ts`、`sensors/amadeus-model-completeness.md`、`run-model-check-artifacts.ts` | **#2289 と `amadeus-formal-verif-model-map.ts` で交差** |
+| #3187 | `tla-authoring.ts`、`plugin.json`、`stages/tla-authoring.md`、`docs/reference/22-formal-model-supply.{md,ja.md}`、テスト 9 面 | **#2289 と `tla-authoring.ts` で交差**、**#3186 と `stages/tla-authoring.md` で交差** |
+
+**4 件は独立ではない。** 交差する共有ファイルは `tla-authoring.ts`（#2289 × #3187）、`amadeus-formal-verif-model-map.ts`（#2289 × #2929）、`tla-applicability.ts`（#3186 × #2289）、`stages/tla-authoring.md`（#3186 × #3187）の 4 面である。`memory/team.md` § Issue 運用の「同一ファイル・進行中 PR との交差は直列化する」が該当し、並行実装するなら write scope の割当を交差面で切る設計が要る。**あわせて `memory/project.md` の `cid:units-generation:c1`（Issue 起点は 1 Issue = 1 Unit）と `cid:code-generation:oq-singleton`（degrade スコープの Delivery Bolt authority は unit ディレクトリちょうど 1 つを要求）の両方が効くため、4 Issue を 1 つの degrade intent へ載せる構成は構造的に成立しない。**

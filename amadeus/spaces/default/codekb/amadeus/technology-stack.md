@@ -116,7 +116,7 @@ Biome `2.5.5` は formatter 無効、cognitive complexity 15超を warning と�
 
 `.github/` は区間内で 0 件変更（`git diff --name-only 83e1dbee..HEAD -- .github/` が空出力・exit 0）であり、CI の構成そのものも本区間で動いていない。
 
-## 区間の技術スタック（260816-priority-bug-batch-3、現在、observed `89053172e`）
+## 区間の技術スタック（260816-priority-bug-batch-3、履歴、observed `89053172e`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260820-fmc-drift-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **外部依存の変化なし。** base `5c5911ee3` → observed `89053172e` で `git diff --stat 5c5911ee3 89053172e -- package.json bun.lock '**/package.json'` の**出力は空**（本節の実測、exit 0）。ランタイム（Bun / TypeScript / ESM）、リンター（Biome、フォーマッタ無効）、型検査（`tsc --noEmit`）、テストランナー（`tests/run-tests.sh` の 4 層）の構成はいずれも不変である。
 
@@ -132,3 +132,36 @@ Biome `2.5.5` は formatter 無効、cognitive complexity 15超を warning と�
 | #3046（election store） | `node:fs` の読書きと tmp+rename。**並行性の再現に別プロセス（`spawn`）が要る**ため、落ちる実証は filesystem / process を使う medium test = integration 層に置く（`cid:code-generation:c2-doctor-seam`） |
 
 **CI 構成の変化は 1 行のみ。** `git diff --name-only 5c5911ee3 89053172e -- .github/` → `.github/workflows/ci.yml` の 1 ファイル（本節の実測）で、内容は self-install 面リストへの `.pi` 追加 **+1 行**（`@@ -402,6 +402,7 @@`。Developer scan §1.5 からの転記）。blocking の正本である集約ジョブ `ci-success` の構成そのものは動いていない。
+
+## 区間の技術スタック（260820-fmc-drift-batch、現在、observed `e86fbe125`）
+
+**観測 ref**: base `c8c393bba` → observed `e86fbe125`（97 commits）。
+
+### 変化した面 — 外部依存が 1 件減った
+
+`git diff c8c393bba..e86fbe125 -- package.json` の実測（本節の再実行）は 1 行の削除のみである。
+
+```
+-    "release-it": "^20.2.1",
+```
+
+`bun.lock` は **+1 −294**、`mise.toml` は **−1**（#3299 の codex ツールチェーンピン撤去）。**追加された外部依存はゼロ。** リリース着地は `scripts/release-land.ts` + `scripts/release-land-domain.ts`（計 +525、いずれも Bun/TypeScript の自前実装）へ移った。`memory/project.md` § Forbidden の「利用者側の Bun-only 前提を変更する理由を文書化せず、配布フレームワークへ runtime dependency を追加しない」に対し、本区間は依存を**減らす**方向の変化である。
+
+### 不変の面
+
+| 面 | 現況 |
+|---|---|
+| ランタイム / パッケージマネージャ | Bun（TypeScript / ESM、直接実行） |
+| 型検査 | `tsc --noEmit`（`tsconfig.json` / `tsconfig.tests.json` の 2 config） |
+| リンター | Biome（`biome.json`、フォーマッタ無効） |
+| テスト | `tests/run-tests.ts`（`--ci` / `--all` / `--coverage`。smoke / unit / integration / e2e / formal-verif の 5 層） |
+| PBT | fast-check |
+| 形式検証 | TLA+ / TLC（Docker 経由。macOS の `sandbox-exec` provider も残る） |
+| TUI E2E | tmux |
+| 外部 CLI | `gh`（optional dependency） |
+| 残る devDependencies | **9 件**（`bun -e` による `package.json` 直読）: `@anthropic-ai/claude-agent-sdk` 0.3.158 / `@ast-grep/napi` 0.45.0 / `@biomejs/biome` 2.5.5 / `@opentelemetry/api` 1.9.1 / `@opentelemetry/api-logs` 0.221.0 / `@opentelemetry/context-async-hooks` 2.10.0 / `bun-types` ^1.3.13 / `fast-check` ^4.9.0 / `typescript` ^6.0.3。`release-it` 削除前は 10 件 |
+| runtime dependencies | **ゼロ**（`package.json` に `dependencies` フィールドが存在しない。同直読で `undefined`）。`memory/project.md` § Forbidden の Bun-only 前提を維持 |
+
+### テストランナーの機構が 1 つ増えた（#1982）
+
+外部ツールの追加ではなく、`tests/run-tests.ts`（+214）と新規 `tests/lib/silent-success.ts` による自前実装である。3 ゲート（アサーション 0 件 / 恒常 SKIP / プロセスリーク）を持ち、台帳 `tests/.silent-success-baseline.json`（schemaVersion 1）は shrink-only で writer を持たない。プロセスリーク検出は `ps` の environ 走査（`runPsWithEnvironment`）に依存するため、**プラットフォーム依存の面がある** — `resolveGateModes(env, platform)` が platform を引数に取り、解決不能な場合は warning を出す設計になっている（`tests/lib/silent-success.ts:96` / `run-tests.ts:233-234`）。

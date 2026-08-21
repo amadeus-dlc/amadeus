@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "ballots": [
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260820-FMC-CG-U3DEV",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-u3-deviations",
+          "choiceInternalNo": 1,
+          "goa": 2,
+          "reservation": "D2's exact '6テスト消費' figure was not independently confirmed at test-block granularity (only confirmed 3 consuming files with 13/4/5 test() blocks respectively, not which subset touches this specific fixture) — this is a minor sourcing gap in the builder's rationale, not in the substantive claim, and doesn't change the ruling. For D3, recommend the FD exclusion-list addendum be scoped at file grain (whole fixture file, matching the git-grep -l file-level census predicate) rather than line grain, consistent with iteration-1 review's NIT about exclusion (c) already needing file-grain clarification — avoids the same ambiguity recurring for a fourth exclusion category.",
+          "rationale": "Verified all three against primary sources. D1: diff confirms item 4 (last item, nothing to renumber) originally carried both the retired subjects declare call and the load-bearing persist contract; builder's surgical clause removal is the only way to retire the dead call without destroying the surviving t450-dependent contract. D2: parent-commit t527 used retired verbs in all 5 tests with subjectsPath wired through beforeEach — FD's ':80 only' instruction would not compile/pass; the rewire onto surviving verbs preserves test names/structure and 5 pass/0 fail confirmed. D3: exactly 3 of 9 keys hit the fixture, all inside captured body JSON string fields (historical review-comment prose); modifying the measured record would violate P2; non-modification plus an FD exclusion-list addendum is the correct process. All three are necessary adaptations preserving FD intent — full ratification warranted."
+        }
+      ],
+      "submittedAt": "2026-08-20T19:45:00Z",
+      "receivedAt": "2026-08-20T19:43:10Z"
+    },
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260820-FMC-CG-U3DEV",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-u3-deviations",
+          "choiceInternalNo": 1,
+          "goa": 2,
+          "reservation": "Acceptance is conditioned on the FD exclusion list actually being amended (not merely acknowledged) with a class-based rule covering verbatim-preserved measured GraphQL/PR fixtures whose README documents comment-body verbatim-preservation as primary evidence, so D3-class hits are excluded by predicate at future census runs rather than requiring a fresh ad hoc judgment call each time. D1/D2 need no further follow-up: both are directly falsifiable against file shape (t450:172 pins the exact receipt/persist text D1 preserves; t527 empirical 5 pass/0 fail confirms D2 rewire is behavior-preserving).",
+          "rationale": "Verified all three against primary sources. D1: the numbered sub-list ends at item 4 (nothing to renumber) and item 4 verbatim carries both the retired call and the persist-receipt clause that t450:172 pins via toContain('applicability receipt') — builder's clause-level removal is minimal and evidenced. D2: all 5 t527 tests route through helpers invoking retired verbs; the worktree dispatch tables confirm no advisory/subjects groups survive, so a line-80-only edit would not compile; the rewire uses genuinely surviving verbs and runs 5 pass/0 fail/45 expect(). D3: the fixture is a real GraphQL capture (introduced in #2283, README documents verbatim-preservation policy); key hits sit only inside quoted historical review-comment prose; this falls outside exclusions (a)/(b)/(c) as literally written — a real FD gap; non-modification plus an FD addendum is the P2/P3-correct response. All three are necessary, minimal, factually-grounded adaptations preserving FD/FR-RET-4 intent."
+        }
+      ],
+      "submittedAt": "2026-08-20T19:45:00Z",
+      "receivedAt": "2026-08-20T19:46:43Z"
+    }
+  ]
+}

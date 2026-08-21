@@ -1,0 +1,30 @@
+{
+  "electionId": "E-260820-FMC-SD-S13",
+  "voter": "subagent-2",
+  "questions": [
+    {
+      "questionId": "q-learnings-selection",
+      "text": "scope-definition (intent 260820-fmc-drift-batch) の §13 学習選定。memory.md から surface された候補2件のうち project.md へ永続化する候補を選べ。提案は『0件で可』— c1 は本 intent の SETTLED 分類の適用記録 (ステージ本文 Step 3 の gating 規定そのものの実行であり新規則ではない)、c2 は本 intent 固有の依存設計判断 (tla-authoring.ts 共有という個別事実に基づく)。",
+      "ordered": [
+        {
+          "internalNo": 3,
+          "label": "c2 を採用",
+          "description": "依存設計はファイル所有権実測ベースを既定とする旨を project.md へ",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 1,
+          "label": "0件で可 (全候補不採用)",
+          "description": "2候補とも既存規定の実行/intent固有の判断であり永続化しない",
+          "displayNo": 2
+        },
+        {
+          "internalNo": 2,
+          "label": "c1 を採用",
+          "description": "SETTLED 全件時は scope-boundary 質問を省略する運用を project.md へ",
+          "displayNo": 3
+        }
+      ]
+    }
+  ]
+}

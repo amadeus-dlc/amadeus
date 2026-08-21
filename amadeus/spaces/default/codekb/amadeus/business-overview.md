@@ -246,7 +246,7 @@ autonomy の着地が業務上もつ意味は「**無人実行の権限を Inten
 
 機序は `architecture.md`、コンポーネント境界は `component-inventory.md`、公開契約は `api-documentation.md`、テスト空白は `code-quality-assessment.md` の各対応節を参照。
 
-## inception 固定費の削減機構が着地し、焦点が Construction 実行経路の信頼性へ移った（260818-priority-bug-batch-4、現在、observed `127be70c5`）
+## inception 固定費の削減機構が着地し、焦点が Construction 実行経路の信頼性へ移った（260818-priority-bug-batch-4、履歴、observed `127be70c5`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260820-fmc-drift-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する。本節が扱う 2 件（#2837 / #3106）は本区間で是正着地済み — 現況は本ファイル末尾の 260820-fmc-drift-batch 節を参照））
 
 **業務境界そのものの変化なし。** base `23d4ae767` → observed `127be70c5` の 5 コミットは、直前 intent `260817-inception-cost-batch` の 2 unit 着地（PR [#3190](https://github.com/amadeus-dlc/amadeus/pull/3190) / [#3191](https://github.com/amadeus-dlc/amadeus/pull/3191)）と、付随する metrics snapshot 2 件・record checkpoint 1 件であり、いずれも自リポジトリの開発運用機構である。製品の対象ユーザー・提供価値・スコープ境界は動いていない。
 
@@ -281,3 +281,46 @@ autonomy の着地が業務上もつ意味は「**無人実行の権限を Inten
 **どちらも「止まる」側の欠陥である。** #2837 は誤った識別子で作業単位が作られうる方向、#3106 はワークフローが前に進めなくなる方向であり、いずれも自動化の信頼性を直接損なう。#3106 については、独立レビューが「回避策がある」という当初の重大度根拠を**反証している**（台帳へ手で `succeeded` を書き足す回避は、cancelled な Unit を succeeded と偽ることになり、存在しない成果物へ後続を流す）。
 
 **是正方式はいずれも未決**であり、公開契約の追加を伴う（`api-documentation.md` の対応節を参照）。本スキャンは方式を選定しない。
+
+## オープンバグゼロへの到達と、焦点が formal-model-check の供給機構へ移った（260820-fmc-drift-batch、現在、observed `e86fbe125`）
+
+**業務境界そのものの変化なし。** base `c8c393bba` → observed `e86fbe125` の 97 コミットは、リリース経路の再構築、テスト基盤の強化、engine / election / mirror / pr-convergence の欠陥是正であり、いずれも自リポジトリの開発運用機構である。製品の対象ユーザー・提供価値・スコープ境界は動いていない。
+
+### 区間で動いた業務上の観測 3 点
+
+**1. バグ計数がゼロに到達した。** metrics snapshot の `collectors.bugs.values` 直読（base 側 `metrics/2026-08-18T04-53-24-170Z-43a2e2978678.json`、observed 側 `metrics/2026-08-20T06-35-41-011Z-e452d3892135.json`、いずれも `bun -e` による直読）:
+
+| 指標 | base 側 | observed 側 |
+|---|---|---|
+| total | 405 | 416 |
+| open | **13** | **0** |
+| closed | 392 | 416 |
+
+区間で 24 件がクローズされ 11 件が新規に total へ入った（派生値、算出式 `416−392` / `416−405`）。`memory/team.md` § Issue 運用の「オープンバグゼロを目標にトリアージとバッチ編成を回す」が、指標の上で初めて達成された断面である。**ただしこの計数の母集団述語は本スキャンでは測定していない** — 本 intent が扱う 4 件は observed 断面で機構が実在する（後述および `architecture.md` の対応節）ため、`bugs` コレクタの母集団は本 intent の 4 件を含まない。open 0 を「未解決の課題がゼロ」と読んではならない。
+
+**2. リリース経路が単一のワークフローへ再構築された。** `scripts/release-land.ts`（+306）と `scripts/release-land-domain.ts`（+219）が新設され、`release.yml` が +36 −29 で改訂された（#3214 merge queue 経由のバージョン着地、#3237 bot slug 比較、#3242 重複フルスイートの除去、#3303 squash commit の fetch）。同時に外部依存 `release-it` が `package.json` の devDependencies から削除された（`git diff c8c393bba..e86fbe125 -- package.json` の実測、`-    "release-it": "^20.2.1",`）。区間内に v0.1.8 / v0.1.9 / v0.1.10 / v0.1.11 の 4 リリースが着地している。**利用者から見た配布物（npm パッケージ・GitHub Release Asset）は不変で、変わったのは発行側の機構である。**
+
+**3. テストの「無音の成功」を検出するゲートが入った（#1982）。** テストが実際には何も検証していない 3 つの形 — アサーション 0 件・恒常 SKIP・プロセスリーク — をランナーが検出するようになった（`tests/lib/silent-success.ts` 新規、`tests/run-tests.ts` +214、台帳 `tests/.silent-success-baseline.json` 新規）。業務上の意味は「緑が緑であることの担保」であり、これまで `memory/team.md` P2 が原理として述べていた検証劇場の禁止を、テストランナー側で機械化した最初の機構である。台帳は shrink-only（逐語 `Direction is shrink-only: entries come out as the debt is paid, and are never added to wave a new violation through. There is deliberately no --update writer.`）で、初期登録は SKIP 免除 19 件のみ、アサーション 0 件とプロセスリークは **0 件**で開始している。
+
+### 本 intent の焦点 — formal-model-check の供給機構にある 4 件
+
+焦点は Construction 実行経路の信頼性から、**形式モデルの供給・登録・適用判定の機構**へ移った。4 件はいずれもユーザー配布物の欠陥ではなく、自リポジトリで形式検証を運用する側の信頼性に関わる。
+
+| Issue | 誰が困るか | 損失 |
+|---|---|---|
+| [#3186](https://github.com/amadeus-dlc/amadeus/issues/3186) | 形式モデルで契約を守ろうとする全員 | モデルの語彙が実装の語彙から遅れても誰も気づかない。実測: `landed` は実装側の第一級 verdict でありながら `PrConvergenceGate.tla:14` / `BoltPrAttestationGate.tla:22-23` の `Verdicts` 集合に**存在しない**（両モデルで逐語同一の 2 行）。モデルは「検証した」と言い続けるが、検証範囲が実装から静かに乖離する |
+| [#2289](https://github.com/amadeus-dlc/amadeus/issues/2289) | モデルを改訂する開発者 | 既存モデルを同名で置き換える経路が無い。`composeRegisteredMap` は追加専用で、validator が名前の一意性を要求するため、改訂は登録を通せない。**モデルは一度登録すると更新できない** |
+| [#2929](https://github.com/amadeus-dlc/amadeus/issues/2929) | plugin 配下に実装を持つ全員 | 実装ファイルの正規境界が 2 つの述語で食い違っている。validator は `plugins/formal-model-check/tools/` を許可するが、ローダーは `packages/framework/core/tools/` しか許可しない。**validator が通した設定がローダーで `SOURCE_DRIFT` になる**、休眠中の契約違反 |
+| [#3187](https://github.com/amadeus-dlc/amadeus/issues/3187) | ワークフローを回す全員 | 発火し得ない advisory（authoring-hold）の宣言が残っており、読む側に「この検査は働いている」と誤解させる。退役はユーザー裁定済み（2026-08-20、完全撤去） |
+
+### 4 件に共通する業務上の性質
+
+3 つある。
+
+第一に、**いずれも「壊れていることが通知されない」クラス**である。#3186 は語彙の遅れを検出する述語が無く、#2929 は片方の境界が実行時まで発現せず、#3187 は宣言だけが残る。#2289 だけは操作時に明確に失敗するが、失敗の理由（追加専用の設計）が文書化されていない。
+
+第二に、**#3186 と #2929 の証拠基盤は Issue の題名より広い。** `landed` 語彙の欠落は 1 モデルではなく 2 モデルに逐語同型で存在し、境界述語の不整合は validator / ローダー / sensor glob の**三面**にまたがる（`git grep` による census の述語と exit code は `re-scans/260820-fmc-drift-batch.md` §3）。是正のスコープを Issue 本文の記述だけから決めると、片面だけを直して失敗を下流へ移すことになる。
+
+第三に、**#3187 の退役面は Issue の完了条件が名指す範囲より広い。** Issue は plugin.json / 関連コード / t528 を挙げるが、書き手側の `subjects declare` が stage 契約（`plugins/formal-model-check/stages/tla-authoring.md:53`）に配線され、blocking なテスト pin（t450）を持つ。書き手を残したまま宣言だけ外すと「発火し得ない advisory を残さない」という完了条件を満たさない。
+
+**是正方式はいずれも未決**（`memory/team.md` P1 の裁定事項）。本スキャンは方式を選定しない。機序は `architecture.md`、患部配置は `code-structure.md`、公開契約は `api-documentation.md`、テスト空白は `code-quality-assessment.md` の各対応節を参照。

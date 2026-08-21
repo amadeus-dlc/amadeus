@@ -15,7 +15,7 @@
 - Verification: `mise trust`、`bun install`、`bun run build` は成功。RE 本体ではコード・テスト・文書を変更せず、既存 codekb へ観測結果のみ追記した。
 - Per-intent record: `re-scans/260818-issue-3029-sensor-gate.md`
 
-## 実行メタデータ（現在: 260818-priority-bug-batch-4）
+## 実行メタデータ（履歴: 260818-priority-bug-batch-4。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260820-fmc-drift-batch の差分リフレッシュ時。本節の本文と当時の値は保存する））
 
 - Date: `2026-08-18`（UTC）
 - Intent: `260818-priority-bug-batch-4`
@@ -2248,3 +2248,23 @@ packaging 入力集合と source-unreferenced ギャップに焦点を絞った 
 - Deviation: dirty worktree へ最新 trunk を merge していない。`git show` / `git diff` による read-only 照合だけを行い、成果物は Observed 断面の主張にした。
 - Focused tests: Developer scan が6 filesを実行し、187 pass / 0 fail / 552 expect（Bun 1.3.13）。Architect synthesis は test / build / lint / typecheck を未実行。
 - Updated artifacts: shared 9成果物と `re-scans/260813-bolt-pr-attestation.md`。直前 #2813 の current marker は本文と当時の行番号を保持したまま履歴へ降格した。
+
+## 実行メタデータ（現在: 260820-fmc-drift-batch）
+
+- Date: `2026-08-20`（UTC）
+- Intent: `260820-fmc-drift-batch`
+- Repository: `amadeus`（単一 repo、root `/Users/j5ik2o/worktrees/j5ik2o.github.com/amadeus-dlc/amadeus/enhance-1`）
+- Scope / depth / project type: `self-fix` / Minimal / Brownfield
+- Base commit: `c8c393bba927e4c00a8c6de9ef2da76068d04bfa`（**選定根拠**: `re-scans/` 中で HEAD の祖先である observed のうち**距離最小** = 260818-issue-3029-sensor-gate の observed。`git merge-base --is-ancestor c8c393bba927e4c00a8c6de9ef2da76068d04bfa HEAD` → **exit 0**、`git rev-list --count c8c393bba..HEAD` → **97**。対抗候補 `127be70c5`（260818-priority-bug-batch-4）も祖先だが距離 **98** で劣後）
+- Observed commit: `e86fbe125c85ddcbe7264f3a9a9a2377a06136da`（`git rev-parse HEAD`。`git rev-parse origin/main` と**同一コミット**、drift 0）
+- Distance: `97` commits
+- 差分規模: 除外前 **566 files / +32638 −3949**、workflow exhaust 除外後 **176 files / +14920 −1380**（除外は `:(exclude,glob)amadeus/spaces/*/intents/**`、`elections/**`、`codekb/**`、`memory/**`、`metrics/**`。削減率 **54.29%**、算出式 `17718 / 32638`）
+- Scan mode: **通常の差分リフレッシュ**（xrev differential 不採用。理由は per-intent record §1.1）
+- Focus: `<record>/ideation/intent-capture/issue-evidence.md` 由来の 4 件 — [#3186](https://github.com/amadeus-dlc/amadeus/issues/3186)（語彙 drift 検出の腕）/ [#2289](https://github.com/amadeus-dlc/amadeus/issues/2289)（replace-by-name）/ [#2929](https://github.com/amadeus-dlc/amadeus/issues/2929)（IMPLEMENTATION_PATHS 拡張）/ [#3187](https://github.com/amadeus-dlc/amadeus/issues/3187)（advisory authoring-hold の退役）
+- 中核知見: 4 件はいずれも observed で機構が実在する。#3186 は分類クラスと revise-model 強制規則が健在で**発火述語だけが欠落**（トークン census 全 0 hit / exit 1、対照は非ゼロ / exit 0）。#2289 は route が前提ゲートまで届きながら compose へ渡らない形で、**#3263 の `authoringProvenance` 必須化が新しい裁定点を作った**（draft 必須 / map optional / 実データ 1-of-4）。#2929 は validator / loader / sensor glob の**三面同時是正**が必須で、ローダー境界にはテスト 0 件。#3187 の退役面は Issue 完了条件より広く、**書き手 `subjects declare` が stage 契約 `:53` に配線され t450 が blocking pin している**。
+- 区間でのスコープ縮小 2 点: #3262（terminal route receipt 永続化）と #3261（交差判定の document identity スコープ化）が着地したことで、#3186 の別起票候補とクロスレビューの追加論点 10 は**解消済み**。
+- 行番号訂正 3 件（base 引用 → observed の再解決）: `tla-model-loader-internal.ts` の `loadVerifiedTlaSourcesInternal` 呼び出し側 `:498` → **`:528`** / `amadeus-sensor-model-completeness.ts` の export `updateModelMap` `:1000-1078` → **`:1121-1136`**（`:1000` は `performModelMapUpdate`、内部版は `:1082`）/ `tla-authoring.ts` の `defaultSubjectsPath` `:521` → **`:529-530`**
+- 区間の最大変化: #1982 silent-success 3 ゲート（テスト基盤）、release パイプライン再構築（`release-land{,-domain}.ts` 新規 +525、`release-it` 依存の撤去）、election `terminate` verb、`amadeus-mirror-orphan.ts` 新規、github-pr-convergence の supersede / landed 改良、8 conductor 面の散文同期
+- Verification: **読取専用**。git 状態変更・GitHub 読み書き・engine / state ツール実行はいずれもゼロ。テスト・build・coverage・TLC・lint・typecheck はすべて未実行（`bun -e` による metrics JSON および `plugin.json` / `model-map.json` の直読のみ）
+- Updated artifacts: shared 9 成果物と `re-scans/260820-fmc-drift-batch.md`。既存の履歴節は削除・再整形せず、最新節を追記。直前の現在断面 `260818-priority-bug-batch-4`（7 面）と `260816-priority-bug-batch-3`（`technology-stack.md` 1 面）を履歴ラベルへ降格
+- Per-intent record: `re-scans/260820-fmc-drift-batch.md`

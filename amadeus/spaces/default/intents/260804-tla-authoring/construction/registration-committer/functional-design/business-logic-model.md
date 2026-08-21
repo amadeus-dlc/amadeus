@@ -38,6 +38,7 @@ commit(draft: ModelMapEntryDraft, bundle: VerifiedBundle, pre: RegistrationPreco
 ```
 
 - 手順 3 で「draft 単体」でなく「追加後の map 全体」を検証するのは、エントリ間不変量(name 重複等)を書込前に閉じるため — validator の検査単位が map 全体であることに合わせる(`services.md` § 整合性と可視化点: 読み手は map 全体の不変条件だけを信頼する)。
+- **改訂ポインタ(2026-08-20)**: 本手順の「snapshot に draft を加える」append 前提は intent 260820-fmc-drift-batch(#2289)で裁定付きで改訂され、route 依存(author-new = append / revise-model = 同名置換)となった。改訂裁定と設計は `amadeus/spaces/default/intents/260820-fmc-drift-batch/construction/revise-model-commit/functional-design/business-logic-model.md` § FR-REG-6 を正とする(裁定 provenance: ユーザー実 HUMAN_TURN バッチ承認 2026-08-20 + 同 intent RA Q1=A)。
 - 手順 4-5 の間に他プロセスが書く TOCTOU 窓は残る(ファイルシステムの制約)が、rename は atomic なため「壊れた map」は観測されず、後勝ち lost update の実害は手順 4 の検知窓で実用上排除する。PR ベースの直列マージが第二の防衛線(`services.md` § スケーリングと運用特性)。
 
 ## 2. validator 拡張(Q1 裁定の実装点)

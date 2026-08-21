@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 2,
+  "ballots": [
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260820-FMC-UG-S13",
+      "voter": "subagent-1",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-learnings-selection",
+          "choiceInternalNo": 4,
+          "goa": 2,
+          "reservation": "採用文は既存ノルム cid:build-and-test:registry-merge-recomposition への追補として書き、二重規定を避けること — 既存則は「着地時(PR landing)の台帳競合解決手順」を規定するのに対し、本則は「units-generation ステージで非交差主張を立てる際に生成台帳の共有書込を先に宣言する」という設計時の記述慣行であり、両者は適用面(解決 vs 宣言)が異なる。適用範囲は units-generation の非交差主張セクションに限定し、一般の write-scope 記述全般へ広げすぎないこと。実測根拠として本 intent の §12a iteration 1 BLOCKER(生成台帳の共有書込面の欠落)と iteration 2 の是正文言を cid 併記で引用すること。",
+          "rationale": "unit-of-work.md の Review 節を実読した結果、iteration 1 の唯一の BLOCKER が『非交差主張が生成台帳(coverage-registry 等)の共有書込を明示していない』ことそのものだった(iteration 2 で是正済み)。これは既存ノルム cid:build-and-test:registry-merge-recomposition が既に規定する『着地時の台帳競合解決手順』とは別の面 — units-generation ステージで非交差を主張する際に、生成台帳の共有書込を先に宣言してから既存の解決手順へ委ねる、という設計時の記述規律であり、既存ノルムの単純な適用例ではなく独立した学習価値を持つ。他候補(c1=質問0問の判定は本文既定の『exceptionally clear』条件の適用記録に過ぎず新規則性なし、c3=FR-REG-5 の2 unit 分割維持は本 intent の ADR-1 に固有で一般化困難)より一般化価値が高いと判断し choice 4 を選ぶ。"
+        }
+      ],
+      "submittedAt": "2026-08-20T13:10:01Z",
+      "receivedAt": "2026-08-20T13:10:16Z"
+    },
+    {
+      "kind": "original",
+      "schemaVersion": 2,
+      "electionId": "E-260820-FMC-UG-S13",
+      "voter": "subagent-2",
+      "voterKind": "subagent",
+      "responses": [
+        {
+          "questionId": "q-learnings-selection",
+          "choiceInternalNo": 4,
+          "goa": 2,
+          "reservation": "既存ノルム cid:build-and-test:registry-merge-recomposition は台帳競合の解決手順(着地時)のみを規定し、units-generation で非交差主張を書く宣言時の慣行はカバーしていないため独立則と判定したが、これを既存ノルムの単なる適用例と読む余地も残る。project.md へ追補する際は「ソース面の非交差」と「生成台帳面の交差(既存手順で解決)」を明示的に書き分ける形にし、cid:build-and-test:registry-merge-recomposition / cid:code-generation:c5-regen-needs-build を相互参照させること。",
+          "rationale": "unit-of-work.md:51(現行断面)は iteration 1 の §12a BLOCKER 是正として、ソース面の非交差とは別に生成台帳(coverage-registry 等)の共有書込を明示し、解決は既存の再構成手順に委ねる形で書き分けている。project.md の既存2則(registry-merge-recomposition=解決手順、units-generation:c1=独立実装可能性とownership境界)のいずれも『非交差主張を立てる際に生成台帳の扱いを明示せよ』という宣言時の規則を持たず、これは他 intent の units-generation でも同種 BLOCKER の再発を防げる一般化可能な学習と判断した。"
+        }
+      ],
+      "submittedAt": "2026-08-20T13:10:09Z",
+      "receivedAt": "2026-08-20T13:10:23Z"
+    }
+  ]
+}

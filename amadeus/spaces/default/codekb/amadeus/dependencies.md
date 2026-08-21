@@ -506,7 +506,7 @@ F. #3181 — RA の consume 面と、Issue 取り込みが要求する新しい�
 
 機序は `architecture.md`、配置は `code-structure.md`、コンポーネント境界は `component-inventory.md` の各対応節を参照。
 
-## 区間の依存エッジ変化と、focus 2 件の依存方向（260818-priority-bug-batch-4、現在、observed `127be70c5`）
+## 区間の依存エッジ変化と、focus 2 件の依存方向（260818-priority-bug-batch-4、履歴、observed `127be70c5`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260820-fmc-drift-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する））
 
 **外部依存の変化なし**（`git diff --stat 23d4ae767..127be70c5 -- package.json bun.lock '**/package.json'` の**出力は空**、exit 0。本節の実測）。ランタイム・開発依存・CI 構成（`.github/` も空 diff・exit 0）はいずれも不変である。
 
@@ -634,3 +634,62 @@ record/audit/*.jsonl（単一のデータ源）
 テキストフォールバック: 検出側は canonical projection を経由するため solo の cancelled を見るが、母集団側は projection を経由せず pool 行と settle 行だけを読むため見ない。発行側は検出側の結果を使って settle 行の発行を止めるので、検出側が見た事実は母集団側へ届かない。下流の fanout は `cancelled` を正規値として受理できる。
 
 **依存上の含意**: 是正方式 (b)（母集団側を canonical projection から読むよう広げる）は、`readPerUnitConsumePopulation` から `amadeus-construction-outcome-projection.ts` への**新しい読取エッジ**を作る。方式 (a)（settle 側に cancelled 語彙を足す）は既存のエッジ構成を変えず、`amadeus-orchestrate.ts` 内部の 2 定数を開くだけで済む。**エッジ構成の観点では (a) が最小変更**だが、読み口の分裂という根は残る。方式選定は未決である。
+
+## 区間の依存エッジ変化と、focus 4 件の依存方向（260820-fmc-drift-batch、現在、observed `e86fbe125`）
+
+**観測 ref**: base `c8c393bba` → observed `e86fbe125`（97 commits）。
+
+### 1. 外部依存 — 1 件削除、追加ゼロ
+
+| 依存 | 変化 | 根拠 |
+|---|---|---|
+| `release-it` ^20.2.1 | **削除** | `git diff c8c393bba..e86fbe125 -- package.json` の実測（逐語 `-    "release-it": "^20.2.1",`）。`packages/setup/.release-it.json` も同時に削除 |
+| `bun.lock` | +1 −294 | 上記の推移的依存の除去 |
+| `mise.toml` | −1 | #3299（codex ツールチェーンピンの撤去） |
+
+残る devDependencies は **9 件**（`bun -e` による `package.json` 直読）: `@anthropic-ai/claude-agent-sdk` 0.3.158 / `@ast-grep/napi` 0.45.0 / `@biomejs/biome` 2.5.5 / `@opentelemetry/api` 1.9.1 / `@opentelemetry/api-logs` 0.221.0 / `@opentelemetry/context-async-hooks` 2.10.0 / `bun-types` ^1.3.13 / `fast-check` ^4.9.0 / `typescript` ^6.0.3。**`dependencies` フィールドは存在しない**（同直読で `undefined`）ため、配布フレームワークの runtime dependency はゼロのままである。
+
+### 2. 内部依存エッジの新設・撤去
+
+| エッジ | 変化 |
+|---|---|
+| `tests/run-tests.ts` → `tests/lib/silent-success.ts` | **新設**（`run-tests.ts:65` の import）。ランナーが判定ロジックを純関数モジュールへ委譲する形 |
+| `plugins/formal-model-check/tools/advisory-model-check.ts` → `tests/lib/advisory-model-check.ts` | **移設**（R094、#3078）。plugin ツリーからテストツリーへの一方向の移動であり、plugin → tests の依存を作ったのではなく **plugin ツリーから非宣言ファイルを除いた** |
+| `scripts/release-land.ts` → `scripts/release-land-domain.ts` | **新設**。副作用層 → 純ドメイン層の一方向。テスト（`tests/unit/t-release-land.test.ts`）はドメイン層のみを import する |
+| `packages/setup` → `release-it` | **撤去** |
+
+### 3. focus 4 件の依存方向
+
+```
+                       amadeus/spaces/default/specs/tla/model-map.json
+                                  （宣言データ・単一の正本）
+                                        │
+        ┌───────────────┬───────────────┼────────────────┬─────────────────┐
+        ▼               ▼               ▼                ▼                 ▼
+  validator        loader          sensor glob      applicability     registration
+  amadeus-formal-  tla-model-      sensors/          tla-applica-      tla-registra-
+  verif-model-     loader-         amadeus-model-    bility.ts         tion.ts
+  map.ts           internal.ts     completeness.md        │                 │
+  :248-251         :291            :8                    │                 │
+    #2929 ─────────── #2929 ────────── #2929             #3186           #2289
+        │                                                  │                 │
+        └───────── 同一概念の 3 述語（別名） ──────────────┘                 │
+                                                           │                 │
+                                        AUTHORING_ROUTES の 2 箇所複製 ──────┘
+                                        (:302 / :87)
+
+  tla-authoring.ts ── 本番経路 :830/:838 ──▶ registration      ← #2289
+        └── advisory hold :574 / subjects declare :649 ────── ← #3187（退役）
+                    │
+                    └── plugin.json advisories[] ── stages/tla-authoring.md:53
+                                                          └── #3186 の発火述語の置き場
+```
+
+テキストフォールバック: `model-map.json` を単一の正本として、validator（`amadeus-formal-verif-model-map.ts:248-251`）・ローダー（`tla-model-loader-internal.ts:291`）・sensor glob（`sensors/amadeus-model-completeness.md:8`）の 3 面が独立に読み、#2929 はこの 3 面すべてに跨る。`tla-applicability.ts` と `tla-registration.ts` は `AUTHORING_ROUTES` を 2 箇所に複製して持ち、前者が #3186、後者が #2289 の患部である。`tla-authoring.ts` は registration の本番経路（`:830` / `:838`）であると同時に、advisory hold（`:574`）と subjects declare（`:649`）という #3187 の退役対象を抱える。stage 契約 `stages/tla-authoring.md` は #3187 の削除面（`:53`）と #3186 の追加面（発火述語の置き場）が同居する。
+
+**依存方向から読める実装上の制約**:
+
+- **#2929 は下から上へ直せない。** 3 述語は `model-map.json` を読む側であり、正本のデータ形式を変えずに述語だけを揃える形になる。
+- **#2289 と #3187 は `tla-authoring.ts` を共有する。** 前者は本番経路（`:830` / `:838`）、後者は advisory / subjects の dispatch（`:900-901`）と USAGE（`:77,80-81`）で、行域は離れているが同一ファイルである。
+- **#3186 と #3187 は `stages/tla-authoring.md` を共有する。** 前者は `:51` 近傍への追加、後者は `:53` の削除で、**隣接行**である。同時実装は競合が確実に起きる。
+- **engine（`packages/framework/core/`）への依存は焦点 4 件のいずれからも生じない。** #3187 の `advisoryHold` という同名シンボルが `amadeus-orchestrate.ts:5675 / 6606 / 6639` に存在するが、これは `advisoryReportHoldReason` を受けるローカル変数名であり、汎用 advisory 機構（`spec-change` も同経路）に属する。**依存ではなく名前の一致にすぎない。**

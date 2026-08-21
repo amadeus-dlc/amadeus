@@ -5985,7 +5985,7 @@ git diff --numstat 89053172e..23d4ae767 \
 
 配置と patch surface は `code-structure.md`、コンポーネント境界は `component-inventory.md`、公開契約は `api-documentation.md`、品質指標と台帳は `code-quality-assessment.md` の各対応節を参照。
 
-## 前 intent の 2 unit 着地が作った上流入力チェーンと、focus 2 件のアーキテクチャ上の位置づけ（260818-priority-bug-batch-4、現在、observed `127be70c5`）
+## 前 intent の 2 unit 着地が作った上流入力チェーンと、focus 2 件のアーキテクチャ上の位置づけ（260818-priority-bug-batch-4、履歴、observed `127be70c5`。**現在時制マーカーのみ降格**（`cid:reverse-engineering:c1`、260820-fmc-drift-batch の差分リフレッシュ時。本節の file:line は本節が宣言する observed 断面の値として保存する。本節 §3 が記す 2 欠陥は本区間で是正着地済み（#2837 → PR #3202、#3106 → PR #3203） — 現況は本ファイル末尾の 260820-fmc-drift-batch 節を参照））
 
 **観測 ref**: base `23d4ae767956cd56fc28fa78abe28096712eff8a`（前回 observed = 260817-inception-cost-batch）→ observed `127be70c5d7a584016f88a5d44e8715904020721`（`git rev-parse HEAD` = `git rev-parse origin/main`、drift 0）。祖先性 `git merge-base --is-ancestor 23d4ae767 HEAD` → **exit 0**。距離 **5**。区間規模は **99 files changed, 7314 insertions(+), 61 deletions(-)**（本節の実測）。行番号はすべて observed 断面で本節の起草時に確認した。
 
@@ -6106,3 +6106,201 @@ engine は「stage 間の routing をすべて所有し、conductor は散文で
 | audit イベント基数 | `tests/integration/event-registry-drift.test.ts:51` | **98（不変）** |
 
 **2 区間連続でディレクトリ再編ゼロ**である。本区間の変更はすべて既存モジュール内の責務追加と、stage 契約散文の追記に収まっている。
+
+## リリース経路の単一化・テスト無音成功ゲートの新設と、formal-model-check 供給機構の 4 つの drift 面（260820-fmc-drift-batch、現在、observed `e86fbe125`）
+
+**観測 ref**: base `c8c393bba927e4c00a8c6de9ef2da76068d04bfa`（前回スキャン 260818-issue-3029-sensor-gate の observed。`re-scans/` 中で HEAD の祖先である observed のうち**距離最小** — `git merge-base --is-ancestor c8c393bba HEAD` → **exit 0**、`git rev-list --count c8c393bba..HEAD` → **97**）→ observed `e86fbe125c85ddcbe7264f3a9a9a2377a06136da`（`git rev-parse HEAD` = `git rev-parse origin/main`、drift 0）。区間規模は除外前 **566 files / +32638 −3949**、workflow exhaust 除外後 **176 files / +14920 −1380**（述語と削減内訳は `re-scans/260820-fmc-drift-batch.md` §1.4）。行番号はすべて observed 断面で本節の起草時に確認した。
+
+区間は 97 コミットで、これまでのスキャン区間の中で最大である。構造は 3 クラスに分かれる — (a) リリース経路の再構築、(b) テスト基盤の強化、(c) engine / election / mirror / pr-convergence / formal-model-check の欠陥是正。**前区間の focus 2 件（#2837 / #3106）はどちらも本区間で着地した**（PR [#3202](https://github.com/amadeus-dlc/amadeus/pull/3202) / [#3203](https://github.com/amadeus-dlc/amadeus/pull/3203)）。
+
+### 1. リリース経路 — 外部ツール依存を落として自前ドメインへ寄せた
+
+`release-it` を devDependencies から外し（`git diff c8c393bba..e86fbe125 -- package.json` の実測、逐語 `-    "release-it": "^20.2.1",`）、`packages/setup/.release-it.json` を削除して、リリースの着地ロジックを自前の 2 モジュールへ置いた。
+
+| 面 | 規模 | 役割 |
+|---|---|---|
+| `scripts/release-land.ts` | **+306（新規）** | `workflow_dispatch` から呼ばれる着地オーケストレータ |
+| `scripts/release-land-domain.ts` | **+219（新規）** | 純ロジック層（副作用を持たない判定） |
+| `scripts/release-version-sync.ts` / `-plan.ts` | +2 −5 / +7 | 全バージョン面の機械同期 |
+| `.github/workflows/release.yml` | **+36 −29** | merge queue 経由のバージョン着地（#3214）、bot slug 比較（#3237）、重複フルスイート除去（#3242）、squash commit の fetch（#3303） |
+| `tests/unit/t-release-land.test.ts` + `tests/fixtures/release-land-repo/` | 新規 | ドメイン層への in-process テスト |
+
+**アーキテクチャ上の形は既存の分割規約と同じ** — 副作用を持つ CLI 層（`release-land.ts`）と純ドメイン層（`release-land-domain.ts`）に割り、テストはドメイン層だけを import する。これは `cid:build-and-test:bt-coverage-universe-inflation` が要求する「大型 tools ファイルを丸ごと import させない」形でもある。
+
+**外部依存の削減は配布物の契約を動かしていない**（`memory/project.md` § Deployment の「リリースは npm パッケージ配布、GitHub Release Asset、タグ / PR 履歴で管理する」は不変）。
+
+### 2. テストランナーの silent-success ゲート — 「緑が緑であること」の機械化（#1982）
+
+`tests/run-tests.ts` に 3 種のゲートが入った（+214）。判定ロジックは純関数として `tests/lib/silent-success.ts`（新規）に置かれ、ランナーはそれを駆動するだけである（`run-tests.ts:229-231` のコメント逐語 `detection logic lives in lib/silent-success.ts as pure functions; this file`）。
+
+| ゲート | 検出対象 | 免除台帳の初期件数 |
+|---|---|---|
+| zero-assertion | アサーションを 1 件も実行せずに成功したファイル | **0** |
+| skip | 恒常的に SKIP されている testcase | **19** |
+| leak | テスト終了後に残るマーク付きプロセス | **0** |
+
+**3 つの設計選択が重要である。**
+
+1. **fail-closed on a broken baseline**（`run-tests.ts:244-248` 逐語 `The silent-success gates are fail-closed on a broken baseline.`）。台帳が壊れているときに「全件免除」へ落ちない — これは `memory/team.md` P2 が禁じる検証劇場の典型的な失敗形（壊れたゲートが緑を返す）を構造的に閉じている。
+2. **shrink-only かつ writer 不在**（`tests/.silent-success-baseline.json` の `description` 逐語 `Direction is shrink-only: entries come out as the debt is paid, and are never added to wave a new violation through. There is deliberately no --update writer.`）。これは `tests/.coverage-ratchet.json` が採る単調ラチェットと同じ形であり、**「新しい違反を台帳で黙らせる」経路を実装ごと持たない**。
+3. **モード分離**（`resolveGateModes` → `"off" | "report" | "strict"`）。census を採るための report モードと、赤にする strict モードが分かれている。初期台帳は 2026-08-20 の全件 census（1068 files）から生成されたと `description` が明記する。
+
+**本 intent の全 unit がこのゲートの射程に入る** — `tests/` を触る変更はすべて 3 ゲートを通る。
+
+### 3. formal-model-check の供給機構 — focus 4 件のアーキテクチャ上の位置づけ
+
+区間内に formal-model-check の是正が 3 件着地しており（#3261 / #3262 / #3263）、**そのうち 2 件が focus のスコープを動かしている**。まずその 3 件を記す。
+
+| PR | 変更 | focus への影響 |
+|---|---|---|
+| [#3261](https://github.com/amadeus-dlc/amadeus/pull/3261)（`8cc9f009f`） | applicability の subject 交差判定を **document identity でスコープ化**（`tla-applicability.ts:121-133`。旧版の bare stable id 集合交差を撤去し `model.subjectIdentity === subjectIdentity` を先に要求） | #3186 のクロスレビューが「別 Issue 候補」として挙げた bare stable id 交差の懸念は**解消済み**。#3186 の実装はこの新交差契約の上に載る |
+| [#3262](https://github.com/amadeus-dlc/amadeus/pull/3262)（`6582768ef`） | terminal route の receipt 永続化を CLI ゲートで強制（`tla-authoring.ts:424` の `--persist` 値検査、`:447` の `failed({kind:"terminal-route-receipt-required", …})`、stage 契約 `:60-64`、新規 doc `plugins/formal-model-check/docs/terminal-route-receipt-audit.md` +41） | #3186 の別起票候補（terminal route receipt の永続化）は**着地済みで本 intent のスコープ外** |
+| [#3263](https://github.com/amadeus-dlc/amadeus/pull/3263)（`e461fea3c`） | 登録 draft に `authoringProvenance` を**必須化**（`tla-registration.ts:203-206` 逐語 `return rejected("draft must carry authoringProvenance");`） | #2289 に**新しい裁定点を作った**（§3.2） |
+
+#### 3.1 #3186 — 語彙の遅れを検出する述語が「分類はあるが発火が無い」形で欠けている
+
+tla-authoring の stage 契約は 3 つの部品を持つはずである — (a) 変更の分類クラス、(b) 語彙 drift を検出する発火述語、(c) 検出時に revise-model を強制する規則。**(a) と (c) は健在、欠けているのは (b) だけである。**
+
+`stages/tla-authoring.md` へのトークン別 census（1 トークン 1 実行、`git grep -c -i -F`、実在既知の対照リテラルを同居させて exit code を対で採取）:
+
+| 述語 | hit | exit | 位置づけ |
+|---|---|---|---|
+| `drift` / `vocabular` / `語彙` / `意味的` / `recurr` / `regression` / `再発` / `repeat` | いずれも **0** | **1**（エラーなく不一致） | 発火述語が不在 |
+| `semantic`（対照） | 1 | **0** | `:51` の `semantic-change` — 分類クラス (a) は健在 |
+| `semantic-change`（対照） | 1 | **0** | 同上 |
+| `reachable`（対照） | 2 | **0** | 到達性の規則は健在 |
+
+**証拠基盤は Issue の題名より広い。** `landed` は実装側の第一級 verdict でありながら、`PrConvergenceGate.tla:14` 逐語 `Verdicts == {"none", "created", "converged", "override"}` / `:15` `TerminalVerdicts == {"converged", "override"}` に存在せず、`BoltPrAttestationGate.tla:22-23` は**逐語同一の 2 行**を持つ。census `git grep -c -F 'landed' -- amadeus/spaces/default/specs/tla/` → MirrorLifecycleAsImplemented 1 / MirrorLifecycleCore 3、**exit 0**（PR 系 2 モデルは 0 hit）。対照 `converged` → BoltPrAttestationGate 5 / PrConvergenceGate 5 / MirrorLifecycleCore 1、**exit 0**（述語健全）。
+
+**位置づけ**: これは「モデルが間違っている」ではなく、**モデルと実装の語彙が乖離したことを誰も観測しない**という形である。判定器そのものは 2 値に閉じており（`tla-applicability.ts:143` が key を `${declaration.kind}:${intersectsRegisteredModel(...)}` で構成、rationale を消費しない）、乖離の度合いを表現する余地が現行の routing 表には無い。
+
+**入力面は既に存在する。** `model-map.json` の `vocabulary` は機械可読で、4 モデル全てが `namedInvariants` / `traceStateVariables` を持つ（PrConvergenceGate 5/8、BoltPrAttestationGate 11/21、FormalElection 7/5、MirrorLifecycle 3/3）。**新機構の発明は不要で、既存の宣言データに述語を足す形になる。**
+
+#### 3.2 #2289 — 登録は追加専用で、置換の経路が構造的に無い
+
+| 層 | observed の実測 | 制約 |
+|---|---|---|
+| compose | `tla-registration.ts:229-243` `composeRegisteredMap` は arity 2 で route を受け取らない。`:235` 逐語 `const composed = [...models, draft].sort((left, right) => {` | 常に追加 |
+| validator | `amadeus-formal-verif-model-map.ts:615` 逐語 `if (model.value.name <= previousName) return invalid("models must be unique and sorted by name");` | 同名の共存を禁止 |
+| 前提ゲート | `tla-registration.ts:110` は `AUTHORING_ROUTES.has(value.route)` で route を通す | route は届いている |
+| 本番経路 | `tla-authoring.ts:830` `createRegistrationPorts` / `:838` `RegistrationCommitter.commit` の 1 本 | 迂回路なし |
+
+**route は前提ゲートまで届いているのに commit（`:314-355`）が compose へ渡さない** — つまり情報は境界の手前まで来ていて、そこで落ちている。#2837 の batch identity と同型の落ち方である（engine が持っている値を、境界の外へ渡す経路が無い）。
+
+**`AUTHORING_ROUTES` は 2 箇所に複製されている。** census `git grep -n -F 'AUTHORING_ROUTES' -- plugins/ packages/ tests/` → **4 hit / exit 0**（定義 `tla-applicability.ts:302` / `tla-registration.ts:87`、消費 `tla-applicability.ts:314` / `tla-registration.ts:110`）。`cid:code-generation:cg2-agreeing-predicate-drift` が名指す「合意述語の複製」であり、route の語彙を広げるなら 1 定義へ集約するのが先である。
+
+**#3263 が新しい非対称を作った。** draft 側は `authoringProvenance` **必須**、map スキーマ側は **optional**（`amadeus-formal-verif-model-map.ts:368` 逐語 `OPTIONAL_MODEL_KEYS = ["auxiliaries","vocabulary","evidenceBundle","authoringProvenance"]`）。実データは 4 モデル中 **BoltPrAttestationGate のみ PRESENT**（本区間の `model-map.json` +14 −6 で追加されたもの。`intentRecord` = `amadeus/spaces/default/intents/260813-bolt-pr-attestation`、`timestamp` = `2026-08-14T00:36:30Z`）。**したがって replace-by-name は「provenance を持たない既存エントリを、provenance 必須の draft で置換する」形になり、置換後の provenance が誰に帰属するかが新たな裁定点になる。** クロスレビュー（同一 observed target-sha）はこの非対称に未言及である。
+
+**fail-open 機序も現存する**: `commit`（`:314-355`）は `candidate.applicability` の subject と `draft.value.name` を突き合わせず、照合は `:324-327` の evidenceBundle digest のみである。
+
+#### 3.3 #2929 — 同じ「正規実装パス」に 3 つの別々の境界述語がある
+
+これは 1 面の欠落ではなく、**同じ概念を 3 箇所が別々の述語で定義している**構造である。
+
+| 面 | 実装 | 許可する範囲 | 違反時 |
+|---|---|---|---|
+| validator | `amadeus-formal-verif-model-map.ts:248-251` `IMPLEMENTATION_PATHS` | **2 プレフィクス**（`packages/framework/core/tools/` + `/^amadeus-[a-z0-9]+(?:-[a-z0-9]+)*\.ts$/`、`plugins/formal-model-check/tools/` + `/^[a-z0-9]+(?:-[a-z0-9]+)*\.ts$/`） | `:349-351` 逐語 `entries[${index}].implPath is outside the canonical implementation boundary` |
+| ローダー | `tla-model-loader-internal.ts:291` 逐語 `const implementationRoot = resolve(repositoryRoot, "packages", "framework", "core", "tools");` | **1 プレフィクスのみ**（`plugins/formal-model-check/tools/` すら含まない） | `:299` の `!isContained(...)` → `:300` `SOURCE_DRIFT` |
+| sensor | `sensors/amadeus-model-completeness.md:8` 逐語 `matches: "**/{amadeus/spaces/*/specs/tla/**,packages/framework/core/tools/amadeus-election*.ts,packages/framework/core/tools/amadeus-mirror-*.ts}"` | glob 直書き | 自動発火しないだけ（無音） |
+
+**含意 1 — #2890 が validator へ足した plugin プレフィクスは現状で使用不能である。** validator は通すがローダーが `SOURCE_DRIFT` を返すため、`plugins/formal-model-check/tools/` 配下を pin する設定は書けても動かない。これは 2026-08-11 から休眠している契約違反であり、`model-map.json` の全 13 entries が `packages/framework/core/tools/` 配下にあるため実害が出ていない（スピンオフ候補）。
+
+**含意 2 — sensor の被覆は 13 entries 中 9 に留まる。** model-map の実測（schemaVersion 2、4 モデル / 13 entries）と glob の突合: 自動発火するのは FormalElection 5 entries + MirrorLifecycle 4 entries = **9**。**PrConvergenceGate 2 + BoltPrAttestationGate 2 = 4 entries は glob 外**（pin が `amadeus-orchestrate.ts` / `amadeus-state.ts`）。本区間はまさにその 2 ファイルのハッシュを再ピンしており（`model-map.json` +14 −6 のうち orchestrate ×2 / state ×2）、**自動発火しない面が手動 resync に依存していることが区間内で実証されている**。
+
+**含意 3 — containment 述語は 3 つの別名で存在する。** census `git grep -n -F 'function isContained' -- plugins/ packages/ tests/ scripts/` → **2 定義 / exit 0**（`run-model-check-artifacts.ts:129`、`tla-model-loader-internal.ts:141`）。validator 側の対応物は同名ではなく `isCanonicalImplementationPath`（`:330-336`）+ `checkAssetSpaceContainment`（`:619` 呼び出し）である。集約するなら **3 つの別名述語の統合**になる。
+
+**テストの非対称**: `git grep -c -F 'is not a regular in-boundary file' -- tests/` → **0 hit / exit 1**（ローダー境界にテスト無し）。対照 `outside the canonical implementation boundary` → `tests/unit/t-formal-verif-canonical-core.test.ts:1` / **exit 0**（validator 境界にはある）。**落ちる実証は 2 本必要になる**（validator は既存、ローダーは新規）。
+
+#### 3.4 #3187 — 退役面が Issue の完了条件より広い
+
+advisory `authoring-hold` の退役はユーザー裁定済み（2026-08-20、完全撤去）である。退役面の全数を二軸 census（`git grep -l -F`、対象 = `plugins/ packages/ tests/ docs/ .github/ scripts/ amadeus/spaces/default/specs/`）で採ると次のとおり。
+
+| キー | files | 主な着地面 |
+|---|---|---|
+| `authoring-hold` | 14 | `plugins/formal-model-check/plugin.json:77`、`docs/reference/22-formal-model-supply.{md,ja.md}`、`amadeus/spaces/default/specs/rfc/0001-intent-autonomy-modes.md:249`、t113/t353/t444/t445/t526/t528/t529/t532、`tests/.coverage-registry.json:1927` |
+| `authoring-subjects` | 7 | `tla-authoring.ts:530`、docs 2 面、t481/t524/t527/t528 |
+| `advisoryHold` | 4 | `tla-authoring.ts:574`、**`packages/framework/core/tools/amadeus-orchestrate.ts:5675,6606,6639`**、t445-tla-applicability-cli、fixture 1 |
+| `subjects declare` | 5 | `tla-authoring.ts:667`、**`stages/tla-authoring.md:53`**、docs 2 面、t450-tla-authoring-stage-e2e |
+| `defaultSubjectsPath` | 3 | `tla-authoring.ts:529`、t481/t524 |
+| `governed-subjects` | 4 | `tla-authoring.ts`（failure kind `governed-subjects-unreadable`）、t445/t481、fixture |
+| `GovernedSubjects` | 1 | `tla-authoring.ts` のみ（型） |
+
+**罠 1 — engine 側の `advisoryHold` は同名の別物である。** `amadeus-orchestrate.ts:5675 / 6606 / 6639` の `advisoryHold` は `advisoryReportHoldReason(pd, slug, pluginHostRoot())` を受けるローカル変数名で、汎用 advisory 機構（`spec-change` も同経路）である。**`plugin.json` の `advisories[]` から `authoring-hold` エントリのみ外せば engine は無変更で済む** — 名前一致に釣られて engine を触ると `spec-change` を壊す。
+
+**罠 2 — 書き手側は stage 契約に配線済みである。** `stages/tla-authoring.md:53` の逐語は次のとおり。
+
+```
+4. For a non-empty selected set, run `subjects declare`, then
+```
+
+実装は `tla-authoring.ts:649-670`（`subjectsDeclare`）、`:632-647`（`publishSubjects`）、dispatch `:900-901` 逐語 `advisory: { hold: advisoryHold }, subjects: { declare: subjectsDeclare }`、USAGE `:77,80-81`。**Issue 本文の「書き手不在」はクロスレビュー両名が反証済みで、observed でも実在する。** 退役は stage 手順 `:53` / USAGE / `subjectsDeclare` / `publishSubjects` / `GovernedSubjects` / `defaultSubjectsPath` / `advisoryHold` を同一変更で撤去し、blocking pin している t450（`expect(receiving).toContain("subjects declare")`）を同時処理する必要がある。**これは Issue 完了条件 3（plugin.json / 関連コード / t528）が名指す範囲より広い。**
+
+**罠 3 — テストは削除と期待値更新に分かれる。** `advisoryHold` の ENOENT 分岐（`:574-599`、`:576` 逐語 `// Only true absence is "nothing is governed here" (the ruled no-hold case).`）と t528 の 3 テスト（`:128` no governed subjects / `:134` declared subject holds…releases on the receipt / `:186` 逐語 `"this repository declares no governed subjects yet, so every intent keeps flowing"`）は同一機構の表裏で、**t528 / t524 は削除対象**。t526 / t529 / t532 / t444 / t445 / t353 / t113 は `authoring-hold` を宣言集合の一要素として数える面なので**期待値更新**（削除ではない）。
+
+### Interaction Diagrams
+
+**#2929 — 1 つの model-map エントリが通る 3 つの境界述語**
+
+```mermaid
+flowchart TD
+  MM["model-map.json<br/>schemaVersion 2 / 4 models / 13 entries"]
+  V["validator<br/>IMPLEMENTATION_PATHS<br/>amadeus-formal-verif-model-map.ts:248-251"]
+  L["loader<br/>implementationRoot<br/>tla-model-loader-internal.ts:291"]
+  S["sensor matches glob<br/>sensors/amadeus-model-completeness.md:8"]
+  VA["core/tools/ AND plugins/formal-model-check/tools/<br/>= 2 prefixes"]
+  LA["core/tools/ only<br/>= 1 prefix / SOURCE_DRIFT at :300"]
+  SA["9 of 13 entries fire automatically<br/>4 entries out of glob"]
+  MM --> V --> VA
+  MM --> L --> LA
+  MM --> S --> SA
+  VA -.->|"validator accepts, loader rejects: the plugin prefix is unusable"| LA
+```
+
+テキストフォールバック: 1 つの `model-map.json` エントリは validator（`amadeus-formal-verif-model-map.ts:248-251`、core/tools と plugins/formal-model-check/tools の 2 プレフィクスを許可）、ローダー（`tla-model-loader-internal.ts:291`、core/tools のみ。外れると `:300` で `SOURCE_DRIFT`）、sensor の matches glob（`sensors/amadeus-model-completeness.md:8`、13 entries 中 9 だけが自動発火）の 3 つを別々に通る。validator が通してローダーが拒否する範囲が存在し、それが #2890 で足された plugin プレフィクスである。
+
+**#3186 — 語彙 drift が観測されない経路**
+
+```
+[実装の verdict 語彙]                     [モデルの Verdicts 集合]
+ created / converged / override /          PrConvergenceGate.tla:14
+ landed  ←── 第一級                        BoltPrAttestationGate.tla:22-23
+    │                                          （逐語同一の 2 行）
+    │                                              │
+    └──────── 乖離 ──────────────────────────────┘
+                     │
+                     ▼
+      stage 契約 stages/tla-authoring.md
+        (a) 分類クラス  semantic-change (:51)      ← 健在
+        (b) 発火述語    drift / vocabulary / 語彙  ← **0 hit / exit 1**
+        (c) 強制規則    revise-model               ← 健在
+                     │
+                     ▼
+      判定器 tla-applicability.ts:143
+        key = "<kind>:<intersectsRegisteredModel(...)>"  ← 2 値、rationale 非消費
+```
+
+テキストフォールバック: 実装側は `landed` を第一級 verdict として持つが、2 つの TLA モデルの `Verdicts` 集合には存在しない。stage 契約は分類クラス (a) と revise-model 強制規則 (c) を持つ一方、乖離を検出する発火述語 (b) を持たない（トークン census が全て 0 hit / exit 1）。判定器は `kind` と交差の真偽の 2 値で routing し、rationale を消費しないため、乖離の度合いを表現する余地が無い。
+
+### 4. 区間で着地したその他のアーキテクチャ変化
+
+| 領域 | 変化 |
+|---|---|
+| engine / state | `amadeus-orchestrate.ts` +203 −40 / `amadeus-state.ts` +94 −13 / `amadeus-swarm.ts` +347 −52 / `amadeus-worktree.ts` +299 −5。#3267（パーク済み intent の終端 — plan/config 乖離の名指しと recompose の準備 retract）、#3197（finalize での swarm Unit source 統合）、#3194、#3268（キュー投入は HUMAN_TURN にならない — `PROVENANCE_REQUIRED` 案内） |
+| election | `amadeus-election.ts` +94 −4 / `amadeus-election-store.ts` +268 −83。**`terminate` verb 新設**（#3256 / #3272 — collecting で停止した再投票ラウンドを終端。`amadeus-election.ts:346` `terminateRoundElection`、状態語彙に `"terminated"` が加わり `:736` の 8 値へ）、appendPending の TOCTOU を per-voter lock で解消（#3225 / #3266）、staging file の per-process 名（#3183 / #3219） |
+| mirror | **`amadeus-mirror-orphan.ts` 新規（+377）**（#3271 — 孤児化した Intent Mirror Issue の診断・修復経路） |
+| github-pr-convergence | `pr-convergence-cli.ts` +237 −16 / `amadeus-sensor-pr-convergence-report-format.ts` +76 −13 / `pr-convergence-git-runner.ts` +56 / sensor manifest +4 −1。#3239 / #3270（supersede された unit の正直なクロージャ経路）、#3265（merge-attested landed report を code-generation で受理） |
+| audit / OTel | canonical event 基数は **98 で不変**（`tests/integration/event-registry-drift.test.ts:51-53` の 4 重 pin）。変化は 2 件の `optionalAttributes` 追加のみ — `RECOMPOSED` に `"Workflow completion retracted"`（#3249）、worktree 系に `"Base SHA"` |
+| harness 表層 | 8 conductor 面すべてと `projections.ts` を改訂（各 +8〜+9 / −4〜−6）。由来は #2837（`--batch <directive.batch>` へ）/ #3197（finalize の source handoff）/ #3271。**`cid:build-and-test:bt-prose-literal-test-ledger` の第 4 台帳クラス** — conductor 面の文言を変えるなら `tests/` の `toContain` pin を census 対象に含める |
+| plugin 構造 | `plugins/formal-model-check/tools/advisory-model-check.ts` が **`tests/lib/advisory-model-check.ts` へ R094 移設**（#3078 — 未宣言 plugin tool の検出）。`plugin.json` の `tools[]` は 35 件を明示宣言し、t3078 が git-tracked `plugins/<name>/tools/*.ts` との一致を blocking 検査する |
+
+### 5. アーキテクチャ境界の不変性
+
+| 境界 | 述語 | 結果 |
+|---|---|---|
+| `packages/framework/core/` ⇔ `packages/framework/harness/<name>/` | `git diff --numstat c8c393bba..e86fbe125 -- packages/framework/harness/` | **9 ファイル（8 conductor 面 + `projections.ts`）の散文同期のみ**。境界そのものは不変 |
+| `plugins/<name>/{tools,stages,sensors}/` | 同 `-- plugins/` | 12 ファイル変更。**新規 plugin 0 / 削除 plugin 0**。plugin tool 1 件が `tests/lib/` へ移設（境界の**厳格化**） |
+| audit イベント基数 | `tests/integration/event-registry-drift.test.ts:51-53` | **98（不変）** |
+| ソースの新規/削除 | `git diff --name-status c8c393bba..e86fbe125 -- packages/ plugins/ scripts/ .github/` | **A 4 / D 4 / R 1**（新規: `amadeus-mirror-orphan.ts`、`release-land{,-domain}.ts`、`terminal-route-receipt-audit.md`。削除: `.release-it.json`、`advisory-model-check.ts`（移設）、`run-claude.sh`、`run-codex.sh`） |
+| 外部依存 | `git diff c8c393bba..e86fbe125 -- package.json` | **`release-it` の削除 1 件のみ**（追加ゼロ） |
+
+**ディレクトリ再編はゼロ**である。97 コミットの区間でありながら、変更はすべて既存モジュール内の責務追加、新規モジュールの既存階層への配置、契約散文の同期に収まっている。
