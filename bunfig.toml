@@ -1,2 +1,5 @@
 [test]
 coveragePathIgnorePatterns = ["**/vendor/**"]
+# #3413: strip git's ambient repository binding (GIT_DIR / GIT_INDEX_FILE /
+# GIT_CONFIG_*) from every test process before any test module loads.
+preload = ["./tests/harness/hermetic-git-setup.ts"]

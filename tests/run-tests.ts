@@ -24,6 +24,10 @@ import { basename, delimiter, dirname, join, relative, resolve } from "node:path
 import { fileURLToPath } from "node:url";
 import { buildMeta, renderMeta, type MetaCounts } from "./lib/bun-junit-to-meta.ts";
 import {
+  applyHermeticGitEnv,
+  materializeHermeticGitConfig,
+} from "./lib/hermetic-git-env.ts";
+import {
   type CoverageSourcePathContext,
   excludeForeignLcovRecords,
   formatForeignCoverageExclusionWarning,
@@ -282,6 +286,16 @@ function prependPath(dir: string): void {
 
 const homeBun = join(homedir(), ".bun", "bin");
 if (existsSync(homeBun)) prependPath(homeBun);
+
+// #3413: strip the ambient git binding BEFORE anything else spawns. When the
+// suite is started from a git hook in a linked worktree, git has exported
+// GIT_DIR (and GIT_INDEX_FILE, GIT_AUTHOR_*, GIT_CONFIG_PARAMETERS) pointing at
+// the real repository — and GIT_DIR outranks the `cwd:`/`-C <dir>` every
+// fixture passes, so a fixture's `git config user.email` writes the real shared
+// config instead of its own scratch repo. Applying this to `process.env` makes
+// every later spawn (each per-file `bun test`, every tool subprocess) inherit a
+// git environment that can only reach the directory it names.
+applyHermeticGitEnv(process.env, materializeHermeticGitConfig());
 
 const needsLlm = args.runIntegration || args.runE2e;
 
