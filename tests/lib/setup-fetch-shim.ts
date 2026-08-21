@@ -13,7 +13,16 @@ if (!port) {
   throw new Error("setup-fetch-shim.ts requires AMADEUS_SETUP_TEST_FAKE_GITHUB_PORT to be set");
 }
 
-const REDIRECT_HOSTS = new Set(["api.github.com", "codeload.github.com"]);
+// Mirrors ports/http.ts's ALLOWED_HOSTS: api.github.com for the REST calls,
+// codeload.github.com for pre-ADR-003 tarballs, and github.com plus the
+// release-assets CDN it redirects to for the verified release assets served
+// to every version at or above ASSET_INTRO_VERSION.
+const REDIRECT_HOSTS = new Set([
+  "api.github.com",
+  "codeload.github.com",
+  "github.com",
+  "release-assets.githubusercontent.com",
+]);
 const originalFetch = globalThis.fetch;
 
 globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {

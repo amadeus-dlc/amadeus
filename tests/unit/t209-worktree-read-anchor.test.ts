@@ -1,4 +1,4 @@
-// covers: subcommand:amadeus-swarm:check
+// covers: subcommand:amadeus-swarm:check, function:ignoredStatusPaths, function:ancestorDirsOf, function:ignoredTerritoryRoots
 // size: medium
 //
 // Issue #746: after #670/#727, `amadeus-worktree create` anchors a Bolt worktree
@@ -37,9 +37,12 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { resolveWorktreeBaseDir } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import {
+  ancestorDirsOf,
   classifySourcePaths,
   gitRunDetail,
   handleCreate,
+  ignoredStatusPaths,
+  ignoredTerritoryRoots,
   handleDiscard,
   handleList,
   handleMerge,
@@ -398,6 +401,178 @@ describe("t209 source classification (#3197) — pure seam", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  // #3391: `git status --ignored=matching` only collapses a wholly-ignored
+  // directory to `!! dir/` when the DIRECTORY itself matches a pattern. A
+  // contents-only rule (`/dist/**`) leaves git naming each file, and before
+  // the territory seam those files read as hand-authored source — so every
+  // Bolt merge failed on any machine without a `dist/` global excludes rule.
+  // These cases pin both shapes to the same classification without depending
+  // on the ambient git config the e2e path is at the mercy of.
+  test("classifySourcePaths: an ignored file inside generated territory is disposable by its root", () => {
+    const porcelain = [
+      "!! dist/generated.js",
+      "!! node_modules/example/",
+      "!! packages/setup/dist/cli.js",
+      "!! notes.draft",
+      "",
+    ].join("\0");
+    const territory = new Map([
+      ["dist/generated.js", "dist"],
+      ["node_modules/example/", "node_modules"],
+      ["packages/setup/dist/cli.js", "packages/setup/dist"],
+    ]);
+    expect(
+      classifySourcePaths(porcelain, MANAGED, null, (path) => territory.get(path) ?? null),
+    ).toEqual({
+      blocking: ["notes.draft"],
+      disposable: ["dist", "node_modules", "packages/setup/dist"],
+    });
+  });
+
+  // The two-probe territory check is only load-bearing if its refusal survives
+  // the next line. `!! dir/` is a RENDERING, not a verdict: git 2.55 collapses a
+  // directory whose contents are all ignored even when the rules name two exact
+  // files, so a directory swallowing exactly those two looks identical to one
+  // under a blanket rule. Falling back to the shape there would delete source
+  // the probe had just refused to call generated.
+  test("classifySourcePaths: a resolver's refusal outranks git's collapsed-directory shape", () => {
+    const porcelain = ["!! dist/", "!! notes.draft", ""].join("\0");
+    expect(classifySourcePaths(porcelain, MANAGED, null, () => null)).toEqual({
+      blocking: ["dist/", "notes.draft"],
+      disposable: [],
+    });
+    // With no resolver supplied the seam keeps its prior default, so callers
+    // that ask no question are unaffected.
+    expect(classifySourcePaths(porcelain, MANAGED, null)).toEqual({
+      blocking: ["notes.draft"],
+      disposable: ["dist/"],
+    });
+  });
+
+  test("classifySourcePaths: a resolved territory root collapses sibling entries to one pathspec", () => {
+    const porcelain = ["!! dist/a.js", "!! dist/nested/b.js", ""].join("\0");
+    expect(classifySourcePaths(porcelain, MANAGED, null, () => "dist")).toEqual({
+      blocking: [],
+      disposable: ["dist"],
+    });
+  });
+
+  test("ignoredStatusPaths reads only the ignored records of a NUL-separated status", () => {
+    const porcelain = ["?? new.ts", "!! dist/generated.js", "M  tracked.ts", "!! dist/", ""].join(
+      "\0",
+    );
+    expect(ignoredStatusPaths(porcelain)).toEqual(["dist/generated.js", "dist/"]);
+  });
+
+  // The probe's own failure arm. `check-ignore` exits 1 for "nothing matched",
+  // which is an answer; anything above that is a fault the merge must refuse on
+  // rather than silently classify nothing as territory and delete the rest.
+  // Driven at a directory that is not a git repository, which is the cheapest
+  // real way to make git exit 128.
+  test("ignoredTerritoryRoots: a check-ignore fault above exit 1 refuses the merge", () => {
+    const root = mkdtempSync(join(tmpdir(), "amadeus-t209-nogit-"));
+    // The rejection path resolves a project dir before it prints. Point it at
+    // the fixture, which carries no state file, so the error stays on stderr
+    // and no ERROR_LOGGED row is written into a real workspace. GIT_DIR /
+    // GIT_WORK_TREE are cleared so an ambient repository binding cannot turn
+    // the intended exit-128 fault into a successful check against it.
+    const savedEnv = {
+      CLAUDE_PROJECT_DIR: process.env.CLAUDE_PROJECT_DIR,
+      GIT_DIR: process.env.GIT_DIR,
+      GIT_WORK_TREE: process.env.GIT_WORK_TREE,
+    };
+    process.env.CLAUDE_PROJECT_DIR = root;
+    delete process.env.GIT_DIR;
+    delete process.env.GIT_WORK_TREE;
+    try {
+      mkdirSync(join(root, "dist"), { recursive: true });
+      const rejection = captureRejection(() => {
+        ignoredTerritoryRoots(root, ["dist/generated.js"], "nogit", "merge rejected: ");
+      });
+      expect(rejection.exitCode).toBe(1);
+      expect(rejection.message).toContain("[slug=nogit]");
+      expect(rejection.message).toContain("merge rejected: ");
+      expect(rejection.message).toContain("could not classify ignored source paths");
+    } finally {
+      for (const [key, value] of Object.entries(savedEnv)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  // Real-git fixture: the territory probe must not classify a directory as
+  // generated output when the ignore rule matches only the probe's own literal
+  // name (or one probe's stem) — only a rule broad enough to swallow BOTH
+  // dissimilar probe names (`dir/**`, `dir/*`) counts. Uses a throwaway repo so
+  // the verdict comes from git itself, independent of ambient git config.
+  test("ignoredTerritoryRoots: a probe-name-only ignore rule does not create territory", () => {
+    const root = mkdtempSync(join(tmpdir(), "amadeus-t209-probe-"));
+    // Isolate from ambient git config: a developer-machine global excludes
+    // rule like `dist/` would legitimately make dist territory (status and
+    // check-ignore read the same config — that self-consistency IS the fix),
+    // but this case must exercise exactly the rules the fixture writes.
+    const saved = {
+      GIT_CONFIG_GLOBAL: process.env.GIT_CONFIG_GLOBAL,
+      GIT_CONFIG_SYSTEM: process.env.GIT_CONFIG_SYSTEM,
+      GIT_CONFIG_NOSYSTEM: process.env.GIT_CONFIG_NOSYSTEM,
+      HOME: process.env.HOME,
+      XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME,
+    };
+    process.env.GIT_CONFIG_GLOBAL = "/dev/null";
+    process.env.GIT_CONFIG_SYSTEM = "/dev/null";
+    process.env.GIT_CONFIG_NOSYSTEM = "1";
+    // GIT_CONFIG_GLOBAL does not disable the DEFAULT excludes file
+    // (~/.config/git/ignore); pointing HOME/XDG at the empty fixture does.
+    process.env.HOME = root;
+    process.env.XDG_CONFIG_HOME = join(root, ".xdg");
+    try {
+      git(root, ["init", "-q", "--initial-branch=main", root]);
+      mkdirSync(join(root, "dist"), { recursive: true });
+      mkdirSync(join(root, "out"), { recursive: true });
+      writeFileSync(
+        join(root, ".gitignore"),
+        // out/** genuinely swallows any name; the dist rules name only the
+        // probe literal and the first probe's stem, so dist must stay blocking.
+        ["/out/**", "/dist/amadeus-worktree-ignore-probe", "/dist/amadeus-*", ""].join("\n"),
+      );
+      writeFileSync(join(root, "dist", "generated.js"), "");
+      writeFileSync(join(root, "out", "bundle.js"), "");
+      const roots = ignoredTerritoryRoots(
+        root,
+        ["dist/generated.js", "out/bundle.js"],
+        "t209",
+        "",
+      );
+      expect(roots.get("out/bundle.js")).toBe("out");
+      expect(roots.has("dist/generated.js")).toBe(false);
+
+      // Root-level fail-closed: once a probe name is ignored at the worktree
+      // root, no directory is distinguishable from that blanket rule — nothing
+      // is territory, not even out/ which qualified above.
+      writeFileSync(
+        join(root, ".gitignore"),
+        ["/out/**", "amadeus-worktree-ignore-probe", ""].join("\n"),
+      );
+      const blanket = ignoredTerritoryRoots(root, ["out/bundle.js"], "t209", "");
+      expect(blanket.size).toBe(0);
+    } finally {
+      for (const [key, value] of Object.entries(saved)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("ancestorDirsOf lists dirs shallowest-first, excluding the root and the file name", () => {
+    expect(ancestorDirsOf("packages/setup/dist/cli.js")).toEqual(["packages", "packages/setup", "packages/setup/dist"]);
+    // A trailing-slash record names a directory, so it is its own last ancestor.
+    expect(ancestorDirsOf("node_modules/example/")).toEqual(["node_modules", "node_modules/example"]);
+    expect(ancestorDirsOf("notes.draft")).toEqual([]);
   });
 
   test("classifySourcePaths: untracked, staged, and malformed records block", () => {
