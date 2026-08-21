@@ -1,6 +1,6 @@
 # センサーシステム: 決定的検証マニフェスト
 
-> **Source**: [awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows) — branch `v2`, commit `3c3146cf` (v2.6.40, retrieved 2026-08-21)
+> **Source**: [awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows/tree/3c3146cfd7cef33020d48e8d48d4e80d0f8c2820) — branch `v2`, commit `3c3146cf` (v2.6.40, retrieved 2026-08-21)
 > **Status**: 実装から導出したas-built仕様である。upstream のコードが本文書に優先する。
 > **正本**: 英語版 `06-sensors.md`(この日本語版は参照訳。両者が食い違う場合は英語版が優先)
 
@@ -200,7 +200,7 @@ Step 9 のマーカー優先の解決には理由がある。unit-major な実�
 
 ### 3.5 発火トランザクション
 
-`handleFire` は監査ロックをちょうど2つの短い区間だけ保持し、spawn をまたいでは決して保持しない(`aidlc-sensor.ts:10-17`)。
+`handleFire` が監査ロックを保持するのはちょうど2つの短い区間だけであり、spawn の間はロックを保持しない(`aidlc-sensor.ts:10-17`)。
 
 1. 解決 + 検証 + 8桁16進の fire id を生成(`randomBytes(4).toString("hex")`、`:187-189`) — ロックなし。
 2. ロック → `SENSOR_FIRED` を発行 → アンロック(`:497-508`)。
@@ -231,7 +231,7 @@ spawn の形式はパッケージングの方法によって異なる(`:512-521`
 | e3 | SIGTERM以外のシグナル(SIGKILL/SIGINT/…) | `SENSOR_PASSED` | `script-error: signal-<SIG>`(`:688-694`) |
 | — | 到達不能な既定 | `SENSOR_PASSED` | `script-error: unknown`(`:696-701`) |
 
-猶予定数は `DEFAULT_TIMEOUT_GRACE_MS = 100`(`:71`)であり、タイムアウトによる SIGTERM を外部からのキルと区別するために固定されている。マニフェストが `timeout_seconds` を省略した場合の既定予算は `DEFAULT_TIMEOUT_SECONDS = 60`(`:66`、`:481-483`)である。
+猶予時間の定数は `DEFAULT_TIMEOUT_GRACE_MS = 100`(ミリ秒、`:71`)であり、タイムアウトによる SIGTERM を外部からのキルと区別するために固定されている。マニフェストが `timeout_seconds` を省略した場合の既定予算は `DEFAULT_TIMEOUT_SECONDS = 60`(`:66`、`:481-483`)である。
 
 ワーカーの stdout は `JSON.parse` の前に `stripStdoutNoise(stdout, "{")` を通される — 最初の `{` までスライスすることで、ペイロードの前にあるパッケージマネージャの実行バナーが判定を無音で `script-error: bad-output` に潰してしまわないようにしている(`:568-571`、`:627`)。linter ワーカー内の同等のヘルパーは `[` までスライスする(`aidlc-sensor-linter.ts:302-305`)。
 
@@ -628,7 +628,9 @@ consume エントリは `artifact` または `artifact:producer-stage` として
   センサーごとの件数(required-sections 30、upstream-coverage 29、traceability 8、type-check 7、linter 6、claim-sources 1)と §5 のステージごとの表は、その33ファイルそれぞれについてフロントマターブロックを抽出し、`sensors:` 行を特定し、`/^  - (\S+)$/` にマッチする連続する後続行を収集するスクリプトから得た。このスクリプトはステージごとに1行と、JSON集計、`stage files: 33` を出力した。(このスクリプトはリポジトリには含めず、セッションのスクラッチパッドに `sensors_by_stage.ts` として残した。)単純な `git grep -h -A6 '^sensors:'` は、ウィンドウ内に `scopes:` リストが続くため過剰カウントになる — それゆえフロントマターを考慮した抽出が必要である。
 
 - **M5 — stage files carrying a populated `## Sensors` body = 33.**
-  `git grep -l '^## Sensors' -- 'core/aidlc-common/stages/*/*.md' | wc -l` → `33`。
+  見出しの存在だけであれば `git grep -l '^## Sensors' -- 'core/aidlc-common/stages/*/*.md' | wc -l` → `33` だが、これは本文が詰まっていることの根拠にはならない。本文が詰まっていることの述語は、`## Sensors` セクションが次の `##` 見出しまでに空でない行を1行以上持つファイルを1行ずつ出力する次のコマンドである:
+  `awk 'FNR==1{s=0} /^## Sensors/{s=1;next} s&&/^## /{s=0} s&&NF{print FILENAME; s=0}' core/aidlc-common/stages/*/*.md | sort -u | wc -l`
+  → `33`。これはファイル総数(`ls core/aidlc-common/stages/*/*.md | wc -l` → `33`)と一致するため、出荷済みのステージファイルに空の `## Sensors` コンパートメントは存在しない。
 
 - **M6 — stage files describing the detail file as `-<iso>.md` = 23; as `-<fire-id>.md` = 0.**
   `git grep -c -F -- '-<iso>.md' -- 'core/aidlc-common/stages/*/*.md' | wc -l` → `23`。

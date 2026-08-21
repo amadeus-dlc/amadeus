@@ -1,6 +1,6 @@
 # Sensor System: Deterministic Verification Manifests
 
-> **Source**: [awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows) — branch `v2`, commit `3c3146cf` (v2.6.40, retrieved 2026-08-21)
+> **Source**: [awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows/tree/3c3146cfd7cef33020d48e8d48d4e80d0f8c2820) — branch `v2`, commit `3c3146cf` (v2.6.40, retrieved 2026-08-21)
 > **Status**: As-built specification derived from the implementation; the upstream code is authoritative over this document.
 
 ---
@@ -1125,7 +1125,13 @@ from the upstream clone root at commit `3c3146cf`.
   within the window — hence the frontmatter-aware extraction.
 
 - **M5 — stage files carrying a populated `## Sensors` body = 33.**
-  `git grep -l '^## Sensors' -- 'core/aidlc-common/stages/*/*.md' | wc -l` → `33`.
+  Heading presence alone is `git grep -l '^## Sensors' -- 'core/aidlc-common/stages/*/*.md' | wc -l` → `33`,
+  which does not establish that the body is populated. The populated-body
+  predicate prints one line per file whose `## Sensors` section holds at least
+  one non-blank line before the next `##` heading:
+  `awk 'FNR==1{s=0} /^## Sensors/{s=1;next} s&&/^## /{s=0} s&&NF{print FILENAME; s=0}' core/aidlc-common/stages/*/*.md | sort -u | wc -l`
+  → `33`, equal to the file count (`ls core/aidlc-common/stages/*/*.md | wc -l` → `33`),
+  so no shipped stage file carries an empty `## Sensors` compartment.
 
 - **M6 — stage files describing the detail file as `-<iso>.md` = 23; as `-<fire-id>.md` = 0.**
   `git grep -c -F -- '-<iso>.md' -- 'core/aidlc-common/stages/*/*.md' | wc -l` → `23`;

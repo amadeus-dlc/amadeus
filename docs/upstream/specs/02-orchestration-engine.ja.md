@@ -1,6 +1,6 @@
 # オーケストレーションエンジンと指令(directive)プロトコル
 
-> **Source**: [awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows) — branch `v2`, commit `3c3146cf` (v2.6.40, retrieved 2026-08-21)
+> **Source**: [awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows/tree/3c3146cfd7cef33020d48e8d48d4e80d0f8c2820) — branch `v2`, commit `3c3146cf` (v2.6.40, retrieved 2026-08-21)
 > **Status**: 実装から導出されたas-built仕様である。upstream のコードが本書に対して正本となる。
 > **正本**: 英語版 `02-orchestration-engine.md`(この日本語版は参照訳。両者が食い違う場合は英語版が優先)
 
@@ -303,7 +303,7 @@ awaiting-approval, rejected, revised, resume, resumed, skipped
 | `completed` | — | yes | `complete-workflow <slug>`(`Status` が既に `Completed` であれば、no-op を説明する `done`) |
 | `completed` | — | no | `advance <slug>`(ただし、ワークフローがすでに先へ進んでいる場合は例外 — 陳腐化した再 report ガードにより冪等な `done`) |
 | `in-progress` | yes | — | 明示的な `--stage` を要求。なければ拒否。その後 `gate-start <slug> --recovered` + `approve <slug>` |
-| `awaiting-approval` | yes | — | `approve <slug>`(approve は自己委譲で advance/complete-workflow を呼ぶ。エンジンが加えて advance も呼んではならない — `:4716-4723`) |
+| `awaiting-approval` | yes | — | `approve <slug>`(approve は自己委譲で advance/complete-workflow を呼ぶ。エンジンはこれに加えて advance を呼び出してはならない — `:4716-4723`) |
 | any | no | yes | `complete-workflow <slug>` |
 | any | no | no | `advance <slug>` |
 

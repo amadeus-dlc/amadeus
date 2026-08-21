@@ -1,6 +1,6 @@
 # ワークスペース、State、監査ログ、ランタイムイントロスペクション
 
-> **Source**: [awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows) — branch `v2`, commit `3c3146cf` (v2.6.40, retrieved 2026-08-21)
+> **Source**: [awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows/tree/3c3146cfd7cef33020d48e8d48d4e80d0f8c2820) — branch `v2`, commit `3c3146cf` (v2.6.40, retrieved 2026-08-21)
 > **Status**: 実装から導出したビルド後仕様書(as-built specification)。上流コードが本文書に優先する。
 > **正本**: 英語版 `03-state-audit-runtime.md`(この日本語版は参照訳。両者が食い違う場合は英語版が優先)
 
@@ -558,12 +558,21 @@ display-only, so a missing row must never fail a transition(このセクショ�
 | `Parked`(ISO ts)、`Parked At Stage` | `## Runtime State` | `aidlc-state.ts:814-815`(`park`)。`unpark` によって削除される `:831-832` |
 | `Active Unit`、`Unit State`、`Unit Pause Reason`、`Unit Next Action` | `## Runtime State` | `aidlc-state.ts:1046-1055`。`unit complete` 時に4つとも削除される `:1041-1044` |
 | `Merge-Held`(`true`/`false`) | `## Project Information` — **Bolt ごとに fork された state 限定** | `aidlc-bolt.ts:692` |
-| `Practices Affirmed Timestamp` | `## Project Information` | `aidlc-state.ts:3743`(不在時のみ挿入。approve ゲートの是正処理が無限ループしないようにするため、`:3739-3742`) |
 
 unit フィールド群は明示的にキャッシュである: *「audit stays the source of truth — these
 fields are a cache, exactly like Parked / Parked At Stage(監査こそが正本であり続ける — これら
 のフィールドは Parked / Parked At Stage とまったく同様にキャッシュである)」*
 (`aidlc-state.ts:1036-1038`)。
+
+`Practices Affirmed Timestamp` は `setOrInsertField`(`aidlc-state.ts:3743`)で書かれるが、
+ランタイム限定フィールドでは**ない**。テンプレートに載るフィールドであり
+(`state-template.md:20`)、birth も空値の箇条書きを出力する(`aidlc-utility.ts:4240`)ため、
+このエンジンが生成した state ファイルであれば呼び出しは常に *replace* 側の分岐を通る。挿入側
+の分岐は旧形式の修復用である: `:3739-3742` のコメントはその対象を *「a state file missing the
+row (a hand-edited or pre-field file)(この行を欠く state ファイル — 手編集されたもの、または
+このフィールド導入前のもの)」* に限定している。そこで `setField` を使うと暗黙の no-op となり、
+このタイムスタンプを要求する approve ゲートは永久に拒否し続け、その是正指示(「practices-promote
+を実行せよ」)もまた no-op を繰り返すことになる。
 
 ### 5.4 チェックボックス文法
 

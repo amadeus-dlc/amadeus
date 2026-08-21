@@ -1,6 +1,6 @@
 # フックシステム: セッションライフサイクル、ガード、状態同期
 
-> **Source**: [awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows) — branch `v2`, commit `3c3146cf` (v2.6.40, retrieved 2026-08-21)
+> **Source**: [awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows/tree/3c3146cfd7cef33020d48e8d48d4e80d0f8c2820) — branch `v2`, commit `3c3146cf` (v2.6.40, retrieved 2026-08-21)
 > **Status**: 実装から導出した as-built 仕様であり、上流コードが本文書に優先する。
 > **正本**: 英語版 `07-hooks.md`(この日本語版は参照訳。両者が食い違う場合は英語版が優先)
 
@@ -81,7 +81,7 @@
 
 **ヘルスとドロップ。** ほとんどのフックはハートビート `<record>/.aidlc-hooks-health/<hook>.last` を書き込み(`hooksHealthDir` は `core/tools/aidlc-lib.ts:5899-5901`)、どのフックも `recordHookDrop` 経由でタブ区切りの行として失敗を `<hook>.drops` に記録できる(`core/tools/aidlc-lib.ts:9886-9900`)。`--doctor` は両方を読む。カバレッジは**一様ではない**: 17本中12本がヘルスディレクトリに何らか触れ、5本はどちらにも触れない(M13) — `aidlc-deliver-stage-rules.ts`、`aidlc-fold-usage.ts`、`aidlc-record-human-turn.ts`、`aidlc-state-transition-guard.ts`、`aidlc-statusline.ts` は `.last` を書かず `recordHookDrop` も呼ばない。このうち2本はガードの物語にとって重要である: 状態遷移ガード(§5 の4種の PreToolUse ガードの一つ)とルール配送フック(§8.2)は生存証跡を一切残さないため、`--doctor` はこれらについて「実行して許可した」と「一度も発火していない」を区別できない — その観測可能な証拠は、実際にブロックした際に発行する拒否の監査行であって、ヘルスディレクトリではない。オプトインのトレースは `hookDebug` 経由で `<health>/hook-debug.log` に書き込まれ、`AIDLC_HOOK_DEBUG` または `aidlc/.aidlc-hook-debug` マーカーで有効化される(`core/tools/aidlc-lib.ts:9917-9928`)。
 
-**既定の失敗モードとしての fail-open。** すべてのガードは、不正な stdin、状態ファイルの欠落、グラフの読取不能、あるいは任意の throw を*許可*として扱う。§12a 時代の3種のガードはそれぞれ決定的なオフスイッチも備える: `AIDLC_DISABLE_PLAN_APPROVAL_GUARD=1`(`aidlc-plan-approval-guard.ts:249`)、`AIDLC_DISABLE_REVIEWER_SCOPE_HOOK=1`(`aidlc-reviewer-scope.ts:716`)、`AIDLC_DISABLE_REVIEW_FREEZE_HOOK=1`(`aidlc-review-freeze.ts:737`)。
+**既定の失敗モードとしての fail-open。** §5 の4つの PreToolUse ガードはいずれも、不正な stdin、状態ファイルの欠落、グラフの読取不能、あるいは任意の throw を*許可*として扱う(`aidlc-state-transition-guard.ts:941-944`、`aidlc-plan-approval-guard.ts:270`、`:284`、`:301`、`aidlc-review-freeze.ts:755`、`:809`、`aidlc-reviewer-scope.ts:734`、`:800`、`:830`)。これはこれら4つのガードの性質であって、フロー変更フック一般の性質ではない: §8.2 のルール配送フックも不正な stdin では fail-open するが(`aidlc-deliver-stage-rules.ts:267-271`)、自身の2つの拒否アームは fail-open では*ない* — 読み込めないルールバンドルでは `exit 2`、サイズ超過では `exit 2`/`exit 3` を返す(§1.1)。§12a 時代の3種のガードはそれぞれ決定的なオフスイッチも備える: `AIDLC_DISABLE_PLAN_APPROVAL_GUARD=1`(`aidlc-plan-approval-guard.ts:249`)、`AIDLC_DISABLE_REVIEWER_SCOPE_HOOK=1`(`aidlc-reviewer-scope.ts:716`)、`AIDLC_DISABLE_REVIEW_FREEZE_HOOK=1`(`aidlc-review-freeze.ts:737`)。
 
 **有界ロック下での監査。** ブロッキングガードは、`acquireAuditLock(projectDir, 5, 50)` でラップされた `appendAuditEntryUnlocked` を通じて拒否の行を発行する — 50 ms 間隔で5回の試行という、標準の予算を大きく下回る値であり、「a dropped advisory row is preferable to a slow block(advisory な行が失われる方が、遅いブロックよりましである)」という考え方である(`aidlc-review-freeze.ts:814-818`、`aidlc-plan-approval-guard.ts:307-312`)。
 

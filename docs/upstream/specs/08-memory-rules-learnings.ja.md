@@ -1,6 +1,6 @@
 # Memory Layers, Rule System, Learnings Gate and Team Knowledge
 
-> **Source**: [awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows) — branch `v2`, commit `3c3146cf` (v2.6.40, retrieved 2026-08-21)
+> **Source**: [awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows/tree/3c3146cfd7cef33020d48e8d48d4e80d0f8c2820) — branch `v2`, commit `3c3146cf` (v2.6.40, retrieved 2026-08-21)
 > **Status**: 実装から導出した as-built(実装準拠)仕様であり、upstream のコードが本文書に対して優先する。
 > **正本**: 英語版 `08-memory-rules-learnings.md`(この日本語版は参照訳。両者が食い違う場合は英語版が優先)
 

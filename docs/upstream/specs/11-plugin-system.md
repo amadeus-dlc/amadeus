@@ -1,6 +1,6 @@
 # Plugin System: Anatomy, Contributions and Activation
 
-> **Source**: [awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows) — branch `v2`, commit `3c3146cf` (v2.6.40, retrieved 2026-08-21)
+> **Source**: [awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows/tree/3c3146cfd7cef33020d48e8d48d4e80d0f8c2820) — branch `v2`, commit `3c3146cf` (v2.6.40, retrieved 2026-08-21)
 > **Status**: As-built specification derived from the implementation; the upstream code is authoritative over this document.
 
 ---
@@ -206,7 +206,7 @@ binary and falls back to bun (`scripts/package.ts:1044-1056`); verbatim, for
 codex:
 
 ```text
-sh -c 'AIDLC=$(command -v aidlc 2>/dev/null || true); [ -n "$AIDLC" ] && { AIDLC_HARNESS_DIR=.codex AIDLC_HARNESS_NAME=codex "$AIDLC" plugin sync && exit 0; }; BUN=…; AIDLC_HARNESS_DIR=.codex AIDLC_HARNESS_NAME=codex "$BUN" "${PLUGIN_ROOT}/hooks/compose.ts"'
+sh -c 'AIDLC=$(command -v aidlc 2>/dev/null || true); [ -n "$AIDLC" ] && { AIDLC_HARNESS_DIR=.codex AIDLC_HARNESS_NAME=codex "$AIDLC" plugin sync && exit 0; }; BUN=$(command -v bun 2>/dev/null || true); [ -z "$BUN" ] && [ -x "$HOME/.bun/bin/bun" ] && BUN="$HOME/.bun/bin/bun"; [ -z "$BUN" ] && { echo "aidlc plugin compose: aidlc and bun not found, skipping" >&2; exit 0; }; AIDLC_HARNESS_DIR=.codex AIDLC_HARNESS_NAME=codex "$BUN" "${PLUGIN_ROOT}/hooks/compose.ts"'
 ```
 
 The committed `dist/plugins/` tree is drift-guarded: `checkPlugins()` rebuilds
@@ -1017,7 +1017,7 @@ root (`/…/scratchpad/aidlc-workflows`, commit `3c3146cf`) on 2026-08-21.
 | 6 host manifest dirs probed for identity | `grep -n "pluginNameFromRoot" -A 12 scripts/plugin-hooks-template/compose.ts` | lines 131-141, 6 entries |
 | 59 `recordDrop(` call sites | `grep -n 'recordDrop(' scripts/plugin-hooks-template/compose.ts \| grep -vc 'function recordDrop'` | `59` (a bare `grep -c` returns `60` — it also matches the declaration at `:192`) |
 | 1866 lines in `compose.ts` | `wc -l < scripts/plugin-hooks-template/compose.ts` | `1866` |
-| 91 lines in `aidlc-plugin-compose.ts` | `wc -l scripts/plugin-hooks-template/*` | `91` |
+| 91 lines in `aidlc-plugin-compose.ts` | `wc -l < scripts/plugin-hooks-template/aidlc-plugin-compose.ts` | `91` |
 | 691 lines in `plugin-kit.ts` | `wc -l tests/harness/plugin-kit.ts` | `691` |
 | 94 / 74 lines in the two sensor tools | `wc -l plugins/test-pro/tools/*.ts` | `94`, `74` |
 | 6 fragments in the `build-and-test` contribution | `grep -c '^  - anchor:' plugins/test-pro/contributions/construction/build-and-test.md` | `6` |

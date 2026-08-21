@@ -1,6 +1,6 @@
 # Upstream Specifications: awslabs/aidlc-workflows (v2)
 
-> **Source**: [awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows) — branch `v2`, commit `3c3146cf` (v2.6.40, retrieved 2026-08-21)
+> **Source**: [awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows/tree/3c3146cfd7cef33020d48e8d48d4e80d0f8c2820) — branch `v2`, commit `3c3146cf` (v2.6.40, retrieved 2026-08-21)
 > **Status**: As-built specifications derived from the upstream implementation; the upstream code is authoritative over these documents.
 
 This directory contains an as-built specification of the upstream AI-DLC Workflows 2.0 framework, written by reading the implementation on the `v2` branch (`core/`, `harness/`, `scripts/`, `tests/`, `plugins/`). Each document is paired with a Japanese companion translation (`*.ja.md`); the English file is canonical.

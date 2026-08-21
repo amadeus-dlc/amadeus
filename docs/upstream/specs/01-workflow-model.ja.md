@@ -1,6 +1,6 @@
 # ワークフローモデル: フェーズ、ステージ、スコープ、深度とティア
 
-> **Source**: [awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows) — branch `v2`, commit `3c3146cf` (v2.6.40, retrieved 2026-08-21)
+> **Source**: [awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows/tree/3c3146cfd7cef33020d48e8d48d4e80d0f8c2820) — branch `v2`, commit `3c3146cf` (v2.6.40, retrieved 2026-08-21)
 > **Status**: 実装から導出された as-built 仕様書。upstream のコードが本文書に優先する。
 > **正本**: 英語版 `01-workflow-model.md`(この日本語版は参照訳。両者が食い違う場合は英語版が優先)
 
@@ -315,8 +315,8 @@ finished." と書かれている。
 | `aidlc-architecture-reviewer-agent` | `domain-design`、`units-generation`、`contract-design` | `advisory`(著者による宣言) |
 | `aidlc-architecture-reviewer-agent` | `functional-design`、`nfr-requirements`、`nfr-design`、`infrastructure-design`、`code-generation` | `adversarial`(**コンパイル時のデフォルト値**) |
 
-Construction のレビュアー付き5ステージはそもそも `review_class:` を著者
-していない。コンパイラはレビュアーを持つステージを、クラス導入以前の
+Construction のレビュアー付き5ステージはそもそも `review_class:` を
+宣言していない。コンパイラはレビュアーを持つステージを、クラス導入以前の
 挙動である `adversarial` へデフォルトさせる:
 `stage.review_class = parsed.review_class === "advisory" ? "advisory" : "adversarial"`
 (`core/tools/aidlc-graph.ts:2064-2065`)。`reviewer_max_iterations` も同じ

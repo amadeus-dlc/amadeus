@@ -1,6 +1,6 @@
 # Workspace, State, Audit Log and Runtime Introspection
 
-> **Source**: [awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows) — branch `v2`, commit `3c3146cf` (v2.6.40, retrieved 2026-08-21)
+> **Source**: [awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows/tree/3c3146cfd7cef33020d48e8d48d4e80d0f8c2820) — branch `v2`, commit `3c3146cf` (v2.6.40, retrieved 2026-08-21)
 > **Status**: As-built specification derived from the implementation; the upstream code is authoritative over this document.
 
 ---
@@ -520,10 +520,17 @@ Fields not in the base template but inserted at runtime via `setOrInsertField`:
 | `Parked` (ISO ts), `Parked At Stage` | `## Runtime State` | `aidlc-state.ts:814-815` (`park`); removed by `unpark` `:831-832` |
 | `Active Unit`, `Unit State`, `Unit Pause Reason`, `Unit Next Action` | `## Runtime State` | `aidlc-state.ts:1046-1055`; all four removed on `unit complete` `:1041-1044` |
 | `Merge-Held` (`true`/`false`) | `## Project Information` — **per-Bolt forked state only** | `aidlc-bolt.ts:692` |
-| `Practices Affirmed Timestamp` | `## Project Information` | `aidlc-state.ts:3743` (insert-if-missing so the approve gate's remediation cannot loop forever, `:3739-3742`) |
 
 The unit fields are explicitly a cache: *"audit stays the source of truth — these fields are a
 cache, exactly like Parked / Parked At Stage"* (`aidlc-state.ts:1036-1038`).
+
+`Practices Affirmed Timestamp` is **not** a runtime-only field, despite also being written with
+`setOrInsertField` (`aidlc-state.ts:3743`). It is a template field (`state-template.md:20`) and
+birth emits the bullet with an empty value (`aidlc-utility.ts:4240`), so on any state file this
+engine created the call takes the *replace* arm. The insert arm is legacy-format repair: the
+comment at `:3739-3742` scopes it to *"a state file missing the row (a hand-edited or pre-field
+file)"*, where `setField` would silently no-op and the approve gate that requires this timestamp
+would then refuse forever while its remediation ("run practices-promote") keeps no-opping.
 
 ### 5.4 Checkbox grammar
 

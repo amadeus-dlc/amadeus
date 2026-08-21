@@ -1,6 +1,6 @@
 # プラグインシステム: 構造・コントリビューション・活性化
 
-> **Source**: [awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows) — branch `v2`, commit `3c3146cf` (v2.6.40, retrieved 2026-08-21)
+> **Source**: [awslabs/aidlc-workflows](https://github.com/awslabs/aidlc-workflows/tree/3c3146cfd7cef33020d48e8d48d4e80d0f8c2820) — branch `v2`, commit `3c3146cf` (v2.6.40, retrieved 2026-08-21)
 > **Status**: 実装から導出した as-built 仕様である。上流コードが本文書に優先する。
 > **正本**: 英語版 `11-plugin-system.md`(この日本語版は参照訳。両者が食い違う場合は英語版が優先)
 
@@ -162,7 +162,7 @@ kind        = manifest.plugin?.kind ?? "store"
 (`scripts/package.ts:1044-1056`)。codex 向けの逐語:
 
 ```text
-sh -c 'AIDLC=$(command -v aidlc 2>/dev/null || true); [ -n "$AIDLC" ] && { AIDLC_HARNESS_DIR=.codex AIDLC_HARNESS_NAME=codex "$AIDLC" plugin sync && exit 0; }; BUN=…; AIDLC_HARNESS_DIR=.codex AIDLC_HARNESS_NAME=codex "$BUN" "${PLUGIN_ROOT}/hooks/compose.ts"'
+sh -c 'AIDLC=$(command -v aidlc 2>/dev/null || true); [ -n "$AIDLC" ] && { AIDLC_HARNESS_DIR=.codex AIDLC_HARNESS_NAME=codex "$AIDLC" plugin sync && exit 0; }; BUN=$(command -v bun 2>/dev/null || true); [ -z "$BUN" ] && [ -x "$HOME/.bun/bin/bun" ] && BUN="$HOME/.bun/bin/bun"; [ -z "$BUN" ] && { echo "aidlc plugin compose: aidlc and bun not found, skipping" >&2; exit 0; }; AIDLC_HARNESS_DIR=.codex AIDLC_HARNESS_NAME=codex "$BUN" "${PLUGIN_ROOT}/hooks/compose.ts"'
 ```
 
 コミット済みの `dist/plugins/` ツリーはドリフトガード付きである: `checkPlugins()` はすべての投影を一時ディレクトリへ再構築してバイト比較したうえで孤児をスイープする —
@@ -751,7 +751,7 @@ when:
 | アイデンティティのために検査されるホストマニフェストディレクトリ数 6 | `grep -n "pluginNameFromRoot" -A 12 scripts/plugin-hooks-template/compose.ts` | 131-141行目、6要素 |
 | `recordDrop(` 呼び出し箇所数 59 | `grep -n 'recordDrop(' scripts/plugin-hooks-template/compose.ts \| grep -vc 'function recordDrop'` | `59`(素の `grep -c` は `60` を返す — `:192` の宣言にもマッチするため) |
 | `compose.ts` の行数 1866 | `wc -l < scripts/plugin-hooks-template/compose.ts` | `1866` |
-| `aidlc-plugin-compose.ts` の行数 91 | `wc -l scripts/plugin-hooks-template/*` | `91` |
+| `aidlc-plugin-compose.ts` の行数 91 | `wc -l < scripts/plugin-hooks-template/aidlc-plugin-compose.ts` | `91` |
 | `plugin-kit.ts` の行数 691 | `wc -l tests/harness/plugin-kit.ts` | `691` |
 | 2つのセンサーツールの行数 94 / 74 | `wc -l plugins/test-pro/tools/*.ts` | `94`、`74` |
 | `build-and-test` コントリビューションのフラグメント数 6 | `grep -c '^  - anchor:' plugins/test-pro/contributions/construction/build-and-test.md` | `6` |
