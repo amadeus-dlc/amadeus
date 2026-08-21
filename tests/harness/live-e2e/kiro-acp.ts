@@ -249,7 +249,7 @@ class AcpConversation {
     return {
       stopReason,
       toolCallCount: this.toolCallCount,
-      toolTitleDigest: digest(this.#toolTitles.join(" ")),
+      toolTitleDigest: digest(this.#toolTitles.join("|")),
       permissionCount: this.permissionCount,
       violations: [...this.violations],
     };
