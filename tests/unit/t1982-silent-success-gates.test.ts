@@ -8,7 +8,7 @@
 // every arm (including the ones that need a real leaked process or a CI
 // environment) is reachable deterministically. The end-to-end proofs against
 // the real runner live in
-// tests/integration/t1982-silent-success-runner.integration.test.ts.
+// tests/integration/t1982-silent-success-runner.integration.serial.test.ts.
 
 import { describe, expect, test } from "bun:test";
 import {
@@ -238,7 +238,7 @@ describe("t1982 baseline parsing (fail-closed)", () => {
   // A path that cannot exist: loadBaseline's absent-file arm must read as "no
   // exemptions", never as a load failure. The on-disk arms (a real missing file
   // and a real malformed one) are proven against the runner end to end in
-  // tests/integration/t1982-silent-success-runner.integration.test.ts -- this
+  // tests/integration/t1982-silent-success-runner.integration.serial.test.ts -- this
   // file stays filesystem-free so it keeps the unit tier's `small` size budget.
   test("an absent baseline file is an empty baseline, not a load failure", () => {
     expect(loadBaseline("/nonexistent/t1982/silent-success-baseline.json")).toEqual({

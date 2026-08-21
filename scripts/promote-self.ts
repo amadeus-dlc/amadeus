@@ -858,6 +858,9 @@ export async function promoteSelfMain(
             `intent-birth remains fail-closed until \`${SELFDEV_BUILD_COMMAND}\` succeeds: ` +
             `${error instanceof Error ? error.message : String(error)}`,
         );
+        // The promotion transaction is already committed. Keep the build green,
+        // while the missing attestation makes the next self-development birth refuse.
+        return 0;
       }
     }
     console.log("promote-self: project-local self install updated");

@@ -3,7 +3,7 @@
     "file": "scripts/promote-self.ts",
     "selector": {
       "function": "promoteSelfMain",
-      "fingerprint": "sha256:be3f90756e8878a6b98b1e258930987c1247f8313af86f5624b057bc9316f062",
+      "fingerprint": "sha256:996506f7427a8943c48a92d69a394315a48ed0dd542bf88c0966b6441cb5c453",
       "anchorLines": 10,
       "targetLines": "1-10"
     },

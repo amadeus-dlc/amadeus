@@ -123,6 +123,7 @@ describe("repository-wide mechanism honesty ratchets", () => {
     "integration/t258-lifecycle-transaction.test.ts",
     "integration/t259-guard-integration.test.ts",
     "integration/t270-harness-provenance-birth.test.ts",
+    "integration/t2772-selfdev-integrity-gate.integration.test.ts",
     "integration/t2790-plugin-staging-seed-harness-dir.integration.test.ts",
     "integration/t296-hook-launch-and-worktree-resolution.test.ts",
     "integration/t299-plugin-cli-walking-skeleton.integration.test.ts",
