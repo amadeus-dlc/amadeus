@@ -42,12 +42,17 @@ import { planMerge, renderManagedBlock } from "../packages/setup/src/domain/kimi
 import { createApplyWrite } from "../packages/setup/src/ports/apply-write.ts";
 import { createFsRead, createFsWrite } from "../packages/setup/src/ports/fsops.ts";
 import { DistributionTransactionCoordinator } from "./distribution-transaction.ts";
+import {
+  SELFDEV_BUILD_COMMAND,
+  writeSelfDevelopmentIntegrityAttestation,
+} from "../packages/framework/core/tools/amadeus-selfdev-integrity.ts";
 // The self-install face set is defined ONCE, next to the eight package faces it
 // is deliberately narrower than. This script consumes it; it never re-declares
 // an equal-valued list under another name (#1575).
 import { buildSelfInstallProjection, SELF_INSTALL_HARNESSES } from "./plugin-projection.ts";
 
 type Mode = "check" | "apply";
+type AttestationWriter = (repoRoot: string) => void;
 
 type ManagedDir = {
   src: string;
@@ -777,6 +782,8 @@ export async function promoteSelfMain(
   postApply: PostApplyStep | null = kimiHooksStep,
   coordinatorFactory: (repoRoot: string) => DistributionTransactionCoordinator =
     (root) => new DistributionTransactionCoordinator(root),
+  mintAttestation = true,
+  attestationWriter: AttestationWriter = writeSelfDevelopmentIntegrityAttestation,
 ): Promise<number> {
   if (argv.includes("--help") || argv.includes("-h")) {
     printUsage();
@@ -840,6 +847,23 @@ export async function promoteSelfMain(
     if (postApply !== null) {
       const ran = await postApply.run(repoRoot);
       if (ran !== 0) return ran;
+    }
+    // Only the real build path can mint build-success evidence. Test seams and
+    // --no-build promotions deliberately leave the prior disposable attestation
+    // untouched rather than claiming a build occurred.
+    if (!noBuild && repoRoot === REPO_ROOT && mintAttestation) {
+      try {
+        attestationWriter(repoRoot);
+      } catch (error) {
+        console.warn(
+          `promote-self: build succeeded, but the self-development attestation was not written; ` +
+            `intent-birth remains fail-closed until \`${SELFDEV_BUILD_COMMAND}\` succeeds: ` +
+            `${error instanceof Error ? error.message : String(error)}`,
+        );
+        // The promotion transaction is already committed. Keep the build green,
+        // while the missing attestation makes the next self-development birth refuse.
+        return 0;
+      }
     }
     console.log("promote-self: project-local self install updated");
     return 0;

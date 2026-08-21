@@ -45,7 +45,9 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PROJECT_INSTRUCTIONS } from "../../packages/framework/harness/claude/project-instructions.ts";
+import { DistributionTransactionCoordinator } from "../../scripts/distribution-transaction.ts";
 import { promoteSelfMain } from "../../scripts/promote-self.ts";
+import { REPO_ROOT } from "../harness/fixtures.ts";
 
 let root: string;
 let kimiHome: string;
@@ -266,5 +268,34 @@ describe("t299 promote-self kimi hooks merge (FR-1)", () => {
     // committed, and only the post-commit write failed.
     expect(existsSync(join(root, ".claude/tools/a.txt"))).toBe(true);
     expect(readFileSync(configPath(), "utf-8")).toBe(OLD_CONFIG);
+  });
+
+  test("attestation write failure after a real build keeps promotion green and warns", async () => {
+    const warnings: string[] = [];
+    const originalWarn = console.warn;
+    console.warn = (...args: unknown[]) => warnings.push(args.map(String).join(" "));
+    const coordinator = {
+      pendingJournalCount: () => 0,
+      apply: () => {},
+    } as unknown as DistributionTransactionCoordinator;
+    try {
+      expect(
+        await promoteSelfMain(
+          ["--apply"],
+          REPO_ROOT,
+          () => {},
+          null,
+          () => coordinator,
+          true,
+          () => {
+            throw new Error("simulated attestation write failure");
+          },
+        ),
+      ).toBe(0);
+    } finally {
+      console.warn = originalWarn;
+    }
+    expect(warnings.join("\n")).toContain("self-development attestation was not written");
+    expect(warnings.join("\n")).toContain("simulated attestation write failure");
   });
 });

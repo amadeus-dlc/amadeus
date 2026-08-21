@@ -1,5 +1,16 @@
 [
   {
+    "file": "scripts/promote-self.ts",
+    "selector": {
+      "function": "promoteSelfMain",
+      "fingerprint": "sha256:24b77d7323d68792633b174c3830ce6840096e0a133e5baa6844d75c6c18b60b",
+      "anchorLines": 10,
+      "targetLines": "1-10"
+    },
+    "reason": "The real build path mints evidence after a successful promotion; fixture-root tests cannot truthfully claim coverage for this spawned build path, which Bun does not attribute to the parent coverage process.",
+    "expiry": "remove when the patch gate can attribute the real bun run build process"
+  },
+  {
     "file": "packages/framework/core/tools/amadeus-goal-reconciliation.ts",
     "selector": {
       "function": "createInitialGoalLineage",

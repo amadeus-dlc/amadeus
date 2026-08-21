@@ -623,6 +623,7 @@ describe("intent-birth checkpoint", () => {
       "intent-birth.autonomy-declaration",
       "intent-birth.reserved-name",
       "intent-birth.repo-set",
+      "intent-birth.self-development-integrity",
     ]);
     expect(INTENT_BIRTH_WORKSPACE_GUARDS.map((guard) => guard.id)).toEqual([
       "intent-birth.workspace-scan",
