@@ -4,6 +4,54 @@
   "zeroAssertion": [],
   "skips": [
     {
+      "file": "tests/e2e/t-acp-kiro-compose-front.serial.test.ts",
+      "test": "*",
+      "reason": "Opt-in Kiro ACP journey: requires AMADEUS_KIRO_ACP_LIVE=1 plus the real kiro-cli and interactive authentication, which are unavailable in CI; the file's own reasoned guard therefore takes its designed offline skip path. Time-boxed until #2236 provides an always-attempt lane with Kiro auth.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-acp-kiro-journey-workspace.serial.test.ts",
+      "test": "*",
+      "reason": "Opt-in Kiro ACP journey: requires AMADEUS_KIRO_ACP_LIVE=1 plus the real kiro-cli and interactive authentication, which are unavailable in CI; the file's own reasoned guard therefore takes its designed offline skip path. Time-boxed until #2236 provides an always-attempt lane with Kiro auth.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-acp-kiro-jump.serial.test.ts",
+      "test": "*",
+      "reason": "Opt-in Kiro ACP journey: requires AMADEUS_KIRO_ACP_LIVE=1 plus the real kiro-cli and interactive authentication, which are unavailable in CI; the file's own reasoned guard therefore takes its designed offline skip path. Time-boxed until #2236 provides an always-attempt lane with Kiro auth.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-acp-kiro-reviewer.serial.test.ts",
+      "test": "*",
+      "reason": "Opt-in Kiro ACP journey: requires AMADEUS_KIRO_ACP_LIVE=1 plus the real kiro-cli and interactive authentication, which are unavailable in CI; the file's own reasoned guard therefore takes its designed offline skip path. Time-boxed until #2236 provides an always-attempt lane with Kiro auth.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-acp-kiro-status.serial.test.ts",
+      "test": "*",
+      "reason": "Opt-in Kiro ACP journey: requires AMADEUS_KIRO_ACP_LIVE=1 plus the real kiro-cli and interactive authentication, which are unavailable in CI; the file's own reasoned guard therefore takes its designed offline skip path. Time-boxed until #2236 provides an always-attempt lane with Kiro auth.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-acp-kiro-utilities.serial.test.ts",
+      "test": "*",
+      "reason": "Opt-in Kiro ACP journey: requires AMADEUS_KIRO_ACP_LIVE=1 plus the real kiro-cli and interactive authentication, which are unavailable in CI; the file's own reasoned guard therefore takes its designed offline skip path. Time-boxed until #2236 provides an always-attempt lane with Kiro auth.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
       "file": "tests/integration/t-codex-hooks-migration.test.ts",
       "test": "renders invalid UTF-8 path bytes as hexadecimal diagnostics",
       "reason": "Platform-gated by `test.skipIf(process.platform !== \"linux\")`: the fixture needs a filename holding a raw 0x80 byte, which only Linux accepts. Runs for real on Linux CI; skipped on macOS/Windows.",
