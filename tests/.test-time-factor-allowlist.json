@@ -216,13 +216,13 @@
     "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
   },
   {
-    "path": "tests/integration/t1982-silent-success-runner.integration.test.ts",
+    "path": "tests/integration/t1982-silent-success-runner.integration.serial.test.ts",
     "sink": "timing-constant",
     "count": 1,
     "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
   },
   {
-    "path": "tests/integration/t1982-silent-success-runner.integration.test.ts",
+    "path": "tests/integration/t1982-silent-success-runner.integration.serial.test.ts",
     "sink": "sleep",
     "count": 1,
     "reason": "Fixed 100ms poll cadence for the process-table lag loop; the deadline it polls against is already scaled via scaleTestTime."
