@@ -176,6 +176,9 @@ function parseAttestation(projectDir: string): ParsedAttestation {
   if (!validAttestationShape(parsed)) {
     return { kind: "malformed", detail: "schema, revision, build marker, timestamp, or digest is invalid" };
   }
+  if (parsed.observedOriginMain === ABSENT_BASE_MARKER) {
+    return { kind: "malformed", detail: "origin/main binding is absent; a fresh build is required" };
+  }
   return {
     kind: "valid",
     value: {
@@ -264,9 +267,6 @@ function evaluateVerdict(
     return refusal(`The self-development build attestation is malformed (${evidence.detail}).`);
   }
   const attestation = evidence.value;
-  if (attestation.observedOriginMain === ABSENT_BASE_MARKER) {
-    return refusal("The self-development build attestation has no origin/main binding because the build could not resolve refs/remotes/origin/main.");
-  }
   const runtimeHarness = context.runtimeHarness ?? ".claude";
   const recordedRuntimeDigest = attestation.runtimeDigests[runtimeHarness];
   if (recordedRuntimeDigest === undefined) {

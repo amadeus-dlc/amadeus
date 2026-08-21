@@ -177,7 +177,7 @@ describe("t2772 self-development integrity policy", () => {
     writeAttestation(root, { observedOriginMain: ABSENT_BASE_MARKER });
     const { deps } = gitDeps();
     const decision = blocked(evaluateSelfDevelopmentIntegrity(context(root), deps));
-    expect(decision.refusal.reason).toContain("no origin/main binding");
+    expect(decision.refusal.reason).toContain("origin/main binding is absent");
     expect(decision.refusal.recovery).toContain("bun run build");
   });
 
