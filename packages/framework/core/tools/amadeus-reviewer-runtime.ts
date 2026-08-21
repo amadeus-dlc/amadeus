@@ -516,9 +516,7 @@ function collectShardFingerprints(
   let record: unknown;
   try {
     record = JSON.parse(line);
-  } catch {
-    return;
-  }
+  } catch { return; }
   if (!isObject(record) || record.schemaVersion !== 2) return;
   if (!isObject(record.attributes)) return;
   const attributes = record.attributes;
@@ -527,9 +525,7 @@ function collectShardFingerprints(
   let transaction: unknown;
   try {
     transaction = JSON.parse(attributes.Transaction);
-  } catch {
-    return;
-  }
+  } catch { return; }
   if (!isObject(transaction) || !Array.isArray(transaction.qualityEvents)) return;
   for (const event of transaction.qualityEvents) {
     const fingerprint = observedRepairFingerprint(event, stageInstance);
@@ -560,6 +556,13 @@ function durableRepairFingerprints(
 // receipts already consumed for this stage instance, and it funds it once. A
 // receipt presented again at a different iteration is a replay; presenting one
 // out of sequence would let a single ruling buy an unbounded jump.
+//
+// The statements below stay on one line each, and this rationale stays outside
+// the function body: inside a body, a continuation line of a single call and a
+// run of comment lines both carry no DA record of their own under bun's union
+// merge, so the patch coverage gate reads them as never executed. The same
+// reason keeps the JSON decoders in `collectShardFingerprints` on a single-line
+// `catch`, where a brace-only closing line would otherwise read uncovered.
 function admitRepairIteration(
   directive: RunStageDirective,
   repair: RepairEvidence,
@@ -586,9 +589,6 @@ function admitRepairIteration(
   if (iteration !== cap + funded.length + 1) {
     throw new Error("repair-funded review iteration must follow the spent budget in sequence");
   }
-  // One line, not a multi-line argument: a continuation line of a single call
-  // carries no DA record of its own under bun's union merge, so the patch gate
-  // reads it as never executed.
   store.repairs.push({ evidenceFingerprint: repair.evidenceFingerprint, stageInstance, iteration });
   writeInvocationStore(path, store, deps);
 }
