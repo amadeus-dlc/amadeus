@@ -270,10 +270,14 @@ export interface KiroAcpAdapterOptions {
   readonly settleMs?: number;
 }
 
-function probeKiroCli(options: KiroAcpAdapterOptions): {
+/** Named rather than inline: bun's lcov leaves the continuation lines of a
+ *  multi-line return type at DA:0, which reads as an untested probe. */
+interface KiroCliProbe {
   readonly measuredVersion?: string;
   readonly findings: readonly PreflightFinding[];
-} {
+}
+
+function probeKiroCli(options: KiroAcpAdapterOptions): KiroCliProbe {
   const base = buildChildEnvironment(options.parentEnv, CAPABILITY.environment);
   if (!base.ok) {
     return {

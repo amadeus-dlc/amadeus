@@ -26,6 +26,7 @@ import {
   type AcpChannel,
   type AcpOpenOptions,
   type AcpTransportPort,
+  BunAcpTransport,
   KIRO_ACP_ANCHOR_FILE,
   KiroAcpAdapter,
 } from "../harness/live-e2e/kiro-acp.ts";
@@ -433,4 +434,36 @@ describe("Kiro ACP live adapter", () => {
       rmSync(item.root, { recursive: true, force: true });
     }
   });
+});
+
+// The real transport is the one piece the fake cannot stand in for: line
+// framing across chunk boundaries, and a kill that actually ends the process.
+// `cat` is enough to prove both without kiro-cli and without a credit.
+describe("BunAcpTransport", () => {
+  test("frames newline-delimited lines across chunks and closes on kill", async () => {
+    const transport = new BunAcpTransport();
+    const channel = transport.open({
+      executable: "/bin/cat",
+      args: [],
+      cwd: tmpdir(),
+      env: { PATH: process.env.PATH ?? "" },
+    });
+    const received: string[] = [];
+    const reading = (async () => {
+      for await (const line of channel.lines()) {
+        received.push(line);
+        if (received.length === 2) break;
+      }
+    })();
+    channel.send(JSON.stringify({ jsonrpc: "2.0", id: 1 }));
+    channel.send(JSON.stringify({ jsonrpc: "2.0", id: 2 }));
+    await reading;
+    expect(received.map((line) => (JSON.parse(line) as { id: number }).id)).toEqual([1, 2]);
+
+    channel.kill();
+    expect(await channel.exited).not.toBeUndefined();
+    // Killing an already-dead process is swallowed: cleanup proves closure by
+    // waiting on `exited`, not by the kill call succeeding.
+    expect(() => channel.kill()).not.toThrow();
+  }, scaleTestTime(30_000));
 });
