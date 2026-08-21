@@ -24,7 +24,7 @@ Project defaults:
 {
   "intent-mirror": { "github": { "issue": { "consent": "prompt" } } },
   "swarm": { "unit": { "concurrency": { "limit": 4 } } },
-  "plugin": { "activation": { "names": ["formal-model-check"] } },
+  "plugin": { "activation": { "names": ["github-pr-convergence"] } },
   "subagent": { "dispatch": { "enforced-models": ["opus", "sonnet"] } }
 }
 ```

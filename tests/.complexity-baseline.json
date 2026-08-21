@@ -177,18 +177,6 @@
       "ccn": 24
     },
     {
-      "path": "plugins/formal-model-check/tools/contract.ts",
-      "name": "parseArmSuiteResult",
-      "ordinal": 0,
-      "ccn": 20
-    },
-    {
-      "path": "plugins/formal-model-check/tools/contract.ts",
-      "name": "parseCellResult",
-      "ordinal": 0,
-      "ccn": 23
-    },
-    {
       "path": "scripts/package.ts",
       "name": "buildTree",
       "ordinal": 0,

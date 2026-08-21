@@ -1,4 +1,4 @@
-// covers: file:plugins/formal-model-check/plugin.json, file:plugins/github-pr-convergence/plugin.json
+// covers: file:plugins/github-pr-convergence/plugin.json
 //
 // t532 (integration) — plugin manifest argv drift guard (Issue #2823, FR-6).
 //

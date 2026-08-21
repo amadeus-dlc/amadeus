@@ -42,8 +42,6 @@ If you are **using** AI-DLC to build software, start with the [User Guide](../gu
 | [Workspace Layout Decision](18-workspace-layout.md) | The Issue #610 repository layout decision: framework source moves to `packages/framework/`, root `scripts/` and `dist/` stay |
 | [Layered Configuration Resolver](19-layered-config.md) | Global → Space → Intent resolution, schema validation, and phase-boundary integration |
 | [Intent Mirror Reference](20-intent-mirror.md) | The Intent Mirror runtime and distribution contract |
-| [Keeping a Formal Model in Step](21-formal-model-following.md) | Reading the `model-completeness` drift signal and choosing between an implementation-hash refresh and a model revision |
-| [Supplying a Formal Model](22-formal-model-supply.md) | Adding a TLA+ model for a new concurrent protocol: subject choice, reduction manifest, registration, falling proof, vacuity guard |
 | [Depth Control Architecture](25-depth-control-architecture.md) | The L0–L5 depth-control point map, target enforcement strength per layer, blocking-conversion governance, and rollout order |
 | [Lifecycle Guard Runtime](26-lifecycle-guard-runtime.md) | The shared guard interface behind Intent birth, stage completion, phase transitions and workflow completion: verdict vocabulary, adapter registries, fail-closed aggregation, and the G1–G40 guard census |
 | [Diagrams](diagrams.md) | All Mermaid diagrams in one place |

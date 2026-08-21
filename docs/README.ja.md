@@ -34,8 +34,6 @@ Harness Engineer Guide と Developer Reference の境界は **データ対コー
 - [Intent Mirrorを運用する](guide/22-intent-mirror.ja.md)
 - [メトリクスダッシュボード](guide/23-metrics-dashboard.ja.md)
 - [Intent Mirror runtime contract](reference/20-intent-mirror.ja.md)
-- [形式モデルを実装に追従させる](reference/21-formal-model-following.ja.md)
-- [新規プロトコルへ形式モデルを供給する](reference/22-formal-model-supply.ja.md)
 - [Telemetry Schema reference](reference/23-telemetry-schema.ja.md)
 - [Intent autonomy・レビュー・完了](reference/24-intent-autonomy.ja.md)
 - [AI-DLC v2 生成ファイル完全目録](amadeus-files.ja.md)

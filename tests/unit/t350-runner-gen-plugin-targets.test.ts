@@ -40,10 +40,10 @@ function stage(slug: string, phase: string, pluginSource?: true): GraphStage {
 describe("t350 runnerTargets (stage-runner target selection, #1598)", () => {
   test("a composed plugin stage is a runner target, like a core stage", () => {
     const core = stage("code-generation", "construction");
-    const plugin = stage("formal-model-check", "construction", true);
+    const plugin = stage("conformance-fixture", "construction", true);
     expect(runnerTargets([core, plugin]).map((s) => s.slug)).toEqual([
       "code-generation",
-      "formal-model-check",
+      "conformance-fixture",
     ]);
   });
 

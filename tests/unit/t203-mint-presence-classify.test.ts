@@ -115,11 +115,11 @@ function humanTurnCount(proj: string): number {
 }
 
 const formalAdvisory = {
-  plugin: "formal-model-check",
+  plugin: "conformance-fixture",
   code: "changed" as const,
-  message: "advisory: formal-model-check spec hash CHANGED",
+  message: "advisory: conformance-fixture FIXTURE CHANGED",
   stage: "functional-design",
-  target: "amadeus/spaces/default/specs/tla",
+  target: "conformance-fixture:fixture-change",
   specIdentity: "sha256:abc",
 };
 

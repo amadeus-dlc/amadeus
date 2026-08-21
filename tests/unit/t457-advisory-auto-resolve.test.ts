@@ -37,10 +37,10 @@ import type {
 const INTENT = "019fc5ac-f0bb-7a5f-8a64-c944b6f76ead";
 
 const identity: AdvisoryIdentity = {
-  plugin: "formal-model-check",
+  plugin: "conformance-fixture",
   code: "changed",
   checkpoint: "functional-design",
-  target: "amadeus/spaces/default/specs/tla",
+  target: "conformance-fixture:fixture-change",
   specIdentity: "sha256:abc",
   intentRun: "019fc698-ba1f-7467-b6b6-57c4b5b50140",
   advisoryInstance: "019fc698-ba1f-7000-8000-000000000001",
@@ -103,7 +103,7 @@ describe("advisory auto-resolution: occurrence mapping", () => {
   test("interactionIdとselectorはadvisory instanceを含んで一意化される", () => {
     expect(advisoryInteractionId(identity)).toBe("advisory-019fc698-ba1f-7000-8000-000000000001");
     expect(advisorySelector(identity)).toBe(
-      "advisory:formal-model-check:changed:019fc698-ba1f-7000-8000-000000000001",
+      "advisory:conformance-fixture:changed:019fc698-ba1f-7000-8000-000000000001",
     );
   });
 

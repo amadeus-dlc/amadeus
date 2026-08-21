@@ -60,7 +60,6 @@
 │   ├── amadeus-answer-evidence.md
 │   ├── amadeus-event-registry-drift.md
 │   ├── amadeus-linter.md
-│   ├── amadeus-model-completeness.md
 │   ├── amadeus-required-sections.md
 │   ├── amadeus-self-scope-consistency.md
 │   ├── amadeus-type-check.md
@@ -123,7 +122,6 @@
 │   ├── amadeus-answer-evidence.md
 │   ├── amadeus-event-registry-drift.md
 │   ├── amadeus-linter.md
-│   ├── amadeus-model-completeness.md
 │   ├── amadeus-required-sections.md
 │   ├── amadeus-self-scope-consistency.md
 │   ├── amadeus-type-check.md
@@ -173,8 +171,7 @@ amadeus/
     │   ├── code-quality-assessment.md
     │   └── reverse-engineering-timestamp.md              # 鮮度マーカー(staleなら再実行)
     ├── specs/                                            # プロダクト規範層(コミット)
-    │   ├── tla/                                          # TLA+ 仕様の正準ルート: model・cfg・model-map.json
-    │   └── tla-evidence/                                 # TLC 実行証跡ストア(spec-hash watch glob の対象外)
+    │   └── rfc/                                          # フレームワーク自身のプロトコルに関する採択済み RFC
     └── intents/
         ├── active-intent                                 # アクティブintentのカーソル(gitignore, per-user)
         ├── intents.json                                  # レジストリ {uuid, slug, dirName, scope, repos, status}

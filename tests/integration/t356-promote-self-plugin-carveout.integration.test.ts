@@ -48,39 +48,39 @@ const STOCK_GRAPH = [
   { slug: "code-generation", phase: "construction" },
 ];
 
-const PLUGIN_NODE = { slug: "formal-model-check", phase: "construction", plugin_source: true };
+const PLUGIN_NODE = { slug: "conformance-fixture", phase: "construction", plugin_source: true };
 
 const COMPOSITION_RECORD = {
   ledger: [],
   plugins: [
     [
-      "formal-model-check",
+      "conformance-fixture",
       {
-        plugin: "formal-model-check",
-        ownedPaths: ["plugins/formal-model-check/stages/formal-model-check.md"],
-        stageIndex: [{ slug: "formal-model-check" }],
+        plugin: "conformance-fixture",
+        ownedPaths: ["plugins/conformance-fixture/stages/conformance-fixture.md"],
+        stageIndex: [{ slug: "conformance-fixture" }],
       },
     ],
   ],
 };
 
 const composedSurfaces = [
-  ".claude/plugins/formal-model-check/stages/formal-model-check.md",
-  ".claude/skills/amadeus-formal-model-check/SKILL.md",
+  ".claude/plugins/conformance-fixture/stages/conformance-fixture.md",
+  ".claude/skills/amadeus-conformance-fixture/SKILL.md",
   ".claude/.amadeus-plugin-composition.json",
   ".claude/.amadeus-plugin-audit.json",
   ".claude/.amadeus-plugin-drops.json",
-  ".claude/.amadeus-plugin-src/formal-model-check/plugin.json",
+  ".claude/.amadeus-plugin-src/conformance-fixture/plugin.json",
 ];
 
 const composeHost = (): void => {
   write(".claude/tools/data/stage-graph.json", json([STOCK_GRAPH[0], STOCK_GRAPH[1], PLUGIN_NODE]));
-  write(".claude/plugins/formal-model-check/stages/formal-model-check.md", "# stage body\n");
-  write(".claude/skills/amadeus-formal-model-check/SKILL.md", "# runner\n");
+  write(".claude/plugins/conformance-fixture/stages/conformance-fixture.md", "# stage body\n");
+  write(".claude/skills/amadeus-conformance-fixture/SKILL.md", "# runner\n");
   write(".claude/.amadeus-plugin-composition.json", json(COMPOSITION_RECORD));
   write(".claude/.amadeus-plugin-audit.json", json([{ event: "composed" }]));
-  write(".claude/.amadeus-plugin-drops.json", json({ plugins: { "formal-model-check": [] } }));
-  write(".claude/.amadeus-plugin-src/formal-model-check/plugin.json", json({ name: "formal-model-check" }));
+  write(".claude/.amadeus-plugin-drops.json", json({ plugins: { "conformance-fixture": [] } }));
+  write(".claude/.amadeus-plugin-src/conformance-fixture/plugin.json", json({ name: "conformance-fixture" }));
 };
 
 beforeEach(async () => {
@@ -146,7 +146,7 @@ describe("t356 composed-plugin state through promote-self", () => {
     expect(merged.map((n) => n.slug)).toEqual([
       "intent-capture",
       "code-generation",
-      "formal-model-check",
+      "conformance-fixture",
     ]);
     expect(merged[0]?.fresh).toBe(true);
     expect(await promoteSelfMain(["--no-build"], root)).toBe(0);
@@ -161,7 +161,7 @@ describe("t356 composed-plugin state through promote-self", () => {
 
   test("falling proof: a stray file beside composed surfaces is still an ORPHAN", async () => {
     composeHost();
-    write(".claude/plugins/formal-model-check/stages/stray.md", "not owned\n");
+    write(".claude/plugins/conformance-fixture/stages/stray.md", "not owned\n");
     expect(await promoteSelfMain(["--no-build"], root)).toBe(1);
   });
 
@@ -169,23 +169,23 @@ describe("t356 composed-plugin state through promote-self", () => {
     composeHost();
     write(
       ".claude/tools/data/stage-graph.json",
-      json([STOCK_GRAPH[0], STOCK_GRAPH[1], { slug: "formal-model-check" }]),
+      json([STOCK_GRAPH[0], STOCK_GRAPH[1], { slug: "conformance-fixture" }]),
     );
     expect(await promoteSelfMain(["--no-build"], root)).toBe(1);
   });
 
   test("detects Codex runner and Kiro self-install misplacements without flagging local files", () => {
-    write(".codex/skills/amadeus-formal-model-check/SKILL.md", "misplaced runner");
-    write(".kiro/plugins/formal-model-check/stages/formal-model-check.md", "misplaced plugin");
+    write(".codex/skills/amadeus-conformance-fixture/SKILL.md", "misplaced runner");
+    write(".kiro/plugins/conformance-fixture/stages/conformance-fixture.md", "misplaced plugin");
     write(".codex/local/user.txt", "unmanaged local file");
     const expected = new Map<string, Buffer>([
-      [".codex/.amadeus-plugin-src/formal-model-check/plugin.json", Buffer.from("{}")],
+      [".codex/.amadeus-plugin-src/conformance-fixture/plugin.json", Buffer.from("{}")],
       [".codex/.amadeus-plugin-composition.json", Buffer.from(json(COMPOSITION_RECORD))],
-      [".agents/skills/amadeus-formal-model-check/SKILL.md", Buffer.from("runner")],
+      [".agents/skills/amadeus-conformance-fixture/SKILL.md", Buffer.from("runner")],
     ]);
     expect(misplacedPluginProjectionFiles(expected, root)).toEqual([
-      ".codex/skills/amadeus-formal-model-check/SKILL.md",
-      ".kiro/plugins/formal-model-check/stages/formal-model-check.md",
+      ".codex/skills/amadeus-conformance-fixture/SKILL.md",
+      ".kiro/plugins/conformance-fixture/stages/conformance-fixture.md",
     ]);
   });
 

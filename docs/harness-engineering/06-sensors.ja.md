@@ -35,7 +35,6 @@
 | `amadeus-linter.md` | `.ts` / `.js` コード出力 | 設定されたリンター(デフォルトは ESLint)をラップする |
 | `amadeus-type-check.md` | `.ts` / `.tsx` コード出力 | 設定された型チェッカー(デフォルトは `tsc`)をラップする |
 | `amadeus-event-registry-drift.md` | Event Registry と監査ツール | 監査イベント語彙、state-machine/hooks の参照集合、正典 Event Registry 集合の間の乖離および濃度ドリフト |
-| `amadeus-model-completeness.md` | TLA モデルとその正典実装ファイル | オプトインの `formal-model-check` プラグインが宣言する: `FormalElection` TLA モデルと選挙実装との乖離 |
 | `amadeus-self-scope-consistency.md` | Amadeus の自己スコープファイルとコンパイル済みグリッド | 自己開発専用: 5つのドッグフード用ハーネス間で4つの `self-*` スコープが一致すること |
 | `amadeus-pr-convergence-report-format.md` | ユニットの `pr-convergence-report.md` | オプトインの `github-pr-convergence` プラグインステージが宣言する: 収束レポートが CLI の書く必須フィールドを備えていること |
 | `amadeus-nfr-budget.md` | NFR ユニットの要件成果物 | 宣言済み要件 id 1件あたりのバイト数をステージ別上限と照合し、id 宣言の欠落・kind が要求する成果物の不在・測定可能な閾値を持たない performance id を報告する — advisory |

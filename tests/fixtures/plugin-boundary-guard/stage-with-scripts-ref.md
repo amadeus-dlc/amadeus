@@ -1,5 +1,5 @@
 ---
-slug: formal-model-check
+slug: conformance-fixture
 phase: construction
 ---
 
@@ -16,5 +16,5 @@ Both the narrative mention above and the runnable command below are violations
 allowlist MUST return more than one finding.
 
 ```
-bun scripts/formal-verif/run-model-check.ts --model MirrorLifecycle
+bun scripts/fixture-tools/run-fixture.ts --mode probe
 ```

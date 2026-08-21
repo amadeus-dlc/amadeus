@@ -477,7 +477,7 @@ slug または番号で特定のステージへ直接ジャンプします。
 | `describe <id>` | 1 つのセンサーの完全なマニフェスト(command、default severity、`matches` glob、timeout)を出力 |
 | `fire <id> --stage <slug> --output-path <path>` | ファイルに対してセンサーを実行し、`SENSOR_FIRED` 行とそのペア結果行を発火 |
 
-手動発火は `SENSOR_FIRED` 監査行を発火し、続いて正確に 1 つの終端行(`SENSOR_PASSED`、`SENSOR_FAILED`、または `SENSOR_BUDGET_OVERRIDE`)を発火します。失敗は `<record>/.amadeus-sensors/<stage>/`(intent のレコードディレクトリ内)に詳細ファイルを書き込みます。センサーはアドバイザリです。センサーの失敗はツールの失敗にはならないため、コマンドは 0 で終了します。フレームワークに付属するセンサーは `answer-evidence`、`linter`、`model-completeness`、`required-sections`、`type-check`、`upstream-coverage` です。
+手動発火は `SENSOR_FIRED` 監査行を発火し、続いて正確に 1 つの終端行(`SENSOR_PASSED`、`SENSOR_FAILED`、または `SENSOR_BUDGET_OVERRIDE`)を発火します。失敗は `<record>/.amadeus-sensors/<stage>/`(intent のレコードディレクトリ内)に詳細ファイルを書き込みます。センサーはアドバイザリです。センサーの失敗はツールの失敗にはならないため、コマンドは 0 で終了します。フレームワークに付属するセンサーは `answer-evidence`、`linter`、`required-sections`、`type-check`、`upstream-coverage` です。
 
 ```
 bun .claude/tools/amadeus-sensor.ts list

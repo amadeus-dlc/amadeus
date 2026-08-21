@@ -1,4 +1,4 @@
-// covers: file:plugins/formal-model-check/plugin.json
+// covers: file:plugins/github-pr-convergence/plugin.json
 // covers: file:packages/framework/core/tools/amadeus-plugin-compose.ts
 // size: medium
 //
@@ -12,7 +12,7 @@
 // projected into <host>/tools/ and never reachable from a stage — a silent
 // drop with no compile error, mirroring #3026's sensor-declaration gap for the
 // `tools/` face. #3078 is exactly that: PR #2890 added
-// `tools/advisory-model-check.ts` to the formal-model-check bundle without
+// a test-only helper to a plugin bundle without
 // adding it to `plugin.json`'s `tools` array.
 //
 // DOMAIN OF THE PREDICATE: plugin tool modules, i.e. the git-tracked files

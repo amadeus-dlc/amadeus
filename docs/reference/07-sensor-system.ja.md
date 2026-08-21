@@ -96,7 +96,7 @@ timeout_seconds: 5                           # optional
 | `command` | ✓ | string | 正典の呼び出しプレフィックス — 出荷された各センサーは自身のper-sensorスクリプトを名指しする(例 `bun .claude/tools/amadeus-sensor-required-sections.ts`)。ディスパッチャ(`amadeus-sensor.ts`)は `--stage <slug>` に加え、センサーの入力形状に一致するファイルフラグを追加する: document センサーは `--output-path <path>`、code センサー(`linter`、`type-check`)は `--file-path <path>`。 |
 | `default_severity` | ✓ | enum | `advisory` または `blocking`。advisory は判定を記録するだけ、blocking はさらにステージの承認をゲートする。 |
 | `description` | ✓ | string | 1行の人間向け説明。 |
-| `category` | optional | string | フリーフォームの記述ラベル(出荷されたマニフェストは `document-shape`、`code-quality`、`governance`、`formal-verification`、`framework-integrity` を使う。閉じたenumではない)。 |
+| `category` | optional | string | フリーフォームの記述ラベル(出荷されたマニフェストは `document-shape`、`code-quality`、`governance`、`framework-integrity` を使う。閉じたenumではない)。 |
 | `matches` | optional | glob文字列 | PostToolUse フックが発火時に消費する能力フィルタ。下記の[`matches` フィルタ](#matches-filter)を参照。 |
 | `input_schema` | optional | object | 現在はアドバイザリー。将来のLLMディスパッチがテンプレート化の契約として使う。 |
 | `output_schema` | optional | object | 現在はアドバイザリー。将来のLLMディスパッチがパースの契約として使う。 |
@@ -204,7 +204,6 @@ outputs: ...
 | `amadeus-linter.md` | `**/*.{ts,js}` |
 | `amadeus-type-check.md` | `**/*.{ts,tsx}` |
 | `amadeus-event-registry-drift.md` | `**/{event-registry,amadeus-audit}.ts` |
-| `amadeus-model-completeness.md` | `**/{amadeus/spaces/*/specs/tla/**,packages/framework/core/tools/amadeus-election*.ts,packages/framework/core/tools/amadeus-mirror-*.ts,packages/framework/core/tools/amadeus-orchestrate.ts,packages/framework/core/tools/amadeus-state.ts,*/plugins/github-pr-convergence/tools/*.ts}` |
 | `amadeus-self-scope-consistency.md` | `**/{scopes/{amadeus-self-*.md,amadeus-installer-distribution.md},tools/data/scope-grid.json}` |
 | `amadeus-pr-convergence-report-format.md` | `**/construction/*/code-generation/pr-convergence-report.md` |
 | `amadeus-nfr-budget.md` | `**/nfr-*/*.md` |
@@ -384,7 +383,6 @@ selections-file はリプレイの成果物です: クラッシュした persist
 `amadeus-upstream-coverage.md`、`amadeus-answer-evidence.md`、
 `amadeus-self-scope-consistency.md` は、document 形状・data 形状の `matches` glob
 (上記の `matches` テーブルに示した値)とともに `timeout_seconds: 5` を使います。
-`amadeus-model-completeness.md` は `10` を使います。
 `amadeus-linter.md` と `amadeus-event-registry-drift.md` は `30` を使います。
 `amadeus-type-check.md` は `matches: "**/*.{ts,tsx}"` とともに `60` を使います。
 

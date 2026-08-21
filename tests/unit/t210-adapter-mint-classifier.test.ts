@@ -342,11 +342,11 @@ describe("t210 non-claude adapters classify the UserPromptSubmit payload before 
     const adapter = ADAPTERS[0];
     const dir = scratchProject(adapter.distTree, adapter.installDir);
     const advisory = {
-      plugin: "formal-model-check",
+      plugin: "conformance-fixture",
       code: "never-run" as const,
-      message: "advisory: formal-model-check has no recorded verdict",
+      message: "advisory: conformance-fixture has no recorded verdict",
       stage: "build-and-test",
-      target: "amadeus/spaces/default/specs/tla",
+      target: "conformance-fixture:fixture-change",
       specIdentity: "sha256:codex-adapter-boundary",
     };
     try {

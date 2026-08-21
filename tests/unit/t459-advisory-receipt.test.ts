@@ -49,10 +49,10 @@ const GRAPH = autonomyDigest("graph-v1");
 const PHASE = "construction";
 
 const identity: AdvisoryIdentity = {
-  plugin: "formal-model-check",
+  plugin: "conformance-fixture",
   code: "changed",
   checkpoint: "functional-design",
-  target: "amadeus/spaces/default/specs/tla",
+  target: "conformance-fixture:fixture-change",
   specIdentity: "sha256:abc",
   intentRun: INTENT,
   advisoryInstance: "019fc698-ba1f-7000-8000-000000000001",

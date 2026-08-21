@@ -1,7 +1,7 @@
 // covers: none (guard predicates are defined in tests/lib/boundary-guard.ts)
 //
 // t377 (integration) — plugin distribution-boundary guard LIVE scan (intent
-// 260731-formal-verif-value-chain, Unit u3-boundary-guard, FR-A6 / NFR-5).
+// 260731-plugin-value-chain, Unit u3-boundary-guard, FR-A6 / NFR-5).
 //
 // The canonical plugin source is NOT part of t258's SCAN_ROOTS
 // (tests/lib/boundary-guard.ts enumerates packages/framework). t377 therefore

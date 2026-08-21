@@ -1545,9 +1545,9 @@ export function codekbReScanFile(
 // is a valid pathspec whose `*` does not cross a `/`: it matches nothing and
 // excludes nothing, silently. Never drop it (FR-EXC-5).
 //
-// `amadeus/spaces/*/specs/` is deliberately absent — model-map.json and the
-// tla-evidence ledgers live under amadeus/spaces/ but a change has to resync
-// them, so they are code knowledge and stay in the scan (FR-EXC-2).
+// `amadeus/spaces/*/specs/` is deliberately absent — the specs/rfc/
+// specifications live under amadeus/spaces/ but a change has to keep them in
+// step, so they are code knowledge and stay in the scan (FR-EXC-2).
 export const RE_SCAN_EXCLUDED_PATHSPECS: readonly string[] = [
   ":(exclude,glob)amadeus/spaces/*/intents/**",
   ":(exclude,glob)amadeus/spaces/*/elections/**",

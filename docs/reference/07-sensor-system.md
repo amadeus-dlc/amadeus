@@ -97,7 +97,7 @@ timeout_seconds: 5                           # optional
 | `command` | ✓ | string | Canonical invocation prefix — each shipped sensor names its own per-sensor script (e.g. `bun .claude/tools/amadeus-sensor-required-sections.ts`). The dispatcher (`amadeus-sensor.ts`) appends `--stage <slug>` plus the file flag matching the sensor's input shape: `--output-path <path>` for document sensors, `--file-path <path>` for the code sensors (`linter`, `type-check`). |
 | `default_severity` | ✓ | enum | `advisory` or `blocking`. Advisory records a verdict; blocking additionally gates the stage's approval. |
 | `description` | ✓ | string | One-line human description. |
-| `category` | optional | string | Free-form descriptive label (the shipped manifests use `document-shape`, `code-quality`, `governance`, `formal-verification`, and `framework-integrity`; not a closed enum). |
+| `category` | optional | string | Free-form descriptive label (the shipped manifests use `document-shape`, `code-quality`, `governance`, and `framework-integrity`; not a closed enum). |
 | `matches` | optional | glob string | Capability filter consumed by the PostToolUse hook at fire time. See [`matches` filter](#matches-filter) below. |
 | `input_schema` | optional | object | Advisory today; future LLM dispatch will use it as a templating contract. |
 | `output_schema` | optional | object | Advisory today; future LLM dispatch will use it as a parsing contract. |
@@ -205,7 +205,6 @@ the PostToolUse hook at fire time, not by the resolver at compile time.
 | `amadeus-linter.md` | `**/*.{ts,js}` |
 | `amadeus-type-check.md` | `**/*.{ts,tsx}` |
 | `amadeus-event-registry-drift.md` | `**/{event-registry,amadeus-audit}.ts` |
-| `amadeus-model-completeness.md` | `**/{amadeus/spaces/*/specs/tla/**,packages/framework/core/tools/amadeus-election*.ts,packages/framework/core/tools/amadeus-mirror-*.ts,packages/framework/core/tools/amadeus-orchestrate.ts,packages/framework/core/tools/amadeus-state.ts,*/plugins/github-pr-convergence/tools/*.ts}` |
 | `amadeus-self-scope-consistency.md` | `**/{scopes/{amadeus-self-*.md,amadeus-installer-distribution.md},tools/data/scope-grid.json}` |
 | `amadeus-pr-convergence-report-format.md` | `**/construction/*/code-generation/pr-convergence-report.md` |
 | `amadeus-nfr-budget.md` | `**/nfr-*/*.md` |
@@ -386,7 +385,7 @@ later evolve into: `amadeus-required-sections.md`,
 `amadeus-upstream-coverage.md`, `amadeus-answer-evidence.md` and
 `amadeus-self-scope-consistency.md` use `timeout_seconds: 5` with their
 document- and data-shaped `matches` globs (the values shown in the `matches`
-table above); `amadeus-model-completeness.md` uses `10`;
+table above);
 `amadeus-linter.md` and `amadeus-event-registry-drift.md` use `30`;
 `amadeus-type-check.md` uses `60` with `matches: "**/*.{ts,tsx}"`.
 

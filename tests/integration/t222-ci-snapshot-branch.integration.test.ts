@@ -38,10 +38,12 @@ describe("t222 CI snapshot publication boundary", () => {
     });
   });
 
-  test("core tools and TLA inputs promote the risk tier", () => {
+  test("core tools promote the risk tier, and nothing else does on its own", () => {
     expect(detectChanges(["packages/framework/core/tools/amadeus-state.ts"]).risk).toBe("true");
-    expect(detectChanges(["amadeus/spaces/default/specs/tla/Model.tla"]).risk).toBe("true");
-    expect(detectChanges(["plugins/formal-model-check/tools/run-model-check-ci.ts"]).risk).toBe("true");
+    // The negative half: a path outside the core tools pattern must not reach
+    // the risk tier by itself, or the pattern has quietly widened.
+    expect(detectChanges(["packages/framework/core/hooks/amadeus-statusline.ts"]).risk).toBe("false");
+    expect(detectChanges(["plugins/github-pr-convergence/tools/pr-convergence-cli.ts"]).risk).toBe("false");
   });
 
   test("a 30-file change promotes the risk tier without broadening the ordinary full tier", () => {
@@ -127,7 +129,6 @@ describe("t222 CI snapshot publication boundary", () => {
       yaml.split("  distribution-contract:")[1]?.split("\n  tests:")[0] ?? "";
     const e2eJob = yaml.split("  e2e:")[1]?.split("\n  tests:")[0] ?? "";
     const testsJob = yaml.split("  tests:")[1]?.split("\n  drift-check:")[0] ?? "";
-    const formalJob = yaml.split("  formal-model-check:")[1]?.split("\n  review-thread-resolution:")[0] ?? "";
     const driftJob = yaml.split("  drift-check:")[1]?.split("\n  coverage-head:")[0] ?? "";
 
     expect(changesJob).toContain(`full: \${{ steps.filter.outputs.full }}`);
@@ -157,9 +158,6 @@ describe("t222 CI snapshot publication boundary", () => {
     expect(e2eJob).toContain("needs: changes");
     expect(e2eJob).toContain("needs.changes.outputs.risk == 'true'");
     expect(e2eJob).toContain("bun tests/run-tests.ts --e2e -P 4");
-    expect(formalJob).toContain("needs: changes");
-    expect(formalJob).toContain("github.event_name == 'merge_group'");
-    expect(formalJob).toContain("needs.changes.outputs.risk == 'true'");
     expect(driftJob).toContain("needs: changes");
     expect(driftJob).toContain(
       `if: \${{ needs.changes.outputs.full == 'true' || needs.changes.outputs.drift == 'true' }}`,
@@ -206,7 +204,6 @@ describe("t222 CI snapshot publication boundary", () => {
         "reproducible-build",
         "drift-check",
         "coverage",
-        "formal-model-check",
         "review-thread-resolution",
       ]),
     );
@@ -311,7 +308,7 @@ describe("t222 CI snapshot publication boundary", () => {
     const ciSuccessJob = yaml.split("  ci-success:")[1] ?? "";
 
     expect(ciSuccessJob).toContain(
-      "- changes\n      - control-byte-gate\n      - coverage-registry\n      - typecheck\n      - lint\n      - distribution-contract\n      - plugin-conformance-e2e\n      - e2e\n      - tests\n      - reproducible-build\n      - drift-check\n      - coverage\n      - formal-model-check",
+      "- changes\n      - control-byte-gate\n      - coverage-registry\n      - typecheck\n      - lint\n      - distribution-contract\n      - plugin-conformance-e2e\n      - e2e\n      - tests\n      - reproducible-build\n      - drift-check\n      - coverage\n      - review-thread-resolution",
     );
     expect(ciSuccessJob).toContain(`require_result "changes" "\${{ needs.changes.result }}"`);
     // Asserted unconditionally, ahead of the `changes`-driven case branches:
@@ -341,9 +338,6 @@ describe("t222 CI snapshot publication boundary", () => {
       `require_result "plugin-conformance-e2e" "\${{ needs.plugin-conformance-e2e.result }}"`,
     );
     expect(ciSuccessJob).toContain(`require_result "e2e" "\${{ needs.e2e.result }}"`);
-    expect(ciSuccessJob).toContain(
-      `require_result "formal-model-check" "\${{ needs['formal-model-check'].result }}"`,
-    );
     expect(ciSuccessJob).toContain(`require_result "tests" "\${{ needs.tests.result }}"`);
     expect(ciSuccessJob).toContain(
       `require_result "reproducible-build" "\${{ needs.reproducible-build.result }}"`,

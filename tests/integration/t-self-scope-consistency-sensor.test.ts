@@ -22,10 +22,10 @@ const SHARED_STAGES: Readonly<Record<string, string>> = {
   "code-generation": "EXECUTE",
 };
 // Present on the canonical face alone, mirroring the real per-face plugin
-// composition (`self-feature.formal-model-check` on .claude only). Every
+// composition (`self-feature.pr-convergence` on .claude only). Every
 // fixture carries it, so each passing case doubles as a negative control that
 // face-local stage keys never enter the comparison.
-const FACE_LOCAL_STAGE = "formal-model-check";
+const FACE_LOCAL_STAGE = "pr-convergence";
 const CANONICAL_FACE = ".claude";
 
 function fixtureRoot(): string {

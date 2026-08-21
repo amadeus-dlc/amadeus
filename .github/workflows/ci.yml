@@ -762,113 +762,6 @@ jobs:
             --deadline-seconds 270 \
             --poll-seconds 5 | tee -a "$GITHUB_STEP_SUMMARY"
 
-  # U4 formal-model-check begin
-  formal-model-check:
-    name: Formal model check
-    needs: changes
-    if: github.event_name == 'workflow_dispatch' || ((github.event_name == 'pull_request' || github.event_name == 'merge_group') && needs.changes.outputs.risk == 'true')
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout
-        id: formal-checkout
-        continue-on-error: true
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        with:
-          persist-credentials: false
-
-      - name: Set up Bun
-        id: formal-setup-bun
-        if: always()
-        continue-on-error: true
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-        with:
-          bun-version: 1.3.13
-
-      - name: Run fixed Docker model-check acceptance (all registered models)
-        id: formal-acceptance
-        if: always()
-        continue-on-error: true
-        env:
-          CHECKOUT_OUTCOME: ${{ steps.formal-checkout.outcome }}
-          BUN_OUTCOME: ${{ steps.formal-setup-bun.outcome }}
-          EVIDENCE_ROOT: ${{ runner.temp }}/amadeus-formal-model-check
-        run: |
-          set -uo pipefail
-          mkdir -p "${EVIDENCE_ROOT}"
-          if [[ "${CHECKOUT_OUTCOME}" != "success" || "${BUN_OUTCOME}" != "success" ]]; then
-            printf '{"schema":"amadeus.ci-model-check-bootstrap-failure.v1","step":"workflow-bootstrap","errorCode":"ACTION_BOOTSTRAP","checkoutOutcome":"%s","bunOutcome":"%s"}\n' \
-              "${CHECKOUT_OUTCOME}" "${BUN_OUTCOME}" > "${EVIDENCE_ROOT}/bootstrap-failure.json"
-            echo "exit-code=2" >> "${GITHUB_OUTPUT}"
-            exit 2
-          fi
-          set +e
-          bun plugins/formal-model-check/tools/run-model-check-ci.ts run --root "${EVIDENCE_ROOT}"
-          status=$?
-          set -e
-          echo "exit-code=${status}" >> "${GITHUB_OUTPUT}"
-          exit "${status}"
-
-      - name: Verify terminal evidence (all registered models)
-        id: formal-verify
-        if: always()
-        continue-on-error: true
-        env:
-          ACCEPTANCE_EXIT: ${{ steps.formal-acceptance.outputs.exit-code }}
-          EVIDENCE_ROOT: ${{ runner.temp }}/amadeus-formal-model-check
-        run: |
-          set -euo pipefail
-          test "${ACCEPTANCE_EXIT:-2}" -eq 0
-          bun plugins/formal-model-check/tools/run-model-check-ci.ts verify --root "${EVIDENCE_ROOT}"
-
-      - name: Upload formal model-check evidence
-        id: formal-upload
-        if: always()
-        continue-on-error: true
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
-        with:
-          name: formal-model-check-${{ github.run_id }}-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/amadeus-formal-model-check
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Publish terminal state
-        id: formal-terminal
-        if: always()
-        env:
-          CHECKOUT_OUTCOME: ${{ steps.formal-checkout.outcome }}
-          BUN_OUTCOME: ${{ steps.formal-setup-bun.outcome }}
-          ACCEPTANCE_EXIT: ${{ steps.formal-acceptance.outputs.exit-code }}
-          VERIFY_OUTCOME: ${{ steps.formal-verify.outcome }}
-          UPLOAD_OUTCOME: ${{ steps.formal-upload.outcome }}
-        run: |
-          set -euo pipefail
-          if [[ "${CHECKOUT_OUTCOME}" != "success" || "${BUN_OUTCOME}" != "success" ]]; then
-            echo "bootstrap failure"
-            exit 2
-          fi
-          case "${ACCEPTANCE_EXIT:-2}" in
-            2) echo "model-check harness failure"; exit 2 ;;
-            0|1) ;;
-            *) echo "invalid model-check exit"; exit 2 ;;
-          esac
-          if [[ "${VERIFY_OUTCOME}" != "success" ]]; then
-            echo "artifact verification failure"
-            exit 2
-          fi
-          if [[ "${UPLOAD_OUTCOME}" != "success" ]]; then
-            echo "artifact upload failure"
-            exit 2
-          fi
-          if [[ "${ACCEPTANCE_EXIT}" -eq 1 ]]; then
-            echo "model counterexample detected"
-            exit 1
-          fi
-          echo "all registered formal models completed with NOT_DETECTED"
-  # U4 formal-model-check end
-
   review-thread-resolution:
     name: CI Review Thread Gate
     if: github.event_name == 'pull_request'
@@ -902,7 +795,6 @@ jobs:
       - reproducible-build
       - drift-check
       - coverage
-      - formal-model-check
       - review-thread-resolution
     if: ${{ always() }}
     steps:
@@ -986,7 +878,6 @@ jobs:
           case "${{ needs.changes.outputs.risk }}" in
             true)
               require_result "e2e" "${{ needs.e2e.result }}"
-              require_result "formal-model-check" "${{ needs['formal-model-check'].result }}"
               ran=true
               ;;
             false)

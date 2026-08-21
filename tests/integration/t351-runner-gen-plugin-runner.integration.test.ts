@@ -36,10 +36,10 @@ import {
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 // The canonical core tree ships no compiled stage-graph.json; the shipped
 // surface does, so the fixture seeds from the committed dist graph (mirrors
-// t-formal-verif-plugin-stage-discovery's COMMITTED_GRAPH discipline).
+// t-plugin-stage-error's COMMITTED_GRAPH discipline).
 const COMMITTED_GRAPH = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "data", "stage-graph.json");
 
-const PLUGIN_SLUG = "formal-model-check";
+const PLUGIN_SLUG = "conformance-fixture";
 
 let work = "";
 let savedGraphEnv: string | undefined;

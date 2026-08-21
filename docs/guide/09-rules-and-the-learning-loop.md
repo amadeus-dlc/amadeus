@@ -156,7 +156,6 @@ These sensors ship with the framework:
 | `linter` | `.ts` / `.js` code outputs | Wraps your configured linter (ESLint by default) |
 | `type-check` | `.ts` / `.tsx` code outputs | Wraps your configured type-checker (`tsc` by default) |
 | `answer-evidence` | Any `*-questions.md` output | A filled `[Answer]` carries a ruling reference (E-code) or a leader-approval timestamp |
-| `model-completeness` | The TLA specs and the election tools they model | The FormalElection TLA model has not drifted from its canonical implementation files |
 
 Each stage declares which sensors fire on its outputs. You can add your own sensors — author a manifest under `.claude/sensors/`, then add its id to the stages that should run it. The learning loop can also install a sensor for you when you confirm one at a gate. The manifest format, the per-stage matrix, and the authoring walkthrough live in [Sensor System](../reference/07-sensor-system.md). For adding one to your own project, see [Customization](13-customization.md).
 

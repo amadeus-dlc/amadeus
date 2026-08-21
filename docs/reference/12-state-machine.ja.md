@@ -282,9 +282,9 @@ bun .claude/tools/amadeus-advisory-choice.ts record \
 
 両経路とも receipt を `HUMAN_TURN` へ束縛します。prompt 経路は、その turn が自クローン自身の audit シャードに在ることを要求し、記録済み `HUMAN_TURN` ブロックの hash から event identity を再導出し、既に別の receipt で使用済みの turn identity を拒否します — 1つの human turn が答えるのは1つの advisory です。さらに両経路とも、対応する advisory 提示の実在を要求します。何も表示されていないターンから choice を収穫することはできません。
 
-受理は **choice について冪等** です。同一 advisory instance へ同じ choice を再記録すると既存 receipt が `idempotent: true` とともに返り、既に receipt を持つ instance へ *異なる* choice を記録しようとすると、上書きではなく拒否になります。`defer-with-risk` の receipt は問いを閉じます。`run-now` の receipt が新たな choice を受け付けるのは、それが認可したモデル検査が実際にはクリーンな結果を出さなかった場合(detected・harness error・invalid)だけです。
+受理は **choice について冪等** です。同一 advisory instance へ同じ choice を再記録すると既存 receipt が `idempotent: true` とともに返り、既に receipt を持つ instance へ *異なる* choice を記録しようとすると、上書きではなく拒否になります。`defer-with-risk` の receipt は問いを閉じます。`run-now` の receipt が新たな choice を受け付けるのは、それが認可した実行が実際にはクリーンな結果を出さなかった場合だけです。
 
-`correct-misattributed` は唯一の取消経路であり、あらゆる側から囲われています。対象は `run-now` receipt に限り、それを根拠づける対応提示が存在しないときに限り、かつその試行に対するモデル検査エビデンスが存在しないときに限ります。receipt は削除されず、理由 `misattributed-unpresented-choice` とともに revoked として印されます。これらの経路はすべて audit ロック下で走ります。
+`correct-misattributed` は唯一の取消経路であり、あらゆる側から囲われています。対象は `run-now` receipt に限り、それを根拠づける対応提示が存在しないときに限り、かつその試行のエビデンスが存在しないときに限ります。receipt は削除されず、理由 `misattributed-unpresented-choice` とともに revoked として印されます。これらの経路はすべて audit ロック下で走ります。
 
 #### store の schema と移行経路
 

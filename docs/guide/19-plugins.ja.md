@@ -262,16 +262,17 @@ compose は、出力ディレクトリが空か、同一プラグイン・同一
 
 ---
 
-## activation ポリシー: formal-model-check
+## advisory
 
-同梱の `formal-model-check` プラグインは *advisory のみ* です。Amadeus はその spec
-ファイル(`amadeus/spaces/<space>/specs/` 配下の `tla/**`)の決定的ハッシュを計算し、最後に記録された verdict と比較
-します。ハッシュが変化した場合 — または一度も記録されていない場合 — エンジンは
-build-and-test の前に stderr のみの advisory をレンダリングし、doctor は
-`formal-model-check: spec-hash CHANGED` の activation 行を追加します。モデルチェッカ
-(TLC)を自動実行するものは何もなく、勝手に state を書くものも何もありません: advisory は
-spec が drift したことを知らせ、*あなた* がチェック再実行を判断できるようにするものです。
-ハッシュが一致するとき advisory は silent です。
+プラグインの manifest は *advisory* を宣言できます。advisory は、エンジンがステージの
+チェックポイントでプラグイン自身の evaluator を実行して評価する名前付きチェックです。
+advisory は促しであって行動ではありません — エンジンが提示し、doctor が一覧に載せ、
+判断はあなたが行います。advisory が立てた hold を解除できるのは宣言元プラグインの
+evaluator だけなので、勝手に何かが実行されることも、state が書かれることもありません。
+
+現在 Amadeus に同梱されるプラグインで advisory を宣言するものはありません。したがって
+既定のインストールではこの経路は休眠しており、advisory を供給するプラグインを導入する
+まで advisory を目にすることはありません。エンジン側はそのまま、供給されれば動きます。
 
 ---
 
@@ -318,9 +319,9 @@ allowlist も skip フラグもありません — モジュールは宣言さ�
 修復すべき集合が一度に列挙されます。
 
 ```
-MISSING from formal-model-check plugin.json: plugins/formal-model-check/tools/helper.ts
-MISSING from formal-model-check owned sources: plugins/formal-model-check/tools/helper.ts
-UNREADABLE import in formal-model-check: plugins/formal-model-check/tools/typo.ts
+MISSING from my-plugin plugin.json: plugins/my-plugin/tools/helper.ts
+MISSING from my-plugin owned sources: plugins/my-plugin/tools/helper.ts
+UNREADABLE import in my-plugin: plugins/my-plugin/tools/typo.ts
 ```
 
 3つの異なる修復として読みます。`MISSING from … plugin.json` は、ファイルはプラグイン内に

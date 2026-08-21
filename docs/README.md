@@ -49,8 +49,6 @@ Before shipping a change to a harness distribution, run the opt-in local journey
 - [Operate the Intent Mirror](guide/22-intent-mirror.md)
 - [Metrics Dashboard](guide/23-metrics-dashboard.md)
 - [Intent Mirror runtime contract](reference/20-intent-mirror.md)
-- [Keeping a formal model in step with its implementation](reference/21-formal-model-following.md)
-- [Supplying a formal model for a new protocol](reference/22-formal-model-supply.md)
 - [Telemetry Schema reference](reference/23-telemetry-schema.md)
 - [Intent autonomy, review, and completion](reference/24-intent-autonomy.md)
 - [Complete AI-DLC v2 Generated File Inventory](amadeus-files.md)

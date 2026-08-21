@@ -99,11 +99,11 @@ function awaitAdvisoryChoice(): Record<string, unknown> {
     question: "形式検査advisoryについて選択してください。",
     options: ["今すぐ実行する", "リスクを承知して延期する"],
     advisories: [{
-      plugin: "formal-model-check",
+      plugin: "conformance-fixture",
       code: "changed",
-      message: "advisory: formal-model-check spec hash CHANGED",
+      message: "advisory: conformance-fixture FIXTURE CHANGED",
       checkpoint: "functional-design",
-      target: "amadeus/spaces/default/specs/tla",
+      target: "conformance-fixture:fixture-change",
       spec_identity: "sha256:abc",
       intent_run: "019fc698-ba1f-7467-b6b6-57c4b5b50140",
       advisory_instance: "019fc698-ba1f-7000-8000-000000000001",
@@ -115,18 +115,18 @@ function executeAdvisoryHandoff(): Record<string, unknown> {
   return {
     kind: "execute-advisory-handoff",
     stage: "functional-design",
-    handoff_stages: ["tla-authoring"],
+    handoff_stages: ["demo-stage"],
     advisories: [{
-      plugin: "formal-model-check",
+      plugin: "conformance-fixture",
       code: "declared-hold",
-      message: "advisory: formal-model-check declared hold",
+      message: "advisory: conformance-fixture declared hold",
       checkpoint: "functional-design",
-      target: "amadeus/spaces/default/specs/tla",
+      target: "conformance-fixture:fixture-change",
       spec_identity: "sha256:abc",
       intent_run: "019fc698-ba1f-7467-b6b6-57c4b5b50140",
       advisory_instance: "019fc698-ba1f-7000-8000-000000000002",
       result: "declared advisory: release requires the plugin's own evaluator to return no-hold",
-      handoff_stage: "tla-authoring",
+      handoff_stage: "demo-stage",
     }],
   };
 }
@@ -257,24 +257,24 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
   });
 
   test("execute-advisory-handoff rejects a handoff stage no advisory declares", () => {
-    expect(errs({ ...executeAdvisoryHandoff(), handoff_stages: ["tla-authoring", "build-and-test"] }))
+    expect(errs({ ...executeAdvisoryHandoff(), handoff_stages: ["demo-stage", "build-and-test"] }))
       .toContain("handoff_stages names build-and-test, which no advisory declares");
   });
 
   test("execute-advisory-handoff rejects a declared stage the array omits", () => {
     expect(errs({ ...executeAdvisoryHandoff(), handoff_stages: [] }))
-      .toContain("handoff_stages omits declared stage tla-authoring");
+      .toContain("handoff_stages omits declared stage demo-stage");
   });
 
   test("execute-advisory-handoff rejects a repeated handoff stage", () => {
-    expect(errs({ ...executeAdvisoryHandoff(), handoff_stages: ["tla-authoring", "tla-authoring"] }))
-      .toContain("handoff_stages repeats tla-authoring");
+    expect(errs({ ...executeAdvisoryHandoff(), handoff_stages: ["demo-stage", "demo-stage"] }))
+      .toContain("handoff_stages repeats demo-stage");
   });
 
   test("execute-advisory-handoff rejects malformed advisories and a non-array handoff_stages", () => {
     const base = executeAdvisoryHandoff();
     expect(errs({ ...base, advisories: [] })).toContain("advisories must be a non-empty array");
-    expect(errs({ ...base, handoff_stages: "tla-authoring" })).toContain("handoff_stages");
+    expect(errs({ ...base, handoff_stages: "demo-stage" })).toContain("handoff_stages");
     // It carries no question and no options — those belong to the human route.
     expect(errs({ ...base, question: "why?" })).toContain("question");
   });

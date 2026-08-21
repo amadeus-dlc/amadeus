@@ -44,8 +44,8 @@ const buf = (value: unknown): Buffer =>
   Buffer.from(`${JSON.stringify(value, null, 2)}\n`, "utf-8");
 
 const LEDGER: PluginLedger = {
-  slugs: new Set(["formal-model-check"]),
-  ownedPaths: new Set(["plugins/formal-model-check/stages/formal-model-check.md"]),
+  slugs: new Set(["conformance-fixture"]),
+  ownedPaths: new Set(["plugins/conformance-fixture/stages/conformance-fixture.md"]),
 };
 
 const STOCK_GRAPH = [
@@ -55,7 +55,7 @@ const STOCK_GRAPH = [
 ];
 
 const PLUGIN_NODE = {
-  slug: "formal-model-check",
+  slug: "conformance-fixture",
   phase: "construction",
   plugin_source: true,
 };
@@ -92,22 +92,22 @@ describe("t356 parsePluginLedger", () => {
       buf({
         plugins: [
           [
-            "formal-model-check",
+            "conformance-fixture",
             {
               ownedPaths: [
-                "plugins/formal-model-check/stages/formal-model-check.md",
+                "plugins/conformance-fixture/stages/conformance-fixture.md",
                 "tools/amadeus-state.ts", // outside plugins/ — must NOT widen the exemption
               ],
-              stageIndex: [{ slug: "formal-model-check" }],
+              stageIndex: [{ slug: "conformance-fixture" }],
             },
           ],
         ],
       }),
     );
     expect(ledger).not.toBeNull();
-    expect([...(ledger as PluginLedger).slugs]).toEqual(["formal-model-check"]);
+    expect([...(ledger as PluginLedger).slugs]).toEqual(["conformance-fixture"]);
     expect([...(ledger as PluginLedger).ownedPaths]).toEqual([
-      "plugins/formal-model-check/stages/formal-model-check.md",
+      "plugins/conformance-fixture/stages/conformance-fixture.md",
     ]);
   });
 
@@ -120,9 +120,9 @@ describe("t356 parsePluginLedger", () => {
 describe("t356 isPluginOwned", () => {
   test("exempts ledger-owned stage bodies and plugin runner skills", () => {
     expect(
-      isPluginOwned(".claude/plugins/formal-model-check/stages/formal-model-check.md", LEDGER),
+      isPluginOwned(".claude/plugins/conformance-fixture/stages/conformance-fixture.md", LEDGER),
     ).toBe(true);
-    expect(isPluginOwned(".claude/skills/amadeus-formal-model-check/SKILL.md", LEDGER)).toBe(true);
+    expect(isPluginOwned(".claude/skills/amadeus-conformance-fixture/SKILL.md", LEDGER)).toBe(true);
   });
 
   test("does not exempt unrelated paths, unknown plugins, or without a ledger", () => {
@@ -130,7 +130,7 @@ describe("t356 isPluginOwned", () => {
     expect(isPluginOwned(".claude/skills/amadeus-code-generation/SKILL.md", LEDGER)).toBe(false);
     expect(isPluginOwned(".claude/tools/amadeus-state.ts", LEDGER)).toBe(false);
     expect(
-      isPluginOwned(".claude/plugins/formal-model-check/stages/formal-model-check.md", null),
+      isPluginOwned(".claude/plugins/conformance-fixture/stages/conformance-fixture.md", null),
     ).toBe(false);
   });
 });
@@ -141,7 +141,7 @@ describe("t356 stageGraphInSync", () => {
   });
 
   test("still fails on an extra node without plugin_source", () => {
-    const unmarked = [STOCK_GRAPH[0], STOCK_GRAPH[1], { slug: "formal-model-check" }, STOCK_GRAPH[2]];
+    const unmarked = [STOCK_GRAPH[0], STOCK_GRAPH[1], { slug: "conformance-fixture" }, STOCK_GRAPH[2]];
     expect(stageGraphInSync(buf(unmarked), buf(STOCK_GRAPH), LEDGER)).toBe(false);
   });
 
@@ -188,7 +188,7 @@ describe("t356 mergeStageGraph", () => {
     expect(parsed.map((n) => n.slug)).toEqual([
       "intent-capture",
       "code-generation",
-      "formal-model-check",
+      "conformance-fixture",
       "deployment-pipeline",
     ]);
     // write⇔check symmetry: the merged output round-trips the sync predicate.

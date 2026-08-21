@@ -65,11 +65,11 @@ const PHASE = "construction";
 const GRAPH = autonomyDigest("graph-t458");
 
 const advisory: Advisory = {
-  plugin: "formal-model-check",
+  plugin: "conformance-fixture",
   code: "changed",
-  message: "advisory: formal-model-check spec hash CHANGED",
+  message: "advisory: conformance-fixture FIXTURE CHANGED",
   stage: STAGE,
-  target: "amadeus/spaces/default/specs/tla",
+  target: "conformance-fixture:fixture-change",
   specIdentity: "sha256:abc",
 };
 
