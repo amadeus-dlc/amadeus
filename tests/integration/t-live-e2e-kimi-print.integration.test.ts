@@ -27,6 +27,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createKimiPrintJourney } from "../harness/live-e2e/journey.ts";
+import type { LiveJourney } from "../harness/live-e2e/adapter.ts";
 import {
   bindKimiScratchHome,
   KIMI_BOUND_HOME_ENTRIES,
@@ -52,7 +53,7 @@ interface Fixture {
  * A fake `kimi` that answers `--version`, records the environment KEY NAMES it
  * was handed (never the values), and writes the journey anchor into its cwd.
  */
-function fixture(options: { exitCode?: number; anchor?: string } = {}): Fixture {
+function fixture(options: { exitCode?: number; anchor?: string; hangSeconds?: number } = {}): Fixture {
   const root = mkdtempSync(join(tmpdir(), "amadeus-live-kimi-print-"));
   const kimiBin = join(root, "fake-kimi");
   const distribution = join(root, "dist", "kimi");
@@ -72,6 +73,7 @@ function fixture(options: { exitCode?: number; anchor?: string } = {}): Fixture 
       "if [ \"$1\" = \"--version\" ]; then printf '%s\\n' '0.37.2'; exit 0; fi",
       `env | sed 's/=.*//' | sort > ${JSON.stringify(envRecord)}`,
       `printf '%s' ${JSON.stringify(anchor)} > ${JSON.stringify(KIMI_PRINT_ANCHOR_FILE)}`,
+      ...(options.hangSeconds === undefined ? [] : [`sleep ${options.hangSeconds}`]),
       "printf '%s\\n' 'done'",
       `exit ${options.exitCode ?? 0}`,
       "",
@@ -86,6 +88,8 @@ interface RunOptions {
   readonly githubActions?: string;
   readonly distributionDir?: string;
   readonly sourceHome?: string;
+  /** Override the journey, e.g. to force the timeout arm on a hanging child. */
+  readonly journey?: LiveJourney;
 }
 
 function runFixture(item: Fixture, options: RunOptions = {}) {
@@ -105,7 +109,7 @@ function runFixture(item: Fixture, options: RunOptions = {}) {
         KIMI_API_KEY: "must-not-leak",
       },
     }),
-    createKimiPrintJourney(),
+    options.journey ?? createKimiPrintJourney(),
     {
       env: {
         ...(options.githubActions === undefined ? {} : { GITHUB_ACTIONS: options.githubActions }),
@@ -298,4 +302,29 @@ describe("Kimi print live adapter", () => {
       rmSync(item.root, { recursive: true, force: true });
     }
   });
+
+  test("a child still running at the deadline is a journey timeout, then reaped", async () => {
+    const item = fixture({ hangSeconds: 30 });
+    const impatient: LiveJourney = {
+      ...createKimiPrintJourney(),
+      id: "kimi-print-anchor-v1",
+      timeoutMs: 250,
+    };
+    try {
+      const { result } = runFixture(item, { optIn: "1", journey: impatient });
+      // The timeout is reported as a timeout — not as an execution failure and
+      // not as an assertion failure — and cleanup still closes every resource,
+      // which is only reachable through the reap path in the adapter.
+      expect(await result).toMatchObject({
+        ok: true,
+        value: {
+          kind: "recorded",
+          outcome: { status: "timeout", code: "AMADEUS_LIVE_E2E:TIMEOUT:JOURNEY_TIMEOUT" },
+          cleanup: { failures: [], retainedResourceIds: [], leakFindings: [] },
+        },
+      });
+    } finally {
+      rmSync(item.root, { recursive: true, force: true });
+    }
+  }, 30_000);
 });

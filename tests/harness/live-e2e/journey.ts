@@ -187,9 +187,11 @@ export function createKimiPrintJourney(): LiveJourney {
       let anchorValue: unknown;
       if (existsSync(anchorPath)) {
         try {
-          anchorValue = (JSON.parse(readFileSync(anchorPath, "utf8")) as {
-            amadeus_live_e2e?: unknown;
-          }).amadeus_live_e2e;
+          // One line, not a wrapped type assertion: bun's lcov leaves the
+          // continuation lines of a multi-line expression at DA:0, which reads
+          // as an untested anchor parse.
+          const parsed = JSON.parse(readFileSync(anchorPath, "utf8")) as Record<string, unknown>;
+          anchorValue = parsed.amadeus_live_e2e;
         } catch {
           anchorValue = undefined;
         }
