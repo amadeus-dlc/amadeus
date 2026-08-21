@@ -42,18 +42,6 @@
     "reason": "Baseline timing value; its test-timeout consumer applies scaleTestTime before use."
   },
   {
-    "path": "tests/integration/t-formal-verif-node-toolchain-ports.integration.test.ts",
-    "sink": "deadline",
-    "count": 3,
-    "reason": "FR-7 production deadline or timestamp-boundary contract must remain wall-clock exact."
-  },
-  {
-    "path": "tests/integration/t-formal-verif-tlc-cache.integration.test.ts",
-    "sink": "timer",
-    "count": 3,
-    "reason": "FR-7 intentional timing-boundary assertion must remain exact."
-  },
-  {
     "path": "tests/integration/t-kimi-print-drive.test.ts",
     "sink": "sleep",
     "count": 1,
@@ -514,12 +502,6 @@
     "sink": "elapsed-assertion",
     "count": 1,
     "reason": "The assertion verifies the returned duration invariant is non-negative, not a wall-clock performance budget."
-  },
-  {
-    "path": "tests/integration/t-formal-verif-run-model-check-real.integration.test.ts",
-    "sink": "elapsed-assertion",
-    "count": 2,
-    "reason": "The real toolchain integration retains a generous subprocess completion ceiling to detect a hung child; it is not a throughput target."
   },
   {
     "path": "tests/integration/t258-lifecycle-transaction.test.ts",

@@ -129,11 +129,11 @@ describe("applyModelPin — charter model projection", () => {
   // strings (`block[0].replace(pin[0], \`model: ${mapped}\`)`, then
   // `content.replace(block[0], <that result>)`). Both search values are
   // literal strings, not RegExps, but the `$`-pattern interpretation of a
-  // replace's REPLACEMENT argument applies regardless — so a harness model-map
+  // replace's REPLACEMENT argument applies regardless — so a harness mapping
   // value containing `$1`/`$&`/`` $` ``/`$'`/`$$` would have been silently
   // mangled instead of shipped verbatim. Fixed by switching both calls to
   // replacer functions.
-  test("a model-map value containing $-special sequences is inserted verbatim", () => {
+  test("a mapping value containing $-special sequences is inserted verbatim", () => {
     const dollarPins = { opus: "vendor/model-$1-$&-$$-tier" } as const;
     const out = applyModelPin(charter("opus"), dollarPins, "agents/amadeus-x-agent.md");
     expect(out).toContain("model: vendor/model-$1-$&-$$-tier");

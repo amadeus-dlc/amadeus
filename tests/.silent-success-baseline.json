@@ -60,54 +60,6 @@
       "expires": "2026-11-18"
     },
     {
-      "file": "tests/integration/t-formal-verif-run-model-check-real.integration.test.ts",
-      "test": "runs the FormalElection production composition in-process with completion evidence",
-      "reason": "Opt-in real-TLC toolchain gate: needs AMADEUS_RUN_REAL_TLC=1 on darwin with JAVA_HOME set. Unset everywhere by default, including CI.",
-      "issue": "#1982",
-      "firstObserved": "2026-08-20",
-      "expires": "2026-11-18"
-    },
-    {
-      "file": "tests/integration/t-formal-verif-run-model-check-real.integration.test.ts",
-      "test": "runs the MirrorLifecycle production composition in-process with completion evidence",
-      "reason": "Opt-in real-TLC toolchain gate: needs AMADEUS_RUN_REAL_TLC=1 on darwin with JAVA_HOME set. Unset everywhere by default, including CI.",
-      "issue": "#1982",
-      "firstObserved": "2026-08-20",
-      "expires": "2026-11-18"
-    },
-    {
-      "file": "tests/integration/t-formal-verif-run-model-check-real.integration.test.ts",
-      "test": "detects a temporary cross-question result mutant with a receipt-bound trace",
-      "reason": "Opt-in real-TLC toolchain gate: needs AMADEUS_RUN_REAL_TLC=1 on darwin with JAVA_HOME set. Unset everywhere by default, including CI.",
-      "issue": "#1982",
-      "firstObserved": "2026-08-20",
-      "expires": "2026-11-18"
-    },
-    {
-      "file": "tests/integration/t-formal-verif-run-model-check-real.integration.test.ts",
-      "test": "detects a temporary established-result wipe mutant with a receipt-bound trace",
-      "reason": "Opt-in real-TLC toolchain gate: needs AMADEUS_RUN_REAL_TLC=1 on darwin with JAVA_HOME set. Unset everywhere by default, including CI.",
-      "issue": "#1982",
-      "firstObserved": "2026-08-20",
-      "expires": "2026-11-18"
-    },
-    {
-      "file": "tests/integration/t-formal-verif-run-model-check-real.integration.test.ts",
-      "test": "detects a temporary out-of-held rerun mutant with a receipt-bound trace",
-      "reason": "Opt-in real-TLC toolchain gate: needs AMADEUS_RUN_REAL_TLC=1 on darwin with JAVA_HOME set. Unset everywhere by default, including CI.",
-      "issue": "#1982",
-      "firstObserved": "2026-08-20",
-      "expires": "2026-11-18"
-    },
-    {
-      "file": "tests/integration/t-formal-verif-run-model-check-real.integration.test.ts",
-      "test": "measures one warm-up and five Darwin production runs",
-      "reason": "Opt-in real-TLC performance gate: needs the real-TLC toolchain gate above plus AMADEUS_RUN_REAL_TLC_PERFORMANCE=1. Held out of CI so wall-clock measurement cannot red a shared runner.",
-      "issue": "#1982",
-      "firstObserved": "2026-08-20",
-      "expires": "2026-11-18"
-    },
-    {
       "file": "tests/integration/t434-intent-completion-live-seam.integration.test.ts",
       "test": "executes every native harness command and validates Judge/election observations",
       "reason": "Opt-in live credential seam: needs AMADEUS_INTENT_COMPLETION_LIVE=1, which spends real credentials across five harnesses. Unset everywhere by default, including CI.",

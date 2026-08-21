@@ -45,8 +45,8 @@ const toolEnv = {
   AMADEUS_SCOPE_GRID: join(ROOT, "dist", "claude", ".claude", "tools", "data", "scope-grid.json"),
 };
 
-// `ci-pipeline` is the stand-in for the real case's formal-model-check /
-// tla-authoring / pr-convergence: a stage the `fix` scope grid marks SKIP,
+// `ci-pipeline` is the stand-in for the real case's pr-convergence: a stage
+// the `fix` scope grid marks SKIP,
 // which host config then binds as mandatory. scope-bindings are parsed
 // syntactically (amadeus-config.ts parsePluginScopeBindings never consults the
 // compiled graph), so the divergence reproduces without compiling a plugin.

@@ -91,7 +91,7 @@ describe("evaluateUndefinedTerm — real repo regression fixtures (#2029 survey)
 	test("ordinary 2-word descriptive English used once is NOT flagged (intent 260812-tla-proof-receipt)", () => {
 		const path = writeArtifact(
 			"requirements-analysis-questions.md",
-			"## Q1: production toolchain を通す author-new 統合テストの CI 接続方式\n\nA. 実TLC を要する統合テストは formal-model-check 専用実行面に置く\nX. Other (please specify)\n",
+			"## Q1: production toolchain を通す統合テストの CI 接続方式\n\nA. 実ツールチェーンを要する統合テストは専用実行面に置く\nX. Other (please specify)\n",
 		);
 		expect(evaluateUndefinedTerm(path, projectDir)).toEqual({
 			pass: true,

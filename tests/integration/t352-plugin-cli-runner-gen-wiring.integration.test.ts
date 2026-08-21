@@ -37,8 +37,8 @@ import {
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const CORE_ROOT = join(REPO_ROOT, "packages", "framework", "core");
-const FIXTURE = join(REPO_ROOT, "plugins", "formal-model-check");
-const PLUGIN = "formal-model-check";
+const FIXTURE = join(REPO_ROOT, "tests", "fixtures", "conformance-fixture-plugin", "conformance-fixture");
+const PLUGIN = "conformance-fixture";
 const OWNED_STAGE = `plugins/${PLUGIN}/stages/${PLUGIN}.md`;
 
 let host = "";

@@ -60,7 +60,6 @@ Sources of truth: `amadeus-dlc/amadeus` (commit `f4d99c2c9`, as of 2026-08)
 │   ├── amadeus-answer-evidence.md
 │   ├── amadeus-event-registry-drift.md
 │   ├── amadeus-linter.md
-│   ├── amadeus-model-completeness.md
 │   ├── amadeus-required-sections.md
 │   ├── amadeus-self-scope-consistency.md
 │   ├── amadeus-type-check.md
@@ -122,7 +121,6 @@ CLAUDE.md                                                 # Claude Code onboardi
 │   ├── amadeus-answer-evidence.md
 │   ├── amadeus-event-registry-drift.md
 │   ├── amadeus-linter.md
-│   ├── amadeus-model-completeness.md
 │   ├── amadeus-required-sections.md
 │   ├── amadeus-self-scope-consistency.md
 │   ├── amadeus-type-check.md
@@ -172,8 +170,7 @@ amadeus/
     │   ├── code-quality-assessment.md
     │   └── reverse-engineering-timestamp.md              # Freshness marker; rerun when stale
     ├── specs/                                            # Product specification layer (committed)
-    │   ├── tla/                                          # Canonical TLA+ spec root: models, configs, model-map.json
-    │   └── tla-evidence/                                 # TLC run evidence store (outside the spec-hash watch glob)
+    │   └── rfc/                                          # Accepted RFCs for the framework's own protocols
     └── intents/
         ├── active-intent                                 # Active intent cursor (gitignored, per-user)
         ├── intents.json                                  # Registry: {uuid, slug, dirName, scope, repos, status}

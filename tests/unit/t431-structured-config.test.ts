@@ -354,7 +354,7 @@ describe("t431 structured config", () => {
     for (const layer of ["space", "intent"] as const) {
       const outcome = parseAmadeusConfigLayers([
         present(layer, {
-          plugin: { activation: { names: ["formal-model-check"] } },
+          plugin: { activation: { names: ["conformance-fixture"] } },
         }),
       ]);
       expect(outcome.kind).toBe("invalid");

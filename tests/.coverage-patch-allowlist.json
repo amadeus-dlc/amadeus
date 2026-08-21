@@ -1430,39 +1430,6 @@
     "expiry": "remove when the Stop trust matrix gains an in-process driver"
   },
   {
-    "file": "plugins/formal-model-check/tools/contract.ts",
-    "selector": {
-      "function": "<module>",
-      "fingerprint": "sha256:8d85c45acc856fe9e2b49de2b9a0a6a6a3c6f8df63ddc15a6d9aca9f743d6805",
-      "anchorLines": 1,
-      "targetLines": "1",
-      "class": "type-only"
-    },
-    "reason": "Type/interface declaration line (ParseCounters); runtime-erased, DA:0 via bun lcov chunk merge (bun-inbody/multiline DA:0 class).",
-    "expiry": "remove if bun lcov stops stamping erased lines"
-  },
-  {
-    "file": "plugins/formal-model-check/tools/fs-tlc-toolchain.ts",
-    "selector": {
-      "function": "<module>",
-      "fingerprint": "sha256:33b3a6a0e79e48bba09c4ca72fd67a5dc509dc61b78d580965741591f10e9e74",
-      "anchorLines": 64,
-      "targetLines": "1-64"
-    },
-    "reason": "Live Node adapter ports (NodeArtifactNetworkPort HTTPS fetch, NodeFileDigestPort, NodePhysicalReservationPort disk reservation) exercised only by the real-toolchain probe (tests/formal-verif/support/tla-real-toolchain-probe.ts) outside CI; no network or disk-reservation substrate in the CI coverage job.",
-    "expiry": "remove when a hermetic real-toolchain probe runs in the CI coverage profile"
-  },
-  {
-    "file": "plugins/formal-model-check/tools/tlc-spawn-planner.ts",
-    "selector": {
-      "function": "<module>",
-      "fingerprint": "sha256:abab2ea725d439cdeb8f7aaa5204443c4ea1bcef53ac0c441db6bcef745f2b30",
-      "anchorLines": 55,
-      "targetLines": "1-55"
-    },
-    "reason": "NodePlannerEnvironmentPort.inspectDarwin runs the live sandbox-exec / JAVA_HOME / java probe on real Darwin — requires a real JDK, exercised only by the real-toolchain probe outside CI."
-  },
-  {
     "file": "scripts/distribution-transaction.ts",
     "selector": {
       "function": "wait",
@@ -4352,39 +4319,6 @@
     "expiry": "remove when the CLI dispatch is testable in-process"
   },
   {
-    "file": "plugins/formal-model-check/tools/tla-authoring.ts",
-    "selector": {
-      "function": "<module>",
-      "fingerprint": "sha256:68c52d65b6109f416bb181a5c8b18c602ecf7f770407b0aeb81d380e9133bf61",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "The import.meta.main dispatch line only runs in a spawned CLI process; every handler branch is driven in-process by tests/integration/t439-tla-authoring-cli.integration.test.ts (spawn-blindspot-two-step second resort). Expire when the CLI entry moves behind a measured runner."
-  },
-  {
-    "file": "plugins/formal-model-check/tools/tla-referee-toolchain.ts",
-    "selector": {
-      "function": "runOnce",
-      "fingerprint": "sha256:d175dc8f599731a74800b0a219b8dedc76eba3e18ef5f6cbe2b85a32cf594864",
-      "anchorLines": 36,
-      "targetLines": "2-36"
-    },
-    "reason": "The acquire/preparePlanned/runPlanned section drives the real pinned TLC jar and sealed JDK; CI cannot download or execute them, so these rows are only reachable by the real-TLC surface (tests/formal-verif/tla-referee-real-toolchain.test.ts and the standalone probe, exercised per ruling A). The pre-toolchain rows of runOnce (describeMutant and the referee receipt mint) are driven in-process by t447 and t535.",
-    "expiry": "remove when a hermetic TLC fixture jar lands in CI (U4 registration-committer follow-up)"
-  },
-  {
-    "file": "plugins/formal-model-check/tools/tla-referees.ts",
-    "selector": {
-      "function": "prepareMutation",
-      "fingerprint": "sha256:bda3a97be133821caccd913666f0a89f89ab8c03a60cc4473e3d59d92a58c6e4",
-      "anchorLines": 3,
-      "targetLines": "1-3",
-      "class": "catch-arm"
-    },
-    "reason": "The defensive catch around the mutant write/copy only fires when writeFileSync or cpSync throws inside a directory mkdtempSync just created; the portable injections (absent path, dangling symlink) are all absorbed earlier as typed failures, and a directory-shaped module diverges between macOS (EISDIR throw) and Linux (empty read), so a deterministic cross-platform red is not constructible (bun-readfilesync-dir-platform-divergence).",
-    "expiry": "remove if the workshop gains an injectable filesystem port"
-  },
-  {
     "file": "packages/framework/core/tools/amadeus-state.ts",
     "selector": {
       "function": "awaitCompletion",
@@ -5076,28 +5010,6 @@
       "class": "catch-arm"
     },
     "reason": "tallies mkdir failure requires the election dir to vanish after load; t549 covers tallies-as-file via readHistory before this mkdir.",
-    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
-  },
-  {
-    "file": "tests/lib/advisory-model-check.ts",
-    "selector": {
-      "function": "auxiliariesProblem",
-      "fingerprint": "sha256:93c508004cc29d5bb89edcbcd0cc189e37077743a9a5d28a46a4e805f514524e",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "Auxiliary identity mismatch shares one return with the path-null and prefix checks; Bun attributes the hit to the condition line. t-advisory-human-choice-domain covers the invalid-auxiliary outcomes.",
-    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
-  },
-  {
-    "file": "tests/lib/advisory-model-check.ts",
-    "selector": {
-      "function": "implementationsProblem",
-      "fingerprint": "sha256:84dc1de807fce3d63c4c2499eff1b9bab42672552aed9b7ad756b9e1a4052f2d",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "Implementation identity mismatch shares one return with the path-null check; Bun attributes the hit to the condition line. t-advisory-human-choice-domain covers the invalid-implementation outcomes.",
     "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
   },
   {

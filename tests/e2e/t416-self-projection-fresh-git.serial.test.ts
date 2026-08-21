@@ -16,7 +16,9 @@ import {
 } from "../../scripts/plugin-projection.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const PLUGIN = "formal-model-check";
+const PLUGIN = "github-pr-convergence";
+// A plugin's stage slug is its own; it need not repeat the plugin directory name.
+const PLUGIN_STAGE = "pr-convergence";
 const HOST: Record<SelfInstallHarness, string> = {
   claude: ".claude",
   codex: ".codex",
@@ -94,22 +96,22 @@ function compose(root: string, harness: SelfInstallHarness): string {
   ]);
 }
 
-function assertFormalStage(root: string, harness: SelfInstallHarness): void {
+function assertPluginStage(root: string, harness: SelfInstallHarness): void {
   const graph = JSON.parse(readFileSync(join(root, HOST[harness], "tools", "data", "stage-graph.json"), "utf-8")) as Array<{ slug?: string }>;
-  expect(graph.some((stage) => stage.slug === PLUGIN), `${harness} graph`).toBe(true);
+  expect(graph.some((stage) => stage.slug === PLUGIN_STAGE), `${harness} graph`).toBe(true);
 }
 
 describe("t416 committed self projection in a fresh Git checkout", () => {
   test("is usable before startup, stays clean on no-op, and repairs only the current host", () => {
     project = freshProjectedCheckout();
-    for (const harness of SELF_INSTALL_HARNESSES) assertFormalStage(project, harness);
+    for (const harness of SELF_INSTALL_HARNESSES) assertPluginStage(project, harness);
 
-    expect(existsSync(join(project, ".claude", "skills", `amadeus-${PLUGIN}`, "SKILL.md"))).toBe(true);
-    expect(existsSync(join(project, ".agents", "skills", `amadeus-${PLUGIN}`, "SKILL.md"))).toBe(true);
-    expect(existsSync(join(project, ".kimi-code", "skills", `amadeus-${PLUGIN}`, "SKILL.md"))).toBe(true);
+    expect(existsSync(join(project, ".claude", "skills", `amadeus-${PLUGIN_STAGE}`, "SKILL.md"))).toBe(true);
+    expect(existsSync(join(project, ".agents", "skills", `amadeus-${PLUGIN_STAGE}`, "SKILL.md"))).toBe(true);
+    expect(existsSync(join(project, ".kimi-code", "skills", `amadeus-${PLUGIN_STAGE}`, "SKILL.md"))).toBe(true);
     expect(existsSync(join(project, ".cursor", "commands", "amadeus.md"))).toBe(true);
     expect(existsSync(join(project, ".opencode", "commands", "amadeus.md"))).toBe(true);
-    expect(existsSync(join(project, ".codex", "skills", `amadeus-${PLUGIN}`))).toBe(false);
+    expect(existsSync(join(project, ".codex", "skills", `amadeus-${PLUGIN_STAGE}`))).toBe(false);
     expect(existsSync(join(project, ".kiro"))).toBe(false);
 
     for (const harness of SELF_INSTALL_HARNESSES) {
@@ -118,7 +120,7 @@ describe("t416 committed self projection in a fresh Git checkout", () => {
       expect(run(project, "git", ["status", "--porcelain"]), `${harness} no-op dirtied Git`).toBe("");
     }
 
-    const codexStage = join(project, ".codex", "plugins", PLUGIN, "stages", `${PLUGIN}.md`);
+    const codexStage = join(project, ".codex", "plugins", PLUGIN, "stages", `${PLUGIN_STAGE}.md`);
     const expectedStage = readFileSync(codexStage);
     rmSync(codexStage);
     expect(compose(project, "codex")).toContain("composed 1 plugin(s)");
@@ -135,14 +137,14 @@ describe("t416 committed self projection in a fresh Git checkout", () => {
     project = freshProjectedCheckout(false);
     for (const harness of SELF_INSTALL_HARNESSES) {
       const graph = JSON.parse(readFileSync(join(project, HOST[harness], "tools", "data", "stage-graph.json"), "utf-8")) as Array<{ slug?: string }>;
-      expect(graph.some((stage) => stage.slug === PLUGIN), `${harness} neutral graph`).toBe(false);
+      expect(graph.some((stage) => stage.slug === PLUGIN_STAGE), `${harness} neutral graph`).toBe(false);
       expect(compose(project, harness)).toContain("record already current (no-op)");
       expect(compose(project, harness)).toContain("record already current (no-op)");
       expect(run(project, "git", ["status", "--porcelain"]), `${harness} neutral startup dirtied Git`).toBe("");
     }
-    expect(existsSync(join(project, ".agents", "skills", `amadeus-${PLUGIN}`))).toBe(false);
-    expect(existsSync(join(project, ".claude", "skills", `amadeus-${PLUGIN}`))).toBe(false);
-    expect(existsSync(join(project, ".kimi-code", "skills", `amadeus-${PLUGIN}`))).toBe(false);
+    expect(existsSync(join(project, ".agents", "skills", `amadeus-${PLUGIN_STAGE}`))).toBe(false);
+    expect(existsSync(join(project, ".claude", "skills", `amadeus-${PLUGIN_STAGE}`))).toBe(false);
+    expect(existsSync(join(project, ".kimi-code", "skills", `amadeus-${PLUGIN_STAGE}`))).toBe(false);
     expect(existsSync(join(project, ".kiro"))).toBe(false);
     expect(existsSync(join(REPO_ROOT, "dist", "plugins", PLUGIN, "kiro", "plugins", PLUGIN, "plugin.json"))).toBe(true);
     expect(existsSync(join(REPO_ROOT, "dist", "plugins", PLUGIN, "kiro-ide", "plugins", PLUGIN, "plugin.json"))).toBe(true);

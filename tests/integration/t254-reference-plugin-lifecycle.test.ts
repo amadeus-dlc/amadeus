@@ -363,7 +363,7 @@ describe("t254 reference-plugin-and-guides — U11 FR-6 items 21–22", () => {
     // plugins/, and every mutation of Parts A–C targets temp dirs (AMADEUS_*_ROOT
     // redirected). So test-pro never appears in the real repo-root plugins/ or the
     // shipped neutral bundle. (repo-root plugins/ and dist/plugins/ are no longer
-    // globally absent: intent 260722-tla-plugin ships the formal-model-check
+    // globally absent: the repository ships an opt-in reference plugin
     // plugin as a neutral bundle there — but that is a DIFFERENT plugin; this
     // guard is scoped to test-pro's non-pollution.)
     expect(existsSync(join(REPO_ROOT, "plugins", PLUGIN))).toBe(false);

@@ -59,7 +59,7 @@ function compileGrid(
 // `self-feature` is a COMPOSED scope: no core stage names it in frontmatter,
 // so the transpose never mints its row and the on-disk entry is the only copy
 // — exactly the shape of the real `self-feature` row that carries
-// `formal-model-check: EXECUTE` (#1634).
+// `pr-convergence: EXECUTE` (#1634).
 const CORE: Stages = [stage("alpha", ["feature"]), stage("beta", ["feature"])];
 // An explicit-invocation-only plugin stage uses `scopes: []`.
 const PLUGIN: Stages = [stage("model-check", [], true)];
@@ -122,7 +122,7 @@ describe("drop -> compose keeps a composed scope's plugin cell (#1863)", () => {
 
 describe("compiling with a stage absent stays silent (#1863)", () => {
   test("a preserved cell for an absent slug is a normal state, not a diagnostic", () => {
-    // The shipped grid carries `self-feature.formal-model-check`, so every
+    // The shipped grid carries `self-feature.pr-convergence`, so every
     // workspace that has not composed that opt-in plugin holds a cell for an
     // absent slug BY DESIGN. Warning about it would fire on the default
     // install, not on a fault — so compile says nothing and the preservation

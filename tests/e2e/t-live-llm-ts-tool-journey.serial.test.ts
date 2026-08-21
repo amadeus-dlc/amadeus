@@ -44,7 +44,7 @@ const CODEX_BIN = process.env.AMADEUS_CODEX_BIN ?? "codex";
 const CLAUDE_DIST = join(REPO_ROOT, "dist", "claude");
 const CODEX_DIST = join(REPO_ROOT, "dist", "codex");
 const TIMEOUT_MS = Number.parseInt(process.env.AMADEUS_LLM_TOOL_E2E_TIMEOUT ?? "900000", 10);
-const STATE_FIXTURE = "state-formal-model-check.md";
+const STATE_FIXTURE = "state-pr-convergence-repair.md";
 const CLAUDE_SANDBOX_SETTINGS = JSON.stringify({
   sandbox: { enabled: true, failIfUnavailable: true },
 });
@@ -53,7 +53,7 @@ const PROMPT = (harnessDir: ".claude" | ".codex"): string => [
   "You are driving a pre-seeded Amadeus test workspace.",
   "Use the shipped TypeScript tools through the shell; do not merely describe actions.",
   "Do not create, birth, select, or switch an Intent. Do not use git, GitHub, or the network.",
-  `Run exactly: bun ${harnessDir}/tools/amadeus-orchestrate.ts report --stage formal-model-check --result completed`,
+  `Run exactly: bun ${harnessDir}/tools/amadeus-orchestrate.ts report --stage pr-convergence --result completed`,
   "Read the tool result. If it reports a missing verification artifact, create the exact path named in that result with a concise markdown verification note, then rerun the same report command.",
   "Continue until the report command succeeds, then stop and summarize the tool commands executed.",
 ].join(" ");
@@ -61,7 +61,7 @@ const STATE_APPROVE_PROMPT = (harnessDir: ".claude" | ".codex"): string => [
   "You are driving a pre-seeded Amadeus test workspace.",
   "Use the shipped TypeScript tools through the shell; do not merely describe actions.",
   "Do not create, birth, select, or switch an Intent. Do not use git, GitHub, or the network.",
-  `Run exactly: bun ${harnessDir}/tools/amadeus-state.ts approve formal-model-check --defer-workflow-completion --project-dir .`,
+  `Run exactly: bun ${harnessDir}/tools/amadeus-state.ts approve pr-convergence --defer-workflow-completion --project-dir .`,
   "Read the tool result. If it reports a missing verification artifact, create the exact path named in that result with a concise markdown verification note, then rerun the same command.",
   "Continue until the command succeeds, then stop and summarize the tool commands executed.",
 ].join(" ");
@@ -200,7 +200,7 @@ function prepareCodexSubscriptionAuth(home: string): void {
  * preparation, not an Intent lifecycle operation: the provider never runs
  * intent-birth or selects it.
  */
-function prepareFormalModelCheckFixture(projectDir: string, harnessDir: ".claude" | ".codex"): void {
+function preparePluginStageFixture(projectDir: string, harnessDir: ".claude" | ".codex"): void {
   seedWorkspaceShell(projectDir);
   seedStateFile(projectDir, STATE_FIXTURE);
   seedAuditFile(projectDir);
@@ -209,12 +209,8 @@ function prepareFormalModelCheckFixture(projectDir: string, harnessDir: ".claude
     join(projectDir, "amadeus", "config.json"),
     `${JSON.stringify({
       plugin: {
-        activation: { names: ["github-pr-convergence", "formal-model-check"] },
+        activation: { names: ["github-pr-convergence"] },
         "scope-bindings": {
-          "formal-model-check": {
-            "formal-model-check": ["self-fix"],
-            "tla-authoring": ["self-fix"],
-          },
           "github-pr-convergence": { "pr-convergence": ["self-fix"] },
         },
       },
@@ -231,7 +227,7 @@ function prepareFormalModelCheckFixture(projectDir: string, harnessDir: ".claude
   }
   const gateStart = spawnSync(
     process.execPath,
-    [join(projectDir, harnessDir, "tools", "amadeus-state.ts"), "gate-start", "formal-model-check", "--project-dir", projectDir],
+    [join(projectDir, harnessDir, "tools", "amadeus-state.ts"), "gate-start", "pr-convergence", "--project-dir", projectDir],
     { cwd: projectDir, encoding: "utf8" },
   );
   if (gateStart.status !== 0) {
@@ -302,7 +298,7 @@ function eventIndexAfter(
   return audit.findIndex((row, index) =>
     index > afterIndex &&
     (row.eventName === event || row.attributes?.Event === event) &&
-    row.attributes?.Stage === "formal-model-check",
+    row.attributes?.Stage === "pr-convergence",
   );
 }
 
@@ -316,12 +312,12 @@ function assertRepairJourney(projectDir: string, run: ToolRun): void {
   }
   expect(readIntentEntries(projectDir)).toHaveLength(1);
   const state = readFileSync(join(seededRecordDir(projectDir), "amadeus-state.md"), "utf8");
-  expect(state).toContain("- [x] formal-model-check — EXECUTE");
+  expect(state).toContain("- [x] pr-convergence — EXECUTE");
   const audit = readAuditRows(projectDir);
   const failedReport = audit.findIndex((row) =>
     row.eventName === "amadeus.operation.failed" &&
     row.attributes?.Event === "ERROR_LOGGED" &&
-    row.attributes.Command?.includes("report --stage formal-model-check --result completed") &&
+    row.attributes.Command?.includes("report --stage pr-convergence --result completed") &&
     row.attributes.Error?.includes("phase-check-construction.md"),
   );
   expect(failedReport).toBeGreaterThanOrEqual(0);
@@ -343,13 +339,13 @@ function assertStateApprovalJourney(projectDir: string, run: ToolRun): void {
   }
   expect(readIntentEntries(projectDir)).toHaveLength(1);
   const state = readFileSync(join(seededRecordDir(projectDir), "amadeus-state.md"), "utf8");
-  expect(state).toContain("- [x] formal-model-check — EXECUTE");
+  expect(state).toContain("- [x] pr-convergence — EXECUTE");
   expect(state).toContain("- **Workflow Completion Status**: pending");
   const audit = readAuditRows(projectDir);
   const failedApproval = audit.findIndex((row) =>
     row.eventName === "amadeus.operation.failed" &&
     row.attributes?.Event === "ERROR_LOGGED" &&
-    row.attributes.Command?.includes("approve formal-model-check") &&
+    row.attributes.Command?.includes("approve pr-convergence") &&
     row.attributes.Error?.includes("phase-check-construction.md"),
   );
   expect(failedApproval).toBeGreaterThanOrEqual(0);
@@ -424,7 +420,7 @@ describe("real-LLM Amadeus tools repair journey without live Intent birth", () =
     () => {
       const projectDir = setupIntegrationProject();
       try {
-        prepareFormalModelCheckFixture(projectDir, ".claude");
+        preparePluginStageFixture(projectDir, ".claude");
         assertRepairJourney(projectDir, runClaude(projectDir));
       } finally {
         cleanupTestProject(projectDir);
@@ -442,7 +438,7 @@ describe("real-LLM Amadeus tools repair journey without live Intent birth", () =
         repositoryRoot: REPO_ROOT,
         model: process.env.AMADEUS_CODEX_EXEC_MODEL ?? "gpt-5.6-sol",
         rulesDir: ".codex/amadeus-rules",
-        prepareProject: (projectDir) => prepareFormalModelCheckFixture(projectDir, ".codex"),
+        prepareProject: (projectDir) => preparePluginStageFixture(projectDir, ".codex"),
       });
       try {
         assertRepairJourney(project.proj, runCodex(project));
@@ -458,7 +454,7 @@ describe("real-LLM Amadeus tools repair journey without live Intent birth", () =
     () => {
       const projectDir = setupIntegrationProject();
       try {
-        prepareFormalModelCheckFixture(projectDir, ".claude");
+        preparePluginStageFixture(projectDir, ".claude");
         assertStateApprovalJourney(projectDir, runClaude(projectDir, STATE_APPROVE_PROMPT(".claude")));
       } finally {
         cleanupTestProject(projectDir);
@@ -476,7 +472,7 @@ describe("real-LLM Amadeus tools repair journey without live Intent birth", () =
         repositoryRoot: REPO_ROOT,
         model: process.env.AMADEUS_CODEX_EXEC_MODEL ?? "gpt-5.6-sol",
         rulesDir: ".codex/amadeus-rules",
-        prepareProject: (projectDir) => prepareFormalModelCheckFixture(projectDir, ".codex"),
+        prepareProject: (projectDir) => preparePluginStageFixture(projectDir, ".codex"),
       });
       try {
         assertStateApprovalJourney(project.proj, runCodex(project, STATE_APPROVE_PROMPT(".codex")));

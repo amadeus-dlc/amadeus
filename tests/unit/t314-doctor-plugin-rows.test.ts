@@ -54,9 +54,9 @@ describe("t314 doctorPluginRows — rows + exit contribution", () => {
   });
 
   test("activation line is appended as a passing advisory row when present", () => {
-    const rows = doctorPluginRows(section([{ plugin: "p", state: "ok", detail: "composed@1" }], "formal-model-check: spec-hash CHANGED"));
+    const rows = doctorPluginRows(section([{ plugin: "p", state: "ok", detail: "composed@1" }], "conformance-fixture: fixture CHANGED"));
     expect(rows).toHaveLength(2);
-    expect(rows[1]).toEqual({ pass: true, label: "Plugins (activation) formal-model-check: spec-hash CHANGED" });
+    expect(rows[1]).toEqual({ pass: true, label: "Plugins (activation) conformance-fixture: fixture CHANGED" });
   });
 
   test("a healthy composed plugin adds no failing row (corpus-sweep: valid config stays green)", () => {

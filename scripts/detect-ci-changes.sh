@@ -11,9 +11,7 @@ while IFS= read -r -d '' path; do
   changed_count=$((changed_count + 1))
 
   case "${path}" in
-    packages/framework/core/tools/amadeus-*.ts|\
-    amadeus/spaces/default/specs/tla/*|\
-    plugins/formal-model-check/*)
+    packages/framework/core/tools/amadeus-*.ts)
       risk=true
       ;;
   esac

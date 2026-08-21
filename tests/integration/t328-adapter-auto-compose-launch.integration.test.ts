@@ -27,8 +27,8 @@ import { createNodeBackend } from "../../packages/framework/core/tools/amadeus-p
 import { amadeusToolTarget } from "../harness/cli-target.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const FIXTURE = join(REPO_ROOT, "plugins", "formal-model-check");
-const PLUGIN = "formal-model-check";
+const FIXTURE = join(REPO_ROOT, "tests", "fixtures", "conformance-fixture-plugin", "conformance-fixture");
+const PLUGIN = "conformance-fixture";
 const COMPOSITION = ".amadeus-plugin-composition.json";
 
 // The five wired adapter faces (claude's SessionStart wiring is covered by U2's

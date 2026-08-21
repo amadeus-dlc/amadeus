@@ -43,10 +43,4 @@ describe("t2997 shipped manifests keep parsing", () => {
     },
   );
 
-  test("formal-model-check still carries its advisories field", () => {
-    const raw = JSON.parse(
-      readFileSync(join(PLUGINS_DIR, "formal-model-check", "plugin.json"), "utf-8"),
-    );
-    expect(Array.isArray(raw.advisories)).toBe(true);
-  });
 });

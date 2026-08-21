@@ -3,7 +3,7 @@
 //
 // The fixture is a frozen copy of the pre-migration root .claude grid. It is
 // intentionally independent of the compiler: changing stage membership does
-// not rewrite the expected cells. The formal-model-check cell is a composed
+// not rewrite the expected cells. The pr-convergence cell is a composed
 // plugin extra and is excluded only from canonical-stage comparisons.
 // covers: dir:packages/framework/core/scopes
 // covers: dir:packages/framework/core/amadeus-common/stages

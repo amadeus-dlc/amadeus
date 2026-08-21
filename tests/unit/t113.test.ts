@@ -99,11 +99,11 @@ function awaitAdvisoryChoice(): Record<string, unknown> {
     question: "形式検査advisoryについて選択してください。",
     options: ["今すぐ実行する", "リスクを承知して延期する"],
     advisories: [{
-      plugin: "formal-model-check",
+      plugin: "conformance-fixture",
       code: "changed",
-      message: "advisory: formal-model-check spec hash CHANGED",
+      message: "advisory: conformance-fixture FIXTURE CHANGED",
       checkpoint: "functional-design",
-      target: "amadeus/spaces/default/specs/tla",
+      target: "conformance-fixture:fixture-change",
       spec_identity: "sha256:abc",
       intent_run: "019fc698-ba1f-7467-b6b6-57c4b5b50140",
       advisory_instance: "019fc698-ba1f-7000-8000-000000000001",
@@ -115,18 +115,18 @@ function executeAdvisoryHandoff(): Record<string, unknown> {
   return {
     kind: "execute-advisory-handoff",
     stage: "functional-design",
-    handoff_stages: ["tla-authoring"],
+    handoff_stages: ["demo-stage"],
     advisories: [{
-      plugin: "formal-model-check",
+      plugin: "conformance-fixture",
       code: "declared-hold",
-      message: "advisory: formal-model-check declared hold",
+      message: "advisory: conformance-fixture declared hold",
       checkpoint: "functional-design",
-      target: "amadeus/spaces/default/specs/tla",
+      target: "conformance-fixture:fixture-change",
       spec_identity: "sha256:abc",
       intent_run: "019fc698-ba1f-7467-b6b6-57c4b5b50140",
       advisory_instance: "019fc698-ba1f-7000-8000-000000000002",
       result: "declared advisory: release requires the plugin's own evaluator to return no-hold",
-      handoff_stage: "tla-authoring",
+      handoff_stage: "demo-stage",
     }],
   };
 }
@@ -257,24 +257,24 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
   });
 
   test("execute-advisory-handoff rejects a handoff stage no advisory declares", () => {
-    expect(errs({ ...executeAdvisoryHandoff(), handoff_stages: ["tla-authoring", "build-and-test"] }))
+    expect(errs({ ...executeAdvisoryHandoff(), handoff_stages: ["demo-stage", "build-and-test"] }))
       .toContain("handoff_stages names build-and-test, which no advisory declares");
   });
 
   test("execute-advisory-handoff rejects a declared stage the array omits", () => {
     expect(errs({ ...executeAdvisoryHandoff(), handoff_stages: [] }))
-      .toContain("handoff_stages omits declared stage tla-authoring");
+      .toContain("handoff_stages omits declared stage demo-stage");
   });
 
   test("execute-advisory-handoff rejects a repeated handoff stage", () => {
-    expect(errs({ ...executeAdvisoryHandoff(), handoff_stages: ["tla-authoring", "tla-authoring"] }))
-      .toContain("handoff_stages repeats tla-authoring");
+    expect(errs({ ...executeAdvisoryHandoff(), handoff_stages: ["demo-stage", "demo-stage"] }))
+      .toContain("handoff_stages repeats demo-stage");
   });
 
   test("execute-advisory-handoff rejects malformed advisories and a non-array handoff_stages", () => {
     const base = executeAdvisoryHandoff();
     expect(errs({ ...base, advisories: [] })).toContain("advisories must be a non-empty array");
-    expect(errs({ ...base, handoff_stages: "tla-authoring" })).toContain("handoff_stages");
+    expect(errs({ ...base, handoff_stages: "demo-stage" })).toContain("handoff_stages");
     // It carries no question and no options — those belong to the human route.
     expect(errs({ ...base, question: "why?" })).toContain("question");
   });
@@ -722,4 +722,71 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
   test("string -> shape error", () => {
     expect(errs("x")).toContain("expected object, got string");
   });
+
+// ============================================================
+// review_only — the review-recovery directive shape.
+//
+// `review_only: true` says "re-run the reviewer for this unit, do not run the
+// stage body and do not open a gate". Every field it depends on is checked
+// together, because a review_only directive missing any of them would either
+// run the stage it meant to skip or open a gate nobody answered.
+// ============================================================
+
+describe("t113 review_only", () => {
+  function reviewOnly(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      ...runStage(),
+      gate: false,
+      unit: "auth",
+      reviewer: "amadeus-quality-agent",
+      review_only: true,
+      ...overrides,
+    };
+  }
+
+  test("a well-formed review_only run-stage validates", () => {
+    expect(validateDirective(reviewOnly()).valid).toBe(true);
+  });
+
+  test("review_only on any other kind is rejected", () => {
+    const e = errs({ ...dispatchSubagent(), review_only: true, unit: "auth", reviewer: "r", gate: false });
+    expect(e).toContain("review_only is valid only on run-stage");
+  });
+
+  test("review_only: false is rejected — absence is how you say no", () => {
+    expect(errs(reviewOnly({ review_only: false }))).toContain("review_only must be true when present");
+  });
+
+  test("review_only without a unit is rejected", () => {
+    expect(errs(reviewOnly({ unit: "" }))).toContain("review_only requires a non-empty unit");
+    const missing = reviewOnly();
+    delete missing.unit;
+    expect(errs(missing)).toContain("review_only requires a non-empty unit");
+  });
+
+  test("review_only without a reviewer is rejected", () => {
+    expect(errs(reviewOnly({ reviewer: "" }))).toContain("review_only requires a non-empty reviewer");
+  });
+
+  test("review_only with a gate is rejected", () => {
+    expect(errs(reviewOnly({ gate: true }))).toContain("review_only requires gate:false");
+  });
+});
+
+// ============================================================
+// The generic field checks, on the arms the fixtures above never reach.
+// ============================================================
+
+describe("t113 generic field checks", () => {
+  test("a missing gate field is named as missing, not as a type error", () => {
+    const missing = runStage();
+    delete missing.gate;
+    expect(errs(missing)).toContain("run-stage: missing required field: gate");
+  });
+
+  test("a non-string element inside a string array names its index", () => {
+    expect(errs({ ...runStage(), produces: ["ok", 7] }))
+      .toContain("run-stage: produces[1] must be string, got number");
+  });
+});
 });

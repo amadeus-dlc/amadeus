@@ -58,11 +58,11 @@ const SEED: readonly SeedFile[] = [
   { path: "amadeus/spaces/default/memory/project.md", lines: 6, excludedBy: MEMORY },
   { path: "metrics/snapshots/2026-01.json", lines: 7, excludedBy: METRICS },
 
-  // Code knowledge — must survive. The two specs/ ledgers are the FR-EXC-2 pin:
-  // they live under amadeus/spaces/ but a change has to resync them, so a
+  // Code knowledge — must survive. The two specs/ entries are the FR-EXC-2 pin:
+  // they live under amadeus/spaces/ but a change has to keep them in step, so a
   // blanket amadeus/spaces/** would blind the scan to real work.
-  { path: "amadeus/spaces/default/specs/tla/model-map.json", lines: 8, excludedBy: null },
-  { path: "amadeus/spaces/default/specs/tla-evidence/deadbeef.json", lines: 2, excludedBy: null },
+  { path: "amadeus/spaces/default/specs/rfc/0001-example.md", lines: 8, excludedBy: null },
+  { path: "amadeus/spaces/default/specs/rfc/0002-example.md", lines: 2, excludedBy: null },
   { path: "packages/framework/core/tools/amadeus-lib.ts", lines: 9, excludedBy: null },
   { path: "tests/unit/t1.test.ts", lines: 3, excludedBy: null },
   { path: "docs/reference/04-stages/inception.md", lines: 1, excludedBy: null },
@@ -198,10 +198,10 @@ describe("t2415 the canonical pathspecs bite (FR-EXC-5)", () => {
 });
 
 describe("t2415 build ledgers under amadeus/spaces/ survive (FR-EXC-2)", () => {
-  test("specs/tla and specs/tla-evidence stay in the scan input", () => {
+  test("specs/rfc stays in the scan input", () => {
     const kept = keptAfter(RE_SCAN_EXCLUDED_PATHSPECS);
-    expect([...kept.keys()]).toContain("amadeus/spaces/default/specs/tla/model-map.json");
-    expect([...kept.keys()]).toContain("amadeus/spaces/default/specs/tla-evidence/deadbeef.json");
+    expect([...kept.keys()]).toContain("amadeus/spaces/default/specs/rfc/0001-example.md");
+    expect([...kept.keys()]).toContain("amadeus/spaces/default/specs/rfc/0002-example.md");
   });
 
   test("ordinary source, tests and docs are untouched by the exclusion", () => {

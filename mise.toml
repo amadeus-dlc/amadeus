@@ -1,18 +1,5 @@
 # Repository-pinned toolchain.
 #
-# formal-model-check verifies the JDK by major version (the planner accepts any
-# `openjdk version "26.…"`). This pin is how the repository supplies that JDK,
-# not the contract itself: the model-check receipt records the exact build per
-# run, so reproducibility does not depend on everyone holding one patch release.
-#
-# Without this file the JDK comes from whatever the machine's global mise
-# activates, and `bun` resolved through a mise shim re-applies that global
-# JAVA_HOME — so even `JAVA_HOME=… bun …` is overwritten on the way in. The
-# result is a Docker fallback under `--provider auto`, or
-# `ENVIRONMENT_UNAVAILABLE` when Docker is unavailable too — a diagnosis that
-# cost four intents the same rediscovery (#2410).
-#
 # Run `mise trust` once in this repository to activate it.
 [tools]
-java = "temurin-26.0.1+8"
 "npm:takt" = "0.58.0"

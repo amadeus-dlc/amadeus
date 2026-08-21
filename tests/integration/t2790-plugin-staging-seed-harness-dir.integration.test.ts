@@ -25,8 +25,9 @@ import { foreignHarnessDirs, harnessDirOf } from "../helpers/harness-dir-fixture
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const COMPOSED_STAGE = join("plugins", "github-pr-convergence", "stages", "pr-convergence.md");
-const COMPOSED_FORMAL_STAGE = join("plugins", "formal-model-check", "stages", "formal-model-check.md");
-const COMPOSED_TLA_STAGE = join("plugins", "formal-model-check", "stages", "tla-authoring.md");
+const FIXTURE_PLUGIN = "conformance-fixture";
+const FIXTURE_SOURCE = join(REPO_ROOT, "tests", "fixtures", "conformance-fixture-plugin", FIXTURE_PLUGIN);
+const COMPOSED_FIXTURE_STAGE = join("plugins", FIXTURE_PLUGIN, "stages", `${FIXTURE_PLUGIN}.md`);
 const ROOT_RELATIVE_PLUGIN_PATH_RE =
   /(^|\.{1,2}\/|[^/A-Za-z0-9._-])plugins\/[a-z0-9-]+\/(tools|stages|specs|hooks)\//m;
 const scratch: string[] = [];
@@ -47,10 +48,13 @@ function dogfoodWorkspace(harness: string): string {
     cpSync(join(distFace, entry), join(workspace, entry), { recursive: true });
   }
   cpSync(join(REPO_ROOT, "plugins"), join(workspace, "plugins"), { recursive: true });
+  // A second plugin, so the seeding transform is proved over more than one
+  // authoring source in the same compose.
+  cpSync(FIXTURE_SOURCE, join(workspace, "plugins", FIXTURE_PLUGIN), { recursive: true });
   mkdirSync(join(workspace, "amadeus"), { recursive: true });
   writeFileSync(
     join(workspace, "amadeus", "config.json"),
-    `${JSON.stringify({ plugin: { activation: { names: ["github-pr-convergence", "formal-model-check"] } } }, null, 2)}\n`,
+    `${JSON.stringify({ plugin: { activation: { names: ["github-pr-convergence", FIXTURE_PLUGIN] } } }, null, 2)}\n`,
   );
   return workspace;
 }
@@ -137,12 +141,10 @@ describe("#2790 plugin staging seed resolves the harness dir", () => {
       expect(text.includes(`${foreign}/`), `foreign literal ${foreign}/`).toBe(false);
     }
 
-    const formalText = readFileSync(join(workspace, harnessDir, COMPOSED_FORMAL_STAGE), "utf-8");
-    const tlaText = readFileSync(join(workspace, harnessDir, COMPOSED_TLA_STAGE), "utf-8");
+    const fixtureText = readFileSync(join(workspace, harnessDir, COMPOSED_FIXTURE_STAGE), "utf-8");
     for (const [stage, stageText] of [
       ["pr-convergence", text],
-      ["formal-model-check", formalText],
-      ["tla-authoring", tlaText],
+      [FIXTURE_PLUGIN, fixtureText],
     ] as const) {
       expect(stageText.includes("{{HARNESS_DIR}}"), `${stage}: raw token survived`).toBe(false);
       expect(ROOT_RELATIVE_PLUGIN_PATH_RE.test(stageText), `${stage}: repo-root-relative plugin path survived`).toBe(
@@ -154,10 +156,10 @@ describe("#2790 plugin staging seed resolves the harness dir", () => {
     for (const subcommand of ["status", "create", "report", "override"]) {
       expect(text).toContain(`bun ${prCli} ${subcommand}`);
     }
-    const formalTools = `${harnessDir}/plugins/formal-model-check/tools`;
-    expect(formalText).toContain(`bun ${formalTools}/run-model-check.ts`);
-    for (const subcommand of ["trace", "proof", "bundle build", "bundle verify", "commit"]) {
-      expect(tlaText).toContain(`bun ${formalTools}/tla-authoring.ts ${subcommand}`);
+    const fixtureTools = `${harnessDir}/plugins/${FIXTURE_PLUGIN}/tools`;
+    expect(fixtureText).toContain(`${fixtureTools}/${FIXTURE_PLUGIN}-tool.ts`);
+    for (const subcommand of ["advisory", "record"]) {
+      expect(fixtureText).toContain(`bun ${fixtureTools}/${FIXTURE_PLUGIN}-tool.ts ${subcommand}`);
     }
   }, scaleTestTime(180_000));
 

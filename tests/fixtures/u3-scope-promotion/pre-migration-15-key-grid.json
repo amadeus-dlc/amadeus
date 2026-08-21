@@ -429,7 +429,7 @@
       "incident-response": "SKIP",
       "performance-validation": "SKIP",
       "feedback-optimization": "SKIP",
-      "formal-model-check": "EXECUTE"
+      "pr-convergence": "EXECUTE"
     }
   },
   "self-fix": {

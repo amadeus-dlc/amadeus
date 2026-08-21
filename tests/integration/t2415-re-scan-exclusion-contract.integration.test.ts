@@ -111,12 +111,12 @@ describe("t2415 the contract declares the exclusion classes (FR-EXC-1)", () => {
   });
 });
 
-describe("t2415 the contract keeps build ledgers in scope (FR-EXC-2)", () => {
+describe("t2415 the contract keeps specifications in scope (FR-EXC-2)", () => {
   test("names specs/ as explicitly NOT excluded", () => {
     const section = exclusionSection(source());
     expect(section).toContain("amadeus/spaces/*/specs/");
-    expect(section).toContain("model-map.json");
-    expect(section).toContain("tla-evidence");
+    expect(section).toContain("specs/rfc/");
+    expect(section).toContain("code knowledge");
     expect(section).toContain("amadeus/spaces/**");
   });
 

@@ -43,7 +43,6 @@ import {
   seedStateFile,
   seededStateFile,
 } from "../harness/fixtures.ts";
-import { writeActivationModelMap } from "../harness/formal-model-fixture.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
@@ -59,14 +58,13 @@ function setEnv(k: string, v: string | undefined): void {
   else process.env[k] = v;
 }
 
-// A NON-composed plugin host (t378 precedent): keeps the activation advisory
-// silent so `next` emits a plain run-stage instead of await-advisory-choice.
+// A NON-composed plugin host (t378 precedent): with no plugin composed, no
+// advisory can fire, so `next` emits a plain run-stage instead of
+// await-advisory-choice.
 function makeSilentHost(): string {
   const root = mkdtempSync(join(tmpdir(), "amadeus-t486-host-"));
   const h = join(root, ".claude");
   mkdirSync(h, { recursive: true });
-  mkdirSync(join(root, "amadeus", "spaces", "default", "specs", "tla"), { recursive: true });
-  writeActivationModelMap(root);
   return h;
 }
 

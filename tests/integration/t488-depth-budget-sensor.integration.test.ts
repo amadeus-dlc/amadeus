@@ -396,7 +396,7 @@ describe("t488 depth-budget FR counting — table and fused-id forms", () => {
 
   test("counts fused ids in bold-list and plain-list forms", () => {
     const body = [
-      "- **FR-A1(移設)**: `scripts/formal-verif/` を移設する",
+      "- **FR-A1(移設)**: `scripts/legacy-tools/` を移設する",
       "y".repeat(50),
       "- FR-B2: dispatch tool 語彙の両受理",
       "y".repeat(50),

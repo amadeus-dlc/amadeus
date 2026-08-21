@@ -278,16 +278,17 @@ more. Treat any of the above as a future capability, not a current one.
 
 ---
 
-## Activation policy: formal-model-check
+## Advisories
 
-The bundled `formal-model-check` plugin is *advisory only*. Amadeus computes a
-deterministic hash of its spec files (`tla/**` under `amadeus/spaces/<space>/specs/`) and compares it against the
-last recorded verdict. When the hash has changed — or has never been recorded —
-the engine renders a stderr-only advisory before build-and-test, and the doctor
-adds a `formal-model-check: spec-hash CHANGED` activation line. Nothing runs the
-model checker (TLC) automatically and nothing writes state on your behalf: the
-advisory tells you the spec drifted so *you* can decide to re-run the check. When
-the hash matches, the advisory is silent.
+A plugin manifest may declare *advisories*: named checks the engine evaluates at
+stage checkpoints by running the plugin's own evaluator. An advisory is a nudge,
+never an action — the engine renders it, the doctor lists it, and you decide what
+to do. Only the declaring plugin's evaluator can release the hold it raises, so
+nothing runs on your behalf and nothing writes state for you.
+
+No plugin bundled with Amadeus declares an advisory today, so the channel is
+dormant on a stock install and you will not see one until you install a plugin
+that supplies one. The engine side is unchanged and ready for that plugin.
 
 ---
 
@@ -340,9 +341,9 @@ name, and the whole repair set is listed at once rather than stopping at the
 first offender:
 
 ```
-MISSING from formal-model-check plugin.json: plugins/formal-model-check/tools/helper.ts
-MISSING from formal-model-check owned sources: plugins/formal-model-check/tools/helper.ts
-UNREADABLE import in formal-model-check: plugins/formal-model-check/tools/typo.ts
+MISSING from my-plugin plugin.json: plugins/my-plugin/tools/helper.ts
+MISSING from my-plugin owned sources: plugins/my-plugin/tools/helper.ts
+UNREADABLE import in my-plugin: plugins/my-plugin/tools/typo.ts
 ```
 
 Read them as three distinct repairs. `MISSING from … plugin.json` means the file

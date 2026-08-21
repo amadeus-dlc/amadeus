@@ -308,13 +308,12 @@ Acceptance is **idempotent by choice**: re-recording the same choice for the
 same advisory instance returns the existing receipt with `idempotent: true`,
 while recording a *different* choice against an instance that already has one is
 refused rather than overwriting it. A `defer-with-risk` receipt closes the
-question; a `run-now` receipt admits a fresh choice only when the model check it
-authorized did not actually produce a clean outcome (detected, harness error, or
-invalid).
+question; a `run-now` receipt admits a fresh choice only when the run it
+authorized did not actually produce a clean outcome.
 
 `correct-misattributed` is the one revocation path, and it is fenced on every
 side: it applies only to a `run-now` receipt, only when no matching presentation
-grounds it, and only when no model-check evidence exists for that attempt. It
+grounds it, and only when no evidence of that attempt exists. It
 marks the receipt revoked with the reason `misattributed-unpresented-choice`
 rather than deleting it. All of these paths run under the audit lock.
 
@@ -360,8 +359,8 @@ name the owner, so passing that receipt over would delete it without ever
 establishing whose it was, and silence is not evidence of belonging. The outcome
 names what changed: `receipts_dropped`, `re_presentation_required` (false when
 no open advisory was salvaged — the store is simply normalised for whatever
-comes next), and `run_now_receipts_reset`, since the attempt a formal-check
-route is numbered by is derived from the `run-now` receipts now gone.
+comes next), and `run_now_receipts_reset`, since the attempt an authorized run
+is numbered by is derived from the `run-now` receipts now gone.
 
 ### Scope and configuration
 

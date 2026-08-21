@@ -1,0 +1,39 @@
+{
+  "name": "conformance-fixture",
+  "stages": [
+    {
+      "slug": "conformance-fixture",
+      "path": "stages/conformance-fixture.md"
+    }
+  ],
+  "seams": [],
+  "fragments": [],
+  "sensors": [
+    "sensors/amadeus-conformance-fixture.md"
+  ],
+  "tools": [
+    "tools/conformance-fixture-tool.ts"
+  ],
+  "advisories": [
+    {
+      "code": "fixture-change",
+      "checkpoints": [
+        "requirements-analysis",
+        "functional-design",
+        "build-and-test"
+      ],
+      "evaluator": {
+        "argv": [
+          "bun",
+          "tools/conformance-fixture-tool.ts",
+          "advisory",
+          "{host-root}",
+          "{stage}"
+        ]
+      },
+      "handoff": {
+        "stage": "conformance-fixture"
+      }
+    }
+  ]
+}

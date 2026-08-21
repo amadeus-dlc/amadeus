@@ -1337,5 +1337,12 @@
     "dirName": "260820-fmc-drift-batch",
     "scope": "self-feature",
     "status": "complete"
+  },
+  {
+    "uuid": "01a02253-3eac-7925-9e80-15026416677c",
+    "slug": "fmc-retirement",
+    "dirName": "260821-fmc-retirement",
+    "scope": "self-feature",
+    "status": "in-flight"
   }
 ]

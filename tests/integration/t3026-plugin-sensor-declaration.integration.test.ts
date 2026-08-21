@@ -1,4 +1,4 @@
-// covers: file:plugins/formal-model-check/plugin.json
+// covers: file:plugins/github-pr-convergence/plugin.json
 // covers: file:packages/framework/core/tools/amadeus-plugin-compose.ts
 // size: medium
 //
@@ -9,7 +9,7 @@
 // an empty list, so a manifest that sits on disk without a declaration is never
 // projected into <host>/sensors/ and never resolvable by a stage — a silent
 // drop with no compile error. #3026 is exactly that: PR #2890 moved
-// amadeus-model-completeness.md from core into the formal-model-check bundle
+// a plugin-owned sensor manifest from core into that plugin's bundle
 // and declared only the tool.
 //
 // DOMAIN OF THE PREDICATE: sensor manifests, i.e. the git-tracked files matching

@@ -350,7 +350,6 @@ describe("t449 the real bundle is installable (FR-1a, NFR-4 precondition)", () =
     const selfScopes = ["self-document", "self-feature", "self-fix", "self-refactor"];
 
     expect(bindings?.[PLUGIN]?.[STAGE_SLUG]).toEqual(selfScopes);
-    expect(bindings?.["formal-model-check"]?.["formal-model-check"]).toEqual(selfScopes);
   });
 });
 

@@ -75,7 +75,7 @@ describe("t327 hook wiring XOR closure (U4)", () => {
         expect(siteContainsCompose(h, site), `wired face ${h}: ${site} invokes auto-compose`).toBe(true);
       } else {
         // Degraded: no auto-compose wiring, and the manual floor is documented.
-        const doc = installDoc("formal-model-check", HARNESS_DIR[h], "manual-only");
+        const doc = installDoc("conformance-fixture", HARNESS_DIR[h], "manual-only");
         expect(doc, `degraded face ${h}: INSTALL documents the manual compose floor`).toContain(
           "no auto-compose session hook",
         );
@@ -103,7 +103,7 @@ describe("t327 hook wiring XOR closure (U4)", () => {
     const drops: DropsRecord = {
       plugins: new Map([
         [
-          "formal-model-check",
+          "conformance-fixture",
           [{ surface: "auto-compose-trigger", severity: "advisory", reason: "opencode has no session-start hook" }],
         ],
       ]),
@@ -112,6 +112,6 @@ describe("t327 hook wiring XOR closure (U4)", () => {
     const line = section.lines.find((l) => l.state === "advisory" && l.detail.includes("auto-compose-trigger"));
     expect(line, "the advisory degrade entry is a visible doctor line").toBeDefined();
     // advisory is visible-but-passing (not a FAIL) — degrade is not breakage.
-    expect(line?.plugin).toBe("formal-model-check");
+    expect(line?.plugin).toBe("conformance-fixture");
   });
 });

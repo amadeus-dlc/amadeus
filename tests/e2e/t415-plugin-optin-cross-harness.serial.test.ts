@@ -13,8 +13,11 @@ import { createNodeBackend } from "../../packages/framework/core/tools/amadeus-p
 import { amadeusToolTarget } from "../harness/cli-target.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const FIXTURE = join(REPO_ROOT, "plugins", "formal-model-check");
-const PLUGIN = "formal-model-check";
+const FIXTURE = join(REPO_ROOT, "tests", "fixtures", "conformance-fixture-plugin", "conformance-fixture");
+const PLUGIN = "conformance-fixture";
+// The plugin-owned state file a run of the plugin's evaluator leaves behind.
+// Its absence on disk is what "startup never ran the plugin" means.
+const PLUGIN_VERDICT_STATE = ".amadeus-plugin-conformance-fixture-verdict.json";
 
 type Face = { name: string; dist: string; host: string; adapter?: string; kind: "hook" | "adapter" | "opencode" };
 
@@ -110,7 +113,7 @@ function assertOnlyCurrentHostComposed(project: string, current: string): void {
     const currentHost = host === current;
     expect(createNodeBackend(root).readComposition().plugins.has(PLUGIN), `${host} composition`).toBe(currentHost);
     expect(existsSync(join(root, ".amadeus-plugin-src", PLUGIN)), `${host} staging`).toBe(currentHost);
-    expect(existsSync(join(root, ".amadeus-plugin-activation.json")), `${host} must not auto-run TLC`).toBe(false);
+    expect(existsSync(join(root, PLUGIN_VERDICT_STATE)), `${host} must not auto-run the plugin evaluator`).toBe(false);
   }
 }
 
@@ -123,19 +126,19 @@ describe("t415 fresh opt-in lifecycle across seven faces and seven hosts", () =>
     });
   }
 
-  test("unselected startup across every face has zero plugin impact and never runs TLC", async () => {
+  test("unselected startup across every face has zero plugin impact and never runs the plugin", async () => {
     for (const face of FACES) {
       const project = freshProject(face, false);
       const config = readFileSync(join(project, "amadeus", "config.json"), "utf-8");
       const graphs = new Map(HOSTS.map((host) => [host, readFileSync(join(project, host, "tools", "data", "stage-graph.json"), "utf-8")]));
       const output = await fire(face, project);
-      expect(output.stderr).not.toContain("formal-model-check");
+      expect(output.stderr).not.toContain(PLUGIN);
       expect(readFileSync(join(project, "amadeus", "config.json"), "utf-8")).toBe(config);
       for (const host of HOSTS) {
         const root = join(project, host);
         expect(createNodeBackend(root).readComposition().plugins.size, `${face.name}/${host} composition`).toBe(0);
         expect(existsSync(join(root, ".amadeus-plugin-src")), `${face.name}/${host} staging`).toBe(false);
-        expect(existsSync(join(root, ".amadeus-plugin-activation.json")), `${face.name}/${host} TLC state`).toBe(false);
+        expect(existsSync(join(root, PLUGIN_VERDICT_STATE)), `${face.name}/${host} plugin state`).toBe(false);
         expect(readFileSync(join(root, "tools", "data", "stage-graph.json"), "utf-8")).toBe(graphs.get(host)!);
       }
     }

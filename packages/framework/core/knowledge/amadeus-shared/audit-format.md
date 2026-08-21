@@ -87,7 +87,7 @@ is.
 
 ### Advisory choice evidence
 
-Formal-model-check checkpoint choices use an authoritative side ledger at
+Advisory checkpoint choices use an authoritative side ledger at
 `<record>/.amadeus-advisory-choice.json`, written atomically under the audit
 lock. Each pending row binds plugin/code, checkpoint, target, spec identity,
 intent run, and advisory instance. Each receipt adds the canonical choice and a

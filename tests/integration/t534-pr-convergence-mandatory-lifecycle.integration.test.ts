@@ -269,16 +269,16 @@ describe("t534 multi-Unit Bolt delivery lifecycle", () => {
     const statePath = join(f.record, "amadeus-state.md");
     const state = readFileSync(statePath, "utf-8").replace(
       "- [-] code-generation — EXECUTE",
-      "- [-] code-generation — EXECUTE\n- [x] formal-model-check — EXECUTE",
+      "- [-] code-generation — EXECUTE\n- [x] conformance-fixture — EXECUTE",
     );
     writeFileSync(statePath, state);
-    mkdirSync(join(f.record, "construction", "formal-model-check", "check-proof"), { recursive: true });
+    mkdirSync(join(f.record, "construction", "conformance-fixture", "check-proof"), { recursive: true });
     const projected = projectEngineSingletonDeliveryBolt(
       f.root,
       state,
-      new Set(["formal-model-check"]),
+      new Set(["conformance-fixture"]),
     );
-    if (projected.kind !== "projection") throw new Error("formal stage directory must not become a Unit");
+    if (projected.kind !== "projection") throw new Error("a foreign stage directory must not become a Unit");
     const graphPath = join(f.record, "runtime-graph.json");
     const graph = JSON.parse(readFileSync(graphPath, "utf-8"));
     graph.delivery_bolts = projected.projection;

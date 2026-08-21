@@ -136,9 +136,9 @@ a known non-zero interval before trusting it. These lines have one definition in
 code — `RE_SCAN_EXCLUDED_PATHSPECS` in `tools/amadeus-lib.ts` — and a drift test
 fails when the two disagree.
 
-**Not excluded: `amadeus/spaces/*/specs/`.** `specs/tla/model-map.json` and
-`specs/tla-evidence/` sit under `amadeus/spaces/` but are build ledgers a code
-change has to resync, so they are code knowledge and stay in the scan. Never
+**Not excluded: `amadeus/spaces/*/specs/`.** The specifications under
+`specs/rfc/` sit under `amadeus/spaces/` but describe the code a change has to
+keep in step with, so they are code knowledge and stay in the scan. Never
 exclude `amadeus/spaces/**` wholesale.
 
 **Base-point resolution is outside this exclusion.** Resolving the base commit

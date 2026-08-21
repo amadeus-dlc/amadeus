@@ -42,8 +42,6 @@ AI-DLC を **使って** ソフトウェアを構築する場合は、まず [�
 | [Workspace Layout Decision](18-workspace-layout.ja.md) | Issue #610 のリポジトリレイアウト決定: framework source を `packages/framework/` へ移し、root の `scripts/` と `dist/` は維持する |
 | [階層設定リゾルバー](19-layered-config.ja.md) | Global → Space → Intent の解決、スキーマ検証、フェーズ境界との統合 |
 | [Intent Mirror リファレンス](20-intent-mirror.ja.md) | Intent Mirror の runtime と配布 contract |
-| [形式モデルを実装に追従させる](21-formal-model-following.ja.md) | `model-completeness` の drift シグナルの読み方と、実装 hash 更新 / モデル改訂の分岐 |
-| [形式モデルを供給する](22-formal-model-supply.ja.md) | 新規並行プロトコルへの TLA+ モデル追加: 題材選定・縮約申告・登録・落ちる実証・空文化ガード |
 | [Depth 制御アーキテクチャ](25-depth-control-architecture.ja.md) | L0〜L5 の depth 制御点マップ、層別の目標強制度、blocking 化の総量規制、着手順 |
 | [ライフサイクル Guard Runtime](26-lifecycle-guard-runtime.ja.md) | Intent 生成・ステージ完了・Phase 遷移・Workflow 完了に共通する Guard Interface: verdict 語彙、Adapter レジストリ、fail-closed 集約、G1〜G40 のガード棚卸し |
 | [Diagrams](diagrams.ja.md) | すべての Mermaid 図を一箇所に集約 |

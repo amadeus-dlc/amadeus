@@ -24,7 +24,7 @@ const HELD_ADVISORY: Advisory = {
   code: "demo-hold" as Advisory["code"],
   message: "advisory: demo demo-hold — hold (no-applicability-receipt)",
   stage: "requirements-analysis",
-  target: "amadeus/spaces/default/specs/tla",
+  target: "conformance-fixture:fixture-change",
   specIdentity: "sha256:hold-1",
 };
 

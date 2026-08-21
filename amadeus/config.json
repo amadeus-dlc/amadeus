@@ -33,26 +33,11 @@
     "activation": {
       "names": [
         "coverage-patch-quick",
-        "formal-model-check",
         "git-drift",
         "github-pr-convergence"
       ]
     },
     "scope-bindings": {
-      "formal-model-check": {
-        "formal-model-check": [
-          "self-document",
-          "self-feature",
-          "self-fix",
-          "self-refactor"
-        ],
-        "tla-authoring": [
-          "self-document",
-          "self-feature",
-          "self-fix",
-          "self-refactor"
-        ]
-      },
       "github-pr-convergence": {
         "pr-convergence": [
           "self-document",

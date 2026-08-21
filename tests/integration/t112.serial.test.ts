@@ -61,6 +61,15 @@ const REAL_COVERAGE_NORMALIZE = join(
   "lib",
   "coverage-normalize.ts",
 );
+// run-tests.ts also imports lib/lcov-file-totals.ts — the single reading of
+// per-source LCOV totals it shares with the project coverage gate. Same
+// copy-into-scratch reason: without it the copied runner fails to load.
+const REAL_LCOV_FILE_TOTALS = join(
+  import.meta.dir,
+  "..",
+  "lib",
+  "lcov-file-totals.ts",
+);
 // run-tests.ts also imports lib/run-tests-totals.ts (the best-effort JSON
 // summary seam, #921). Keep the scratch runner's static import graph complete.
 const REAL_RUN_TESTS_TOTALS = join(
@@ -142,6 +151,7 @@ function driveRunner(nFail: number, nPass: number): { code: number; stdout: stri
   copyFileSync(REAL_GLUE, join(libDir, "bun-junit-to-meta.ts"));
   copyFileSync(REAL_COVERAGE_SOURCE_PATH, join(libDir, "coverage-source-path.ts"));
   copyFileSync(REAL_COVERAGE_NORMALIZE, join(libDir, "coverage-normalize.ts"));
+  copyFileSync(REAL_LCOV_FILE_TOTALS, join(libDir, "lcov-file-totals.ts"));
   copyFileSync(REAL_RUN_TESTS_TOTALS, join(libDir, "run-tests-totals.ts"));
   copyFileSync(REAL_SIZE, join(libDir, "test-size.ts"));
   copyFileSync(REAL_RUN_TESTS_ARGS, join(libDir, "run-tests-args.ts"));

@@ -32,7 +32,7 @@ function digestible(projection: ReturnType<typeof buildSelfInstallProjection>): 
 
 function pluginRecord(...slugs: string[]): PluginRecord {
   return {
-    plugin: "formal-model-check",
+    plugin: "github-pr-convergence",
     ownedPaths: [],
     ownedContentDigests: new Map(),
     stageIndex: slugs.map((slug) => ({
@@ -55,8 +55,8 @@ describe("t416 deterministic self-install plugin projections", () => {
       expect(first.expectedPaths.size, harness).toBeGreaterThan(0);
       expect(digestible(second), harness).toBe(digestible(first));
       expect([...first.expectedPaths].some((path) => path.endsWith("tools/data/stage-graph.json")), harness).toBe(true);
-      expect([...first.expectedPaths].some((path) => path.includes("plugins/formal-model-check/")), harness).toBe(true);
-      expect([...first.expectedPaths].some((path) => path.includes(".amadeus-plugin-src/formal-model-check/")), harness).toBe(true);
+      expect([...first.expectedPaths].some((path) => path.includes("plugins/github-pr-convergence/")), harness).toBe(true);
+      expect([...first.expectedPaths].some((path) => path.includes(".amadeus-plugin-src/github-pr-convergence/")), harness).toBe(true);
       expect([...first.expectedPaths].some((path) => path.endsWith(".amadeus-plugin-composition.json")), harness).toBe(true);
       expect([...first.expectedPaths].some((path) => path.endsWith(".amadeus-plugin-audit.json")), harness).toBe(false);
       expect([...first.expectedPaths].some((path) => path.endsWith(".amadeus-plugin-drops.json")), harness).toBe(false);
@@ -97,14 +97,14 @@ describe("t416 deterministic self-install plugin projections", () => {
 
   test("Codex emits only the project-root .agents runner", () => {
     const projection = buildSelfInstallProjection("codex", REPO_ROOT);
-    expect(projection.expectedPaths.has(".agents/skills/amadeus-formal-model-check/SKILL.md")).toBe(true);
+    expect(projection.expectedPaths.has(".agents/skills/amadeus-pr-convergence/SKILL.md")).toBe(true);
     expect([...projection.expectedPaths].some((path) => path.startsWith(".codex/skills/"))).toBe(false);
   }, scaleTestTime(120_000));
 
   test("Cursor and OpenCode use their existing command entry instead of plugin runner skills", () => {
     for (const harness of ["cursor", "opencode"] as const) {
       const projection = buildSelfInstallProjection(harness, REPO_ROOT);
-      expect([...projection.expectedPaths].some((path) => path.includes("amadeus-formal-model-check/SKILL.md"))).toBe(false);
+      expect([...projection.expectedPaths].some((path) => path.includes("amadeus-pr-convergence/SKILL.md"))).toBe(false);
       expect([...projection.expectedPaths].some((path) => path.endsWith("tools/data/stage-graph.json"))).toBe(true);
     }
   }, scaleTestTime(120_000));
@@ -125,7 +125,7 @@ describe("t416 deterministic self-install plugin projections", () => {
     mkdirSync(join(invalid, "amadeus"), { recursive: true });
     writeFileSync(
       join(invalid, "amadeus", "config.json"),
-      '{"plugin":{"activation":{"names":"formal-model-check"}}}\n',
+      '{"plugin":{"activation":{"names":"github-pr-convergence"}}}\n',
     );
 
     expect(() => buildSelfInstallProjection("codex", invalid)).toThrow(
@@ -178,7 +178,7 @@ describe("t416 deterministic self-install plugin projections", () => {
     const dataDir = join(hostRoot, "tools", "data");
     const graphPath = join(dataDir, "stage-graph.json");
     const descriptor = join(dataDir, "harness.json");
-    const slug = "formal-model-check";
+    const slug = "pr-convergence";
     const current = defaultPluginCliDeps().derivedProjectionCurrent!;
     mkdirSync(dataDir, { recursive: true });
     const node = { slug, phase: "construction" } as Parameters<typeof renderStageRunner>[0];

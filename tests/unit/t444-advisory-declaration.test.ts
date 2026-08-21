@@ -13,7 +13,7 @@ const DECLARATION = {
     {
       code: "spec-change",
       checkpoints: ["requirements-analysis", "functional-design"],
-      evaluator: { argv: ["bun", "plugins/formal-model-check/tools/tla-authoring.ts", "hold"] },
+      evaluator: { argv: ["bun", "plugins/conformance-fixture/tools/conformance-fixture-tool.ts", "hold"] },
     },
   ],
 };
@@ -72,7 +72,7 @@ describe("advisoryFromEvaluatorRun (BR-U2-20: stdout is the authority)", () => {
   >;
 
   function advisory(run: { status: number; stdout: string }) {
-    return advisoryFromEvaluatorRun("formal-model-check", declaration, "requirements-analysis", run);
+    return advisoryFromEvaluatorRun("conformance-fixture", declaration, "requirements-analysis", run);
   }
 
   test("a no-hold verdict raises nothing", () => {
@@ -85,7 +85,7 @@ describe("advisoryFromEvaluatorRun (BR-U2-20: stdout is the authority)", () => {
       stdout: JSON.stringify({ ok: false, verdict: { kind: "hold", reasons: [{ kind: "stale-evidence" }] } }),
     });
     expect(String(raised?.code)).toBe("spec-change");
-    expect(raised?.plugin).toBe("formal-model-check");
+    expect(raised?.plugin).toBe("conformance-fixture");
     expect(raised?.stage).toBe("requirements-analysis");
     expect(raised?.message).toContain("stale-evidence");
   });

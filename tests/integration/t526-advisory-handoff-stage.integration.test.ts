@@ -12,20 +12,28 @@ import { chooseRunNow } from "../harness/advisory-choice-fixture.ts";
 import { cleanupTestProject, createTestProject, FIXTURES_DIR, seedStateFile } from "../harness/fixtures.ts";
 
 // FR-3 + D2 (#2766): a declared advisory could raise a hold but had no way to
-// name the stage the run-now choice should open. `declaredFormalCheckRoute`
-// hard-codes `formal-model-check`, which is the wrong stage for an authoring
-// hold. The declaration now carries `handoff: { stage }`, and the directive
-// carries it as `handoff_stage` — an entry point, never a release: BR-U2-05
-// keeps the plugin's own evaluator as the only way out of the hold.
+// name the stage the run-now choice should open. The engine used to hard-code a
+// single destination stage, which is the wrong stage for any other hold. The
+// declaration now carries `handoff: { stage }`, and the directive carries it as
+// `handoff_stage` — an entry point, never a release: BR-U2-05 keeps the
+// plugin's own evaluator as the only way out of the hold.
 
-const REPO_ROOT = join(import.meta.dir, "..", "..");
+const FIXTURE_PLUGIN = "conformance-fixture";
+const FIXTURE_MANIFEST = join(
+  import.meta.dir,
+  "..",
+  "fixtures",
+  "conformance-fixture-plugin",
+  FIXTURE_PLUGIN,
+  "plugin.json",
+);
 
 const HANDOFF_DECLARATION = [
   {
     code: "demo-hold",
     checkpoints: ["requirements-analysis"],
     evaluator: { argv: ["bun", "plugins/demo/tools/evaluate.ts", "hold"] },
-    handoff: { stage: "tla-authoring" },
+    handoff: { stage: "demo-stage" },
   },
 ];
 
@@ -34,7 +42,7 @@ const DECLARED_ADVISORY: Advisory = {
   code: "demo-hold" as Advisory["code"],
   message: "advisory: demo demo-hold — no-applicability-receipt",
   stage: "requirements-analysis",
-  target: "amadeus/spaces/default/specs/tla",
+  target: "demo:demo-hold",
   specIdentity: "sha256:hold-1",
 };
 
@@ -69,7 +77,7 @@ describe("t526 declared advisory handoff stage", () => {
   test("the declaration carries the handoff stage through the parser", () => {
     const parsed = parseAdvisoryDeclarations(JSON.stringify({ advisories: HANDOFF_DECLARATION }));
     expect(parsed.invalid).toEqual([]);
-    expect(parsed.declarations[0]?.handoffStage).toBe("tla-authoring");
+    expect(parsed.declarations[0]?.handoffStage).toBe("demo-stage");
   });
 
   test("a declaration with no handoff carries none", () => {
@@ -93,8 +101,8 @@ describe("t526 declared advisory handoff stage", () => {
     const guarded = guardAdvisoryChoices(projectDir, DECLARED_ADVISORY.stage, [DECLARED_ADVISORY], hostRoot);
     expect(guarded.kind).toBe("hold");
     if (guarded.kind !== "hold") return;
-    expect(guarded.advisories[0]?.handoff_stage).toBe("tla-authoring");
-    expect(declaredHandoffStage(projectDir, "demo", "demo-hold")).toBe("tla-authoring");
+    expect(guarded.advisories[0]?.handoff_stage).toBe("demo-stage");
+    expect(declaredHandoffStage(projectDir, "demo", "demo-hold")).toBe("demo-stage");
   });
 
   test("run-now opens the handoff stage without releasing the hold", () => {
@@ -107,7 +115,7 @@ describe("t526 declared advisory handoff stage", () => {
     // Still held, under the settled `handoff` verdict (#2967).
     expect(guarded.kind).toBe("handoff");
     if (guarded.kind !== "handoff") return;
-    expect(guarded.advisories[0]?.handoff_stage).toBe("tla-authoring");
+    expect(guarded.advisories[0]?.handoff_stage).toBe("demo-stage");
     // BR-U2-05 stands: the run-now route is an entry point into authoring, and
     // only the plugin's own evaluator returning no-hold releases the hold.
     expect(guarded.advisories[0]?.result ?? "").toContain("evaluator to return no-hold");
@@ -123,13 +131,13 @@ describe("t526 declared advisory handoff stage", () => {
     expect(guarded.advisories[0]?.handoff_stage).toBeUndefined();
   });
 
-  test("the shipped manifest hands the spec-change advisory to the formal-model-check stage", () => {
-    const manifest = JSON.parse(
-      readFileSync(join(REPO_ROOT, "plugins", "formal-model-check", "plugin.json"), "utf8"),
-    ) as { advisories: ReadonlyArray<Record<string, unknown>> };
-    expect(manifest.advisories.map((advisory) => advisory.code)).toEqual(["spec-change"]);
-    const declared = manifest.advisories.find((advisory) => advisory.code === "spec-change");
-    expect(declared?.handoff).toEqual({ stage: "formal-model-check" });
+  test("a real manifest hands its declared advisory to its own stage", () => {
+    const manifest = JSON.parse(readFileSync(FIXTURE_MANIFEST, "utf8")) as {
+      advisories: ReadonlyArray<Record<string, unknown>>;
+    };
+    expect(manifest.advisories.map((advisory) => advisory.code)).toEqual(["fixture-change"]);
+    const declared = manifest.advisories.find((advisory) => advisory.code === "fixture-change");
+    expect(declared?.handoff).toEqual({ stage: FIXTURE_PLUGIN });
     expect(declared).not.toHaveProperty("formalCheck");
   });
 });

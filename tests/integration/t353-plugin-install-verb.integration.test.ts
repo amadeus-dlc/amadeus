@@ -56,8 +56,9 @@ import {
 } from "../../packages/framework/core/tools/amadeus-advisory-declaration.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const FIXTURE = join(REPO_ROOT, "plugins", "formal-model-check");
-const PLUGIN = "formal-model-check";
+const FIXTURE = join(REPO_ROOT, "tests", "fixtures", "conformance-fixture-plugin", "conformance-fixture");
+const PLUGIN = "conformance-fixture";
+const ADVISORY_CODE = "fixture-change";
 
 let host = "";
 let source = "";
@@ -297,13 +298,13 @@ describe("t353 plugin install verb (U2, #1597)", () => {
         seen.push([...argv]);
         return { status: 0, stdout: JSON.stringify({ ok: true, verdict: { kind: "no-hold" } }) };
       }, (message) => warnings.push(message));
-      // The plugin-owned activation evaluator returns no-hold on this bare
-      // fixture (no spec model map), so nothing is raised.
-      expect(raised.some((advisory) => String(advisory.code) === "spec-change")).toBe(false);
+      // The injected runner answers no-hold for the plugin's declared
+      // evaluator, so nothing is raised.
+      expect(raised.some((advisory) => String(advisory.code) === ADVISORY_CODE)).toBe(false);
       expect(seen).toEqual([
         [
           "bun",
-          join(project, "plugins", PLUGIN, "tools", "plugin-activation.ts"),
+          join(project, "plugins", PLUGIN, "tools", "conformance-fixture-tool.ts"),
           "advisory",
           harness,
           "requirements-analysis",
@@ -311,7 +312,7 @@ describe("t353 plugin install verb (U2, #1597)", () => {
       ]);
       expect(seen.every((argv) => existsSync(argv[1] as string))).toBe(true);
       expect(warnings).toEqual([]);
-      expect(declaredHandoffStage(project, PLUGIN, "spec-change")).toBe("formal-model-check");
+      expect(declaredHandoffStage(project, PLUGIN, ADVISORY_CODE)).toBe(PLUGIN);
     } finally {
       rmSync(project, { recursive: true, force: true });
     }
