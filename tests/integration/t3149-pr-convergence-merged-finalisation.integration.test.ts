@@ -56,6 +56,7 @@ const UNIT = "prc-finalization";
 const BOLT = "delivery";
 const REPO = "amadeus-dlc/amadeus";
 const PR_NUMBER = 3149;
+const SIBLING_PR_NUMBER = 3150;
 const MERGED_AT = "2026-08-17T09:00:00Z";
 const MERGE_COMMIT = "abcdef0123456789abcdef0123456789abcdef01";
 const RECORD_DIR = "260816-priority-bug-batch-3";
@@ -105,6 +106,8 @@ interface Fixture {
   /** The merge queue deleted the head branch and the checkout moved off it. */
   branchGone: boolean;
   dirty: boolean;
+  siblingMerged: boolean;
+  siblingStateReadable: boolean;
   readonly units: readonly string[];
 }
 
@@ -200,7 +203,8 @@ function makeFixture(units: readonly string[] = [UNIT]): Fixture {
   return {
     root, work, record, bodyFile, branchHead, advancedHead, orphanHead,
     calls: [], attested: branchHead, prHead: branchHead, merged: false,
-    mergeCommit: MERGE_COMMIT, branchGone: false, dirty: false, units,
+    mergeCommit: MERGE_COMMIT, branchGone: false, dirty: false,
+    siblingMerged: false, siblingStateReadable: true, units,
   };
 }
 
@@ -210,6 +214,11 @@ function merge(f: Fixture, at: string): void {
   git(["update-ref", `refs/pull/${PR_NUMBER}/head`, at], join(f.root, "origin.git"));
   f.prHead = at;
   f.merged = true;
+}
+
+function mergeSibling(f: Fixture): void {
+  git(["update-ref", `refs/pull/${SIBLING_PR_NUMBER}/head`, f.prHead], join(f.root, "origin.git"));
+  f.siblingMerged = true;
 }
 
 /** The conductor's checkout moves past the head the record was attested at. */
@@ -286,7 +295,10 @@ function ghSpawn(f: Fixture): GhSpawn {
         },
       }));
     }
-    const lifecycle = f.merged
+    const sibling = text.includes(`number=${SIBLING_PR_NUMBER}`);
+    if (sibling && !f.siblingStateReadable) return { code: 2, stdout: "", stderr: "sibling PR state unavailable" };
+    const merged = sibling ? f.siblingMerged : f.merged;
+    const lifecycle = merged
       ? {
           state: "MERGED",
           mergedAt: MERGED_AT,
@@ -579,6 +591,68 @@ describe("#3149 — the in-place finalisation answers for each member Unit separ
       expect(parseAttestation(body)?.mergeCommit).toBe(MERGE_COMMIT);
       expect(evaluateReportFormat(reportPathFor(f.record, unit), "pr-convergence").pass).toBe(true);
     }
+  });
+
+  test("finalises only the current PR member and skips a sibling bound to another merged PR", async () => {
+    const f = await convergedPair();
+    reattest(f, SECOND, (receipt) => ({ ...receipt, pr: SIBLING_PR_NUMBER }));
+    merge(f, f.branchHead);
+    mergeSibling(f);
+    f.branchGone = true;
+    moveCheckoutOn(f);
+
+    const out = await runCli(memberArgs("report", f), seams(f));
+
+    expect(out.exitCode).toBe(0);
+    expect(out.stderr).toBe("");
+    expect(out.stdout).toContain(`skipped sibling unit ${SECOND}: receipt is bound to PR #${SIBLING_PR_NUMBER}, which is MERGED`);
+    expect(parseAttestation(readFileSync(reportPathFor(f.record, UNIT), "utf-8"))?.mergeCommit).toBe(MERGE_COMMIT);
+    expect(parseAttestation(memberBody(f))?.mergeCommit).toBeUndefined();
+  });
+
+  test("refuses an intact sibling receipt when its other PR is not verifiably merged", async () => {
+    const f = await convergedPair();
+    reattest(f, SECOND, (receipt) => ({ ...receipt, pr: SIBLING_PR_NUMBER }));
+    merge(f, f.branchHead);
+    f.branchGone = true;
+    moveCheckoutOn(f);
+    const before = memberBody(f);
+
+    const out = await runCli(memberArgs("report", f), seams(f));
+
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain(`sibling unit ${SECOND} receipt is bound to PR #${SIBLING_PR_NUMBER}`);
+    expect(out.stderr).toContain("not verifiably MERGED");
+    expect(memberBody(f)).toBe(before);
+  });
+
+  test("refuses when the sibling PR state cannot be read", async () => {
+    const f = await convergedPair();
+    reattest(f, SECOND, (receipt) => ({ ...receipt, pr: SIBLING_PR_NUMBER }));
+    merge(f, f.branchHead);
+    f.siblingStateReadable = false;
+    f.branchGone = true;
+    moveCheckoutOn(f);
+
+    const out = await runCli(memberArgs("report", f), seams(f));
+
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain(`sibling unit ${SECOND} receipt is bound to PR #${SIBLING_PR_NUMBER}`);
+    expect(out.stderr).toContain("GitHub state could not be read");
+  });
+
+  test("keeps the generic refusal for an intact receipt with another delivery identity", async () => {
+    const f = await convergedPair();
+    reattest(f, SECOND, (receipt) => ({ ...receipt, intentUuid: "another-intent" }));
+    merge(f, f.branchHead);
+    f.branchGone = true;
+    moveCheckoutOn(f);
+
+    const out = await runCli(memberArgs("report", f), seams(f));
+
+    expect(out.exitCode).toBe(1);
+    expect(out.stderr).toContain("report attestation is missing, tampered, copied, or replayed");
+    expect(memberBody(f)).not.toContain("- merge commit:");
   });
 
   test("a member Unit with no record on disk is refused, not invented", async () => {

@@ -30,7 +30,7 @@
         },
         {
           "implPath": "plugins/github-pr-convergence/tools/pr-convergence-cli.ts",
-          "sha256": "41b47ae7fc46a8d7d8a593a243d847230fa24388cfc526e0b9585de02972d984"
+          "sha256": "aac5146c20a36656158ca24021b2994c89331a8b4be63fea7419af63d874ace3"
         },
         {
           "implPath": "plugins/github-pr-convergence/tools/pr-convergence-predicate.ts",
@@ -220,7 +220,7 @@
         },
         {
           "implPath": "plugins/github-pr-convergence/tools/pr-convergence-cli.ts",
-          "sha256": "41b47ae7fc46a8d7d8a593a243d847230fa24388cfc526e0b9585de02972d984"
+          "sha256": "aac5146c20a36656158ca24021b2994c89331a8b4be63fea7419af63d874ace3"
         },
         {
           "implPath": "plugins/github-pr-convergence/tools/pr-convergence-predicate.ts",
