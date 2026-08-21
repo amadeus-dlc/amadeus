@@ -52,6 +52,7 @@ import {
 import { buildSelfInstallProjection, SELF_INSTALL_HARNESSES } from "./plugin-projection.ts";
 
 type Mode = "check" | "apply";
+type AttestationWriter = (repoRoot: string) => void;
 
 type ManagedDir = {
   src: string;
@@ -782,6 +783,7 @@ export async function promoteSelfMain(
   coordinatorFactory: (repoRoot: string) => DistributionTransactionCoordinator =
     (root) => new DistributionTransactionCoordinator(root),
   mintAttestation = true,
+  attestationWriter: AttestationWriter = writeSelfDevelopmentIntegrityAttestation,
 ): Promise<number> {
   if (argv.includes("--help") || argv.includes("-h")) {
     printUsage();
@@ -851,7 +853,7 @@ export async function promoteSelfMain(
     // untouched rather than claiming a build occurred.
     if (!noBuild && repoRoot === REPO_ROOT && mintAttestation) {
       try {
-        writeSelfDevelopmentIntegrityAttestation(repoRoot);
+        attestationWriter(repoRoot);
       } catch (error) {
         console.warn(
           `promote-self: build succeeded, but the self-development attestation was not written; ` +
