@@ -958,16 +958,38 @@ function validateSelectedSources(selection: ResolvedPluginSelection, hostRoot: s
   return null;
 }
 
+// #3414 — is this composed plugin's SOURCE gone?
+//
+// Two faces can supply a plugin, and which one is canonical depends on the
+// layout the project uses:
+//   * AUTHORING layout — <projectDir>/plugins/ exists (this repository, and any
+//     project the install verb persists into). That tree is canonical and the
+//     staged bundle is only a materialized copy of it, so a plugin the tree no
+//     longer carries is retired even while its stale copy is still staged.
+//   * CONSUMER layout — no authoring tree at all; the staged bundle IS the
+//     source, so a plugin is retired exactly when that bundle is gone.
+// Neither arm ever calls a plugin retired while the layout it lives in still
+// supplies it, which is what keeps this safe to run on every compose.
+function pluginSourceRetired(projectDir: string, hostRoot: string, name: string): boolean {
+  const authoringRoot = join(projectDir, PLUGIN_AUTHORING_DIR_NAME);
+  if (existsSync(authoringRoot)) return !existsSync(join(authoringRoot, name));
+  return !existsSync(join(pluginSourceRootOf(hostRoot), name));
+}
+
 function dropDeselectedCompositions(
   selection: ResolvedPluginSelection,
   hostRoot: string,
   deps: PluginCliDeps,
 ): ReconcileStep {
-  if (!selection.explicit) return { failure: null, changed: false };
   const composed = deps.makeBackend(hostRoot).readComposition();
   let changed = false;
   for (const name of [...composed.plugins.keys()].sort()) {
-    if (selection.plugins.includes(name)) continue;
+    // #3414: a composition entry whose source is gone is deletion drift, not a
+    // selection choice, so it is shed on EVERY project. The deselection arm
+    // below stays explicit-only — without a `plugin` key the project selects
+    // everything, so nothing there is deselected.
+    const retired = pluginSourceRetired(selection.projectDir, hostRoot, name);
+    if (!retired && (!selection.explicit || selection.plugins.includes(name))) continue;
     const dropped = handleDrop(
       { kind: "drop", name, projectRoot: hostRoot },
       deps,
@@ -1214,8 +1236,19 @@ function removeManagedPluginStaging(
   deps: PluginCliDeps,
 ): void {
   const staged = join(pluginSourceRootOf(hostRoot), name);
+  if (!existsSync(staged)) return;
+  // #3414: cleanup used to require the authoring source to still exist, so the
+  // moment a plugin was retired the staged copy became permanently unreachable
+  // — and a staged manifest is a face resolvePluginManifest reads, so the
+  // retired plugin kept supplying advisories out of it. Retirement is now the
+  // trigger it always should have been: the copy has no upstream left to be
+  // compared against, and nothing to belong to.
+  if (pluginSourceRetired(selected.projectDir, hostRoot, name)) {
+    rmSync(staged, { recursive: true, force: true });
+    return;
+  }
   const supplied = join(selected.projectDir, PLUGIN_AUTHORING_DIR_NAME, name);
-  if (!existsSync(staged) || !existsSync(supplied)) return;
+  if (!existsSync(supplied)) return;
   if (deps.stagingEntryState(staged, supplied) !== "identical") return;
   rmSync(staged, { recursive: true, force: true });
 }
