@@ -431,6 +431,26 @@ describe("t209 source classification (#3197) — pure seam", () => {
     });
   });
 
+  // The two-probe territory check is only load-bearing if its refusal survives
+  // the next line. `!! dir/` is a RENDERING, not a verdict: git 2.55 collapses a
+  // directory whose contents are all ignored even when the rules name two exact
+  // files, so a directory swallowing exactly those two looks identical to one
+  // under a blanket rule. Falling back to the shape there would delete source
+  // the probe had just refused to call generated.
+  test("classifySourcePaths: a resolver's refusal outranks git's collapsed-directory shape", () => {
+    const porcelain = ["!! dist/", "!! notes.draft", ""].join("\0");
+    expect(classifySourcePaths(porcelain, MANAGED, null, () => null)).toEqual({
+      blocking: ["dist/", "notes.draft"],
+      disposable: [],
+    });
+    // With no resolver supplied the seam keeps its prior default, so callers
+    // that ask no question are unaffected.
+    expect(classifySourcePaths(porcelain, MANAGED, null)).toEqual({
+      blocking: ["notes.draft"],
+      disposable: ["dist/"],
+    });
+  });
+
   test("classifySourcePaths: a resolved territory root collapses sibling entries to one pathspec", () => {
     const porcelain = ["!! dist/a.js", "!! dist/nested/b.js", ""].join("\0");
     expect(classifySourcePaths(porcelain, MANAGED, null, () => "dist")).toEqual({

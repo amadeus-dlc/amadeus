@@ -726,12 +726,19 @@ export function classifySourcePaths(
       if (isManagedWorktreePath(path, managed)) continue;
       if (status === "!!") {
         // Generated output territory is removable by exact path before worktree
-        // removal. Prefer the resolved territory root so the pathspec is the
-        // directory the ignore rule names, whichever shape git reported the
-        // entry in; fall back to git's own collapsed `!! dir/` entry.
+        // removal, and the resolver is the authority on what qualifies.
         const territory = territoryRootOf(path);
         if (territory !== null) disposable.push(territory);
-        else if (path.endsWith("/") || isSelfInstallLeaf(path, installRoot)) disposable.push(path);
+        else if (isSelfInstallLeaf(path, installRoot)) disposable.push(path);
+        // git's own collapsed `!! dir/` entry is a RENDERING, not a verdict, so
+        // it cannot be a fallback once a resolver has answered. git 2.55
+        // collapses a directory whose contents are all ignored even when the
+        // rules name two exact files, so a directory that swallows exactly
+        // those two renders identically to one under a blanket rule — and the
+        // two-probe check would refuse it while this line deleted it anyway.
+        // Honoured only when no resolver was supplied, which keeps the seam's
+        // default for callers that ask no question.
+        else if (territoryRootOf === NO_TERRITORY && path.endsWith("/")) disposable.push(path);
         else blocking.push(path);
       } else {
         blocking.push(path);
