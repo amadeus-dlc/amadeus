@@ -25,6 +25,7 @@ import { join } from "node:path";
 const realSpawnSync = childProcess.spawnSync;
 
 let capturedRunTestsArgs: string[] | null = null;
+let capturedRunTestsEnv: NodeJS.ProcessEnv | null = null;
 let mockRunTestsStatus: number | null = 0;
 
 mock.module("node:child_process", () => ({
@@ -33,6 +34,7 @@ mock.module("node:child_process", () => ({
 		const argv = Array.isArray(args) ? args.map(String) : [];
 		if (argv.some((a) => a.includes("run-tests.ts"))) {
 			capturedRunTestsArgs = argv;
+			capturedRunTestsEnv = (options as { env?: NodeJS.ProcessEnv } | undefined)?.env ?? null;
 			return {
 				pid: 1,
 				output: [null, "", ""],
@@ -48,6 +50,7 @@ mock.module("node:child_process", () => ({
 }));
 
 const {
+	REENTRY_MARKER_ENV,
 	buildFilterPattern,
 	main,
 	relatedUnitTests,
@@ -64,8 +67,31 @@ beforeEach(() => {
 afterEach(() => {
 	rmSync(dir, { recursive: true, force: true });
 	capturedRunTestsArgs = null;
+	capturedRunTestsEnv = null;
 	mockRunTestsStatus = 0;
 });
+
+// main() ends in process.exit; trap it into a throwable so a drive returns the
+// exit code instead of killing the test runner (mirrors
+// tests/unit/t-sensor-fire-seam.test.ts's driveExit convention).
+class ExitSignal {
+	constructor(readonly code: number) {}
+}
+function driveExit(fn: () => void): number {
+	const origExit = process.exit;
+	process.exit = ((code?: number) => {
+		throw new ExitSignal(code ?? 0);
+	}) as typeof process.exit;
+	try {
+		fn();
+		return 0;
+	} catch (e) {
+		if (e instanceof ExitSignal) return e.code;
+		throw e;
+	} finally {
+		process.exit = origExit;
+	}
+}
 
 function write(name: string, body: string): void {
 	writeFileSync(join(dir, name), body, "utf-8");
@@ -253,25 +279,6 @@ describe("main — happy path (mocked run-tests.ts spawn)", () => {
 		process.exit = origExit;
 	});
 
-	// main() ends in process.exit; trap it into a throwable so the drive
-	// returns the exit code instead of killing the test runner (mirrors
-	// tests/unit/t-sensor-fire-seam.test.ts's driveExit convention).
-	class ExitSignal {
-		constructor(readonly code: number) {}
-	}
-	function driveExit(fn: () => void): number {
-		process.exit = ((code?: number) => {
-			throw new ExitSignal(code ?? 0);
-		}) as typeof process.exit;
-		try {
-			fn();
-			return 0;
-		} catch (e) {
-			if (e instanceof ExitSignal) return e.code;
-			throw e;
-		}
-	}
-
 	test("spawns run-tests.ts with --unit --filter <pattern> and exits 0 on success", () => {
 		mockRunTestsStatus = 0;
 		const code = driveExit(() => main());
@@ -294,5 +301,71 @@ describe("main — happy path (mocked run-tests.ts spawn)", () => {
 		mockRunTestsStatus = null;
 		const code = driveExit(() => main());
 		expect(code).toBe(1);
+	});
+});
+
+// #3413 — the hook hands the test run an environment with git's ambient
+// repository binding removed, and refuses to re-enter itself if a test run ever
+// reaches `git commit` on a real repository anyway.
+describe("main — #3413 hermetic git environment and re-entry guard", () => {
+	const priorStaged = process.env.AMADEUS_PRECOMMIT_STAGED_FILES;
+	const priorUnitDir = process.env.AMADEUS_PRECOMMIT_UNIT_DIR;
+	const priorMarker = process.env[REENTRY_MARKER_ENV];
+	const priorGitDir = process.env.GIT_DIR;
+	const origError = console.error;
+	let stderr: string[] = [];
+
+	beforeEach(() => {
+		write(
+			"t-fixture.test.ts",
+			'// covers: file:packages/framework/core/tools/amadeus-fixture.ts\nimport { test } from "bun:test";\n',
+		);
+		process.env.AMADEUS_PRECOMMIT_STAGED_FILES =
+			"packages/framework/core/tools/amadeus-fixture.ts";
+		process.env.AMADEUS_PRECOMMIT_UNIT_DIR = dir;
+		stderr = [];
+		console.error = (...parts: unknown[]) => {
+			stderr.push(parts.map(String).join(" "));
+		};
+	});
+
+	afterEach(() => {
+		console.error = origError;
+		for (const [key, value] of Object.entries({
+			AMADEUS_PRECOMMIT_STAGED_FILES: priorStaged,
+			AMADEUS_PRECOMMIT_UNIT_DIR: priorUnitDir,
+			[REENTRY_MARKER_ENV]: priorMarker,
+			GIT_DIR: priorGitDir,
+		})) {
+			if (value === undefined) delete process.env[key];
+			else process.env[key] = value;
+		}
+	});
+
+	test("the runner spawn gets no ambient binding, and carries the re-entry marker", () => {
+		// The hook's own environment is bound to the repository being committed
+		// to — that is exactly what the test run must not inherit.
+		process.env.GIT_DIR = "/real/.git/worktrees/enhance-1";
+		mockRunTestsStatus = 0;
+
+		expect(driveExit(() => main())).toBe(0);
+
+		const env = capturedRunTestsEnv as NodeJS.ProcessEnv;
+		expect(env).not.toBeNull();
+		expect(env.GIT_DIR).toBeUndefined();
+		expect(env.GIT_CONFIG_GLOBAL).toBeDefined();
+		expect(env[REENTRY_MARKER_ENV]).toBe("1");
+		// The hook's own process keeps its binding: stagedFiles() legitimately
+		// runs inside it, and only the child is scrubbed.
+		expect(process.env.GIT_DIR).toBe("/real/.git/worktrees/enhance-1");
+	});
+
+	test("an invocation started from inside a test run refuses with exit 2 and runs nothing", () => {
+		process.env[REENTRY_MARKER_ENV] = "1";
+
+		expect(driveExit(() => main())).toBe(2);
+
+		expect(capturedRunTestsArgs).toBeNull();
+		expect(stderr.join("\n")).toContain("refusing to re-enter");
 	});
 });

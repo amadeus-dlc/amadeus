@@ -24,9 +24,23 @@
 // hermetic arm asserts the identical operations leave it byte-identical.
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  HERMETIC_GLOBAL_GITCONFIG,
+  HERMETIC_SYSTEM_GITCONFIG,
+  materializeHermeticGitConfig,
+} from "../lib/hermetic-git-env.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
 const SEAM_MODULE = join(REPO_ROOT, "tests", "lib", "hermetic-git-env.ts");
@@ -292,5 +306,63 @@ describe("the seam is wired into every spawn face (#3413)", () => {
     ["scripts/precommit-related-unit-tests.ts", "hermeticGitEnv(process.env"],
   ])("%s applies it", (file, marker) => {
     expect(readFileSync(join(REPO_ROOT, file), "utf-8")).toContain(marker);
+  });
+});
+
+// The pinned config files are written by the seam itself, and git has to be
+// able to READ them — a pin pointing at a file git rejects would silently give
+// back whatever fallback git chooses. Driven at an explicit directory so the
+// shared default location is never disturbed.
+describe("pinned git config materialisation (#3413)", () => {
+  let dir: string | null = null;
+
+  afterEach(() => {
+    if (dir !== null) rmSync(dir, { recursive: true, force: true });
+    dir = null;
+  });
+
+  test("creates both files when the directory holds nothing yet", () => {
+    dir = join(mkdtempSync(join(tmpdir(), "amadeus-t3413-cfg-")), "nested");
+
+    const paths = materializeHermeticGitConfig(dir);
+
+    expect(readFileSync(paths.global, "utf-8")).toBe(HERMETIC_GLOBAL_GITCONFIG);
+    expect(readFileSync(paths.system, "utf-8")).toBe(HERMETIC_SYSTEM_GITCONFIG);
+    // Write-then-rename must leave no staging file behind.
+    expect(readdirSync(dir).sort()).toEqual(["global.gitconfig", "system.gitconfig"]);
+  });
+
+  test("a second call with the files already correct rewrites nothing", () => {
+    dir = mkdtempSync(join(tmpdir(), "amadeus-t3413-cfg-"));
+    const first = materializeHermeticGitConfig(dir);
+    const stamp = statSync(first.global).mtimeMs;
+
+    const second = materializeHermeticGitConfig(dir);
+
+    expect(second.global).toBe(first.global);
+    expect(statSync(second.global).mtimeMs).toBe(stamp);
+  });
+
+  test("a stale or corrupted file is replaced", () => {
+    dir = mkdtempSync(join(tmpdir(), "amadeus-t3413-cfg-"));
+    const paths = materializeHermeticGitConfig(dir);
+    writeFileSync(paths.global, "[user]\n\temail = stale@example.invalid\n", "utf-8");
+
+    materializeHermeticGitConfig(dir);
+
+    expect(readFileSync(paths.global, "utf-8")).toBe(HERMETIC_GLOBAL_GITCONFIG);
+  });
+
+  test("git itself reads the pinned files and reports the identity they declare", () => {
+    dir = mkdtempSync(join(tmpdir(), "amadeus-t3413-cfg-"));
+    const paths = materializeHermeticGitConfig(dir);
+
+    const read = spawnSync("git", ["config", "--global", "user.email"], {
+      encoding: "utf-8",
+      env: { ...process.env, GIT_CONFIG_GLOBAL: paths.global, GIT_CONFIG_SYSTEM: paths.system },
+    });
+
+    expect(read.status).toBe(0);
+    expect((read.stdout ?? "").trim()).toBe("amadeus-test@example.invalid");
   });
 });
