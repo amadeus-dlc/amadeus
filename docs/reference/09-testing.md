@@ -307,6 +307,35 @@ a given function, audit event, scope, stage, hook, subcommand, or render
 surface. The `--check` mode is wired into the suite so a registry that drifts
 from disk reds the gate.
 
+The `function` class is enumerated from the framework's importable surface —
+`amadeus-lib.ts`, `amadeus-graph.ts`, three targeted `amadeus-state.ts`
+functions, and the setup package under `packages/setup/src/` (both its top-level
+`export function`s and its `export namespace` members, which appear as
+`function:<Namespace>.<name>`). The id space is flat, so a name declared by two
+roots — `main` lives in both `amadeus-graph.ts` and `packages/setup/src/cli.ts` —
+is one unit whose `source` names every declaring file.
+
+### Unjoined `covers:` claims
+
+The `covers:` header is parsed permissively, because several ledgers share it:
+`file:` feeds the patch gate, `domain:`/`modules:`/`invariant:` are prose-level
+groupings, and prose itself contributes noise (`node:child_process`). A claim
+written in the *registry's own* vocabulary — one of the seven class prefixes —
+that matches no enumerated unit is a real divergence between what a test says it
+covers and what the ledger knows about, so the generator reports every one:
+
+- to stderr, on both generate and `--check`, as `UNJOINED COVERS CLAIMS`;
+- into the committed registry, under `unjoinedClaims` (and
+  `counts.unjoinedClaims`).
+
+Committing the list is what gives it teeth. A *new* unjoined claim changes the
+generated registry, so the freshness diff reds `--check` until someone
+regenerates and the list is reviewed in the diff. The report itself is advisory
+and never fails on its own: the repository carries a few hundred such claims
+today — mostly `function:` ids naming helpers in roots no enumerator reads —
+and turning that into a hard failure would red the build without telling anyone
+anything new. Claims outside the registry's vocabulary are never reported.
+
 > **Note:** t19 appears in both unit (`tests/unit/t19.test.ts`, the jump CLI
 > tool) and integration (`tests/integration/t19.test.ts`, the live preflight
 > gate) — a level/file path, not a bare ID, disambiguates such collisions.
