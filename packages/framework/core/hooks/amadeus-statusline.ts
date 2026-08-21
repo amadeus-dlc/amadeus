@@ -69,7 +69,7 @@ function contextColor(pct: number): string {
 
 const RESET = "\x1b[0m";
 const STATUSLINE_LABEL = "Amadeus-DLC";
-const STATUSLINE_PREFIX = `[${STATUSLINE_LABEL}]`;
+export const STATUSLINE_PREFIX = `[${STATUSLINE_LABEL}]`;
 
 const STAGE_DISPLAY: Record<string, string> = {
   "workspace-scaffold": "Workspace Scaffold",
@@ -357,4 +357,9 @@ async function main(): Promise<void> {
   printLine(withAutonomySegment(output, state, projectDir), right);
 }
 
-await main();
+async function runStatuslineEntrypoint(): Promise<void> {
+  if (!import.meta.main) return;
+  await main();
+}
+
+await runStatuslineEntrypoint();

@@ -23,3 +23,48 @@ Before the production change, the new regression failed with `update` instead of
 - Setup unit/integration/smoke suite: PASS (393 tests, 0 failures, 3821 assertions).
 - `bun run build`: PASS.
 - `bun run check`: PASS. Existing Biome diagnostics remain warnings/infos only.
+
+## #3402 statusline marker
+
+- Scope: `self-fix`.
+- Baseline: `bun test tests/e2e/t-tui-statusline.serial.test.ts` reached the real tmux TUI but failed after waiting for the stale `\\[AIDLC\\]` marker; the captured pane contained the rendered `[Amadeus-DLC] ready` line.
+- Fix: exported the statusline implementation's canonical `STATUSLINE_PREFIX`, changed the TUI test's wait pattern and assertions to derive from it, and guarded the hook entrypoint with `import.meta.main` so importing the constant has no render side effect.
+- The target test contains no hard-coded `AIDLC` or `Amadeus-DLC` marker literal.
+
+### Verification
+
+- `bun run build` — pass; regenerated all distributions.
+- `bun run check` — pass; typecheck and distribution checks passed. Lint reported repository baseline warnings only.
+- `git diff --check` — pass.
+- `bun test tests/e2e/t-tui-statusline.serial.test.ts` — pass in local tmux after the final distribution build:
+
+```text
+bun test v1.3.13 (bf2e2cec)
+
+tests/e2e/t-tui-statusline.serial.test.ts:
+(pass) t-tui-statusline (statusline renders in a real terminal) > [Amadeus-DLC] ready paints in the launched TUI [18548.29ms]
+
+ 1 pass
+ 0 fail
+ 4 expect() calls
+Ran 1 test across 1 file. [19.00s]
+```
+
+## CI fix
+
+- CI failure: the marker-constant entrypoint guard was measured as part of `main()` by lizard, changing the ratcheted CCN from 26 to 27.
+- Fix: moved the `import.meta.main` guard and direct call into `runStatuslineEntrypoint()`. The gate now measures `main` at CCN 26 and the new helper at CCN 2; no baseline entry was changed.
+- The known `#1841`-family `FAIL zero direct legacy call sites` advisory was not changed.
+- `bun tests/complexity-gate.ts --check` — pass: 0 new violations, 0 regressions.
+- `bun test tests/e2e/t-tui-statusline.serial.test.ts` — pass in local tmux:
+
+```text
+(pass) t-tui-statusline (statusline renders in a real terminal) > [Amadeus-DLC] ready paints in the launched TUI [18918.27ms]
+
+ 1 pass
+ 0 fail
+ 4 expect() calls
+Ran 1 test across 1 file. [19.42s]
+```
+
+- `bun run check` — pass; typecheck and distribution checks passed, with repository baseline lint warnings only.
