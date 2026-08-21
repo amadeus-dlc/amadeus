@@ -5013,28 +5013,6 @@
     "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
   },
   {
-    "file": "tests/lib/advisory-model-check.ts",
-    "selector": {
-      "function": "auxiliariesProblem",
-      "fingerprint": "sha256:93c508004cc29d5bb89edcbcd0cc189e37077743a9a5d28a46a4e805f514524e",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "Auxiliary identity mismatch shares one return with the path-null and prefix checks; Bun attributes the hit to the condition line. t-advisory-human-choice-domain covers the invalid-auxiliary outcomes.",
-    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
-  },
-  {
-    "file": "tests/lib/advisory-model-check.ts",
-    "selector": {
-      "function": "implementationsProblem",
-      "fingerprint": "sha256:84dc1de807fce3d63c4c2499eff1b9bab42672552aed9b7ad756b9e1a4052f2d",
-      "anchorLines": 1,
-      "targetLines": "1"
-    },
-    "reason": "Implementation identity mismatch shares one return with the path-null check; Bun attributes the hit to the condition line. t-advisory-human-choice-domain covers the invalid-implementation outcomes.",
-    "expiry": "remove when the patch gate excludes these fail-closed or type-only arms or a test can reach them without TOCTOU"
-  },
-  {
     "file": "packages/framework/core/tools/amadeus-learnings.ts",
     "selector": {
       "function": "readJsonFile",
