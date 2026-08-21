@@ -5,7 +5,7 @@
 import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   cleanupTestProject,
@@ -61,6 +61,19 @@ function writeArtifacts(
   }
 }
 
+function writeReview(project: string, stage: string, artifact: string): void {
+  const path = join(seededRecordDir(project), "construction", "shared", stage, `${artifact}.md`);
+  writeFileSync(
+    path,
+    `${readFileSync(path, "utf-8")}\n## Review — Iteration 1\n\n` +
+      "- **Verdict:** READY\n" +
+      "- **Reviewer:** amadeus-architecture-reviewer-agent\n" +
+      "- **Date:** 2026-08-08T00:00:00Z\n" +
+      "- **Iteration:** 1\n- **Scope decision:** none\n",
+    "utf-8",
+  );
+}
+
 describe("t416 NFR kind pruning packaged workflow slice (e2e)", () => {
   test("a library advances through both NFR stages with only applicable outputs and inputs", () => {
     const project = createTestProject();
@@ -68,6 +81,10 @@ describe("t416 NFR kind pruning packaged workflow slice (e2e)", () => {
       cpSync(join(REPO_ROOT, "dist", "codex", ".codex"), join(project, ".codex"), {
         recursive: true,
       });
+      copyFileSync(
+        join(project, ".codex", "hooks.json.example"),
+        join(project, ".codex", "hooks.json"),
+      );
       mkdirSync(join(project, "amadeus", "spaces", "default", "memory"), {
         recursive: true,
       });
@@ -155,6 +172,7 @@ units:
         "security-requirements",
         "tech-stack-decisions",
       ]);
+      writeReview(project, "nfr-requirements", "security-requirements");
       const advanceRequirements = runTool(project, "amadeus-state.ts", [
         "advance",
         "nfr-requirements",
@@ -184,6 +202,7 @@ units:
       ]);
 
       writeArtifacts(project, "nfr-design", ["security-design", "logical-components"]);
+      writeReview(project, "nfr-design", "security-design");
       const advanceDesign = runTool(project, "amadeus-state.ts", [
         "advance",
         "nfr-design",
