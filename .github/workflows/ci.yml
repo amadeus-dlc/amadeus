@@ -594,8 +594,10 @@ jobs:
         id: base-cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
-          path: /tmp/base-coverage-totals.json
-          key: relative-coverage-base-${{ steps.merge-base.outputs.sha }}
+          path: |
+            /tmp/base-coverage-totals.json
+            /tmp/base-coverage-lcov.info
+          key: relative-coverage-base-v2-${{ steps.merge-base.outputs.sha }}
 
       - name: Measure base coverage
         if: ${{ (github.event_name == 'pull_request' || github.event_name == 'merge_group') && steps.base-cache.outputs.cache-hit != 'true' }}
@@ -620,13 +622,18 @@ jobs:
             echo "::warning::base suite verdict failed (exit ${status}) but coverage artifacts are complete; proceeding verdict-independent per E-CV2 D4"
           fi
           cp coverage/coverage-totals.json /tmp/base-coverage-totals.json
+          # The per-file split the project gate needs to tell a deletion apart
+          # from a regression. Same run as the totals above, so the two agree.
+          cp coverage/lcov.info /tmp/base-coverage-lcov.info
 
       - name: Upload base coverage totals
         if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: amadeus-base-coverage-totals
-          path: /tmp/base-coverage-totals.json
+          path: |
+            /tmp/base-coverage-totals.json
+            /tmp/base-coverage-lcov.info
           if-no-files-found: error
           retention-days: 1
 
@@ -677,6 +684,7 @@ jobs:
         if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
         env:
           AMADEUS_COVERAGE_PROJECT_BASELINE: /tmp/base-coverage-totals.json
+          AMADEUS_COVERAGE_PROJECT_BASELINE_LCOV: /tmp/base-coverage-lcov.info
         run: |
           set -euo pipefail
           bun tests/coverage-project-gate.ts --check | tee /tmp/relative-gate-summary.txt

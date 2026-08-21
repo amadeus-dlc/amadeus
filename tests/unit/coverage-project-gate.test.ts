@@ -19,6 +19,9 @@
 //      threshold, driven through the AMADEUS_COVERAGE_* env seams.
 //   5. `--update` refuses when the emit is absent and transcribes correctly
 //      when present.
+//   6. The RETAINED baseline population: a deletion leaves the comparison, a
+//      regression in retained code does not, and with every file retained the
+//      retained basis and the whole-project basis agree exactly.
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -29,9 +32,11 @@ import { fileURLToPath } from "node:url";
 
 import {
   evaluateGate,
+  type LcovPopulations,
   type LoadedPolicy,
   type LoadedTotals,
   main,
+  resolveRetainedPopulation,
   runCheck,
   runUpdate,
 } from "../coverage-project-gate.ts";
@@ -567,5 +572,267 @@ describe("in-process CLI plumbing: runCheck / runUpdate / main", () => {
     expect(main([])).toBe(2);
     expect(main(["--frobnicate"])).toBe(2);
     expect(main(["--check", "--update"])).toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 6. The retained baseline population.
+//
+// One LCOV record per file, in the shape the runner's combined report emits:
+// repo-relative SF, one LF/LH pair. The totals emit beside it must agree, which
+// is what makes a stale artifact a loud failure rather than a silent reweighting.
+// ---------------------------------------------------------------------------
+function lcov(files: ReadonlyArray<[source: string, hits: number, lines: number]>): LoadedTotals {
+  const records = files.map(
+    ([source, hits, lines]) => `TN:\nSF:${source}\nLF:${lines}\nLH:${hits}\nend_of_record`,
+  );
+  return { present: true, text: `${records.join("\n")}\n` };
+}
+
+function sum(files: ReadonlyArray<[source: string, hits: number, lines: number]>): {
+  hits: number;
+  lines: number;
+} {
+  return {
+    hits: files.reduce((acc, [, hits]) => acc + hits, 0),
+    lines: files.reduce((acc, [, , lines]) => acc + lines, 0),
+  };
+}
+
+function populations(
+  currentFiles: ReadonlyArray<[string, number, number]>,
+  baseFiles: ReadonlyArray<[string, number, number]>,
+): LcovPopulations {
+  return { current: lcov(currentFiles), base: lcov(baseFiles) };
+}
+
+describe("retained baseline population", () => {
+  // The mix effect this basis exists to remove: a well-covered file is deleted
+  // and NOTHING that remains changed by one line. Whole-project ratios call that
+  // a 25pp regression; the retained comparison calls it what it is — no change.
+  test("deleting a well-covered file is not a regression", () => {
+    const kept: [string, number, number][] = [["src/kept.ts", 50, 100]];
+    const baseFiles: [string, number, number][] = [...kept, ["src/gone.ts", 100, 100]];
+    const cur = sum(kept);
+    const base = sum(baseFiles);
+    expect(base.hits / base.lines).toBeGreaterThan(cur.hits / cur.lines); // the mix effect, measured
+
+    const aggregate = evaluateGate(present(totals(cur.hits, cur.lines)), present(totals(base.hits, base.lines)), policy());
+    expect(aggregate.kind === "fail" && aggregate.reason).toBe("RELATIVE_DROP_EXCEEDED");
+
+    const retained = evaluateGate(
+      present(totals(cur.hits, cur.lines)),
+      present(totals(base.hits, base.lines)),
+      policy(),
+      populations(kept, baseFiles),
+    );
+    expect(retained.kind).toBe("pass");
+    if (retained.kind === "pass") {
+      expect(retained.basis).toBe("retained");
+      expect(retained.deltaPp).toBe(0);
+      expect(retained.retained).toEqual({
+        base: { hits: 50, lines: 100 },
+        removedFiles: 1,
+        removedLines: 100,
+      });
+    }
+  });
+
+  // The other half, and the one that keeps the gate a gate: the same deletion
+  // PLUS a real loss in retained code must still fail.
+  test("a retained file that loses hits still fails, deletion or not", () => {
+    const baseFiles: [string, number, number][] = [
+      ["src/kept.ts", 50, 100],
+      ["src/gone.ts", 100, 100],
+    ];
+    const currentFiles: [string, number, number][] = [["src/kept.ts", 49, 100]];
+    const cur = sum(currentFiles);
+    const base = sum(baseFiles);
+    const result = evaluateGate(
+      present(totals(cur.hits, cur.lines)),
+      present(totals(base.hits, base.lines)),
+      policy(),
+      populations(currentFiles, baseFiles),
+    );
+    expect(result.kind === "fail" && result.reason).toBe("RELATIVE_DROP_EXCEEDED");
+    expect(result.kind === "fail" && result.detail).toContain("retained basis");
+  });
+
+  // A new file was never in the baseline, so it cannot be excluded from it:
+  // arriving with no coverage still moves the current ratio and still fails.
+  test("a new uncovered file still drops the delta", () => {
+    const baseFiles: [string, number, number][] = [["src/kept.ts", 100, 100]];
+    const currentFiles: [string, number, number][] = [...baseFiles, ["src/new.ts", 0, 100]];
+    const cur = sum(currentFiles);
+    const base = sum(baseFiles);
+    const result = evaluateGate(
+      present(totals(cur.hits, cur.lines)),
+      present(totals(base.hits, base.lines)),
+      policy(),
+      populations(currentFiles, baseFiles),
+    );
+    expect(result.kind === "fail" && result.reason).toBe("RELATIVE_DROP_EXCEEDED");
+  });
+
+  // The boundary that proves this is a refinement and not a different gate.
+  test("with every file retained the two bases give the identical verdict", () => {
+    const files: [string, number, number][] = [
+      ["src/a.ts", 90, 100],
+      ["src/b.ts", 30, 50],
+    ];
+    const currentFiles: [string, number, number][] = [
+      ["src/a.ts", 89, 100],
+      ["src/b.ts", 30, 50],
+    ];
+    const cur = sum(currentFiles);
+    const base = sum(files);
+    const aggregate = evaluateGate(present(totals(cur.hits, cur.lines)), present(totals(base.hits, base.lines)), policy());
+    const retained = evaluateGate(
+      present(totals(cur.hits, cur.lines)),
+      present(totals(base.hits, base.lines)),
+      policy(),
+      populations(currentFiles, files),
+    );
+    expect(retained.kind).toBe(aggregate.kind);
+    if (retained.kind === "pass" && aggregate.kind === "pass") {
+      expect(retained.basePct).toBe(aggregate.basePct);
+      expect(retained.deltaPp).toBe(aggregate.deltaPp);
+      expect(retained.retained).toEqual({ base: base, removedFiles: 0, removedLines: 0 });
+    }
+  });
+
+  test("one side without a per-file reading falls back to the whole-project basis", () => {
+    const files: [string, number, number][] = [["src/kept.ts", 50, 100]];
+    for (const input of [
+      { current: lcov(files) },
+      { base: lcov(files) },
+      {},
+      { current: { present: false } as LoadedTotals, base: lcov(files) },
+    ]) {
+      const result = evaluateGate(present(totals(50, 100)), present(totals(50, 100)), policy(), input);
+      expect(result.kind).toBe("pass");
+      if (result.kind === "pass") {
+        expect(result.basis).toBe("aggregate");
+        expect(result.retained).toBeNull();
+      }
+    }
+  });
+
+  // A report that does not sum to the emit beside it is two different runs.
+  // Reweighting from mismatched artifacts is worse than not reweighting at all.
+  test("an lcov that disagrees with its emit fails closed", () => {
+    const files: [string, number, number][] = [["src/kept.ts", 50, 100]];
+    const wrongCurrent = evaluateGate(
+      present(totals(60, 100)),
+      present(totals(50, 100)),
+      policy(),
+      populations(files, files),
+    );
+    expect(wrongCurrent.kind === "fail" && wrongCurrent.reason).toBe("LCOV_TOTALS_MISMATCH");
+    expect(wrongCurrent.kind === "fail" && wrongCurrent.detail).toContain("current lcov sums to 50/100");
+
+    const wrongBase = evaluateGate(
+      present(totals(50, 100)),
+      present(totals(60, 100)),
+      policy(),
+      populations(files, files),
+    );
+    expect(wrongBase.kind === "fail" && wrongBase.reason).toBe("LCOV_TOTALS_MISMATCH");
+    expect(wrongBase.kind === "fail" && wrongBase.detail).toContain("baseline lcov sums to 50/100");
+  });
+
+  test("a baseline whose every file is gone keeps the whole-project basis", () => {
+    const baseFiles: [string, number, number][] = [["src/gone.ts", 100, 100]];
+    const currentFiles: [string, number, number][] = [["src/new.ts", 100, 100]];
+    const outcome = resolveRetainedPopulation(
+      { hits: 100, lines: 100 },
+      { hits: 100, lines: 100 },
+      populations(currentFiles, baseFiles),
+    );
+    expect(outcome.ok && outcome.retained).toBeNull();
+  });
+
+  test("the absolute minimum is unaffected by the retained basis", () => {
+    const baseFiles: [string, number, number][] = [
+      ["src/kept.ts", 50, 100],
+      ["src/gone.ts", 100, 100],
+    ];
+    const currentFiles: [string, number, number][] = [["src/kept.ts", 50, 100]];
+    const result = evaluateGate(
+      present(totals(50, 100)),
+      present(totals(150, 200)),
+      policy(9000, 2),
+      populations(currentFiles, baseFiles),
+    );
+    // Relative is satisfied by the retained basis; the absolute floor is not,
+    // and it still reads the whole current population.
+    expect(result.kind === "fail" && result.reason).toBe("ABSOLUTE_MINIMUM_NOT_MET");
+  });
+});
+
+describe("process boundary: the retained basis through its env seams", () => {
+  test("--check reports which basis it used, and the deletion passes only with the base lcov", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "cov-gate-retained-"));
+    try {
+      const totalsPath = join(tmp, "coverage-totals.json");
+      const baselinePath = join(tmp, "baseline.json");
+      const currentLcovPath = join(tmp, "head-lcov.info");
+      const baseLcovPath = join(tmp, "base-lcov.info");
+      // A floor of 0 so this case reads the relative condition alone; the
+      // absolute floor has its own cases above.
+      const policyPath = join(tmp, "policy.json");
+      writeFileSync(
+        policyPath,
+        JSON.stringify({
+          schemaVersion: 1,
+          minimumProjectLineCoverageBasisPoints: 0,
+          maximumRelativeDropBasisPoints: 2,
+        }),
+      );
+      writeFileSync(totalsPath, JSON.stringify(totals(50, 100)));
+      writeFileSync(baselinePath, JSON.stringify(totals(150, 200)));
+      writeFileSync(currentLcovPath, "TN:\nSF:src/kept.ts\nLF:100\nLH:50\nend_of_record\n");
+      writeFileSync(
+        baseLcovPath,
+        "TN:\nSF:src/kept.ts\nLF:100\nLH:50\nend_of_record\nTN:\nSF:src/gone.ts\nLF:100\nLH:100\nend_of_record\n",
+      );
+
+      // Without the baseline lcov the whole-project basis still sees the mix
+      // effect and fails — the same inputs, the older question.
+      const aggregate = runGate(["--check"], {
+        AMADEUS_COVERAGE_TOTALS: totalsPath,
+        AMADEUS_COVERAGE_PROJECT_BASELINE: baselinePath,
+        AMADEUS_COVERAGE_LCOV: currentLcovPath,
+        AMADEUS_COVERAGE_PROJECT_POLICY: policyPath,
+      });
+      expect(aggregate.status).toBe(1);
+      expect(aggregate.stderr).toContain("RELATIVE_DROP_EXCEEDED");
+
+      const retained = runGate(["--check"], {
+        AMADEUS_COVERAGE_TOTALS: totalsPath,
+        AMADEUS_COVERAGE_PROJECT_BASELINE: baselinePath,
+        AMADEUS_COVERAGE_LCOV: currentLcovPath,
+        AMADEUS_COVERAGE_PROJECT_BASELINE_LCOV: baseLcovPath,
+        AMADEUS_COVERAGE_PROJECT_POLICY: policyPath,
+      });
+      expect(retained.status).toBe(0);
+      expect(retained.stdout).toContain("retained baseline: 1 removed file(s), 100 removed line(s)");
+
+      // And the regression the retained basis must still catch.
+      writeFileSync(totalsPath, JSON.stringify(totals(49, 100)));
+      writeFileSync(currentLcovPath, "TN:\nSF:src/kept.ts\nLF:100\nLH:49\nend_of_record\n");
+      const regressed = runGate(["--check"], {
+        AMADEUS_COVERAGE_TOTALS: totalsPath,
+        AMADEUS_COVERAGE_PROJECT_BASELINE: baselinePath,
+        AMADEUS_COVERAGE_LCOV: currentLcovPath,
+        AMADEUS_COVERAGE_PROJECT_BASELINE_LCOV: baseLcovPath,
+        AMADEUS_COVERAGE_PROJECT_POLICY: policyPath,
+      });
+      expect(regressed.status).toBe(1);
+      expect(regressed.stderr).toContain("RELATIVE_DROP_EXCEEDED");
+      expect(regressed.stderr).toContain("retained basis");
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
   });
 });

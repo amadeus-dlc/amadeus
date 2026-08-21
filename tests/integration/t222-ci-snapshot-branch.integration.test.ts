@@ -270,8 +270,26 @@ describe("t222 CI snapshot publication boundary", () => {
     // cache keyed by merge-base sha, artifacts verified before comparison
     expect(coverageJob).toContain("Project coverage gate (absolute and merge-base-relative)");
     expect(coverageJob).toContain("AMADEUS_COVERAGE_PROJECT_BASELINE: /tmp/base-coverage-totals.json");
-    expect(baseJob).toContain(`key: relative-coverage-base-\${{ steps.merge-base.outputs.sha }}`);
+    expect(baseJob).toContain(`key: relative-coverage-base-v2-\${{ steps.merge-base.outputs.sha }}`);
     expect(baseJob).toContain("base coverage artifacts incomplete");
+    // The retained-population basis needs the base side's PER-FILE report, not
+    // just its totals, and it must travel by every route the totals do —
+    // measured, cached, uploaded, and named to the gate. A cache that restored
+    // only the totals would silently drop the gate back to whole-project ratios,
+    // so the key is versioned alongside the widened path.
+    for (const step of [
+      "path: |\n            /tmp/base-coverage-totals.json\n            /tmp/base-coverage-lcov.info",
+      "cp coverage/lcov.info /tmp/base-coverage-lcov.info",
+    ]) {
+      expect(baseJob).toContain(step);
+    }
+    expect(
+      baseJob.split("path: |\n            /tmp/base-coverage-totals.json").length - 1,
+      "cache and upload must both carry the per-file report",
+    ).toBe(2);
+    expect(coverageJob).toContain(
+      "AMADEUS_COVERAGE_PROJECT_BASELINE_LCOV: /tmp/base-coverage-lcov.info",
+    );
     expect(coverageJob).toContain("- coverage-head\n      - coverage-base");
     expect(headJob).toContain("needs.changes.outputs.coverage == 'true'");
     expect(baseJob).toContain("needs.changes.outputs.coverage == 'true'");

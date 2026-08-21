@@ -29,6 +29,7 @@ import {
   formatForeignCoverageExclusionWarning,
 } from "./lib/coverage-source-path.ts";
 import { normalizeCoverageReport as normalizeCoverageReportImpl } from "./lib/coverage-normalize.ts";
+import { parseLcovFileTotals, sumLcovFileTotals } from "./lib/lcov-file-totals.ts";
 import {
   DEFAULT_TEST_TIMEOUT_MS,
   MAX_TEST_TIMEOUT_MS,
@@ -522,30 +523,20 @@ interface CoverageTotals {
 
 // Parse the normalized LCOV string into per-source rows (SF/LF/LH) and sum the
 // hit/line totals across every source. Single parse, shared by the HTML report
-// and the coverage-totals.json emit so the two can never disagree.
+// and the coverage-totals.json emit so the two can never disagree. The parse
+// itself lives in lib/lcov-file-totals.ts because the project coverage gate
+// reads the SAME report per file, and two readings of one report that drifted
+// would break the gate's emit-vs-report cross-check.
 // combineCoverageReports must run excludeForeignLcovRecords first so out-of-repo
 // SF records cannot inflate the project universe (#2315).
 function collectCoverageTotals(lcov: string): CoverageTotals {
-  const rows: CoverageRow[] = [];
-  let current: CoverageRow | null = null;
-  for (const line of lcov.split(/\r?\n/)) {
-    if (line.startsWith("SF:")) {
-      current = { source: line.slice(3), lines: 0, hits: 0 };
-      rows.push(current);
-      continue;
-    }
-    if (!current) continue;
-    if (line.startsWith("LF:")) {
-      current.lines = Number(line.slice(3)) || 0;
-      continue;
-    }
-    if (line.startsWith("LH:")) {
-      current.hits = Number(line.slice(3)) || 0;
-    }
-  }
-
-  const totalLines = rows.reduce((sum, row) => sum + row.lines, 0);
-  const totalHits = rows.reduce((sum, row) => sum + row.hits, 0);
+  const files = parseLcovFileTotals(lcov);
+  const rows: CoverageRow[] = [...files].map(([source, file]) => ({
+    source,
+    lines: file.lines,
+    hits: file.hits,
+  }));
+  const { hits: totalHits, lines: totalLines } = sumLcovFileTotals(files.values());
   return { rows, totalHits, totalLines };
 }
 

@@ -23,6 +23,24 @@
 // (ch/cl = current hits/lines, bh/bl = baseline hits/lines). Exact equality at
 // either configured boundary passes.
 //
+// THE BASELINE POPULATION IS THE RETAINED ONE. Comparing two whole-project
+// ratios silently mixes two different questions: did the code that survived get
+// worse, and was the code that left better or worse than average. Deleting a
+// well-covered subtree moves the project ratio down while nothing that remains
+// regressed by a single line — a mix effect, not a regression, and failing on it
+// would mean the gate charges a PR for removing tested code.
+//
+// So when a per-file reading of BOTH sides is available, the baseline ratio is
+// recomputed over the files that still exist at head, and the current side stays
+// the whole head population. Deletions leave the comparison; everything else is
+// still caught:
+//   * a retained file that loses hits drops current% while the retained baseline
+//     holds still -> failure, exactly as before;
+//   * a new file arrives in current but never in the baseline, so adding
+//     untested code still drops the delta.
+// With no per-file reading the gate compares whole-project ratios as before and
+// says so in its output — the basis is never silently swapped.
+//
 // Run:
 //   bun tests/coverage-project-gate.ts --check    # CI gate (exit 1 on drop/error)
 //   bun tests/coverage-project-gate.ts --update    # rewrite baseline from the emit
@@ -30,6 +48,8 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { parseLcovFileTotals, sumLcovFileTotals } from "./lib/lcov-file-totals.ts";
 
 // ---------------------------------------------------------------------------
 // Paths. Resolved from this file's location so the tool runs from any cwd.
@@ -42,6 +62,12 @@ import { fileURLToPath } from "node:url";
 //   AMADEUS_COVERAGE_TOTALS            — the current-commit emit to read
 //   AMADEUS_COVERAGE_PROJECT_BASELINE  — the committed baseline to compare against
 //   AMADEUS_COVERAGE_PROJECT_POLICY    — the versioned absolute/relative policy
+//   AMADEUS_COVERAGE_LCOV              — the current-commit combined LCOV report
+//   AMADEUS_COVERAGE_PROJECT_BASELINE_LCOV
+//                                      — the baseline commit's combined LCOV
+//                                        report. No default: CI points it at the
+//                                        merge-base artifact, and without it the
+//                                        gate compares whole-project ratios.
 // ---------------------------------------------------------------------------
 const TESTS_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(TESTS_DIR, "..");
@@ -59,6 +85,15 @@ function policyPath(): string {
   return (
     process.env.AMADEUS_COVERAGE_PROJECT_POLICY ?? join(TESTS_DIR, ".coverage-project-policy.json")
   );
+}
+function currentLcovPath(): string {
+  return process.env.AMADEUS_COVERAGE_LCOV ?? join(REPO_ROOT, "coverage", "lcov.info");
+}
+// Deliberately undefaulted: there is no committed baseline LCOV, so the
+// retained-population basis is opt-in through the CI artifact rather than
+// something a local run silently half-enables.
+function baselineLcovPath(): string | null {
+  return process.env.AMADEUS_COVERAGE_PROJECT_BASELINE_LCOV ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -83,7 +118,26 @@ export type FailReason =
   | "MISSING_POLICY"
   | "MALFORMED"
   | "MALFORMED_POLICY"
-  | "EMPTY_POPULATION";
+  | "EMPTY_POPULATION"
+  | "LCOV_TOTALS_MISMATCH";
+
+/**
+ * Which population the baseline ratio was taken over.
+ *   "retained"  — files that still exist at head; deletions excluded.
+ *   "aggregate" — the whole baseline project, because no per-file reading of
+ *                 both sides was available.
+ * Always reported, so a run can never leave the reader guessing which question
+ * the verdict answered.
+ */
+export type ComparisonBasis = "retained" | "aggregate";
+
+export interface RetainedPopulation {
+  /** Baseline totals restricted to files that still exist at head. */
+  readonly base: Totals;
+  /** Baseline files absent from head, and the baseline lines they carried. */
+  readonly removedFiles: number;
+  readonly removedLines: number;
+}
 
 export type GateResult =
   | {
@@ -93,6 +147,8 @@ export type GateResult =
       deltaPp: number;
       minimumBasisPoints: number;
       relativeToleranceBasisPoints: number;
+      basis: ComparisonBasis;
+      retained: RetainedPopulation | null;
     }
   | { kind: "fail"; reason: FailReason; detail: string };
 
@@ -100,6 +156,18 @@ export type GateResult =
 // evaluateGate does all parsing so the verdict has a single source of truth.
 export type LoadedTotals = { present: false } | { present: true; text: string };
 export type LoadedPolicy = LoadedTotals;
+export type LoadedLcov = LoadedTotals;
+
+/**
+ * The per-file readings the retained-population basis needs. Both sides are
+ * optional: absent (or unreadable) means the gate falls back to comparing whole
+ * project ratios, which is the stricter of the two, so the fallback can never
+ * turn a red into a green.
+ */
+export interface LcovPopulations {
+  readonly current?: LoadedLcov;
+  readonly base?: LoadedLcov;
+}
 
 // ---------------------------------------------------------------------------
 // Parsing. Parse, don't validate: a successful parse yields a Totals whose
@@ -236,10 +304,88 @@ function pct(t: Totals): number {
   return t.lines === 0 ? 100 : (t.hits / t.lines) * 100;
 }
 
+// ---------------------------------------------------------------------------
+// The retained population. Reading one report per side, keyed by the LCOV `SF`
+// path, which the runner has already normalized to a repo-relative form — so a
+// base checkout and a head checkout name the same file identically.
+// ---------------------------------------------------------------------------
+type PopulationOutcome =
+  | { ok: true; retained: RetainedPopulation | null; detail: null }
+  | { ok: false; detail: string };
+
+function lcovFiles(input: LoadedLcov | undefined): Map<string, Totals> | null {
+  if (input === undefined || !input.present) return null;
+  const files = parseLcovFileTotals(input.text);
+  return files.size === 0 ? null : new Map(files);
+}
+
+// A report that does not sum to the emit beside it is a mismatched pair of
+// artifacts — a stale download, a half-written file, two different runs. Reading
+// the split out of one and the total out of the other would compare numbers that
+// never described the same measurement, so this fails closed rather than
+// guessing which artifact to believe.
+function agreesWithEmit(files: Map<string, Totals>, emit: Totals): boolean {
+  const summed = sumLcovFileTotals(files.values());
+  return summed.hits === emit.hits && summed.lines === emit.lines;
+}
+
+/**
+ * The baseline restricted to files that still exist at head. Returns
+ * `retained: null` when no per-file reading is available on both sides (the
+ * caller then compares whole-project ratios), and fails when a reading is
+ * available but contradicts the emit it came with.
+ */
+export function resolveRetainedPopulation(
+  current: Totals,
+  base: Totals,
+  populations: LcovPopulations,
+): PopulationOutcome {
+  const currentFiles = lcovFiles(populations.current);
+  const baseFiles = lcovFiles(populations.base);
+  if (currentFiles === null || baseFiles === null) return { ok: true, retained: null, detail: null };
+  if (!agreesWithEmit(currentFiles, current)) {
+    const summed = sumLcovFileTotals(currentFiles.values());
+    return {
+      ok: false,
+      detail:
+        `current lcov sums to ${summed.hits}/${summed.lines} but the current emit says ` +
+        `${current.hits}/${current.lines}`,
+    };
+  }
+  if (!agreesWithEmit(baseFiles, base)) {
+    const summed = sumLcovFileTotals(baseFiles.values());
+    return {
+      ok: false,
+      detail:
+        `baseline lcov sums to ${summed.hits}/${summed.lines} but the baseline emit says ` +
+        `${base.hits}/${base.lines}`,
+    };
+  }
+  let hits = 0;
+  let lines = 0;
+  let removedFiles = 0;
+  let removedLines = 0;
+  for (const [source, totals] of baseFiles) {
+    if (currentFiles.has(source)) {
+      hits += totals.hits;
+      lines += totals.lines;
+      continue;
+    }
+    removedFiles += 1;
+    removedLines += totals.lines;
+  }
+  // Everything the baseline measured is gone from head. There is no retained
+  // population to compare against, so keep the whole-project comparison rather
+  // than inventing a ratio out of an empty set.
+  if (lines === 0) return { ok: true, retained: null, detail: null };
+  return { ok: true, retained: { base: { hits, lines }, removedFiles, removedLines }, detail: null };
+}
+
 export function evaluateGate(
   current: LoadedTotals,
   base: LoadedTotals,
   policyInput: LoadedPolicy,
+  populations: LcovPopulations = {},
 ): GateResult {
   if (!current.present) {
     return { kind: "fail", reason: "MISSING_CURRENT", detail: "coverage totals emit not found" };
@@ -269,8 +415,18 @@ export function evaluateGate(
     return { kind: "fail", reason: "EMPTY_POPULATION", detail: "baseline has 0 lines" };
   }
 
+  const population = resolveRetainedPopulation(cur.totals, bs.totals, populations);
+  if (!population.ok) {
+    return { kind: "fail", reason: "LCOV_TOTALS_MISMATCH", detail: population.detail };
+  }
+  const retained = population.retained;
+  const basis: ComparisonBasis = retained === null ? "aggregate" : "retained";
+  // The relative condition compares against the retained baseline; the absolute
+  // condition is untouched and always reads the whole current population.
+  const comparisonBase = retained === null ? bs.totals : retained.base;
+
   const currentPct = pct(cur.totals);
-  const basePct = pct(bs.totals);
+  const basePct = pct(comparisonBase);
   const deltaPp = currentPct - basePct;
 
   const minimumBasisPoints = policy.policy.minimumProjectLineCoverageBasisPoints;
@@ -278,7 +434,7 @@ export function evaluateGate(
   const absolutePasses = passesAbsoluteMinimum(cur.totals, minimumBasisPoints);
   const relativePasses = passesRelativeThreshold(
     cur.totals,
-    bs.totals,
+    comparisonBase,
     relativeToleranceBasisPoints,
   );
   if (!absolutePasses || !relativePasses) {
@@ -299,7 +455,8 @@ export function evaluateGate(
         `failed: ${failedConditions.join(", ")}; ` +
         `current ${cur.totals.hits}/${cur.totals.lines} (${currentPct.toFixed(4)}%), ` +
         `absolute minimum ${(minimumBasisPoints / 100).toFixed(2)}%, ` +
-        `merge-base ${bs.totals.hits}/${bs.totals.lines} (${basePct.toFixed(4)}%), ` +
+        `merge-base ${comparisonBase.hits}/${comparisonBase.lines} (${basePct.toFixed(4)}%) ` +
+        `[${describeBasis(basis, bs.totals, retained)}], ` +
         `relative tolerance ${(relativeToleranceBasisPoints / 100).toFixed(2)}pp, ` +
         `delta ${deltaPp.toFixed(4)}pp`,
     };
@@ -311,7 +468,24 @@ export function evaluateGate(
     deltaPp,
     minimumBasisPoints,
     relativeToleranceBasisPoints,
+    basis,
+    retained,
   };
+}
+
+/** One phrase naming the population the baseline ratio was taken over. */
+export function describeBasis(
+  basis: ComparisonBasis,
+  wholeBase: Totals,
+  retained: RetainedPopulation | null,
+): string {
+  if (basis === "aggregate" || retained === null) {
+    return "whole-project basis: no per-file reading of both sides";
+  }
+  return (
+    `retained basis: ${retained.removedFiles} file(s) / ${retained.removedLines} line(s) ` +
+    `removed from the ${wholeBase.hits}/${wholeBase.lines} baseline`
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -328,20 +502,31 @@ const USAGE =
   "  --update  rewrite tests/.coverage-project-baseline.json from the current emit";
 
 export function runCheck(): number {
-  const result = evaluateGate(load(totalsPath()), load(baselinePath()), load(policyPath()));
+  const baseLcov = baselineLcovPath();
+  const result = evaluateGate(load(totalsPath()), load(baselinePath()), load(policyPath()), {
+    current: load(currentLcovPath()),
+    base: baseLcov === null ? { present: false } : load(baseLcov),
+  });
   if (result.kind === "fail") {
     console.error(`PROJECT COVERAGE GATE FAILED [${result.reason}]: ${result.detail}`);
-    console.error(`  current emit:      ${totalsPath()}`);
+    console.error(`  current emit:       ${totalsPath()}`);
     console.error(`  committed baseline: ${baselinePath()}`);
     console.error(`  coverage policy:    ${policyPath()}`);
+    console.error(`  current lcov:       ${currentLcovPath()}`);
+    console.error(`  baseline lcov:      ${baseLcov ?? "(unset)"}`);
     return 1;
   }
+  const removed =
+    result.retained === null
+      ? "whole-project baseline (no per-file reading of both sides)"
+      : `retained baseline: ${result.retained.removedFiles} removed file(s), ` +
+        `${result.retained.removedLines} removed line(s) excluded`;
   console.log(
     `project coverage gate: OK — current ${result.currentPct.toFixed(4)}%, ` +
       `absolute minimum ${(result.minimumBasisPoints / 100).toFixed(2)}%, ` +
       `merge-base ${result.basePct.toFixed(4)}%, ` +
       `relative tolerance ${(result.relativeToleranceBasisPoints / 100).toFixed(2)}pp, ` +
-      `delta ${result.deltaPp.toFixed(4)}pp`,
+      `delta ${result.deltaPp.toFixed(4)}pp — ${removed}`,
   );
   return 0;
 }

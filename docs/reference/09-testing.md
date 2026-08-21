@@ -339,9 +339,33 @@ satisfies both a fixed absolute minimum and a merge-base-relative tolerance.
   `current% >= mergeBase% − maximumRelativeDropBasisPoints / 100 pp` hold. The
   verdict uses exact integer (`BigInt`) arithmetic, never floating point;
   equality at either boundary passes. The gate reports current coverage, the
-  absolute minimum, merge-base coverage, relative tolerance, and every failed
-  condition. A missing or malformed emit, baseline, or policy; a schema mismatch;
-  an out-of-range policy value; and an empty population all fail closed.
+  absolute minimum, merge-base coverage, relative tolerance, the baseline
+  population it used, and every failed condition. A missing or malformed emit,
+  baseline, or policy; a schema mismatch; an out-of-range policy value; and an
+  empty population all fail closed.
+- **The relative condition compares the retained population.** Two whole-project
+  ratios answer two questions at once: did the surviving code get worse, and was
+  the code that left better or worse than average. Deleting a well-covered
+  subtree moves the project ratio down while nothing that remains regressed —
+  charging a PR for that would make the gate a tax on removing tested code. So
+  the relative condition recomputes the **baseline over the files that still
+  exist at head**, and leaves the current side as the whole head population.
+  Everything else is still caught: a retained file that loses hits drops the
+  current ratio while the retained baseline holds still, and a new file arrives
+  in the current population having never been in the baseline, so adding
+  untested code still moves the delta. The **absolute** condition is untouched —
+  it always reads the whole current population.
+- **What that needs, and what happens without it.** The retained population is
+  read from the per-file LCOV of both sides: the head report at
+  `coverage/lcov.info` (`AMADEUS_COVERAGE_LCOV`) and the merge-base report the
+  `coverage-base` job measures and uploads beside its totals
+  (`AMADEUS_COVERAGE_PROJECT_BASELINE_LCOV`). Each side's report must sum to the
+  totals emit it came with, or the gate fails `LCOV_TOTALS_MISMATCH` rather than
+  reweighting from two different runs. When no per-file reading of both sides is
+  available — a local `--check`, where there is no baseline LCOV — the gate
+  compares whole-project ratios as before and **says which basis it used** in its
+  output. That fallback is the stricter of the two, so it can never turn a red
+  into a green.
 - **Updating the baseline.** The baseline lives at
   `tests/.coverage-project-baseline.json`. When a PR *improves* coverage, its
   author regenerates the baseline **in that same PR** by running
