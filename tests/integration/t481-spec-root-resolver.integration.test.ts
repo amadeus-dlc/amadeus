@@ -24,6 +24,10 @@ import {
   LegacySpecError as PluginLegacySpecError,
   resolveSpecRoots as pluginResolveSpecRoots,
 } from "../../plugins/formal-model-check/tools/tla-model-map.ts";
+import {
+  LegacySpecError as ShippedLegacySpecError,
+  resolveSpecRoots as shippedResolveSpecRoots,
+} from "../../dist/plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts";
 import { loadVerifiedTlaSourcesInternal } from "../../plugins/formal-model-check/tools/tla-model-loader-internal.ts";
 import {
   activationAdvisoriesForHost,
@@ -139,6 +143,7 @@ describe("t481 spec root resolver — legacy layout fails closed (BR-4/BR-13a)",
     const root = workspace();
     plantLegacySpec(root);
     expect(() => pluginResolveSpecRoots(root)).toThrow(PluginLegacySpecError);
+    expect(() => shippedResolveSpecRoots(root)).toThrow(ShippedLegacySpecError);
   });
 
   test("the loader path surfaces the legacy stop as a fail-closed load error", () => {

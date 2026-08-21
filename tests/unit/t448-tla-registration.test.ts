@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseTlaModelMap } from "../../plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts";
 import {
@@ -107,17 +106,6 @@ describe("model-map validator: optional evidenceBundle key (Q1 ruling A)", () =>
       modelMapPath: join(missingWorkspace, "amadeus", "spaces", "default", "specs", "tla", "model-map.json"),
       evidenceRoot: join(missingWorkspace, "amadeus", "spaces", "default", "specs", "tla-evidence"),
     });
-
-    const legacyWorkspace = mkdtempSync("/tmp/amadeus-t448-legacy-");
-    try {
-      const legacySpecs = join(legacyWorkspace, "specs", "tla");
-      mkdirSync(legacySpecs, { recursive: true });
-      writeFileSync(join(legacySpecs, "Legacy.tla"), "---- MODULE Legacy ----\n");
-      expect(() => resolveShippedSpecRoots(legacyWorkspace)).toThrow(/legacy TLA spec layout detected/);
-      expect(readdirSync(legacySpecs)).toEqual(["Legacy.tla"]);
-    } finally {
-      rmSync(legacyWorkspace, { recursive: true, force: true });
-    }
 
     const seamBytes = mapBytes([
       modelEntry("Sample", {
