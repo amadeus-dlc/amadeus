@@ -24,7 +24,7 @@
     "lint:check": "bunx @biomejs/biome check tests/ packages/setup/ packages/framework/core/ scripts/ plugins/",
     "no-silent-drop": "bun tests/no-silent-drop-gate.ts check",
     "check": "bun run typecheck && bun run lint && bun run distribution:check",
-    "prepare": "lefthook install"
+    "prepare": "bun scripts/lefthook-prepare.ts"
   },
   "description": "Dev-only tooling for the AIDLC framework — not part of the distributable. The shipped framework lives under dist/<harness>/ and is installed into user projects with `bunx @amadeus-dlc/setup install` (see README.md). All framework hooks and tools run via bun without requiring this package; bun-types here only powers contributor LSP coverage.",
   "author": "Amazon.com, Inc. or its affiliates",
