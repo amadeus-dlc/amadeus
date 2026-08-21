@@ -39,7 +39,7 @@
       "subcommand": 88,
       "render-surface": 7
     },
-    "unjoinedClaims": 367
+    "unjoinedClaims": 369
   },
   "units": [
     {
@@ -8786,6 +8786,14 @@
     {
       "claimId": "function:_trustedPluginStageFileForTests",
       "file": "tests/integration/t-plugin-runtime-trust.integration.test.ts"
+    },
+    {
+      "claimId": "function:activationSelectionFilter",
+      "file": "tests/integration/t3414-advisory-activation-gate.integration.test.ts"
+    },
+    {
+      "claimId": "function:advisoriesForHost",
+      "file": "tests/integration/t3414-advisory-activation-gate.integration.test.ts"
     },
     {
       "claimId": "function:amadeus-orchestrate:completionRefusalDirective",
