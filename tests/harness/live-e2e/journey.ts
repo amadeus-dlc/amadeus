@@ -6,6 +6,7 @@ import { CLAUDE_SDK_PROMPT, type ClaudeSdkWorkerEvent } from "./claude-sdk.ts";
 import { CLAUDE_TUI_PROMPT } from "./claude-tui.ts";
 import { CLAUDE_PRINT_PROMPT } from "./claude.ts";
 import { digest } from "./contract.ts";
+import { KIMI_PRINT_ANCHOR_FILE, KIMI_PRINT_PROMPT } from "./kimi-print.ts";
 import { KIRO_TUI_PROMPT } from "./kiro-tui.ts";
 
 export interface CodexAnchorJourneyOptions {
@@ -166,6 +167,52 @@ export function createKiroTuiJourney(): LiveJourney {
     passedDiagnostic: "private Kiro TUI session, current-run file anchor, and bounded pane evidence passed",
     failedDiagnostic: "Kiro TUI anchor mismatch",
   });
+}
+
+/**
+ * Kimi's print transport emits prose, so the deterministic half of the PASS
+ * product is a file the model had to create — the same anchor shape the Codex
+ * journey uses. business-rules.md pins the 600,000 ms journey timeout, and the
+ * enclosing Bun test must stay at or above 660,000 ms so the two can never
+ * collide (BR-KIMI-15).
+ */
+export function createKimiPrintJourney(): LiveJourney {
+  return {
+    id: "kimi-print-anchor-v1",
+    prompt: KIMI_PRINT_PROMPT,
+    timeoutMs: scaleTestTime(600_000),
+    retryPolicy: { maxAttempts: 1 },
+    assert: (execution, scratch) => {
+      const anchorPath = join(scratch.projectDir, KIMI_PRINT_ANCHOR_FILE);
+      let anchorValue: unknown;
+      if (existsSync(anchorPath)) {
+        try {
+          // One line, not a wrapped type assertion: bun's lcov leaves the
+          // continuation lines of a multi-line expression at DA:0, which reads
+          // as an untested anchor parse.
+          const parsed = JSON.parse(readFileSync(anchorPath, "utf8")) as Record<string, unknown>;
+          anchorValue = parsed.amadeus_live_e2e;
+        } catch {
+          anchorValue = undefined;
+        }
+      }
+      const passed = execution.exitCode === 0 &&
+        !execution.timedOut &&
+        !execution.aborted &&
+        anchorValue === "ok";
+      return {
+        passed,
+        diagnostic: passed
+          ? "exit and scratch-project file anchor passed"
+          : "Kimi print anchor mismatch",
+        evidence: [{
+          kind: "kimi-print-anchor",
+          value: digest(`${execution.exitCode}:${anchorValue}:${execution.structured?.stdoutTruncated}`),
+          source: "assertion",
+        }],
+      };
+    },
+  };
 }
 
 export function createCodexAnchorJourney(options: CodexAnchorJourneyOptions = {}): LiveJourney {

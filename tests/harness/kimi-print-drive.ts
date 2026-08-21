@@ -34,10 +34,17 @@
 // logs, and hook wiring state stay tmp-local (BR-2 hermeticity).
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, symlinkSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
+import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  bindKimiScratchHome,
+  defaultKimiJourneyModel,
+  defaultKimiSourceHome,
+  writeKimiScratchConfig,
+} from "./live-e2e/kimi.ts";
+import { evaluateLiveGate } from "./live-e2e/policy.ts";
+import { requireCapability } from "./live-e2e/registry.ts";
 
 const HARNESS_DIR = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(HARNESS_DIR, "..", "..");
@@ -57,16 +64,19 @@ function kimiBinaryPresent(env: NodeJS.ProcessEnv = process.env): boolean {
   return r.status === 0;
 }
 
+const CAPABILITY = requireCapability("kimi-print");
+
 /**
- * The live gate (BR-1): returns a skip-reason string unless
- * AMADEUS_KIMI_PRINT_LIVE=1 AND a kimi binary is resolvable AND the shipped
- * dist/kimi tree exists. Deterministic tiers always get a reason, so the
- * journeys never run kimi implicitly.
+ * The live gate (BR-1), decided by the COMMON kernel policy since #1717 Phase
+ * 2: `GITHUB_ACTIONS=true` is a hard deny that outranks the opt-in, and the
+ * opt-in itself is the kernel's exact `=== "1"` comparison on the capability's
+ * declared key. This driver keeps its own prerequisite probes (binary, shipped
+ * tree) but no longer owns a second answer to "may this run at all" — the
+ * canonical-code form of the same decision is `KimiPrintAdapter.preflight`.
  */
 export function skipReason(env: NodeJS.ProcessEnv = process.env): string | null {
-  if (env.AMADEUS_KIMI_PRINT_LIVE !== "1") {
-    return "set AMADEUS_KIMI_PRINT_LIVE=1 to run the live kimi print journeys (SPENDS Kimi credits)";
-  }
+  const gate = evaluateLiveGate(env, CAPABILITY);
+  if (gate.kind === "skip") return gate.diagnostic;
   if (!kimiBinaryPresent(env)) {
     return `kimi binary not found (AMADEUS_KIMI_BIN=${kimiBin(env)})`;
   }
@@ -129,75 +139,39 @@ export function runPrintSession(args: PrintSessionArgs): Promise<PrintResult> {
 
 /**
  * Supply authentication to a tmp KIMI_CODE_HOME WITHOUT copying credentials
- * (security-design.md): symlink the `credentials` and `oauth` entries from
- * the real home into the tmp home. The tmp config.toml / sessions / logs stay
- * tmp-local; only the CLI's own credential resolution crosses the link, which
- * is exactly "use Kimi's existing login" (security-requirements.md
- * §credential 非接触). Best-effort: a machine with no stored credentials gets
- * no links, and the journey then records kimi's unauthenticated failure as-is.
+ * (security-design.md): the `credentials` and `oauth` entries of the real home
+ * are bound into the tmp home by reference. The binding itself now lives in the
+ * live-E2E kernel (`live-e2e/kimi.ts`) so this driver and the KimiPrintAdapter
+ * cannot drift into two different isolation stories; this wrapper keeps the
+ * driver's own signature and best-effort semantics.
  */
 export function prepareKimiHome(home: string, realHome?: string): void {
-  mkdirSync(home, { recursive: true });
-  const source = realHome ?? process.env.KIMI_CODE_HOME ?? join(homedir(), ".kimi-code");
-  if (source === home) return;
-  for (const entry of ["credentials", "oauth"]) {
-    const target = join(source, entry);
-    const link = join(home, entry);
-    if (!existsSync(target) || existsSync(link)) continue;
-    symlinkSync(target, link, process.platform === "win32" ? "junction" : "dir");
-  }
+  bindKimiScratchHome(home, realHome ?? defaultKimiSourceHome());
 }
 
 /**
- * The managed model id the tmp config seeds; AMADEUS_KIMI_MODEL overrides
- * (accepts either a bare id like "kimi-for-coding" or the full
- * "kimi-code/<id>" alias — the id after the last slash is used).
+ * The managed model id the tmp config seeds; `AMADEUS_KIMI_MODEL` overrides.
+ * Re-exported from the kernel module so both the driver and the adapter seed
+ * the same model.
  */
 export function defaultJourneyModel(env: NodeJS.ProcessEnv = process.env): string {
-  const value = env.AMADEUS_KIMI_MODEL ?? "k3";
-  return value.includes("/") ? (value.split("/").pop() as string) : value;
+  return defaultKimiJourneyModel(env);
 }
 
 /**
- * Write the tmp home's config.toml: `default_model` plus the MANAGED
- * (OAuth) provider and one `[models."kimi-code/<id>"]` entry. kimi refuses to
- * start a session without these (verified 2026-07-26, kimi 0.28.1: first
- * "No model configured ... set default_model in config.toml", then `Model
- * "kimi-code/k3" is not configured in config.toml`), so a config-less tmp
- * home cannot run a journey at all — the unwired doctor state is therefore
- * "config exists, no managed block" (the doctor's `not found` row), never a
- * missing file. The tables mirror what `kimi login` writes into a real
- * config (type "kimi", empty api_key, the public managed base_url, oauth
- * storage pointing at the kimi-code credential store): they carry NO
- * credential material — the OAuth tokens themselves reach the tmp home only
- * through prepareKimiHome's symlinks. Call BEFORE any managed-block seeding:
- * the merge module appends the block after this config, exactly as it does
- * into a real user config.
+ * Write the tmp home's config.toml: `default_model` plus the MANAGED (OAuth)
+ * provider and one `[models."kimi-code/<id>"]` entry. kimi refuses to start a
+ * session without these (verified 2026-07-26, kimi 0.28.1: first "No model
+ * configured ... set default_model in config.toml", then `Model
+ * "kimi-code/k3" is not configured in config.toml`), so a config-less tmp home
+ * cannot run a journey at all — the unwired doctor state is therefore "config
+ * exists, no managed block" (the doctor's `not found` row), never a missing
+ * file. The tables carry NO credential material; the OAuth tokens reach the tmp
+ * home only through prepareKimiHome's binding. Call BEFORE any managed-block
+ * seeding: the merge module appends the block after this config, exactly as it
+ * does into a real user config. The writer itself lives in the kernel module so
+ * the adapter's scratch home and this driver's tmp home are byte-identical.
  */
 export function writeKimiConfig(home: string, model?: string): void {
-  mkdirSync(home, { recursive: true });
-  const id = model ?? defaultJourneyModel();
-  const alias = `kimi-code/${id}`;
-  writeFileSync(
-    join(home, "config.toml"),
-    [
-      `default_model = "${alias}"`,
-      ``,
-      `[providers."managed:kimi-code"]`,
-      `type = "kimi"`,
-      `api_key = ""`,
-      `base_url = "https://api.kimi.com/coding/v1"`,
-      ``,
-      `[providers."managed:kimi-code".oauth]`,
-      `storage = "file"`,
-      `key = "oauth/kimi-code"`,
-      ``,
-      `[models."${alias}"]`,
-      `provider = "managed:kimi-code"`,
-      `model = "${id}"`,
-      `max_context_size = 1048576`,
-      ``,
-    ].join("\n"),
-    "utf-8",
-  );
+  writeKimiScratchConfig(home, model);
 }
