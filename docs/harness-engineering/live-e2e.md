@@ -12,6 +12,8 @@ The `codex-exec` adapter requires `AMADEUS_CODEX_EXEC_LIVE=1`, Codex CLI 0.139.0
 
 The `kimi-print` adapter requires `AMADEUS_KIMI_PRINT_LIVE=1`, Kimi Code 0.28.1 or newer, and `dist/kimi`. Kimi keeps its OAuth material under the user's own `KIMI_CODE_HOME`, reachable through no environment variable, so no environment credential lease exists for it either. The scratch home binds the source `credentials` and `oauth` entries by reference on the Kiro pattern: no credential byte is copied into scratch, the adapter never writes to the source home, and removing the scratch tree removes the binding. The scratch `config.toml`, sessions, and logs are created scratch-local and die with it. Source `HOME`, `KIMI_CODE_HOME`, `AMADEUS_KIMI_SOURCE_HOME`, and an ambient `KIMI_API_KEY` are never forwarded to the child.
 
+The `kiro-acp` adapter requires `AMADEUS_KIRO_ACP_LIVE=1`, Kiro CLI 2.6.0 or newer, and `dist/kiro`. It drives Kiro's programmatic surface — `kiro-cli acp`, newline-delimited JSON-RPC 2.0 over stdio, no TTY — and shares the TUI adapter's authentication seam: the scratch home binds the source auth database by reference, so no credential byte is copied into scratch and the source home is never written to. Request identity is enforced on the wire: a reply carrying an id the client never issued, a second terminal reply for one id, and a frame that is neither a reply nor a known notification are recorded as protocol violations and fail the run rather than being ignored into a pass. Source `HOME`, `XDG_DATA_HOME`, `KIRO_HOME`, and ambient AWS credentials are never forwarded.
+
 The `kiro-tui` adapter requires `AMADEUS_KIRO_TUI_LIVE=1`, tmux, Kiro CLI 2.6.0 or newer, and `dist/kiro`. Kiro keeps its authentication in an on-disk database under the user's home and re-executes its chat runtime from a per-home path, so no environment credential lease exists for it. The scratch home instead binds those two source entries by reference: the credential bytes never leave the user's home, nothing is copied into scratch, and the adapter never writes to, edits, or deletes anything under the source home. Removing the scratch tree removes the entire binding. Source `HOME`, `XDG_DATA_HOME`, `KIRO_HOME`, and ambient AWS credentials are never forwarded to the child.
 
 Cleanup is a barrier, not another recorded outcome. A cleanup error, leak finding, or retained resource returns `cleanup-barrier-failed` and suppresses ledger append even when execution/assertion succeeded. Only the sequence `executed/asserted → cleanup-barrier-closed → ledger-appended|already-present → closure-committed` can release a PASS receipt or a supported matrix projection.
@@ -72,6 +74,15 @@ AMADEUS_KIMI_PRINT_LIVE=1 \
 
 The runner copies `dist/kimi` into a fresh Git project, sets a fresh `HOME`, `KIMI_CODE_HOME`, and `TMPDIR`, binds the source OAuth entries into the scratch home, seeds a scratch-local `config.toml` carrying the managed provider but no credential material, and runs one `kimi -p` session. `kimi -p` emits prose rather than a structured envelope, so the deterministic half of the PASS product is a file the model had to write into the scratch project — the model's own wording is never asserted. Each stream is captured to 4,096 bytes before sanitisation while the receipt digest still covers the full stream. The journey budget is 600,000 ms and the enclosing Bun timeout is 660,000 ms, deliberately not the same number. Authentication is probed by presence only; run `kimi login` first, and expect the journey to spend real Kimi credits on one short turn.
 
+Run the serial Kiro ACP journey only from a clean local worktree:
+
+```bash
+AMADEUS_KIRO_ACP_LIVE=1 \
+  bun test --timeout 360000 tests/e2e/t-kiro-acp-kernel.serial.test.ts
+```
+
+The runner copies `dist/kiro` into a fresh Git project, sets a fresh `HOME` and `TMPDIR`, binds the source auth database into the scratch home, and starts `kiro-cli acp --agent kiro_default --trust-all-tools` over stdio. The built-in agent is pinned deliberately: this journey measures the ACP transport, not the shipped conductor, whose own workflow journeys live in `tests/e2e/t-acp-kiro-*`. It runs one turn, answers the `session/request_permission` channel if the agent opens it, and judges the turn on completion plus an allow-listed tool call plus the file that tool had to write — never on the agent's prose. Tool output is bounded to 4,096 bytes and only counts and digests are retained. Cleanup kills the process and waits for its exit; a cancel acknowledgement is never accepted as proof of closure, and a process that will not exit fails the cleanup barrier so no receipt is written. Authentication is probed by presence only; run `kiro-cli login` first, and expect the journey to spend real Kiro credits on one short turn.
+
 ## Ledger and matrix
 
 Recorded runs append atomically to `tests/harness/live-e2e/runs.jsonl`. A recorded receipt contains adapter/version/SHA/time/result and bounded digests, never raw credentials, absolute source paths, prompts, or full output. A pending durability marker is not green evidence; recover the identical receipt before projecting it.
@@ -94,6 +105,7 @@ The live test updates only the ledger. Maintainers explicitly run `update`, revi
 | claude-tui | claude | tui | `AMADEUS_TUI_LIVE` | hard deny | fresh project/home; project settings only; run-private tmux socket and session | file, state | UNVERIFIED | 2.1.220 / 2.1.220 | — |
 | codex-exec | codex | exec | `AMADEUS_CODEX_EXEC_LIVE` | hard deny | fresh project/home; env credential lease; no source config or hooks | exit, schema, file | UNVERIFIED | 0.139.0 / 0.146.0 | — |
 | kimi-print | kimi | print | `AMADEUS_KIMI_PRINT_LIVE` | hard deny | fresh project/home; source OAuth entries bound by reference, never copied; scratch-local config, sessions and logs | exit, file | UNVERIFIED | 0.28.1 / 0.37.2 | — |
+| kiro-acp | kiro | acp | `AMADEUS_KIRO_ACP_LIVE` | hard deny | fresh project/home; source auth bound by reference, never copied; stdio JSON-RPC with no TTY | tool, file | UNVERIFIED | 2.6.0 / 2.19.0 | — |
 | kiro-tui | kiro | tui | `AMADEUS_KIRO_TUI_LIVE` | hard deny | fresh project/home; source auth bound by reference, never copied; run-private tmux socket and session | file, state | UNVERIFIED | 2.6.0 / 2.13.0 | — |
 <!-- AMADEUS_LIVE_E2E_MATRIX:END -->
 

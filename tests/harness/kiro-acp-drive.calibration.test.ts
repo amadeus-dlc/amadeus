@@ -23,25 +23,35 @@
 
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
 import { driveKiroAcp } from "./kiro-acp-drive.ts";
+import { kiroAcpLiveRequirementsSkipReason } from "./kiro-acp-live.ts";
 import { cleanupTuiProject, KIRO_SRC, setupTuiProject } from "./tui-fixtures.ts";
 
 const TIMEOUT_S = Number.parseInt(process.env.AMADEUS_TEST_TIMEOUT ?? "1200", 10);
 const TEST_TIMEOUT_MS = (Number.isFinite(TIMEOUT_S) ? TIMEOUT_S : 1200) * 1000;
 const DRIVE_TIMEOUT_MS = Math.max(60_000, TEST_TIMEOUT_MS - 15_000);
 
+/**
+ * The gate is the COMMON kernel policy since #1717 Phase 2: `GITHUB_ACTIONS`
+ * is a hard deny that outranks the opt-in, the opt-in is the kernel's exact
+ * `=== "1"` comparison on the registry's declared key, and the prerequisite
+ * probes come back in the kernel's own precedence order. This file used to own
+ * a fourth copy of that decision with no CI arm at all.
+ *
+ * `kiro-cli whoami` stays as a calibration-only extra: the shared probe checks
+ * the auth database by presence (it never opens it), and a calibration that is
+ * about to spend credits is worth failing early on a stale login.
+ */
 function skipReason(): string | null {
-  if (process.env.AMADEUS_KIRO_ACP_LIVE !== "1") {
-    return "set AMADEUS_KIRO_ACP_LIVE=1 to run the ACP calibrations (uses Kiro credits)";
-  }
-  if (spawnSync("kiro-cli", ["--version"], { encoding: "utf-8" }).status !== 0) {
-    return "kiro-cli not found";
-  }
+  const shared = kiroAcpLiveRequirementsSkipReason({
+    env: process.env,
+    kiroBin: process.env.AMADEUS_KIRO_BIN ?? "kiro-cli",
+    distributionDir: KIRO_SRC,
+  });
+  if (shared !== null) return shared;
   if (spawnSync("kiro-cli", ["whoami"], { encoding: "utf-8" }).status !== 0) {
     return "kiro-cli not authenticated (run `kiro-cli login`)";
   }
-  if (!existsSync(KIRO_SRC)) return `distributable missing: ${KIRO_SRC}`;
   return null;
 }
 const SKIP_REASON = skipReason();
