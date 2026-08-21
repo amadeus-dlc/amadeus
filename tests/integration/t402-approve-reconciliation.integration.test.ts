@@ -50,6 +50,10 @@ const NFR_DESIGN_PRODUCES = [
   "reliability-design",
   "logical-components",
 ];
+const REVIEW_BLOCK =
+  "\n## Review — Iteration 1\n\n- **Verdict:** READY\n" +
+  "- **Reviewer:** amadeus-architecture-reviewer-agent\n- **Date:** 2026-08-10T00:00:00Z\n" +
+  "- **Iteration:** 1\n- **Scope decision:** none\n";
 
 const tempDirs: string[] = [];
 afterEach(() => {
@@ -140,7 +144,10 @@ function seedDag(proj: string, batches: string[][]): void {
 function coverUnit(proj: string, unit: string): void {
   const dir = join(seededRecordDir(proj), "construction", unit, "code-generation");
   mkdirSync(dir, { recursive: true });
-  for (const name of CG_PRODUCES) writeFileSync(join(dir, `${name}.md`), `# ${name}\n`);
+  for (const name of CG_PRODUCES) {
+    const review = name === CG_PRODUCES[0] ? REVIEW_BLOCK : "";
+    writeFileSync(join(dir, `${name}.md`), `# ${name}\n${review}`);
+  }
 }
 
 /**
@@ -328,7 +335,8 @@ describe("t402 approve-time reconciliation (FR-2)", () => {
       const dir = join(seededRecordDir(proj), "construction", unit, "nfr-design");
       mkdirSync(dir, { recursive: true });
       for (const name of NFR_DESIGN_PRODUCES) {
-        writeFileSync(join(dir, `${name}.md`), `# ${name}\n`);
+        const review = name === NFR_DESIGN_PRODUCES[0] ? REVIEW_BLOCK : "";
+        writeFileSync(join(dir, `${name}.md`), `# ${name}\n${review}`);
       }
     }
     const directive = runReport(proj, ["--stage", "nfr-design", "--result", "approved"]);
