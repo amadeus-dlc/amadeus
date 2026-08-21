@@ -96,7 +96,7 @@ stage incomplete, stop for human direction, and do not run completion
 verification, learnings, approval, or report a stage result. A validated
 `NOT-READY` verdict at the iteration limit leaves the stage incomplete: present
 unresolved `BLOCKER` findings, stop for human direction, and do not run
-completion verification, learnings, approval, or report a stage result.
+completion verification, learnings, approval, or report a stage result. That limit is not the last word under an active quality-repair grant (`directive.quality_repair === "active"`): an `observe-quality` `repair` / `replanned` ruling orders the same closed checks re-run and its receipt funds exactly one further review iteration, recorded by adding `repair: { evidenceFingerprint }` — the fingerprint that result returned — to the `complete-review` carrier. Halt as above when no such ruling exists or its receipt is already spent.
 
 Run the engine binary directly via the shell. If a directive looks malformed or
 names a move you cannot make, surface it to the user — never improvise the
