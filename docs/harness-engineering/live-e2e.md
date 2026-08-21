@@ -104,8 +104,8 @@ The live test updates only the ledger. Maintainers explicitly run `update`, revi
 | claude-sdk | claude | agent-sdk | `AMADEUS_CLAUDE_SDK_LIVE` | hard deny | SDK-owned worker group; one-shot credential pipe; project settings only | schema, tool, state, audit | UNVERIFIED | 0.3.158 / 0.3.158 | — |
 | claude-tui | claude | tui | `AMADEUS_TUI_LIVE` | hard deny | fresh project/home; project settings only; run-private tmux socket and session | file, state | UNVERIFIED | 2.1.220 / 2.1.220 | — |
 | codex-exec | codex | exec | `AMADEUS_CODEX_EXEC_LIVE` | hard deny | fresh project/home; env credential lease; no source config or hooks | exit, schema, file | UNVERIFIED | 0.139.0 / 0.146.0 | — |
-| kimi-print | kimi | print | `AMADEUS_KIMI_PRINT_LIVE` | hard deny | fresh project/home; source OAuth entries bound by reference, never copied; scratch-local config, sessions and logs | exit, file | UNVERIFIED | 0.28.1 / 0.37.2 | — |
-| kiro-acp | kiro | acp | `AMADEUS_KIRO_ACP_LIVE` | hard deny | fresh project/home; source auth bound by reference, never copied; stdio JSON-RPC with no TTY | tool, file | UNVERIFIED | 2.6.0 / 2.19.0 | — |
+| kimi-print | kimi | print | `AMADEUS_KIMI_PRINT_LIVE` | hard deny | fresh project/home; source OAuth entries bound by reference, never copied; scratch-local config, sessions and logs | exit, file | SUPPORTED | 0.28.1 / 0.37.2 | 6a0c3b9940163f1f2ab9e44bbd7f10970097befa @ 2026-08-21T03:40:35.011Z |
+| kiro-acp | kiro | acp | `AMADEUS_KIRO_ACP_LIVE` | hard deny | fresh project/home; source auth bound by reference, never copied; stdio JSON-RPC with no TTY | tool, file | SUPPORTED | 2.6.0 / 2.19.0 | 6a0c3b9940163f1f2ab9e44bbd7f10970097befa @ 2026-08-21T03:47:53.421Z |
 | kiro-tui | kiro | tui | `AMADEUS_KIRO_TUI_LIVE` | hard deny | fresh project/home; source auth bound by reference, never copied; run-private tmux socket and session | file, state | UNVERIFIED | 2.6.0 / 2.13.0 | — |
 <!-- AMADEUS_LIVE_E2E_MATRIX:END -->
 
