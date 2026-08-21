@@ -20,9 +20,9 @@
     "render-surface": "tui"
   },
   "counts": {
-    "total": 642,
+    "total": 755,
     "enumeratedByClass": {
-      "function": 362,
+      "function": 475,
       "audit": 98,
       "scope": 15,
       "stage": 32,
@@ -31,14 +31,15 @@
       "render-surface": 7
     },
     "coveredByClass": {
-      "function": 193,
+      "function": 196,
       "audit": 49,
       "scope": 15,
       "stage": 8,
       "hook": 15,
       "subcommand": 88,
       "render-surface": 7
-    }
+    },
+    "unjoinedClaims": 367
   },
   "units": [
     {
@@ -1196,6 +1197,13 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:allEngineDirNames",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:anyIntentRecordExists",
       "minMechanism": "none",
       "coveredBy": [],
@@ -1226,6 +1234,20 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:Applier.create",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:applyMerge",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "function",
@@ -1288,6 +1310,13 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:ASSET_INTRO_VERSION",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "function",
@@ -1535,6 +1564,27 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:checkTomlSyntax",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:classify",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:classifyAction",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:classifyHelpIntent",
       "minMechanism": "none",
       "coveredBy": [
@@ -1749,6 +1799,132 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:createApplyWrite",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:createDefaultPorts",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:createExtractedPayload",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:createFetcher",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:createFetchError",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:createFsRead",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:createFsWrite",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:createHttp",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:createManifest",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:createManifestFiles",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:createManifestIo",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:createResolvedVersion",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:createResolver",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:createSemVer",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:createTmpWrite",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:createTtyIO",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:createVerifyRead",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:createVersionSpec",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:CURRENT_SESSION_FILE",
       "minMechanism": "none",
       "coveredBy": [],
@@ -1768,6 +1944,18 @@
       "coveredBy": [
         {
           "file": "tests/unit/t480-degrade-unit-declaration.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:decideOnboardingDestination",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/setup-onboarding-ladder.test.ts",
           "mechanism": "none"
         }
       ],
@@ -1989,6 +2177,13 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:engineDirNameFor",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:ensureStageDiary",
       "minMechanism": "none",
       "coveredBy": [
@@ -2089,6 +2284,20 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:EXTRACT_RELATIVE_DIR",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:ExtractedPayload.locate",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:extractMarkdownSection",
       "minMechanism": "none",
       "coveredBy": [
@@ -2102,6 +2311,48 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:extractTarGz",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:FetchError.assetMissing",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:FetchError.checksumMismatch",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:FetchError.checksumUnavailable",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:FetchError.classify",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:FetchError.payloadInvalid",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "function",
@@ -2320,6 +2571,20 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:HarnessName.all",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:HarnessName.parse",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:hasActiveWorkflowAudit",
       "minMechanism": "none",
       "coveredBy": [
@@ -2445,6 +2710,20 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:Installation.detect",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:InstallInputs.fromFlags",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:INTENT_STATUSES",
       "minMechanism": "none",
       "coveredBy": [],
@@ -2531,6 +2810,13 @@
     {
       "unitClass": "function",
       "unitId": "function:IntentStatusParseError",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:IoError.of",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -2703,6 +2989,13 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:kimiConfigPath",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:knowledgeDir",
       "minMechanism": "none",
       "coveredBy": [
@@ -2723,6 +3016,13 @@
     {
       "unitClass": "function",
       "unitId": "function:legacyAuditShards",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:LegacyLayout.isUnsupported",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -2917,6 +3217,83 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:MANAGED_BLOCK_BEGIN",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:MANAGED_BLOCK_END",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:Manifest.build",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:Manifest.parse",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:ManifestError.duplicatePath",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:ManifestError.io",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:ManifestError.malformed",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:ManifestError.schemaUnsupported",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:ManifestError.unknownHarness",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:ManifestFiles.fromEntries",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:manifestPathFor",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:memoryDirFor",
       "minMechanism": "none",
       "coveredBy": [],
@@ -2979,6 +3356,13 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:MergeContentError.of",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "function",
@@ -3103,6 +3487,13 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:NextSteps.of",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:nonInteractiveMarker",
       "minMechanism": "none",
       "coveredBy": [
@@ -3158,10 +3549,41 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:noticeFor",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/setup-onboarding-ladder.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:numericStageOrder",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:ONBOARDING_DOC_BASENAMES",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:onboardingAlternateFor",
+      "minMechanism": "none",
+      "coveredBy": [
+        {
+          "file": "tests/unit/setup-onboarding-ladder.test.ts",
+          "mechanism": "none"
+        }
+      ],
+      "status": "covered"
     },
     {
       "unitClass": "function",
@@ -3230,6 +3652,13 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:ParsedCommand.parse",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "function",
@@ -3447,6 +3876,20 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:Plan.forInstall",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:Plan.forUpgrade",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:planFilePath",
       "minMechanism": "none",
       "coveredBy": [],
@@ -3475,6 +3918,27 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:planMerge",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:PlanRefusal.alreadyInstalled",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:PlanRefusal.harnessNotInPayload",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "function",
@@ -3849,7 +4313,56 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:removeManagedBlock",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:removeSlug",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:renderAlreadyInstalled",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:renderApplyFailure",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:renderCorruptManifestForced",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:renderError",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:renderHelp",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:renderHooksError",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -3868,7 +4381,63 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:renderManagedBlock",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:renderOnboardingWiring",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:renderPlanReport",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:renderSnippetUnreadable",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:renderStageProgressSection",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:renderSuccess",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:renderTmpDirFailure",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:renderVerifyFailure",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:renderWizardAborted",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -3970,6 +4539,34 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:ResolvedVersion.fromRelease",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:ResolvedVersion.fromTag",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:ResolveError.noStableVersion",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:ResolveError.notFound",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:resolveGateResolutionPresence",
       "minMechanism": "none",
       "coveredBy": [
@@ -3991,6 +4588,13 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:resolveKimiHome",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "function",
@@ -4107,6 +4711,13 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:resolveUnderRootPath",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:resolveUniqueIntentDir",
       "minMechanism": "none",
       "coveredBy": [],
@@ -4115,6 +4726,20 @@
     {
       "unitClass": "function",
       "unitId": "function:resolveWorktreeBaseDir",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:Result.err",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:Result.ok",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -4177,6 +4802,20 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:runHooksMerge",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:runHooksRemoval",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:runIntentLifecycleTransactionLocked",
       "minMechanism": "none",
       "coveredBy": [],
@@ -4185,6 +4824,13 @@
     {
       "unitClass": "function",
       "unitId": "function:runtimeGraphPath",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:runWizard",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -4226,6 +4872,20 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:SemVer.latestStableOf",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:SemVer.parse",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "function",
@@ -4338,6 +4998,13 @@
         }
       ],
       "status": "covered"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:SetupTransactionCoordinator.create",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
     },
     {
       "unitClass": "function",
@@ -4621,6 +5288,20 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:Timestamps.of",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:toPlanAction",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:toPosix",
       "minMechanism": "none",
       "coveredBy": [],
@@ -4676,6 +5357,90 @@
     {
       "unitClass": "function",
       "unitId": "function:unitDependencyPath",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:UpgradeAssessment.of",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:UpgradeRefusal.fromOutcome",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:UpgradeRefusal.noInstallation",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:UpgradeRefusal.partialRefused",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:UpgradeRefusal.unsupportedLayout",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:UpgradeSource.fromInstallation",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:UsageError.invalidHarness",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:UsageError.invalidVersion",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:UsageError.missingRequired",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:UsageError.multipleHarnesses",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:UsageError.unknownFlag",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:UsageError.unknownSubcommand",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -4779,6 +5544,13 @@
     },
     {
       "unitClass": "function",
+      "unitId": "function:Verifier.create",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
       "unitId": "function:verifyBatchApprovalPresence",
       "minMechanism": "none",
       "coveredBy": [
@@ -4796,6 +5568,41 @@
     {
       "unitClass": "function",
       "unitId": "function:verifyDelegatedProvenance",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:VerifyResult.of",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:verifySha256",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:VersionError.invalidFormat",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:VersionSpec.exact",
+      "minMechanism": "none",
+      "coveredBy": [],
+      "status": "UNCOVERED"
+    },
+    {
+      "unitClass": "function",
+      "unitId": "function:VersionSpec.latest",
       "minMechanism": "none",
       "coveredBy": [],
       "status": "UNCOVERED"
@@ -7961,6 +8768,1476 @@
         }
       ],
       "status": "covered"
+    }
+  ],
+  "unjoinedClaims": [
+    {
+      "claimId": "audit:ERROR_LOGGED.",
+      "file": "tests/integration/t137.test.ts"
+    },
+    {
+      "claimId": "audit:fork-merge-seams",
+      "file": "tests/unit/t351-audit-record-seams.test.ts"
+    },
+    {
+      "claimId": "audit:formatAuditRecord",
+      "file": "tests/unit/t351-audit-record-seams.test.ts"
+    },
+    {
+      "claimId": "function:_trustedPluginStageFileForTests",
+      "file": "tests/integration/t-plugin-runtime-trust.integration.test.ts"
+    },
+    {
+      "claimId": "function:amadeus-orchestrate:completionRefusalDirective",
+      "file": "tests/unit/t451-completion-refusal-directive.test.ts"
+    },
+    {
+      "claimId": "function:amadeus-orchestrate:refuseBlockedNextEnvironment",
+      "file": "tests/integration/t513-codex-hooks-active-guard.integration.test.ts"
+    },
+    {
+      "claimId": "function:amadeus-orchestrate:refuseInactiveCodexHooks",
+      "file": "tests/e2e/t-exec-codex-hooks-missing.serial.test.ts"
+    },
+    {
+      "claimId": "function:amadeus-orchestrate:refuseInactiveCodexHooks",
+      "file": "tests/integration/t513-codex-hooks-active-guard.integration.test.ts"
+    },
+    {
+      "claimId": "function:ancestorDirsOf",
+      "file": "tests/unit/t209-worktree-read-anchor.test.ts"
+    },
+    {
+      "claimId": "function:appendAuditEntry",
+      "file": "tests/integration/t33-hook-concurrency.test.ts"
+    },
+    {
+      "claimId": "function:appendAuditEntry",
+      "file": "tests/smoke/t86-stage-protocol-section-13.test.ts"
+    },
+    {
+      "claimId": "function:appendAuditEntry",
+      "file": "tests/unit/t07-hook-audit-logger.serial.test.ts"
+    },
+    {
+      "claimId": "function:appendAuditEntry",
+      "file": "tests/unit/t10-hook-session-start.test.ts"
+    },
+    {
+      "claimId": "function:appendAuditEntry",
+      "file": "tests/unit/t30-hook-session-end.test.ts"
+    },
+    {
+      "claimId": "function:appendAuditEntryViaEvents",
+      "file": "tests/integration/t378-hook-canonical-emit.test.ts"
+    },
+    {
+      "claimId": "function:appendAuditEntryViaEvents",
+      "file": "tests/integration/t381-registry-emitter-parity.test.ts"
+    },
+    {
+      "claimId": "function:appendJournalRecordV2",
+      "file": "tests/integration/t370-canonical-lock-target.integration.test.ts"
+    },
+    {
+      "claimId": "function:appendPending",
+      "file": "tests/integration/t3046-election-append-voter-race.integration.test.ts"
+    },
+    {
+      "claimId": "function:appendTelemetryEvent",
+      "file": "tests/integration/t357-observability-seam.test.ts"
+    },
+    {
+      "claimId": "function:applyReboundBundle",
+      "file": "tests/integration/t427-no-silent-drop-evidence-rebind.integration.test.ts"
+    },
+    {
+      "claimId": "function:applySessionTakeover",
+      "file": "tests/integration/t464-session-takeover-seam.integration.test.ts"
+    },
+    {
+      "claimId": "function:archivedNextGuard",
+      "file": "tests/integration/t259-guard-integration.test.ts"
+    },
+    {
+      "claimId": "function:assertHumanPresentForGateResolution",
+      "file": "tests/unit/t188-human-presence-gate.test.ts"
+    },
+    {
+      "claimId": "function:authorizeGoalCompletion",
+      "file": "tests/e2e/t427-goal-reconciliation-harness-parity.test.ts"
+    },
+    {
+      "claimId": "function:authorizeGoalCompletion",
+      "file": "tests/integration/t427-goal-reconciliation-completion.integration.test.ts"
+    },
+    {
+      "claimId": "function:authorizeGoalCompletion",
+      "file": "tests/integration/t427-goal-reconciliation.test.ts"
+    },
+    {
+      "claimId": "function:authorizeMainConductor",
+      "file": "tests/integration/t460-caller-denial-reason.integration.test.ts"
+    },
+    {
+      "claimId": "function:authorizeMainConductor",
+      "file": "tests/integration/t461-kimi-session-start-recovery.integration.test.ts"
+    },
+    {
+      "claimId": "function:authorizeMainConductor",
+      "file": "tests/integration/t462-session-takeover.integration.test.ts"
+    },
+    {
+      "claimId": "function:birthPrintDirective",
+      "file": "tests/integration/t171-birth-gate-registry.test.ts"
+    },
+    {
+      "claimId": "function:bookDelivery",
+      "file": "tests/unit/t551-election-record-transport-v2.test.ts"
+    },
+    {
+      "claimId": "function:buildAutoDecisionSummary",
+      "file": "tests/integration/t3121-completion-report.integration.test.ts"
+    },
+    {
+      "claimId": "function:buildCensus",
+      "file": "tests/unit/t367-callsite-guard.test.ts"
+    },
+    {
+      "claimId": "function:buildCensus",
+      "file": "tests/unit/t420-unchecked-cast-guard.test.ts"
+    },
+    {
+      "claimId": "function:buildDistributionView",
+      "file": "tests/unit/t551-election-record-transport-v2.test.ts"
+    },
+    {
+      "claimId": "function:buildDistributionView",
+      "file": "tests/unit/t552-election-record-transport.pbt.test.ts"
+    },
+    {
+      "claimId": "function:buildIntentSelectionSnapshot",
+      "file": "tests/integration/t171-birth-gate-registry.test.ts"
+    },
+    {
+      "claimId": "function:buildIntentSelectionSnapshot",
+      "file": "tests/unit/t171-intent-selection.test.ts"
+    },
+    {
+      "claimId": "function:buildReboundBundle",
+      "file": "tests/integration/t427-no-silent-drop-evidence-rebind.integration.test.ts"
+    },
+    {
+      "claimId": "function:buildSelfInstallProjection",
+      "file": "tests/integration/t416-self-install-plugin-projection.integration.test.ts"
+    },
+    {
+      "claimId": "function:callerAuthorizationError",
+      "file": "tests/integration/t460-caller-denial-reason.integration.test.ts"
+    },
+    {
+      "claimId": "function:callerAuthorizationError",
+      "file": "tests/unit/t463-session-takeover-plan.test.ts"
+    },
+    {
+      "claimId": "function:canEarlyTally",
+      "file": "tests/unit/t549-election-question-tally.test.ts"
+    },
+    {
+      "claimId": "function:canonicalizeDeliveryRecord",
+      "file": "tests/unit/t551-election-record-transport-v2.test.ts"
+    },
+    {
+      "claimId": "function:checkCallsitesZero",
+      "file": "tests/unit/t371-deletion-gate.test.ts"
+    },
+    {
+      "claimId": "function:checkDistributionGuards",
+      "file": "tests/unit/t371-deletion-gate.test.ts"
+    },
+    {
+      "claimId": "function:checkMigrationEquivalence",
+      "file": "tests/unit/t371-deletion-gate.test.ts"
+    },
+    {
+      "claimId": "function:checkMixedJournal",
+      "file": "tests/unit/t371-deletion-gate.test.ts"
+    },
+    {
+      "claimId": "function:checkRegistryComplete",
+      "file": "tests/unit/t371-deletion-gate.test.ts"
+    },
+    {
+      "claimId": "function:checkRelayProof",
+      "file": "tests/unit/t371-deletion-gate.test.ts"
+    },
+    {
+      "claimId": "function:classifyAgentType",
+      "file": "tests/unit/t451-subagent-type-classify.test.ts"
+    },
+    {
+      "claimId": "function:classifyApprovalAuthority",
+      "file": "tests/unit/t-solo-gate-transaction.test.ts"
+    },
+    {
+      "claimId": "function:classifyLateResponses",
+      "file": "tests/unit/t549-election-question-tally.test.ts"
+    },
+    {
+      "claimId": "function:cleanupWorktreeFixture",
+      "file": "tests/e2e/t01-helpers.test.ts"
+    },
+    {
+      "claimId": "function:cloneIdFromShardName",
+      "file": "tests/integration/t356-journal-convert.test.ts"
+    },
+    {
+      "claimId": "function:collectReviewBlocks",
+      "file": "tests/integration/t487-stage-stats.integration.test.ts"
+    },
+    {
+      "claimId": "function:commitTally",
+      "file": "tests/integration/t3183-election-store-unique-tmp.integration.test.ts"
+    },
+    {
+      "claimId": "function:compactionPendingFromAudit",
+      "file": "tests/unit/t365-journal-reader-swap.test.ts"
+    },
+    {
+      "claimId": "function:composeStageStats",
+      "file": "tests/unit/t486-stage-stats.test.ts"
+    },
+    {
+      "claimId": "function:composeStatsReport",
+      "file": "tests/unit/t460-subagent-stats-compose.test.ts"
+    },
+    {
+      "claimId": "function:composeSubagentLifetimes",
+      "file": "tests/unit/t-subagent-lifetime.test.ts"
+    },
+    {
+      "claimId": "function:computeBoltDagOutcome",
+      "file": "tests/integration/t399-bolt-dag-outcome.test.ts"
+    },
+    {
+      "claimId": "function:consumePresenceReservation",
+      "file": "tests/integration/t505-consume-presence-lock-bucket.integration.test.ts"
+    },
+    {
+      "claimId": "function:continuationReason",
+      "file": "tests/integration/t296-hook-launch-and-worktree-resolution.test.ts"
+    },
+    {
+      "claimId": "function:convertShardText",
+      "file": "tests/integration/t356-journal-convert.test.ts"
+    },
+    {
+      "claimId": "function:convertV1ToV2",
+      "file": "tests/integration/t364-journal-v2.pbt.test.ts"
+    },
+    {
+      "claimId": "function:copyPluginSource",
+      "file": "tests/integration/t2790-plugin-staging-seed-harness-dir.integration.test.ts"
+    },
+    {
+      "claimId": "function:createGithubIssueForFinding",
+      "file": "tests/unit/t366-amadeus-finding-coordinator.test.ts"
+    },
+    {
+      "claimId": "function:createMirrorStateStorePorts",
+      "file": "tests/integration/t383-targeted-canonical-emit.test.ts"
+    },
+    {
+      "claimId": "function:createOnly",
+      "file": "tests/integration/t3183-election-store-unique-tmp.integration.test.ts"
+    },
+    {
+      "claimId": "function:decideDispatchModel",
+      "file": "tests/unit/t484-subagent-dispatch-model-decide.test.ts"
+    },
+    {
+      "claimId": "function:declaredIntentAutonomyMode",
+      "file": "tests/integration/t3116-semi-answer-presence.integration.test.ts"
+    },
+    {
+      "claimId": "function:deriveLifecycle",
+      "file": "tests/unit/t549-election-question-tally.test.ts"
+    },
+    {
+      "claimId": "function:detectCallsites",
+      "file": "tests/unit/t367-callsite-guard.test.ts"
+    },
+    {
+      "claimId": "function:detectHarnessTypeForAuthorization",
+      "file": "tests/integration/t460-caller-denial-reason.integration.test.ts"
+    },
+    {
+      "claimId": "function:detectHarnessTypeForAuthorization",
+      "file": "tests/unit/t269-harness-provenance.test.ts"
+    },
+    {
+      "claimId": "function:detectTeamPrerequisites",
+      "file": "tests/unit/t265-team-prerequisites.test.ts"
+    },
+    {
+      "claimId": "function:detectUncheckedCasts",
+      "file": "tests/unit/t420-unchecked-cast-guard.test.ts"
+    },
+    {
+      "claimId": "function:diffAgainstAllowlist",
+      "file": "tests/unit/t367-callsite-guard.test.ts"
+    },
+    {
+      "claimId": "function:diffAgainstAllowlist",
+      "file": "tests/unit/t420-unchecked-cast-guard.test.ts"
+    },
+    {
+      "claimId": "function:discoverMigrationEquivalenceTests",
+      "file": "tests/integration/t371-deletion-gate-cli.test.ts"
+    },
+    {
+      "claimId": "function:emitAuditEvent",
+      "file": "tests/unit/t18.test.ts"
+    },
+    {
+      "claimId": "function:emitEvent",
+      "file": "tests/integration/t381-registry-emitter-parity.test.ts"
+    },
+    {
+      "claimId": "function:emitPerUnitRunStage",
+      "file": "tests/e2e/t-exec-codex-review-recovery.serial.test.ts"
+    },
+    {
+      "claimId": "function:emitPluginAdvisories",
+      "file": "tests/integration/t321-activation-engine-seams.integration.test.ts"
+    },
+    {
+      "claimId": "function:emitSingleRunStage",
+      "file": "tests/integration/t127-single-stage-invariant.test.ts"
+    },
+    {
+      "claimId": "function:emitSingleRunStage",
+      "file": "tests/integration/t128-custom-runner.test.ts"
+    },
+    {
+      "claimId": "function:emitSwarmAudit",
+      "file": "tests/integration/t379-swarm-canonical-emit.test.ts"
+    },
+    {
+      "claimId": "function:escapeAuditValue",
+      "file": "tests/unit/t204-audit-escape.pbt.test.ts"
+    },
+    {
+      "claimId": "function:evaluateBlockingSensorGuard",
+      "file": "tests/integration/t511-blocking-sensor-gate.integration.test.ts"
+    },
+    {
+      "claimId": "function:evaluateBlockingSensors",
+      "file": "tests/unit/t511-blocking-sensor-severity.test.ts"
+    },
+    {
+      "claimId": "function:evaluateGate",
+      "file": "tests/unit/t371-deletion-gate.test.ts"
+    },
+    {
+      "claimId": "function:evaluateLifecycleGuards",
+      "file": "tests/unit/t2771-lifecycle-guard-runtime.test.ts"
+    },
+    {
+      "claimId": "function:evidenceDigestForEntry",
+      "file": "tests/integration/t427-no-silent-drop-evidence-rebind.integration.test.ts"
+    },
+    {
+      "claimId": "function:exceedsDiscoveryOverhead",
+      "file": "tests/unit/plugin-discovery-overhead-gate.test.ts"
+    },
+    {
+      "claimId": "function:exceedsMedianLatencyBudget",
+      "file": "tests/unit/latency-median-budget-gate.test.ts"
+    },
+    {
+      "claimId": "function:extractProjectDirArg",
+      "file": "tests/unit/t-jump-parseflags-seam.test.ts"
+    },
+    {
+      "claimId": "function:findForkAnchor",
+      "file": "tests/unit/t365-journal-reader-swap.test.ts"
+    },
+    {
+      "claimId": "function:forkLineageCloneId",
+      "file": "tests/unit/t352-journal-codec.pbt.test.ts"
+    },
+    {
+      "claimId": "function:formatGuardRefusal",
+      "file": "tests/integration/t2771-lifecycle-guard-regression.integration.test.ts"
+    },
+    {
+      "claimId": "function:formatGuardRefusal",
+      "file": "tests/unit/t2771-lifecycle-guard-runtime.test.ts"
+    },
+    {
+      "claimId": "function:formatIntentAutonomyUpdateFailure",
+      "file": "tests/unit/t3170-queued-turn-provenance.test.ts"
+    },
+    {
+      "claimId": "function:gitHasSourceWork",
+      "file": "tests/unit/t206-source-work-intent-span.test.ts"
+    },
+    {
+      "claimId": "function:gitOrThrow",
+      "file": "tests/integration/t493-git-commit-diagnostics.integration.test.ts"
+    },
+    {
+      "claimId": "function:guardReceipt",
+      "file": "tests/unit/t2771-lifecycle-guard-runtime.test.ts"
+    },
+    {
+      "claimId": "function:handleAdvance",
+      "file": "tests/integration/t185-stage-artifact-guard.test.ts"
+    },
+    {
+      "claimId": "function:handleAdvance",
+      "file": "tests/integration/t48-audit-event-emitters.test.ts"
+    },
+    {
+      "claimId": "function:handleAdvance",
+      "file": "tests/integration/t511-blocking-sensor-gate.integration.test.ts"
+    },
+    {
+      "claimId": "function:handleAdvance",
+      "file": "tests/unit/t-phase-check-gate-seam.test.ts"
+    },
+    {
+      "claimId": "function:handleAnswer",
+      "file": "tests/integration/t3116-semi-answer-presence.integration.test.ts"
+    },
+    {
+      "claimId": "function:handleAnswer",
+      "file": "tests/unit/t188-human-presence-gate.test.ts"
+    },
+    {
+      "claimId": "function:handleAppend",
+      "file": "tests/unit/t111.test.ts"
+    },
+    {
+      "claimId": "function:handleAppend",
+      "file": "tests/unit/t18.test.ts"
+    },
+    {
+      "claimId": "function:handleAppendRaw",
+      "file": "tests/unit/t205-audit-escape-seams.test.ts"
+    },
+    {
+      "claimId": "function:handleApprove",
+      "file": "tests/integration/t-solo-gate-transaction-carrier.test.ts"
+    },
+    {
+      "claimId": "function:handleApprove",
+      "file": "tests/integration/t-solo-gate-transaction-prefix.test.ts"
+    },
+    {
+      "claimId": "function:handleApprove",
+      "file": "tests/integration/t185-stage-artifact-guard.test.ts"
+    },
+    {
+      "claimId": "function:handleApprove",
+      "file": "tests/integration/t45-revision-loop.test.ts"
+    },
+    {
+      "claimId": "function:handleApprove",
+      "file": "tests/integration/t48-audit-event-emitters.test.ts"
+    },
+    {
+      "claimId": "function:handleApprove",
+      "file": "tests/integration/t511-blocking-sensor-gate.integration.test.ts"
+    },
+    {
+      "claimId": "function:handleApprove",
+      "file": "tests/unit/t-phase-check-gate-seam.test.ts"
+    },
+    {
+      "claimId": "function:handleApprove",
+      "file": "tests/unit/t188-human-presence-gate.test.ts"
+    },
+    {
+      "claimId": "function:handleApproveBatch",
+      "file": "tests/integration/t3243-approve-batch-ambient-projectdir-isolation.integration.test.ts"
+    },
+    {
+      "claimId": "function:handleCompleteWorkflow",
+      "file": "tests/integration/t185-stage-artifact-guard.test.ts"
+    },
+    {
+      "claimId": "function:handleCompleteWorkflow",
+      "file": "tests/integration/t48-audit-event-emitters.test.ts"
+    },
+    {
+      "claimId": "function:handleCompleteWorkflow",
+      "file": "tests/integration/t511-blocking-sensor-gate.integration.test.ts"
+    },
+    {
+      "claimId": "function:handleCompleteWorkflow",
+      "file": "tests/unit/t-phase-check-gate-seam.test.ts"
+    },
+    {
+      "claimId": "function:handleConvert",
+      "file": "tests/integration/t356-journal-convert.test.ts"
+    },
+    {
+      "claimId": "function:handleDeclareDocsOnly",
+      "file": "tests/integration/t215-docs-only-exemption.test.ts"
+    },
+    {
+      "claimId": "function:handleDeclareDocsOnly",
+      "file": "tests/unit/t-docs-only-exemption-seam.test.ts"
+    },
+    {
+      "claimId": "function:handleDeclareUnitsDone",
+      "file": "tests/integration/t480-declare-units-done.integration.test.ts"
+    },
+    {
+      "claimId": "function:handleFailureRuling",
+      "file": "tests/integration/t544-ambient-projectdir-refusal.integration.test.ts"
+    },
+    {
+      "claimId": "function:handleFinalize",
+      "file": "tests/integration/t185-stage-artifact-guard.test.ts"
+    },
+    {
+      "claimId": "function:handleFinalize",
+      "file": "tests/integration/t511-blocking-sensor-gate.integration.test.ts"
+    },
+    {
+      "claimId": "function:handleFinalize",
+      "file": "tests/unit/t-phase-check-gate-seam.test.ts"
+    },
+    {
+      "claimId": "function:handleGateStart",
+      "file": "tests/integration/t45-revision-loop.test.ts"
+    },
+    {
+      "claimId": "function:handleGateStart",
+      "file": "tests/integration/t48-audit-event-emitters.test.ts"
+    },
+    {
+      "claimId": "function:handleGateStart",
+      "file": "tests/unit/t188-human-presence-gate.test.ts"
+    },
+    {
+      "claimId": "function:handleIntentBirth",
+      "file": "tests/integration/t2771-lifecycle-guard-census.integration.test.ts"
+    },
+    {
+      "claimId": "function:handleIntentBirth",
+      "file": "tests/integration/t2771-lifecycle-guard-regression.integration.test.ts"
+    },
+    {
+      "claimId": "function:handleIntentBirth",
+      "file": "tests/integration/t48-audit-event-emitters.test.ts"
+    },
+    {
+      "claimId": "function:handleNext",
+      "file": "tests/integration/t246-routing-and-autonomy-guards.test.ts"
+    },
+    {
+      "claimId": "function:handleNext",
+      "file": "tests/integration/t513-codex-hooks-active-guard.integration.test.ts"
+    },
+    {
+      "claimId": "function:handleNext",
+      "file": "tests/integration/t544-ambient-projectdir-refusal.integration.test.ts"
+    },
+    {
+      "claimId": "function:handlePersist",
+      "file": "tests/integration/t380-locked-canonical-emit.test.ts"
+    },
+    {
+      "claimId": "function:handlePracticesEvent",
+      "file": "tests/integration/t-practices-event-parseflags-seam.test.ts"
+    },
+    {
+      "claimId": "function:handlePracticesPromote",
+      "file": "tests/integration/t-practices-promote-contract.test.ts"
+    },
+    {
+      "claimId": "function:handlePracticesPromote",
+      "file": "tests/integration/t408-practices-promote-latch-gate.test.ts"
+    },
+    {
+      "claimId": "function:handleReject",
+      "file": "tests/integration/t45-revision-loop.test.ts"
+    },
+    {
+      "claimId": "function:handleReject",
+      "file": "tests/integration/t48-audit-event-emitters.test.ts"
+    },
+    {
+      "claimId": "function:handleReject",
+      "file": "tests/unit/t188-human-presence-gate.test.ts"
+    },
+    {
+      "claimId": "function:handleReport",
+      "file": "tests/integration/t-solo-gate-transaction-carrier.test.ts"
+    },
+    {
+      "claimId": "function:handleReport",
+      "file": "tests/integration/t544-ambient-projectdir-refusal.integration.test.ts"
+    },
+    {
+      "claimId": "function:handleReuseArtifact",
+      "file": "tests/integration/t48-audit-event-emitters.test.ts"
+    },
+    {
+      "claimId": "function:handleRevise",
+      "file": "tests/integration/t45-revision-loop.test.ts"
+    },
+    {
+      "claimId": "function:handleRevise",
+      "file": "tests/integration/t48-audit-event-emitters.test.ts"
+    },
+    {
+      "claimId": "function:handleSessionTakeover",
+      "file": "tests/integration/t462-session-takeover.integration.test.ts"
+    },
+    {
+      "claimId": "function:handleSessionTakeover",
+      "file": "tests/integration/t464-session-takeover-seam.integration.test.ts"
+    },
+    {
+      "claimId": "function:handleSetStatus",
+      "file": "tests/integration/t233-set-status-retreat-guard.integration.test.ts"
+    },
+    {
+      "claimId": "function:handleSingleReport",
+      "file": "tests/integration/t-plugin-runtime-trust.integration.test.ts"
+    },
+    {
+      "claimId": "function:handleSingleReport",
+      "file": "tests/integration/t127-single-stage-invariant.test.ts"
+    },
+    {
+      "claimId": "function:handleSpaceCreate",
+      "file": "tests/integration/t175-space-create-memory-isolation.test.ts"
+    },
+    {
+      "claimId": "function:ignoredStatusPaths",
+      "file": "tests/unit/t209-worktree-read-anchor.test.ts"
+    },
+    {
+      "claimId": "function:ignoredTerritoryRoots",
+      "file": "tests/unit/t209-worktree-read-anchor.test.ts"
+    },
+    {
+      "claimId": "function:inferScopeFromText",
+      "file": "tests/unit/t191-composed-scope-write.test.ts"
+    },
+    {
+      "claimId": "function:intentIdFromShardPath",
+      "file": "tests/integration/t356-journal-convert.test.ts"
+    },
+    {
+      "claimId": "function:intentPickPromptIfRecordsExist",
+      "file": "tests/integration/t171-birth-gate-registry.test.ts"
+    },
+    {
+      "claimId": "function:isMilestoneInteraction",
+      "file": "tests/unit/t188-human-presence-gate.test.ts"
+    },
+    {
+      "claimId": "function:journalRecordField",
+      "file": "tests/unit/t365-journal-reader-swap.test.ts"
+    },
+    {
+      "claimId": "function:listSourceFiles",
+      "file": "tests/integration/t420-unchecked-cast-guard-cli.test.ts"
+    },
+    {
+      "claimId": "function:matchesGlob",
+      "file": "tests/integration/t-sensor-glob-expansion.integration.test.ts"
+    },
+    {
+      "claimId": "function:measureCallsites",
+      "file": "tests/integration/t371-deletion-gate-cli.test.ts"
+    },
+    {
+      "claimId": "function:measureMigrationEquivalence",
+      "file": "tests/integration/t371-deletion-gate-cli.test.ts"
+    },
+    {
+      "claimId": "function:measureRegistryDrift",
+      "file": "tests/integration/t371-deletion-gate-cli.test.ts"
+    },
+    {
+      "claimId": "function:measureRelayProof",
+      "file": "tests/integration/t371-deletion-gate-cli.test.ts"
+    },
+    {
+      "claimId": "function:median",
+      "file": "tests/unit/latency-median-budget-gate.test.ts"
+    },
+    {
+      "claimId": "function:median",
+      "file": "tests/unit/plugin-discovery-overhead-gate.test.ts"
+    },
+    {
+      "claimId": "function:mergeShards",
+      "file": "tests/integration/t364-journal-v2.pbt.test.ts"
+    },
+    {
+      "claimId": "function:mintHumanPresence",
+      "file": "tests/integration/t380-locked-canonical-emit.test.ts"
+    },
+    {
+      "claimId": "function:mintHumanPresence",
+      "file": "tests/integration/t514-codex-mint-presence-chain.integration.test.ts"
+    },
+    {
+      "claimId": "function:nearestRankP95",
+      "file": "tests/unit/t486-stage-stats.test.ts"
+    },
+    {
+      "claimId": "function:nextElection",
+      "file": "tests/integration/t559-election-v2-cli-inprocess.integration.test.ts"
+    },
+    {
+      "claimId": "function:normalizeSpawnOutcome",
+      "file": "tests/integration/t499-no-silent-drop-spawn-failclosed.integration.test.ts"
+    },
+    {
+      "claimId": "function:observe",
+      "file": "tests/integration/t357-observability-seam.test.ts"
+    },
+    {
+      "claimId": "function:observeSubprocess",
+      "file": "tests/integration/t357-observability-seam.test.ts"
+    },
+    {
+      "claimId": "function:observeSubprocessSpan",
+      "file": "tests/integration/t379-swarm-canonical-emit.test.ts"
+    },
+    {
+      "claimId": "function:openElection",
+      "file": "tests/integration/t559-election-v2-cli-inprocess.integration.test.ts"
+    },
+    {
+      "claimId": "function:parseActiveSubagents",
+      "file": "tests/integration/t464-session-takeover-seam.integration.test.ts"
+    },
+    {
+      "claimId": "function:parseAllowlist",
+      "file": "tests/integration/t367-callsite-guard-cli.test.ts"
+    },
+    {
+      "claimId": "function:parseApprovalProcessResult",
+      "file": "tests/unit/t-solo-gate-transaction.test.ts"
+    },
+    {
+      "claimId": "function:parseDoctorAuditSuffix",
+      "file": "tests/unit/t365-journal-reader-swap.test.ts"
+    },
+    {
+      "claimId": "function:parseFlags",
+      "file": "tests/unit/t-jump-parseflags-seam.test.ts"
+    },
+    {
+      "claimId": "function:parseGoalLineage",
+      "file": "tests/integration/t427-goal-reconciliation.test.ts"
+    },
+    {
+      "claimId": "function:parseGoalReconciliationReceipt",
+      "file": "tests/integration/t427-goal-reconciliation.test.ts"
+    },
+    {
+      "claimId": "function:parseJournalLine",
+      "file": "tests/integration/t364-journal-v2.pbt.test.ts"
+    },
+    {
+      "claimId": "function:parseJournalLine",
+      "file": "tests/unit/t352-journal-codec.pbt.test.ts"
+    },
+    {
+      "claimId": "function:parseJournalShard",
+      "file": "tests/unit/t352-journal-codec.pbt.test.ts"
+    },
+    {
+      "claimId": "function:parseMirrorBoundaryReceipts",
+      "file": "tests/unit/t418-state-receipts-codec.pbt.test.ts"
+    },
+    {
+      "claimId": "function:parseRuleLines",
+      "file": "tests/unit/t-practices-promote-contract-seam.test.ts"
+    },
+    {
+      "claimId": "function:parseRuleSectionsOrFail",
+      "file": "tests/unit/t-practices-promote-contract-seam.test.ts"
+    },
+    {
+      "claimId": "function:parseSensorManifest",
+      "file": "tests/integration/t99-learnings-gate-flow.test.ts"
+    },
+    {
+      "claimId": "function:parseSensorManifest",
+      "file": "tests/unit/t86-sensor-manifest-schema.test.ts"
+    },
+    {
+      "claimId": "function:parseSessionTakeoverArgs",
+      "file": "tests/unit/t463-session-takeover-plan.test.ts"
+    },
+    {
+      "claimId": "function:parseTree",
+      "file": "tests/integration/t499-no-silent-drop-spawn-failclosed.integration.test.ts"
+    },
+    {
+      "claimId": "function:planSessionTakeover",
+      "file": "tests/integration/t462-session-takeover.integration.test.ts"
+    },
+    {
+      "claimId": "function:planSessionTakeover",
+      "file": "tests/unit/t463-session-takeover-plan.test.ts"
+    },
+    {
+      "claimId": "function:producesArtifactsExist",
+      "file": "tests/integration/t185-stage-artifact-guard.test.ts"
+    },
+    {
+      "claimId": "function:producesArtifactsExist",
+      "file": "tests/integration/t248-stage-contract-routing.test.ts"
+    },
+    {
+      "claimId": "function:readAllPending",
+      "file": "tests/integration/t3046-election-append-voter-race.integration.test.ts"
+    },
+    {
+      "claimId": "function:readBoltDagAbsence",
+      "file": "tests/integration/t399-bolt-dag-outcome.test.ts"
+    },
+    {
+      "claimId": "function:readContainedFile",
+      "file": "tests/integration/t368-safe-contained-file.integration.test.ts"
+    },
+    {
+      "claimId": "function:readJournalRecords",
+      "file": "tests/integration/t364-journal-v2.pbt.test.ts"
+    },
+    {
+      "claimId": "function:readPendingVoter",
+      "file": "tests/integration/t3046-election-append-voter-race.integration.test.ts"
+    },
+    {
+      "claimId": "function:readSessionTakeoverFacts",
+      "file": "tests/integration/t464-session-takeover-seam.integration.test.ts"
+    },
+    {
+      "claimId": "function:reclaimRoleMarkerLock",
+      "file": "tests/integration/t465-kimi-role-lock-ownership.integration.test.ts"
+    },
+    {
+      "claimId": "function:recordEngineError",
+      "file": "tests/integration/t258-engine-error-ambient-shard-pollution.test.ts"
+    },
+    {
+      "claimId": "function:redactAttributes",
+      "file": "tests/integration/t381-registry-emitter-parity.test.ts"
+    },
+    {
+      "claimId": "function:renderAdvisoryChoiceQuestion",
+      "file": "tests/e2e/t-advisory-human-choice-rendering.e2e.test.ts"
+    },
+    {
+      "claimId": "function:renderElectionRecord",
+      "file": "tests/unit/t551-election-record-transport-v2.test.ts"
+    },
+    {
+      "claimId": "function:renderElectionRecord",
+      "file": "tests/unit/t552-election-record-transport.pbt.test.ts"
+    },
+    {
+      "claimId": "function:renderJournalView",
+      "file": "tests/integration/t364-journal-v2.pbt.test.ts"
+    },
+    {
+      "claimId": "function:renderStatsText",
+      "file": "tests/unit/t460-subagent-stats-compose.test.ts"
+    },
+    {
+      "claimId": "function:repointHarnessIncludes",
+      "file": "tests/unit/t-active-space-includes.test.ts"
+    },
+    {
+      "claimId": "function:reportDelivery",
+      "file": "tests/unit/t551-election-record-transport-v2.test.ts"
+    },
+    {
+      "claimId": "function:reportElection",
+      "file": "tests/integration/t559-election-v2-cli-inprocess.integration.test.ts"
+    },
+    {
+      "claimId": "function:requireOnboardingDoc",
+      "file": "tests/unit/setup-onboarding-doc-fixture.test.ts"
+    },
+    {
+      "claimId": "function:resolveAllowedAgentTypes",
+      "file": "tests/integration/t452-subagent-observability.integration.test.ts"
+    },
+    {
+      "claimId": "function:resolveCurrentIntentSelectionResponse",
+      "file": "tests/integration/t171-birth-gate-registry.test.ts"
+    },
+    {
+      "claimId": "function:resolveCurrentIntentSelectionResponse",
+      "file": "tests/unit/t171-intent-selection.test.ts"
+    },
+    {
+      "claimId": "function:resolveEffectiveModel",
+      "file": "tests/unit/t453-subagent-model-resolve.test.ts"
+    },
+    {
+      "claimId": "function:resolveEvaluatorArgv",
+      "file": "tests/integration/t445-advisory-declaration-supply.integration.test.ts"
+    },
+    {
+      "claimId": "function:resolveObservabilityConfig",
+      "file": "tests/integration/t357-observability-seam.test.ts"
+    },
+    {
+      "claimId": "function:resolvePersonaPin",
+      "file": "tests/integration/t454-subagent-model-attribution.integration.test.ts"
+    },
+    {
+      "claimId": "function:resolvePluginManifest",
+      "file": "tests/integration/t445-advisory-declaration-supply.integration.test.ts"
+    },
+    {
+      "claimId": "function:resolveResponses",
+      "file": "tests/unit/t549-election-question-tally.test.ts"
+    },
+    {
+      "claimId": "function:resolveResponses",
+      "file": "tests/unit/t550-election-question-tally.pbt.test.ts"
+    },
+    {
+      "claimId": "function:resultsFromEvidence",
+      "file": "tests/integration/t371-deletion-gate-cli.test.ts"
+    },
+    {
+      "claimId": "function:rulesSubdirFor",
+      "file": "tests/integration/t532-plugin-prose-transform-seed-equivalence.integration.test.ts"
+    },
+    {
+      "claimId": "function:runAdapter",
+      "file": "tests/integration/t461-kimi-session-start-recovery.integration.test.ts"
+    },
+    {
+      "claimId": "function:runCheck",
+      "file": "tests/integration/t367-callsite-guard-cli.test.ts"
+    },
+    {
+      "claimId": "function:runCheck",
+      "file": "tests/integration/t371-deletion-gate-cli.test.ts"
+    },
+    {
+      "claimId": "function:runCheck",
+      "file": "tests/integration/t420-unchecked-cast-guard-cli.test.ts"
+    },
+    {
+      "claimId": "function:runFindingCli",
+      "file": "tests/integration/t368-amadeus-finding-cli.integration.test.ts"
+    },
+    {
+      "claimId": "function:runRequireGreen",
+      "file": "tests/integration/t371-deletion-gate-cli.test.ts"
+    },
+    {
+      "claimId": "function:runUpdate",
+      "file": "tests/integration/t367-callsite-guard-cli.test.ts"
+    },
+    {
+      "claimId": "function:runUpdate",
+      "file": "tests/integration/t420-unchecked-cast-guard-cli.test.ts"
+    },
+    {
+      "claimId": "function:runUtilityMain",
+      "file": "tests/integration/t246-routing-and-autonomy-guards.test.ts"
+    },
+    {
+      "claimId": "function:sanitizeAdvisoryValue",
+      "file": "tests/unit/t451-subagent-type-classify.test.ts"
+    },
+    {
+      "claimId": "function:scanAuditCorpus",
+      "file": "tests/integration/t461-subagent-stats.integration.test.ts"
+    },
+    {
+      "claimId": "function:scanCorpus",
+      "file": "tests/integration/t487-stage-stats.integration.test.ts"
+    },
+    {
+      "claimId": "function:scanPluginProseForHarnessLiterals",
+      "file": "tests/integration/t531-plugin-harness-literal-guard.integration.test.ts"
+    },
+    {
+      "claimId": "function:scanRepository",
+      "file": "tests/integration/t367-callsite-guard-cli.test.ts"
+    },
+    {
+      "claimId": "function:scanRepository",
+      "file": "tests/integration/t420-unchecked-cast-guard-cli.test.ts"
+    },
+    {
+      "claimId": "function:seedBytesForHarness",
+      "file": "tests/integration/t2790-plugin-staging-seed-harness-dir.integration.test.ts"
+    },
+    {
+      "claimId": "function:seedBytesForHarness",
+      "file": "tests/integration/t532-plugin-prose-transform-seed-equivalence.integration.test.ts"
+    },
+    {
+      "claimId": "function:serializeJournalEntry",
+      "file": "tests/unit/t352-journal-codec.pbt.test.ts"
+    },
+    {
+      "claimId": "function:serializeJournalEntryV2",
+      "file": "tests/integration/t364-journal-v2.pbt.test.ts"
+    },
+    {
+      "claimId": "function:serializeMirrorBoundaryReceipts",
+      "file": "tests/unit/t418-state-receipts-codec.pbt.test.ts"
+    },
+    {
+      "claimId": "function:setupWorktreeFixture",
+      "file": "tests/e2e/t01-helpers.test.ts"
+    },
+    {
+      "claimId": "function:stagingHarnessDirOf",
+      "file": "tests/integration/t2790-plugin-staging-seed-harness-dir.integration.test.ts"
+    },
+    {
+      "claimId": "function:statusElection",
+      "file": "tests/integration/t559-election-v2-cli-inprocess.integration.test.ts"
+    },
+    {
+      "claimId": "function:tallyElection",
+      "file": "tests/integration/t3077-election-full-retally.integration.test.ts"
+    },
+    {
+      "claimId": "function:tallyQuestions",
+      "file": "tests/unit/t549-election-question-tally.test.ts"
+    },
+    {
+      "claimId": "function:tallyQuestions",
+      "file": "tests/unit/t550-election-question-tally.pbt.test.ts"
+    },
+    {
+      "claimId": "function:targetedApprovalEvidence",
+      "file": "tests/unit/t365-journal-reader-swap.test.ts"
+    },
+    {
+      "claimId": "function:terminateRound",
+      "file": "tests/integration/t3256-election-round-terminate.integration.test.ts"
+    },
+    {
+      "claimId": "function:terminateRoundElection",
+      "file": "tests/integration/t3256-election-round-terminate.integration.test.ts"
+    },
+    {
+      "claimId": "function:transform",
+      "file": "tests/integration/t532-plugin-prose-transform-seed-equivalence.integration.test.ts"
+    },
+    {
+      "claimId": "function:tui-drive:tmux-socket-isolation",
+      "file": "tests/unit/t-tui-drive-socket-isolation.test.ts"
+    },
+    {
+      "claimId": "function:unescapeAuditBody",
+      "file": "tests/unit/t204-audit-escape.pbt.test.ts"
+    },
+    {
+      "claimId": "function:unitCovered",
+      "file": "tests/integration/t248-stage-contract-routing.test.ts"
+    },
+    {
+      "claimId": "function:updateKimiSubagentRole",
+      "file": "tests/integration/t465-kimi-role-lock-ownership.integration.test.ts"
+    },
+    {
+      "claimId": "function:validateDirective",
+      "file": "tests/integration/t212-optional-produces.test.ts"
+    },
+    {
+      "claimId": "function:validateDirective",
+      "file": "tests/integration/t528-report-ack-kind.integration.test.ts"
+    },
+    {
+      "claimId": "function:validateDirective",
+      "file": "tests/unit/t-solo-gate-transaction.test.ts"
+    },
+    {
+      "claimId": "function:validateDirective",
+      "file": "tests/unit/t113.test.ts"
+    },
+    {
+      "claimId": "function:validateRuleLines",
+      "file": "tests/unit/t-practices-promote-contract-seam.test.ts"
+    },
+    {
+      "claimId": "function:validateSensorManifest",
+      "file": "tests/unit/t86-sensor-manifest-schema.test.ts"
+    },
+    {
+      "claimId": "function:validateStageFrontmatter",
+      "file": "tests/integration/t212-optional-produces.test.ts"
+    },
+    {
+      "claimId": "function:validateStageFrontmatter",
+      "file": "tests/integration/t65.test.ts"
+    },
+    {
+      "claimId": "function:validateStageFrontmatter",
+      "file": "tests/unit/t248-stage-contract.test.ts"
+    },
+    {
+      "claimId": "function:validateStageFrontmatter",
+      "file": "tests/unit/t64.test.ts"
+    },
+    {
+      "claimId": "function:verifyBlockingSensors",
+      "file": "tests/integration/t2771-lifecycle-guard-checkpoints.integration.test.ts"
+    },
+    {
+      "claimId": "function:verifyDocsOnlyEvidence",
+      "file": "tests/integration/t215-docs-only-exemption.test.ts"
+    },
+    {
+      "claimId": "function:verifyElectionRecord",
+      "file": "tests/unit/t551-election-record-transport-v2.test.ts"
+    },
+    {
+      "claimId": "function:verifyPhaseCheckArtifact",
+      "file": "tests/integration/t2771-lifecycle-guard-census.integration.test.ts"
+    },
+    {
+      "claimId": "function:verifyPhaseCheckArtifact",
+      "file": "tests/integration/t2771-lifecycle-guard-checkpoints.integration.test.ts"
+    },
+    {
+      "claimId": "function:verifyPhaseCheckArtifact",
+      "file": "tests/integration/t2771-lifecycle-guard-regression.integration.test.ts"
+    },
+    {
+      "claimId": "function:verifyPhaseCheckArtifact",
+      "file": "tests/unit/t-phase-check-gate-seam.test.ts"
+    },
+    {
+      "claimId": "function:verifyStageArtifacts",
+      "file": "tests/integration/t185-stage-artifact-guard.test.ts"
+    },
+    {
+      "claimId": "function:verifyStageArtifacts",
+      "file": "tests/integration/t215-docs-only-exemption.test.ts"
+    },
+    {
+      "claimId": "function:verifyStageArtifacts",
+      "file": "tests/integration/t2771-lifecycle-guard-checkpoints.integration.test.ts"
+    },
+    {
+      "claimId": "function:verifyStageArtifacts",
+      "file": "tests/unit/t-docs-only-exemption-seam.test.ts"
+    },
+    {
+      "claimId": "function:verifyStageCompletionGuards",
+      "file": "tests/integration/t2771-lifecycle-guard-census.integration.test.ts"
+    },
+    {
+      "claimId": "function:verifyStageCompletionGuards",
+      "file": "tests/integration/t2771-lifecycle-guard-checkpoints.integration.test.ts"
+    },
+    {
+      "claimId": "function:verifyStageCompletionGuards",
+      "file": "tests/integration/t2771-lifecycle-guard-regression.integration.test.ts"
+    },
+    {
+      "claimId": "function:verifyStageCompletionGuards",
+      "file": "tests/integration/t511-blocking-sensor-gate.integration.test.ts"
+    },
+    {
+      "claimId": "function:voteElection",
+      "file": "tests/integration/t559-election-v2-cli-inprocess.integration.test.ts"
+    },
+    {
+      "claimId": "function:workspaceHasSourceFile",
+      "file": "tests/integration/t185-stage-artifact-guard.test.ts"
+    },
+    {
+      "claimId": "function:writeRoleLockOwner",
+      "file": "tests/integration/t465-kimi-role-lock-ownership.integration.test.ts"
+    },
+    {
+      "claimId": "function:writeStoreFile",
+      "file": "tests/integration/t3183-election-store-unique-tmp.integration.test.ts"
+    },
+    {
+      "claimId": "scope:data-migration",
+      "file": "tests/e2e/t-tui-custom-harness.serial.test.ts"
+    },
+    {
+      "claimId": "stage:schema-snapshot",
+      "file": "tests/e2e/t-tui-custom-harness.serial.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-advisory-choice:record",
+      "file": "tests/integration/t-advisory-choice-record.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-audit:audit-merge.",
+      "file": "tests/e2e/t07-audit-fork-merge.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-finding:create-github-issue",
+      "file": "tests/integration/t366-amadeus-finding-cli.integration.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-goal:approve-legacy-migration",
+      "file": "tests/integration/t429-legacy-goal-migration.integration.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-goal:approve-revision",
+      "file": "tests/integration/t428-goal-revision-authority.integration.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-goal:legacy-propose",
+      "file": "tests/integration/t429-legacy-goal-migration.integration.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-goal:propose",
+      "file": "tests/integration/t428-goal-revision-authority.integration.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-graph",
+      "file": "tests/unit/t63.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-jump",
+      "file": "tests/integration/t118.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-jump",
+      "file": "tests/unit/t117.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-log",
+      "file": "tests/unit/t31.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-norm-metrics:",
+      "file": "tests/integration/t-norm-metrics.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:next",
+      "file": "tests/e2e/t416-nfr-kind-pruning.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:next",
+      "file": "tests/integration/t120-classify-roundtrip.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:next",
+      "file": "tests/integration/t127-single-stage-invariant.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:next",
+      "file": "tests/integration/t128-custom-runner.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:next",
+      "file": "tests/integration/t135-invoke-swarm.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:next",
+      "file": "tests/integration/t171-birth-gate-registry.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:next",
+      "file": "tests/integration/t212-optional-produces.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:next",
+      "file": "tests/integration/t214-engine-error-logged.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:next",
+      "file": "tests/integration/t222-migration-routing.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:next",
+      "file": "tests/integration/t248-stage-contract-routing.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:next",
+      "file": "tests/integration/t367-degrade-unitname-resolution.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:next",
+      "file": "tests/integration/t435-intent-autonomy-production.integration.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:next",
+      "file": "tests/integration/t449-pr-convergence-packaging-e2e.integration.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:next",
+      "file": "tests/integration/t453-await-completion-directive.integration.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:next",
+      "file": "tests/integration/t480-declare-units-done.integration.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:next",
+      "file": "tests/integration/t533-per-unit-consume-fanout.integration.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:next",
+      "file": "tests/integration/t540-full-autonomy-referee-failure.integration.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:next",
+      "file": "tests/unit/t114-orchestrate-next.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:next",
+      "file": "tests/unit/t116-directive-path-resolution.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:next",
+      "file": "tests/unit/t179-orchestrate-rollforward-guard.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:next",
+      "file": "tests/unit/t186-foreach-per-unit-iteration.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:next",
+      "file": "tests/unit/t198-compose-surfaces.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:report",
+      "file": "tests/integration/t120-classify-roundtrip.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:report",
+      "file": "tests/integration/t127-single-stage-invariant.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:report",
+      "file": "tests/integration/t258-engine-error-ambient-shard-pollution.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:report",
+      "file": "tests/integration/t435-intent-autonomy-production.integration.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:report",
+      "file": "tests/integration/t540-full-autonomy-referee-failure.integration.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-orchestrate:report",
+      "file": "tests/unit/t186-foreach-per-unit-iteration.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-plugin:compose",
+      "file": "tests/integration/t406-compose-host-graph-guard.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-plugin:compose",
+      "file": "tests/integration/t410-host-graph-shape-validation.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-plugin:compose",
+      "file": "tests/integration/t411-compose-invalid-graph-visibility.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-runner-gen:check",
+      "file": "tests/integration/t128-custom-runner.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-runner-gen:write",
+      "file": "tests/integration/t128-custom-runner.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-sensor-required-sections",
+      "file": "tests/unit/t133-bolt-dag-compile.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-sensor-required-sections",
+      "file": "tests/unit/t155-template-override.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-swarm:check",
+      "file": "tests/e2e/t134-swarm-referee.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-swarm:check",
+      "file": "tests/unit/t209-worktree-read-anchor.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-swarm:finalize",
+      "file": "tests/e2e/t134-swarm-referee.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-swarm:finalize",
+      "file": "tests/integration/t135-invoke-swarm.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-swarm:finalize",
+      "file": "tests/integration/t166-multi-repo-construction.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-swarm:prepare",
+      "file": "tests/e2e/t134-swarm-referee.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-swarm:prepare",
+      "file": "tests/integration/t135-invoke-swarm.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-swarm:prepare",
+      "file": "tests/integration/t166-multi-repo-construction.test.ts"
+    },
+    {
+      "claimId": "subcommand:amadeus-worktree:merge.",
+      "file": "tests/e2e/t03.test.ts"
+    },
+    {
+      "claimId": "subcommand:complexity-gate:check",
+      "file": "tests/unit/complexity-gate.test.ts"
+    },
+    {
+      "claimId": "subcommand:complexity-gate:update",
+      "file": "tests/unit/complexity-gate.test.ts"
+    },
+    {
+      "claimId": "subcommand:no-silent-drop:census-evidence",
+      "file": "tests/integration/no-silent-drop-gate.test.ts"
+    },
+    {
+      "claimId": "subcommand:no-silent-drop:check",
+      "file": "tests/integration/no-silent-drop-gate.test.ts"
+    },
+    {
+      "claimId": "subcommand:no-silent-drop:check",
+      "file": "tests/integration/no-silent-drop-repository-adoption.test.ts"
+    },
+    {
+      "claimId": "subcommand:no-silent-drop:check",
+      "file": "tests/integration/t502-nsd003-catalog-integrity.integration.test.ts"
+    },
+    {
+      "claimId": "subcommand:release-version-sync:atomic-write",
+      "file": "tests/integration/t-release-sync-atomicity.test.ts"
+    },
+    {
+      "claimId": "subcommand:release-version-sync:plan",
+      "file": "tests/unit/t-release-sync-plan.test.ts"
     }
   ]
 }

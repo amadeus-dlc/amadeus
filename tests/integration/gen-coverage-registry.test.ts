@@ -18,6 +18,11 @@
 //   4. The RATCHET catches a simulated covered-count DECREASE.
 //   5. The SUBCOMMAND CROSS-CHECK (anti-rot guard b) holds for real source:
 //      the structured parser count equals the independent dispatch-site count.
+//   6. packages/setup/src IS part of the `function` universe (#3404), in both
+//      of the package's export shapes, and the flat id space stays unique.
+//   7. An UNJOINED covers claim — one written in this registry's own
+//      vocabulary that matches no unit — is reported, committed, and reds
+//      `--check` when it is new. It is never silently discarded.
 //
 // The injection tests use the AMADEUS_COVERAGE_* env-var seams to redirect the
 // source root, claim discovery, and committed-baseline paths at fixtures or a
@@ -42,6 +47,7 @@ import {
   buildRegistry,
   emptyClasses,
   enumerateAllUnits,
+  enumerateSetupFunctions,
   MECHANISMS,
   MIN_MECHANISM,
   mechanismFromSegment,
@@ -83,7 +89,8 @@ describe("enumeration is non-empty for every unit class (anti-rot guard a)", () 
     const counts = Object.fromEntries(
       UNIT_CLASSES.map((c) => [c, rows.filter((r) => r.unitClass === c).length]),
     ) as Record<string, number>;
-    expect(counts.function).toBeGreaterThanOrEqual(80); // 89 today (71 lib + 18 graph)
+    // 475 today: lib + graph + 3 targeted state fns + packages/setup/src (#3404).
+    expect(counts.function).toBeGreaterThanOrEqual(400);
     expect(counts.audit).toBeGreaterThanOrEqual(55); // 61 today
     expect(counts.scope).toBeGreaterThanOrEqual(9); // 9 scope keys today
     expect(counts.stage).toBeGreaterThanOrEqual(30); // 32 stage .md today
@@ -260,6 +267,14 @@ describe("--check freshness diff (the ratchet mechanism)", () => {
         "stages",
       ),
       join(srcRoot, "dist", "claude", ".claude", "amadeus-common", "stages"),
+      { recursive: true },
+    );
+    // The setup package is enumerated from SOURCE, not from dist (#3404), so a
+    // src-root override must carry it too — the enumerator refuses to run
+    // against a tree without it rather than silently shrinking the universe.
+    cpSync(
+      join(REPO_ROOT, "packages", "setup", "src"),
+      join(srcRoot, "packages", "setup", "src"),
       { recursive: true },
     );
     const registry = join(root, ".coverage-registry.json");
@@ -519,12 +534,12 @@ describe("ratchet parsing (parse, don't validate — malformed input is a diagno
       // Corrupt committed ratchet -> MALFORMED diagnosis, not a crash.
       writeFileSync(ratchet, "<<<<<<< HEAD conflict garbage\n");
       process.env.AMADEUS_COVERAGE_RATCHET = ratchet;
-      const bad = runCheck(liveRegistry.rows);
+      const bad = runCheck(liveRegistry);
       expect(bad.ok).toBe(false);
       expect(bad.messages.join("\n")).toContain("RATCHET FAILED [MALFORMED]");
       // Missing ratchet -> the existing does-not-exist diagnosis still fires.
       process.env.AMADEUS_COVERAGE_RATCHET = join(root, "nope.json");
-      const missing = runCheck(liveRegistry.rows);
+      const missing = runCheck(liveRegistry);
       expect(missing.ok).toBe(false);
       expect(missing.messages.join("\n")).toContain("does not exist");
       // A VALID ratchet still flows into the drop comparison: an inflated
@@ -540,11 +555,11 @@ describe("ratchet parsing (parse, don't validate — malformed input is a diagno
       };
       writeFileSync(ratchet, `${JSON.stringify(inflated, null, 2)}\n`);
       process.env.AMADEUS_COVERAGE_RATCHET = ratchet;
-      const dropped = runCheck(liveRegistry.rows);
+      const dropped = runCheck(liveRegistry);
       expect(dropped.ok).toBe(false);
       expect(dropped.messages.join("\n")).toContain("DROPPED");
       writeFileSync(ratchet, `${JSON.stringify(doc, null, 2)}\n`);
-      expect(runCheck(liveRegistry.rows).ok).toBe(true);
+      expect(runCheck(liveRegistry).ok).toBe(true);
     } finally {
       if (prev === undefined) delete process.env.AMADEUS_COVERAGE_RATCHET;
       else process.env.AMADEUS_COVERAGE_RATCHET = prev;
@@ -672,12 +687,240 @@ describe("covers: header parsing", () => {
 });
 
 // ---------------------------------------------------------------------------
+// 6b. The setup package is part of the `function` universe (#3404).
+//     Before this, the function enumerator read only dist's amadeus-{lib,graph}
+//     plus three targeted state fns, so a setup test declaring
+//     `covers: function:<name>` joined nothing and changed no committed byte.
+// ---------------------------------------------------------------------------
+describe("packages/setup is enumerated into the function class (#3404)", () => {
+  const setupUnits = enumerateSetupFunctions();
+
+  test("the enumerator reads the setup source tree and names its files", () => {
+    expect(setupUnits.length).toBeGreaterThan(0);
+    for (const u of setupUnits) {
+      expect(u.unitClass).toBe("function");
+      expect(u.unitId.startsWith("function:")).toBe(true);
+      expect(u.source.startsWith("packages/setup/src/")).toBe(true);
+    }
+  });
+
+  test("BOTH export shapes are enumerated: top-level fns and namespace members", () => {
+    const ids = new Set(setupUnits.map((u) => u.unitId));
+    // Top-level `export function` (domain/onboarding-ladder.ts).
+    expect(ids.has("function:decideOnboardingDestination")).toBe(true);
+    // `export namespace` member — setup's dominant idiom (domain/plan.ts).
+    expect(ids.has("function:Plan.forInstall")).toBe(true);
+    expect(
+      setupUnits.some((u) => u.source === "packages/setup/src/domain/plan.ts"),
+    ).toBe(true);
+  });
+
+  test("the measured #3389 case: the onboarding-ladder claims now JOIN", () => {
+    // tests/unit/setup-onboarding-ladder.test.ts declares three function ids.
+    // The issue's measurement was that all three vanished. They must now be
+    // covered rows naming that file.
+    const { rows } = liveRegistry;
+    for (const name of [
+      "onboardingAlternateFor",
+      "decideOnboardingDestination",
+      "noticeFor",
+    ]) {
+      const row = rows.find(
+        (r) => r.unitClass === "function" && r.unitId === `function:${name}`,
+      );
+      expect(row).toBeDefined();
+      expect(row!.status).toBe("covered");
+      expect(row!.coveredBy.map((c) => c.file)).toContain(
+        "tests/unit/setup-onboarding-ladder.test.ts",
+      );
+    }
+  });
+
+  test("the flat function id space stays collision-free: one row per unitId", () => {
+    // `main` is declared by BOTH amadeus-graph.ts and packages/setup/src/cli.ts.
+    // The enumerator collapses them into one unit naming both sources, so the
+    // registry never carries byte-identical duplicate rows.
+    const ids = enumerateAllUnits()
+      .filter((u) => u.unitClass === "function")
+      .map((u) => u.unitId);
+    expect(ids.length).toBe(new Set(ids).size);
+    const mainUnit = enumerateAllUnits().find(
+      (u) => u.unitClass === "function" && u.unitId === "function:main",
+    );
+    expect(mainUnit).toBeDefined();
+    expect(mainUnit!.source).toContain("packages/setup/src/cli.ts");
+    expect(mainUnit!.source).toContain("amadeus-graph.ts");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 6c. An unjoined covers claim is LOUD, never silently dropped (#3404).
+// ---------------------------------------------------------------------------
+describe("unjoined covers claims are surfaced, not discarded (#3404)", () => {
+  /** Run the generator against a temp claims dir holding exactly one test file. */
+  function printWithClaim(header: string): {
+    doc: {
+      counts: { unjoinedClaims: number };
+      unjoinedClaims: Array<{ claimId: string; file: string }>;
+    };
+    stderr: string;
+  } {
+    const tmp = mkdtempSync(join(tmpdir(), "cov-unjoined-"));
+    try {
+      const tier = join(tmp, "unit");
+      mkdirSync(tier, { recursive: true });
+      writeFileSync(
+        join(tier, "tfake.none.test.ts"),
+        `${header}\nimport { test } from "bun:test";\ntest("x", () => {});\n`,
+      );
+      const res = spawnSync(process.execPath, [TOOL, "--print"], {
+        encoding: "utf-8",
+        env: { ...process.env, AMADEUS_COVERAGE_TESTS_DIR: tmp },
+      });
+      expect(res.status).toBe(0);
+      return { doc: JSON.parse(res.stdout), stderr: res.stderr };
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  }
+
+  test("a claim in the registry's vocabulary that matches nothing is reported", () => {
+    const { doc, stderr } = printWithClaim(
+      "// covers: function:thisFunctionExistsNowhereAtAll",
+    );
+    expect(doc.unjoinedClaims).toEqual([
+      {
+        claimId: "function:thisFunctionExistsNowhereAtAll",
+        file: "tests/unit/tfake.none.test.ts",
+      },
+    ]);
+    expect(doc.counts.unjoinedClaims).toBe(1);
+    expect(stderr).toContain("UNJOINED COVERS CLAIMS");
+    expect(stderr).toContain("function:thisFunctionExistsNowhereAtAll");
+  });
+
+  test("every unit class's vocabulary is watched, not just function:", () => {
+    for (const claimId of [
+      "audit:NO_SUCH_EVENT_AT_ALL",
+      "scope:no-such-scope-key",
+      "stage:no-such-phase/no-such-stage",
+      "hook:amadeus-no-such-hook",
+      "subcommand:amadeus-state:no-such-sub",
+      "render-surface:no-such-surface",
+    ]) {
+      const { doc } = printWithClaim(`// covers: ${claimId}`);
+      expect(doc.unjoinedClaims.map((u) => u.claimId)).toEqual([claimId]);
+    }
+  });
+
+  test("another ledger's vocabulary is NOT reported (no false alarms)", () => {
+    // `file:` feeds the patch gate; `domain:`/`modules:` are prose groupings;
+    // `bun:`/`node:` are import specifiers a leading comment mentions. None of
+    // them belong to this join, so none may be flagged as a divergence.
+    const { doc } = printWithClaim(
+      "// covers: file:packages/setup/src/domain/plan.ts, domain:setup-plan,\n" +
+        "//   modules:setup-applier, invariant:audit-first-atomicity",
+    );
+    expect(doc.unjoinedClaims).toEqual([]);
+    expect(doc.counts.unjoinedClaims).toBe(0);
+  });
+
+  test("a claim that DOES join is not reported as unjoined", () => {
+    const { doc } = printWithClaim("// covers: function:decideOnboardingDestination");
+    expect(doc.unjoinedClaims).toEqual([]);
+  });
+
+  test("the report is a WARNING: --check still exits 0 while the list is committed", () => {
+    // An unjoined claim that IS already in the committed registry leaves the
+    // freshness diff clean, so --check passes — and the warning still prints.
+    // Advisory, not a gate of its own: 367 such claims exist today and a hard
+    // fail would have redded the repo on day one.
+    const root = mkdtempSync(join(tmpdir(), "cov-unjoined-warn-"));
+    const claims = mkdtempSync(join(tmpdir(), "cov-unjoined-warn-claims-"));
+    try {
+      const registry = join(root, ".coverage-registry.json");
+      const ratchet = join(root, ".coverage-ratchet.json");
+      const tier = join(claims, "unit");
+      mkdirSync(tier, { recursive: true });
+      writeFileSync(
+        join(tier, "tfake.none.test.ts"),
+        '// covers: function:anAcceptedUnjoinedClaim\nimport { test } from "bun:test";\ntest("x", () => {});\n',
+      );
+      const env = {
+        ...process.env,
+        AMADEUS_COVERAGE_TESTS_DIR: claims,
+        AMADEUS_COVERAGE_REGISTRY: registry,
+        AMADEUS_COVERAGE_RATCHET: ratchet,
+      };
+      const gen = spawnSync(process.execPath, [TOOL], {
+        encoding: "utf-8",
+        env,
+      });
+      expect(gen.status).toBe(0);
+      expect(gen.stderr).toContain("UNJOINED COVERS CLAIMS");
+      const chk = spawnSync(process.execPath, [TOOL, "--check"], {
+        encoding: "utf-8",
+        env,
+      });
+      expect(chk.status).toBe(0);
+      expect(chk.stderr).toContain("UNJOINED COVERS CLAIMS");
+      expect(chk.stderr).toContain("function:anAcceptedUnjoinedClaim");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(claims, { recursive: true, force: true });
+    }
+  }, scaleTestTime(FRESHNESS_DIFF_TIMEOUT_MS));
+
+  test("a NEW unjoined claim reds --check via the freshness diff", () => {
+    // The teeth: the committed registry carries `unjoinedClaims`, so adding a
+    // claim that joins nothing MOVES a committed byte. It can no longer be
+    // absorbed silently — the run fails until someone regenerates and reviews.
+    const root = mkdtempSync(join(tmpdir(), "cov-unjoined-check-"));
+    const claims = mkdtempSync(join(tmpdir(), "cov-unjoined-claims-"));
+    try {
+      const registry = join(root, ".coverage-registry.json");
+      const ratchet = join(root, ".coverage-ratchet.json");
+      const tier = join(claims, "unit");
+      mkdirSync(tier, { recursive: true });
+      const env = {
+        ...process.env,
+        AMADEUS_COVERAGE_TESTS_DIR: claims,
+        AMADEUS_COVERAGE_REGISTRY: registry,
+        AMADEUS_COVERAGE_RATCHET: ratchet,
+      };
+      // Baseline FIRST, with no unjoined claim anywhere.
+      expect(
+        spawnSync(process.execPath, [TOOL], { encoding: "utf-8", env }).status,
+      ).toBe(0);
+      // Now a new test declares a function id that names nothing.
+      writeFileSync(
+        join(tier, "tfake.none.test.ts"),
+        '// covers: function:aClaimThatJoinsNothing\nimport { test } from "bun:test";\ntest("x", () => {});\n',
+      );
+      const chk = spawnSync(process.execPath, [TOOL, "--check"], {
+        encoding: "utf-8",
+        env,
+      });
+      expect(chk.status).toBe(1);
+      expect(chk.stderr).toContain("FRESHNESS DIFF FAILED");
+      expect(chk.stderr).toContain("aClaimThatJoinsNothing");
+      expect(chk.stderr).toContain("UNJOINED COVERS CLAIMS");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+      rmSync(claims, { recursive: true, force: true });
+    }
+  }, scaleTestTime(FRESHNESS_DIFF_TIMEOUT_MS));
+});
+
+// ---------------------------------------------------------------------------
 // 7. Determinism: registryJson is byte-stable across two builds.
 // ---------------------------------------------------------------------------
 describe("determinism", () => {
   test("registryJson is byte-identical across two independent builds", () => {
-    const a = registryJson(buildRegistry().rows);
-    const b = registryJson(buildRegistry().rows);
+    const first = buildRegistry();
+    const second = buildRegistry();
+    const a = registryJson(first.rows, first.unjoined);
+    const b = registryJson(second.rows, second.unjoined);
     expect(a).toBe(b);
   });
 

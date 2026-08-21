@@ -35,6 +35,17 @@
 //       equal an INDEPENDENT regex count of dispatch sites in the same anchored
 //       block. Catches a parser that silently stops seeing a tool.
 //
+// THE UNJOINED-CLAIM REPORT (#3404). The join has two silent-loss faces. The
+// left one is guarded above; the right one used to be open: a `covers:` token
+// written in THIS registry's vocabulary (`function:`, `audit:`, `scope:`,
+// `stage:`, `hook:`, `subcommand:`, `render-surface:`) that matched no unit was
+// simply dropped — not counted, not reported, green forever. Such claims are now
+// collected into `unjoinedClaims` in the emitted registry (so the freshness diff
+// reds `--check` until a new one is regenerated and reviewed) and printed to
+// stderr on both generate and `--check`. Tokens in other ledgers' vocabularies
+// (`file:` for the patch gate, `domain:`/`modules:`/`invariant:`, and prose
+// noise like `node:child_process`) are deliberately NOT reported here.
+//
 // Run:
 //   bun tests/gen-coverage-registry.ts            # regenerate + write the 3 files
 //   bun tests/gen-coverage-registry.ts --check     # CI drift guard (exit 1 on drift)
@@ -107,6 +118,11 @@ const LIB_PATH = join(TOOLS_DIR, "amadeus-lib.ts");
 const GRAPH_PATH = join(TOOLS_DIR, "amadeus-graph.ts");
 const STATE_PATH = join(TOOLS_DIR, "amadeus-state.ts");
 const TARGETED_STATE_FUNCTIONS = ["skipStageContent", "handleSkip", "mergeScopedCheckboxProgress"] as const;
+// The setup package is SOURCE, not a dist projection: `bunx @amadeus-dlc/setup`
+// ships from packages/setup/ directly, so its functions are enumerated from the
+// source tree rather than from dist/claude/. Same unit class, same
+// `function:NAME` claim form (#3404).
+const SETUP_SRC_DIR = join(REPO_ROOT, "packages", "setup", "src");
 
 const REGISTRY_PATH =
   process.env.AMADEUS_COVERAGE_REGISTRY ?? join(TESTS_DIR, ".coverage-registry.json");
@@ -543,9 +559,12 @@ export function enumerateRenderSurfaces(): Unit[] {
   return units;
 }
 
-/** Exported lib functions from amadeus-lib.ts + amadeus-graph.ts. Matches a
- *  top-level `export function|const|class|async function NAME`. unitId is
- *  `function:NAME` so it joins to the `function:NAME` covers-IDs t106-t111 use. */
+/** Exported functions of the framework's importable surface: amadeus-lib.ts +
+ *  amadeus-graph.ts, three targeted amadeus-state.ts functions, and (since
+ *  #3404) the setup package under packages/setup/src. Matches a top-level
+ *  `export function|const|class|async function NAME`. unitId is `function:NAME`
+ *  so it joins to the `function:NAME` covers-IDs t106-t111 and the setup unit
+ *  tests use. */
 export function enumerateExportedFunctions(): Unit[] {
   const units: Unit[] = [];
   const re =
@@ -575,7 +594,118 @@ export function enumerateExportedFunctions(): Unit[] {
       source: "dist/claude/.claude/tools/amadeus-state.ts",
     });
   }
+  units.push(...enumerateSetupFunctions());
+  return dedupeFunctionUnits(units);
+}
+
+/** Every *.ts file under `dir`, recursively, in a deterministic (name-sorted,
+ *  depth-first) order — the enumeration must not depend on readdir order or the
+ *  registry would not be byte-stable. */
+function tsFilesUnder(dir: string): string[] {
+  const out: string[] = [];
+  const entries = readdirSync(dir, { withFileTypes: true }).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+  for (const e of entries) {
+    const p = join(dir, e.name);
+    if (e.isDirectory()) out.push(...tsFilesUnder(p));
+    else if (e.name.endsWith(".ts")) out.push(p);
+  }
+  return out;
+}
+
+/** Names of `export function|const|class` declarations sitting at brace depth 0
+ *  of `body` — the SAME declaration shapes the lib/graph enumerator matches. The
+ *  depth filter is what lets one scan read both a whole file (its top level) and
+ *  a `namespace` block body (whose members sit at depth 0 of that block, merely
+ *  indented in the file). Depth is tracked with the same naive bracket count the
+ *  dispatch parsers use. */
+function depthZeroExportedNames(body: string): string[] {
+  const names: string[] = [];
+  let depth = 0;
+  for (const line of body.split("\n")) {
+    if (depth === 0) {
+      const m =
+        /^\s*export\s+(?:async\s+function|function|const|class)\s+([A-Za-z_][A-Za-z0-9_]*)/.exec(
+          line,
+        );
+      if (m) names.push(m[1]);
+    }
+    for (const ch of line) {
+      if (ch === "{" || ch === "(" || ch === "[") depth++;
+      else if (ch === "}" || ch === ")" || ch === "]") depth--;
+    }
+  }
+  return names;
+}
+
+/** Exported functions of the setup package (#3404). Covers BOTH shapes the
+ *  package uses: top-level `export function|const|class`, and the members of an
+ *  `export namespace` (setup's dominant idiom — `Plan.forInstall` and friends).
+ *  Enumerating only the top level would leave roughly half the package's
+ *  exported surface outside the enumerated universe, which is the same silent
+ *  gap this class exists to close.
+ *
+ *  unitId is `function:NAME` for a top-level export and `function:NS.NAME` for a
+ *  namespace member, so a setup test's `covers: function:decideOnboardingDestination`
+ *  joins exactly like a lib/graph claim does. */
+export function enumerateSetupFunctions(): Unit[] {
+  if (!existsSync(SETUP_SRC_DIR)) {
+    // Fail loud rather than silently shrink the universe: a missing source root
+    // would report every setup unit as "gone" and quietly relax the ratchet.
+    throw new Error(
+      `setup function enumerator: ${SETUP_SRC_DIR} does not exist. The setup ` +
+        `package source is part of the enumerated universe — point ` +
+        `AMADEUS_COVERAGE_SRC_ROOT at a tree that contains packages/setup/src.`,
+    );
+  }
+  const units: Unit[] = [];
+  const nsRe = /^export\s+namespace\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{/gm;
+  for (const abs of tsFilesUnder(SETUP_SRC_DIR)) {
+    const rel = `packages/setup/src/${abs.slice(SETUP_SRC_DIR.length + 1).replace(/\\/g, "/")}`;
+    const src = readFileSync(abs, "utf-8");
+    for (const name of depthZeroExportedNames(src)) {
+      units.push({
+        unitClass: "function",
+        unitId: `function:${name}`,
+        minMechanism: MIN_MECHANISM.function,
+        source: rel,
+      });
+    }
+    nsRe.lastIndex = 0;
+    for (const m of src.matchAll(nsRe)) {
+      for (const member of depthZeroExportedNames(balancedBlock(src, m.index))) {
+        units.push({
+          unitClass: "function",
+          unitId: `function:${m[1]}.${member}`,
+          minMechanism: MIN_MECHANISM.function,
+          source: rel,
+        });
+      }
+    }
+  }
   return units;
+}
+
+/** The `function` class has a FLAT namespace (`function:NAME`), so two roots can
+ *  legitimately declare the same name — `main` exists in both amadeus-graph.ts
+ *  and packages/setup/src/cli.ts. Two rows with the same unitId would serialise
+ *  as byte-identical duplicates (RegistryRow carries no source), so collapse
+ *  them into ONE unit whose `source` names every declaring file. A claim on that
+ *  name therefore covers the name, not one chosen declaration — the honest
+ *  reading of a flat id space. */
+function dedupeFunctionUnits(units: Unit[]): Unit[] {
+  const byId = new Map<string, Unit>();
+  for (const u of units) {
+    const prev = byId.get(u.unitId);
+    if (prev === undefined) {
+      byId.set(u.unitId, u);
+      continue;
+    }
+    const sources = dedupe([...prev.source.split(", "), u.source]).sort();
+    byId.set(u.unitId, { ...prev, source: sources.join(", ") });
+  }
+  return [...byId.values()];
 }
 
 /** All units, every class. The full enumerated universe (left side). */
@@ -830,9 +960,24 @@ function claimKeysForUnit(u: Unit): string[] {
   }
 }
 
+/** A `covers:` token written in the registry's OWN vocabulary (its class prefix
+ *  is one of UNIT_CLASSES) that matches NO enumerated unit. Before #3404 the
+ *  join simply dropped it: the claim was neither counted nor reported, so a test
+ *  could declare `covers: function:foo` against a root the enumerator never read
+ *  and stay green forever. These are now serialised into the registry (so the
+ *  freshness diff reds `--check` until they are reviewed and regenerated) and
+ *  reported on stderr. */
+export interface UnjoinedClaim {
+  claimId: string;
+  file: string; // relative to repo root
+}
+
 export interface BuildResult {
   rows: RegistryRow[];
   claims: DiscoveredClaim[];
+  /** Claims in the registry's vocabulary that joined no unit. Sorted by
+   *  (claimId, file) so serialisation is deterministic. */
+  unjoined: UnjoinedClaim[];
 }
 
 export function buildRegistry(): BuildResult {
@@ -921,14 +1066,73 @@ export function buildRegistry(): BuildResult {
       a.unitId.localeCompare(b.unitId),
   );
 
-  return { rows, claims };
+  return { rows, claims, unjoined: findUnjoinedClaims(units, claims) };
+}
+
+/** The right side of the join that landed nowhere. A `covers:` header is parsed
+ *  permissively — any `<word>:<token>` in the leading comment block becomes an
+ *  id — because several LEDGERS share that header: `file:` feeds the patch gate,
+ *  `domain:` / `modules:` / `invariant:` are prose-level groupings, and prose
+ *  itself contributes noise (`node:child_process`, `bun:test`). Only ids whose
+ *  class prefix IS one of this registry's UNIT_CLASSES belong to this join, so
+ *  only those can be "unjoined" here; everything else is another ledger's
+ *  vocabulary and is deliberately not reported. */
+function findUnjoinedClaims(
+  units: Unit[],
+  claims: DiscoveredClaim[],
+): UnjoinedClaim[] {
+  const validKeys = new Set<string>();
+  for (const u of units) for (const k of claimKeysForUnit(u)) validKeys.add(k);
+  const ourVocabulary = new Set<string>(UNIT_CLASSES);
+
+  const unjoined: UnjoinedClaim[] = [];
+  for (const c of claims) {
+    for (const id of c.unitIds) {
+      const sep = id.indexOf(":");
+      if (sep === -1) continue;
+      if (!ourVocabulary.has(id.slice(0, sep))) continue;
+      if (validKeys.has(id)) continue;
+      unjoined.push({ claimId: id, file: c.file });
+    }
+  }
+  return unjoined.sort(
+    (a, b) => a.claimId.localeCompare(b.claimId) || a.file.localeCompare(b.file),
+  );
+}
+
+/** The stderr report for unjoined claims — one line per class with a count, then
+ *  every claim. Emitted on BOTH generate and `--check` so the divergence is
+ *  visible at the moment it is created, not only in a registry diff. */
+export function unjoinedClaimsReport(unjoined: UnjoinedClaim[]): string[] {
+  if (unjoined.length === 0) return [];
+  const byClass = new Map<string, number>();
+  for (const u of unjoined) {
+    const cls = u.claimId.slice(0, u.claimId.indexOf(":"));
+    byClass.set(cls, (byClass.get(cls) ?? 0) + 1);
+  }
+  const perClass = [...byClass]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([cls, n]) => `${cls}=${n}`)
+    .join(" ");
+  return [
+    `UNJOINED COVERS CLAIMS: ${unjoined.length} claim(s) name the coverage ` +
+      `registry's own vocabulary but match NO enumerated unit (${perClass}). ` +
+      `They contribute ZERO coverage. Either fix the id, add the declaring ` +
+      `root to an enumerator, or accept it — the full list is committed to ` +
+      `tests/.coverage-registry.json under "unjoinedClaims", so a NEW one reds ` +
+      `--check until it is regenerated and reviewed.`,
+    ...unjoined.map((u) => `  ${u.claimId}  <- ${u.file}`),
+  ];
 }
 
 // ===========================================================================
 // SERIALISATION — deterministic JSON so the freshness diff is byte-stable.
 // ===========================================================================
 
-export function registryJson(rows: RegistryRow[]): string {
+export function registryJson(
+  rows: RegistryRow[],
+  unjoined: UnjoinedClaim[] = [],
+): string {
   const byClass: Record<string, number> = {};
   const coveredByClass: Record<string, number> = {};
   for (const c of UNIT_CLASSES) {
@@ -948,8 +1152,12 @@ export function registryJson(rows: RegistryRow[]): string {
       total: rows.length,
       enumeratedByClass: byClass,
       coveredByClass,
+      unjoinedClaims: unjoined.length,
     },
     units: rows,
+    // Committed on purpose (#3404): an unjoined claim used to vanish silently,
+    // so a NEW one has to move a committed byte before it can pass CI.
+    unjoinedClaims: unjoined,
   };
   return `${JSON.stringify(doc, null, 2)}\n`;
 }
@@ -1088,10 +1296,16 @@ function lineDiff(expected: string, actual: string): string {
 export interface CheckResult {
   ok: boolean;
   messages: string[];
+  /** Advisory lines printed to stderr regardless of `ok` (the unjoined-claim
+   *  report). They never flip the exit code by themselves — the freshness diff
+   *  is what reds CI when the committed list changes. */
+  warnings: string[];
 }
 
-export function runCheck(rows: RegistryRow[] = buildRegistry().rows): CheckResult {
+export function runCheck(build: BuildResult = buildRegistry()): CheckResult {
+  const { rows, unjoined } = build;
   const messages: string[] = [];
+  const warnings = unjoinedClaimsReport(unjoined);
   let ok = true;
 
   // GUARD (a): non-empty per class.
@@ -1120,7 +1334,7 @@ export function runCheck(rows: RegistryRow[] = buildRegistry().rows): CheckResul
   }
 
   // FRESHNESS DIFF: committed registry must match the freshly generated one.
-  const actual = registryJson(rows);
+  const actual = registryJson(rows, unjoined);
   if (!existsSync(REGISTRY_PATH)) {
     ok = false;
     messages.push(
@@ -1160,7 +1374,7 @@ export function runCheck(rows: RegistryRow[] = buildRegistry().rows): CheckResul
           `hand edit). Regenerate it with a reviewed commit: ` +
           `bun tests/gen-coverage-registry.ts`,
       );
-      return { ok, messages };
+      return { ok, messages, warnings };
     }
     const baseline = parsed.coveredByClass;
     const current = ratchetFromRows(rows).coveredByClass;
@@ -1180,16 +1394,20 @@ export function runCheck(rows: RegistryRow[] = buildRegistry().rows): CheckResul
     }
   }
 
-  return { ok, messages };
+  return { ok, messages, warnings };
 }
 
 // ===========================================================================
 // MAIN.
 // ===========================================================================
 
-function writeAll(rows: RegistryRow[]): void {
-  writeFileSync(REGISTRY_PATH, registryJson(rows));
+function writeAll(rows: RegistryRow[], unjoined: UnjoinedClaim[]): void {
+  writeFileSync(REGISTRY_PATH, registryJson(rows, unjoined));
   writeFileSync(RATCHET_PATH, ratchetJson(ratchetFromRows(rows)));
+}
+
+function printStderr(lines: readonly string[]): void {
+  for (const line of lines) console.error(line);
 }
 
 function main(): void {
@@ -1197,15 +1415,19 @@ function main(): void {
 
   if (args.includes("--check")) {
     const r = runCheck();
+    // Warnings print on the failing AND the passing path — an unjoined claim is
+    // never silent, even when the committed registry already records it.
+    printStderr(r.warnings);
     if (!r.ok) {
-      for (const m of r.messages) console.error(m);
+      printStderr(r.messages);
       process.exit(1);
     }
     console.log("coverage registry: OK (fresh, guards green, ratchet held)");
     return;
   }
 
-  const { rows } = buildRegistry();
+  const { rows, unjoined } = buildRegistry();
+  printStderr(unjoinedClaimsReport(unjoined));
 
   // Guards also run on a plain generate so we never WRITE a rotted registry.
   const empties = emptyClasses(rows);
@@ -1227,11 +1449,11 @@ function main(): void {
   }
 
   if (args.includes("--print")) {
-    process.stdout.write(registryJson(rows));
+    process.stdout.write(registryJson(rows, unjoined));
     return;
   }
 
-  writeAll(rows);
+  writeAll(rows, unjoined);
 
   // Report enumerated + covered counts per class to stdout.
   const byClass: Record<string, { total: number; covered: number }> = {};
@@ -1248,6 +1470,7 @@ function main(): void {
     );
   }
   console.log(`  ${"TOTAL".padEnd(11)} ${rows.filter((r) => r.status === "covered").length}/${rows.length}`);
+  console.log(`Unjoined covers claims (contribute no coverage): ${unjoined.length}`);
 }
 
 if (import.meta.main) main();

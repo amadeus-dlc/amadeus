@@ -300,6 +300,34 @@ bun tests/gen-coverage-registry.ts --check  # コミット済みレジストリ�
 ヘッダを直接 grep します)。`--check` モードはスイートに組み込まれており、ディスクから
 ドリフトしたレジストリはゲートをレッドにします。
 
+`function` クラスは、フレームワークのインポート可能なサーフェスから列挙されます —
+`amadeus-lib.ts`、`amadeus-graph.ts`、`amadeus-state.ts` の対象3関数、そして
+`packages/setup/src/` 配下の setup パッケージ(トップレベルの `export function` と
+`export namespace` のメンバーの両方。後者は `function:<Namespace>.<name>` として現れます)。
+ID 空間はフラットなので、2つのルートが宣言する同名の関数 — `main` は
+`amadeus-graph.ts` と `packages/setup/src/cli.ts` の両方に存在します — は、
+宣言している全ファイルを `source` に列挙する1つのユニットになります。
+
+### join されない `covers:` 主張
+
+`covers:` ヘッダは寛容に解析されます。複数の台帳がこのヘッダを共有しているためです。
+`file:` はパッチゲートに供給され、`domain:`/`modules:`/`invariant:` は散文レベルの
+グルーピングで、散文そのものもノイズ(`node:child_process` など)を持ち込みます。
+レジストリ *自身の* 語彙 — 7つのクラス接頭辞のいずれか — で書かれていながら列挙済み
+ユニットのどれにも一致しない主張は、テストが「カバーする」と言っていることと台帳が
+知っていることの実際の乖離です。そのためジェネレータはそれをすべて報告します:
+
+- 生成時と `--check` の両方で、stderr に `UNJOINED COVERS CLAIMS` として出力する
+- コミット済みレジストリの `unjoinedClaims`(および `counts.unjoinedClaims`)に記録する
+
+この一覧をコミットすることが、この仕組みに歯を与えています。*新しい* 未 join 主張は
+生成されるレジストリを変えるため、誰かが再生成してその差分がレビューされるまで、
+フレッシュネス差分が `--check` をレッドにします。報告自体は advisory であり、
+単独で失敗させることはありません。リポジトリには現在この種の主張が数百件存在し
+(その大半は、どの列挙器も読まないルートのヘルパーを指す `function:` ID です)、
+これをハード失敗にしても、新しい情報を伝えないままビルドをレッドにするだけだからです。
+レジストリの語彙外の主張は報告されません。
+
 > **注:** t19 は unit(`tests/unit/t19.test.ts`、ジャンプ CLI
 > ツール)と integration(`tests/integration/t19.test.ts`、ライブプリフライト
 > ゲート)の両方に現れます — このような衝突は、素の ID ではなく、レベル/ファイルパスで
