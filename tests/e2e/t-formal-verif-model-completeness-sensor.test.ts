@@ -11,6 +11,9 @@ import {
 } from "node:fs";
 import { hostname } from "node:os";
 import { join } from "node:path";
+import { KNOWN_HARNESS_DIRS } from "../../packages/framework/core/tools/amadeus-harness.ts";
+import { PACKAGE_HARNESS_IDS } from "../../packages/framework/core/tools/amadeus-harness-registry.ts";
+import { matchesGlob } from "../../packages/framework/core/tools/amadeus-sensor.ts";
 import { canonicalIdentity } from "../../plugins/formal-model-check/tools/canonical.ts";
 import { type NormalizedAuditRecord, auditRowsFrom } from "../harness/audit-records.ts";
 import {
@@ -30,14 +33,19 @@ const SENSOR_DISPATCHER = join(
   "tools",
   "amadeus-sensor.ts",
 );
-const SENSOR_SCRIPT_DIR = join(
-  REPO_ROOT,
-  "packages",
-  "framework",
-  "core",
-  "tools",
-);
-const SENSORS_DIR = join(REPO_ROOT, "packages", "framework", "core", "sensors");
+// #2890 moved both faces of this sensor out of core — the manifest from
+// packages/framework/core/sensors/ and the per-sensor script from
+// packages/framework/core/tools/ — into the formal-model-check plugin bundle.
+// The dispatcher still finds them through the same two seams it always used
+// (AMADEUS_SENSORS_DIR for manifests, AMADEUS_SENSOR_SCRIPT_DIR for scripts);
+// only the directories they point at moved.
+const PLUGIN_ROOT = join(REPO_ROOT, "plugins", "formal-model-check");
+const SENSOR_SCRIPT_DIR = join(PLUGIN_ROOT, "tools");
+const SENSORS_DIR = join(PLUGIN_ROOT, "sensors");
+const SENSOR_MANIFEST_BASENAME = "amadeus-model-completeness.md";
+const SENSOR_SCRIPT_BASENAME = "amadeus-sensor-model-completeness.ts";
+const SENSOR_MANIFEST = join(SENSORS_DIR, SENSOR_MANIFEST_BASENAME);
+const MODEL_MAP_RELATIVE = "amadeus/spaces/default/specs/tla/model-map.json";
 const SENSOR_HOOK = join(
   REPO_ROOT,
   "packages",
@@ -47,6 +55,32 @@ const SENSOR_HOOK = join(
   "amadeus-sensor-fire.ts",
 );
 const roots: string[] = [];
+
+/** The per-harness bundle the packager emits for the plugin that owns this
+ *  sensor. Replaces the pre-#2890 `dist/<harness>/<harnessDir>/{sensors,tools}`
+ *  mirror, which no longer carries either face. */
+function projectedBundle(harness: string): string {
+  return join(
+    REPO_ROOT,
+    "dist",
+    "plugins",
+    "formal-model-check",
+    harness,
+    "plugins",
+    "formal-model-check",
+  );
+}
+
+/** Read one scalar frontmatter key off a sensor manifest. Fails closed: an
+ *  unreadable frontmatter or a missing key is an unknown state, not a pass. */
+function manifestField(manifestPath: string, key: string): string {
+  const raw = readFileSync(manifestPath, "utf-8");
+  const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---/.exec(raw);
+  if (!frontmatter) throw new Error(`${manifestPath} has no YAML frontmatter block`);
+  const field = new RegExp(`^${key}:[ \\t]*(.+)$`, "m").exec(frontmatter[1] ?? "");
+  if (!field) throw new Error(`${manifestPath} declares no ${key}`);
+  return (field[1] ?? "").trim().replace(/^(['"])([\s\S]*)\1$/, "$2");
+}
 
 function shardName(): string {
   const host =
@@ -145,10 +179,13 @@ function project(): {
         sensors_applicable: [
           {
             id: "model-completeness",
-            path: ".claude/sensors/amadeus-model-completeness.md",
+            // Post-#2890 the manifest is plugin-owned, and post-#3364 its
+            // `matches` glob covers every registered model-map entry rather
+            // than the single U1 branch. Both are read off the shipped
+            // manifest so the fixture cannot drift from what compile emits.
+            path: `plugins/formal-model-check/sensors/${SENSOR_MANIFEST_BASENAME}`,
             kind: "deterministic",
-            matches:
-              "**/{amadeus/spaces/*/specs/tla/**,packages/framework/core/tools/amadeus-election*.ts}",
+            matches: manifestField(SENSOR_MANIFEST, "matches"),
             default_severity: "advisory",
           },
         ],
@@ -219,66 +256,86 @@ afterEach(() => {
 });
 
 describe("model-completeness sensor E2E", () => {
-  test("core toolとmanifestが全6 harness mirrorへ同期される", () => {
-    for (const [name, harnessDir] of [
-      ["claude", ".claude"],
-      ["codex", ".codex"],
-      ["cursor", ".cursor"],
-      ["kiro", ".kiro"],
-      ["kiro-ide", ".kiro"],
-      ["opencode", ".opencode"],
-    ]) {
-      const root = join(REPO_ROOT, "dist", name, harnessDir);
-      const tool = join(root, "tools", "amadeus-sensor-model-completeness.ts");
-      const manifest = join(root, "sensors", "amadeus-model-completeness.md");
-      expect(existsSync(tool)).toBe(true);
+  // Pre-#2890 this asserted that the CORE-owned manifest and script reached
+  // every harness mirror under dist/<harness>/<harnessDir>/{sensors,tools}.
+  // #2890 moved both faces into the formal-model-check bundle, so that mirror
+  // is no longer their delivery path — the packager's per-harness plugin
+  // projection is. The check follows the files: same "every shipped face
+  // carries both, with a harness-resolved command" contract, new location, plus
+  // the negative half proving the core mirror really did give up ownership.
+  test("plugin bundleのmanifestとtoolが全package harness projectionへ同期される", () => {
+    expect(PACKAGE_HARNESS_IDS.length).toBeGreaterThan(0);
+    for (const harness of PACKAGE_HARNESS_IDS) {
+      const bundle = projectedBundle(harness);
+      const manifest = join(bundle, "sensors", SENSOR_MANIFEST_BASENAME);
+      expect(existsSync(join(bundle, "tools", SENSOR_SCRIPT_BASENAME))).toBe(true);
       expect(existsSync(manifest)).toBe(true);
-      expect(readFileSync(manifest, "utf-8")).toContain(
-        `command: bun ${harnessDir}/tools/amadeus-sensor-model-completeness.ts`,
+
+      // The authoring manifest carries a `{{HARNESS_DIR}}` placeholder; every
+      // projected face must have it resolved to that face's harness dir.
+      const command = manifestField(manifest, "command");
+      expect(command).not.toContain("{{HARNESS_DIR}}");
+      const [runner, script] = command.split(/\s+/);
+      expect(runner).toBe("bun");
+      const [harnessDir, ...rest] = (script ?? "").split("/");
+      expect(KNOWN_HARNESS_DIRS as readonly string[]).toContain(harnessDir);
+      expect(rest.join("/")).toBe(
+        `plugins/formal-model-check/tools/${SENSOR_SCRIPT_BASENAME}`,
       );
+
+      // Ownership moved: the core face ships neither face of this sensor.
+      const coreFace = join(REPO_ROOT, "dist", harness, harnessDir ?? "");
+      expect(existsSync(coreFace)).toBe(true);
+      expect(existsSync(join(coreFace, "sensors", SENSOR_MANIFEST_BASENAME))).toBe(false);
+      expect(existsSync(join(coreFace, "tools", SENSOR_SCRIPT_BASENAME))).toBe(false);
     }
   });
 
-  test("Domain Entities・manifest・U1 map・plan/summary・PostToolUse境界がcanonical globへ一致する", () => {
-    const canonicalGlob =
-      "packages/framework/core/tools/amadeus-election*.ts";
-    const files = [
-      join(
-        REPO_ROOT,
-        "amadeus/spaces/default/intents/260722-tla-plugin/construction/completeness-sensor/functional-design/domain-entities.md",
-      ),
-      join(
-        REPO_ROOT,
-        "packages/framework/core/sensors/amadeus-model-completeness.md",
-      ),
-      join(
-        REPO_ROOT,
-        "amadeus/spaces/default/intents/260722-tla-plugin/construction/completeness-sensor/code-generation/code-generation-plan.md",
-      ),
-      join(
-        REPO_ROOT,
-        "amadeus/spaces/default/intents/260722-tla-plugin/construction/completeness-sensor/code-generation/code-summary.md",
-      ),
-    ];
-    for (const file of files) {
-      expect(readFileSync(file, "utf-8")).toContain(canonicalGlob);
-    }
+  // Pre-#3364 the canonical glob was one literal (`packages/framework/core/
+  // tools/amadeus-election*.ts`) that the manifest, the U1 model map, and the
+  // 260722-tla-plugin design record all spelled out, so string equality across
+  // those four files was the agreement check. #3364 widened the glob to cover
+  // every registered model-map entry, which turns literal equality into the
+  // wrong predicate: COVERAGE is now the contract.
+  //
+  // The intent record is deliberately no longer a party to it. Those artifacts
+  // are frozen — they record what was decided at U1 and must not be rewritten
+  // when the live spec moves — so gating the current spec on them can only be
+  // discharged by editing history. The live participants that replace them are
+  // the per-harness projections of the manifest, which must all ship the
+  // identical glob.
+  test("manifest・model map・harness projection・PostToolUse境界がcanonical globへ一致する", () => {
+    const canonicalGlob = manifestField(SENSOR_MANIFEST, "matches");
+
+    // Every governed entry is selected, via the PRODUCTION matcher — the
+    // dispatcher and the PostToolUse hook both apply it to an absolute path.
     const map = JSON.parse(
-      readFileSync(join(REPO_ROOT, "amadeus/spaces/default/specs/tla/model-map.json"), "utf-8"),
-    );
-    const formalElection = map.models.find(
-      (model: { name: string }) => model.name === "FormalElection",
-    );
+      readFileSync(join(REPO_ROOT, MODEL_MAP_RELATIVE), "utf-8"),
+    ) as { models: { entries: { implPath: string }[] }[] };
+    const registered = [
+      ...new Set(map.models.flatMap((model) => model.entries.map((e) => e.implPath))),
+    ].sort();
+    expect(registered.length).toBeGreaterThan(0);
     expect(
-      formalElection.entries.every(
-        (entry: { implPath: string }) =>
-          entry.implPath.startsWith(
-            "packages/framework/core/tools/amadeus-election",
-          ) && entry.implPath.endsWith(".ts"),
-      ),
-    ).toBe(true);
+      registered.filter((implPath) => !matchesGlob(canonicalGlob, join(REPO_ROOT, implPath))),
+    ).toEqual([]);
+
+    // The spec-asset branch still fires the sensor on map/model edits.
+    expect(matchesGlob(canonicalGlob, join(REPO_ROOT, MODEL_MAP_RELATIVE))).toBe(true);
+
+    // Projection fidelity: one glob, byte-identical on every shipped face.
+    for (const harness of PACKAGE_HARNESS_IDS) {
+      expect(
+        manifestField(join(projectedBundle(harness), "sensors", SENSOR_MANIFEST_BASENAME), "matches"),
+      ).toBe(canonicalGlob);
+    }
+
+    // PostToolUse boundary: the glob the hook reads off the stage-graph node
+    // selects the canonical implementation path and rejects an unrelated one.
     const p = project();
     expect(readFileSync(p.graphPath, "utf-8")).toContain(canonicalGlob);
+    expect(matchesGlob(canonicalGlob, p.implPath)).toBe(true);
+    expect(matchesGlob(canonicalGlob, join(p.root, "README.md"))).toBe(false);
   });
 
   test("dispatcher fireが同期状態をpaired SENSOR_PASSEDへ到達させる", () => {

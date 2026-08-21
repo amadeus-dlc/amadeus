@@ -162,6 +162,198 @@
       "issue": "#1982",
       "firstObserved": "2026-08-20",
       "expires": "2026-11-18"
+    },
+    {
+      "file": "tests/e2e/t-acp-kiro-compose-front.serial.test.ts",
+      "test": "*",
+      "reason": "Live-harness journey: needs the real harness binary and interactive/subscription auth, neither of which exists in CI, so the file's own guard self-skips every case there. Time-boxed until #2236 lands an always-attempt lane with auth; the skip is the file's designed offline behavior, not a masked failure.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-acp-kiro-journey-workspace.serial.test.ts",
+      "test": "*",
+      "reason": "Live-harness journey: needs the real harness binary and interactive/subscription auth, neither of which exists in CI, so the file's own guard self-skips every case there. Time-boxed until #2236 lands an always-attempt lane with auth; the skip is the file's designed offline behavior, not a masked failure.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-acp-kiro-jump.serial.test.ts",
+      "test": "*",
+      "reason": "Live-harness journey: needs the real harness binary and interactive/subscription auth, neither of which exists in CI, so the file's own guard self-skips every case there. Time-boxed until #2236 lands an always-attempt lane with auth; the skip is the file's designed offline behavior, not a masked failure.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-acp-kiro-reviewer.serial.test.ts",
+      "test": "*",
+      "reason": "Live-harness journey: needs the real harness binary and interactive/subscription auth, neither of which exists in CI, so the file's own guard self-skips every case there. Time-boxed until #2236 lands an always-attempt lane with auth; the skip is the file's designed offline behavior, not a masked failure.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-acp-kiro-status.serial.test.ts",
+      "test": "*",
+      "reason": "Live-harness journey: needs the real harness binary and interactive/subscription auth, neither of which exists in CI, so the file's own guard self-skips every case there. Time-boxed until #2236 lands an always-attempt lane with auth; the skip is the file's designed offline behavior, not a masked failure.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-acp-kiro-utilities.serial.test.ts",
+      "test": "*",
+      "reason": "Live-harness journey: needs the real harness binary and interactive/subscription auth, neither of which exists in CI, so the file's own guard self-skips every case there. Time-boxed until #2236 lands an always-attempt lane with auth; the skip is the file's designed offline behavior, not a masked failure.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-claude-print-kernel.serial.test.ts",
+      "test": "*",
+      "reason": "Live-harness journey: needs the real harness binary and interactive/subscription auth, neither of which exists in CI, so the file's own guard self-skips every case there. Time-boxed until #2236 lands an always-attempt lane with auth; the skip is the file's designed offline behavior, not a masked failure.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-claude-sdk-kernel.serial.test.ts",
+      "test": "*",
+      "reason": "Live-harness journey: needs the real harness binary and interactive/subscription auth, neither of which exists in CI, so the file's own guard self-skips every case there. Time-boxed until #2236 lands an always-attempt lane with auth; the skip is the file's designed offline behavior, not a masked failure.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-claude-tui-kernel.serial.test.ts",
+      "test": "*",
+      "reason": "Live-harness journey: needs the real harness binary and interactive/subscription auth, neither of which exists in CI, so the file's own guard self-skips every case there. Time-boxed until #2236 lands an always-attempt lane with auth; the skip is the file's designed offline behavior, not a masked failure.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-exec-codex-autosolo-s13.serial.test.ts",
+      "test": "*",
+      "reason": "Live-harness journey: needs the real harness binary and interactive/subscription auth, neither of which exists in CI, so the file's own guard self-skips every case there. Time-boxed until #2236 lands an always-attempt lane with auth; the skip is the file's designed offline behavior, not a masked failure.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-exec-codex-compose-front.serial.test.ts",
+      "test": "*",
+      "reason": "Live-harness journey: needs the real harness binary and interactive/subscription auth, neither of which exists in CI, so the file's own guard self-skips every case there. Time-boxed until #2236 lands an always-attempt lane with auth; the skip is the file's designed offline behavior, not a masked failure.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-exec-codex-hooks-missing.serial.test.ts",
+      "test": "*",
+      "reason": "Live-harness journey: needs the real harness binary and interactive/subscription auth, neither of which exists in CI, so the file's own guard self-skips every case there. Time-boxed until #2236 lands an always-attempt lane with auth; the skip is the file's designed offline behavior, not a masked failure.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-exec-codex-journey-workspace.serial.test.ts",
+      "test": "*",
+      "reason": "Live-harness journey: needs the real harness binary and interactive/subscription auth, neither of which exists in CI, so the file's own guard self-skips every case there. Time-boxed until #2236 lands an always-attempt lane with auth; the skip is the file's designed offline behavior, not a masked failure.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-exec-codex-kernel.serial.test.ts",
+      "test": "*",
+      "reason": "Live-harness journey: needs the real harness binary and interactive/subscription auth, neither of which exists in CI, so the file's own guard self-skips every case there. Time-boxed until #2236 lands an always-attempt lane with auth; the skip is the file's designed offline behavior, not a masked failure.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-exec-codex-memory-include.serial.test.ts",
+      "test": "*",
+      "reason": "Live-harness journey: needs the real harness binary and interactive/subscription auth, neither of which exists in CI, so the file's own guard self-skips every case there. Time-boxed until #2236 lands an always-attempt lane with auth; the skip is the file's designed offline behavior, not a masked failure.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-exec-codex-review-recovery.serial.test.ts",
+      "test": "*",
+      "reason": "Live-harness journey: needs the real harness binary and interactive/subscription auth, neither of which exists in CI, so the file's own guard self-skips every case there. Time-boxed until #2236 lands an always-attempt lane with auth; the skip is the file's designed offline behavior, not a masked failure.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-exec-codex-status.serial.test.ts",
+      "test": "*",
+      "reason": "Live-harness journey: needs the real harness binary and interactive/subscription auth, neither of which exists in CI, so the file's own guard self-skips every case there. Time-boxed until #2236 lands an always-attempt lane with auth; the skip is the file's designed offline behavior, not a masked failure.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-ide-kiro-checkpoint.serial.test.ts",
+      "test": "*",
+      "reason": "Live-harness journey: needs the real harness binary and interactive/subscription auth, neither of which exists in CI, so the file's own guard self-skips every case there. Time-boxed until #2236 lands an always-attempt lane with auth; the skip is the file's designed offline behavior, not a masked failure.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-kimi-print-kernel.serial.test.ts",
+      "test": "*",
+      "reason": "Live-harness journey: needs the real harness binary and interactive/subscription auth, neither of which exists in CI, so the file's own guard self-skips every case there. Time-boxed until #2236 lands an always-attempt lane with auth; the skip is the file's designed offline behavior, not a masked failure.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-kiro-acp-kernel.serial.test.ts",
+      "test": "*",
+      "reason": "Live-harness journey: needs the real harness binary and interactive/subscription auth, neither of which exists in CI, so the file's own guard self-skips every case there. Time-boxed until #2236 lands an always-attempt lane with auth; the skip is the file's designed offline behavior, not a masked failure.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-kiro-tui-kernel.serial.test.ts",
+      "test": "*",
+      "reason": "Live-harness journey: needs the real harness binary and interactive/subscription auth, neither of which exists in CI, so the file's own guard self-skips every case there. Time-boxed until #2236 lands an always-attempt lane with auth; the skip is the file's designed offline behavior, not a masked failure.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-live-llm-ts-tool-journey.serial.test.ts",
+      "test": "*",
+      "reason": "Live-harness journey: needs the real harness binary and interactive/subscription auth, neither of which exists in CI, so the file's own guard self-skips every case there. Time-boxed until #2236 lands an always-attempt lane with auth; the skip is the file's designed offline behavior, not a masked failure.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-print-kimi-doctor.serial.test.ts",
+      "test": "*",
+      "reason": "Live-harness journey: needs the real harness binary and interactive/subscription auth, neither of which exists in CI, so the file's own guard self-skips every case there. Time-boxed until #2236 lands an always-attempt lane with auth; the skip is the file's designed offline behavior, not a masked failure.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
+      "file": "tests/e2e/t-print-kimi-status.serial.test.ts",
+      "test": "*",
+      "reason": "Live-harness journey: needs the real harness binary and interactive/subscription auth, neither of which exists in CI, so the file's own guard self-skips every case there. Time-boxed until #2236 lands an always-attempt lane with auth; the skip is the file's designed offline behavior, not a masked failure.",
+      "issue": "#2236",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
     }
   ],
   "leaks": []
