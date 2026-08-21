@@ -741,9 +741,18 @@ export function classifySourcePaths(
   return { blocking: [...new Set(blocking)], disposable: [...new Set(disposable)] };
 }
 
-// A name no ignore rule should plausibly carry, used only as a synthetic probe
-// path — it is never created on disk.
-const IGNORE_PROBE_NAME = "amadeus-worktree-ignore-probe";
+// Names no ignore rule should plausibly carry, used only as synthetic probe
+// paths — never created on disk. TWO deliberately dissimilar names (no shared
+// stem, prefix, extension, or the word "probe") are probed per directory, and
+// a directory only counts as territory when BOTH are ignored: a rule that
+// happens to name one probe literally (or glob its stem) cannot also match the
+// other, while any rule broad enough to swallow both (`dir/*`, `dir/**`, `*`)
+// genuinely swallows arbitrary new names — which is exactly the property being
+// tested for.
+const IGNORE_PROBE_NAMES = [
+  "amadeus-worktree-ignore-probe",
+  "zz7q-territory-canary.tmpx",
+] as const;
 
 /** The `!! `-prefixed paths of a NUL-separated porcelain=v1 status. */
 export function ignoredStatusPaths(porcelain: string): string[] {
@@ -783,7 +792,7 @@ export function ancestorDirsOf(relPath: string): string[] {
  * Fails closed: if the probe NAME is itself ignored at the worktree root, no
  * directory can be told apart from a blanket rule, so nothing is territory.
  */
-function ignoredTerritoryRoots(
+export function ignoredTerritoryRoots(
   wtPath: string,
   ignoredPaths: readonly string[],
   slug: string,
@@ -794,7 +803,10 @@ function ignoredTerritoryRoots(
   for (const path of ignoredPaths) for (const dir of ancestorDirsOf(path)) dirs.add(dir);
   if (dirs.size === 0) return roots;
 
-  const probes = [IGNORE_PROBE_NAME, ...[...dirs].map((dir) => `${dir}/${IGNORE_PROBE_NAME}`)];
+  const probes = [
+    ...IGNORE_PROBE_NAMES,
+    ...[...dirs].flatMap((dir) => IGNORE_PROBE_NAMES.map((name) => `${dir}/${name}`)),
+  ];
   const checked = runGit(
     ["check-ignore", "-z", "--no-index", "--stdin"],
     wtPath,
@@ -808,12 +820,14 @@ function ignoredTerritoryRoots(
     );
   }
   const ignoredProbes = new Set(checked.stdout.split("\0").filter((probe) => probe.length > 0));
-  if (ignoredProbes.has(IGNORE_PROBE_NAME)) return roots;
+  // Fail closed when EITHER probe name is ignored at the worktree root: a
+  // blanket rule that broad leaves no directory distinguishable from it.
+  if (IGNORE_PROBE_NAMES.some((name) => ignoredProbes.has(name))) return roots;
 
+  const swallowsAnyName = (dir: string): boolean =>
+    IGNORE_PROBE_NAMES.every((name) => ignoredProbes.has(`${dir}/${name}`));
   for (const path of ignoredPaths) {
-    const territory = ancestorDirsOf(path).find((dir) =>
-      ignoredProbes.has(`${dir}/${IGNORE_PROBE_NAME}`),
-    );
+    const territory = ancestorDirsOf(path).find(swallowsAnyName);
     if (territory !== undefined) roots.set(path, territory);
   }
   return roots;

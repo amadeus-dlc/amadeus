@@ -1,4 +1,4 @@
-// covers: subcommand:amadeus-swarm:check
+// covers: subcommand:amadeus-swarm:check, function:ignoredStatusPaths, function:ancestorDirsOf, function:ignoredTerritoryRoots
 // size: medium
 //
 // Issue #746: after #670/#727, `amadeus-worktree create` anchors a Bolt worktree
@@ -42,6 +42,7 @@ import {
   gitRunDetail,
   handleCreate,
   ignoredStatusPaths,
+  ignoredTerritoryRoots,
   handleDiscard,
   handleList,
   handleMerge,
@@ -443,6 +444,60 @@ describe("t209 source classification (#3197) — pure seam", () => {
       "\0",
     );
     expect(ignoredStatusPaths(porcelain)).toEqual(["dist/generated.js", "dist/"]);
+  });
+
+  // Real-git fixture: the territory probe must not classify a directory as
+  // generated output when the ignore rule matches only the probe's own literal
+  // name (or one probe's stem) — only a rule broad enough to swallow BOTH
+  // dissimilar probe names (`dir/**`, `dir/*`) counts. Uses a throwaway repo so
+  // the verdict comes from git itself, independent of ambient git config.
+  test("ignoredTerritoryRoots: a probe-name-only ignore rule does not create territory", () => {
+    const root = mkdtempSync(join(tmpdir(), "amadeus-t209-probe-"));
+    // Isolate from ambient git config: a developer-machine global excludes
+    // rule like `dist/` would legitimately make dist territory (status and
+    // check-ignore read the same config — that self-consistency IS the fix),
+    // but this case must exercise exactly the rules the fixture writes.
+    const saved = {
+      GIT_CONFIG_GLOBAL: process.env.GIT_CONFIG_GLOBAL,
+      GIT_CONFIG_SYSTEM: process.env.GIT_CONFIG_SYSTEM,
+      GIT_CONFIG_NOSYSTEM: process.env.GIT_CONFIG_NOSYSTEM,
+      HOME: process.env.HOME,
+      XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME,
+    };
+    process.env.GIT_CONFIG_GLOBAL = "/dev/null";
+    process.env.GIT_CONFIG_SYSTEM = "/dev/null";
+    process.env.GIT_CONFIG_NOSYSTEM = "1";
+    // GIT_CONFIG_GLOBAL does not disable the DEFAULT excludes file
+    // (~/.config/git/ignore); pointing HOME/XDG at the empty fixture does.
+    process.env.HOME = root;
+    process.env.XDG_CONFIG_HOME = join(root, ".xdg");
+    try {
+      git(root, ["init", "-q", "--initial-branch=main", root]);
+      mkdirSync(join(root, "dist"), { recursive: true });
+      mkdirSync(join(root, "out"), { recursive: true });
+      writeFileSync(
+        join(root, ".gitignore"),
+        // out/** genuinely swallows any name; the dist rules name only the
+        // probe literal and the first probe's stem, so dist must stay blocking.
+        ["/out/**", "/dist/amadeus-worktree-ignore-probe", "/dist/amadeus-*", ""].join("\n"),
+      );
+      writeFileSync(join(root, "dist", "generated.js"), "");
+      writeFileSync(join(root, "out", "bundle.js"), "");
+      const roots = ignoredTerritoryRoots(
+        root,
+        ["dist/generated.js", "out/bundle.js"],
+        "t209",
+        "",
+      );
+      expect(roots.get("out/bundle.js")).toBe("out");
+      expect(roots.has("dist/generated.js")).toBe(false);
+    } finally {
+      for (const [key, value] of Object.entries(saved)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   test("ancestorDirsOf lists dirs shallowest-first, excluding the root and the file name", () => {
