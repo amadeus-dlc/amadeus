@@ -11,8 +11,8 @@
 //   3. Clear the two startup modals the spike discovered:
 //        a. workspace-trust dialog     -> "1. Yes, I trust"
 //        b. bypass-permissions warning  -> "2. Yes, I accept"
-//   4. Wait for the statusline marker "[Amadeus-DLC]" to paint and settle.
-//   5. Assert the captured pane contains "[Amadeus-DLC] ready" — the no-workflow
+//   4. Wait for the canonical statusline marker to paint and settle.
+//   5. Assert the captured pane contains the canonical marker plus "ready" — the no-workflow
 //      statusline output from amadeus-statusline.ts (no amadeus-docs/ present).
 //
 // COST: this launches the claude TUI but submits NO prompt, so it reaches the
@@ -33,8 +33,10 @@ import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { STATUSLINE_PREFIX } from "../../packages/framework/core/hooks/amadeus-statusline.ts";
 
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
+const STATUSLINE_MARKER_PATTERN = STATUSLINE_PREFIX.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 // Bun runs the TypeScript entrypoint natively on every platform.
 
 // `wait` returns nonzero on timeout — we want a boolean for the idempotent modal
@@ -55,7 +57,7 @@ const ABSENT_REASON = absentReason();
 
 describe("t-tui-statusline (statusline renders in a real terminal)", () => {
   test.skipIf(ABSENT_REASON !== null)(
-    `[Amadeus-DLC] ready paints in the launched TUI${ABSENT_REASON ? ` — SKIP: ${ABSENT_REASON}` : ""}`,
+    `${STATUSLINE_PREFIX} ready paints in the launched TUI${ABSENT_REASON ? ` — SKIP: ${ABSENT_REASON}` : ""}`,
     () => {
       const session = `amadeus_tui_statusline_${process.pid}`;
       const sandbox = mkdtempSync(join(tmpdir(), "amadeus-tui-statusline-"));
@@ -75,7 +77,7 @@ describe("t-tui-statusline (statusline renders in a real terminal)", () => {
         // P0a — the retired spike (git show 4ce826b:tests/spike/t-tui-statusline.sh
         // ~L55) also required settings.json to CARRY the "statusLine" key, not just
         // exist: that key is what wires amadeus-statusline.ts into the TUI, so a copy
-        // that drops it would render no `[Amadeus-DLC]` line at all. Restore that guard.
+        // that drops it would render no statusline marker at all. Restore that guard.
         expect(readFileSync(settingsPath, "utf8")).toContain('"statusLine"');
 
         // --- step 2: launch the claude TUI ------------------------------------
@@ -107,21 +109,21 @@ describe("t-tui-statusline (statusline renders in a real terminal)", () => {
         }
 
         // --- step 4: wait for the statusline marker ---------------------------
-        const sawMarker = waitForTui(session, "\\[AIDLC\\]", 45000, 1000);
+        const sawMarker = waitForTui(session, STATUSLINE_MARKER_PATTERN, 45000, 1000);
         if (!sawMarker) {
           const pane = runTuiDriver(["capture", "--session", session]).stdout;
           throw new Error(
-            `statusline marker [Amadeus-DLC] never appeared in the TUI.\n` +
+            `statusline marker ${STATUSLINE_PREFIX} never appeared in the TUI.\n` +
               `---- last pane ----\n${pane}\n-------------------`,
           );
         }
 
         // --- step 5: assert the rendered statusline content -------------------
-        // The no-workflow state (no amadeus-docs/ present) renders "[Amadeus-DLC] ready"
+        // The no-workflow state (no amadeus-docs/ present) renders the marker plus "ready"
         // (amadeus-statusline.ts). This is the one thing the SDK path cannot see —
         // the painted statusline.
         const pane = runTuiDriver(["capture", "--session", session]).stdout;
-        expect(pane).toContain("[Amadeus-DLC] ready");
+        expect(pane).toContain(`${STATUSLINE_PREFIX} ready`);
       } finally {
         runTuiDriver(["kill", "--session", session]);
         if (existsSync(sandbox)) rmSync(sandbox, { recursive: true, force: true });
