@@ -1,7 +1,7 @@
 // Preload script for the install E2E test (tests/e2e/setup-install.test.ts).
 //
 // ports/http.ts is a frozen U1 file with no test-injection hook and a fixed
-// host allowlist (api.github.com/codeload.github.com), and the E2E test
+// host allowlist (api.github.com, codeload.github.com, and github.com), and the E2E test
 // spawns the *real built binary* as its own process — so the only way to
 // keep that scenario network-independent (cicd-pipeline.md) without editing
 // the frozen port is to rewrite outgoing fetch() calls before they leave the
@@ -13,7 +13,7 @@ if (!port) {
   throw new Error("setup-fetch-shim.ts requires AMADEUS_SETUP_TEST_FAKE_GITHUB_PORT to be set");
 }
 
-const REDIRECT_HOSTS = new Set(["api.github.com", "codeload.github.com"]);
+const REDIRECT_HOSTS = new Set(["api.github.com", "codeload.github.com", "github.com"]);
 const originalFetch = globalThis.fetch;
 
 globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {

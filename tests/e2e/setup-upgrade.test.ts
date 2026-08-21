@@ -26,6 +26,7 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ensureSetupCliBuilt } from "../lib/setup-lazy-build.ts";
 import { buildDistArchiveFixture } from "../lib/setup-dist-fixture.ts";
+import { buildReleaseAssetChecksums } from "../lib/setup-release-asset-fixture.ts";
 
 const TESTS_DIR = dirname(fileURLToPath(import.meta.url));
 const SHIM_PATH = join(TESTS_DIR, "..", "lib", "setup-fetch-shim.ts");
@@ -42,6 +43,7 @@ function startFakeGitHubServer(
   tags: readonly TagEntry[],
 ): Promise<{ port: number; close: () => Promise<void> }> {
   return new Promise((resolveReady) => {
+    const checksums = buildReleaseAssetChecksums(archive, FIXTURE_TAG);
     const server: Server = createServer((req, res) => {
       const url = new URL(req.url ?? "/", "http://localhost");
       if (url.pathname === "/repos/amadeus-dlc/amadeus/releases") {
@@ -57,6 +59,17 @@ function startFakeGitHubServer(
       if (url.pathname.startsWith("/amadeus-dlc/amadeus/tar.gz/refs/tags/")) {
         res.writeHead(200, { "content-type": "application/gzip" });
         res.end(archive);
+        return;
+      }
+      const releaseAssetBase = `/amadeus-dlc/amadeus/releases/download/${FIXTURE_TAG}`;
+      if (url.pathname === `${releaseAssetBase}/amadeus-dist-${FIXTURE_TAG}.tar.gz`) {
+        res.writeHead(200, { "content-type": "application/gzip" });
+        res.end(archive);
+        return;
+      }
+      if (url.pathname === `${releaseAssetBase}/SHA256SUMS`) {
+        res.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
+        res.end(checksums);
         return;
       }
       // Exact --version resolution goes through the git ref direct lookup
