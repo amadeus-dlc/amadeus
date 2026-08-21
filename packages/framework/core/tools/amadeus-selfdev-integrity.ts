@@ -29,6 +29,7 @@ import {
 
 export const SELFDEV_INTEGRITY_RELATIVE_PATH = ".amadeus/.amadeus-selfdev-integrity.json";
 export const SELFDEV_BUILD_COMMAND = "bun run build";
+export const ABSENT_BASE_MARKER = "absent";
 export const SELFDEV_SCOPES = [
   "self-feature",
   "self-fix",
@@ -94,6 +95,10 @@ function validRevision(value: unknown): value is string {
   return typeof value === "string" && REVISION_RE.test(value);
 }
 
+function validOriginRevision(value: unknown): value is string {
+  return validRevision(value) || value === ABSENT_BASE_MARKER;
+}
+
 function validDigest(value: unknown): value is string {
   return typeof value === "string" && SHA256_RE.test(value);
 }
@@ -116,7 +121,7 @@ function validAttestationShape(value: Record<string, unknown>): value is ValidAt
   return (
     value.schemaVersion === 1 &&
     validRevision(value.targetHead) &&
-    validRevision(value.observedOriginMain) &&
+    validOriginRevision(value.observedOriginMain) &&
     value.buildStatus === SUCCESS &&
     typeof value.builtAt === "string" &&
     Number.isFinite(Date.parse(value.builtAt)) &&
@@ -259,6 +264,9 @@ function evaluateVerdict(
     return refusal(`The self-development build attestation is malformed (${evidence.detail}).`);
   }
   const attestation = evidence.value;
+  if (attestation.observedOriginMain === ABSENT_BASE_MARKER) {
+    return refusal("The self-development build attestation has no origin/main binding because the build could not resolve refs/remotes/origin/main.");
+  }
   const runtimeHarness = context.runtimeHarness ?? ".claude";
   const recordedRuntimeDigest = attestation.runtimeDigests[runtimeHarness];
   if (recordedRuntimeDigest === undefined) {
@@ -337,6 +345,17 @@ function gitRevision(projectDir: string, ref: string): string {
   return result.stdout.trim();
 }
 
+function gitOriginMainRevision(projectDir: string): string {
+  try {
+    return gitRevision(projectDir, "refs/remotes/origin/main");
+  } catch (error) {
+    console.warn(
+      `promote-self: could not resolve refs/remotes/origin/main; writing ${ABSENT_BASE_MARKER} base marker (${error instanceof Error ? error.message : String(error)})`,
+    );
+    return ABSENT_BASE_MARKER;
+  }
+}
+
 /** Write the disposable attestation atomically after a successful build path. */
 export function writeSelfDevelopmentIntegrityAttestation(
   projectDir: string,
@@ -356,7 +375,7 @@ export function writeSelfDevelopmentIntegrityAttestation(
   const attestation: SelfDevelopmentIntegrityAttestation = {
     schemaVersion: 1,
     targetHead: gitRevision(projectDir, "HEAD"),
-    observedOriginMain: gitRevision(projectDir, "refs/remotes/origin/main"),
+    observedOriginMain: gitOriginMainRevision(projectDir),
     buildStatus: SUCCESS,
     builtAt: now().toISOString(),
     sourceDigest,

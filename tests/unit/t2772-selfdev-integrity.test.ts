@@ -6,6 +6,7 @@ import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  ABSENT_BASE_MARKER,
   SELFDEV_INTEGRITY_RELATIVE_PATH,
   digestDirectory,
   digestRuntimeTools,
@@ -171,6 +172,15 @@ describe("t2772 self-development integrity policy", () => {
     expect(decision.refusal.reason).toContain("malformed");
   });
 
+  test("refuses an attestation written without an origin/main binding", () => {
+    const root = project();
+    writeAttestation(root, { observedOriginMain: ABSENT_BASE_MARKER });
+    const { deps } = gitDeps();
+    const decision = blocked(evaluateSelfDevelopmentIntegrity(context(root), deps));
+    expect(decision.refusal.reason).toContain("no origin/main binding");
+    expect(decision.refusal.recovery).toContain("bun run build");
+  });
+
   test("is not applicable when the repository is not self-development", () => {
     const root = project();
     const { deps } = gitDeps();
@@ -245,5 +255,19 @@ describe("t2772 self-development integrity policy", () => {
   test("fails loudly when build attestation git refs cannot be resolved", () => {
     const root = project();
     expect(() => writeSelfDevelopmentIntegrityAttestation(root, [".claude"])).toThrow("cannot resolve HEAD");
+  });
+
+  test("writes an absent-base marker when origin/main is unavailable", () => {
+    const root = project();
+    execFileSync("git", ["init", "-q", "-b", "main"], { cwd: root });
+    execFileSync("git", ["config", "user.email", "test@example.invalid"], { cwd: root });
+    execFileSync("git", ["config", "user.name", "Test"], { cwd: root });
+    execFileSync("git", ["add", "."], { cwd: root });
+    execFileSync("git", ["commit", "-qm", "fixture"], { cwd: root });
+    writeSelfDevelopmentIntegrityAttestation(root, [".claude"], () => new Date("2026-08-21T00:00:00.000Z"));
+    const attestation = JSON.parse(
+      readFileSync(join(root, SELFDEV_INTEGRITY_RELATIVE_PATH), "utf8"),
+    ) as SelfDevelopmentIntegrityAttestation;
+    expect(attestation.observedOriginMain).toBe(ABSENT_BASE_MARKER);
   });
 });
