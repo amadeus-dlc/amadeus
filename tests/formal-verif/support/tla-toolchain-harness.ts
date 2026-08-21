@@ -81,24 +81,40 @@ function envelope(code: number, severity: number, payload: string): string {
   return `@!@!@STARTMSG ${code}:${severity} @!@!@\n${payload}\n@!@!@ENDMSG ${code} @!@!@\n`;
 }
 
-function lifecyclePrefix(): string {
+const STANDARD_MODULES = ["Naturals", "Sequences", "FiniteSets", "TLC"] as const;
+
+/**
+ * The SANY transcript a real TLC run prints for THIS model. The auxiliary
+ * module names are read off the frozen model's own receipt rather than written
+ * out here, because a hard-coded copy silently rots: when the election model
+ * grew the `FormalElectionCore` auxiliary, this fixture kept emitting the old
+ * transcript and the classifier — correctly — rejected it as a module graph
+ * that does not match the receipt, which surfaced as HARNESS_ERROR:GRAMMAR on a
+ * TLC run that had in fact succeeded (#3391 class 2).
+ *
+ * Ordering mirrors SANY: the root module is parsed first, then everything it
+ * pulls in; semantic processing then runs dependencies-first with the root
+ * last. Auxiliaries sit beside the module, standard modules under the run's
+ * stdlib directory — the two locations the classifier resolves.
+ */
+function sanyTranscript(auxiliaryModules: readonly string[]): string {
+  return [
+    `Parsing file ${MODULE_PATH}`,
+    ...STANDARD_MODULES.map((module) => `Parsing file ${RUN_ROOT}/.tlc-stdlib/${module}.tla`),
+    ...auxiliaryModules.map((module) => `Parsing file ${RUN_ROOT}/${module}.tla`),
+    ...STANDARD_MODULES.map((module) => `Semantic processing of module ${module}`),
+    ...auxiliaryModules.map((module) => `Semantic processing of module ${module}`),
+    `Semantic processing of module ${MODULE_NAME}`,
+    "",
+  ].join("\n");
+}
+
+function lifecyclePrefix(auxiliaryModules: readonly string[]): string {
   return [
     envelope(2262, 0, "TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)"),
     envelope(2187, 0, "Running breadth-first search Model-Checking with fp 92 and seed 5 with 1 worker."),
     envelope(2220, 0, "Starting SANY..."),
-    [
-      `Parsing file ${MODULE_PATH}`,
-      `Parsing file ${RUN_ROOT}/.tlc-stdlib/Naturals.tla`,
-      `Parsing file ${RUN_ROOT}/.tlc-stdlib/Sequences.tla`,
-      `Parsing file ${RUN_ROOT}/.tlc-stdlib/FiniteSets.tla`,
-      `Parsing file ${RUN_ROOT}/.tlc-stdlib/TLC.tla`,
-      "Semantic processing of module Naturals",
-      "Semantic processing of module Sequences",
-      "Semantic processing of module FiniteSets",
-      "Semantic processing of module TLC",
-      `Semantic processing of module ${MODULE_NAME}`,
-      "",
-    ].join("\n"),
+    sanyTranscript(auxiliaryModules),
     envelope(2219, 0, "SANY finished."),
     envelope(2185, 0, "Starting... (2026-07-21 09:26:25)"),
     envelope(2189, 0, "Computing initial states..."),
@@ -106,7 +122,7 @@ function lifecyclePrefix(): string {
   ].join("");
 }
 
-function completeOutput(): string {
+function completeOutput(auxiliaryModules: readonly string[]): string {
   const completion = [
     "Model checking completed. No error has been found.",
     "  Estimates of the probability that TLC did not check all reachable states",
@@ -114,7 +130,7 @@ function completeOutput(): string {
     "  calculated (optimistic):  val = 1.1E-19",
   ].join("\n");
   return [
-    lifecyclePrefix(),
+    lifecyclePrefix(auxiliaryModules),
     envelope(2193, 0, completion),
     envelope(2200, 0, "Progress(1): 1 states generated, 1 distinct states found, 1 states left on queue."),
     envelope(2200, 0, "Progress(2): 3 states generated, 2 distinct states found, 0 states left on queue."),
@@ -125,23 +141,35 @@ function completeOutput(): string {
   ].join("");
 }
 
+/**
+ * The invariant the synthetic counterexample reports. Taken from the model
+ * map's own frozen set rather than written out here: the classifier rejects any
+ * name outside that set, and a hard-coded name is exactly what went stale when
+ * the election model was rewritten (#3391 class 2).
+ */
+const VIOLATED_INVARIANT: string = (() => {
+  const [first] = VOCABULARY.namedInvariants;
+  if (first === undefined) throw new Error(`${MODULE_NAME} declares no named invariants`);
+  return first;
+})();
+
+/**
+ * One state dump. The variable NAMES must equal the frozen trace vocabulary
+ * exactly — the classifier compares the whole set — so they are projected from
+ * it. The values are opaque filler: nothing asserts on them, and inventing
+ * model-shaped values here would be a second place to keep in sync.
+ */
 function state(ordinal: number, label: string): string {
-  const body = [
-    "/\\ initialBudget = (V1 :> 1 @@ V2 :> 1 @@ V3 :> 1)",
-    "/\\ amendBudget = (V1 :> 1 @@ V2 :> 1 @@ V3 :> 1)",
-    "/\\ accepted = (V1 :> [choice |-> C1])",
-    "/\\ holdMarkers = <<>>",
-    "/\\ holdBudget = 1",
-    "/\\ tally = [kind |-> \"NONE\"]",
-    "/\\ reexamRequired = FALSE",
-  ].join("\n");
+  const body = VOCABULARY.traceStateVariables
+    .map((name, index) => `/\\ ${name} = ${index}`)
+    .join("\n");
   return envelope(2217, 4, `${ordinal}: <${label}>\n${body}`);
 }
 
-function counterexampleOutput(): string {
+function counterexampleOutput(auxiliaryModules: readonly string[]): string {
   return [
-    lifecyclePrefix(),
-    envelope(2110, 1, "Invariant InvalidTimestampRejected is violated."),
+    lifecyclePrefix(auxiliaryModules),
+    envelope(2110, 1, `Invariant ${VIOLATED_INVARIANT} is violated.`),
     envelope(2121, 1, "The behavior up to this point is:"),
     state(1, "Initial predicate"),
     state(2, "Next line 160, col 8 to line 161, col 66 of module FormalElection"),
@@ -244,9 +272,16 @@ function createVerifiedSandbox(): VerifiedSandbox {
   });
 }
 
-function rawOutcome(scenario: SyntheticTlcScenario): RawTlcOutcome {
+function rawOutcome(
+  scenario: SyntheticTlcScenario,
+  auxiliaryModules: readonly string[],
+): RawTlcOutcome {
   const stdout = new TextEncoder().encode(
-    scenario === "counterexample" ? counterexampleOutput() : scenario === "complete" ? completeOutput() : "",
+    scenario === "counterexample"
+      ? counterexampleOutput(auxiliaryModules)
+      : scenario === "complete"
+        ? completeOutput(auxiliaryModules)
+        : "",
   );
   const stderr = new Uint8Array();
   return Object.freeze({
@@ -270,7 +305,10 @@ interface SyntheticFacade {
 }
 
 /** Test-only structural adapter; it does not mint a production spawn capability. */
-function createSyntheticFacade(scenario: SyntheticTlcScenario): SyntheticFacade {
+function createSyntheticFacade(
+  scenario: SyntheticTlcScenario,
+  auxiliaryModules: readonly string[],
+): SyntheticFacade {
   const artifact = createVerifiedArtifact();
   const issuedPrepared = new WeakSet<PreparedTlcRun>();
   const calls: ToolchainCall[] = [];
@@ -331,7 +369,7 @@ function createSyntheticFacade(scenario: SyntheticTlcScenario): SyntheticFacade 
       if (!issuedPrepared.has(prepared)) {
         return operationFailure("InvocationError", "SYNTHETIC_PREPARED_REJECTED", "prepared run was not issued by this test adapter");
       }
-      return { ok: true, value: rawOutcome(scenario) };
+      return { ok: true, value: rawOutcome(scenario, auxiliaryModules) };
     },
     normalize: ({ prepared, outcome, binding }) => {
       calls.push("normalize");
@@ -422,7 +460,13 @@ function failedDriverResult(
 export async function driveSyntheticTlcToolchain(scenario: SyntheticTlcScenario) {
   const model = generateFrozenTlaModel({ publicContractIdentity: PUBLIC_CONTRACT_IDENTITY });
   const modelReceipt = createFrozenTlaModelReceipt(model);
-  const synthetic = createSyntheticFacade(scenario);
+  // The transcript the fake TLC prints is derived from the receipt's own module
+  // graph, so a model that grows or loses an auxiliary keeps this fixture honest
+  // instead of drifting away from the classifier (#3391).
+  const synthetic = createSyntheticFacade(
+    scenario,
+    modelReceipt.auxiliaryModules.map(({ name }) => name),
+  );
   const acquired = await synthetic.facade.acquire();
   if (!acquired.ok) return failedDriverResult(acquired, synthetic.calls, model);
   const verified = synthetic.facade.verifyOffline();

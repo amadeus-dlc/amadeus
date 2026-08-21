@@ -5,7 +5,7 @@
 import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   cleanupTestProject,
@@ -61,6 +61,23 @@ function writeArtifacts(
   }
 }
 
+// #2529 refuses to complete a stage whose unit produced artifacts with no
+// reviewer verdict on them, so a fixture modelling a *reviewed* unit has to
+// carry one — writing the artifacts alone models the parked-mid-unit state the
+// gate exists to catch, not the reviewed one this slice is about.
+function writeReview(project: string, stage: string, artifact: string): void {
+  const path = join(seededRecordDir(project), "construction", "shared", stage, `${artifact}.md`);
+  writeFileSync(
+    path,
+    `${readFileSync(path, "utf-8")}\n## Review — Iteration 1\n\n` +
+      "- **Verdict:** READY\n" +
+      "- **Reviewer:** amadeus-architecture-reviewer-agent\n" +
+      "- **Date:** 2026-08-08T00:00:00Z\n" +
+      "- **Iteration:** 1\n- **Scope decision:** none\n",
+    "utf-8",
+  );
+}
+
 describe("t416 NFR kind pruning packaged workflow slice (e2e)", () => {
   test("a library advances through both NFR stages with only applicable outputs and inputs", () => {
     const project = createTestProject();
@@ -68,6 +85,17 @@ describe("t416 NFR kind pruning packaged workflow slice (e2e)", () => {
       cpSync(join(REPO_ROOT, "dist", "codex", ".codex"), join(project, ".codex"), {
         recursive: true,
       });
+      // The projection above ships hooks.json.example but no active hooks.json,
+      // and `next` refuses on a Codex projection whose hooks are inactive
+      // (#2703) — a refusal this fixture only escapes on a machine where the
+      // ambient environment makes detectHarnessType() read as some other
+      // harness, which is why this file was green locally and red on CI.
+      // Equivalent to `amadeus-codex-hooks.ts activate` on a fresh project:
+      // activateCodexHooks copies the same canonical example into place.
+      copyFileSync(
+        join(project, ".codex", "hooks.json.example"),
+        join(project, ".codex", "hooks.json"),
+      );
       mkdirSync(join(project, "amadeus", "spaces", "default", "memory"), {
         recursive: true,
       });
@@ -155,6 +183,7 @@ units:
         "security-requirements",
         "tech-stack-decisions",
       ]);
+      writeReview(project, "nfr-requirements", "security-requirements");
       const advanceRequirements = runTool(project, "amadeus-state.ts", [
         "advance",
         "nfr-requirements",
@@ -184,6 +213,7 @@ units:
       ]);
 
       writeArtifacts(project, "nfr-design", ["security-design", "logical-components"]);
+      writeReview(project, "nfr-design", "security-design");
       const advanceDesign = runTool(project, "amadeus-state.ts", [
         "advance",
         "nfr-design",

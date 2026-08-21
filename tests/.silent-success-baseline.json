@@ -68,6 +68,14 @@
       "expires": "2026-11-18"
     },
     {
+      "file": "tests/e2e/setup-install.test.ts",
+      "test": "installs the real latest claude release from GitHub",
+      "reason": "Opt-in real-network release gate: needs AMADEUS_SETUP_E2E_NETWORK=1, which reaches GitHub for real. infrastructure-design/cicd-pipeline.md keeps --e2e/--release offline by default, so it is unset everywhere including CI; the release procedure sets it. The offline sibling in the same file covers the whole install pipeline on every run.",
+      "issue": "#3391",
+      "firstObserved": "2026-08-21",
+      "expires": "2026-11-19"
+    },
+    {
       "file": "tests/unit/t11.test.ts",
       "test": "26: Bedrock opus-4-6 model abbreviates to BR:opus-4-6",
       "reason": "Unconditional `test.skip` marked TEMP-DISABLED: asserts the BR: prefix, which needs Bedrock model detection. Disabled on EVERY machine, not environment-gated, so it is real debt awaiting a decision to re-enable or delete.",

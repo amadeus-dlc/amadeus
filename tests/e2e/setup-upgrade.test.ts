@@ -3,8 +3,11 @@
 // Upgrade E2E (NFR-002, US-B1~B4): spawns the *real built* amadeus-setup
 // binary as its own child process against a real installed target, using a
 // real dist/claude archive fixture (tests/lib/setup-dist-fixture.ts, same
-// convention as U2's setup-install.test.ts). The network boundary is faked by
-// rewriting fetch() at process start (tests/lib/setup-fetch-shim.ts) — offline
+// convention as U2's setup-install.test.ts). FIXTURE_TAG sits above ADR-003's
+// ASSET_INTRO_VERSION, so every run here walks the verified release-asset
+// path — asset download, SHA256SUMS download, real checksum verification. The
+// network boundary is faked by rewriting fetch() at process start
+// (tests/lib/setup-fetch-shim.ts) — offline
 // by default (infrastructure-design/cicd-pipeline.md). REL-U02's 6 no-change
 // paths are verified with a real recursive fs snapshot (path -> md5) taken
 // before and after each run, rather than spot-checking individual files.
@@ -18,14 +21,14 @@
 import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { createServer, type Server } from "node:http";
 import { spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ensureSetupCliBuilt } from "../lib/setup-lazy-build.ts";
-import { buildDistArchiveFixture } from "../lib/setup-dist-fixture.ts";
+import { buildDistAssetFixture } from "../lib/setup-dist-fixture.ts";
+import { startFakeGitHubServer } from "../lib/setup-fake-github-server.ts";
 
 const TESTS_DIR = dirname(fileURLToPath(import.meta.url));
 const SHIM_PATH = join(TESTS_DIR, "..", "lib", "setup-fetch-shim.ts");
@@ -33,58 +36,10 @@ const FIXTURE_TAG = "v9.9.8";
 const FIXTURE_VERSION = "9.9.8";
 const MANIFEST_RELATIVE_PATH = join("amadeus", ".installer", "amadeus-setup-manifest.json");
 
-type ReleaseEntry = { tag_name: string; draft: boolean; prerelease: boolean };
-type TagEntry = { name: string };
-
-function startFakeGitHubServer(
-  archive: Buffer,
-  releases: readonly ReleaseEntry[],
-  tags: readonly TagEntry[],
-): Promise<{ port: number; close: () => Promise<void> }> {
-  return new Promise((resolveReady) => {
-    const server: Server = createServer((req, res) => {
-      const url = new URL(req.url ?? "/", "http://localhost");
-      if (url.pathname === "/repos/amadeus-dlc/amadeus/releases") {
-        res.writeHead(200, { "content-type": "application/json" });
-        res.end(JSON.stringify(releases));
-        return;
-      }
-      if (url.pathname === "/repos/amadeus-dlc/amadeus/tags") {
-        res.writeHead(200, { "content-type": "application/json" });
-        res.end(JSON.stringify(tags));
-        return;
-      }
-      if (url.pathname.startsWith("/amadeus-dlc/amadeus/tar.gz/refs/tags/")) {
-        res.writeHead(200, { "content-type": "application/gzip" });
-        res.end(archive);
-        return;
-      }
-      // Exact --version resolution goes through the git ref direct lookup
-      // (resolver.ts GIT_REF_TAGS_PATH) since #774/#802. Serve refs for tags the
-      // fixture knows and 404 the rest, mirroring the real API's not-found shape.
-      const refTag = url.pathname.match(/^\/repos\/amadeus-dlc\/amadeus\/git\/ref\/tags\/(.+)$/);
-      if (refTag) {
-        const tagName = decodeURIComponent(refTag[1]);
-        if (tags.some((t) => t.name === tagName)) {
-          res.writeHead(200, { "content-type": "application/json" });
-          res.end(
-            JSON.stringify({ ref: `refs/tags/${tagName}`, object: { sha: "0".repeat(40), type: "commit" } }),
-          );
-        } else {
-          res.writeHead(404, { "content-type": "application/json" });
-          res.end(JSON.stringify({ message: "Not Found" }));
-        }
-        return;
-      }
-      res.writeHead(404);
-      res.end("not found in fixture server");
-    });
-    server.listen(0, "127.0.0.1", () => {
-      const address = server.address();
-      const port = typeof address === "object" && address !== null ? address.port : 0;
-      resolveReady({ port, close: () => new Promise((r) => server.close(() => r())) });
-    });
-  });
+// Every scenario below advertises the same single release/tag, so the fake
+// server's defaults are exactly what these tests need.
+function startFixtureServer(archive: Buffer): Promise<{ port: number; close: () => Promise<void> }> {
+  return startFakeGitHubServer({ tag: FIXTURE_TAG, archive });
 }
 
 type SpawnResult = { status: number | null; stdout: string; stderr: string };
@@ -153,12 +108,8 @@ describe("amadeus-setup upgrade (E2E, offline fixture)", () => {
     "a real install followed by a customized-file upgrade backs up the customization and stays green (FR-008/NFR-002)",
     async () => {
       const cliPath = await ensureSetupCliBuilt();
-      const archive = buildDistArchiveFixture(["claude"], FIXTURE_VERSION);
-      const { port, close } = await startFakeGitHubServer(
-        archive,
-        [{ tag_name: FIXTURE_TAG, draft: false, prerelease: false }],
-        [{ name: FIXTURE_TAG }],
-      );
+      const archive = buildDistAssetFixture(["claude"], FIXTURE_VERSION);
+      const { port, close } = await startFixtureServer(archive);
       const target = mkdtempSync(join(tmpdir(), "amadeus-setup-e2e-upgrade-"));
 
       try {
@@ -210,12 +161,8 @@ describe("amadeus-setup upgrade (E2E, offline fixture)", () => {
 describe("amadeus-setup upgrade (E2E, REL-U02: all 6 no-change paths write nothing)", () => {
   async function withInstalledTarget(fn: (target: string, port: number, cliPath: string) => Promise<void>): Promise<void> {
     const cliPath = await ensureSetupCliBuilt();
-    const archive = buildDistArchiveFixture(["claude"], FIXTURE_VERSION);
-    const { port, close } = await startFakeGitHubServer(
-      archive,
-      [{ tag_name: FIXTURE_TAG, draft: false, prerelease: false }],
-      [{ name: FIXTURE_TAG }],
-    );
+    const archive = buildDistAssetFixture(["claude"], FIXTURE_VERSION);
+    const { port, close } = await startFixtureServer(archive);
     const target = mkdtempSync(join(tmpdir(), "amadeus-setup-e2e-upgrade-noop-"));
     try {
       const installed = await runCli(cliPath, ["install", "--harness", "claude", "--target", target, "--yes"], port);
@@ -281,12 +228,8 @@ describe("amadeus-setup upgrade (E2E, REL-U02: all 6 no-change paths write nothi
     "no-installation (BR-U06): an empty target changes nothing",
     async () => {
       const cliPath = await ensureSetupCliBuilt();
-      const archive = buildDistArchiveFixture(["claude"], FIXTURE_VERSION);
-      const { port, close } = await startFakeGitHubServer(
-        archive,
-        [{ tag_name: FIXTURE_TAG, draft: false, prerelease: false }],
-        [{ name: FIXTURE_TAG }],
-      );
+      const archive = buildDistAssetFixture(["claude"], FIXTURE_VERSION);
+      const { port, close } = await startFixtureServer(archive);
       const target = mkdtempSync(join(tmpdir(), "amadeus-setup-e2e-upgrade-none-"));
       try {
         const before = snapshot(target);

@@ -119,11 +119,12 @@ function telemetryProjectDir(): string {
   }
 }
 
-function runGit(args: string[], cwd?: string): GitResult {
+function runGit(args: string[], cwd?: string, input?: string): GitResult {
   const r = observeSubprocessSpan(telemetryProjectDir(), "git", () =>
     spawnSync("git", args, {
       cwd,
       encoding: "utf-8",
+      ...(input === undefined ? {} : { input }),
       env: { ...process.env, EDITOR: process.env.EDITOR ?? "false" },
     }),
   );
@@ -681,10 +682,24 @@ interface SourceInspection {
   readonly disposable: string[];
 }
 
+// Resolves an ignored worktree path to the generated-output directory that
+// owns it, or null when no directory does. `git status --ignored=matching`
+// only collapses a wholly-ignored directory to a `!! dir/` entry when the
+// DIRECTORY ITSELF matches an ignore pattern; the far more common
+// contents-only pattern (`/dist/**`) leaves git listing each file
+// individually (`!! dist/generated.js`), which the trailing-slash test alone
+// reads as hand-authored source. See ignoredTerritoryRoots.
+export type TerritoryResolver = (relPath: string) => string | null;
+
+// Fail-closed default: without a resolver only git's own collapsed-directory
+// entries count as generated output, exactly as before this seam existed.
+const NO_TERRITORY: TerritoryResolver = () => null;
+
 export function classifySourcePaths(
   porcelain: string,
   managed: ManagedWorktreePaths,
   installRoot: string | null = HARNESS_INSTALL_ROOT,
+  territoryRootOf: TerritoryResolver = NO_TERRITORY,
 ): SourceInspection {
   const records = porcelain.split("\0");
   const blocking: string[] = [];
@@ -710,9 +725,13 @@ export function classifySourcePaths(
     for (const path of paths) {
       if (isManagedWorktreePath(path, managed)) continue;
       if (status === "!!") {
-        // A wholly-ignored directory collapses to a `!! dir/` entry: generated
-        // output territory, removable by exact path before worktree removal.
-        if (path.endsWith("/") || isSelfInstallLeaf(path, installRoot)) disposable.push(path);
+        // Generated output territory is removable by exact path before worktree
+        // removal. Prefer the resolved territory root so the pathspec is the
+        // directory the ignore rule names, whichever shape git reported the
+        // entry in; fall back to git's own collapsed `!! dir/` entry.
+        const territory = territoryRootOf(path);
+        if (territory !== null) disposable.push(territory);
+        else if (path.endsWith("/") || isSelfInstallLeaf(path, installRoot)) disposable.push(path);
         else blocking.push(path);
       } else {
         blocking.push(path);
@@ -720,6 +739,84 @@ export function classifySourcePaths(
     }
   }
   return { blocking: [...new Set(blocking)], disposable: [...new Set(disposable)] };
+}
+
+// A name no ignore rule should plausibly carry, used only as a synthetic probe
+// path — it is never created on disk.
+const IGNORE_PROBE_NAME = "amadeus-worktree-ignore-probe";
+
+/** The `!! `-prefixed paths of a NUL-separated porcelain=v1 status. */
+export function ignoredStatusPaths(porcelain: string): string[] {
+  return porcelain
+    .split("\0")
+    .filter((record) => record.startsWith("!! "))
+    .map((record) => record.slice(3));
+}
+
+/** Every ancestor directory of `relPath`, shallowest first (root excluded). */
+export function ancestorDirsOf(relPath: string): string[] {
+  const segments = relPath.replace(/\/+$/, "").split("/");
+  // A trailing-slash record names a directory, so it is its own last ancestor;
+  // a file record's last segment is the file name and is dropped.
+  const depth = relPath.endsWith("/") ? segments.length : segments.length - 1;
+  const dirs: string[] = [];
+  for (let i = 1; i <= depth; i++) dirs.push(segments.slice(0, i).join("/"));
+  return dirs;
+}
+
+/**
+ * Maps each ignored path to the shallowest ancestor directory that is
+ * generated-output territory — a directory whose ignore rules would swallow
+ * ANY new name inside it (`/dist/**` does; `*.draft` and a literal
+ * `/.claude/settings.local.json` do not).
+ *
+ * Asking git this directly, with one batched `check-ignore` over synthetic
+ * probe paths, is what makes the classification independent of how git chose
+ * to render the status: `--ignored=matching` only collapses a directory to
+ * `!! dir/` when the directory itself matches a pattern, so a repository whose
+ * .gitignore says `/dist/**` reports `!! dist/generated.js` while one that
+ * also carries a `dist/` rule (commonly from the user's global excludes file)
+ * reports `!! dist/`. Both must classify the same way; before #3391 only the
+ * latter did, so on a machine without those global rules every Bolt merge
+ * failed claiming the build output was hand-authored source.
+ *
+ * Fails closed: if the probe NAME is itself ignored at the worktree root, no
+ * directory can be told apart from a blanket rule, so nothing is territory.
+ */
+function ignoredTerritoryRoots(
+  wtPath: string,
+  ignoredPaths: readonly string[],
+  slug: string,
+  failurePrefix: string,
+): Map<string, string> {
+  const roots = new Map<string, string>();
+  const dirs = new Set<string>();
+  for (const path of ignoredPaths) for (const dir of ancestorDirsOf(path)) dirs.add(dir);
+  if (dirs.size === 0) return roots;
+
+  const probes = [IGNORE_PROBE_NAME, ...[...dirs].map((dir) => `${dir}/${IGNORE_PROBE_NAME}`)];
+  const checked = runGit(
+    ["check-ignore", "-z", "--no-index", "--stdin"],
+    wtPath,
+    probes.map((probe) => `${probe}\0`).join(""),
+  );
+  // check-ignore exits 1 when nothing matched — that is an answer, not a fault.
+  if (!checked.ok && checked.code !== 1) {
+    errorWithSlug(
+      slug,
+      `${failurePrefix}could not classify ignored source paths: ${gitRunDetail(checked)}`,
+    );
+  }
+  const ignoredProbes = new Set(checked.stdout.split("\0").filter((probe) => probe.length > 0));
+  if (ignoredProbes.has(IGNORE_PROBE_NAME)) return roots;
+
+  for (const path of ignoredPaths) {
+    const territory = ancestorDirsOf(path).find((dir) =>
+      ignoredProbes.has(`${dir}/${IGNORE_PROBE_NAME}`),
+    );
+    if (territory !== undefined) roots.set(path, territory);
+  }
+  return roots;
 }
 
 function inspectSourceWorktree(
@@ -745,7 +842,15 @@ function inspectSourceWorktree(
       `${failurePrefix}could not inspect source worktree status: ${gitRunDetail(status)}`,
     );
   }
-  return classifySourcePaths(status.stdout, managed);
+  const territory = ignoredTerritoryRoots(
+    wtPath,
+    ignoredStatusPaths(status.stdout),
+    slug,
+    failurePrefix,
+  );
+  return classifySourcePaths(status.stdout, managed, HARNESS_INSTALL_ROOT, (path) =>
+    territory.get(path) ?? null,
+  );
 }
 
 // Refuse source the merge must not lose: uncommitted or staged tracked changes,

@@ -37,9 +37,11 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { resolveWorktreeBaseDir } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import {
+  ancestorDirsOf,
   classifySourcePaths,
   gitRunDetail,
   handleCreate,
+  ignoredStatusPaths,
   handleDiscard,
   handleList,
   handleMerge,
@@ -398,6 +400,56 @@ describe("t209 source classification (#3197) — pure seam", () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  // #3391: `git status --ignored=matching` only collapses a wholly-ignored
+  // directory to `!! dir/` when the DIRECTORY itself matches a pattern. A
+  // contents-only rule (`/dist/**`) leaves git naming each file, and before
+  // the territory seam those files read as hand-authored source — so every
+  // Bolt merge failed on any machine without a `dist/` global excludes rule.
+  // These cases pin both shapes to the same classification without depending
+  // on the ambient git config the e2e path is at the mercy of.
+  test("classifySourcePaths: an ignored file inside generated territory is disposable by its root", () => {
+    const porcelain = [
+      "!! dist/generated.js",
+      "!! node_modules/example/",
+      "!! packages/setup/dist/cli.js",
+      "!! notes.draft",
+      "",
+    ].join("\0");
+    const territory = new Map([
+      ["dist/generated.js", "dist"],
+      ["node_modules/example/", "node_modules"],
+      ["packages/setup/dist/cli.js", "packages/setup/dist"],
+    ]);
+    expect(
+      classifySourcePaths(porcelain, MANAGED, null, (path) => territory.get(path) ?? null),
+    ).toEqual({
+      blocking: ["notes.draft"],
+      disposable: ["dist", "node_modules", "packages/setup/dist"],
+    });
+  });
+
+  test("classifySourcePaths: a resolved territory root collapses sibling entries to one pathspec", () => {
+    const porcelain = ["!! dist/a.js", "!! dist/nested/b.js", ""].join("\0");
+    expect(classifySourcePaths(porcelain, MANAGED, null, () => "dist")).toEqual({
+      blocking: [],
+      disposable: ["dist"],
+    });
+  });
+
+  test("ignoredStatusPaths reads only the ignored records of a NUL-separated status", () => {
+    const porcelain = ["?? new.ts", "!! dist/generated.js", "M  tracked.ts", "!! dist/", ""].join(
+      "\0",
+    );
+    expect(ignoredStatusPaths(porcelain)).toEqual(["dist/generated.js", "dist/"]);
+  });
+
+  test("ancestorDirsOf lists dirs shallowest-first, excluding the root and the file name", () => {
+    expect(ancestorDirsOf("packages/setup/dist/cli.js")).toEqual(["packages", "packages/setup", "packages/setup/dist"]);
+    // A trailing-slash record names a directory, so it is its own last ancestor.
+    expect(ancestorDirsOf("node_modules/example/")).toEqual(["node_modules", "node_modules/example"]);
+    expect(ancestorDirsOf("notes.draft")).toEqual([]);
   });
 
   test("classifySourcePaths: untracked, staged, and malformed records block", () => {
