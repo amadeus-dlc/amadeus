@@ -26,6 +26,10 @@ import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseCoversHeader } from "../tests/gen-coverage-registry.ts";
+import {
+	hermeticGitEnv,
+	materializeHermeticGitConfig,
+} from "../tests/lib/hermetic-git-env.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -72,7 +76,37 @@ export function buildFilterPattern(basenames: readonly string[]): string {
 	return `^(${escaped.join("|")})$`;
 }
 
+/** Marker set on the test run's environment so a hook invocation started from
+ *  INSIDE that run is recognisable. */
+export const REENTRY_MARKER_ENV = "AMADEUS_PRECOMMIT_RELATED_UNIT_TESTS_ACTIVE";
+
+/** #3413 re-entry guard. If a test run somehow reaches `git commit` on a real
+ *  repository, that commit fires this same pre-commit hook from inside the test
+ *  run — which starts another test run, which commits again. The environment
+ *  scrub is what makes such a commit land in the fixture instead of a real
+ *  repository, and this guard is the second, independent stop: a nested
+ *  invocation refuses instead of recursing. Pure so it can be exercised without
+ *  driving a real commit. */
+export function reentryVerdict(
+	env: NodeJS.ProcessEnv,
+): { kind: "proceed" } | { kind: "refuse"; message: string } {
+	if (env[REENTRY_MARKER_ENV] === undefined) return { kind: "proceed" };
+	return {
+		kind: "refuse",
+		message:
+			"precommit-related-unit-tests: refusing to re-enter — this hook was invoked from inside " +
+			"a pre-commit test run (#3413). A test reached `git commit` on a repository outside its " +
+			"own fixture; fix the fixture rather than skipping this guard.",
+	};
+}
+
 export function main(): void {
+	const reentry = reentryVerdict(process.env);
+	if (reentry.kind === "refuse") {
+		console.error(reentry.message);
+		process.exit(2);
+	}
+
 	const staged = new Set(stagedFiles());
 	if (staged.size === 0) {
 		console.log("precommit-related-unit-tests: no staged files — nothing to run.");
@@ -91,10 +125,22 @@ export function main(): void {
 	for (const b of basenames) console.log(`  - ${b}`);
 
 	const pattern = buildFilterPattern(basenames);
+	// #3413: the hook's own environment carries git's ambient repository binding
+	// (GIT_DIR is exported to hooks run from a linked worktree, and it outranks
+	// the `cwd:`/`-C` every fixture passes). `stagedFiles()` above legitimately
+	// runs inside that binding; the test run must not. The runner strips it
+	// again on its own process, so this is the outer of two layers.
 	const result = spawnSync(
 		"bun",
 		[join(REPO_ROOT, "tests", "run-tests.ts"), "--unit", "--filter", pattern],
-		{ cwd: REPO_ROOT, stdio: "inherit" },
+		{
+			cwd: REPO_ROOT,
+			stdio: "inherit",
+			env: {
+				...hermeticGitEnv(process.env, materializeHermeticGitConfig()),
+				[REENTRY_MARKER_ENV]: "1",
+			},
+		},
 	);
 	process.exit(result.status ?? 1);
 }
