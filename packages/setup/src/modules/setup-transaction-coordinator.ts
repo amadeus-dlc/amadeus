@@ -435,7 +435,9 @@ function candidateFiles(plan: Plan, manifest: Manifest): Candidate[] {
   const candidates: Candidate[] = [];
   for (const entry of plan.entries()) {
     if (dispositionFor(entry) === "skip") continue;
-    candidates.push({ path: entry.path, source: join(plan.harnessRoot(), entry.path) });
+    // #3388: entry.path is the DESTINATION; sourcePath is the payload path
+    // when the onboarding ladder diverted the two apart.
+    candidates.push({ path: entry.path, source: join(plan.harnessRoot(), entry.sourcePath ?? entry.path) });
   }
   candidates.push({ path: MANIFEST_RELATIVE_PATH, content: `${JSON.stringify(manifest.toJSON(), null, 2)}\n` });
   return candidates;

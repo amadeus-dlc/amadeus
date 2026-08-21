@@ -51,6 +51,7 @@ function plan(source: string, entries: readonly PlanEntry[]): Plan {
       conflict: entries.filter((item) => item.action === "conflict").length,
     }),
     harnessRoot: () => source,
+    onboardingNotices: () => [],
   };
 }
 
@@ -107,6 +108,27 @@ describe("SetupTransactionCoordinator", () => {
       expect(lstatSync(retained).mode & 0o077).toBe(0);
     }
     expect(lstatSync(privateRoot).mode & 0o077).toBe(0);
+  });
+
+  test("installs a diverted onboarding doc from its payload path and leaves the user's own file untouched (#3388)", async () => {
+    const { target, source, privateRoot } = fixture();
+    // The rung-2 shape: the payload ships CLAUDE.md, the target already owns
+    // one, so the plan's destination is CLAUDE-AMADEUS.md with sourcePath set.
+    writeFileSync(join(target, "CLAUDE.md"), "the user's own instructions\n");
+    writeFileSync(join(source, "CLAUDE.md"), "shipped onboarding doc\n");
+    const entries = [{ ...entry("CLAUDE-AMADEUS.md", "shipped onboarding doc\n", "add"), sourcePath: "CLAUDE.md" }];
+
+    const result = await SetupTransactionCoordinator.create({ privateRoot: () => privateRoot }).apply(
+      plan(source, entries),
+      target,
+      manifest(entries),
+    );
+
+    expect(result.hasFailures()).toBe(false);
+    expect(readFileSync(join(target, "CLAUDE-AMADEUS.md"), "utf8")).toBe("shipped onboarding doc\n");
+    expect(readFileSync(join(target, "CLAUDE.md"), "utf8")).toBe("the user's own instructions\n");
+    // Nothing was captured, so no backup transaction dir holds a payload file.
+    expect(readdirSync(join(privateRoot, "committed"))).toHaveLength(1);
   });
 
   test("derives a private root by default and recovers an idle target", async () => {

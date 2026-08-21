@@ -25,6 +25,7 @@ function fakeManifest(requiredPaths: readonly string[]): Manifest {
     installedAt: "2026-07-08T12:00:00.000Z",
     harness: claudeHarness(),
     dispositionFor: () => ({ type: "overwrite" }),
+    knowsPath: (path: string) => requiredPaths.includes(path),
     isNewerThan: () => false,
     requiredPaths: () => requiredPaths,
     upgradedTo: () => {

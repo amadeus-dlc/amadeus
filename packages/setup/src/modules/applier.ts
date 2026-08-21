@@ -79,7 +79,9 @@ export namespace Applier {
             backupPaths.push(`${entry.path}.${plan.backupTimestamp}.bk`);
           }
 
-          const copied = await fsWrite.copyFile(join(plan.harnessRoot(), entry.path), dest);
+          // #3388: entry.path is the DESTINATION; sourcePath is the payload
+          // path when the onboarding ladder diverted the two apart.
+          const copied = await fsWrite.copyFile(join(plan.harnessRoot(), entry.sourcePath ?? entry.path), dest);
           if (copied.type === "err") {
             failures.push({ path: entry.path, operation: "copy", detail: copied.error.detail });
             break;

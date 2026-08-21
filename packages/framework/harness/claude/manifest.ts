@@ -103,10 +103,14 @@ const manifest: HarnessManifest = {
     { file: "agents/amadeus-architecture-reviewer-agent.md", lines: ["tools: [Read, Grep, Glob]"] },
   ],
 
-  // The onboarding doc template (CLAUDE.md.example) renders from the shared skeleton
-  // core/templates/onboarding.md with Claude's fills, then the standard
-  // {{HARNESS_DIR}} → .claude transform. Single source across every harness.
-  onboarding: { dst: "CLAUDE.md.example", fills: onboardingFills },
+  // CLAUDE.md renders from the shared skeleton core/templates/onboarding.md with
+  // Claude's fills, then the standard {{HARNESS_DIR}} → .claude transform. It
+  // lands at the project root (outside .claude/), exactly like every AGENTS.md
+  // harness: Claude Code auto-loads a root CLAUDE.md, so the doc ships as the
+  // real file rather than a .example the user has to copy by hand (#3388). The
+  // installer's destination ladder is what keeps that no-clobber — an existing
+  // CLAUDE.md diverts the install to CLAUDE-AMADEUS.md plus wiring guidance.
+  onboarding: { dst: "CLAUDE.md", projectRoot: true, fills: onboardingFills },
 
   // Claude renames no core dir.
   rulesRename: null,

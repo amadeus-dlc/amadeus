@@ -28,7 +28,7 @@ import {
   waitForTui,
   tmuxUnavailableReason,
 } from "../harness/tui-client.ts";
-import { copyTreeWithRetry } from "../harness/fixtures.ts";
+import { copyTreeWithRetry, requireOnboardingDoc } from "../harness/fixtures.ts";
 import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -65,9 +65,9 @@ describe("t-tui-statusline (statusline renders in a real terminal)", () => {
         // dest .claude must NOT pre-exist or cp nests it — we copy SRC -> <sandbox>/.claude.
         const destClaude = join(sandbox, ".claude");
         copyTreeWithRetry(AMADEUS_SRC, destClaude);
-        const claudeMdExample = join(destClaude, "CLAUDE.md.example");
-        const claudeMd = join(destClaude, "CLAUDE.md");
-        if (!existsSync(claudeMd) && existsSync(claudeMdExample)) cpSync(claudeMdExample, claudeMd);
+        // #3388: the onboarding doc ships as the real project-root CLAUDE.md.
+        const claudeMd = join(sandbox, "CLAUDE.md");
+        if (!existsSync(claudeMd)) cpSync(requireOnboardingDoc(), claudeMd);
         const settingsExample = join(destClaude, "settings.json.example");
         const settingsPath = join(destClaude, "settings.json");
         if (!existsSync(settingsPath) && existsSync(settingsExample)) cpSync(settingsExample, settingsPath);

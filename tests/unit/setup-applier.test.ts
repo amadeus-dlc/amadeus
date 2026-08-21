@@ -40,6 +40,7 @@ function fakePlan(entries: readonly PlanEntry[], backupTimestamp = "20260708T120
     // Review correction 2: Applier now rebuilds each entry's source path from
     // Plan.harnessRoot() instead of a PlanEntry.source field.
     harnessRoot: () => "/fixture-source",
+    onboardingNotices: () => [],
   };
 }
 
@@ -89,6 +90,18 @@ describe("Applier.apply — dispositions", () => {
     const plan = fakePlan([entry({ path: "amadeus-tool.ts", action: "add", class: "owned" })]);
     await Applier.create(port).apply(plan, "/target");
     expect(calls.some((c) => c.startsWith(`copy:${plan.harnessRoot()}/amadeus-tool.ts->`))).toBe(true);
+  });
+
+  test("edge case: a diverted onboarding doc copies FROM sourcePath TO path (#3388)", async () => {
+    const { port, calls } = fakeApplyWrite();
+    // What the ladder produces on a target that already owns CLAUDE.md: the
+    // payload still ships CLAUDE.md, but the destination is CLAUDE-AMADEUS.md.
+    const plan = fakePlan([entry({ path: "CLAUDE-AMADEUS.md", action: "add", class: "shared", sourcePath: "CLAUDE.md" })]);
+    const result = await Applier.create(port).apply(plan, "/target");
+    expect(result.hasFailures()).toBe(false);
+    expect(calls).toContain(`copy:${plan.harnessRoot()}/CLAUDE.md->/target/CLAUDE-AMADEUS.md`);
+    // The user's own CLAUDE.md is never a destination here.
+    expect(calls.some((c) => c.endsWith("->/target/CLAUDE.md"))).toBe(false);
   });
 
   test("'backup' entries are backed up (only when the destination exists) then copied", async () => {

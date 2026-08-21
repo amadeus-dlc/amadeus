@@ -39,6 +39,7 @@ import {
   DEFAULT_SPACE,
   FIXTURE_CLONE_ID,
   intentsDirOf,
+  requireOnboardingDoc,
   seededAuditShard,
   seededRecordDir,
 } from "./fixtures.ts";
@@ -187,9 +188,9 @@ export function setupTuiProject(opts: TuiProjectOptions = {}): string {
     if (existsSync(KIRO_IDE_MEMORY_SRC)) copyTreeWithRetry(KIRO_IDE_MEMORY_SRC, join(proj, "amadeus"));
   } else {
     copyTreeWithRetry(AMADEUS_SRC, join(proj, ".claude"));
-    const claudeMdExample = join(proj, ".claude", "CLAUDE.md.example");
-    const claudeMd = join(proj, ".claude", "CLAUDE.md");
-    if (!existsSync(claudeMd) && existsSync(claudeMdExample)) cpSync(claudeMdExample, claudeMd);
+    // #3388: the onboarding doc ships as the real project-root CLAUDE.md.
+    const claudeMd = join(proj, "CLAUDE.md");
+    if (!existsSync(claudeMd)) cpSync(requireOnboardingDoc(), claudeMd);
     const settingsExample = join(proj, ".claude", "settings.json.example");
     const settings = join(proj, ".claude", "settings.json");
     if (!existsSync(settings) && existsSync(settingsExample)) cpSync(settingsExample, settings);

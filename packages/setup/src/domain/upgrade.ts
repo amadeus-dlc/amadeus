@@ -126,6 +126,12 @@ Object.freeze(LegacyLayout);
 export type UpgradeSource = {
   readonly kind: "manifested" | "manual-or-unknown" | "partial-forced";
   dispositionFor(path: string, cls: FileClass, actualMd5: string): Disposition;
+  // #3388: "did the previous install put a file HERE?". Plan.forUpgrade asks
+  // this to follow an onboarding doc that landed on <STEM>-AMADEUS.md. Only a
+  // manifested source can answer — a conservative source has no record of the
+  // previous install and always says no, which sends upgrade back to the same
+  // filesystem ladder install uses.
+  knowsPath(path: string): boolean;
   assess(resolved: ResolvedVersion, spec: VersionSpec): UpgradeAssessment | null;
   nextManifest(input: BuildInput): Manifest;
   strategyNote(): string;
@@ -138,6 +144,9 @@ function manifestedSource(manifest: Manifest): UpgradeSource {
     // independent classification logic lives here for this variant.
     dispositionFor(path: string, _cls: FileClass, actualMd5: string): Disposition {
       return manifest.dispositionFor(path, actualMd5);
+    },
+    knowsPath(path: string): boolean {
+      return manifest.knowsPath(path);
     },
     assess(resolved: ResolvedVersion, spec: VersionSpec): UpgradeAssessment | null {
       return UpgradeAssessment.of(manifest.distributionVersion, resolved, spec);
@@ -162,6 +171,11 @@ function conservativeSource(kind: "manual-or-unknown" | "partial-forced"): Upgra
       if (cls === "owned") return Object.freeze({ type: "overwrite" });
       if (cls === "user-preserved") return Object.freeze({ type: "preserve" });
       return Object.freeze({ type: "backup-then-copy" });
+    },
+    // No manifest exists for this source, so nothing is known to have been
+    // installed at any path (BR-U09's same "assume nothing" stance).
+    knowsPath(_path: string): boolean {
+      return false;
     },
     assess(_resolved: ResolvedVersion, _spec: VersionSpec): UpgradeAssessment | null {
       return null; // BR-U05: installed version is unknown, so no boundary check applies

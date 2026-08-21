@@ -1,6 +1,6 @@
 // harness/claude/onboarding.fills.ts — Claude Code's onboarding-doc fills.
 // Rendered with core/templates/onboarding.md by scripts/onboarding.ts into
-// dist/claude/.claude/CLAUDE.md.example. {{HARNESS_DIR}} stays for the packager transform.
+// dist/claude/CLAUDE.md. {{HARNESS_DIR}} stays for the packager transform.
 
 import type { OnboardingFills } from "../../../../scripts/onboarding.ts";
 

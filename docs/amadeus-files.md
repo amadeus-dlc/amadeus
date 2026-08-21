@@ -80,12 +80,11 @@ Sources of truth: `amadeus-dlc/amadeus` (commit `f4d99c2c9`, as of 2026-08)
 │       ├── scaffold/
 │       └── templates/
 ├── vendor/                                               # Vendored OpenTelemetry API (ships to every harness)
-├── CLAUDE.md                                             # Claude Code onboarding instructions
-├── CLAUDE.md.example
 ├── settings.json                                         # Hook, statusline, and permission settings
 ├── settings.json.example
 ├── settings.local.json.example
 └── VERSION
+CLAUDE.md                                                 # Claude Code onboarding doc — project root, beside .claude/ (the AGENTS.md equivalent for Claude)
 .codex/                                                   # Codex CLI engine (generated; local active hooks are preserved on upgrade)
 ├── agents/                                               # Codex subagent definitions (15 roles, .md + .toml)
 │   ├── amadeus-<role>-agent.md

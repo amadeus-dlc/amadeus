@@ -20,6 +20,9 @@ export function createManifestFiles(entries: readonly ManifestFile[]): ManifestF
       // customization and must be preserved via backup (FR-008).
       return actualMd5 === entry.md5 ? Object.freeze({ type: "overwrite" }) : Object.freeze({ type: "backup-then-copy" });
     },
+    knowsPath(path: string): boolean {
+      return byPath.has(path);
+    },
     entries(): ReadonlyArray<ManifestFile> {
       return entries;
     },

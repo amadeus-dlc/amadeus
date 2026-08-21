@@ -46,7 +46,7 @@
 // (trims to "") — covering both shapes the .sh allowed.
 
 import { normalizeAuditRecord } from "../harness/audit-records.ts";
-import { copyTreeWithRetry } from "../harness/fixtures.ts";
+import { copyTreeWithRetry, requireOnboardingDoc } from "../harness/fixtures.ts";
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
@@ -161,9 +161,9 @@ describe("t80 practices-event --type empty (spawnSync CLI-boundary, parity-only)
     mkdirSyncRecursive(record);
     writeFileSync(join(record, "amadeus-state.md"), "# AI-DLC State Tracking\n", "utf-8");
     copyTreeWithRetry(AMADEUS_SRC, join(proj, ".claude"));
-    const claudeMdExample = join(proj, ".claude", "CLAUDE.md.example");
-    const claudeMd = join(proj, ".claude", "CLAUDE.md");
-    if (!existsSync(claudeMd) && existsSync(claudeMdExample)) cpSync(claudeMdExample, claudeMd);
+    // #3388: the onboarding doc ships as the real project-root CLAUDE.md.
+    const claudeMd = join(proj, "CLAUDE.md");
+    if (!existsSync(claudeMd)) cpSync(requireOnboardingDoc(), claudeMd);
     const settingsExample = join(proj, ".claude", "settings.json.example");
     const settings = join(proj, ".claude", "settings.json");
     if (!existsSync(settings) && existsSync(settingsExample)) cpSync(settingsExample, settings);

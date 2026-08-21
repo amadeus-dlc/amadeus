@@ -7187,7 +7187,7 @@ export const MERGE_SUCCEEDED_TAG_REGEX = /\[merge-succeeded:([^\]]+)\]/;
 // Record boundaries come from splitAuditRecords (JSONL lines).
 // splitAuditRecords normalises CRLF → LF before splitting so audits authored
 // or edited on Windows (Bun's PRE_REQ env per
-// dist/claude/.claude/CLAUDE.md.example) parse the same as Unix audits.
+// dist/claude/CLAUDE.md) parse the same as Unix audits.
 // splitAuditRecords — the ONE place that turns an audit buffer (a single
 // shard, or a readAllAuditShards merge) into record blocks. Every consumer
 // that needs record boundaries must call this instead of splitting on the

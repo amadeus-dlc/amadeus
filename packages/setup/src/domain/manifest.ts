@@ -22,6 +22,11 @@ export type Disposition =
 export type ManifestFiles = {
   requiredPaths(): readonly string[];
   dispositionFor(path: string, actualMd5: string | null): Disposition; // FR-008: Tell, Don't Ask
+  // #3388: whether a path was recorded as installed. Distinct from
+  // dispositionFor, which answers "overwrite" for an unrecorded path (it treats
+  // an unknown file as framework-owned); the onboarding ladder needs the
+  // recorded/not-recorded fact itself.
+  knowsPath(path: string): boolean;
   entries(): ReadonlyArray<ManifestFile>;
 };
 
@@ -68,6 +73,7 @@ export type Manifest = {
   readonly installedAt: string;
   readonly harness: HarnessName;
   dispositionFor(path: string, actualMd5: string | null): Disposition;
+  knowsPath(path: string): boolean;
   isNewerThan(candidate: SemVer): boolean;
   requiredPaths(): readonly string[];
   upgradedTo(next: BuildInput): Manifest;

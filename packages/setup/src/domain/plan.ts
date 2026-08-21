@@ -4,6 +4,13 @@ import { join, relative, sep } from "node:path";
 import type { HarnessName } from "./harness.ts";
 import type { InstallAdmission } from "./installation.ts";
 import type { Disposition, FileClass } from "./manifest.ts";
+import {
+  decideOnboardingDestination,
+  noticeFor,
+  onboardingAlternateFor,
+  type OnboardingDestination,
+  type OnboardingNotice,
+} from "./onboarding-ladder.ts";
 import type { ExtractedPayload } from "./payload.ts";
 import type { UpgradeRefusal, UpgradeSource } from "./upgrade.ts";
 import { Result } from "../shared/result.ts";
@@ -18,6 +25,11 @@ export type PlanEntry = {
   readonly forced: boolean;
   readonly md5: string;
   readonly required: boolean;
+  // #3388: the payload-relative path to copy FROM, when it differs from the
+  // destination `path`. Present only for an onboarding doc the ladder diverted
+  // to <STEM>-AMADEUS.md; absent everywhere else, where source and destination
+  // are the same relative path. Consumers read `sourcePath ?? path`.
+  readonly sourcePath?: string;
 };
 
 export type PlanSummary = {
@@ -41,6 +53,12 @@ export type Plan = {
   // rebuild each entry's source path (join(harnessRoot(), entry.path)) without
   // widening PlanEntry beyond domain-entities.md's canonical 6 fields.
   harnessRoot(): string;
+  // #3388: every onboarding doc this plan diverted to <STEM>-AMADEUS.md, or
+  // declined to write at all. Empty on the overwhelmingly common path. The
+  // reporter turns each into harness-specific wiring guidance — an alternate
+  // no harness auto-loads is inert until the user wires it, so a plan that
+  // produced a notice and never showed it would be the #3386 bug again.
+  onboardingNotices(): ReadonlyArray<OnboardingNotice>;
 };
 
 export type PlanOptions = { readonly force: boolean; readonly startedAt: string };
@@ -60,7 +78,13 @@ export namespace PlanRefusal {
 
 Object.freeze(PlanRefusal);
 
-function createPlan(entries: readonly PlanEntry[], startedAtIso: string, backupTimestamp: string, root: string): Plan {
+function createPlan(
+  built: BuiltEntries,
+  startedAtIso: string,
+  backupTimestamp: string,
+  root: string,
+): Plan {
+  const { entries, notices } = built;
   return Object.freeze({
     startedAtIso,
     backupTimestamp,
@@ -88,6 +112,9 @@ function createPlan(entries: readonly PlanEntry[], startedAtIso: string, backupT
     harnessRoot(): string {
       return root;
     },
+    onboardingNotices(): ReadonlyArray<OnboardingNotice> {
+      return notices;
+    },
   });
 }
 
@@ -106,9 +133,9 @@ export namespace Plan {
       return Result.err(PlanRefusal.harnessNotInPayload(harness));
     }
 
-    const entries = buildEntries(rootResult.value, target, opts);
+    const built = buildEntries(rootResult.value, target, opts);
     const { iso, token } = Timestamps.of(new Date(opts.startedAt));
-    return Result.ok(createPlan(entries, iso, token, rootResult.value));
+    return Result.ok(createPlan(built, iso, token, rootResult.value));
   }
 
   // U3's upgrade-side factory (functional-design/domain-entities.md, promised
@@ -129,34 +156,71 @@ export namespace Plan {
       return Result.err(PlanRefusal.harnessNotInPayload(harness));
     }
 
-    const entries = buildUpgradeEntries(rootResult.value, target, source, opts);
+    const built = buildUpgradeEntries(rootResult.value, target, source, opts);
     const { iso, token } = Timestamps.of(new Date(opts.startedAt));
-    return Result.ok(createPlan(entries, iso, token, rootResult.value));
+    return Result.ok(createPlan(built, iso, token, rootResult.value));
   }
 }
 
 Object.freeze(Plan);
 
+// --- shared internals ---------------------------------------------------------
+
+type BuiltEntries = { readonly entries: readonly PlanEntry[]; readonly notices: readonly OnboardingNotice[] };
+
+// #3388: the payload path an onboarding doc would land on by default, resolved
+// against what the target already holds. Used by install directly; upgrade
+// consults the installed manifest first and falls back to this. The two
+// filesystem probes are behind the alternate lookup on purpose — a payload is
+// ~600 files and at most one of them is an onboarding doc, so every other file
+// reaches its single existsSync in the caller, exactly as before #3388.
+function probeOnboardingLadder(relPath: string, target: string, force: boolean): OnboardingDestination {
+  const alternate = onboardingAlternateFor(relPath);
+  if (alternate === null || force) return Object.freeze({ type: "primary", dest: relPath });
+  return decideOnboardingDestination({
+    relPath,
+    force,
+    primaryExists: existsSync(join(target, relPath)),
+    alternateExists: existsSync(join(target, alternate)),
+  });
+}
+
+// The destination path carries the entry identity from here on: it is what gets
+// written, what the manifest records, and what a later upgrade follows. The
+// payload path only survives as `sourcePath`, and only when the two differ.
+function planEntry(root: string, destPath: string, sourceRelPath: string, action: PlanAction, forced: boolean): PlanEntry {
+  const cls = classify(destPath);
+  return Object.freeze({
+    path: destPath,
+    action,
+    class: cls,
+    forced,
+    md5: md5OfFileSync(join(root, sourceRelPath)),
+    required: cls === "owned",
+    ...(destPath === sourceRelPath ? {} : { sourcePath: sourceRelPath }),
+  });
+}
+
 // --- Plan.forInstall internals (private) -------------------------------------
 
-function buildEntries(root: string, target: string, opts: PlanOptions): PlanEntry[] {
+function buildEntries(root: string, target: string, opts: PlanOptions): BuiltEntries {
   const entries: PlanEntry[] = [];
+  const notices: OnboardingNotice[] = [];
   for (const relPath of walkFiles(root)) {
-    const cls = classify(relPath);
-    const exists = existsSync(join(target, relPath));
-    const action = classifyAction(exists, opts.force, cls);
-    entries.push(
-      Object.freeze({
-        path: relPath,
-        action,
-        class: cls,
-        forced: action === "update" || action === "backup",
-        md5: md5OfFileSync(join(root, relPath)),
-        required: cls === "owned",
-      }),
-    );
+    const destination = probeOnboardingLadder(relPath, target, opts.force);
+    const notice = noticeFor(relPath, destination);
+    if (notice !== null) notices.push(notice);
+    // Ladder rung 3: both names are taken, so nothing is written AND nothing is
+    // recorded. Emitting a "skip" entry instead would put a path we never
+    // installed into the manifest, and the next upgrade would then "follow" it
+    // straight onto the user's own file.
+    if (destination.type === "blocked") continue;
+
+    const destPath = destination.dest;
+    const action = classifyAction(existsSync(join(target, destPath)), opts.force, classify(destPath));
+    entries.push(planEntry(root, destPath, relPath, action, action === "update" || action === "backup"));
   }
-  return entries;
+  return { entries, notices };
 }
 
 // BR-I10~I14: install's per-file action decision (business-logic-model workflow
@@ -181,36 +245,52 @@ export function classifyAction(exists: boolean, force: boolean, cls: FileClass):
 // disposition is already decided by source.dispositionFor (delegated to the
 // installed manifest when one exists, BR-U11), so classification is a
 // straight lookup rather than a force/exists branch like install's.
-function buildUpgradeEntries(root: string, target: string, source: UpgradeSource, opts: PlanOptions): PlanEntry[] {
+function buildUpgradeEntries(root: string, target: string, source: UpgradeSource, opts: PlanOptions): BuiltEntries {
   const entries: PlanEntry[] = [];
+  const notices: OnboardingNotice[] = [];
   for (const relPath of walkFiles(root)) {
-    const cls = classify(relPath);
-    const newMd5 = md5OfFileSync(join(root, relPath));
-    if (!existsSync(join(target, relPath))) {
-      entries.push(
-        Object.freeze({ path: relPath, action: "add", class: cls, forced: false, md5: newMd5, required: cls === "owned" }),
-      );
+    const destination = routeUpgradeDestination(relPath, target, source, opts.force);
+    const notice = noticeFor(relPath, destination);
+    if (notice !== null) notices.push(notice);
+    if (destination.type === "blocked") continue;
+
+    const destPath = destination.dest;
+    const cls = classify(destPath);
+    if (!existsSync(join(target, destPath))) {
+      entries.push(planEntry(root, destPath, relPath, "add", false));
       continue;
     }
 
-    const actualMd5 = md5OfFileSync(join(target, relPath));
-    const disposition = source.dispositionFor(relPath, cls, actualMd5);
-    const action = toPlanAction(disposition);
-    entries.push(
-      Object.freeze({
-        path: relPath,
-        action,
-        class: cls,
-        // Not a bypassed conflict (there is none in upgrade) — this only
-        // flags "a backup happened even under --force" so BR-U12 (backups
-        // are never skipped by --force) stays visible in the plan report.
-        forced: opts.force && disposition.type === "backup-then-copy",
-        md5: newMd5,
-        required: cls === "owned",
-      }),
-    );
+    const actualMd5 = md5OfFileSync(join(target, destPath));
+    const disposition = source.dispositionFor(destPath, cls, actualMd5);
+    // Not a bypassed conflict (there is none in upgrade) — `forced` only flags
+    // "a backup happened even under --force" so BR-U12 (backups are never
+    // skipped by --force) stays visible in the plan report.
+    const forced = opts.force && disposition.type === "backup-then-copy";
+    entries.push(planEntry(root, destPath, relPath, toPlanAction(disposition), forced));
   }
-  return entries;
+  return { entries, notices };
+}
+
+// #3388 spec 5: an installation that landed its onboarding doc on the alternate
+// name keeps being updated there. The installed manifest is the authority —
+// it records where the file actually went — so it is consulted before the
+// filesystem ladder. Only when the manifest knows neither name (a conservative
+// manual-or-unknown source, or a pre-#3388 installation whose onboarding doc
+// shipped inside the harness dir) does the install-side ladder decide, which
+// keeps upgrade's no-clobber promise identical to install's.
+function routeUpgradeDestination(relPath: string, target: string, source: UpgradeSource, force: boolean): OnboardingDestination {
+  const alternate = onboardingAlternateFor(relPath);
+  if (alternate === null || force) return Object.freeze({ type: "primary", dest: relPath });
+  // The manifest is followed regardless of what sits at the real name today —
+  // the user may have deleted their own CLAUDE.md since the install — so the
+  // real name is probed rather than assumed occupied. Without it the notice
+  // would tell a user with no CLAUDE.md that "CLAUDE.md already exists".
+  if (source.knowsPath(alternate)) {
+    return Object.freeze({ type: "alternate", dest: alternate, primaryExists: existsSync(join(target, relPath)) });
+  }
+  if (source.knowsPath(relPath)) return Object.freeze({ type: "primary", dest: relPath });
+  return probeOnboardingLadder(relPath, target, force);
 }
 
 // BR-U10: the one place the Disposition -> PlanAction mapping is fixed.

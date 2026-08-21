@@ -182,12 +182,24 @@ command -v bun    >/dev/null && echo "✓ bun"          || echo "✗ bun"
 # Install (engine + the workspace shell sibling)
 cp -r dist/claude/.claude/ your-project/.claude/
 cp -r dist/claude/amadeus/   your-project/amadeus/
-cp -n your-project/.claude/CLAUDE.md.example your-project/CLAUDE.md
 cp -n your-project/.claude/settings.json.example your-project/.claude/settings.json
+
+# Onboarding doc — walk the same destination ladder the installer does, because
+# CLAUDE.md is the one payload file your project very likely already owns.
+if [ ! -e your-project/CLAUDE.md ]; then
+  cp dist/claude/CLAUDE.md your-project/CLAUDE.md            # free name: take it
+elif [ ! -e your-project/CLAUDE-AMADEUS.md ]; then
+  cp dist/claude/CLAUDE.md your-project/CLAUDE-AMADEUS.md    # taken: land beside your file
+  echo 'Now add the line @CLAUDE-AMADEUS.md to your CLAUDE.md — it stays inert until imported'
+else
+  echo 'CLAUDE.md and CLAUDE-AMADEUS.md both exist — merge dist/claude/CLAUDE.md in by hand'
+fi
 
 # Launch Claude Code in your project
 cd your-project && claude
 ```
+
+既存の `CLAUDE.md` は絶対に上書きしないでください。それはプロジェクト自身の指示書であり、かつ Claude Code が読み込むのは `CLAUDE.md` **だけ** です — インポートされていない `CLAUDE-AMADEUS.md` は何の効果もありません。`@`-import の 1 行が任意の追加作業ではなく手順の一部なのはそのためです。`bunx amadeus-setup install` はこのラダーを代行し(さらにマニフェストを記録するので、`upgrade` は配置先を追って更新を続けます)、上記のコピーコマンドはインストーラに到達できない場合のフォールバックです。
 
 Claude Code セッション内で:
 

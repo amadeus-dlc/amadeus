@@ -1,16 +1,18 @@
-// covers: file:dist/claude/.claude/CLAUDE.md.example
+// covers: file:dist/claude/CLAUDE.md
 //
-// t06 — the distributable CLAUDE.md.example describes the post-Wave-1 .claude/ layout.
+// t06 — the distributable CLAUDE.md describes the post-Wave-1 .claude/ layout.
 // Migrated from tests/smoke/t06-claude-md-paths.sh (6 TAP assertions).
 //
 // Mechanism: none. The .sh shelled out to `grep` against a static shipped
 // file; there is no tool / process seam under test — the subject IS the bytes
-// of dist/claude/.claude/CLAUDE.md.example. So the twin reads that file in-process
-// (resolved from the harness's AMADEUS_SRC, the same dist/claude/.claude root)
-// and asserts on its contents. Zero LLM, zero tokens, zero subprocess.
+// of dist/claude/CLAUDE.md. So the twin reads that file in-process
+// (resolved from the harness's CLAUDE_ONBOARDING_DOC, the project-root doc the
+// packager emits beside dist/claude/.claude/ since #3388 replaced the
+// hand-copied .claude/CLAUDE.md.example) and asserts on its contents. Zero LLM,
+// zero tokens, zero subprocess.
 //
-// Subject under test (the shipped user-facing CLAUDE.md.example, NOT this repo's):
-//   dist/claude/.claude/CLAUDE.md.example — its "## AI-DLC Structure" section
+// Subject under test (the shipped user-facing CLAUDE.md, NOT this repo's):
+//   dist/claude/CLAUDE.md — its "## AI-DLC Structure" section
 //   enumerates the user-visible .claude/ surfaces. Wave-1 (milestone 2) flattened
 //   practices/ + rules/ into a single flat rules/ dir, renamed
 //   amadeus-knowledge/ -> knowledge/, and v0.5.0 added the sensors/ surface.
@@ -19,7 +21,7 @@
 //   flat-rules filename (amadeus-org) named as a positive anchor.
 //
 // Old TAP -> new test parity (1:1, every .sh assertion -> a named test()):
-//   .sh test 1 (distributable CLAUDE.md.example exists)           -> "the shipped CLAUDE.md.example exists"
+//   .sh test 1 (distributable CLAUDE.md exists)           -> "the shipped CLAUDE.md exists"
 //   .sh test 2 (flat rules/ — no rules/amadeus/guardrails nested)   -> "describes a flat .claude/rules/ layout (no nested rules/amadeus/guardrails)"
 //   .sh test 3 (no removed .claude/practices/ path)               -> "does not reference the removed .claude/practices/ path"
 //   .sh test 4 (no legacy .claude/amadeus-knowledge/ parent)        -> "does not reference the legacy amadeus-knowledge/ parent"
@@ -35,12 +37,12 @@
 
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-import { AMADEUS_SRC } from "../harness/fixtures.ts";
+import { CLAUDE_ONBOARDING_DOC } from "../harness/fixtures.ts";
 
-// AMADEUS_SRC = <repo>/dist/claude/.claude — the same root the .sh reached via
-// $SCRIPT_DIR/../../dist/claude/.claude. The shipped CLAUDE.md.example sits at its top.
-const CLAUDE_MD = join(AMADEUS_SRC, "CLAUDE.md.example");
+// CLAUDE_ONBOARDING_DOC = <repo>/dist/claude/CLAUDE.md — the project-root doc the
+// packager emits beside dist/claude/.claude/, which the .sh reached as
+// $SCRIPT_DIR/../../dist/claude/.claude/CLAUDE.md.example before #3388.
+const CLAUDE_MD = CLAUDE_ONBOARDING_DOC;
 
 function readClaudeMd(): string {
   return readFileSync(CLAUDE_MD, "utf-8");
@@ -53,8 +55,8 @@ function countOccurrences(haystack: string, literal: string): number {
   return (haystack.match(new RegExp(escaped, "g")) || []).length;
 }
 
-describe("distributable CLAUDE.md.example describes the post-Wave-1 .claude/ layout", () => {
-  test("the shipped CLAUDE.md.example exists [.sh test 1]", () => {
+describe("distributable CLAUDE.md describes the post-Wave-1 .claude/ layout", () => {
+  test("the shipped CLAUDE.md exists [.sh test 1]", () => {
     // The .sh SKIP-guarded 2-6 if this file was missing so the negative
     // greps wouldn't vacuously pass. Here a missing file fails outright, and
     // every other test reads the bytes, so none can vacuously pass.
