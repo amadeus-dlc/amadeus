@@ -7,6 +7,7 @@ import { CLAUDE_TUI_PROMPT } from "./claude-tui.ts";
 import { CLAUDE_PRINT_PROMPT } from "./claude.ts";
 import { digest } from "./contract.ts";
 import { KIMI_PRINT_ANCHOR_FILE, KIMI_PRINT_PROMPT } from "./kimi-print.ts";
+import { KIRO_ACP_ANCHOR_FILE, KIRO_ACP_PROMPT } from "./kiro-acp.ts";
 import { KIRO_TUI_PROMPT } from "./kiro-tui.ts";
 
 export interface CodexAnchorJourneyOptions {
@@ -208,6 +209,55 @@ export function createKimiPrintJourney(): LiveJourney {
         evidence: [{
           kind: "kimi-print-anchor",
           value: digest(`${execution.exitCode}:${anchorValue}:${execution.structured?.stdoutTruncated}`),
+          source: "assertion",
+        }],
+      };
+    },
+  };
+}
+
+/**
+ * The ACP journey judges the TRANSPORT: a completed turn whose protocol frames
+ * were all accounted for, at least one tool call, and the file that tool had to
+ * write. The agent's prose is never asserted (BR-ACP-04).
+ */
+export function createKiroAcpJourney(): LiveJourney {
+  return {
+    id: "kiro-acp-anchor-v1",
+    prompt: KIRO_ACP_PROMPT,
+    timeoutMs: scaleTestTime(300_000),
+    retryPolicy: { maxAttempts: 1 },
+    assert: (execution, scratch) => {
+      const anchorPath = join(scratch.projectDir, KIRO_ACP_ANCHOR_FILE);
+      let anchorValue: unknown;
+      if (existsSync(anchorPath)) {
+        try {
+          const parsed = JSON.parse(readFileSync(anchorPath, "utf8")) as Record<string, unknown>;
+          anchorValue = parsed.amadeus_live_e2e;
+        } catch {
+          anchorValue = undefined;
+        }
+      }
+      const violations = execution.structured?.violations;
+      const passed = execution.exitCode === 0 &&
+        !execution.timedOut &&
+        !execution.aborted &&
+        execution.structured?.stopReason === "end_turn" &&
+        typeof execution.structured.toolCallCount === "number" &&
+        execution.structured.toolCallCount >= 1 &&
+        Array.isArray(violations) &&
+        violations.length === 0 &&
+        anchorValue === "ok";
+      return {
+        passed,
+        diagnostic: passed
+          ? "turn completion, accounted protocol frames, tool call, and file anchor passed"
+          : "Kiro ACP anchor mismatch",
+        evidence: [{
+          kind: "kiro-acp-anchor",
+          value: digest(
+            `${execution.exitCode}:${execution.structured?.stopReason}:${execution.structured?.toolCallCount}:${anchorValue}`,
+          ),
           source: "assertion",
         }],
       };

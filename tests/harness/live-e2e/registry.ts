@@ -7,6 +7,7 @@ export type LiveAdapterId =
   | "claude-sdk"
   | "claude-tui"
   | "kimi-print"
+  | "kiro-acp"
   | "kiro-tui";
 export type CapabilityStatus = "supported" | "unsupported" | "unverified";
 
@@ -111,6 +112,23 @@ export const LIVE_CAPABILITIES = [
     },
     isolationSummary:
       "fresh project/home; source OAuth entries bound by reference, never copied; scratch-local config, sessions and logs",
+  },
+  {
+    id: "kiro-acp",
+    harness: "kiro",
+    transport: "acp",
+    optInKey: "AMADEUS_KIRO_ACP_LIVE",
+    minimumVersion: "2.6.0",
+    measuredVersion: "2.19.0",
+    status: "supported",
+    anchorKinds: ["tool", "file"],
+    environment: {
+      allowedKeys: ["PATH", "LANG", "LC_ALL", "NO_COLOR"],
+      sensitiveKeys: ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN"],
+      sourcePathKeys: ["HOME", "XDG_DATA_HOME", "KIRO_HOME"],
+    },
+    isolationSummary:
+      "fresh project/home; source auth bound by reference, never copied; stdio JSON-RPC with no TTY",
   },
   {
     id: "kiro-tui",
