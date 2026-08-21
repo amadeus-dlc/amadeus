@@ -5353,5 +5353,16 @@
     },
     "reason": "The /proc readdir catch arm is reachable only where /proc is absent (macOS/win32); the Linux coverage runner always has /proc, and the darwin in-process test proves the arm returns [] there.",
     "expiry": "remove if the coverage job ever runs on a platform without /proc"
+  },
+  {
+    "file": "packages/framework/core/tools/amadeus-worktree.ts",
+    "selector": {
+      "function": "ignoredTerritoryRoots",
+      "fingerprint": "sha256:73ba19de3b4e4464962d9a6fef2ca223d4e9df49676532a782a2c5a83624711a",
+      "anchorLines": 3,
+      "targetLines": "1-3"
+    },
+    "reason": "errorWithSlug on a check-ignore invocation failing with exit >= 2 (e.g. not a git repository). errorWithSlug -> error() emits and terminates the process, so the branch cannot be exercised in-process; it is a message-string error row per the spawn-blindspot-two-step norm. The success path and the exit-1 no-match path are covered by t209's real-git fixtures.",
+    "expiry": "remove if errorWithSlug gains an injectable exit seam or the gate excludes never-returning error rows"
   }
 ]
