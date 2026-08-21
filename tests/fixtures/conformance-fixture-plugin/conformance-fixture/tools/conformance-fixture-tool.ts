@@ -12,8 +12,12 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-/** The marker whose presence releases the declared advisory. */
-export const CLEARED_MARKER = ".amadeus-conformance-fixture-cleared";
+/**
+ * The recorded-verdict marker whose presence releases the declared advisory.
+ * Named under the `.amadeus-plugin` prefix so a host snapshot treats it as
+ * plugin state rather than host surface, exactly as a real plugin would.
+ */
+export const CLEARED_MARKER = ".amadeus-plugin-conformance-fixture-verdict.json";
 
 export function clearedMarkerPath(hostRoot: string): string {
   return join(hostRoot, CLEARED_MARKER);
@@ -36,7 +40,7 @@ export function advisoryVerdict(hostRoot: string): { readonly json: string; read
 
 export function recordVerdict(hostRoot: string): void {
   mkdirSync(hostRoot, { recursive: true });
-  writeFileSync(clearedMarkerPath(hostRoot), `${new Date().toISOString()}\n`);
+  writeFileSync(clearedMarkerPath(hostRoot), `${JSON.stringify({ recordedAt: new Date().toISOString() })}\n`);
 }
 
 export function main(argv: readonly string[]): number {

@@ -37,3 +37,10 @@ plugin stage.
 The companion tool is an advisory evaluator only. It holds until a host records
 a verdict and returns no-hold afterwards, which is the minimum a declared
 advisory needs in order to exercise the host's advisory channel end to end.
+
+Its two verbs, written the way plugin prose must write an executable path — the
+harness-dir token, never a repo-root-relative one, so the seeding transform has
+something to resolve:
+
+    bun {{HARNESS_DIR}}/plugins/conformance-fixture/tools/conformance-fixture-tool.ts advisory
+    bun {{HARNESS_DIR}}/plugins/conformance-fixture/tools/conformance-fixture-tool.ts record

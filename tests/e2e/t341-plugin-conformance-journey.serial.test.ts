@@ -27,7 +27,7 @@
 // binary spawn against the temp workspace. Serial because the journey compiles
 // the stage graph twice and is heavy on the filesystem.
 //
-// Fixture: the SHIPPED reference plugin `plugins/formal-model-check`, copied
+// Fixture: the synthetic conformance plugin under tests/fixtures, copied
 // read-only (the repo's own plugins/ and dist/ are never written — asserted).
 
 import { scaleTestTime } from "../lib/test-time-factor.ts";
@@ -40,19 +40,29 @@ import { basename, dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { PLUGIN_SOURCE_DIR_NAME } from "../../packages/framework/core/tools/amadeus-plugin.ts";
+import { discoverPluginSources, installArtifacts } from "../../scripts/plugin-projection.ts";
 import { amadeusToolTarget } from "../harness/cli-target.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SHIPPED_FACE = join(REPO_ROOT, "dist", "claude");
-const PLUGIN_FIXTURE = join(REPO_ROOT, "plugins", "formal-model-check");
-const PLUGIN = "formal-model-check";
+const PLUGIN_FIXTURE_ROOT = join(REPO_ROOT, "tests", "fixtures", "conformance-fixture-plugin");
+const PLUGIN = "conformance-fixture";
+const PLUGIN_FIXTURE = join(PLUGIN_FIXTURE_ROOT, PLUGIN);
 const HARNESS = ".claude";
 
 // The projected install bundle of a folder-drop face. Its INSTALL.md is the
 // instruction a developer follows, so the drop destination this test uses is
 // READ OUT of it rather than assumed (#1569's failure mode was exactly the two
-// drifting apart).
-const CODEX_INSTALL_DOC = join(REPO_ROOT, "dist", "plugins", PLUGIN, "codex", "INSTALL.md");
+// drifting apart). It is built here through the SAME projector seam that writes
+// every shipped bundle, so the instruction under test is the projector's own
+// output rather than a transcription of it.
+function codexInstallDoc(): string {
+  const [source] = discoverPluginSources(PLUGIN_FIXTURE_ROOT);
+  expect(source?.directoryName).toBe(PLUGIN);
+  const doc = installArtifacts(source, "codex").find((artifact) => artifact.relativePath === "INSTALL.md");
+  expect(doc).toBeDefined();
+  return (doc?.bytes ?? Buffer.alloc(0)).toString("utf-8");
+}
 
 let ws = "";
 let hostRoot = "";
@@ -191,7 +201,7 @@ describe("t341 plugin conformance journey (FR-4, #1589)", () => {
     // names (#1591 ruling B). Assert the doc says so BEFORE following it, so a
     // regression in the instruction fails here rather than silently diverging
     // from what this test does.
-    const installDoc = readFileSync(CODEX_INSTALL_DOC, "utf-8");
+    const installDoc = codexInstallDoc();
     expect(installDoc).toContain(`.codex/${PLUGIN_SOURCE_DIR_NAME}/${PLUGIN}/`);
     const dropTarget = join(hostRoot, PLUGIN_SOURCE_DIR_NAME, PLUGIN);
     expect(relative(ws, dropTarget)).toBe(join(HARNESS, PLUGIN_SOURCE_DIR_NAME, PLUGIN));

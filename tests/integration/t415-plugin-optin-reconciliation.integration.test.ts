@@ -31,8 +31,9 @@ import {
 } from "../../packages/framework/core/tools/amadeus-plugin.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const FIXTURE = join(REPO_ROOT, "plugins", "formal-model-check");
-const PLUGIN = "formal-model-check";
+const FIXTURE = join(REPO_ROOT, "tests", "fixtures", "conformance-fixture-plugin", "conformance-fixture");
+const PLUGIN = "conformance-fixture";
+const PLUGIN_TOOL = "conformance-fixture-tool.ts";
 
 let project = "";
 let host = "";
@@ -180,17 +181,17 @@ describe("t415 project opt-in reconciliation", () => {
 
   test("a changed project source is restaged and recomposed", () => {
     expect(runPluginCli(["compose", "--if-stale", "--project-root", host], deps()).kind).toBe("composed");
-    const sourceTool = join(project, "plugins", PLUGIN, "tools", "canonical.ts");
+    const sourceTool = join(project, "plugins", PLUGIN, "tools", PLUGIN_TOOL);
     writeFileSync(sourceTool, `${readFileSync(sourceTool, "utf-8")}\n// t415 source change\n`);
     const result = runPluginCli(["compose", "--if-stale", "--project-root", host], deps());
     expect(result.kind).toBe("composed");
-    expect(readFileSync(join(host, ".amadeus-plugin-src", PLUGIN, "tools", "canonical.ts"), "utf-8")).toContain("t415 source change");
+    expect(readFileSync(join(host, ".amadeus-plugin-src", PLUGIN, "tools", PLUGIN_TOOL), "utf-8")).toContain("t415 source change");
   });
 
   test("a missing or modified composed file is repaired from the selected source", () => {
     const injected = deps();
     expect(runPluginCli(["compose", "--if-stale", "--project-root", host], injected).kind).toBe("composed");
-    const stage = join(host, "plugins", PLUGIN, "stages", "formal-model-check.md");
+    const stage = join(host, "plugins", PLUGIN, "stages", `${PLUGIN}.md`);
     const expected = readFileSync(stage);
     const composition = join(host, ".amadeus-plugin-composition.json");
     const expectedComposition = readFileSync(composition);
@@ -208,12 +209,12 @@ describe("t415 project opt-in reconciliation", () => {
     expect(runPluginCli(["compose", "--if-stale", "--project-root", host], deps()).kind).toBe("composed");
     const source = join(project, "plugins", PLUGIN);
     const staging = join(host, ".amadeus-plugin-src", PLUGIN);
-    const stagedTool = join(staging, "tools", "canonical.ts");
+    const stagedTool = join(staging, "tools", PLUGIN_TOOL);
     writeFileSync(stagedTool, `${readFileSync(stagedTool, "utf-8")}\n// staged drift\n`);
     let doctor = runPluginCli(["doctor", "--project-root", host], deps());
     expect(doctor.kind === "doctor" && doctor.section.lines.some((line) => line.plugin === PLUGIN && line.state === "drift")).toBe(true);
 
-    const sourceTool = join(source, "tools", "canonical.ts");
+    const sourceTool = join(source, "tools", PLUGIN_TOOL);
     writeFileSync(sourceTool, `${readFileSync(sourceTool, "utf-8")}\n// composition drift\n`);
     copyPluginSource(source, staging, () => {});
     doctor = runPluginCli(["doctor", "--project-root", host], deps());

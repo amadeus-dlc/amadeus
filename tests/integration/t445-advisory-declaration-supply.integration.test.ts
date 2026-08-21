@@ -247,11 +247,11 @@ describe("declared advisory supply from the staging face (consumer layout)", () 
         code: "demo-hold",
         checkpoints: ["requirements-analysis"],
         evaluator: { argv: ["bun", "tools/evaluate.ts", "hold"] },
-        handoff: { stage: "tla-authoring" },
+        handoff: { stage: "demo-stage" },
       },
     ]);
     expect(declaredHandoffStage(projectRoot, "demo", "demo-hold", undefined, join(hostRoot, ".amadeus-plugin-src")))
-      .toBe("tla-authoring");
+      .toBe("demo-stage");
   });
 
   test("a declaration lookup with no manifest on either face returns null and warns", () => {
@@ -282,15 +282,15 @@ describe("declared advisory supply from the staging face (consumer layout)", () 
   });
 });
 
-describe("the shipped formal-model-check declaration", () => {
+describe("a real plugin manifest's advisory declaration", () => {
+  const FIXTURE_PLUGIN = "conformance-fixture";
+  const FIXTURE_ROOT = join(import.meta.dir, "..", "fixtures", "conformance-fixture-plugin");
+
   test("parses with no invalid entries", () => {
-    const manifest = readFileSync(
-      join(import.meta.dir, "..", "..", "plugins", "formal-model-check", "plugin.json"),
-      "utf8",
-    );
+    const manifest = readFileSync(join(FIXTURE_ROOT, FIXTURE_PLUGIN, "plugin.json"), "utf8");
     const parsed = parseAdvisoryDeclarations(manifest);
     expect(parsed.invalid).toEqual([]);
-    expect(parsed.declarations.map((declaration) => String(declaration.code))).toEqual(["spec-change"]);
+    expect(parsed.declarations.map((declaration) => String(declaration.code))).toEqual(["fixture-change"]);
     expect(parsed.declarations[0]?.checkpoints).toEqual([
       "requirements-analysis",
       "functional-design",
@@ -298,16 +298,20 @@ describe("the shipped formal-model-check declaration", () => {
     ]);
   });
 
-  // FR-3: the plugin's declared evaluator and handoff implementation exist on
-  // its own authoring face.
+  // FR-3: the plugin's declared evaluator implementation exists on the face the
+  // resolver located the manifest on.
   test("declared plugin tool paths exist against the located plugin root", () => {
-    const repoRoot = join(import.meta.dir, "..", "..");
-    const located = resolvePluginManifest(repoRoot, undefined, "formal-model-check");
+    const located = resolvePluginManifest(join(import.meta.dir, "..", ".."), FIXTURE_ROOT, FIXTURE_PLUGIN);
     expect(located).not.toBeNull();
     if (located === null) return;
-    expect(located.pluginRoot).toBe(join(repoRoot, "plugins", "formal-model-check"));
-    expect(existsSync(join(located.pluginRoot, "tools", "tla-authoring.ts"))).toBe(true);
-    expect(existsSync(join(located.pluginRoot, "tools", "run-model-check.ts"))).toBe(true);
+    expect(located.pluginRoot).toBe(join(FIXTURE_ROOT, FIXTURE_PLUGIN));
+    expect(existsSync(join(located.pluginRoot, "tools", `${FIXTURE_PLUGIN}-tool.ts`))).toBe(true);
+    const declared = JSON.parse(readFileSync(join(located.pluginRoot, "plugin.json"), "utf8")) as {
+      tools?: string[];
+    };
+    for (const tool of declared.tools ?? []) {
+      expect(existsSync(join(located.pluginRoot, tool)), tool).toBe(true);
+    }
   });
 });
 
@@ -326,7 +330,7 @@ describe("declared advisory hold symmetry across next and report", () => {
     code: "demo-hold" as Advisory["code"],
     message: "advisory: demo demo-hold — no-applicability-receipt",
     stage: "requirements-analysis",
-    target: "amadeus/spaces/default/specs/tla",
+    target: "demo:demo-hold",
     specIdentity: "sha256:hold-1",
   };
 
@@ -403,7 +407,8 @@ describe("declared advisory hold symmetry across next and report", () => {
 
     const reason = advisoryReportHoldReason(projectDir, stage, hostRoot, holdRunner());
     expect(reason ?? "").toContain("demo-hold");
-    expect(reason ?? "").not.toContain("formal model check artifacts");
+    // The reason is this declaration's own, never another live plugin's code.
+    expect(reason ?? "").not.toContain("fixture-change");
   });
 
   test("report releases once the evaluator stops raising the advisory", () => {
