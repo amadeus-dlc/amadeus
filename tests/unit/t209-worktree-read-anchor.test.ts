@@ -511,6 +511,16 @@ describe("t209 source classification (#3197) — pure seam", () => {
       );
       expect(roots.get("out/bundle.js")).toBe("out");
       expect(roots.has("dist/generated.js")).toBe(false);
+
+      // Root-level fail-closed: once a probe name is ignored at the worktree
+      // root, no directory is distinguishable from that blanket rule — nothing
+      // is territory, not even out/ which qualified above.
+      writeFileSync(
+        join(root, ".gitignore"),
+        ["/out/**", "amadeus-worktree-ignore-probe", ""].join("\n"),
+      );
+      const blanket = ignoredTerritoryRoots(root, ["out/bundle.js"], "t209", "");
+      expect(blanket.size).toBe(0);
     } finally {
       for (const [key, value] of Object.entries(saved)) {
         if (value === undefined) delete process.env[key];
