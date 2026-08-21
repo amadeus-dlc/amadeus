@@ -103,6 +103,11 @@ const REAL_RUN_TESTS_EXIT_CODE = join(
 // gates). Same static-import reason as the files above: without it the copied
 // runner cannot even load, and every exit code here collapses to 1.
 const REAL_SILENT_SUCCESS = join(import.meta.dir, "..", "lib", "silent-success.ts");
+// run-tests.ts also imports lib/hermetic-git-env.ts (#3413: the ambient
+// git-binding scrub it applies to its own process before anything spawns).
+// Same static-import reason as the files above: without it the copied runner
+// cannot even load, and every exit code here collapses to 1.
+const REAL_HERMETIC_GIT_ENV = join(import.meta.dir, "..", "lib", "hermetic-git-env.ts");
 
 const scratchRoots: string[] = [];
 
@@ -158,6 +163,7 @@ function driveRunner(nFail: number, nPass: number): { code: number; stdout: stri
   copyFileSync(REAL_TEST_TIME_FACTOR, join(libDir, "test-time-factor.ts"));
   copyFileSync(REAL_RUN_TESTS_EXIT_CODE, join(libDir, "run-tests-exit-code.ts"));
   copyFileSync(REAL_SILENT_SUCCESS, join(libDir, "silent-success.ts"));
+  copyFileSync(REAL_HERMETIC_GIT_ENV, join(libDir, "hermetic-git-env.ts"));
 
   // Distinct numeric stems keep glob ordering deterministic and avoid collisions
   // between the fail/pass families.
