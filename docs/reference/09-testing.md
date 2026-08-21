@@ -517,7 +517,7 @@ is deliberately no `--update` writer that would let one be added mechanically.
 
 | Trigger | Layer | Command | Where |
 |---------|-------|---------|-------|
-| `git commit` | fast subset of L1 | `bun run typecheck` + `bun run lint` + diff-scoped unit tests | Local (pre-commit hook) |
+| `git commit` | fast subset of L1 | `bun run typecheck` + staged-file-scoped biome lint + diff-scoped unit tests | Local (pre-commit hook) |
 | CI pipeline | L2 | `bun tests/run-tests.ts --ci` | CI/CD pipeline |
 | Release / merge to main | L3 | `bun tests/run-tests.ts --release` | CI/CD pipeline |
 | Daily schedule / manual dispatch | perf | `bash tests/run-tests.sh --perf` | `.github/workflows/perf.yml` (non-blocking) |
@@ -529,7 +529,18 @@ is deliberately no `--update` writer that would let one be added mechanically.
 runs, in order:
 
 1. `bun run typecheck` — whole-repo, ~8-10s.
-2. `bun run lint` — whole-repo Biome check, well under a second.
+2. A Biome lint scoped to **staged files only**: `bunx @biomejs/biome check
+   --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}`, restricted via
+   lefthook's `glob` to the same five directories `bun run lint` covers
+   (`tests/ packages/setup/ packages/framework/core/ scripts/ plugins/`), so hook and CI
+   never disagree on what's in scope. `bunx @biomejs/biome` resolves to the project's
+   `@biomejs/biome` devDependency (lockfile-pinned) whenever it is installed — Bun checks
+   local dependencies before ever considering a registry fetch — the same mechanism `bun run
+   lint` itself relies on, so pre-commit and CI structurally always run the same biome
+   version. Scoping to staged files (rather than whole-repo, the original #1984 design) is
+   the #3405 fix: a repo-wide scan meant a pre-existing finding in an untouched file could
+   block a completely unrelated commit; lefthook skips this step entirely when no staged
+   file matches the `glob` (e.g. a doc-only commit).
 3. `bun scripts/precommit-related-unit-tests.ts` — only the `tests/unit/*.test.ts` files
    whose `// covers: file:<path>` header (the same header the coverage registry parses,
    see `tests/gen-coverage-registry.ts`'s `parseCoversHeader`) names a file in `git diff
@@ -538,10 +549,10 @@ runs, in order:
    coverage still passes", not "coverage exists" (that is the [Silent-Success
    Gates](#silent-success-gates)' and #1979's job).
 
-Whole-repo typecheck+lint plus a small diff-scoped unit slice keeps the hook comfortably
-under a ~30s budget regardless of repo size (running the full unit tier every commit would
-not). Heavier integration/e2e tests stay CI's job — this hook is a fast local subset of L1,
-not L1 itself.
+Whole-repo typecheck, a staged-file-scoped lint, and a small diff-scoped unit slice keep the
+hook comfortably under a ~30s budget regardless of repo size (running the full unit tier, or
+a whole-repo lint, every commit would not). Heavier integration/e2e tests stay CI's job —
+this hook is a fast local subset of L1, not L1 itself.
 
 **Skip**: `git commit --no-verify` (a native git flag, always available, no lefthook-specific
 escape needed). CI (`bun run check` plus the full test suite) always re-verifies afterward,

@@ -3,10 +3,33 @@
 # in dist/<harness>/ (this repository's own git hooks are not part of the
 # distributable framework).
 #
-# Typecheck and lint already run whole-repo (both comfortably inside the
-# budget below); the unit tier is scoped to only the tests that `covers:`
-# a staged file (scripts/precommit-related-unit-tests.ts) so the hook stays
-# fast regardless of repo size. Heavier integration/e2e tests stay CI's job.
+# Typecheck runs whole-repo (fast enough to stay well inside the budget
+# below); the unit tier is scoped to only the tests that `covers:` a staged
+# file (scripts/precommit-related-unit-tests.ts) so the hook stays fast
+# regardless of repo size. Heavier integration/e2e tests stay CI's job.
+#
+# lint (#3405) is scoped to STAGED files only, not whole-repo: a repo-wide
+# scan meant an unrelated, pre-existing finding anywhere under the five
+# linted directories could block a completely unconnected commit (observed
+# 3x in practice — see #3405). `glob` restricts the command to the same five
+# directories `bun run lint` covers (so hook and CI never disagree on WHAT
+# is in scope), and lefthook skips this command entirely when no staged file
+# matches (a doc-only commit never invokes biome at all). `{staged_files}`
+# is lefthook's own template — substituted with the staged paths that
+# matched `glob`. `--no-errors-on-unmatched --files-ignore-unknown=true`
+# mirror Biome's own documented git-hooks recipe
+# (https://biomejs.dev/recipes/git-hooks/): a staged path biome doesn't
+# understand (or that its own biome.json excludes, e.g. tests/fixtures/**)
+# is silently skipped rather than erroring.
+#
+# `bunx @biomejs/biome` resolves to the project's own node_modules/@biomejs/biome
+# (the exact @biomejs/biome devDependency version, lockfile-pinned) whenever
+# it is installed — Bun checks local dependencies before ever considering a
+# registry fetch, the same mechanism `bun run lint`'s identical invocation
+# already relies on for CI. This is what keeps pre-commit and CI on the same
+# biome version structurally (both resolve from the same installed
+# node_modules), not a hardcoded version string that could drift from the
+# lockfile.
 #
 # Skip: `git commit --no-verify` (native git flag, always available). CI
 # (`bun run check` + the full test suite) is the enforcement backstop for
@@ -17,6 +40,12 @@ pre-commit:
     typecheck:
       run: bun run typecheck
     lint:
-      run: bun run lint
+      glob:
+        - "tests/**"
+        - "packages/setup/**"
+        - "packages/framework/core/**"
+        - "scripts/**"
+        - "plugins/**"
+      run: bunx @biomejs/biome check --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
     related-unit-tests:
       run: bun scripts/precommit-related-unit-tests.ts
