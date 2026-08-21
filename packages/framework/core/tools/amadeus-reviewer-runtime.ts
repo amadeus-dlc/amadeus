@@ -580,19 +580,16 @@ function admitRepairIteration(
     return;
   }
   if (!durableRepairFingerprints(directive, deps).has(repair.evidenceFingerprint)) {
-    throw new Error(
-      "repair evidence is not a durable quality-repair observation for this stage",
-    );
+    throw new Error("repair evidence is not a durable quality-repair observation for this stage");
   }
   const funded = store.repairs.filter((entry) => entry.stageInstance === stageInstance);
   if (iteration !== cap + funded.length + 1) {
     throw new Error("repair-funded review iteration must follow the spent budget in sequence");
   }
-  store.repairs.push({
-    evidenceFingerprint: repair.evidenceFingerprint,
-    stageInstance,
-    iteration,
-  });
+  // One line, not a multi-line argument: a continuation line of a single call
+  // carries no DA record of its own under bun's union merge, so the patch gate
+  // reads it as never executed.
+  store.repairs.push({ evidenceFingerprint: repair.evidenceFingerprint, stageInstance, iteration });
   writeInvocationStore(path, store, deps);
 }
 
@@ -611,9 +608,7 @@ function verifyRecordedReviews(
   for (const recorded of store.reviews) {
     if (recorded.artifact !== artifact) continue;
     if (existingReviewBlock(content, recorded.iteration) === undefined) {
-      throw new Error(
-        `recorded Review projection for iteration ${recorded.iteration} is missing from the artifact`,
-      );
+      throw new Error(`recorded Review projection for iteration ${recorded.iteration} is missing from the artifact`);
     }
   }
 }

@@ -18,7 +18,15 @@
 
 import { afterEach, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import {
   cleanupTestProject,
@@ -43,6 +51,7 @@ import {
   _resetStageGraphForTests,
 } from "../../packages/framework/core/tools/amadeus-lib.ts";
 import { handleAdvance } from "../../packages/framework/core/tools/amadeus-state.ts";
+import { runReviewerCommand } from "../../packages/framework/core/tools/amadeus-reviewer-runtime.ts";
 import { scaleTestTime } from "../lib/test-time-factor.ts";
 
 const REPO_ROOT = join(import.meta.dir, "..", "..");
@@ -126,6 +135,76 @@ function issued(current: Fixture): string {
   const scoped = run(current, "scope", current.directive);
   expect(scoped.status, scoped.stderr).toBe(0);
   return JSON.parse(scoped.stdout).invocationId as string;
+}
+
+// The same three modes driven IN-PROCESS over the same on-disk fixture. The
+// spawned arms above are the production surface, but a subprocess is invisible
+// to the parent LCOV, so the repair route would read as dead code. Real fs
+// dependencies rather than a virtual tree: the audit shards, the ledger, and
+// the artifact this route reads are exactly the ones `seedRepairEvidence` and
+// the spawned arms already wrote.
+interface RuntimeOutcome {
+  status: number | undefined;
+  stdout: string;
+  stderr: string;
+}
+
+function inProcess(current: Fixture) {
+  let stdin = "";
+  let stdout = "";
+  let stderr = "";
+  let minted = 0;
+  const exitCode: { exitCode?: number } = {};
+  const deps = {
+    cwd: () => current.root,
+    fs: {
+      exists: existsSync,
+      stat: statSync,
+      readFile: (path: string | 0, encoding: "utf8") =>
+        path === 0 ? stdin : readFileSync(path, encoding),
+      readdir: readdirSync,
+      appendFile: appendFileSync,
+      writeFile: writeFileSync,
+      mkdir: (path: string) => {
+        mkdirSync(path, { recursive: true });
+      },
+    },
+    utc: {
+      command: "date",
+      args: ["-u", "+%Y-%m-%dT%H:%M:%SZ"],
+      run: () => ({ status: 0, stdout: "2026-08-21T04:45:00Z\n" }),
+    },
+    stdin: 0 as const,
+    stdout: { write: (text: string) => { stdout += text; } },
+    stderr: { write: (text: string) => { stderr += text; } },
+    invocationId: () => {
+      minted += 1;
+      return `00000000-0000-4000-8000-${String(minted).padStart(12, "0")}`;
+    },
+    exitCode,
+  };
+  return {
+    call(mode: string, input: unknown): RuntimeOutcome {
+      stdin = JSON.stringify(input);
+      stdout = "";
+      stderr = "";
+      exitCode.exitCode = undefined;
+      runReviewerCommand([mode], deps);
+      return { status: exitCode.exitCode, stdout, stderr };
+    },
+    review(iteration: number, verdict: "READY" | "NOT-READY", repair?: unknown): RuntimeOutcome {
+      const scoped = this.call("scope", current.directive);
+      expect(scoped.status, scoped.stderr).toBe(0);
+      const invocationId = JSON.parse(scoped.stdout).invocationId as string;
+      const carrier: Record<string, unknown> = {
+        directive: current.directive,
+        invocationId,
+        result: reviewResult(invocationId, iteration, verdict),
+      };
+      if (repair !== undefined) carrier.repair = repair;
+      return this.call("complete-review", carrier);
+    },
+  };
 }
 
 function reviewResult(
@@ -423,6 +502,200 @@ describe("t3415 repair-funded review iteration", () => {
     });
     expect(second.status, second.stderr).toBe(0);
     expect(JSON.parse(second.stdout).ready).toBe(true);
+  });
+
+  // Every refusal arm of the admission, driven in-process for the same reason:
+  // the spawned arms above are the production surface but carry no coverage, so
+  // each guard would otherwise read as dead code.
+  test("refuses every malformed or unbacked repair admission, in-process", () => {
+    const current = fixture();
+    seedRepairEvidence(current, FINGERPRINT, STAGE_INSTANCE);
+    const local = inProcess(current);
+    for (const iteration of [1, 2]) {
+      expect(local.review(iteration, "NOT-READY").status).toBe(0);
+    }
+
+    const malformed = local.review(3, "READY", { evidenceFingerprint: "not-a-digest" });
+    expect(malformed.status).toBe(1);
+    expect(malformed.stderr).toContain(
+      "repair evidence fingerprint must be a sha256 quality snapshot digest",
+    );
+
+    const unbacked = local.review(3, "READY", { evidenceFingerprint: OTHER_FINGERPRINT });
+    expect(unbacked.status).toBe(1);
+    expect(unbacked.stderr).toContain(
+      "repair evidence is not a durable quality-repair observation for this stage",
+    );
+
+    const outOfSequence = local.review(4, "READY", { evidenceFingerprint: FINGERPRINT });
+    expect(outOfSequence.status).toBe(1);
+    expect(outOfSequence.stderr).toContain(
+      "repair-funded review iteration must follow the spent budget in sequence",
+    );
+
+    const funded = local.review(3, "READY", { evidenceFingerprint: FINGERPRINT });
+    expect(funded.status, funded.stderr).toBe(0);
+    // Re-offering the spent receipt at another iteration is a replay; offering
+    // it again at the one it funded is the idempotent re-entry.
+    const replayed = local.review(4, "READY", { evidenceFingerprint: FINGERPRINT });
+    expect(replayed.status).toBe(1);
+    expect(replayed.stderr).toContain("repair evidence is bound to a different review iteration");
+    const reentry = local.review(3, "READY", { evidenceFingerprint: FINGERPRINT });
+    expect(reentry.status, reentry.stderr).toBe(0);
+    expect(JSON.parse(reentry.stdout).appended).toBe(false);
+  });
+
+  // A shard row that does not decode, or decodes to something other than a
+  // repair ruling for this stage, is not evidence: the admission fails closed
+  // rather than opening on a shape it never parsed. Each case gets its own
+  // fixture, and the last case is the control that funds.
+  test("admits only on a decodable repair ruling for this stage, in-process", () => {
+    const mutate = {
+      "an undecodable line": () => "{not json\n",
+      "an undecodable Transaction": (row: Record<string, unknown>) =>
+        `${JSON.stringify({
+          ...row,
+          attributes: {
+            ...(row.attributes as Record<string, unknown>),
+            Transaction: "{not json",
+          },
+        })}\n`,
+    };
+
+    for (const [name, rewrite] of Object.entries(mutate)) {
+      const current = fixture();
+      seedRepairEvidence(current, FINGERPRINT, STAGE_INSTANCE);
+      const shard = join(seededAuditDir(current.root), `t3415-${FINGERPRINT.slice(-8)}.jsonl`);
+      const row = JSON.parse(readFileSync(shard, "utf8").trim());
+      writeFileSync(shard, rewrite(row), "utf-8");
+
+      const local = inProcess(current);
+      for (const iteration of [1, 2]) {
+        expect(local.review(iteration, "NOT-READY").status, name).toBe(0);
+      }
+      const refused = local.review(3, "READY", { evidenceFingerprint: FINGERPRINT });
+      expect(refused.status, name).toBe(1);
+      expect(refused.stderr, name).toContain(
+        "repair evidence is not a durable quality-repair observation for this stage",
+      );
+    }
+
+    // Decodable, but the observation resolved everything — the READY arm of
+    // `observe-quality`, which orders no re-run.
+    const resolved = fixture();
+    seedRepairEvidence(resolved, FINGERPRINT, STAGE_INSTANCE, 0);
+    const resolvedLocal = inProcess(resolved);
+    for (const iteration of [1, 2]) {
+      expect(resolvedLocal.review(iteration, "NOT-READY").status).toBe(0);
+    }
+    const refusedResolved = resolvedLocal.review(3, "READY", {
+      evidenceFingerprint: FINGERPRINT,
+    });
+    expect(refusedResolved.status).toBe(1);
+    expect(refusedResolved.stderr).toContain(
+      "repair evidence is not a durable quality-repair observation for this stage",
+    );
+
+    // Control: the untouched row, with unresolved obligations, funds the same
+    // iteration — so the refusals above are the mutations, not the fixture.
+    const control = fixture();
+    seedRepairEvidence(control, FINGERPRINT, STAGE_INSTANCE);
+    const controlLocal = inProcess(control);
+    for (const iteration of [1, 2]) {
+      expect(controlLocal.review(iteration, "NOT-READY").status).toBe(0);
+    }
+    const funded = controlLocal.review(3, "READY", { evidenceFingerprint: FINGERPRINT });
+    expect(funded.status, funded.stderr).toBe(0);
+  });
+
+  test("refuses a stage definition whose declared iteration cap is not positive", () => {
+    const current = fixture();
+    writeFileSync(
+      join(current.root, current.directive.stage_file as string),
+      "---\nslug: functional-design\nreviewer_max_iterations: 0\n---\n",
+      "utf-8",
+    );
+    const refused = inProcess(current).review(1, "NOT-READY");
+    expect(refused.status).toBe(1);
+    expect(refused.stderr).toContain("stage definition declares an invalid review iteration cap");
+  });
+
+  test("refuses a reviewer ledger whose repair or review lists are not arrays", () => {
+    for (const [field, expected] of [
+      ["repairs", "reviewer invocation store must list consumed repair evidence"],
+      ["reviews", "reviewer invocation store must list recorded reviews"],
+    ] as const) {
+      const current = fixture();
+      const local = inProcess(current);
+      expect(local.review(1, "NOT-READY").status, field).toBe(0);
+      const ledger = join(current.root, RECORD, ".amadeus-reviewer-invocations.json");
+      const store = JSON.parse(readFileSync(ledger, "utf8"));
+      writeFileSync(ledger, JSON.stringify({ ...store, [field]: "not-an-array" }), "utf-8");
+
+      // Every path reads the ledger, so the refusal lands on the next call
+      // into the runtime rather than waiting for the repair admission.
+      const refused = local.call("scope", current.directive);
+      expect(refused.status, field).toBe(1);
+      expect(refused.stderr, field).toContain(expected);
+    }
+  });
+
+  test("drives the repair-funded route in-process over the same fixture", () => {
+    const current = fixture();
+    seedRepairEvidence(current, FINGERPRINT, STAGE_INSTANCE);
+    const local = inProcess(current);
+
+    for (const iteration of [1, 2]) {
+      const spent = local.review(iteration, "NOT-READY");
+      expect(spent.status, spent.stderr).toBe(0);
+    }
+
+    const funded = local.review(3, "READY", { evidenceFingerprint: FINGERPRINT });
+    expect(funded.status, funded.stderr).toBe(0);
+    expect(JSON.parse(funded.stdout).appended).toBe(true);
+    const artifact = readFileSync(join(current.root, current.primary), "utf8");
+    expect(artifact).toContain("## Review — Iteration 3");
+    expect(artifact).toContain(`- **Repair evidence:** ${FINGERPRINT}`);
+  });
+
+  test("refuses repair evidence offered while the budget still has room, in-process", () => {
+    const current = fixture();
+    seedRepairEvidence(current, FINGERPRINT, STAGE_INSTANCE);
+    const local = inProcess(current);
+
+    const early = local.review(2, "READY", { evidenceFingerprint: FINGERPRINT });
+    expect(early.status).toBe(1);
+    expect(early.stderr).toContain(
+      "repair evidence applies only after the review iteration budget is spent",
+    );
+  });
+
+  // The fail-open this change closes: the projection immutability check can only
+  // speak about a block that is still in the artifact, so a rewrite that drops
+  // the Review sections used to re-admit the same iteration with a different
+  // verdict and no warning. Both arms run on the same fixture: the wipe is
+  // refused, and the restored artifact is accepted again — so the refusal is the
+  // missing block, not the re-record itself.
+  test("refuses a re-record whose recorded projections were wiped from the artifact", () => {
+    const current = fixture();
+    const local = inProcess(current);
+    const first = local.review(1, "NOT-READY");
+    expect(first.status, first.stderr).toBe(0);
+
+    const primaryPath = join(current.root, current.primary);
+    const recorded = readFileSync(primaryPath, "utf8");
+    writeFileSync(primaryPath, "# business-logic-model\n", "utf-8");
+
+    const wiped = local.review(1, "READY");
+    expect(wiped.status).toBe(1);
+    expect(wiped.stderr).toContain(
+      "recorded Review projection for iteration 1 is missing from the artifact",
+    );
+    expect(readFileSync(primaryPath, "utf8")).not.toContain("## Review — Iteration");
+
+    writeFileSync(primaryPath, recorded, "utf-8");
+    const restored = local.review(2, "NOT-READY");
+    expect(restored.status, restored.stderr).toBe(0);
   });
 
   test("the engine completion gate reads the repair-funded verdict", () => {
