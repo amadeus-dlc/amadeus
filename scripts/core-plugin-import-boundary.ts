@@ -184,9 +184,13 @@ export function trackedGitFiles(projectDir: string): readonly string[] {
   return result.stdout.toString("utf-8").split("\0").filter(Boolean);
 }
 
-function reportViolation(
-  verdict: Extract<BoundaryVerdict, { kind: "violation" }>,
-): number {
+// Named rather than written inline in the signature below: bun's merged LCOV
+// emits zero-hit DA records for the continuation lines of a multi-line type
+// annotation, which no test can ever cover
+// (cid:pr-convergence:lcov-type-annotation-asymmetry).
+type ViolationVerdict = Extract<BoundaryVerdict, { kind: "violation" }>;
+
+function reportViolation(verdict: ViolationVerdict): number {
   console.error(
     `framework→plugins import boundary violated — ${verdict.violations.length} import(s), ` +
       `${verdict.unreadable.length} unreadable file(s) across ${verdict.scanned} scanned source(s):`,
