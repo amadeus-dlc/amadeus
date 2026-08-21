@@ -197,7 +197,6 @@ macOS で Homebrew を使うなら `brew install --cask claude-code`。`claude -
 
 ```bash
 bunx @amadeus-dlc/setup install --harness claude --target your-project --yes
-cp -n your-project/.claude/CLAUDE.md.example your-project/CLAUDE.md
 cp -n your-project/.claude/settings.json.example your-project/.claude/settings.json
 cd your-project && claude
 ```

@@ -61,6 +61,9 @@ import {
 const HARNESS_DIR = dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = join(HARNESS_DIR, "..", "..");
 export const AMADEUS_SRC = join(REPO_ROOT, "dist", "claude", ".claude");
+// #3388: Claude's onboarding doc ships as a real project-root CLAUDE.md beside
+// .claude/, exactly like every AGENTS.md harness — no .example, no manual copy.
+export const CLAUDE_ONBOARDING_DOC = join(REPO_ROOT, "dist", "claude", "CLAUDE.md");
 
 // The per-intent WORKSPACE layout the fixtures seed (P9 — the flat amadeus-docs/
 // layout is retired). A fixture project gets a SEED-style shell (amadeus/active-space
@@ -916,11 +919,9 @@ export function setupIntegrationProject(
 ): string {
   const proj = createTestProject();
   copyTreeWithRetry(AMADEUS_SRC, join(proj, ".claude"));
-  const claudeMdExample = join(proj, ".claude", "CLAUDE.md.example");
-  const claudeMd = join(proj, ".claude", "CLAUDE.md");
-  if (!existsSync(claudeMd) && existsSync(claudeMdExample)) {
-    cpSync(claudeMdExample, claudeMd);
-  }
+  // #3388: the onboarding doc ships as the real project-root CLAUDE.md.
+  const claudeMd = join(proj, "CLAUDE.md");
+  if (!existsSync(claudeMd) && existsSync(CLAUDE_ONBOARDING_DOC)) cpSync(CLAUDE_ONBOARDING_DOC, claudeMd);
   const settingsExample = join(proj, ".claude", "settings.json.example");
   const settings = join(proj, ".claude", "settings.json");
   if (!existsSync(settings) && existsSync(settingsExample)) {
@@ -1113,9 +1114,9 @@ export function setupWorkspaceJourney(harness: JourneyHarness = "claude"): Works
     cpSync(join(CODEX_DIST, "amadeus"), join(root, "amadeus"), { recursive: true });
   } else {
     cpSync(join(CLAUDE_DIST, ".claude"), join(root, ".claude"), { recursive: true });
-    const claudeMdExample = join(root, ".claude", "CLAUDE.md.example");
-    const claudeMd = join(root, ".claude", "CLAUDE.md");
-    if (!existsSync(claudeMd) && existsSync(claudeMdExample)) cpSync(claudeMdExample, claudeMd);
+    // #3388: the onboarding doc ships as the real project-root CLAUDE.md.
+    const claudeMd = join(root, "CLAUDE.md");
+    if (!existsSync(claudeMd) && existsSync(CLAUDE_ONBOARDING_DOC)) cpSync(CLAUDE_ONBOARDING_DOC, claudeMd);
     const settingsExample = join(root, ".claude", "settings.json.example");
     const settings = join(root, ".claude", "settings.json");
     if (!existsSync(settings) && existsSync(settingsExample)) cpSync(settingsExample, settings);

@@ -35,6 +35,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const AMADEUS_SRC = join(import.meta.dir, "..", "..", "dist", "claude", ".claude");
+// #3388: the onboarding doc ships as the real project-root CLAUDE.md.
+const CLAUDE_ONBOARDING_DOC = join(import.meta.dir, "..", "..", "dist", "claude", "CLAUDE.md");
 // Bun runs the TypeScript entrypoint natively on every platform.
 
 // `wait` returns nonzero on timeout — we want a boolean for the idempotent modal
@@ -65,9 +67,9 @@ describe("t-tui-statusline (statusline renders in a real terminal)", () => {
         // dest .claude must NOT pre-exist or cp nests it — we copy SRC -> <sandbox>/.claude.
         const destClaude = join(sandbox, ".claude");
         copyTreeWithRetry(AMADEUS_SRC, destClaude);
-        const claudeMdExample = join(destClaude, "CLAUDE.md.example");
-        const claudeMd = join(destClaude, "CLAUDE.md");
-        if (!existsSync(claudeMd) && existsSync(claudeMdExample)) cpSync(claudeMdExample, claudeMd);
+        // #3388: the onboarding doc ships as the real project-root CLAUDE.md.
+        const claudeMd = join(sandbox, "CLAUDE.md");
+        if (!existsSync(claudeMd) && existsSync(CLAUDE_ONBOARDING_DOC)) cpSync(CLAUDE_ONBOARDING_DOC, claudeMd);
         const settingsExample = join(destClaude, "settings.json.example");
         const settingsPath = join(destClaude, "settings.json");
         if (!existsSync(settingsPath) && existsSync(settingsExample)) cpSync(settingsExample, settingsPath);

@@ -301,7 +301,8 @@ async function runInstall(parsed: ParsedCommand, ports: CliPorts): Promise<numbe
       if (wired !== 0) return wired;
     }
 
-    console.log(reporter.renderSuccess(applied, verify, NextSteps.of(inputs.harness, resolved.value, inputs.target)));
+    const wiring = reporter.renderOnboardingWiring(plan.onboardingNotices(), inputs.harness);
+    console.log(reporter.renderSuccess(applied, verify, NextSteps.of(inputs.harness, resolved.value, inputs.target), wiring));
     return 0;
   });
 }
@@ -407,7 +408,8 @@ async function runUpgrade(parsed: ParsedCommand, ports: CliPorts): Promise<numbe
       if (wired !== 0) return wired;
     }
 
-    console.log(reporter.renderSuccess(applied, verify, NextSteps.of(inputs.harness, resolved.value, inputs.target)));
+    const wiring = reporter.renderOnboardingWiring(plan.onboardingNotices(), inputs.harness);
+    console.log(reporter.renderSuccess(applied, verify, NextSteps.of(inputs.harness, resolved.value, inputs.target), wiring));
     return 0;
   });
 }

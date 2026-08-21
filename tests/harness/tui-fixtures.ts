@@ -47,6 +47,8 @@ import {
 const HARNESS_DIR = import.meta.dir;
 const REPO_ROOT = join(HARNESS_DIR, "..", "..");
 export const AMADEUS_SRC = join(REPO_ROOT, "dist", "claude", ".claude");
+// #3388: the onboarding doc ships as the real project-root CLAUDE.md.
+export const CLAUDE_ONBOARDING_DOC = join(REPO_ROOT, "dist", "claude", "CLAUDE.md");
 export const KIRO_SRC = join(REPO_ROOT, "dist", "kiro", ".kiro");
 // The Kiro IDE distributable ships the .kiro.hook files the IDE actually reads
 // (the human-presence mint + block); dist/kiro/.kiro/hooks has none. Seed this tree
@@ -187,9 +189,9 @@ export function setupTuiProject(opts: TuiProjectOptions = {}): string {
     if (existsSync(KIRO_IDE_MEMORY_SRC)) copyTreeWithRetry(KIRO_IDE_MEMORY_SRC, join(proj, "amadeus"));
   } else {
     copyTreeWithRetry(AMADEUS_SRC, join(proj, ".claude"));
-    const claudeMdExample = join(proj, ".claude", "CLAUDE.md.example");
-    const claudeMd = join(proj, ".claude", "CLAUDE.md");
-    if (!existsSync(claudeMd) && existsSync(claudeMdExample)) cpSync(claudeMdExample, claudeMd);
+    // #3388: the onboarding doc ships as the real project-root CLAUDE.md.
+    const claudeMd = join(proj, "CLAUDE.md");
+    if (!existsSync(claudeMd) && existsSync(CLAUDE_ONBOARDING_DOC)) cpSync(CLAUDE_ONBOARDING_DOC, claudeMd);
     const settingsExample = join(proj, ".claude", "settings.json.example");
     const settings = join(proj, ".claude", "settings.json");
     if (!existsSync(settings) && existsSync(settingsExample)) cpSync(settingsExample, settings);

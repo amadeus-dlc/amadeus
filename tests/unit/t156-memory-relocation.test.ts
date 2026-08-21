@@ -190,7 +190,7 @@ describe("t156 method relocation to amadeus/spaces/default/memory/ + per-harness
     }
     // And CLAUDE.md imports the stub (top of the reference chain).
     const claudeMd = readFileSync(
-      join(REPO_ROOT, "dist", "claude", ".claude", "CLAUDE.md.example"),
+      join(REPO_ROOT, "dist", "claude", "CLAUDE.md"),
       "utf-8",
     );
     expect(claudeMd).toContain("@.claude/rules/amadeus.md");

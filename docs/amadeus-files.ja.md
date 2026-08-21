@@ -80,12 +80,11 @@
 │       ├── scaffold/
 │       └── templates/
 ├── vendor/                                               # ベンダリングしたOpenTelemetry API(全ハーネスへ配布)
-├── CLAUDE.md                                             # Claude Code向け導入指示
-├── CLAUDE.md.example
 ├── settings.json                                         # hook/statusline/permission設定
 ├── settings.json.example
 ├── settings.local.json.example
 └── VERSION
+CLAUDE.md                                                 # Claude Code向け導入ドキュメント(プロジェクトルート。.claude/ と並ぶ。他ハーネスの AGENTS.md 相当)
 .codex/                                                   # Codex CLIのエンジン(生成物。ローカルのactive hookは更新時も保持)
 ├── agents/                                               # Codex subagent定義(15 role、.md + .toml)
 │   ├── amadeus-<role>-agent.md

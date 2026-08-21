@@ -23,6 +23,9 @@ export function createManifest(state: ManifestState): Manifest {
       // Law of Demeter: callers ask the manifest, not manifest.files() directly.
       return state.files.dispositionFor(path, actualMd5);
     },
+    knowsPath(path: string): boolean {
+      return state.files.knowsPath(path);
+    },
     isNewerThan(candidate: SemVer): boolean {
       return state.distributionVersion.isLaterThan(candidate);
     },

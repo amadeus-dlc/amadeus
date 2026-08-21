@@ -9,6 +9,7 @@ import { describe, expect, test } from "bun:test";
 import * as reporter from "../../packages/setup/src/modules/reporter.ts";
 import { HarnessName } from "../../packages/setup/src/domain/harness.ts";
 import { NextSteps, VerifyResult } from "../../packages/setup/src/domain/verify-result.ts";
+import type { OnboardingNotice } from "../../packages/setup/src/domain/onboarding-ladder.ts";
 import type { Plan, PlanEntry } from "../../packages/setup/src/domain/plan.ts";
 import type { ApplyResult } from "../../packages/setup/src/domain/apply-result.ts";
 import { ResolvedVersion } from "../../packages/setup/src/domain/resolved-version.ts";
@@ -24,7 +25,7 @@ function planEntry(overrides: Partial<PlanEntry> & Pick<PlanEntry, "path" | "act
   return Object.freeze({ forced: false, md5: "x", required: false, ...overrides });
 }
 
-function fakePlan(entries: readonly PlanEntry[]): Plan {
+function fakePlan(entries: readonly PlanEntry[], notices: readonly OnboardingNotice[] = []): Plan {
   return {
     startedAtIso: "2026-07-08T12:00:00.000Z",
     backupTimestamp: "20260708T120000Z",
@@ -40,6 +41,7 @@ function fakePlan(entries: readonly PlanEntry[]): Plan {
       conflict: entries.filter((e) => e.action === "conflict").length,
     }),
     harnessRoot: () => "/src",
+    onboardingNotices: () => notices,
   };
 }
 
@@ -85,6 +87,76 @@ describe("renderPlanReport (FR-007)", () => {
   });
 });
 
+describe("renderPlanReport — onboarding ladder notices (#3388)", () => {
+  test("states the divert in words rather than leaving it to be inferred from the Add list", () => {
+    const plan = fakePlan(
+      [planEntry({ path: "CLAUDE-AMADEUS.md", action: "add", class: "shared", sourcePath: "CLAUDE.md" })],
+      [{ kind: "alternate", primary: "CLAUDE.md", alternate: "CLAUDE-AMADEUS.md" }],
+    );
+    const text = reporter.renderPlanReport(plan);
+    expect(text).toContain("Onboarding doc:");
+    expect(text).toContain("CLAUDE.md already exists");
+    expect(text).toContain("CLAUDE-AMADEUS.md");
+  });
+
+  test("a blocked doc is reported even though it produced no plan entry", () => {
+    const plan = fakePlan([], [{ kind: "blocked", primary: "AGENTS.md", alternate: "AGENTS-AMADEUS.md" }]);
+    const text = reporter.renderPlanReport(plan);
+    expect(text).toContain("AGENTS.md and AGENTS-AMADEUS.md both exist");
+    expect(text).toContain("not installed");
+  });
+
+  test("a plan with no ladder notices says nothing about onboarding at all", () => {
+    const text = reporter.renderPlanReport(fakePlan([planEntry({ path: "CLAUDE.md", action: "add", class: "shared" })]));
+    expect(text).not.toContain("Onboarding doc:");
+  });
+});
+
+describe("renderOnboardingWiring (#3388 completion condition 2)", () => {
+  function codexHarness(): HarnessName {
+    const codex = HarnessName.all.find((h) => (h as string) === "codex");
+    if (!codex) throw new Error("fixture setup: 'codex' must be a known harness");
+    return codex;
+  }
+
+  test("claude is told the exact @-import line to add", () => {
+    const text = reporter.renderOnboardingWiring(
+      [{ kind: "alternate", primary: "CLAUDE.md", alternate: "CLAUDE-AMADEUS.md" }],
+      claudeHarness(),
+    );
+    expect(text).not.toBeNull();
+    expect(text ?? "").toContain('"@CLAUDE-AMADEUS.md"');
+    expect(text ?? "").toContain("CLAUDE.md");
+    // The reason the step is mandatory: the alternate is inert on its own.
+    expect(text ?? "").toContain("inert");
+  });
+
+  test("an AGENTS.md harness is told to merge, since it has no @-import", () => {
+    const text = reporter.renderOnboardingWiring(
+      [{ kind: "alternate", primary: "AGENTS.md", alternate: "AGENTS-AMADEUS.md" }],
+      codexHarness(),
+    );
+    expect(text ?? "").toContain("Merge AGENTS-AMADEUS.md into AGENTS.md");
+    expect(text ?? "").toContain("no @-import");
+    expect(text ?? "").not.toContain('"@AGENTS-AMADEUS.md"');
+  });
+
+  test("a blocked doc adds the move-aside-and-re-run step ahead of the wiring step", () => {
+    const text = reporter.renderOnboardingWiring(
+      [{ kind: "blocked", primary: "CLAUDE.md", alternate: "CLAUDE-AMADEUS.md" }],
+      claudeHarness(),
+    );
+    const body = text ?? "";
+    expect(body).toContain("no onboarding doc was written");
+    expect(body.indexOf("Move the existing CLAUDE-AMADEUS.md aside")).toBeGreaterThan(-1);
+    expect(body.indexOf("Move the existing CLAUDE-AMADEUS.md aside")).toBeLessThan(body.indexOf('"@CLAUDE-AMADEUS.md"'));
+  });
+
+  test("edge case: no notices means no guidance block at all", () => {
+    expect(reporter.renderOnboardingWiring([], claudeHarness())).toBeNull();
+  });
+});
+
 describe("renderAlreadyInstalled (FR-004)", () => {
   test("names the upgrade command as the suggested next step", () => {
     const text = reporter.renderAlreadyInstalled({ type: "refuse-suggest-upgrade", detected: "claude v1.0.0" });
@@ -126,6 +198,21 @@ describe("renderSuccess (US-A6)", () => {
     expect(text).toContain("harness-dir");
     expect(text).toContain("/tmp/project");
     expect(text).toContain("/amadeus");
+  });
+
+  test("appends the onboarding wiring block last, after the next steps (#3388)", () => {
+    const semver = SemVer.parse("1.2.3");
+    if (semver.type === "err") throw new Error("fixture setup failed");
+    const verify = VerifyResult.of([{ name: "harness-dir", ok: true, detail: "exists" }]);
+    const next = NextSteps.of(claudeHarness(), ResolvedVersion.fromRelease(semver.value), "/tmp/project");
+    const wiring = reporter.renderOnboardingWiring(
+      [{ kind: "alternate", primary: "CLAUDE.md", alternate: "CLAUDE-AMADEUS.md" }],
+      claudeHarness(),
+    );
+    const text = reporter.renderSuccess(fakeApplyResult(), verify, next, wiring);
+    expect(text).toContain("Action required");
+    // Last on screen is the step the user still owes.
+    expect(text.indexOf("Next steps:")).toBeLessThan(text.indexOf("Action required"));
   });
 });
 

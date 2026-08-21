@@ -103,6 +103,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   AMADEUS_SRC,
+  CLAUDE_ONBOARDING_DOC,
   cleanupTestProject,
   copyTreeWithRetry,
   createTestProject,
@@ -255,9 +256,9 @@ function bareProj(): string {
 function installedProj(mutate?: (claudeDir: string) => void): string {
   const p = bareProj();
   copyTreeWithRetry(AMADEUS_SRC, join(p, ".claude"));
-  const claudeMdExample = join(p, ".claude", "CLAUDE.md.example");
-  const claudeMd = join(p, ".claude", "CLAUDE.md");
-  if (!existsSync(claudeMd) && existsSync(claudeMdExample)) cpSync(claudeMdExample, claudeMd);
+  // #3388: the onboarding doc ships as the real project-root CLAUDE.md.
+  const claudeMd = join(p, "CLAUDE.md");
+  if (!existsSync(claudeMd) && existsSync(CLAUDE_ONBOARDING_DOC)) cpSync(CLAUDE_ONBOARDING_DOC, claudeMd);
   const settingsExample = join(p, ".claude", "settings.json.example");
   const settings = join(p, ".claude", "settings.json");
   if (!existsSync(settings) && existsSync(settingsExample)) cpSync(settingsExample, settings);

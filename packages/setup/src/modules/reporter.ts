@@ -3,6 +3,7 @@ import type { UsageError } from "../domain/command.ts";
 import { HarnessName } from "../domain/harness.ts";
 import type { InstallAdmission, InstallationError } from "../domain/installation.ts";
 import type { ManifestError } from "../domain/manifest.ts";
+import type { OnboardingNotice } from "../domain/onboarding-ladder.ts";
 import type { FetchError } from "../domain/payload.ts";
 import type { Plan, PlanAction, PlanRefusal } from "../domain/plan.ts";
 import type { ResolveError } from "../domain/resolved-version.ts";
@@ -58,7 +59,54 @@ export function renderPlanReport(plan: Plan, note?: string): string {
   lines.push(
     `Summary: add=${summary.add} update=${summary.update} backup=${summary.backup} conflict=${summary.conflict} skip=${summary.skip}`,
   );
+  // #3388: a diverted or withheld onboarding doc is stated in words here, not
+  // left to be inferred from an unfamiliar "-AMADEUS.md" path in the Add list.
+  // This block is harness-neutral and always printed; the harness-specific
+  // wiring steps ride with the success report (renderOnboardingWiring).
+  const notices = plan.onboardingNotices();
+  if (notices.length > 0) {
+    lines.push("Onboarding doc:");
+    for (const notice of notices) {
+      lines.push(
+        notice.kind === "alternate"
+          ? `  ${notice.primary} already exists — installing to ${notice.alternate} instead (manual wiring required).`
+          : `  ${notice.primary} and ${notice.alternate} both exist — not installed (manual wiring required).`,
+      );
+    }
+  }
   return lines.join("\n");
+}
+
+// #3388, completion condition 2: the alternate onboarding filename is inert
+// until the user wires it up — no harness auto-loads it — so an install that
+// used one owes the user the exact wiring step for THEIR harness. Returns null
+// when the doc landed on its real name and there is nothing to do.
+export function renderOnboardingWiring(notices: readonly OnboardingNotice[], harness: HarnessName): string | null {
+  if (notices.length === 0) return null;
+  const lines = ["Action required — the Amadeus onboarding doc is not wired in yet:"];
+  for (const notice of notices) {
+    lines.push("");
+    if (notice.kind === "alternate") {
+      lines.push(`  ${notice.primary} already existed, so the onboarding doc was written to ${notice.alternate}.`);
+    } else {
+      lines.push(`  ${notice.primary} and ${notice.alternate} both already existed, so no onboarding doc was written.`);
+    }
+    lines.push(...wiringSteps(notice, harness));
+  }
+  return lines.join("\n");
+}
+
+// Claude Code resolves @-imports from CLAUDE.md, so one added line is the whole
+// procedure. Codex-family harnesses (every AGENTS.md harness) read AGENTS.md
+// and nothing else — there is no import mechanism to point at the alternate —
+// so the content has to be merged by hand.
+function wiringSteps(notice: OnboardingNotice, harness: HarnessName): string[] {
+  const wireIn =
+    (harness as string) === "claude"
+      ? `  Add the line "@${notice.alternate}" to ${notice.primary}. Claude Code auto-loads ${notice.primary} only, so ${notice.alternate} stays inert until it is imported.`
+      : `  Merge ${notice.alternate} into ${notice.primary}, or copy the parts you want across. This harness reads ${notice.primary} only and has no @-import, so ${notice.alternate} stays inert on its own.`;
+  if (notice.kind === "alternate") return [wireIn];
+  return [`  Move the existing ${notice.alternate} aside and re-run the installer, then:`, wireIn];
 }
 
 // FR-004/BR-I07: the only UX for a refused install (fresh files untouched).
@@ -91,12 +139,15 @@ export function renderVerifyFailure(verify: VerifyResult): string {
 }
 
 // US-A6: harness, version, target, verification checks, then next steps.
-export function renderSuccess(_applied: ApplyResult, verify: VerifyResult, next: NextSteps): string {
+// `wiring` (#3388) is renderOnboardingWiring's output, appended last so the
+// manual step the user still owes is the final thing on screen.
+export function renderSuccess(_applied: ApplyResult, verify: VerifyResult, next: NextSteps, wiring: string | null = null): string {
   const lines = ["Install complete.", "", "Verification:"];
   for (const check of verify.checks()) {
     lines.push(`  [${check.ok ? "ok" : "FAIL"}] ${check.name}: ${check.detail}`);
   }
   lines.push("", ...next.lines());
+  if (wiring !== null) lines.push("", wiring);
   return lines.join("\n");
 }
 
