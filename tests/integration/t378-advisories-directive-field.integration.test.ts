@@ -1,16 +1,14 @@
-// covers: file:plugins/formal-model-check/tools/plugin-activation.ts
+// covers: file:packages/framework/core/tools/amadeus-directive.ts, file:packages/framework/core/tools/amadeus-orchestrate.ts
 // size: medium
 //
 // U5 advisories-channel (FR-B2) — the MACHINE-CONSUMABLE advisory channel. The
 // stderr line was human-only: a conductor had no structured field to read, so
 // the nudge could not be relayed. This file pins the structured half:
 //
-//   1. activationAdvisoriesForHost STRUCTURES the 3-value judgment into
-//      Advisory[] (domain-entities.md E1) — `current` yields [].
-//   2. The directive validator ACCEPTS `advisories` on run-stage (it is a
+//   1. The directive validator ACCEPTS `advisories` on run-stage (it is a
 //      strict unknown-key rejecter, so the field must be allowlisted) and
 //      rejects a malformed entry.
-//   3. `next` carries the field on stdout ONLY when an advisory actually fires
+//   2. `next` carries the field on stdout ONLY when an advisory actually fires
 //      (business-logic-model.md I2 — silence is preserved byte-for-byte), and
 //      the stderr line is still written (L5 — the channels are additive).
 //
@@ -19,7 +17,7 @@
 // (bun-coverage-spawn-blindspot).
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { __resetGraphCache } from "../../packages/framework/core/tools/amadeus-graph.ts";
@@ -31,13 +29,6 @@ import {
   previewProductionAutonomyGrant,
 } from "../../packages/framework/core/tools/amadeus-intent-autonomy-production.ts";
 import {
-  ACTIVATION_PLUGIN,
-  ACTIVATION_WATCH_GLOBS,
-  activationAdvisoriesForHost,
-  recordActivationVerdict,
-  specRootForHost,
-} from "../../plugins/formal-model-check/tools/plugin-activation.ts";
-import {
   cleanupTestProject,
   createTestProject,
   FIXTURES_DIR,
@@ -45,7 +36,13 @@ import {
   seedStateFile,
   seededStateFile,
 } from "../harness/fixtures.ts";
-import { writeActivationModelMap } from "../harness/formal-model-fixture.ts";
+import {
+  FIXTURE_ADVISORY_CODE,
+  FIXTURE_HOLD_MESSAGE,
+  FIXTURE_PLUGIN,
+  installFixturePlugin,
+  composeFixturePlugin,
+} from "../harness/conformance-fixture.ts";
 import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 
@@ -63,41 +60,22 @@ function setEnv(k: string, v: string | undefined): void {
 }
 
 // A hermetic project in the REAL installation layout (U8 FR-B3 grounding): the
-// host root is the harness directory and the watched spec tree is a PROJECT
-// asset one level up, so the two roots stay distinguishable. The composition
-// record — host state — gates the whole advisory (BR-U6-4 0-plugin zero-impact)
-// and stays on the host root. Returns the host root.
+// host root is the harness directory and the plugin source is a PROJECT asset
+// one level up, so the two roots stay distinguishable. The composition record —
+// host state — gates the whole advisory (BR-U6-4 0-plugin zero-impact) and stays
+// on the host root. Returns the host root.
 function makeHost(composed: boolean): string {
   const root = mkdtempSync(join(tmpdir(), "amadeus-t378-host-"));
   const h = join(root, ".claude");
   mkdirSync(h, { recursive: true });
-  mkdirSync(join(root, "amadeus", "spaces", "default", "specs", "tla"), { recursive: true });
-  writeFileSync(join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.tla"), "MODULE FormalElection\n");
-  writeFileSync(join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.cfg"), "INIT Init\n");
-  writeActivationModelMap(root);
-  if (composed) {
-    cpSync(
-      join(REPO_ROOT, "plugins", ACTIVATION_PLUGIN),
-      join(root, "plugins", ACTIVATION_PLUGIN),
-      { recursive: true },
-    );
-    writeFileSync(
-      join(h, ".amadeus-plugin-composition.json"),
-      JSON.stringify({ ledger: [], plugins: [[ACTIVATION_PLUGIN, { stageIndex: [{ slug: ACTIVATION_PLUGIN }] }]] }),
-    );
-  }
+  installFixturePlugin(root);
+  if (composed) composeFixturePlugin(h);
   return h;
 }
 
-// Record a verdict and then mutate the spec, so the judgment is `changed`.
+// A composed host with no recorded verdict, so the declared evaluator holds.
 function makeChangedHost(): string {
-  const h = makeHost(true);
-  recordActivationVerdict(h, ACTIVATION_WATCH_GLOBS, "2026-07-27T00:00:00Z");
-  writeFileSync(
-    join(specRootForHost(h), "tla", "FormalElection.tla"),
-    "MODULE FormalElection\nVARIABLES x\n",
-  );
-  return h;
+  return makeHost(true);
 }
 
 let logs: string[] = [];
@@ -135,48 +113,7 @@ afterEach(() => {
 });
 
 // ===========================================================================
-// 1. Structuring: judgment -> Advisory[] (domain-entities.md E1)
-// ===========================================================================
-
-describe("t378 activationAdvisoriesForHost (L2 structuring)", () => {
-  test("changed -> one Advisory carrying plugin/code/message/stage", () => {
-    host = makeChangedHost();
-    const advisories = activationAdvisoriesForHost(host, "build-and-test");
-    expect(advisories.length).toBe(1);
-    expect(advisories[0].plugin).toBe(ACTIVATION_PLUGIN);
-    expect(advisories[0].code).toBe("changed");
-    expect(advisories[0].stage).toBe("build-and-test");
-    // BR-U5-2: the message is the EXISTING stderr line, byte-identical.
-    expect(advisories[0].message).toBe(
-      `advisory: ${ACTIVATION_PLUGIN} spec hash CHANGED (amadeus/spaces/default/specs/tla) — run /amadeus --stage ${ACTIVATION_PLUGIN}`,
-    );
-  });
-
-  test("never-run (no recorded verdict) -> one Advisory with code never-run", () => {
-    host = makeHost(true);
-    const advisories = activationAdvisoriesForHost(host, "requirements-analysis");
-    expect(advisories.length).toBe(1);
-    expect(advisories[0].code).toBe("never-run");
-    expect(advisories[0].stage).toBe("requirements-analysis");
-    expect(advisories[0].message).toBe(
-      `advisory: ${ACTIVATION_PLUGIN} has no recorded verdict (amadeus/spaces/default/specs/tla) — run /amadeus --stage ${ACTIVATION_PLUGIN}`,
-    );
-  });
-
-  test("current (verdict matches spec) -> [] (silence is preserved)", () => {
-    host = makeHost(true);
-    recordActivationVerdict(host, ACTIVATION_WATCH_GLOBS, "2026-07-27T00:00:00Z");
-    expect(activationAdvisoriesForHost(host, "build-and-test")).toEqual([]);
-  });
-
-  test("not composed -> [] (0-plugin zero-impact, first gate)", () => {
-    host = makeHost(false);
-    expect(activationAdvisoriesForHost(host, "build-and-test")).toEqual([]);
-  });
-});
-
-// ===========================================================================
-// 2. The directive contract: advisories is an ALLOWLISTED, SHAPE-CHECKED field
+// 1. The directive contract: advisories is an ALLOWLISTED, SHAPE-CHECKED field
 // ===========================================================================
 
 function runStageFixture(extra: Record<string, unknown> = {}): Record<string, unknown> {
@@ -204,11 +141,11 @@ describe("t378 directive contract: advisories field", () => {
       runStageFixture({
         advisories: [
           {
-            plugin: ACTIVATION_PLUGIN,
+            plugin: FIXTURE_PLUGIN,
             code: "changed",
             message: "advisory: x",
             stage: "build-and-test",
-            target: "amadeus/spaces/default/specs/tla",
+            target: `${FIXTURE_PLUGIN}:${FIXTURE_ADVISORY_CODE}`,
             reason: "model changed",
           },
         ],
@@ -275,12 +212,12 @@ describe("t378 directive contract: advisories field", () => {
 });
 
 // ===========================================================================
-// 3. next: the field appears ONLY when an advisory fires (I1/I2), and the
+// 2. next: the field appears ONLY when an advisory fires (I1/I2), and the
 //    stderr line is still written (L5 — additive, not a replacement).
 // ===========================================================================
 
 // ===========================================================================
-// 4. The consuming NORM: a field nobody is told to read is not a channel.
+// 3. The consuming NORM: a field nobody is told to read is not a channel.
 //    stage-protocol.md must instruct the conductor to relay each advisory —
 //    in the canonical source AND in every shipped harness copy.
 // ===========================================================================
@@ -351,13 +288,13 @@ describe("t378 next holds before stage body", () => {
     expect(directive.stage).toBe("build-and-test");
     expect(directive.options).toEqual(["今すぐ実行する", "リスクを承知して延期する"]);
     expect(directive.advisories?.length).toBe(1);
-    expect(directive.advisories?.[0].code).toBe("spec-change");
+    expect(directive.advisories?.[0].code).toBe(FIXTURE_ADVISORY_CODE);
     expect(directive.advisories?.[0].checkpoint).toBe("build-and-test");
     expect(directive.question).toBe(
       `${directive.advisories?.[0].message}\n\n各advisoryについて次のいずれかを選択してください。`,
     );
     // stderr is preserved (L5): the human channel did not move.
-    expect(errs.join("\n")).toContain(`${ACTIVATION_PLUGIN} spec hash CHANGED`);
+    expect(errs.join("\n")).toContain(FIXTURE_HOLD_MESSAGE);
   });
 
   test("silent condition (0-plugin) -> the advisories KEY is absent, not an empty array", () => {

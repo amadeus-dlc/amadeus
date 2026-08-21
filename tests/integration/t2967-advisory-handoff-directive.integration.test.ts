@@ -21,7 +21,7 @@
 // is — bun --coverage does not instrument spawned children.
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -34,12 +34,6 @@ import {
   previewProductionAutonomyGrant,
 } from "../../packages/framework/core/tools/amadeus-intent-autonomy-production.ts";
 import {
-  ACTIVATION_PLUGIN,
-  ACTIVATION_WATCH_GLOBS,
-  recordActivationVerdict,
-  specRootForHost,
-} from "../../plugins/formal-model-check/tools/plugin-activation.ts";
-import {
   cleanupTestProject,
   createTestProject,
   FIXTURES_DIR,
@@ -48,7 +42,7 @@ import {
   seededStateFile,
 } from "../harness/fixtures.ts";
 import { chooseRunNow } from "../harness/advisory-choice-fixture.ts";
-import { writeActivationModelMap } from "../harness/formal-model-fixture.ts";
+import { FIXTURE_PLUGIN, seedHoldingHost } from "../harness/conformance-fixture.ts";
 import { plantV1AuditRow } from "../harness/v1-audit-fixture.ts";
 import { resetOtelPerProject } from "../harness/otel-reset.ts";
 
@@ -65,23 +59,12 @@ function setEnv(key: string, value: string | undefined): void {
   else process.env[key] = value;
 }
 
-// A composed host whose recorded verdict is stale, so the activation plugin
-// raises its `spec-change` advisory at every checkpoint.
+// A composed host with no recorded verdict, so the plugin's declared evaluator
+// raises its advisory at every checkpoint.
 function makeChangedHost(): string {
   const root = mkdtempSync(join(tmpdir(), "amadeus-t2967-host-"));
   const harnessRoot = join(root, ".claude");
-  mkdirSync(harnessRoot, { recursive: true });
-  mkdirSync(join(root, "amadeus", "spaces", "default", "specs", "tla"), { recursive: true });
-  writeFileSync(join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.tla"), "MODULE FormalElection\n");
-  writeFileSync(join(root, "amadeus", "spaces", "default", "specs", "tla", "FormalElection.cfg"), "INIT Init\n");
-  writeActivationModelMap(root);
-  cpSync(join(REPO_ROOT, "plugins", ACTIVATION_PLUGIN), join(root, "plugins", ACTIVATION_PLUGIN), { recursive: true });
-  writeFileSync(
-    join(harnessRoot, ".amadeus-plugin-composition.json"),
-    JSON.stringify({ ledger: [], plugins: [[ACTIVATION_PLUGIN, { stageIndex: [{ slug: ACTIVATION_PLUGIN }] }]] }),
-  );
-  recordActivationVerdict(harnessRoot, ACTIVATION_WATCH_GLOBS, "2026-07-27T00:00:00Z");
-  writeFileSync(join(specRootForHost(harnessRoot), "tla", "FormalElection.tla"), "MODULE FormalElection\nVARIABLES x\n");
+  seedHoldingHost(root, harnessRoot);
   return harnessRoot;
 }
 
@@ -239,10 +222,10 @@ describe("t2967 settled advisory is handed off, not re-asked", () => {
     expect(handoff.advisories?.length).toBe(1);
     // BR-U2-05 is unchanged: opening the stage is an entry point, not a release.
     expect(handoff.advisories?.[0]?.result ?? "").toContain("evaluator to return no-hold");
-    // The literal destination the shipped manifest declares for `spec-change`,
+    // The literal destination the composed manifest declares for its advisory,
     // not a value re-derived from the directive itself.
-    expect(handoff.advisories?.[0]?.handoff_stage).toBe("formal-model-check");
-    expect(handoff.handoff_stages).toEqual(["formal-model-check"]);
+    expect(handoff.advisories?.[0]?.handoff_stage).toBe(FIXTURE_PLUGIN);
+    expect(handoff.handoff_stages).toEqual([FIXTURE_PLUGIN]);
   });
 
   // The unresolved case is untouched: an advisory with no receipt is still a
