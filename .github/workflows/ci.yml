@@ -42,6 +42,7 @@ jobs:
       full: ${{ steps.filter.outputs.full }}
       drift: ${{ steps.filter.outputs.drift }}
       coverage: ${{ steps.filter.outputs.coverage }}
+      risk: ${{ steps.filter.outputs.risk }}
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -59,7 +60,7 @@ jobs:
           set -euo pipefail
 
           if [[ -z "${BASE_SHA}" ]]; then
-            printf 'full=false\ndrift=false\ncoverage=false\n' >> "${GITHUB_OUTPUT}"
+            printf 'full=false\ndrift=false\ncoverage=false\nrisk=false\n' >> "${GITHUB_OUTPUT}"
             exit 0
           fi
 
@@ -310,6 +311,36 @@ jobs:
 
       - name: Plugin conformance journey (e2e)
         run: bun test --timeout="$(bun tests/test-timeout-ms.ts 30000)" tests/e2e/t341-plugin-conformance-journey.serial.test.ts
+
+  # Risk tier (#1981): core/TLA/large PRs run the complete e2e layer. Ordinary
+  # full PRs retain the focused plugin-conformance journey above.
+  e2e:
+    name: E2E tests (risk tier)
+    needs: changes
+    if: ${{ needs.changes.outputs.risk == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TEST_TIME_FACTOR: "2"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.3.13
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build generated distributions
+        run: bun run build
+
+      - name: Full e2e tier
+        run: bun tests/run-tests.ts --e2e -P 4
 
   tests:
     name: Tests
@@ -734,7 +765,8 @@ jobs:
   # U4 formal-model-check begin
   formal-model-check:
     name: Formal model check
-    if: github.event_name == 'workflow_dispatch'
+    needs: changes
+    if: github.event_name == 'workflow_dispatch' || ((github.event_name == 'pull_request' || github.event_name == 'merge_group') && needs.changes.outputs.risk == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -744,6 +776,8 @@ jobs:
         id: formal-checkout
         continue-on-error: true
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
 
       - name: Set up Bun
         id: formal-setup-bun
@@ -863,10 +897,12 @@ jobs:
       - lint
       - distribution-contract
       - plugin-conformance-e2e
+      - e2e
       - tests
       - reproducible-build
       - drift-check
       - coverage
+      - formal-model-check
       - review-thread-resolution
     if: ${{ always() }}
     steps:
@@ -943,6 +979,20 @@ jobs:
               ;;
             *)
               echo "changes returned an invalid coverage decision"
+              exit 1
+              ;;
+          esac
+
+          case "${{ needs.changes.outputs.risk }}" in
+            true)
+              require_result "e2e" "${{ needs.e2e.result }}"
+              require_result "formal-model-check" "${{ needs['formal-model-check'].result }}"
+              ran=true
+              ;;
+            false)
+              ;;
+            *)
+              echo "changes returned an invalid risk decision"
               exit 1
               ;;
           esac

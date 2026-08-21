@@ -97,6 +97,12 @@ const BASELINE_SHA = readFileSync(
 //     (57a395d1f0d1…) exactly, so this entry sanctions that edit and nothing else.
 //   - #1983 (merge-time revalidation): re-baseline the merge_group-triggered
 //     coverage and patch-gate execution against the queue base SHA.
+//   - #1981 (risk-based CI tiering): add the risk detector output, the full
+//     risk e2e tier, and PR/merge-group formal-model-check promotion, with both
+//     risk jobs conditionally required through CI Success.
+//   - #1981 review follow-up: disable checkout credential persistence in the
+//     risk e2e job; the formal job's checkout remains covered by its normalized
+//     formal block contract.
 describe("CI workflow structure (formal job isolation + baseline pin)", () => {
   test("contains only the sanctioned edits and an isolated pinned formal job", () => {
     const source = readFileSync(WORKFLOW, "utf8");
@@ -115,7 +121,7 @@ describe("CI workflow structure (formal job isolation + baseline pin)", () => {
     )).toContain("changes outside the three permitted U4 edits");
     expect(inspectCiWorkflow(
       source.replace(
-        "github.event_name == 'workflow_dispatch'",
+        "github.event_name == 'workflow_dispatch' || ((github.event_name == 'pull_request' || github.event_name == 'merge_group') && needs.changes.outputs.risk == 'true')",
         "github.event_name != 'pull_request'",
       ),
       BASELINE_SHA,
@@ -139,12 +145,12 @@ describe("CI workflow structure (formal job isolation + baseline pin)", () => {
     )).toContain("always artifact upload contract drifted");
     expect(inspectCiWorkflow(
       source.replace(
-        "  ci-success:\n    name: CI Success\n    runs-on: ubuntu-latest\n    needs:\n      - changes",
-        "  ci-success:\n    name: CI Success\n    runs-on: ubuntu-latest\n    needs:\n      - formal-model-check\n      - changes",
+        "      - formal-model-check\n      - review-thread-resolution",
+        "      - review-thread-resolution",
       ),
       BASELINE_SHA,
       false,
-    )).toContain("ci-success must not depend on formal job");
+    )).toContain("ci-success must depend on formal job");
   });
 
   test("falls closed for every pinned runtime, command, and trigger boundary", () => {
@@ -163,8 +169,8 @@ describe("CI workflow structure (formal job isolation + baseline pin)", () => {
       ["id: formal-acceptance\n        if: always()", "id: formal-acceptance", "always evidence or terminal flow drifted"],
       ["run-model-check-ci.ts run", "run-model-check-ci.ts invalid", "formal acceptance, verification, or terminal command is missing"],
       [
-        "formal-model-check:\n    name: Formal model check\n    if: github.event_name == 'workflow_dispatch'\n    runs-on: ubuntu-latest",
-        "formal-model-check:\n    name: Formal model check\n    if: github.event_name == 'workflow_dispatch'\n    runs-on: windows-latest",
+        "formal-model-check:\n    name: Formal model check\n    needs: changes\n    if: github.event_name == 'workflow_dispatch' || ((github.event_name == 'pull_request' || github.event_name == 'merge_group') && needs.changes.outputs.risk == 'true')\n    runs-on: ubuntu-latest",
+        "formal-model-check:\n    name: Formal model check\n    needs: changes\n    if: github.event_name == 'workflow_dispatch' || ((github.event_name == 'pull_request' || github.event_name == 'merge_group') && needs.changes.outputs.risk == 'true')\n    runs-on: windows-latest",
         "formal job runtime or permissions drifted",
       ],
       ["workflow_dispatch: {}", "manual_dispatch: {}", "workflow_dispatch trigger is missing"],
