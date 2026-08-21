@@ -54,6 +54,14 @@ export const AMBIENT_GIT_BINDING_VARS = [
   "GIT_PREFIX",
   "GIT_CONFIG_PARAMETERS",
   "GIT_CONFIG_COUNT",
+  // Not a repository binding, but it decides whether the GIT_CONFIG_SYSTEM pin
+  // below is read at all: with GIT_CONFIG_NOSYSTEM=1 still in the environment,
+  // git skips system config entirely and the pin silently stops applying
+  // (measured on git 2.55: `git config --get` of a key present only in the
+  // pinned system file returns nothing, exit 1, while the global pin still
+  // resolves). Leaving it would put part of the config resolution outside this
+  // module's control.
+  "GIT_CONFIG_NOSYSTEM",
   "GIT_AUTHOR_NAME",
   "GIT_AUTHOR_EMAIL",
   "GIT_AUTHOR_DATE",

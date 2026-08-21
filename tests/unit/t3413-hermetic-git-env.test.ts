@@ -94,6 +94,15 @@ describe("hermetic git environment (#3413)", () => {
     expect(AMBIENT_GIT_BINDING_VARS).toContain(name);
   });
 
+  // GIT_CONFIG_NOSYSTEM is not a repository binding, so it needs its own reason
+  // to be on the list: it suppresses system config entirely, which would make
+  // the GIT_CONFIG_SYSTEM pin inert. The measured proof that git behaves this
+  // way lives in the integration file (it takes a real `git config` read).
+  test("GIT_CONFIG_NOSYSTEM is stripped so the system pin cannot be suppressed", () => {
+    expect(AMBIENT_GIT_BINDING_VARS).toContain("GIT_CONFIG_NOSYSTEM");
+    expect(hermeticGitEnv({ GIT_CONFIG_NOSYSTEM: "1" }, CONFIG).GIT_CONFIG_NOSYSTEM).toBeUndefined();
+  });
+
   test("the pinned global config restores what pinning would otherwise hide", () => {
     // safe.directory replaces the entry actions/checkout writes into the
     // runner's real global config; the identity replaces the one a bare CI

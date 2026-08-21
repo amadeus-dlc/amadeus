@@ -39,6 +39,7 @@ import { join } from "node:path";
 import {
   HERMETIC_GLOBAL_GITCONFIG,
   HERMETIC_SYSTEM_GITCONFIG,
+  hermeticGitEnv,
   materializeHermeticGitConfig,
 } from "../lib/hermetic-git-env.ts";
 
@@ -300,12 +301,15 @@ describe("ambient git binding leaks out of a linked-worktree hook (#3413)", () =
 });
 
 describe("the seam is wired into every spawn face (#3413)", () => {
+  // Whitespace-tolerant: the call may be wrapped across lines without the
+  // wiring having changed. `\b` before hermeticGitEnv keeps the pre-commit
+  // pattern from being satisfied by an applyHermeticGitEnv call.
   test.each([
-    ["bunfig.toml", "tests/harness/hermetic-git-setup.ts"],
-    ["tests/run-tests.ts", "applyHermeticGitEnv(process.env"],
-    ["scripts/precommit-related-unit-tests.ts", "hermeticGitEnv(process.env"],
+    ["bunfig.toml", /tests\/harness\/hermetic-git-setup\.ts/],
+    ["tests/run-tests.ts", /applyHermeticGitEnv\s*\(\s*process\.env/],
+    ["scripts/precommit-related-unit-tests.ts", /\bhermeticGitEnv\s*\(\s*process\.env/],
   ])("%s applies it", (file, marker) => {
-    expect(readFileSync(join(REPO_ROOT, file), "utf-8")).toContain(marker);
+    expect(readFileSync(join(REPO_ROOT, file as string), "utf-8")).toMatch(marker as RegExp);
   });
 });
 
@@ -351,6 +355,42 @@ describe("pinned git config materialisation (#3413)", () => {
     materializeHermeticGitConfig(dir);
 
     expect(readFileSync(paths.global, "utf-8")).toBe(HERMETIC_GLOBAL_GITCONFIG);
+  });
+
+  // GIT_CONFIG_NOSYSTEM=1 makes git skip system config ALTOGETHER, pin or no
+  // pin. Left in the environment it would quietly take the system half of the
+  // config resolution away from this seam. Driven at probe files rather than
+  // the shipped constants so the assertion reads a value back rather than an
+  // absence.
+  test("an ambient GIT_CONFIG_NOSYSTEM cannot suppress the system pin", () => {
+    dir = mkdtempSync(join(tmpdir(), "amadeus-t3413-cfg-"));
+    const probe = { global: join(dir, "g.gitconfig"), system: join(dir, "s.gitconfig") };
+    writeFileSync(probe.global, "[amadeus]\n\tglobalProbe = global-pin-read\n", "utf-8");
+    writeFileSync(probe.system, "[amadeus]\n\tsystemProbe = system-pin-read\n", "utf-8");
+    const hostile: NodeJS.ProcessEnv = { ...process.env, GIT_CONFIG_NOSYSTEM: "1" };
+    const read = (env: NodeJS.ProcessEnv, key: string) =>
+      spawnSync("git", ["config", "--get", key], { encoding: "utf-8", env });
+
+    // Left in place, the pin is inert: git reports nothing, exit 1.
+    const suppressed = read(
+      { ...hostile, GIT_CONFIG_GLOBAL: probe.global, GIT_CONFIG_SYSTEM: probe.system },
+      "amadeus.systemProbe",
+    );
+    expect(suppressed.status).not.toBe(0);
+    expect((suppressed.stdout ?? "").trim()).toBe("");
+
+    // Through the seam, the same read resolves.
+    const sealed = hermeticGitEnv(hostile, probe);
+    expect(sealed.GIT_CONFIG_NOSYSTEM).toBeUndefined();
+    expect(read(sealed, "amadeus.systemProbe").stdout.trim()).toBe("system-pin-read");
+    // Control: the global half was never affected either way, so the arm above
+    // is measuring suppression and not a broken fixture.
+    expect(
+      read(
+        { ...hostile, GIT_CONFIG_GLOBAL: probe.global, GIT_CONFIG_SYSTEM: probe.system },
+        "amadeus.globalProbe",
+      ).stdout.trim(),
+    ).toBe("global-pin-read");
   });
 
   test("git itself reads the pinned files and reports the identity they declare", () => {
