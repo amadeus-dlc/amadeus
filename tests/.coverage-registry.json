@@ -1646,6 +1646,10 @@
       "minMechanism": "none",
       "coveredBy": [
         {
+          "file": "tests/integration/t-plugin-stage-compile.integration.test.ts",
+          "mechanism": "none"
+        },
+        {
           "file": "tests/integration/t110.test.ts",
           "mechanism": "none"
         },
@@ -3477,6 +3481,10 @@
       "unitId": "function:PluginStageError",
       "minMechanism": "none",
       "coveredBy": [
+        {
+          "file": "tests/integration/t-plugin-stage-compile.integration.test.ts",
+          "mechanism": "none"
+        },
         {
           "file": "tests/integration/t-plugin-stage-error.integration.test.ts",
           "mechanism": "none"

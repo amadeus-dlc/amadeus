@@ -31,6 +31,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  describeBasis,
   evaluateGate,
   type LcovPopulations,
   type LoadedPolicy,
@@ -816,7 +817,7 @@ describe("process boundary: the retained basis through its env seams", () => {
         AMADEUS_COVERAGE_PROJECT_POLICY: policyPath,
       });
       expect(retained.status).toBe(0);
-      expect(retained.stdout).toContain("retained baseline: 1 removed file(s), 100 removed line(s)");
+      expect(retained.stdout).toContain("retained basis: 1 file(s) / 100 line(s) removed");
 
       // And the regression the retained basis must still catch.
       writeFileSync(totalsPath, JSON.stringify(totals(49, 100)));
@@ -833,6 +834,48 @@ describe("process boundary: the retained basis through its env seams", () => {
       expect(regressed.stderr).toContain("retained basis");
     } finally {
       rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 7. describeBasis — the ONE phrasing of which population the verdict used.
+//
+// Both the OK line and the failure detail read it, so a reader is never left
+// guessing which question a verdict answered, and the two can never drift into
+// different words for one fact.
+// ---------------------------------------------------------------------------
+describe("describeBasis", () => {
+  test("the aggregate basis says plainly that no per-file reading was available", () => {
+    expect(describeBasis("aggregate", { hits: 50, lines: 100 }, null))
+      .toBe("whole-project basis: no per-file reading of both sides");
+  });
+
+  test("the retained basis names what left the baseline, and the baseline it left", () => {
+    expect(
+      describeBasis("retained", { hits: 150, lines: 200 }, {
+        base: { hits: 50, lines: 100 },
+        removedFiles: 1,
+        removedLines: 100,
+      }),
+    ).toBe("retained basis: 1 file(s) / 100 line(s) removed from the 150/200 baseline");
+  });
+
+  // A "retained" basis with nothing retained is a contradiction; the phrasing
+  // falls back rather than rendering a half-sentence about a population it does
+  // not have.
+  test("a retained basis with no population falls back to the whole-project wording", () => {
+    expect(describeBasis("retained", { hits: 50, lines: 100 }, null))
+      .toBe("whole-project basis: no per-file reading of both sides");
+  });
+
+  test("a pass carries the baseline it read, so the OK line reports the same facts", () => {
+    const result = evaluateGate(present(totals(50, 100)), present(totals(50, 100)), policy());
+    expect(result.kind).toBe("pass");
+    if (result.kind === "pass") {
+      expect(result.wholeBase).toEqual({ hits: 50, lines: 100 });
+      expect(describeBasis(result.basis, result.wholeBase, result.retained))
+        .toBe("whole-project basis: no per-file reading of both sides");
     }
   });
 });

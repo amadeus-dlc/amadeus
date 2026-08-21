@@ -722,4 +722,71 @@ describe("t113 directive-schema — validateDirective (migrated from t113-direct
   test("string -> shape error", () => {
     expect(errs("x")).toContain("expected object, got string");
   });
+
+// ============================================================
+// review_only — the review-recovery directive shape.
+//
+// `review_only: true` says "re-run the reviewer for this unit, do not run the
+// stage body and do not open a gate". Every field it depends on is checked
+// together, because a review_only directive missing any of them would either
+// run the stage it meant to skip or open a gate nobody answered.
+// ============================================================
+
+describe("t113 review_only", () => {
+  function reviewOnly(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      ...runStage(),
+      gate: false,
+      unit: "auth",
+      reviewer: "amadeus-quality-agent",
+      review_only: true,
+      ...overrides,
+    };
+  }
+
+  test("a well-formed review_only run-stage validates", () => {
+    expect(validateDirective(reviewOnly()).valid).toBe(true);
+  });
+
+  test("review_only on any other kind is rejected", () => {
+    const e = errs({ ...dispatchSubagent(), review_only: true, unit: "auth", reviewer: "r", gate: false });
+    expect(e).toContain("review_only is valid only on run-stage");
+  });
+
+  test("review_only: false is rejected — absence is how you say no", () => {
+    expect(errs(reviewOnly({ review_only: false }))).toContain("review_only must be true when present");
+  });
+
+  test("review_only without a unit is rejected", () => {
+    expect(errs(reviewOnly({ unit: "" }))).toContain("review_only requires a non-empty unit");
+    const missing = reviewOnly();
+    delete missing.unit;
+    expect(errs(missing)).toContain("review_only requires a non-empty unit");
+  });
+
+  test("review_only without a reviewer is rejected", () => {
+    expect(errs(reviewOnly({ reviewer: "" }))).toContain("review_only requires a non-empty reviewer");
+  });
+
+  test("review_only with a gate is rejected", () => {
+    expect(errs(reviewOnly({ gate: true }))).toContain("review_only requires gate:false");
+  });
+});
+
+// ============================================================
+// The generic field checks, on the arms the fixtures above never reach.
+// ============================================================
+
+describe("t113 generic field checks", () => {
+  test("a missing gate field is named as missing, not as a type error", () => {
+    const missing = runStage();
+    delete missing.gate;
+    expect(errs(missing)).toContain("run-stage: missing required field: gate");
+  });
+
+  test("a non-string element inside a string array names its index", () => {
+    expect(errs({ ...runStage(), produces: ["ok", 7] }))
+      .toContain("run-stage: produces[1] must be string, got number");
+  });
+});
 });

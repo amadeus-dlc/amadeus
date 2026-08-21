@@ -149,6 +149,8 @@ export type GateResult =
       relativeToleranceBasisPoints: number;
       basis: ComparisonBasis;
       retained: RetainedPopulation | null;
+      /** The baseline as read, before any restriction to the retained files. */
+      wholeBase: Totals;
     }
   | { kind: "fail"; reason: FailReason; detail: string };
 
@@ -470,6 +472,7 @@ export function evaluateGate(
     relativeToleranceBasisPoints,
     basis,
     retained,
+    wholeBase: bs.totals,
   };
 }
 
@@ -516,17 +519,13 @@ export function runCheck(): number {
     console.error(`  baseline lcov:      ${baseLcov ?? "(unset)"}`);
     return 1;
   }
-  const removed =
-    result.retained === null
-      ? "whole-project baseline (no per-file reading of both sides)"
-      : `retained baseline: ${result.retained.removedFiles} removed file(s), ` +
-        `${result.retained.removedLines} removed line(s) excluded`;
   console.log(
     `project coverage gate: OK — current ${result.currentPct.toFixed(4)}%, ` +
       `absolute minimum ${(result.minimumBasisPoints / 100).toFixed(2)}%, ` +
       `merge-base ${result.basePct.toFixed(4)}%, ` +
       `relative tolerance ${(result.relativeToleranceBasisPoints / 100).toFixed(2)}pp, ` +
-      `delta ${result.deltaPp.toFixed(4)}pp — ${removed}`,
+      `delta ${result.deltaPp.toFixed(4)}pp — ` +
+      describeBasis(result.basis, result.wholeBase, result.retained),
   );
   return 0;
 }
