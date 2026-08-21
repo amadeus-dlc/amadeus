@@ -12,6 +12,7 @@
 // Mechanism: real filesystem, real lifecycle, fake binary — the only thing
 // stubbed is the model itself (fs-tests-integration-first).
 
+import { scaleTestTime } from "../lib/test-time-factor.ts";
 import { describe, expect, test } from "bun:test";
 import {
   chmodSync,
@@ -308,7 +309,9 @@ describe("Kimi print live adapter", () => {
     const impatient: LiveJourney = {
       ...createKimiPrintJourney(),
       id: "kimi-print-anchor-v1",
-      timeoutMs: 250,
+      // Scaled like every other budget here: on a slow machine the deadline
+      // must still land while the fake child is sleeping, not after it.
+      timeoutMs: scaleTestTime(250),
     };
     try {
       const { result } = runFixture(item, { optIn: "1", journey: impatient });
@@ -326,5 +329,5 @@ describe("Kimi print live adapter", () => {
     } finally {
       rmSync(item.root, { recursive: true, force: true });
     }
-  }, 30_000);
+  }, scaleTestTime(30_000));
 });
