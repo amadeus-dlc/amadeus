@@ -41,6 +41,7 @@ docs/                # ドキュメント
 2. **アーキテクチャを読む** -- [reference/01-architecture.md](01-architecture.ja.md) は実行モデル、エージェント委譲、フックシステムを説明します
 3. **エントリポイントを理解する** -- 決定論的エンジン `packages/framework/core/tools/amadeus-orchestrate.ts`(`next` / `report`)がルーティングを所有し、コンダクター `packages/framework/harness/claude/skills/amadeus/SKILL.md` はそのディレクティブに従って動作する薄い転送ループです。正となるエンジン / ディレクティブ / コンダクター / swarm の契約については [The Skill System](17-skill-system.ja.md) を参照してください
 4. **変更を加える** -- `packages/framework/core/` のハーネス中立ソース(tools, stages, agents, hooks, rules, knowledge)、または `packages/framework/harness/<name>/` のハーネス表層(オーケストレーター skill、settings)を編集します。fresh cloneではハーネス起動前に `bun install --frozen-lockfile` と `bun run build` を実行します。生成された `dist/` とself-install面はignoreされるローカル出力なのでstageしません
+   - フレームワークツリーはプラグインをimportできません。プラグインはopt-inで各自のmanifestから合成されるため、`packages/framework/core/**` と `packages/framework/harness/**` は `plugins/…` や `<harness-dir>/plugins/…` を参照してはなりません。許可される方向はプラグインがcoreに依存する側です。提出前に `bun run plugin-boundary:check` を実行します。CIはこれをblockingゲートとして実行します
 5. **ドッグフーディング時はローカルビルドする** -- `bun run build` は全 `dist/<harness>/` を生成し、このリポジトリのプロジェクトローカルな `.claude/`、`.codex/`、`.agents/`、`.cursor/`、`.opencode/`、`.kimi-code/`、`.pi/` を更新します。このとき追跡されたbootstrap/configuration allowlistとper-user runtime状態は保持されます。`amadeus/spaces/default/memory/` は手編集されるmethod正本なので意図的に昇格されません。提出前に `bun run source-only:check` を実行します。CIは隔離した2回のビルドもbyte単位で比較します
 6. **テスト** -- 提出前に `bun tests/run-tests.ts` を実行します
 7. **提出** -- `main` に対して PR を開きます

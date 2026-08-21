@@ -11,6 +11,7 @@
     "dist": "bun scripts/package.ts",
     "promote:self": "bun scripts/promote-self.ts --apply",
     "source-only:check": "bun scripts/source-only-boundary.ts",
+    "plugin-boundary:check": "bun scripts/core-plugin-import-boundary.ts",
     "distribution:check": "bun scripts/mirror-distribution-check.ts && bun scripts/mirror-docs-contract.ts && bun scripts/scan-public-projections.ts",
     "distribution:recover": "bun scripts/distribution-transaction.ts recover",
     "distribution:benchmark": "bun scripts/mirror-distribution-benchmark.ts",

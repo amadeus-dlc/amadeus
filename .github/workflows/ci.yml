@@ -478,6 +478,12 @@ jobs:
       - name: Source-only boundary guard
         run: bun run source-only:check
 
+      # #3416: the shipped framework tree (core + harness) must not import any
+      # plugin. TypeScript cannot express that closure, so the direction is held
+      # by a predicate gate. Blocking: this job is in `ci-success`'s needs.
+      - name: Framework to plugins import boundary guard
+        run: bun run plugin-boundary:check
+
       - name: Build generated distributions
         run: bun run build
 
