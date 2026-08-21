@@ -204,7 +204,7 @@ command -v bun    >/dev/null && echo "✓ bun"          || echo "✗ bun"
 # Install (engine + the workspace shell sibling)
 cp -r dist/claude/.claude/ your-project/.claude/
 cp -r dist/claude/amadeus/   your-project/amadeus/
-cp -n your-project/.claude/CLAUDE.md.example your-project/.claude/CLAUDE.md
+cp -n your-project/.claude/CLAUDE.md.example your-project/CLAUDE.md
 cp -n your-project/.claude/settings.json.example your-project/.claude/settings.json
 
 # Launch Claude Code in your project
