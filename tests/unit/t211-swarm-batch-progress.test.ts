@@ -70,6 +70,10 @@ resetAidlcEnv();
 // code-generation's produces[] (verified frontmatter) — a unit is COVERED for
 // the stage once both land under construction/<unit>/code-generation/ in the record.
 const CG_PRODUCES = ["code-generation-plan", "code-summary"];
+const REVIEW_BLOCK =
+  "\n## Review — Iteration 1\n\n- **Verdict:** READY\n" +
+  "- **Reviewer:** amadeus-architecture-reviewer-agent\n- **Date:** 2026-08-10T00:00:00Z\n" +
+  "- **Iteration:** 1\n- **Scope decision:** none\n";
 
 const tempDirs: string[] = [];
 afterEach(() => {
@@ -171,7 +175,8 @@ function coverUnit(proj: string, unit: string): void {
   const dir = join(seededRecordDir(proj), "construction", unit, "code-generation");
   mkdirSync(dir, { recursive: true });
   for (const name of CG_PRODUCES) {
-    writeFileSync(join(dir, `${name}.md`), `# ${name} for ${unit}\n`);
+    const review = name === CG_PRODUCES[0] ? REVIEW_BLOCK : "";
+    writeFileSync(join(dir, `${name}.md`), `# ${name} for ${unit}\n${review}`);
   }
 }
 

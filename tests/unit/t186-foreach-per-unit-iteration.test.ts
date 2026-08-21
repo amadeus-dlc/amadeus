@@ -562,6 +562,8 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     seedBoltDag(proj, ["alpha", "beta"]);
     coverUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES);
     coverUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES);
+    reviewUnit(proj, "alpha", "functional-design", FD_REQUIRED_PRODUCES[0]);
+    reviewUnit(proj, "beta", "functional-design", FD_REQUIRED_PRODUCES[0]);
     const d = runReport(proj, [
       "--stage",
       "functional-design",
@@ -673,6 +675,7 @@ describe("t186 engine-driven per-unit for_each iteration (issue #368)", () => {
     setAutonomous(proj);
     // First batch (alpha) merged its artifacts; beta (batch 2) not yet.
     coverUnit(proj, "alpha", "code-generation", CG_PRODUCES);
+    reviewUnit(proj, "alpha", "code-generation", CG_PRODUCES[0]);
     // The swarm wrote real source for batch 1 outside the amadeus/ tree, so the
     // #366 workspace_requires guard (code-generation is a code-producing stage)
     // sees source work and lets the approve through. Orthogonal to the per-unit

@@ -40,6 +40,10 @@ process.env.AMADEUS_SKIP_HUMAN_PRESENCE_GUARD ??= "1";
 resetAidlcEnv();
 
 const CG_PRODUCES = ["code-generation-plan", "code-summary", "pr-convergence-report"];
+const REVIEW_BLOCK =
+  "\n## Review — Iteration 1\n\n- **Verdict:** READY\n" +
+  "- **Reviewer:** amadeus-architecture-reviewer-agent\n- **Date:** 2026-08-10T00:00:00Z\n" +
+  "- **Iteration:** 1\n- **Scope decision:** none\n";
 const SESSION_ID = "trusted-carrier-session";
 const ROUTE_ID = "12345678-1234-4abc-8def-1234567890ab";
 
@@ -155,7 +159,10 @@ function seedDag(proj: string, batches: string[][]): void {
 function coverUnit(proj: string, unit: string, produces = CG_PRODUCES, stage = "code-generation"): void {
   const dir = join(seededRecordDir(proj), "construction", unit, stage);
   mkdirSync(dir, { recursive: true });
-  for (const name of produces) writeFileSync(join(dir, `${name}.md`), `# ${name}\n`);
+  for (const name of produces) {
+    const review = name === produces[0] ? REVIEW_BLOCK : "";
+    writeFileSync(join(dir, `${name}.md`), `# ${name}\n${review}`);
+  }
 }
 
 /** The batches the fixture seeded, read back from the compiled DAG it wrote. */
