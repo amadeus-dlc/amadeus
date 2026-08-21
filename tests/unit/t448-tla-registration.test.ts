@@ -1,6 +1,15 @@
 import { describe, expect, test } from "bun:test";
+import { join } from "node:path";
 import { parseTlaModelMap } from "../../plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts";
-import { parseTlaModelMap as parseShippedModelMap } from "../../plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts";
+import {
+  canonicalIdentity as shippedCanonicalIdentity,
+  diffModelMap as diffShippedModelMap,
+  evaluateTlaModelReadiness as evaluateShippedReadiness,
+  findModelMapModel as findShippedModelMapModel,
+  parseAuthoringProvenance as parseShippedAuthoringProvenance,
+  parseTlaModelMap as parseShippedModelMap,
+  resolveSpecRoots as resolveShippedSpecRoots,
+} from "../../dist/plugins/formal-model-check/tools/amadeus-formal-verif-model-map.ts";
 import {
   checkPreconditions,
   composeRegisteredMap,
@@ -69,8 +78,8 @@ describe("model-map validator: optional evidenceBundle key (Q1 ruling A)", () =>
     expect(parsed.ok).toBe(false);
   });
 
-  // The plugin tree carries a generated copy of the validator, and it is the
-  // one the authoring CLI loads, so the same verdicts are pinned on it too.
+  // The neutral bundle is the shipped plugin copy that an install projects
+  // into a host, so the same verdicts are pinned against the authoring source.
   test("the shipped plugin copy reaches the same verdicts", () => {
     expect(parseShippedModelMap(mapBytes([modelEntry("Sample", { evidenceBundle: { digest: BUNDLE_DIGEST } })])).ok)
       .toBe(true);
@@ -79,6 +88,46 @@ describe("model-map validator: optional evidenceBundle key (Q1 ruling A)", () =>
     expect(
       parseShippedModelMap(mapBytes([modelEntry("Sample", { evidenceBundle: { digest: BUNDLE_DIGEST, note: "x" } })])).ok,
     ).toBe(false);
+  });
+
+  test("the shipped plugin copy exercises its exported parser seams", () => {
+    const counters = { serializations: 0, hashes: 0, encodedBytes: 0 };
+    const identity = shippedCanonicalIdentity({ z: [1, true], a: "value" }, undefined, counters);
+    expect(identity.sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(counters.serializations).toBe(1);
+    expect(counters.hashes).toBe(1);
+    expect(counters.encodedBytes).toBe(identity.bytes.byteLength);
+
+    const missingWorkspace = "/tmp/amadeus-t448-shipped-copy-missing";
+    expect(resolveShippedSpecRoots(missingWorkspace)).toEqual({
+      space: "default",
+      specsRoot: join(missingWorkspace, "amadeus", "spaces", "default", "specs"),
+      tlaDir: join(missingWorkspace, "amadeus", "spaces", "default", "specs", "tla"),
+      modelMapPath: join(missingWorkspace, "amadeus", "spaces", "default", "specs", "tla", "model-map.json"),
+      evidenceRoot: join(missingWorkspace, "amadeus", "spaces", "default", "specs", "tla-evidence"),
+    });
+
+    const seamBytes = mapBytes([
+      modelEntry("Sample", {
+        auxiliaries: [{ path: "amadeus/spaces/default/specs/tla/Helper.tla", identity: MODEL_IDENTITY }],
+        vocabulary: { namedInvariants: ["Invariant"], traceStateVariables: ["state"] },
+        authoringProvenance: AUTHORING_PROVENANCE,
+      }),
+    ]);
+    const seamLocation = "amadeus/spaces/default/specs/tla/model-map.json";
+    const shippedParsed = parseShippedModelMap(seamBytes, seamLocation);
+    expect(shippedParsed.ok).toBe(true);
+    if (!shippedParsed.ok) return;
+    const shippedModel = findShippedModelMapModel(shippedParsed.value, "Sample");
+    expect(shippedModel?.name).toBe("Sample");
+    expect(parseShippedAuthoringProvenance(AUTHORING_PROVENANCE).ok).toBe(true);
+    expect(evaluateShippedReadiness(seamBytes, () => true, seamLocation).ok).toBe(true);
+    const missingCfg = evaluateShippedReadiness(seamBytes, (path) => path.endsWith(".tla"), seamLocation);
+    expect(missingCfg.ok).toBe(false);
+    if (!missingCfg.ok) expect(missingCfg.error).toMatchObject({ code: "CFG_MISSING" });
+    expect(diffShippedModelMap(shippedModel!, [{ implPath: "other.ts", sha256: IMPL_SHA }])).toEqual([
+      { implPath: "packages/framework/core/tools/amadeus-election.ts", recorded: IMPL_SHA, current: null },
+    ]);
   });
 });
 
