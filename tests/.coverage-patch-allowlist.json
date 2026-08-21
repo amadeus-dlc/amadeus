@@ -3,11 +3,11 @@
     "file": "scripts/promote-self.ts",
     "selector": {
       "function": "promoteSelfMain",
-      "fingerprint": "sha256:8fd4694db07e1933c14182195290a8c3a9b4f9f8242ec250a385c1706ae2a909",
-      "anchorLines": 7,
-      "targetLines": "1-7"
+      "fingerprint": "sha256:be3f90756e8878a6b98b1e258930987c1247f8313af86f5624b057bc9316f062",
+      "anchorLines": 10,
+      "targetLines": "1-10"
     },
-    "reason": "The exact real-build identity branch is exercised by bun run build, which runs promote-self outside the parent Bun coverage process; the regular promote-self test seams deliberately use fixture roots and injected freshness functions and cannot truthfully claim this production-only branch.",
+    "reason": "The real build path mints evidence after a successful promotion; fixture-root tests and explicit mintAttestation=false seams cannot truthfully claim coverage for this spawned build path.",
     "expiry": "remove when the patch gate can attribute the real bun run build process"
   },
   {
