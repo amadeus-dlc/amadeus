@@ -49,7 +49,7 @@ import {
 // The self-install face set is defined ONCE, next to the eight package faces it
 // is deliberately narrower than. This script consumes it; it never re-declares
 // an equal-valued list under another name (#1575).
-import { buildSelfInstallProjection, SELF_INSTALL_HARNESSES } from "./plugin-projection.ts";
+import { buildSelfInstallProjection, PLUGIN_MANIFEST, SELF_INSTALL_HARNESSES } from "./plugin-projection.ts";
 
 type Mode = "check" | "apply";
 type AttestationWriter = (repoRoot: string) => void;
@@ -170,14 +170,32 @@ export type PluginLedger = {
 // Parse the composition record into the ownership ledger the carve-out
 // predicates consult. Malformed content yields null — every consumer then
 // falls back to the strict byte/path behaviour, never weaker than stock.
-export function parsePluginLedger(bytes: Buffer): PluginLedger | null {
+// `live`, when supplied, restricts the ledger to plugin identities the
+// authoring source still declares (#3414). A ledger entry for a retired plugin
+// then contributes neither ownedPaths nor stage slugs, so its composed stage
+// bodies AND its generated per-stage runner skills lose the exemption and fall
+// back to the ORPHAN sweep. Omitting `live` keeps the unfiltered reading, which
+// is what the freshly projected ledger wants — every entry in it is live by
+// construction.
+// The ledger entries the carve-outs may read: a well-formed [name, record]
+// pair whose plugin identity the authoring source still declares, when `live`
+// narrows the reading. Anything else contributes nothing.
+function ledgerEntryInScope(
+  entry: unknown,
+  live: ReadonlySet<string> | undefined,
+): entry is [string, unknown] {
+  if (!Array.isArray(entry) || entry.length !== 2 || typeof entry[0] !== "string") return false;
+  return live === undefined || live.has(entry[0]);
+}
+
+export function parsePluginLedger(bytes: Buffer, live?: ReadonlySet<string>): PluginLedger | null {
   try {
     const record = JSON.parse(bytes.toString("utf-8")) as { plugins?: unknown };
     if (!Array.isArray(record.plugins)) return null;
     const slugs = new Set<string>();
     const ownedPaths = new Set<string>();
     for (const entry of record.plugins) {
-      if (!Array.isArray(entry) || entry.length !== 2) continue;
+      if (!ledgerEntryInScope(entry, live)) continue;
       const rec = entry[1] as { ownedPaths?: unknown; stageIndex?: unknown };
       if (Array.isArray(rec?.ownedPaths)) {
         for (const p of rec.ownedPaths) {
@@ -199,18 +217,26 @@ export function parsePluginLedger(bytes: Buffer): PluginLedger | null {
   }
 }
 
-function readPluginLedger(repoRoot: string, host: string): PluginLedger | null {
+function readPluginLedger(
+  repoRoot: string,
+  host: string,
+  authored: ReadonlySet<string> | null,
+): PluginLedger | null {
   const p = join(repoRoot, host, ".amadeus-plugin-composition.json");
   if (!existsSync(p)) return null;
-  return parsePluginLedger(readFileSync(p));
+  return parsePluginLedger(readFileSync(p), authored ?? undefined);
 }
 
-// Per-host ledger cache for one check/apply pass.
-function ledgerLookup(repoRoot: string): (rel: string) => PluginLedger | null {
+// Per-host ledger cache for one check/apply pass, narrowed to the plugins the
+// authoring source still declares.
+function ledgerLookup(
+  repoRoot: string,
+  authored: ReadonlySet<string> | null,
+): (rel: string) => PluginLedger | null {
   const cache = new Map<string, PluginLedger | null>();
   return (rel: string) => {
     const host = normalizeRel(rel).split("/")[0] ?? "";
-    if (!cache.has(host)) cache.set(host, readPluginLedger(repoRoot, host));
+    if (!cache.has(host)) cache.set(host, readPluginLedger(repoRoot, host, authored));
     return cache.get(host) ?? null;
   };
 }
@@ -458,7 +484,8 @@ function rootInstructionProblems(repoRoot: string): string[] {
 function orphanedFiles(expected: Map<string, Buffer>, repoRoot: string): string[] {
   const roots = managedRoots();
   const orphans: string[] = [];
-  const ledgerFor = ledgerLookup(repoRoot);
+  const authored = authoringPluginNames(repoRoot);
+  const ledgerFor = ledgerLookup(repoRoot, authored);
   for (const root of roots) {
     const abs = join(repoRoot, root);
     if (!existsSync(abs)) continue;
@@ -466,12 +493,16 @@ function orphanedFiles(expected: Map<string, Buffer>, repoRoot: string): string[
       const rel = normalizeRel(relative(repoRoot, file));
       if (isPreserved(rel)) continue;
       if (COMPOSED_SCOPE_RE.test(rel)) continue; // composed scope — runtime data, never in dist
-      if (PLUGIN_ENGINE_STATE_RE.test(rel)) {
+      // #3414: the composed-plugin carve-outs below protect the RUNTIME state
+      // of plugins the source still declares. A projection left behind by a
+      // retired or renamed plugin has no such claim, so it skips them.
+      const retired = isRetiredPluginProjection(rel, authored);
+      if (!retired && PLUGIN_ENGINE_STATE_RE.test(rel)) {
         const host = rel.split("/")[0];
         const deterministic = expected.has(`${host}/.amadeus-plugin-composition.json`);
         if (!deterministic || !PLUGIN_RUNTIME_HISTORY_RE.test(rel)) continue;
       }
-      if (isPluginOwned(rel, ledgerFor(rel))) {
+      if (!retired && isPluginOwned(rel, ledgerFor(rel))) {
         const runner = rel.match(PLUGIN_RUNNER_PATH_RE);
         if (runnerPlacedElsewhere(runner, rel, expected)) continue;
         continue;
@@ -480,6 +511,102 @@ function orphanedFiles(expected: Map<string, Buffer>, repoRoot: string): string[
     }
   }
   return orphans;
+}
+
+// Deletion drift (#3414). promote-self only ever ADDED and UPDATED, so a plugin
+// retired or renamed at the authoring source left its self-install projection
+// behind — shielded from the ORPHAN sweep by the two carve-outs that exist for
+// COMPOSED plugins:
+//   * `<host>/.amadeus-plugin-src/<name>/` — PLUGIN_ENGINE_STATE_RE exempts the
+//     engine dot-state unconditionally, so this face survived every build.
+//   * `<host>/plugins/<name>/` — the PREVIOUS run's composition ledger still
+//     claimed it through ownedPaths, so it survived the build that retired the
+//     plugin (the ledger only refreshes at the end of that same run).
+// The residue is not inert: amadeus-advisory-declaration.ts's
+// resolvePluginManifest reads the staging tree as a manifest face, so a retired
+// plugin's declared advisories keep firing out of a tree whose source is gone.
+//
+// The repair adds no second destructive path. It NARROWS the two carve-outs: a
+// projection subtree whose plugin identity the authoring source no longer
+// declares stops being exempt and falls back to the ORPHAN sweep every other
+// generated file is already subject to — inside the managed self-install roots
+// only, transactionally, through the same DistributionTransactionCoordinator.
+const PLUGIN_PROJECTION_OWNER_RE = /^\.[^/]+\/(?:plugins|\.amadeus-plugin-src)\/([^/]+)\//u;
+
+// The plugin identity a self-install path is projected for, or null when the
+// path is not inside a per-plugin projection subtree. Host-level engine
+// dot-state (`.amadeus-plugin-composition.json` and its siblings) carries no
+// identity segment, so it is never claimed here and keeps its own handling.
+export function projectedPluginOwner(rel: string): string | null {
+  return normalizeRel(rel).match(PLUGIN_PROJECTION_OWNER_RE)?.[1] ?? null;
+}
+
+// The plugin identities the authoring source declares — a directory under
+// repo-root plugins/ carrying a plugin.json, the SAME structural identity gate
+// validatePluginSources applies, so the sweep and the projector cannot disagree
+// about what a plugin is.
+//
+// `null` means this tree has NO authoring source at all. That is not "every
+// plugin is retired": it says the tree does not use the authoring layout, so it
+// has no upstream to declare a retirement against and nothing is swept. Mirrors
+// pluginSourceRetired in amadeus-plugin.ts, where the same absence selects the
+// consumer layout.
+export function authoringPluginNames(repoRoot: string): Set<string> | null {
+  const root = join(repoRoot, "plugins");
+  if (!existsSync(root)) return null;
+  const names = new Set<string>();
+  for (const entry of readdirSync(root)) {
+    if (existsSync(join(root, entry, PLUGIN_MANIFEST))) names.add(entry);
+  }
+  return names;
+}
+
+// True when `rel` sits in the projection subtree of a plugin the authoring
+// source no longer declares. Every path outside a per-plugin subtree, every
+// path belonging to a declared plugin, and every path in a tree with no
+// authoring source answers false — those keep every carve-out they had,
+// byte-for-byte.
+export function isRetiredPluginProjection(rel: string, authored: ReadonlySet<string> | null): boolean {
+  if (authored === null) return false;
+  const owner = projectedPluginOwner(rel);
+  return owner !== null && !authored.has(owner);
+}
+
+// Remove `abs` and its descendants when — and only when — they hold no files.
+// Returns whether the directory is gone. A single surviving file anywhere below
+// keeps every ancestor, so this can never destroy content the transaction kept.
+function removeEmptyDirectories(abs: string): boolean {
+  if (!existsSync(abs)) return true;
+  if (!lstatSync(abs).isDirectory()) return false;
+  let empty = true;
+  for (const entry of readdirSync(abs, { withFileTypes: true })) {
+    if (entry.isDirectory() && removeEmptyDirectories(join(abs, entry.name))) continue;
+    empty = false;
+  }
+  if (empty) rmSync(abs, { recursive: true });
+  return empty;
+}
+
+// The three per-identity directory layers a retired plugin occupies inside a
+// host: its composed surface, its staged bundle, and the generated runner skill
+// of each stage it contributed. Each is `<host>/<layer>/<identity>/…`, so the
+// husk left behind after a sweep is always the first three segments.
+const SWEPT_HUSK_LAYERS = new Set(["plugins", ".amadeus-plugin-src", "skills"]);
+
+// The distribution transaction removes FILES; a retired plugin's directories
+// would otherwise survive as empty husks — and an empty `plugins/<name>/` still
+// reads as a plugin directory to anything listing the host (#1586 filed the
+// same shape after `drop`). Prune them once the transaction has committed,
+// bounded to the three layers above and gated on genuine emptiness, so nothing
+// the transaction chose to keep can be reached.
+export function pruneEmptySweptDirs(repoRoot: string, removed: Iterable<string>): void {
+  const husks = new Set<string>();
+  for (const rel of removed) {
+    const segments = normalizeRel(rel).split("/");
+    if (segments.length < 4 || !SWEPT_HUSK_LAYERS.has(segments[1] ?? "")) continue;
+    husks.add(segments.slice(0, 3).join("/"));
+  }
+  for (const husk of husks) removeEmptyDirectories(join(repoRoot, husk));
 }
 
 function projectionNames(paths: readonly string[], pattern: RegExp): Set<string> {
@@ -600,7 +727,7 @@ export function activateCodexHooksIfMissing(repoRoot: string): "created" | "pres
 
 function check(expected: Map<string, Buffer>, repoRoot: string): string[] {
   const problems = rootInstructionProblems(repoRoot);
-  const ledgerFor = ledgerLookup(repoRoot);
+  const ledgerFor = ledgerLookup(repoRoot, authoringPluginNames(repoRoot));
   for (const [rel, want] of expected) {
     const abs = join(repoRoot, rel);
     if (!existsSync(abs)) {
@@ -642,7 +769,7 @@ function apply(
     if (lstatSync(path).isSymbolicLink()) rmSync(path);
     else updates.push({ path: rel, bytes: null });
   }
-  const ledgerFor = ledgerLookup(repoRoot);
+  const ledgerFor = ledgerLookup(repoRoot, authoringPluginNames(repoRoot));
   for (const [rel, bytes] of expected) {
     const abs = join(repoRoot, rel);
     const out = SCOPE_GRID_RE.test(rel) && existsSync(abs)
@@ -653,6 +780,7 @@ function apply(
     updates.push({ path: rel, bytes: out });
   }
   applyDistributionUpdates(repoRoot, updates, coordinator);
+  pruneEmptySweptDirs(repoRoot, removals);
   ensureActiveSpaceCursor(repoRoot);
 }
 

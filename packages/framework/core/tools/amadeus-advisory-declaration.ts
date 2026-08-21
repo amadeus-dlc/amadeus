@@ -12,6 +12,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, join } from "node:path";
 import { PLUGIN_SOURCE_DIR_NAME } from "./amadeus-plugin.ts";
+import { resolvePluginSelection } from "./amadeus-plugin-selection.ts";
 import {
   composedPluginNames,
   defaultPluginRuntimeFs,
@@ -431,6 +432,26 @@ export function spawnEvaluator(
   };
 }
 
+/**
+ * The activation gate on advisory supply (#3414). `composedPluginNames` reads
+ * the machine-local composition record — a snapshot of the LAST compose, not a
+ * statement about what this project selects today. A plugin dropped from the
+ * selection (retired, renamed, deactivated) therefore keeps supplying
+ * advisories out of that snapshot until the next compose rewrites it.
+ *
+ * The gate re-applies compose's OWN selection predicate (amadeus-plugin.ts:
+ * `!selection.explicit || selection.plugins.includes(name)`) so the two can
+ * never disagree about what is active: an explicit `plugin` key filters by
+ * name, an absent one selects everything. An unreadable or malformed selection
+ * falls open to the snapshot — never a silent silencing of every advisory.
+ */
+export function activationSelectionFilter(hostRoot: string): (plugin: string) => boolean {
+  const selection = resolvePluginSelection(hostRoot);
+  if (selection.kind !== "resolved" || !selection.explicit) return () => true;
+  const selected = new Set(selection.plugins);
+  return (plugin) => selected.has(plugin);
+}
+
 /** Every advisory declared by a plugin composed into this host at `stage`. */
 export function advisoriesForHost(
   hostRoot: string,
@@ -447,7 +468,7 @@ export function advisoriesForHost(
     existsSync: (path) => fs.existsSync(path),
     readFileSync: (path) => fs.readFileSync(path).toString("utf-8"),
   };
-  return composedPluginNames(hostRoot, fs).flatMap((plugin) =>
+  return composedPluginNames(hostRoot, fs).filter(activationSelectionFilter(hostRoot)).flatMap((plugin) =>
     declaredAdvisoriesForPlugin(
       projectRoot,
       plugin,
