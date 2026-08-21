@@ -39,7 +39,7 @@
       "subcommand": 88,
       "render-surface": 7
     },
-    "unjoinedClaims": 369
+    "unjoinedClaims": 366
   },
   "units": [
     {
@@ -8772,10 +8772,6 @@
   ],
   "unjoinedClaims": [
     {
-      "claimId": "audit:ERROR_LOGGED.",
-      "file": "tests/integration/t137.test.ts"
-    },
-    {
       "claimId": "audit:fork-merge-seams",
       "file": "tests/unit/t351-audit-record-seams.test.ts"
     },
@@ -9996,10 +9992,6 @@
       "file": "tests/integration/t-advisory-choice-record.test.ts"
     },
     {
-      "claimId": "subcommand:amadeus-audit:audit-merge.",
-      "file": "tests/e2e/t07-audit-fork-merge.test.ts"
-    },
-    {
       "claimId": "subcommand:amadeus-finding:create-github-issue",
       "file": "tests/integration/t366-amadeus-finding-cli.integration.test.ts"
     },
@@ -10210,10 +10202,6 @@
     {
       "claimId": "subcommand:amadeus-swarm:prepare",
       "file": "tests/integration/t166-multi-repo-construction.test.ts"
-    },
-    {
-      "claimId": "subcommand:amadeus-worktree:merge.",
-      "file": "tests/e2e/t03.test.ts"
     },
     {
       "claimId": "subcommand:complexity-gate:check",

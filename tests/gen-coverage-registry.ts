@@ -123,11 +123,8 @@ const TARGETED_STATE_FUNCTIONS = ["skipStageContent", "handleSkip", "mergeScoped
 // source tree rather than from dist/claude/. Same unit class, same
 // `function:NAME` claim form (#3404).
 const SETUP_SRC_DIR = join(REPO_ROOT, "packages", "setup", "src");
-// Static prose lives at module scope, evaluated on import in EVERY process that
-// loads this module. A multi-line string concatenation built INSIDE a function
-// is not equally reliable: the merged suite LCOV carries zero-hit DA records for
-// some of its constant-folded continuation lines (measured on #3404), which reads
-// as dead code it is not. Module-scope initialisation has no such ambiguity.
+// Module scope, not function-local: constant-folded continuation lines inside a
+// function produce spurious zero-hit LCOV DA records (measured on #3404).
 const MISSING_SETUP_SRC =
   "setup function enumerator: the setup package source is part of the " +
   "enumerated universe, but this directory does not exist. Point " +
@@ -682,7 +679,6 @@ export function enumerateSetupFunctions(setupSrcDir: string = SETUP_SRC_DIR): Un
         source: rel,
       });
     }
-    nsRe.lastIndex = 0;
     for (const m of src.matchAll(nsRe)) {
       for (const member of depthZeroExportedNames(balancedBlock(src, m.index))) {
         units.push({
@@ -899,7 +895,12 @@ function collectIds(text: string, out: string[]): void {
   // Strip trailing parenthetical annotations like "(handleApprove :675)" first
   // so a `:675` doesn't masquerade as an id segment.
   for (const m of text.matchAll(UNIT_ID_RE)) {
-    out.push(`${m[1]}:${m[2]}`);
+    // A header sentence that NAMES a unit in prose ("... emits audit:ERROR_LOGGED.")
+    // otherwise captures the full stop as part of the id, which then joins nothing
+    // and lands in the unjoined report as noise. No unit id ends in a period —
+    // `function:Plan.forInstall` has its dots INSIDE — so trimming trailing dots is
+    // lossless.
+    out.push(`${m[1]}:${m[2].replace(/\.+$/, "")}`);
   }
 }
 
@@ -1137,7 +1138,7 @@ export function unjoinedClaimsReport(unjoined: UnjoinedClaim[]): string[] {
 
 export function registryJson(
   rows: RegistryRow[],
-  unjoined: UnjoinedClaim[] = [],
+  unjoined: UnjoinedClaim[],
 ): string {
   const byClass: Record<string, number> = {};
   const coveredByClass: Record<string, number> = {};
@@ -1258,19 +1259,22 @@ export function emptyClasses(rows: RegistryRow[]): UnitClass[] {
   return UNIT_CLASSES.filter((c) => counts[c] === 0);
 }
 
-/** Guard (b): per-tool, the structured parser's count must equal the
- *  independent regex count of dispatch sites. Returns mismatches (empty ==
- *  healthy). */
-export function subcommandCrossCheck(): Array<{
+export interface SubcommandMismatch {
   tool: string;
   parsed: number;
   independent: number;
-}> {
-  const mismatches: Array<{
-    tool: string;
-    parsed: number;
-    independent: number;
-  }> = [];
+}
+
+/** Guard (b)'s reader, as a seam: `runCheck` and `runMain` both take it so a
+ *  test can drive the refuse-to-write / anti-rot branches without a doctored
+ *  source tree. Both default to the real disk-reading implementation. */
+export type CrossCheckReader = () => SubcommandMismatch[];
+
+/** Guard (b): per-tool, the structured parser's count must equal the
+ *  independent regex count of dispatch sites. Returns mismatches (empty ==
+ *  healthy). */
+export function subcommandCrossCheck(): SubcommandMismatch[] {
+  const mismatches: SubcommandMismatch[] = [];
   for (const d of TOOL_DESCRIPTORS) {
     const parsed = subcommandsForTool(d).length;
     const independent = independentSubcommandCount(d);
@@ -1308,7 +1312,10 @@ export interface CheckResult {
   warnings: string[];
 }
 
-export function runCheck(build: BuildResult = buildRegistry()): CheckResult {
+export function runCheck(
+  build: BuildResult = buildRegistry(),
+  crossCheck: CrossCheckReader = subcommandCrossCheck,
+): CheckResult {
   const { rows, unjoined } = build;
   const messages: string[] = [];
   const warnings = unjoinedClaimsReport(unjoined);
@@ -1326,7 +1333,7 @@ export function runCheck(build: BuildResult = buildRegistry()): CheckResult {
   }
 
   // GUARD (b): subcommand parser vs independent count.
-  const mismatches = subcommandCrossCheck();
+  const mismatches = crossCheck();
   if (mismatches.length > 0) {
     ok = false;
     for (const m of mismatches) {
@@ -1426,10 +1433,10 @@ export function printStderr(lines: readonly string[]): void {
 export function runMain(
   args: readonly string[],
   build: () => BuildResult = buildRegistry,
-  crossCheck: () => ReturnType<typeof subcommandCrossCheck> = subcommandCrossCheck,
+  crossCheck: CrossCheckReader = subcommandCrossCheck,
 ): number {
   if (args.includes("--check")) {
-    const r = runCheck(build());
+    const r = runCheck(build(), crossCheck);
     // Warnings print on the failing AND the passing path — an unjoined claim is
     // never silent, even when the committed registry already records it.
     printStderr(r.warnings);

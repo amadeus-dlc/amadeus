@@ -33,6 +33,7 @@ import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import {
   cpSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -756,13 +757,12 @@ describe("packages/setup is enumerated into the function class (#3404)", () => {
     // `main` is declared by BOTH amadeus-graph.ts and packages/setup/src/cli.ts.
     // The enumerator collapses them into one unit naming both sources, so the
     // registry never carries byte-identical duplicate rows.
-    const ids = enumerateAllUnits()
-      .filter((u) => u.unitClass === "function")
-      .map((u) => u.unitId);
-    expect(ids.length).toBe(new Set(ids).size);
-    const mainUnit = enumerateAllUnits().find(
-      (u) => u.unitClass === "function" && u.unitId === "function:main",
+    const functions = enumerateAllUnits().filter(
+      (u) => u.unitClass === "function",
     );
+    const ids = functions.map((u) => u.unitId);
+    expect(ids.length).toBe(new Set(ids).size);
+    const mainUnit = functions.find((u) => u.unitId === "function:main");
     expect(mainUnit).toBeDefined();
     expect(mainUnit!.source).toContain("packages/setup/src/cli.ts");
     expect(mainUnit!.source).toContain("amadeus-graph.ts");
@@ -813,7 +813,7 @@ describe("unjoined covers claims are surfaced, not discarded (#3404)", () => {
     expect(doc.counts.unjoinedClaims).toBe(1);
     expect(stderr).toContain("UNJOINED COVERS CLAIMS");
     expect(stderr).toContain("function:thisFunctionExistsNowhereAtAll");
-  });
+  }, scaleTestTime(FRESHNESS_DIFF_TIMEOUT_MS));
 
   test("every unit class's vocabulary is watched, not just function:", () => {
     for (const claimId of [
@@ -827,7 +827,7 @@ describe("unjoined covers claims are surfaced, not discarded (#3404)", () => {
       const { doc } = printWithClaim(`// covers: ${claimId}`);
       expect(doc.unjoinedClaims.map((u) => u.claimId)).toEqual([claimId]);
     }
-  });
+  }, scaleTestTime(FRESHNESS_DIFF_TIMEOUT_MS));
 
   test("another ledger's vocabulary is NOT reported (no false alarms)", () => {
     // `file:` feeds the patch gate; `domain:`/`modules:` are prose groupings;
@@ -839,12 +839,12 @@ describe("unjoined covers claims are surfaced, not discarded (#3404)", () => {
     );
     expect(doc.unjoinedClaims).toEqual([]);
     expect(doc.counts.unjoinedClaims).toBe(0);
-  });
+  }, scaleTestTime(FRESHNESS_DIFF_TIMEOUT_MS));
 
   test("a claim that DOES join is not reported as unjoined", () => {
     const { doc } = printWithClaim("// covers: function:decideOnboardingDestination");
     expect(doc.unjoinedClaims).toEqual([]);
-  });
+  }, scaleTestTime(FRESHNESS_DIFF_TIMEOUT_MS));
 
   test("the report is a WARNING: --check still exits 0 while the list is committed", () => {
     // An unjoined claim that IS already in the committed registry leaves the
@@ -988,6 +988,23 @@ describe("runMain argv dispatch (in-process, exit codes not process.exit)", () =
     expect(r.err.join("\n")).toContain("Refusing to write: empty unit class(es)");
   });
 
+  test("--check honours the injected cross-check seam too (not just generate)", () => {
+    // The seam must reach BOTH argv paths. `--check` routes it through runCheck,
+    // whose anti-rot guard (b) is otherwise only reachable with a doctored source
+    // tree — an asymmetry that would leave the check path's guard untested.
+    const r = capture(() =>
+      runMain(
+        ["--check"],
+        () => liveRegistry,
+        () => [{ tool: "amadeus-fake.ts", parsed: 3, independent: 5 }],
+      ),
+    );
+    expect(r.code).toBe(1);
+    const stderr = r.err.join("\n");
+    expect(stderr).toContain("ANTI-ROT GUARD (b) FAILED");
+    expect(stderr).toContain("amadeus-fake.ts subcommand parser counted 3");
+  }, scaleTestTime(FRESHNESS_DIFF_TIMEOUT_MS));
+
   test("generate refuses to write on a subcommand cross-check mismatch", () => {
     const r = capture(() =>
       runMain(
@@ -1003,9 +1020,30 @@ describe("runMain argv dispatch (in-process, exit codes not process.exit)", () =
   });
 
   test("--print emits the registry to stdout and writes nothing", () => {
-    const r = capture(() => runMain(["--print"], () => liveRegistry));
-    expect(r.code).toBe(0);
-    expect(r.stdout).toBe(registryJson(liveRegistry.rows, liveRegistry.unjoined));
+    // The "writes nothing" half is the point of --print: point BOTH committed
+    // paths at a temp dir and prove neither file appears.
+    const tmp = mkdtempSync(join(tmpdir(), "cov-print-"));
+    const prevRegistry = process.env.AMADEUS_COVERAGE_REGISTRY;
+    const prevRatchet = process.env.AMADEUS_COVERAGE_RATCHET;
+    try {
+      const registry = join(tmp, ".coverage-registry.json");
+      const ratchet = join(tmp, ".coverage-ratchet.json");
+      process.env.AMADEUS_COVERAGE_REGISTRY = registry;
+      process.env.AMADEUS_COVERAGE_RATCHET = ratchet;
+      const r = capture(() => runMain(["--print"], () => liveRegistry));
+      expect(r.code).toBe(0);
+      expect(r.stdout).toBe(
+        registryJson(liveRegistry.rows, liveRegistry.unjoined),
+      );
+      expect(existsSync(registry)).toBe(false);
+      expect(existsSync(ratchet)).toBe(false);
+    } finally {
+      if (prevRegistry === undefined) delete process.env.AMADEUS_COVERAGE_REGISTRY;
+      else process.env.AMADEUS_COVERAGE_REGISTRY = prevRegistry;
+      if (prevRatchet === undefined) delete process.env.AMADEUS_COVERAGE_RATCHET;
+      else process.env.AMADEUS_COVERAGE_RATCHET = prevRatchet;
+      rmSync(tmp, { recursive: true, force: true });
+    }
   });
 
   test("plain generate writes both files and reports the per-class counts", () => {
