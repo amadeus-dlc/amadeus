@@ -31,6 +31,16 @@
 
 単一 unit のため unit 間の write scope 交差は構造的に不存在。
 
+### write scope 追補(承認後 — ユーザー裁定 A / ADR-7、2026-08-21)
+
+§12a code-generation iteration 1 BLOCKER/MAJOR の是正として、実装済みの追加スコープを遡及宣言する(裁定 provenance と設計根拠は `application-design/decisions.md` ADR-7)。
+
+| 面 | 内容 | 根拠 |
+|---|---|---|
+| 編集 | `tests/coverage-project-gate.ts`(相対条件 retained-basis 拡張)、`.github/workflows/ci.yml` gate 配線 4 箇所、`docs/reference/09-testing.md` + `.ja.md`、`tests/unit/coverage-project-gate.test.ts`、`tests/integration/t222-ci-snapshot-branch.integration.test.ts`、`tests/run-tests.ts`、`tests/integration/t112.serial.test.ts`、`tests/unit/t113.test.ts` | ADR-7(ユーザー裁定 A) |
+| 新設 | `tests/lib/lcov-file-totals.ts`(per-source LCOV 読取の単一定義) | ADR-7 |
+| 新設 | `tests/harness/plugin-composition-fixture.ts` + 回復テスト 4 本(`t-plugin-stage-compile` / `t-sensor-glob-expansion` / `t-advisory-choice-boundaries` / `t-plugin-runtime-trust`) | FR-TEST-6 / NFR-1 の AC「ゲート green」充足(残存コア被覆 182 行の回復 — code-summary.md 追補 2) |
+
 ## 着地後アクション(unit 外 — conductor 所有)
 
 - FR-NORM-1: 失効 cid 整理の単独ノルム PR(所有: conductor、時期: Bolt 着地後、成果物: team.md/project.md 改訂 PR — §12a FOLLOW-UP の閉包点)

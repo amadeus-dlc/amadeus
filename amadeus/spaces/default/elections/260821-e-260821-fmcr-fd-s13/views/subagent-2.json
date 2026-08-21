@@ -1,0 +1,27 @@
+{
+  "electionId": "E-260821-FMCR-FD-S13",
+  "voter": "subagent-2",
+  "questions": [
+    {
+      "questionId": "q-learnings-selection",
+      "text": "260821-fmc-retirement functional-design の §13 学習選定。diary 候補 1 件。候補 c1: quality-repair(observe-quality repair 裁定)後の再レビュー READY を reviewer-runtime へ記録できない構造欠陥 — iteration 3 は directive 上限(2)超過で拒否、同一 iteration 2 の再記録は Review projection 不変性で拒否。repair 経路『修復→同一チェック再実行』と記録契約が噛み合わない。実測: intent 260821-fmc-retirement functional-design(invocation 58545098…、repair fingerprint sha256:5d30e8f1…、逐語拒否 2 種)。conductor の採用案: c1 を project.md へ採用(framework Issue 起票候補の明記つき — 回避知識として『repair 後の真実は diary+audit+reviewer 出力で保持し engine の verdict-existence 再入で進行する』を記録)。",
+      "ordered": [
+        {
+          "internalNo": 2,
+          "label": "採用せず Issue 起票のみ",
+          "displayNo": 1
+        },
+        {
+          "internalNo": 3,
+          "label": "0件(記録価値なし)",
+          "displayNo": 2
+        },
+        {
+          "internalNo": 1,
+          "label": "c1 を採用(Issue 起票候補明記つきで project.md Learnings Inbox へ)",
+          "displayNo": 3
+        }
+      ]
+    }
+  ]
+}
