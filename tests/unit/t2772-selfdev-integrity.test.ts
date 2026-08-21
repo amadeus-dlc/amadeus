@@ -45,7 +45,7 @@ function context(projectDir: string, scope = "self-fix"): SelfDevelopmentIntegri
   };
 }
 
-function gitDeps(overrides: Partial<Record<string, { status: number; stdout?: string; stderr?: string }>> = {}) {
+function gitDeps(overrides: Partial<Record<string, { status: number | null; stdout?: string; stderr?: string }>> = {}) {
   const calls: string[][] = [];
   const deps: SelfDevelopmentIntegrityDeps = {
     runGit: (_projectDir, args) => {
@@ -141,6 +141,18 @@ describe("t2772 self-development integrity policy", () => {
     expect(decision.refusal.recovery).toContain("bun run build");
   });
 
+  test("turns a timed-out fetch into an unknown refusal", () => {
+    const root = project();
+    writeAttestation(root);
+    const { deps } = gitDeps({
+      "fetch origin": { status: null, stderr: "spawnSync git ETIMEDOUT" },
+    });
+    const decision = blocked(evaluateSelfDevelopmentIntegrity(context(root), deps));
+    expect(decision.blockingKind).toBe("unknown");
+    expect(decision.refusal.reason).toContain("ETIMEDOUT");
+    expect(decision.refusal.recovery).toContain("bun run build");
+  });
+
   test("refuses when the freshly fetched origin/main is not an ancestor", () => {
     const root = project();
     writeAttestation(root);
@@ -188,13 +200,20 @@ describe("t2772 self-development integrity policy", () => {
     expect(decision.evaluations[0]?.verdict.kind).toBe("not-applicable");
   });
 
-  test("supports exact-file and directory-prefix digest exclusions", () => {
+  test("supports exact-file and directory-prefix runtime digest exclusions", () => {
     const root = project();
-    mkdirSync(join(root, "packages", "framework", "core", "tools", "generated"));
-    writeFileSync(join(root, "packages", "framework", "core", "tools", "generated", "ignored.ts"), "ignored\n");
     const tools = join(root, "packages", "framework", "core", "tools");
-    const digest = digestDirectory(tools, new Set(["engine.ts", "generated/"]));
-    expect(digest).toMatch(/^sha256:[0-9a-f]{64}$/);
+    const runtime = join(root, ".claude", "tools");
+    const before = digestRuntimeTools(runtime, tools);
+    mkdirSync(join(tools, "data", "memory-seed"), { recursive: true });
+    mkdirSync(join(runtime, "data", "memory-seed"), { recursive: true });
+    writeFileSync(join(tools, "data", "harness.json"), "source-only\n");
+    writeFileSync(join(runtime, "data", "harness.json"), "runtime-only\n");
+    writeFileSync(join(tools, "data", "memory-seed", "ignored.ts"), "source-only\n");
+    writeFileSync(join(runtime, "data", "memory-seed", "ignored.ts"), "runtime-only\n");
+    const after = digestRuntimeTools(runtime, tools);
+    expect(before).toMatch(/^sha256:[0-9a-f]{64}$/);
+    expect(after).toBe(before);
   });
 
   test("refuses an attestation whose runtime digest is absent", () => {

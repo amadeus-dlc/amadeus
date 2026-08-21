@@ -55,6 +55,7 @@ const GENERATED_RUNTIME_ONLY_FILES = new Set([
 const SUCCESS = "success" as const;
 const SHA256_RE = /^sha256:[0-9a-f]{64}$/u;
 const REVISION_RE = /^[0-9a-f]{40,64}$/iu;
+const GIT_COMMAND_TIMEOUT_MS = 20_000;
 
 export interface SelfDevelopmentIntegrityAttestation {
   readonly schemaVersion: 1;
@@ -76,7 +77,7 @@ export interface SelfDevelopmentIntegrityContext {
 }
 
 export interface GitCommandResult {
-  readonly status: number;
+  readonly status: number | null;
   readonly stdout: string;
   readonly stderr: string;
 }
@@ -134,12 +135,13 @@ function defaultRunGit(projectDir: string, args: readonly string[]): GitCommandR
   const result = spawnSync("git", [...args], {
     cwd: projectDir,
     encoding: "utf-8",
+    timeout: GIT_COMMAND_TIMEOUT_MS,
     env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
   });
   return {
-    status: result.status ?? 1,
+    status: result.status,
     stdout: (result.stdout ?? "").toString(),
-    stderr: (result.stderr ?? "").toString(),
+    stderr: (result.stderr ?? "").toString() || (result.error ? result.error.message : ""),
   };
 }
 
@@ -207,13 +209,10 @@ function filesUnder(root: string, current = root): string[] {
 }
 
 /** Digest a generated tool tree using stable relative paths and file bytes. */
-export function digestDirectory(root: string, ignoredRelativePaths: ReadonlySet<string> = new Set()): string {
+export function digestDirectory(root: string): string {
   const hash = createHash("sha256");
   for (const file of filesUnder(root)) {
     const relativePath = relative(root, file).split("\\").join("/");
-    if ([...ignoredRelativePaths].some((ignored) =>
-      ignored.endsWith("/") ? relativePath.startsWith(ignored) : relativePath === ignored,
-    )) continue;
     hash.update(relativePath);
     hash.update("\0");
     hash.update(readFileSync(file));
@@ -224,9 +223,10 @@ export function digestDirectory(root: string, ignoredRelativePaths: ReadonlySet<
 
 export function digestRuntimeTools(runtimeRoot: string, sourceRoot: string): string {
   const hash = createHash("sha256");
+  const ignoredPaths = [...GENERATED_RUNTIME_ONLY_FILES];
   for (const sourceFile of filesUnder(sourceRoot)) {
     const relativePath = relative(sourceRoot, sourceFile).split("\\").join("/");
-    if ([...GENERATED_RUNTIME_ONLY_FILES].some((ignored) =>
+    if (ignoredPaths.some((ignored) =>
       ignored.endsWith("/") ? relativePath.startsWith(ignored) : relativePath === ignored,
     )) continue;
     const runtimeFile = join(runtimeRoot, ...relativePath.split("/"));
@@ -298,8 +298,8 @@ function evaluateVerdict(
     return unknown(`Self-development base ancestry is unknown (${ancestry.stderr.trim() || `exit ${ancestry.status}`}).`);
   }
 
-  const source = currentDigest(join(context.projectDir, SOURCE_TOOLS_RELATIVE_PATH), "canonical source tools");
   const sourceRoot = join(context.projectDir, SOURCE_TOOLS_RELATIVE_PATH);
+  const source = currentDigest(sourceRoot, "canonical source tools");
   const runtime = currentDigest(join(context.projectDir, runtimeHarness, "tools"), `${runtimeHarness} runtime tools`, sourceRoot);
   if ("error" in source || "error" in runtime) {
     const detail = "error" in source ? source.error : "error" in runtime ? runtime.error : "unavailable";

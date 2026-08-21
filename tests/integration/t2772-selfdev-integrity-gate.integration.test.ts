@@ -5,8 +5,19 @@ import { spawnSync } from "node:child_process";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { cleanupTestProject, REPO_ROOT, removeWorkspaceRecord, setupIntegrationProject } from "../harness/fixtures.ts";
-import { writeSelfDevelopmentIntegrityAttestation } from "../../packages/framework/core/tools/amadeus-selfdev-integrity.ts";
+import {
+  cleanupTestProject,
+  REPO_ROOT,
+  removeWorkspaceRecord,
+  seededAuditShard,
+  seededStateFile,
+  setupIntegrationProject,
+} from "../harness/fixtures.ts";
+import {
+  digestDirectory,
+  digestRuntimeTools,
+  writeSelfDevelopmentIntegrityAttestation,
+} from "../../packages/framework/core/tools/amadeus-selfdev-integrity.ts";
 
 const BUN = process.execPath;
 const UTILITY = join(REPO_ROOT, "dist", "claude", ".claude", "tools", "amadeus-utility.ts");
@@ -32,6 +43,13 @@ function selfDevelopmentProject(): string {
   cpSync(join(REPO_ROOT, "packages", "framework", "core", "tools"), join(root, "packages", "framework", "core", "tools"), {
     recursive: true,
   });
+  const sourceTools = join(root, "packages", "framework", "core", "tools");
+  const runtimeTools = join(root, ".claude", "tools");
+  const sourceDigest = digestDirectory(sourceTools);
+  const runtimeDigest = digestRuntimeTools(runtimeTools, sourceTools);
+  if (sourceDigest !== runtimeDigest) {
+    throw new Error(`t2772 fixture source/runtime drift: ${sourceDigest} !== ${runtimeDigest}`);
+  }
   mkdirSync(join(root, "scripts"), { recursive: true });
   writeFileSync(join(root, "scripts", "promote-self.ts"), "// self-development marker\n");
   writeFileSync(join(root, "README.md"), "seed\n");
@@ -50,11 +68,15 @@ function selfDevelopmentProject(): string {
   return root;
 }
 
-function runBirth(root: string): { status: number; output: string } {
+function runBirth(root: string, requestedHarness?: string): { status: number; output: string } {
   const result = spawnSync(BUN, [UTILITY, "intent-birth", "--scope", "self-fix", "--project-dir", root], {
     cwd: root,
     encoding: "utf-8",
-    env: { ...process.env, AMADEUS_DEFAULT_SCOPE: "" },
+    env: {
+      ...process.env,
+      AMADEUS_DEFAULT_SCOPE: "",
+      ...(requestedHarness === undefined ? {} : { AMADEUS_HARNESS_DIR: requestedHarness }),
+    },
   });
   return { status: result.status ?? -1, output: `${result.stdout ?? ""}${result.stderr ?? ""}` };
 }
@@ -84,6 +106,14 @@ describe("t2772 self-development intent-birth gate", () => {
     expect(result.output).toContain("bun run build");
     expect(result.output).toContain("HEAD");
     expect(workspaceEntries(root)).toEqual(before);
+    expect(existsSync(seededStateFile(root))).toBe(false);
+    expect(existsSync(seededAuditShard(root))).toBe(false);
+  });
+
+  test("unsupported harness selection cannot redirect the integrity digest", () => {
+    const root = selfDevelopmentProject();
+    const result = runBirth(root, ".agents");
+    expect(result.status, result.output).toBe(0);
   });
 
   test("keeps ordinary feature birth behavior unchanged outside self-development", () => {

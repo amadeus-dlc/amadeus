@@ -26,7 +26,10 @@ import {
   type LifecycleGuardDecision,
   type LifecycleGuardVerdict,
 } from "./amadeus-lifecycle-guard.ts";
-import { selfDevelopmentIntegrityAdapter } from "./amadeus-selfdev-integrity.ts";
+import {
+  SELFDEV_RUNTIME_HARNESSES,
+  selfDevelopmentIntegrityAdapter,
+} from "./amadeus-selfdev-integrity.ts";
 import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -4504,13 +4507,18 @@ export const INTENT_BIRTH_GUARDS: readonly LifecycleGuardAdapter<
     id: "intent-birth.self-development-integrity",
     checkpoint: "intent-birth",
     order: 40,
-    evaluate: (context) =>
-      selfDevelopmentIntegrityAdapter().evaluate({
+    evaluate: (context) => {
+      const requestedHarness = harnessDir();
+      const runtimeHarness = (SELFDEV_RUNTIME_HARNESSES as readonly string[]).includes(requestedHarness)
+        ? requestedHarness
+        : undefined;
+      return selfDevelopmentIntegrityAdapter().evaluate({
         projectDir: context.projectDir,
         scope: context.flags.scope ?? "",
         selfDevelopmentWorkspace: isSelfDevWorkspace(context.projectDir),
-        runtimeHarness: harnessDir(),
-      }),
+        runtimeHarness,
+      });
+    },
   },
 ]);
 
