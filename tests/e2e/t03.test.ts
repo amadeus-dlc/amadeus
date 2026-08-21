@@ -154,6 +154,28 @@ function writeFixtureFile(root: string, relativePath: string, contents: string):
   writeFileSync(path, contents);
 }
 
+/**
+ * Seed .gitignore.
+ *
+ * A rule that names a DIRECTORY (`/dist/`) and a rule that names its CONTENTS
+ * (`/dist/**`) both hide the same files, but they do NOT produce the same
+ * `git status --ignored=matching` output, and the difference moved between git
+ * releases. Measured 2026-08-21 on the identical tree:
+ *
+ *   rule        git 2.43.0 / 2.47.3            git 2.55.0
+ *   /dist/**    `!! dist/generated.js`         `!! dist/`
+ *   /dist/      `!! dist/`                     `!! dist/`
+ *
+ * Only the newer git collapses a directory whose CONTENTS are ignored; the
+ * older one collapses only when the directory ITSELF is ignored. The merge
+ * subcommand reads that trailing slash as "generated-output territory"
+ * (classifySourcePaths), so a contents-form rule made these cases pass on a
+ * developer's git and fail on CI's — the whole of #3391 class 4.
+ *
+ * Cases that mean "this whole directory is build output" therefore say so with
+ * a directory rule. Cases about a single ignored FILE are unaffected and keep
+ * their own rule shape.
+ */
 function commitIgnoreRules(p: string, rules: readonly string[]): void {
   writeFixtureFile(p, ".gitignore", `${rules.join("\n")}\n`);
   git(p, ["add", "--", ".gitignore"]);
@@ -256,7 +278,7 @@ describe("t03 amadeus-worktree merge (migrated from t03-worktree-merge.sh, plan 
       "node_modules/example/generated.js",
       "packages/setup/dist/cli.js",
     ];
-    commitIgnoreRules(p, ["/dist/**", "/node_modules/**", "/packages/setup/dist/**"]);
+    commitIgnoreRules(p, ["/dist/", "/node_modules/", "/packages/setup/dist/"]);
     expect(tool(p, ["create", "--slug", "generated-only", "--base", "main"]).status).toBe(0);
     const wt = commitWorkerSource(p, "generated-only");
     for (const output of outputFiles) {
@@ -323,7 +345,7 @@ describe("t03 amadeus-worktree merge (migrated from t03-worktree-merge.sh, plan 
 
   test("issue #3197: unknown ignored source blocks cleanup of otherwise-known output", () => {
     const p = freshFixture();
-    commitIgnoreRules(p, ["/dist/**", "*.draft"]);
+    commitIgnoreRules(p, ["/dist/", "*.draft"]);
     expect(tool(p, ["create", "--slug", "generated-unknown", "--base", "main"]).status).toBe(0);
     const wt = commitWorkerSource(p, "generated-unknown");
     writeFixtureFile(wt, "dist/generated.js", "known generated output\n");
