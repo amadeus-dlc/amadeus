@@ -190,7 +190,7 @@ if [ ! -e your-project/CLAUDE.md ]; then
   cp dist/claude/CLAUDE.md your-project/CLAUDE.md            # free name: take it
 elif [ ! -e your-project/CLAUDE-AMADEUS.md ]; then
   cp dist/claude/CLAUDE.md your-project/CLAUDE-AMADEUS.md    # taken: land beside your file
-  echo '@CLAUDE-AMADEUS.md' >> your-project/CLAUDE.md        # ...and import it, or it stays inert
+  echo 'Now add the line @CLAUDE-AMADEUS.md to your CLAUDE.md — it stays inert until imported'
 else
   echo 'CLAUDE.md and CLAUDE-AMADEUS.md both exist — merge dist/claude/CLAUDE.md in by hand'
 fi

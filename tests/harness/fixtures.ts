@@ -70,13 +70,13 @@ export const CLAUDE_ONBOARDING_DOC = join(REPO_ROOT, "dist", "claude", "CLAUDE.m
 // simply absent — and a fixture that quietly skipped the copy would hand the
 // test a project with no method layer, which is the #3386 failure mode dressed
 // up as a passing run. The missing source is a broken fixture, so it throws.
-export function requireOnboardingDoc(): string {
-  if (!existsSync(CLAUDE_ONBOARDING_DOC)) {
+export function requireOnboardingDoc(docPath: string = CLAUDE_ONBOARDING_DOC): string {
+  if (!existsSync(docPath)) {
     throw new Error(
-      `fixture setup: ${CLAUDE_ONBOARDING_DOC} is missing. The distributable is not built — run \`bun run dist\` before this suite.`,
+      `fixture setup: ${docPath} is missing. The distributable is not built — run \`bun run dist\` before this suite.`,
     );
   }
-  return CLAUDE_ONBOARDING_DOC;
+  return docPath;
 }
 
 // The per-intent WORKSPACE layout the fixtures seed (P9 — the flat amadeus-docs/
