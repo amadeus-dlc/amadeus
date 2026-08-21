@@ -123,16 +123,30 @@ const TARGETED_STATE_FUNCTIONS = ["skipStageContent", "handleSkip", "mergeScoped
 // source tree rather than from dist/claude/. Same unit class, same
 // `function:NAME` claim form (#3404).
 const SETUP_SRC_DIR = join(REPO_ROOT, "packages", "setup", "src");
+// Static prose lives at module scope, evaluated on import in EVERY process that
+// loads this module. A multi-line string concatenation built INSIDE a function
+// is not equally reliable: the merged suite LCOV carries zero-hit DA records for
+// some of its constant-folded continuation lines (measured on #3404), which reads
+// as dead code it is not. Module-scope initialisation has no such ambiguity.
+const MISSING_SETUP_SRC =
+  "setup function enumerator: the setup package source is part of the " +
+  "enumerated universe, but this directory does not exist. Point " +
+  "AMADEUS_COVERAGE_SRC_ROOT at a tree that contains packages/setup/src";
+const UNJOINED_ADVICE =
+  "They contribute ZERO coverage. Either fix the id, add the declaring root " +
+  "to an enumerator, or accept it: the full list is committed to " +
+  'tests/.coverage-registry.json under "unjoinedClaims", so a NEW one reds ' +
+  "--check until it is regenerated and reviewed.";
 
-const REGISTRY_PATH =
-  process.env.AMADEUS_COVERAGE_REGISTRY ?? join(TESTS_DIR, ".coverage-registry.json");
 // Read lazily (same seam shape as coverage-project-gate's totalsPath/
 // baselinePath) so in-process tests can retarget a single import at different
-// temp ratchets per case. The module-level snapshot serves generation.
+// temp registries / ratchets per case.
+function registryPath(): string {
+  return process.env.AMADEUS_COVERAGE_REGISTRY ?? join(TESTS_DIR, ".coverage-registry.json");
+}
 function ratchetPath(): string {
   return process.env.AMADEUS_COVERAGE_RATCHET ?? join(TESTS_DIR, ".coverage-ratchet.json");
 }
-const RATCHET_PATH = ratchetPath();
 // tests/coverage-exclusions.json is reviewer-facing documentation of legit
 // L-CODE exclusions (import.meta.main shims, process.exit terminals, external-
 // binary spawn sites). This UNIT-surface generator does not read it — units are
@@ -649,20 +663,16 @@ function depthZeroExportedNames(body: string): string[] {
  *  unitId is `function:NAME` for a top-level export and `function:NS.NAME` for a
  *  namespace member, so a setup test's `covers: function:decideOnboardingDestination`
  *  joins exactly like a lib/graph claim does. */
-export function enumerateSetupFunctions(): Unit[] {
-  if (!existsSync(SETUP_SRC_DIR)) {
+export function enumerateSetupFunctions(setupSrcDir: string = SETUP_SRC_DIR): Unit[] {
+  if (!existsSync(setupSrcDir)) {
     // Fail loud rather than silently shrink the universe: a missing source root
     // would report every setup unit as "gone" and quietly relax the ratchet.
-    throw new Error(
-      `setup function enumerator: ${SETUP_SRC_DIR} does not exist. The setup ` +
-        `package source is part of the enumerated universe — point ` +
-        `AMADEUS_COVERAGE_SRC_ROOT at a tree that contains packages/setup/src.`,
-    );
+    throw new Error(`${MISSING_SETUP_SRC}: ${setupSrcDir}`);
   }
   const units: Unit[] = [];
   const nsRe = /^export\s+namespace\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{/gm;
-  for (const abs of tsFilesUnder(SETUP_SRC_DIR)) {
-    const rel = `packages/setup/src/${abs.slice(SETUP_SRC_DIR.length + 1).replace(/\\/g, "/")}`;
+  for (const abs of tsFilesUnder(setupSrcDir)) {
+    const rel = `packages/setup/src/${abs.slice(setupSrcDir.length + 1).replace(/\\/g, "/")}`;
     const src = readFileSync(abs, "utf-8");
     for (const name of depthZeroExportedNames(src)) {
       units.push({
@@ -1114,13 +1124,9 @@ export function unjoinedClaimsReport(unjoined: UnjoinedClaim[]): string[] {
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([cls, n]) => `${cls}=${n}`)
     .join(" ");
+  const headline = `UNJOINED COVERS CLAIMS: ${unjoined.length} claim(s) name the coverage registry's own vocabulary but match NO enumerated unit (${perClass}).`;
   return [
-    `UNJOINED COVERS CLAIMS: ${unjoined.length} claim(s) name the coverage ` +
-      `registry's own vocabulary but match NO enumerated unit (${perClass}). ` +
-      `They contribute ZERO coverage. Either fix the id, add the declaring ` +
-      `root to an enumerator, or accept it — the full list is committed to ` +
-      `tests/.coverage-registry.json under "unjoinedClaims", so a NEW one reds ` +
-      `--check until it is regenerated and reviewed.`,
+    `${headline} ${UNJOINED_ADVICE}`,
     ...unjoined.map((u) => `  ${u.claimId}  <- ${u.file}`),
   ];
 }
@@ -1335,14 +1341,15 @@ export function runCheck(build: BuildResult = buildRegistry()): CheckResult {
 
   // FRESHNESS DIFF: committed registry must match the freshly generated one.
   const actual = registryJson(rows, unjoined);
-  if (!existsSync(REGISTRY_PATH)) {
+  const regPath = registryPath();
+  if (!existsSync(regPath)) {
     ok = false;
     messages.push(
-      `FRESHNESS DIFF FAILED: ${REGISTRY_PATH} does not exist. ` +
+      `FRESHNESS DIFF FAILED: ${regPath} does not exist. ` +
         `Generate it with: bun tests/gen-coverage-registry.ts`,
     );
   } else {
-    const committed = readFileSync(REGISTRY_PATH, "utf-8");
+    const committed = readFileSync(regPath, "utf-8");
     if (committed !== actual) {
       ok = false;
       messages.push(
@@ -1398,35 +1405,43 @@ export function runCheck(build: BuildResult = buildRegistry()): CheckResult {
 }
 
 // ===========================================================================
-// MAIN.
+// MAIN. The argv dispatch is a pure function of its arguments and two injected
+// readers, returning an EXIT CODE rather than calling process.exit. That is
+// what makes it in-process testable: the module's terminal is the single
+// `import.meta.main` line below, and every branch above it — including the two
+// refuse-to-write guards, which need a broken enumeration to reach — is driven
+// directly by the unit test through the `build` / `crossCheck` seams. (Same
+// shape as coverage-patch-gate.ts's exported `main(argv): number`.)
 // ===========================================================================
 
-function writeAll(rows: RegistryRow[], unjoined: UnjoinedClaim[]): void {
-  writeFileSync(REGISTRY_PATH, registryJson(rows, unjoined));
-  writeFileSync(RATCHET_PATH, ratchetJson(ratchetFromRows(rows)));
+export function writeAll(rows: RegistryRow[], unjoined: UnjoinedClaim[]): void {
+  writeFileSync(registryPath(), registryJson(rows, unjoined));
+  writeFileSync(ratchetPath(), ratchetJson(ratchetFromRows(rows)));
 }
 
-function printStderr(lines: readonly string[]): void {
+export function printStderr(lines: readonly string[]): void {
   for (const line of lines) console.error(line);
 }
 
-function main(): void {
-  const args = process.argv.slice(2);
-
+export function runMain(
+  args: readonly string[],
+  build: () => BuildResult = buildRegistry,
+  crossCheck: () => ReturnType<typeof subcommandCrossCheck> = subcommandCrossCheck,
+): number {
   if (args.includes("--check")) {
-    const r = runCheck();
+    const r = runCheck(build());
     // Warnings print on the failing AND the passing path — an unjoined claim is
     // never silent, even when the committed registry already records it.
     printStderr(r.warnings);
     if (!r.ok) {
       printStderr(r.messages);
-      process.exit(1);
+      return 1;
     }
     console.log("coverage registry: OK (fresh, guards green, ratchet held)");
-    return;
+    return 0;
   }
 
-  const { rows, unjoined } = buildRegistry();
+  const { rows, unjoined } = build();
   printStderr(unjoinedClaimsReport(unjoined));
 
   // Guards also run on a plain generate so we never WRITE a rotted registry.
@@ -1435,9 +1450,9 @@ function main(): void {
     console.error(
       `Refusing to write: empty unit class(es): ${empties.join(", ")}`,
     );
-    process.exit(1);
+    return 1;
   }
-  const mismatches = subcommandCrossCheck();
+  const mismatches = crossCheck();
   if (mismatches.length > 0) {
     for (const m of mismatches) {
       console.error(
@@ -1445,12 +1460,12 @@ function main(): void {
           `(${m.parsed} vs ${m.independent})`,
       );
     }
-    process.exit(1);
+    return 1;
   }
 
   if (args.includes("--print")) {
     process.stdout.write(registryJson(rows, unjoined));
-    return;
+    return 0;
   }
 
   writeAll(rows, unjoined);
@@ -1471,6 +1486,9 @@ function main(): void {
   }
   console.log(`  ${"TOTAL".padEnd(11)} ${rows.filter((r) => r.status === "covered").length}/${rows.length}`);
   console.log(`Unjoined covers claims (contribute no coverage): ${unjoined.length}`);
+  return 0;
 }
 
-if (import.meta.main) main();
+// The one terminal. `process.exitCode` rather than `process.exit` so buffered
+// stdout is flushed before the process ends.
+if (import.meta.main) process.exitCode = runMain(process.argv.slice(2));

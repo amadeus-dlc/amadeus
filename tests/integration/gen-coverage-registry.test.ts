@@ -57,12 +57,16 @@ import {
   parseObjectDispatchKeys,
   parseRatchetText,
   parseSwitchDispatchCases,
+  printStderr,
   ratchetFromRows,
   registryJson,
   runCheck,
+  runMain,
   subcommandCrossCheck,
   UNIT_CLASSES,
+  writeAll,
 } from "../gen-coverage-registry.ts";
+import type { BuildResult } from "../gen-coverage-registry.ts";
 
 // This test lives in tests/integration/; the generator tool + repo root are one level up.
 const __FILE_DIR = dirname(fileURLToPath(import.meta.url));
@@ -715,6 +719,18 @@ describe("packages/setup is enumerated into the function class (#3404)", () => {
     ).toBe(true);
   });
 
+  test("a missing setup source root fails LOUD, never a silently smaller universe", () => {
+    // The enumerator refuses rather than returning [] — an empty return would
+    // drop every setup unit from the universe and quietly relax the ratchet.
+    const gone = join(tmpdir(), "cov-no-setup-src-does-not-exist");
+    expect(() => enumerateSetupFunctions(gone)).toThrow(
+      /setup function enumerator: .*does not exist/s,
+    );
+    expect(() => enumerateSetupFunctions(gone)).toThrow(
+      /AMADEUS_COVERAGE_SRC_ROOT/,
+    );
+  });
+
   test("the measured #3389 case: the onboarding-ladder claims now JOIN", () => {
     // tests/unit/setup-onboarding-ladder.test.ts declares three function ids.
     // The issue's measurement was that all three vanished. They must now be
@@ -910,6 +926,173 @@ describe("unjoined covers claims are surfaced, not discarded (#3404)", () => {
       rmSync(claims, { recursive: true, force: true });
     }
   }, scaleTestTime(FRESHNESS_DIFF_TIMEOUT_MS));
+});
+
+// ---------------------------------------------------------------------------
+// 6d. The argv dispatch, driven IN-PROCESS. `runMain` returns an exit code
+//     instead of calling process.exit, and takes the registry build and the
+//     subcommand cross-check as injectable readers — so every branch, including
+//     the two refuse-to-write guards that need a broken enumeration, is reached
+//     here rather than only through a subprocess the coverage run cannot see.
+// ---------------------------------------------------------------------------
+describe("runMain argv dispatch (in-process, exit codes not process.exit)", () => {
+  /** Capture console.log / console.error / process.stdout.write for one call. */
+  function capture(fn: () => number): {
+    code: number;
+    out: string[];
+    err: string[];
+    stdout: string;
+  } {
+    const out: string[] = [];
+    const err: string[] = [];
+    let stdout = "";
+    const realLog = console.log;
+    const realError = console.error;
+    const realWrite = process.stdout.write.bind(process.stdout);
+    console.log = (...a: unknown[]) => out.push(a.join(" "));
+    console.error = (...a: unknown[]) => err.push(a.join(" "));
+    process.stdout.write = ((chunk: string) => {
+      stdout += chunk;
+      return true;
+    }) as typeof process.stdout.write;
+    try {
+      return { code: fn(), out, err, stdout };
+    } finally {
+      console.log = realLog;
+      console.error = realError;
+      process.stdout.write = realWrite;
+    }
+  }
+
+  const emptyBuild: BuildResult = { rows: [], claims: [], unjoined: [] };
+
+  test("--check against the committed registry: exit 0, warnings still printed", () => {
+    const r = capture(() => runMain(["--check"], () => liveRegistry));
+    expect(r.code).toBe(0);
+    expect(r.out.join("\n")).toContain("coverage registry: OK");
+    // The unjoined report is advisory — it prints on the PASSING path too.
+    expect(r.err.join("\n")).toContain("UNJOINED COVERS CLAIMS");
+  }, scaleTestTime(FRESHNESS_DIFF_TIMEOUT_MS));
+
+  test("--check on a rotted build: exit 1 and the diagnosis reaches stderr", () => {
+    const r = capture(() => runMain(["--check"], () => emptyBuild));
+    expect(r.code).toBe(1);
+    const stderr = r.err.join("\n");
+    expect(stderr).toContain("ANTI-ROT GUARD (a) FAILED");
+    expect(stderr).toContain("FRESHNESS DIFF FAILED");
+  }, scaleTestTime(FRESHNESS_DIFF_TIMEOUT_MS));
+
+  test("generate refuses to write when a unit class enumerates zero units", () => {
+    const r = capture(() => runMain([], () => emptyBuild));
+    expect(r.code).toBe(1);
+    expect(r.err.join("\n")).toContain("Refusing to write: empty unit class(es)");
+  });
+
+  test("generate refuses to write on a subcommand cross-check mismatch", () => {
+    const r = capture(() =>
+      runMain(
+        [],
+        () => liveRegistry,
+        () => [{ tool: "amadeus-fake.ts", parsed: 3, independent: 5 }],
+      ),
+    );
+    expect(r.code).toBe(1);
+    const stderr = r.err.join("\n");
+    expect(stderr).toContain("amadeus-fake.ts parser/independent count mismatch");
+    expect(stderr).toContain("(3 vs 5)");
+  });
+
+  test("--print emits the registry to stdout and writes nothing", () => {
+    const r = capture(() => runMain(["--print"], () => liveRegistry));
+    expect(r.code).toBe(0);
+    expect(r.stdout).toBe(registryJson(liveRegistry.rows, liveRegistry.unjoined));
+  });
+
+  test("plain generate writes both files and reports the per-class counts", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "cov-runmain-"));
+    const prevRegistry = process.env.AMADEUS_COVERAGE_REGISTRY;
+    const prevRatchet = process.env.AMADEUS_COVERAGE_RATCHET;
+    try {
+      const registry = join(tmp, ".coverage-registry.json");
+      const ratchet = join(tmp, ".coverage-ratchet.json");
+      process.env.AMADEUS_COVERAGE_REGISTRY = registry;
+      process.env.AMADEUS_COVERAGE_RATCHET = ratchet;
+      const r = capture(() => runMain([], () => liveRegistry));
+      expect(r.code).toBe(0);
+      expect(readFileSync(registry, "utf-8")).toBe(
+        registryJson(liveRegistry.rows, liveRegistry.unjoined),
+      );
+      expect(JSON.parse(readFileSync(ratchet, "utf-8")).coveredByClass).toEqual(
+        ratchetFromRows(liveRegistry.rows).coveredByClass,
+      );
+      const stdout = r.out.join("\n");
+      expect(stdout).toContain("Wrote tests/.coverage-registry.json");
+      expect(stdout).toContain("Unjoined covers claims (contribute no coverage):");
+    } finally {
+      if (prevRegistry === undefined) delete process.env.AMADEUS_COVERAGE_REGISTRY;
+      else process.env.AMADEUS_COVERAGE_REGISTRY = prevRegistry;
+      if (prevRatchet === undefined) delete process.env.AMADEUS_COVERAGE_RATCHET;
+      else process.env.AMADEUS_COVERAGE_RATCHET = prevRatchet;
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  test("writeAll honours the committed-path env seams", () => {
+    const tmp = mkdtempSync(join(tmpdir(), "cov-writeall-"));
+    const prevRegistry = process.env.AMADEUS_COVERAGE_REGISTRY;
+    const prevRatchet = process.env.AMADEUS_COVERAGE_RATCHET;
+    try {
+      const registry = join(tmp, "r.json");
+      const ratchet = join(tmp, "t.json");
+      process.env.AMADEUS_COVERAGE_REGISTRY = registry;
+      process.env.AMADEUS_COVERAGE_RATCHET = ratchet;
+      writeAll(liveRegistry.rows, liveRegistry.unjoined);
+      expect(readFileSync(registry, "utf-8")).toBe(
+        registryJson(liveRegistry.rows, liveRegistry.unjoined),
+      );
+      expect(readFileSync(ratchet, "utf-8")).toBe(
+        `${JSON.stringify(ratchetFromRows(liveRegistry.rows), null, 2)}\n`,
+      );
+    } finally {
+      if (prevRegistry === undefined) delete process.env.AMADEUS_COVERAGE_REGISTRY;
+      else process.env.AMADEUS_COVERAGE_REGISTRY = prevRegistry;
+      if (prevRatchet === undefined) delete process.env.AMADEUS_COVERAGE_RATCHET;
+      else process.env.AMADEUS_COVERAGE_RATCHET = prevRatchet;
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  test("a missing committed registry is a runCheck diagnosis, not a crash", () => {
+    // Same seam shape as the missing-ratchet case: the freshness diff must name
+    // the absent file and say how to generate it, rather than throwing ENOENT.
+    const prev = process.env.AMADEUS_COVERAGE_REGISTRY;
+    try {
+      const gone = join(tmpdir(), "cov-registry-does-not-exist.json");
+      process.env.AMADEUS_COVERAGE_REGISTRY = gone;
+      const r = runCheck(liveRegistry);
+      expect(r.ok).toBe(false);
+      const messages = r.messages.join("\n");
+      expect(messages).toContain("FRESHNESS DIFF FAILED");
+      expect(messages).toContain(gone);
+      expect(messages).toContain("does not exist");
+    } finally {
+      if (prev === undefined) delete process.env.AMADEUS_COVERAGE_REGISTRY;
+      else process.env.AMADEUS_COVERAGE_REGISTRY = prev;
+    }
+  });
+
+  test("printStderr writes one stderr line per element and nothing for []", () => {
+    const realError = console.error;
+    const seen: string[] = [];
+    console.error = (...a: unknown[]) => seen.push(a.join(" "));
+    try {
+      printStderr(["alpha", "beta"]);
+      printStderr([]);
+    } finally {
+      console.error = realError;
+    }
+    expect(seen).toEqual(["alpha", "beta"]);
+  });
 });
 
 // ---------------------------------------------------------------------------
